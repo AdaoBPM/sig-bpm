@@ -205,14 +205,38 @@ enum AtribuicaoCusto {
   INDIRETA
 }
 
-/// ENUM: chave de rateio. Custos marcados com uma destas chaves são
-/// distribuídos entre unidades conforme o volume físico da competência.
-enum ChaveRateio {
+/// ENUM: balde de alocação. Corresponde à coluna RATEIO das abas
+/// `Centros de Custo` e `Contas de Resultado`, que apesar do nome carrega dois
+/// papéis distintos:
+///
+/// - os cinco primeiros são CHAVES DE RATEIO: o valor é distribuído entre
+///   unidades conforme o volume físico da competência;
+/// - os demais são BALDES DIRETOS: o valor vai inteiro para um destino, e é o
+///   que separa as abas da DRE (Serviços filtra OBRAS e COMPLEMENTAR,
+///   Desp.+Extra filtra DESPESAS, RN filtra RN).
+///
+/// `TipoAlocacao` (DIRETO ou RATEIO) é derivado da pertinência ao primeiro
+/// grupo, como a coluna ALOCAÇÃO da planilha já faz.
+enum BaldeAlocacao {
+  // --- chaves de rateio ---
   PROJETO
   PRODUCAO
   METALURGIA
   ARMADURA
   ACOMPANHAMENTO
+  // --- baldes diretos ---
+  UNIDADE
+  MATRIZ
+  FILIAL
+  OBRAS
+  COMPLEMENTAR
+  DESPESAS
+  EXTRA
+  RN
+  /// Construtora do mesmo grupo, com atividades encerradas. As contas de
+  /// operação marcadas com este balde estão em desuso; restam movimentações
+  /// financeiras. Mantido no cadastro para não perder o histórico.
+  LEBEN
 }
 
 /// ENUM: grandeza física que serve de direcionador do rateio.
@@ -312,23 +336,24 @@ model UnidadeNegocio {
 
 model CentroCusto {
   id                String          @id @default(uuid())
-  coligada          Int
-  /// Chave de conciliação com o TOTVS RM.
-  codigoRM          String          @unique @map("codigo_rm")
+  coligada          Int?
+  /// Chave de conciliação com o TOTVS RM. Opcional: há centros mantidos só
+  /// pela controladoria, sem correspondente no ERP.
+  codigoRM          String?         @unique @map("codigo_rm")
   nomeRM            String          @map("nome_rm")
   /// Nome adotado pela controladoria; agrupa vários centros sob um mesmo rótulo.
   nomeControladoria String?         @map("nome_controladoria")
-  departamento      String
-  departamentoSigla String          @map("departamento_sigla")
-  atribuicao        AtribuicaoCusto
-  atribuicaoSigla   String          @map("atribuicao_sigla")
+  departamento      String?
+  departamentoSigla String?          @map("departamento_sigla")
+  atribuicao        AtribuicaoCusto?
+  atribuicaoSigla   String?          @map("atribuicao_sigla")
   /// ORDEM: posição na tela, reorganizável pelo usuário.
   ordem             Int             @default(0)
   ativo             Boolean         @default(true)
   criadoEm          DateTime        @default(now()) @map("criado_em")
   atualizadoEm      DateTime        @updatedAt @map("atualizado_em")
 
-  chaveRateio      ChaveRateio? @map("chave_rateio")
+  balde      BaldeAlocacao? @map("balde")
   unidadeNegocioId String?      @map("unidade_negocio_id")
 
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -338,14 +363,17 @@ model CentroCusto {
   resultadosApurados   ResultadoApurado[]
 
   @@index([nomeControladoria])
-  @@index([chaveRateio])
+  @@index([balde])
   @@map("centros_custo")
 }
 
 model ContaResultado {
   id             String         @id @default(uuid())
-  /// Código reduzido no ERP — chave de conciliação do balancete.
-  reduzido       Int            @unique
+  /// Código reduzido, chave de conciliação do balancete.
+  /// É TEXTO, não número: além dos códigos do ERP, carrega as contas
+  /// gerenciais criadas fora dele — 22 contas `RN.*`, que só passam a existir
+  /// no TOTVS RM a partir de janeiro, e 18 contas com sufixo `.D`.
+  reduzido       String         @unique
   /// Código hierárquico, ex.: 3.02.01.03.01.01
   conta          String
   descricao      String
@@ -361,7 +389,7 @@ model ContaResultado {
   criadoEm       DateTime       @default(now()) @map("criado_em")
   atualizadoEm   DateTime       @updatedAt @map("atualizado_em")
 
-  chaveRateio ChaveRateio? @map("chave_rateio")
+  balde BaldeAlocacao? @map("balde")
   linhaDREId  String?      @map("linha_dre_id")
 
   linhaDRE LinhaDRE? @relation(fields: [linhaDREId], references: [id])
@@ -431,7 +459,9 @@ model LinhaDREUnidade {
 /// competência a partir do volume físico realizado (RF007 do SPEC).
 model RegraRateio {
   id               String      @id @default(uuid())
-  chave            ChaveRateio
+  /// Só os cinco valores de rateio de `BaldeAlocacao` são válidos aqui;
+  /// a restrição é aplicada na aplicação, já que o enum é um só.
+  chave            BaldeAlocacao
   unidadeDestinoId String      @map("unidade_destino_id")
   baseFisica       BaseFisica  @map("base_fisica")
   /// Qual lista operacional fornece o volume, ex.: "Producao", "ProducaoMetalurgia".
@@ -822,7 +852,7 @@ model LancamentoContabil {
   departamento String?
   atribuicao   String?
   linhaDREId   String?              @map("linha_dre_id")
-  chaveRateio  ChaveRateio?         @map("chave_rateio")
+  balde        BaldeAlocacao?       @map("balde")
   alocacao     TipoAlocacao?
   /// Chave de agregação: departamento.atribuicao.conta, prefixada pelo rateio
   /// quando houver. É o equivalente da coluna ETIQUETA da planilha.
@@ -852,7 +882,7 @@ model LancamentoManual {
   filial           Int
   centroCustoId    String?      @map("centro_custo_id")
   contaResultadoId String?      @map("conta_resultado_id")
-  chaveRateio      ChaveRateio? @map("chave_rateio")
+  balde      BaldeAlocacao? @map("balde")
   descricao        String
   linhaDREId       String       @map("linha_dre_id")
   /// DECIMAL: aritmética sempre em JavaScript.
