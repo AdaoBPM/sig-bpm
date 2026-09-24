@@ -58,21 +58,22 @@ JSON ou em texto separado por vírgula resolveria só o SQLite e criaria dívida
 Padrão de nomenclatura e documentação:
 
 ```prisma
-model Usuario {
-  /// LISTA: substitui o campo `permissions String[]` do molde.
-  permissoes UsuarioPermissao[]
+model Perfil {
+  /// LISTA: o que este perfil pode fazer, por recurso e ação.
+  permissoes PerfilPermissao[]
 }
 
-/// LISTA-DE: Usuario.permissions (era `String[]` no molde)
-model UsuarioPermissao {
-  usuarioId String @map("usuario_id")
-  permissao String
+/// LISTA-DE: Perfil.permissoes
+model PerfilPermissao {
+  perfilId String         @map("perfil_id")
+  recurso  RecursoSistema
+  acao     AcaoPermissao
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  perfil Perfil @relation(fields: [perfilId], references: [id], onDelete: Cascade)
 
-  @@id([usuarioId, permissao])
-  @@index([permissao])
-  @@map("usuario_permissoes")
+  @@id([perfilId, recurso, acao])
+  @@index([recurso, acao])
+  @@map("perfil_permissoes")
 }
 ```
 
@@ -88,7 +89,7 @@ conversão é um `UPDATE ... array_agg` — mas não há necessidade.
 
 | Modelo | Campo original | Tabela de relação | Passo |
 |---|---|---|---|
-| `Perfil` | `permissoes` | `PerfilPermissao` | 5+ |
+| `Perfil` | `permissoes` | `PerfilPermissao` | 5 (revisão) |
 | `LinhaDRE` | `unidadesAplicaveis` | `LinhaDREUnidade` | 2 |
 | `Usuario` | `setores` | `UsuarioSetor` | 3 |
 | `ReceitaPrevia` | `precoContratoIds` | `ReceitaPreviaPreco` | 5 |
@@ -186,7 +187,7 @@ Quando a TI provisionar o servidor:
 
 1. Trocar `provider = "sqlite"` por `provider = "postgresql"` no `schema.prisma`.
 2. Apontar `DATABASE_URL` para o PostgreSQL no `backend/.env`.
-3. Trocar o adaptador em `src/config/prisma.ts`: `PrismaBetterSQLite3` → `PrismaPg`
+3. Trocar o adaptador em `src/config/prisma.ts`: `PrismaBetterSqlite3` → `PrismaPg`
    (o `@prisma/adapter-pg` já está instalado, vem do molde).
 4. Apagar a pasta `prisma/migrations` gerada contra o SQLite e rodar
    `npx prisma migrate dev --name init` contra o PostgreSQL — o histórico de
