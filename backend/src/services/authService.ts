@@ -42,6 +42,7 @@ async function authenticateDatabaseUser(
   const prisma = getPrismaClient();
   const usuario = await prisma.usuario.findUnique({
     where: { email: input.email },
+    include: { permissoes: true },
   });
 
   if (!usuario || !usuario.ativo) {
@@ -57,7 +58,7 @@ async function authenticateDatabaseUser(
     id: usuario.id,
     nome: usuario.nome,
     email: usuario.email,
-    permissions: usuario.permissions,
+    permissions: usuario.permissoes.map((p) => p.permissao),
   };
 }
 
@@ -93,6 +94,7 @@ export const authService = {
       const prisma = getPrismaClient();
       const usuario = await prisma.usuario.findUnique({
         where: { id: userId },
+        include: { permissoes: true },
       });
 
       if (usuario) {
@@ -100,7 +102,7 @@ export const authService = {
           id: usuario.id,
           nome: usuario.nome,
           email: usuario.email,
-          permissions: usuario.permissions,
+          permissions: usuario.permissoes.map((p) => p.permissao),
         };
       }
     } catch {

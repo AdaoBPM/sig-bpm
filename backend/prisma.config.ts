@@ -8,8 +8,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url:
-      process.env.DATABASE_URL ??
-      "postgresql://postgres:postgres@localhost:5432/bpm_template",
+    // Desenvolvimento: SQLite em arquivo, sem servidor.
+    // Produção: PostgreSQL — ver prisma/PORTABILIDADE.md.
+    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
   },
 });

@@ -1,23 +1,59 @@
+// =============================================================================
+// SIG BPM — Fechamento Mensal
+//
+// Banco de DESENVOLVIMENTO: SQLite (arquivo local, ver prisma.config.ts).
+// Banco de PRODUÇÃO: PostgreSQL.
+//
+// Este schema é escrito para ser portável entre os dois. As convenções que
+// garantem isso — e o que muda na migração — estão em prisma/PORTABILIDADE.md.
+// Leia aquele arquivo antes de acrescentar campos.
+// =============================================================================
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  // MIGRAÇÃO PARA POSTGRES: trocar para "postgresql" e ajustar a URL em
+  // prisma.config.ts. Nenhuma outra linha deste schema precisa mudar.
+  provider = "sqlite"
 }
+
+// -----------------------------------------------------------------------------
+// Usuário e auditoria (herdados do molde repositorio-padrao-bpm)
+// -----------------------------------------------------------------------------
 
 model Usuario {
   id           String   @id @default(uuid())
   nome         String
   email        String   @unique
   senhaHash    String   @map("senha_hash")
-  permissions  String[] @default([])
   ativo        Boolean  @default(true)
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
+  /// LISTA: substitui o campo `permissions String[]` do molde.
+  permissoes UsuarioPermissao[]
+
   @@map("usuarios")
+}
+
+/// LISTA-DE: Usuario.permissions (era `String[]` no molde)
+///
+/// O SQLite não suporta lista de tipo primitivo no Prisma. Em vez de serializar
+/// em texto, a lista virou tabela de relação — que funciona igual nos dois
+/// bancos e ainda permite indexar e consultar por permissão.
+/// Na migração para PostgreSQL esta tabela é mantida como está.
+model UsuarioPermissao {
+  usuarioId String @map("usuario_id")
+  permissao String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, permissao])
+  @@index([permissao])
+  @@map("usuario_permissoes")
 }
 
 model AuditLog {
@@ -29,6 +65,7 @@ model AuditLog {
   usuarioNome String?  @map("usuario_nome")
   ip          String?
   userAgent   String?  @map("user_agent")
+  /// JSON: suportado nos dois bancos. Em SQLite o Prisma serializa e valida.
   dadosAntes  Json?    @map("dados_antes")
   dadosDepois Json?    @map("dados_depois")
   metadados   Json?
