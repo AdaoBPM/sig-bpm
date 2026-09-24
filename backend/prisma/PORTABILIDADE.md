@@ -86,13 +86,43 @@ conversão é um `UPDATE ... array_agg` — mas não há necessidade.
 
 ### Inventário de listas
 
-| Modelo | Campo original | Tabela de relação |
-|---|---|---|
-| `Usuario` | `permissions String[]` (molde) | `UsuarioPermissao` |
+| Modelo | Campo original | Tabela de relação | Passo |
+|---|---|---|---|
+| `Usuario` | `permissions String[]` (molde) | `UsuarioPermissao` | 1 |
+| `LinhaDRE` | `unidadesAplicaveis` | `LinhaDREUnidade` | 2 |
+| `Usuario` | `setores` | *a criar* | 3 |
+| `ReceitaPrevia` | `precoContratoIds` | *a criar* | 5 |
 
-*(Atualizar esta tabela a cada lista nova. As listas previstas no `SPEC.md` —
-`LinhaDRE.unidadesAplicaveis`, `Usuario.setores` e `ReceitaPrevia.precoContratoIds` —
-entram nos passos 2 a 5 seguindo esta mesma convenção.)*
+*(Atualizar esta tabela a cada lista nova.)*
+
+Repare que `LinhaDREUnidade` teria virado tabela de relação mesmo em PostgreSQL: a
+lista é de referências a `UnidadeNegocio`, e a relação dá integridade referencial que
+um `String[]` não daria. O mesmo vale para `ReceitaPrevia.precoContratoIds`.
+
+### Inventário de enums
+
+| Enum | Onde é usado |
+|---|---|
+| `TipoUnidade` | `UnidadeNegocio.tipo` |
+| `TipoConta` | `ContaResultado.tipoConta` |
+| `SinalBalancete` | `ContaResultado.sinalBalancete` |
+| `TipoLinhaDRE` | `LinhaDRE.tipo` |
+| `AtribuicaoCusto` | `CentroCusto.atribuicao` |
+| `ChaveRateio` | `CentroCusto.chaveRateio`, `ContaResultado.chaveRateio`, `RegraRateio.chave` |
+| `BaseFisica` | `RegraRateio.baseFisica` |
+
+### Cuidado com a palavra "atribuição"
+
+A planilha usa o mesmo rótulo para duas coisas diferentes, e o schema as separa:
+
+- **`CentroCusto.atribuicao`** é `DIRETA` ou `INDIRETA` — por isso virou o enum
+  `AtribuicaoCusto`.
+- **`ContaResultado.atribuicao`** é o subgrupo da DRE, como "Receita Bruta de
+  Montagem" ou "Mão de Obra Direta" — texto livre, alinhado com
+  `LinhaDRE.atribuicao`.
+
+Confundir as duas ao importar os cadastros produziria uma classificação errada sem
+gerar erro algum.
 
 ## Convenção 3 — Valores monetários
 
