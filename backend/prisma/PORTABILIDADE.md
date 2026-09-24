@@ -90,7 +90,7 @@ conversão é um `UPDATE ... array_agg` — mas não há necessidade.
 |---|---|---|---|
 | `Usuario` | `permissions String[]` (molde) | `UsuarioPermissao` | 1 |
 | `LinhaDRE` | `unidadesAplicaveis` | `LinhaDREUnidade` | 2 |
-| `Usuario` | `setores` | *a criar* | 3 |
+| `Usuario` | `setores` | `UsuarioSetor` | 3 |
 | `ReceitaPrevia` | `precoContratoIds` | *a criar* | 5 |
 
 *(Atualizar esta tabela a cada lista nova.)*
@@ -110,6 +110,26 @@ um `String[]` não daria. O mesmo vale para `ReceitaPrevia.precoContratoIds`.
 | `AtribuicaoCusto` | `CentroCusto.atribuicao` |
 | `ChaveRateio` | `CentroCusto.chaveRateio`, `ContaResultado.chaveRateio`, `RegraRateio.chave` |
 | `BaseFisica` | `RegraRateio.baseFisica` |
+| `PerfilUsuario` | `Usuario.perfil` |
+| `StatusCompetencia` | `Competencia.status` |
+| `TipoImportacao` | `Importacao.tipo`, `UsuarioSetor.tipoLista` |
+| `StatusImportacao` | `Importacao.status` |
+| `TipoDivergencia` | `Divergencia.tipo` |
+| `StatusDivergencia` | `Divergencia.status` |
+
+### Convenção 5 — Ordem dos cadastros
+
+Todo cadastro tem `id` (chave interna) e `ordem` (posição na tela, que o usuário
+reorganiza subindo e descendo itens).
+
+`ordem` é **apresentação**: é `Int` **sem restrição de unicidade**, porque uma troca
+de posição entre dois itens falharia contra um índice único aplicado imediatamente.
+A reordenação renumera a sequência do cadastro inteiro.
+
+Nenhuma regra de negócio pode se apoiar na `ordem`. Quando um registro precisa
+referenciar outro, a referência é pelo `id` ou por um `codigo` estável — é por isso
+que `LinhaDRE` tem `codigo String @unique`, e que as expressões de subtotal
+(`"ROL - CPV"`) usam o código, não o número da linha.
 
 ### Cuidado com a palavra "atribuição"
 

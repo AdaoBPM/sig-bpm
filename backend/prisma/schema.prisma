@@ -24,19 +24,52 @@ datasource db {
 // Usuário e auditoria (herdados do molde repositorio-padrao-bpm)
 // -----------------------------------------------------------------------------
 
+/// ENUM: perfil de acesso. Governa o que o usuário vê e faz (RF001 do SPEC).
+enum PerfilUsuario {
+  CONTABIL
+  ALIMENTADOR
+  GESTAO
+}
+
 model Usuario {
-  id           String   @id @default(uuid())
+  id           String        @id @default(uuid())
   nome         String
-  email        String   @unique
-  senhaHash    String   @map("senha_hash")
-  ativo        Boolean  @default(true)
-  criadoEm     DateTime @default(now()) @map("criado_em")
-  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+  email        String        @unique
+  senhaHash    String        @map("senha_hash")
+  perfil       PerfilUsuario @default(GESTAO)
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem        Int           @default(0)
+  ativo        Boolean       @default(true)
+  criadoEm     DateTime      @default(now()) @map("criado_em")
+  atualizadoEm DateTime      @updatedAt @map("atualizado_em")
 
   /// LISTA: substitui o campo `permissions String[]` do molde.
   permissoes UsuarioPermissao[]
+  /// LISTA: quais listas operacionais este Alimentador pode preencher.
+  setores    UsuarioSetor[]
+
+  competenciasAbertas   Competencia[] @relation("CompetenciaAberta")
+  competenciasApuradas  Competencia[] @relation("CompetenciaApurada")
+  competenciasFechadas  Competencia[] @relation("CompetenciaFechada")
+  reaberturas           ReaberturaCompetencia[]
+  importacoes           Importacao[]
 
   @@map("usuarios")
+}
+
+/// LISTA-DE: Usuario.setores
+///
+/// Quais tipos de lista o Alimentador pode preencher. Reaproveita
+/// `TipoImportacao` porque o recorte de permissão é exatamente por tipo de lista.
+model UsuarioSetor {
+  usuarioId String         @map("usuario_id")
+  tipoLista TipoImportacao @map("tipo_lista")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, tipoLista])
+  @@index([tipoLista])
+  @@map("usuario_setores")
 }
 
 /// LISTA-DE: Usuario.permissions (era `String[]` no molde)
@@ -83,6 +116,12 @@ model AuditLog {
 // Correspondem hoje às abas `Centros de Custo`, `Contas de Resultado`,
 // `Tipos de Movimento`, `Tabela de Estacas` e à estrutura do
 // `Realizado (Consolidado)` do arquivo UNIDADES E CENTROS DE CUSTO.
+//
+// REGRA GERAL DOS CADASTROS
+// Todo cadastro tem `id` (chave interna) e `ordem` (posição na tela, que o
+// usuário reorganiza subindo e descendo itens). A `ordem` é apresentação e muda
+// a qualquer momento — por isso NÃO é única e NENHUMA regra de negócio se apoia
+// nela. Referência entre registros usa `id` ou um `codigo` estável.
 // =============================================================================
 
 /// ENUM: natureza da unidade, define como ela é apurada.
@@ -145,6 +184,8 @@ model UnidadeNegocio {
   codigo    Int         @unique
   nome      String
   tipo      TipoUnidade
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem     Int         @default(0)
   ativo     Boolean     @default(true)
   criadoEm  DateTime    @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
@@ -169,6 +210,8 @@ model CentroCusto {
   departamentoSigla String          @map("departamento_sigla")
   atribuicao        AtribuicaoCusto
   atribuicaoSigla   String          @map("atribuicao_sigla")
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem             Int             @default(0)
   ativo             Boolean         @default(true)
   criadoEm          DateTime        @default(now()) @map("criado_em")
   atualizadoEm      DateTime        @updatedAt @map("atualizado_em")
@@ -196,6 +239,8 @@ model ContaResultado {
   /// ATRIBUIÇÃO do centro de custo, que é direta/indireta — ver PORTABILIDADE.md.
   atribuicao     String?
   sinalBalancete SinalBalancete? @map("sinal_balancete")
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem          Int            @default(0)
   ativo          Boolean        @default(true)
   criadoEm       DateTime       @default(now()) @map("criado_em")
   atualizadoEm   DateTime       @updatedAt @map("atualizado_em")
@@ -213,15 +258,20 @@ model ContaResultado {
 /// A estrutura da DRE é dado, não código (RF003 do SPEC).
 model LinhaDRE {
   id              String       @id @default(uuid())
-  ordem           Int          @unique
+  /// Código estável e legível da linha, ex.: "ROL", "CPV", "CPP.MOD.CLT".
+  /// É por ele que as expressões de subtotal referenciam outras linhas —
+  /// nunca pela `ordem`, que o usuário reorganiza na tela.
+  codigo          String       @unique
+  /// ORDEM: posição na DRE, reorganizável pelo usuário. Apresentação apenas.
+  ordem           Int          @default(0)
   grupo           String
   grupoSigla      String       @map("grupo_sigla")
   atribuicao      String?
   atribuicaoSigla String?      @map("atribuicao_sigla")
   descricao       String
   tipo            TipoLinhaDRE
-  /// Fórmula do subtotal, referenciando outras linhas por `ordem`.
-  /// Nulo quando `tipo` é ITEM.
+  /// Fórmula do subtotal, referenciando outras linhas pelo `codigo`,
+  /// ex.: "ROL - CPV". Nulo quando `tipo` é ITEM.
   expressao       String?
   /// O que a linha significa — vem da coluna de definição da planilha.
   definicao       String?
@@ -265,6 +315,8 @@ model RegraRateio {
   origemDoVolume   String      @map("origem_do_volume")
   vigenciaInicio   DateTime    @map("vigencia_inicio")
   vigenciaFim      DateTime?   @map("vigencia_fim")
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem            Int         @default(0)
   criadoEm         DateTime    @default(now()) @map("criado_em")
   atualizadoEm     DateTime    @updatedAt @map("atualizado_em")
 
@@ -281,6 +333,8 @@ model TipoMovimento {
   codigo         String   @unique
   descricao      String
   retornaEstoque Boolean  @map("retorna_estoque")
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem          Int      @default(0)
   ativo          Boolean  @default(true)
   criadoEm       DateTime @default(now()) @map("criado_em")
   atualizadoEm   DateTime @updatedAt @map("atualizado_em")
@@ -297,9 +351,184 @@ model TabelaEstaca {
   precoUnitario  Decimal   @map("preco_unitario")
   vigenciaInicio DateTime  @map("vigencia_inicio")
   vigenciaFim    DateTime? @map("vigencia_fim")
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem          Int       @default(0)
   criadoEm       DateTime  @default(now()) @map("criado_em")
   atualizadoEm   DateTime  @updatedAt @map("atualizado_em")
 
   @@unique([secao, grupo, vigenciaInicio])
   @@map("tabela_estacas")
+}
+
+// =============================================================================
+// GOVERNANÇA DA APURAÇÃO (Passo 3)
+//
+// Competência, importação, divergência e auditoria. É aqui que mora o
+// Princípio de Congelamento da Apuração descrito no SPEC.md: apurar grava o
+// retrato do mês e o congela; só a reabertura permite nova apuração.
+// =============================================================================
+
+/// ENUM: estado da competência.
+/// ABERTA → EM_CONFERENCIA → FECHADA, e FECHADA → ABERTA por reabertura.
+enum StatusCompetencia {
+  ABERTA
+  EM_CONFERENCIA
+  FECHADA
+}
+
+/// ENUM: tipo de arquivo ou lista que entra no sistema.
+/// Serve tanto para `Importacao.tipo` quanto para dizer quais listas um
+/// Alimentador pode preencher (`UsuarioSetor.tipoLista`).
+enum TipoImportacao {
+  BALANCETE
+  FOLHA
+  REQUISICOES
+  NOTAS_FISCAIS
+  DRE_COMERCIAL
+  ESTOQUE_INICIAL
+  PROJETO
+  PRODUCAO
+  PRODUCAO_PISTA
+  PRODUCAO_ARMADURA
+  PRODUCAO_METALURGIA
+  EXPEDICAO
+  MONTAGEM
+  ACOMPANHAMENTO
+  MEDICAO
+  DEVOLUCAO
+  SAIDA
+  FATURAMENTO
+  OBRA_ENCERRADA
+}
+
+/// ENUM: estado do processamento de uma importação.
+enum StatusImportacao {
+  PROCESSANDO
+  CONCLUIDA
+  REJEITADA
+}
+
+/// ENUM: o que originou a divergência retroativa (RF010 do SPEC).
+enum TipoDivergencia {
+  BALANCETE
+  PRECO_CONTRATO
+}
+
+/// ENUM: tratamento dado à divergência.
+enum StatusDivergencia {
+  ABERTA
+  JUSTIFICADA
+  RESOLVIDA_POR_REABERTURA
+}
+
+model Competencia {
+  id     String            @id @default(uuid())
+  ano    Int
+  mes    Int
+  status StatusCompetencia @default(ABERTA)
+
+  abertaEm   DateTime @default(now()) @map("aberta_em")
+  abertaPor  String   @map("aberta_por")
+  /// Última apuração. Nulo enquanto o mês não foi apurado.
+  apuradaEm  DateTime? @map("apurada_em")
+  apuradaPor String?   @map("apurada_por")
+  /// Quantas vezes o mês foi apurado — reapurar é normal durante a conferência.
+  apuracoes  Int       @default(0) @map("apuracoes")
+  fechadaEm  DateTime? @map("fechada_em")
+  fechadaPor String?   @map("fechada_por")
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  usuarioAbertura  Usuario  @relation("CompetenciaAberta", fields: [abertaPor], references: [id])
+  usuarioApuracao  Usuario? @relation("CompetenciaApurada", fields: [apuradaPor], references: [id])
+  usuarioFechamento Usuario? @relation("CompetenciaFechada", fields: [fechadaPor], references: [id])
+
+  /// LISTA: histórico de reaberturas, uma por ocorrência.
+  historicoReaberturas ReaberturaCompetencia[]
+  importacoes          Importacao[]
+  divergencias         Divergencia[]
+
+  @@unique([ano, mes])
+  @@index([status])
+  @@map("competencias")
+}
+
+/// Cada reabertura é um registro próprio, com justificativa e autor.
+/// Guardar o histórico completo é o que permite auditar um mês reapurado
+/// várias vezes — um contador só diria quantas, não por quê.
+model ReaberturaCompetencia {
+  id            String   @id @default(uuid())
+  competenciaId String   @map("competencia_id")
+  justificativa String
+  reabertaEm    DateTime @default(now()) @map("reaberta_em")
+  reabertaPor   String   @map("reaberta_por")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [reabertaPor], references: [id])
+
+  @@index([competenciaId, reabertaEm])
+  @@map("reaberturas_competencia")
+}
+
+model Importacao {
+  id              String           @id @default(uuid())
+  competenciaId   String           @map("competencia_id")
+  tipo            TipoImportacao
+  nomeArquivo     String           @map("nome_arquivo")
+  /// Impressão digital do conteúdo — impede reprocessar o mesmo arquivo por engano.
+  hashArquivo     String           @map("hash_arquivo")
+  importadoPor    String           @map("importado_por")
+  importadoEm     DateTime         @default(now()) @map("importado_em")
+  linhasLidas     Int              @default(0) @map("linhas_lidas")
+  linhasAceitas   Int              @default(0) @map("linhas_aceitas")
+  linhasRejeitadas Int             @default(0) @map("linhas_rejeitadas")
+  status          StatusImportacao @default(PROCESSANDO)
+  /// JSON: erros por linha, para o relatório de importação.
+  relatorioErros  Json?            @map("relatorio_erros")
+  /// Uma reimportação do mesmo tipo na mesma competência substitui a anterior,
+  /// que fica marcada aqui em vez de ser apagada.
+  substituidaEm   DateTime?        @map("substituida_em")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [importadoPor], references: [id])
+
+  divergencias Divergencia[]
+
+  @@index([competenciaId, tipo])
+  @@index([hashArquivo])
+  @@map("importacoes")
+}
+
+/// Divergência retroativa: dado novo que conflita com o que já foi apurado ou
+/// fechado. Registrar NUNCA altera a competência (RF010 do SPEC).
+model Divergencia {
+  id            String            @id @default(uuid())
+  competenciaId String            @map("competencia_id")
+  tipo          TipoDivergencia
+  importacaoId  String            @map("importacao_id")
+
+  /// Preenchidos quando `tipo` é BALANCETE.
+  contaResultadoId String? @map("conta_resultado_id")
+  centroCustoId    String? @map("centro_custo_id")
+  /// Preenchido quando `tipo` é PRECO_CONTRATO.
+  /// A relação com Obra é criada no Passo 4, quando o modelo existir.
+  obraId           String? @map("obra_id")
+
+  /// DECIMAL: aritmética sempre em JavaScript. Ver PORTABILIDADE.md.
+  valorGravado  Decimal           @map("valor_gravado")
+  valorRecebido Decimal           @map("valor_recebido")
+  diferenca     Decimal
+  detectadaEm   DateTime          @default(now()) @map("detectada_em")
+  status        StatusDivergencia @default(ABERTA)
+  justificativa String?
+  tratadaEm     DateTime?         @map("tratada_em")
+  tratadaPor    String?           @map("tratada_por")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id])
+
+  @@index([competenciaId, status])
+  @@index([status])
+  @@map("divergencias")
 }
