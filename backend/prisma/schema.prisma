@@ -24,29 +24,90 @@ datasource db {
 // Usuário e auditoria (herdados do molde repositorio-padrao-bpm)
 // -----------------------------------------------------------------------------
 
-/// ENUM: perfil de acesso. Governa o que o usuário vê e faz (RF001 do SPEC).
-enum PerfilUsuario {
-  CONTABIL
-  ALIMENTADOR
-  GESTAO
+/// ENUM: recurso do sistema sobre o qual se concede permissão.
+/// Corresponde a um módulo ou tela — é o "o quê" da permissão.
+enum RecursoSistema {
+  CADASTROS
+  USUARIOS
+  COMPETENCIA
+  IMPORTACAO
+  LISTAS_OPERACIONAIS
+  LANCAMENTOS_MANUAIS
+  CLASSIFICACAO
+  APURACAO
+  DRE
+  DIVERGENCIA
+  AUDITORIA
+}
+
+/// ENUM: ação permitida sobre um recurso — é o "pode fazer o quê".
+enum AcaoPermissao {
+  VER
+  LER
+  EDITAR
+}
+
+/// Tipo de usuário. Virou cadastro, a pedido da TI, para que a empresa possa
+/// criar e inativar tipos sem depender de desenvolvimento.
+///
+/// As permissões pertencem ao perfil, não ao usuário: quem define o que alguém
+/// pode fazer é o tipo a que ele pertence.
+model Perfil {
+  id           String   @id @default(uuid())
+  /// Código estável, usado no código e nas verificações de permissão.
+  codigo       String   @unique
+  nome         String
+  descricao    String?
+  /// Perfis de sistema não podem ser excluídos, apenas inativados — do
+  /// contrário seria possível deixar a instalação sem nenhum administrador.
+  sistema      Boolean  @default(false)
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem        Int      @default(0)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  /// LISTA: o que este perfil pode fazer, por recurso e ação.
+  permissoes PerfilPermissao[]
+  usuarios   Usuario[]
+
+  @@map("perfis")
+}
+
+/// LISTA-DE: Perfil.permissoes
+///
+/// A matriz de permissão: uma linha por (perfil × recurso × ação). A ausência
+/// da linha é a negação — não existe permissão negativa, o que evita a pergunta
+/// de qual regra vence quando duas se contradizem.
+model PerfilPermissao {
+  perfilId String         @map("perfil_id")
+  recurso  RecursoSistema
+  acao     AcaoPermissao
+
+  perfil Perfil @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+
+  @@id([perfilId, recurso, acao])
+  @@index([recurso, acao])
+  @@map("perfil_permissoes")
 }
 
 model Usuario {
-  id           String        @id @default(uuid())
+  id           String   @id @default(uuid())
   nome         String
-  email        String        @unique
-  senhaHash    String        @map("senha_hash")
-  perfil       PerfilUsuario @default(GESTAO)
+  email        String   @unique
+  senhaHash    String   @map("senha_hash")
+  perfilId     String   @map("perfil_id")
   /// ORDEM: posição na tela, reorganizável pelo usuário.
-  ordem        Int           @default(0)
-  ativo        Boolean       @default(true)
-  criadoEm     DateTime      @default(now()) @map("criado_em")
-  atualizadoEm DateTime      @updatedAt @map("atualizado_em")
+  ordem        Int      @default(0)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  /// LISTA: substitui o campo `permissions String[]` do molde.
-  permissoes UsuarioPermissao[]
-  /// LISTA: quais listas operacionais este Alimentador pode preencher.
-  setores    UsuarioSetor[]
+  perfil Perfil @relation(fields: [perfilId], references: [id])
+
+  /// LISTA: quais listas operacionais este usuário pode preencher.
+  /// Recorte por dado, complementar ao recorte por recurso que o perfil dá.
+  setores UsuarioSetor[]
 
   competenciasAbertas   Competencia[] @relation("CompetenciaAberta")
   competenciasApuradas  Competencia[] @relation("CompetenciaApurada")
@@ -70,23 +131,6 @@ model UsuarioSetor {
   @@id([usuarioId, tipoLista])
   @@index([tipoLista])
   @@map("usuario_setores")
-}
-
-/// LISTA-DE: Usuario.permissions (era `String[]` no molde)
-///
-/// O SQLite não suporta lista de tipo primitivo no Prisma. Em vez de serializar
-/// em texto, a lista virou tabela de relação — que funciona igual nos dois
-/// bancos e ainda permite indexar e consultar por permissão.
-/// Na migração para PostgreSQL esta tabela é mantida como está.
-model UsuarioPermissao {
-  usuarioId String @map("usuario_id")
-  permissao String
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@id([usuarioId, permissao])
-  @@index([permissao])
-  @@map("usuario_permissoes")
 }
 
 model AuditLog {

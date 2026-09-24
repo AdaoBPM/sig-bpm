@@ -21,6 +21,17 @@ const TEMPLATE_USER: AuthUser = {
 const TEMPLATE_PASSWORD_HASH =
   "$2b$10$TfWpTldLcP8P4w0bOlhMw.b5i1v2neNtOCAGdEJjZNZGhF6BPPsQ6";
 
+/// As permissões vivem no perfil, não no usuário. Aqui a matriz
+/// (recurso × ação) vira a lista de strings "recurso:acao" que o token carrega
+/// e que os middlewares verificam.
+function permissoesDoPerfil(
+  permissoes: Array<{ recurso: string; acao: string }>,
+): string[] {
+  return permissoes.map(
+    (p) => `${p.recurso.toLowerCase()}:${p.acao.toLowerCase()}`,
+  );
+}
+
 async function authenticateTemplateUser(
   input: LoginInput,
 ): Promise<AuthUser | null> {
@@ -42,10 +53,10 @@ async function authenticateDatabaseUser(
   const prisma = getPrismaClient();
   const usuario = await prisma.usuario.findUnique({
     where: { email: input.email },
-    include: { permissoes: true },
+    include: { perfil: { include: { permissoes: true } } },
   });
 
-  if (!usuario || !usuario.ativo) {
+  if (!usuario || !usuario.ativo || !usuario.perfil.ativo) {
     return null;
   }
 
@@ -58,7 +69,7 @@ async function authenticateDatabaseUser(
     id: usuario.id,
     nome: usuario.nome,
     email: usuario.email,
-    permissions: usuario.permissoes.map((p) => p.permissao),
+    permissions: permissoesDoPerfil(usuario.perfil.permissoes),
   };
 }
 
@@ -94,7 +105,7 @@ export const authService = {
       const prisma = getPrismaClient();
       const usuario = await prisma.usuario.findUnique({
         where: { id: userId },
-        include: { permissoes: true },
+        include: { perfil: { include: { permissoes: true } } },
       });
 
       if (usuario) {
@@ -102,7 +113,7 @@ export const authService = {
           id: usuario.id,
           nome: usuario.nome,
           email: usuario.email,
-          permissions: usuario.permissoes.map((p) => p.permissao),
+          permissions: permissoesDoPerfil(usuario.perfil.permissoes),
         };
       }
     } catch {

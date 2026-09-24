@@ -88,7 +88,7 @@ conversão é um `UPDATE ... array_agg` — mas não há necessidade.
 
 | Modelo | Campo original | Tabela de relação | Passo |
 |---|---|---|---|
-| `Usuario` | `permissions String[]` (molde) | `UsuarioPermissao` | 1 |
+| `Perfil` | `permissoes` | `PerfilPermissao` | 5+ |
 | `LinhaDRE` | `unidadesAplicaveis` | `LinhaDREUnidade` | 2 |
 | `Usuario` | `setores` | `UsuarioSetor` | 3 |
 | `ReceitaPrevia` | `precoContratoIds` | `ReceitaPreviaPreco` | 5 |
@@ -110,7 +110,8 @@ um `String[]` não daria. O mesmo vale para `ReceitaPrevia.precoContratoIds`.
 | `AtribuicaoCusto` | `CentroCusto.atribuicao` |
 | `ChaveRateio` | `CentroCusto.chaveRateio`, `ContaResultado.chaveRateio`, `RegraRateio.chave` |
 | `BaseFisica` | `RegraRateio.baseFisica` |
-| `PerfilUsuario` | `Usuario.perfil` |
+| `RecursoSistema` | `PerfilPermissao.recurso` |
+| `AcaoPermissao` | `PerfilPermissao.acao` |
 | `StatusCompetencia` | `Competencia.status` |
 | `TipoImportacao` | `Importacao.tipo`, `UsuarioSetor.tipoLista` |
 | `StatusImportacao` | `Importacao.status` |
