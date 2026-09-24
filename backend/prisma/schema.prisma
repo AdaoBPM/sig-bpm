@@ -191,8 +191,10 @@ enum SinalBalancete {
 }
 
 /// ENUM: papel da linha na estrutura da DRE.
-/// ITEM soma lançamentos; SUBTOTAL e TOTAL são calculados por `expressao`.
+/// SECAO é só rótulo e não carrega valor; ITEM soma lançamentos;
+/// SUBTOTAL e TOTAL são calculados pela `expressao`.
 enum TipoLinhaDRE {
+  SECAO
   ITEM
   SUBTOTAL
   TOTAL

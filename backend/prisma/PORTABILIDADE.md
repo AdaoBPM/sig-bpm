@@ -46,6 +46,14 @@ enum StatusCompetencia {
 fora do Prisma (SQL cru, importação manual) consegue gravar valor inválido. Todo
 acesso a dados deve passar pelo Prisma Client.
 
+**Segunda consequência, observada na prática:** acrescentar um valor a um enum **não
+gera migração no SQLite** — a coluna já é `TEXT`, então não há DDL a executar e o
+Prisma responde "Already in sync". No PostgreSQL o mesmo acréscimo exige
+`ALTER TYPE ... ADD VALUE`. Ou seja, o histórico de migrações gerado aqui é
+incompleto por construção, e é mais uma razão para o passo 4 do procedimento de
+migração: descartar as migrações de desenvolvimento e gerar uma migração inicial
+limpa contra o PostgreSQL, em vez de tentar reaproveitá-las.
+
 ## Convenção 2 — Listas
 
 Listas escalares não existem no SQLite. **Toda lista vira tabela de relação**, e não

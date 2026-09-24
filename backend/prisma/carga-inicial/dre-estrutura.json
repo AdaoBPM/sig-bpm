@@ -1,0 +1,2782 @@
+[
+    {
+        "linhaPlanilha":  1,
+        "descricao":  "REALIZADO: CONSOLIDADO",
+        "formula":  "UPPER(TEXT(DATE(2026,1,1),\"MMM/AA\"))",
+        "grupo":  "DEPARTAMENTO",
+        "grupoSigla":  "DEP.",
+        "atribuicao":  "ATRIBUIÇÃO",
+        "atribuicaoSigla":  "ATR.",
+        "definicao":  "OBSERVAÇÃO"
+    },
+    {
+        "linhaPlanilha":  2,
+        "descricao":  "PRODUÇÃO E SERVIÇOS (PS)",
+        "formula":  null,
+        "grupo":  "-",
+        "grupoSigla":  "PS",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  3,
+        "descricao":  "PRODUÇÃO (P)",
+        "formula":  null,
+        "grupo":  "-",
+        "grupoSigla":  "P",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  4,
+        "descricao":  "Produção do Pré-Fabricado (m³)",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B4+\u0027Realizado (Filial)\u0027!B4",
+        "grupo":  "PRODUÇÃO (P)",
+        "grupoSigla":  "P",
+        "atribuicao":  "Produção do Pré-Fabricado (m³)",
+        "atribuicaoSigla":  "-",
+        "definicao":  "Volume das baixas de OP (com perdas)"
+    },
+    {
+        "linhaPlanilha":  5,
+        "descricao":  "Produção do Pré-Fabricado (pst)",
+        "formula":  "\u0027Realizado (Filial)\u0027!B5",
+        "grupo":  "PRODUÇÃO (P)",
+        "grupoSigla":  "P",
+        "atribuicao":  "Produção do Pré-Fabricado (pst)",
+        "atribuicaoSigla":  "-",
+        "definicao":  "Volume das baixas de OP (com perdas)"
+    },
+    {
+        "linhaPlanilha":  6,
+        "descricao":  "Produção da Metalurgia (kg)",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B5+\u0027Realizado (Filial)\u0027!B6+\u0027Realizado (Serviços)\u0027!B4",
+        "grupo":  "PRODUÇÃO (P)",
+        "grupoSigla":  "P",
+        "atribuicao":  "Produção da Metalurgia (kg)",
+        "atribuicaoSigla":  "-",
+        "definicao":  "Pistas conforme baixas de OP (com perdas)"
+    },
+    {
+        "linhaPlanilha":  7,
+        "descricao":  "SERVIÇOS (S)",
+        "formula":  null,
+        "grupo":  "-",
+        "grupoSigla":  "S",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  8,
+        "descricao":  "Expedição do Pré-Fabricado (m³)",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B7+\u0027Realizado (Filial)\u0027!B8",
+        "grupo":  "SERVIÇOS (S)",
+        "grupoSigla":  "S",
+        "atribuicao":  "Expedição do Pré-Fabricado (m³)",
+        "atribuicaoSigla":  "-",
+        "definicao":  "Volume das peças expedidas (sem devoluções)"
+    },
+    {
+        "linhaPlanilha":  9,
+        "descricao":  "Montagem do Pré-Fabricado (m³)",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B6",
+        "grupo":  "SERVIÇOS (S)",
+        "grupoSigla":  "S",
+        "atribuicao":  "Montagem do Pré-Fabricado (m³)",
+        "atribuicaoSigla":  "-",
+        "definicao":  "Volume das peças montadas (sem devoluções)"
+    },
+    {
+        "linhaPlanilha":  10,
+        "descricao":  "Acompanhamento de Obra (d)",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B7",
+        "grupo":  "SERVIÇOS (S)",
+        "grupoSigla":  "S",
+        "atribuicao":  "Acompanhamento de Obra (d)",
+        "atribuicaoSigla":  "-",
+        "definicao":  "Diárias de acompanhamento de obra"
+    },
+    {
+        "linhaPlanilha":  11,
+        "descricao":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "formula":  "B20",
+        "grupo":  "-",
+        "grupoSigla":  "RO",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  12,
+        "descricao":  "RECEITA OPERACIONAL BRUTA (ROB)",
+        "formula":  "SUM(B13:B17)",
+        "grupo":  "-",
+        "grupoSigla":  "ROB",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  13,
+        "descricao":  "Receita Bruta do Pré-Fabricado",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B10+\u0027Realizado (Filial)\u0027!B11",
+        "grupo":  "RECEITA OPERACIONAL BRUTA (ROB)",
+        "grupoSigla":  "ROB",
+        "atribuicao":  "Receita Bruta do Pré-Fabricado",
+        "atribuicaoSigla":  "RBPF",
+        "definicao":  "Valor bruto da variação do saldo do estoque (mercantil) e produzido (global)"
+    },
+    {
+        "linhaPlanilha":  14,
+        "descricao":  "Receita Bruta de Frete",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B11+\u0027Realizado (Filial)\u0027!B12",
+        "grupo":  "RECEITA OPERACIONAL BRUTA (ROB)",
+        "grupoSigla":  "ROB",
+        "atribuicao":  "Receita Bruta de Frete",
+        "atribuicaoSigla":  "RBF",
+        "definicao":  "Valor bruto das notas fiscais de saída (mercantil) e expedido (global)"
+    },
+    {
+        "linhaPlanilha":  15,
+        "descricao":  "Receita Bruta de Montagem",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B10",
+        "grupo":  "RECEITA OPERACIONAL BRUTA (ROB)",
+        "grupoSigla":  "ROB",
+        "atribuicao":  "Receita Bruta de Montagem",
+        "atribuicaoSigla":  "RBM",
+        "definicao":  "Valor bruto dos serviços executados à faturar (SEF)"
+    },
+    {
+        "linhaPlanilha":  16,
+        "descricao":  "Receita Bruta Complementar",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B11",
+        "grupo":  "RECEITA OPERACIONAL BRUTA (ROB)",
+        "grupoSigla":  "ROB",
+        "atribuicao":  "Receita Bruta Complementar",
+        "atribuicaoSigla":  "RBC",
+        "definicao":  "Valor bruto dos serviços executados à faturar (SEF)"
+    },
+    {
+        "linhaPlanilha":  17,
+        "descricao":  "Receita Bruta de Devoluções e Inventários",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B12+\u0027Realizado (Filial)\u0027!B13",
+        "grupo":  "RECEITA OPERACIONAL BRUTA (ROB)",
+        "grupoSigla":  "ROB",
+        "atribuicao":  "Receita Bruta de Devoluções e Inventários",
+        "atribuicaoSigla":  "RBDI",
+        "definicao":  "Valor bruto das devoluções e inventários de estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  18,
+        "descricao":  "IMPOSTOS SOBRE A RECEITA BRUTA (IRB)",
+        "formula":  "B19",
+        "grupo":  "-",
+        "grupoSigla":  "IRB",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  19,
+        "descricao":  "Impostos Operacionais",
+        "formula":  "B12-B20",
+        "grupo":  "IMPOSTOS SOBRE A RECEITA BRUTA (IRB)",
+        "grupoSigla":  "IRB",
+        "atribuicao":  "Impostos Operacionais",
+        "atribuicaoSigla":  "IO",
+        "definicao":  "Impostos sobre NF de saída e expedido (global)"
+    },
+    {
+        "linhaPlanilha":  20,
+        "descricao":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "formula":  "SUM(B21:B25)",
+        "grupo":  "-",
+        "grupoSigla":  "ROL",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  21,
+        "descricao":  "Receita Líquida do Pré-Fabricado",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B16+\u0027Realizado (Filial)\u0027!B17",
+        "grupo":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "grupoSigla":  "ROL",
+        "atribuicao":  "Receita Líquida do Pré-Fabricado",
+        "atribuicaoSigla":  "RLPF",
+        "definicao":  "Valor líquido da variação do saldo do estoque (mercantil) e produzido (global)"
+    },
+    {
+        "linhaPlanilha":  22,
+        "descricao":  "Receita Líquida de Frete",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B17+\u0027Realizado (Filial)\u0027!B18",
+        "grupo":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "grupoSigla":  "ROL",
+        "atribuicao":  "Receita Líquida de Frete",
+        "atribuicaoSigla":  "RLF",
+        "definicao":  "Valor líquido das notas fiscais de saída (mercantil) e expedido (global)"
+    },
+    {
+        "linhaPlanilha":  23,
+        "descricao":  "Receita Líquida de Montagem",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B15",
+        "grupo":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "grupoSigla":  "ROL",
+        "atribuicao":  "Receita Líquida de Montagem",
+        "atribuicaoSigla":  "RLM",
+        "definicao":  "Valor líquido dos serviços executados à faturar (SEF)"
+    },
+    {
+        "linhaPlanilha":  24,
+        "descricao":  "Receita Líquida Complementar",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B16",
+        "grupo":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "grupoSigla":  "ROL",
+        "atribuicao":  "Receita Líquida Complementar",
+        "atribuicaoSigla":  "RLC",
+        "definicao":  "Valor líquido dos serviços executados à faturar (SEF)"
+    },
+    {
+        "linhaPlanilha":  25,
+        "descricao":  "Receita Líquida de Devoluções e Inventários",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B18+\u0027Realizado (Filial)\u0027!B19",
+        "grupo":  "RECEITA OPERACIONAL LÍQUIDA (ROL)",
+        "grupoSigla":  "ROL",
+        "atribuicao":  "Receita Líquida de Devoluções e Inventários",
+        "atribuicaoSigla":  "RLDI",
+        "definicao":  "Valor líquido das devoluções e inventários de estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  26,
+        "descricao":  "CUSTO DE PRODUTO VENDIDO (CPV)",
+        "formula":  "B27+B77+B128",
+        "grupo":  "-",
+        "grupoSigla":  "CPV",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  27,
+        "descricao":  "CUSTOS DE PRODUÇÃO: PRÉ-FABRICADOS (CPP)",
+        "formula":  "SUM(B28:B76)/2",
+        "grupo":  "-",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  28,
+        "descricao":  "Mão de Obra Direta",
+        "formula":  "SUM(B29:B33)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Direta"
+    },
+    {
+        "linhaPlanilha":  29,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B22+\u0027Realizado (Filial)\u0027!B23",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  30,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B23+\u0027Realizado (Filial)\u0027!B24",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  31,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B24+\u0027Realizado (Filial)\u0027!B25",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  32,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B25+\u0027Realizado (Filial)\u0027!B26",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  33,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B26+\u0027Realizado (Filial)\u0027!B27",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  34,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B35:B39)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  35,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B28+\u0027Realizado (Filial)\u0027!B29",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  36,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B29+\u0027Realizado (Filial)\u0027!B30",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  37,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B30+\u0027Realizado (Filial)\u0027!B31",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  38,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B31+\u0027Realizado (Filial)\u0027!B32",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  39,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B32+\u0027Realizado (Filial)\u0027!B33",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  40,
+        "descricao":  "Mão de Obra Terceirizada",
+        "formula":  "SUM(B41:B43)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Serviços terceirizados complementares à mão de obra direta"
+    },
+    {
+        "linhaPlanilha":  41,
+        "descricao":  "Projetos Terceirizados",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B34+\u0027Realizado (Filial)\u0027!B35",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização de projetos estruturais"
+    },
+    {
+        "linhaPlanilha":  42,
+        "descricao":  "Serviços de Corte e Dobra do Aço",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B35+\u0027Realizado (Filial)\u0027!B36",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização do corte e dobra do aço"
+    },
+    {
+        "linhaPlanilha":  43,
+        "descricao":  "Serviços de Formas e Concretagem",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B36+\u0027Realizado (Filial)\u0027!B37",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização da mão de obra de caixaria e concretagem"
+    },
+    {
+        "linhaPlanilha":  44,
+        "descricao":  "Matérias Primas",
+        "formula":  "SUM(B45:B49)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Materiais utilizados para o preparo, armação e concretagem das peças"
+    },
+    {
+        "linhaPlanilha":  45,
+        "descricao":  "Cimento",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B38+\u0027Realizado (Filial)\u0027!B39",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Cimento para o pré-fabricado (com frete)"
+    },
+    {
+        "linhaPlanilha":  46,
+        "descricao":  "Agregados",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B39+\u0027Realizado (Filial)\u0027!B40",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Britas, areias e aditivos para o pré-fabricado"
+    },
+    {
+        "linhaPlanilha":  47,
+        "descricao":  "Aço CA e CP",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B40+\u0027Realizado (Filial)\u0027!B41",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Aço CA-50, CA-60, tela soldada, arame recozido e aço CP 175 e CP 190"
+    },
+    {
+        "linhaPlanilha":  48,
+        "descricao":  "Insertos Metálicos e Ferragens",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B41+\u0027Realizado (Filial)\u0027!B42",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Porcas, arruelas, parafusos, chapas, anéis soldáveis, luvas metálicas e perfis metálicos"
+    },
+    {
+        "linhaPlanilha":  49,
+        "descricao":  "Materiais Aplicados",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B42+\u0027Realizado (Filial)\u0027!B43",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Espaçadores, EPS, SPDA embutido de mais itens incluídos na concretagem"
+    },
+    {
+        "linhaPlanilha":  50,
+        "descricao":  "Gastos Gerais Variáveis",
+        "formula":  "SUM(B51:B54)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Gastos gerais relacionados à produção"
+    },
+    {
+        "linhaPlanilha":  51,
+        "descricao":  "Acessórios e Ferramentas",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B44+\u0027Realizado (Filial)\u0027!B45",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Bardelas e ráfias de estocagem, e materiais gastos no processo de fabricação, não inclusos na concretagem"
+    },
+    {
+        "linhaPlanilha":  52,
+        "descricao":  "Madeiras e Madeirites",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B45+\u0027Realizado (Filial)\u0027!B46",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Madeiras e madeirites para caixaria"
+    },
+    {
+        "linhaPlanilha":  53,
+        "descricao":  "Manutenção do Maquinário",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B46+\u0027Realizado (Filial)\u0027!B47",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Materiais e serviços requisitados para a manutenção do maquinário"
+    },
+    {
+        "linhaPlanilha":  54,
+        "descricao":  "Equipamentos Locados",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B47+\u0027Realizado (Filial)\u0027!B48",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Locação de equipamentos para a produção"
+    },
+    {
+        "linhaPlanilha":  55,
+        "descricao":  "Gastos Gerais Diretos",
+        "formula":  "SUM(B56:B63)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Gastos gerais relacionados à mão de obra direta"
+    },
+    {
+        "linhaPlanilha":  56,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B49+\u0027Realizado (Filial)\u0027!B50",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  57,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B50+\u0027Realizado (Filial)\u0027!B51",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  58,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B51+\u0027Realizado (Filial)\u0027!B52",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  59,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B52+\u0027Realizado (Filial)\u0027!B53",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  60,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B53+\u0027Realizado (Filial)\u0027!B54",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  61,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B54+\u0027Realizado (Filial)\u0027!B55",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  62,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B55+\u0027Realizado (Filial)\u0027!B56",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  63,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B56+\u0027Realizado (Filial)\u0027!B57",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  64,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B65:B72)",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Gastos gerais relacionados à mão de obra indireta"
+    },
+    {
+        "linhaPlanilha":  65,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B58+\u0027Realizado (Filial)\u0027!B59",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  66,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B59+\u0027Realizado (Filial)\u0027!B60",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  67,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B60+\u0027Realizado (Filial)\u0027!B61",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  68,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B61+\u0027Realizado (Filial)\u0027!B62",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  69,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B62+\u0027Realizado (Filial)\u0027!B63",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  70,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B63+\u0027Realizado (Filial)\u0027!B64",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  71,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B64+\u0027Realizado (Filial)\u0027!B65",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  72,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B65+\u0027Realizado (Filial)\u0027!B66",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  73,
+        "descricao":  "Estoque",
+        "formula":  "B74",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Estoque",
+        "atribuicaoSigla":  "E",
+        "definicao":  "Variação do estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  74,
+        "descricao":  "Variação do Estoque",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B67+\u0027Realizado (Filial)\u0027!B68",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Estoque",
+        "atribuicaoSigla":  "E",
+        "definicao":  "Variação do estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  75,
+        "descricao":  "Depreciação",
+        "formula":  "B76",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Depreciação",
+        "atribuicaoSigla":  "D",
+        "definicao":  "Variação do estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  76,
+        "descricao":  "Depreciação do Maquinário",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B69+\u0027Realizado (Filial)\u0027!B70",
+        "grupo":  "CUSTOS DE PRODUÇÃO (CP)",
+        "grupoSigla":  "CPP",
+        "atribuicao":  "Depreciação",
+        "atribuicaoSigla":  "D",
+        "definicao":  "Variação do estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  77,
+        "descricao":  "CUSTOS DE SERVIÇOS: MONTAGEM (CSM)",
+        "formula":  "SUM(B78:B127)/2",
+        "grupo":  "-",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  78,
+        "descricao":  "Mão de Obra Direta",
+        "formula":  "SUM(B79:B83)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Direta"
+    },
+    {
+        "linhaPlanilha":  79,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B20",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  80,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B21",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  81,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B22",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  82,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B23",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  83,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B24",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  84,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B85:B89)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  85,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B26",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  86,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B27",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  87,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B28",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  88,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B29",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  89,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B30",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  90,
+        "descricao":  "Mão de Obra Terceirizada",
+        "formula":  "SUM(B91:B96)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Materiais utilizados para a montagem das peças e serviços in-loco"
+    },
+    {
+        "linhaPlanilha":  91,
+        "descricao":  "Projetos Terceirizados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B32",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização do serviço de montagem do pré-fabricado"
+    },
+    {
+        "linhaPlanilha":  92,
+        "descricao":  "Montagem dos Pré-Fabricados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B33",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização do serviço de montagem do pré-fabricado"
+    },
+    {
+        "linhaPlanilha":  93,
+        "descricao":  "Vedação dos Pré-Fabricados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B34",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "terceirização de serviços auxiliares in-loco"
+    },
+    {
+        "linhaPlanilha":  94,
+        "descricao":  "Serviços de Montagem Diversos",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B35",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "terceirização de serviços de montagem auxiliares (como locação)"
+    },
+    {
+        "linhaPlanilha":  95,
+        "descricao":  "Serviços de Corte e Dobra do Aço",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B36",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "terceirização de serviços auxiliares in-loco"
+    },
+    {
+        "linhaPlanilha":  96,
+        "descricao":  "Execução de Etapas In-Loco",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B37",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização da execução da fundação, capeamento, montagem de estruturas metálicas e telhamento"
+    },
+    {
+        "linhaPlanilha":  97,
+        "descricao":  "Matérias Primas",
+        "formula":  "SUM(B98:B102)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Materiais utilizados para a montagem das peças e serviços in-loco"
+    },
+    {
+        "linhaPlanilha":  98,
+        "descricao":  "Concreto e Graute",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B39",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Concreto usinado e grautes puros e mistos"
+    },
+    {
+        "linhaPlanilha":  99,
+        "descricao":  "Materiais de Vedação",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B40",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Polietileno, EPS de enchimento, fita de vedação e materiais de aplicação e limpeza da vedação"
+    },
+    {
+        "linhaPlanilha":  100,
+        "descricao":  "Aço CA e CP",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B41",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Aço CA-50, CA-60, tela soldada, e arame recozido para elementos concrtados in-loco"
+    },
+    {
+        "linhaPlanilha":  101,
+        "descricao":  "Insertos Metálicos e Ferragens",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B42",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Aço CA-50, CA-60, tela soldada, e arame recozido para elementos concrtados in-loco"
+    },
+    {
+        "linhaPlanilha":  102,
+        "descricao":  "Materiais Aplicados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B43",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Estruturas metálicas, telhas metálicas e demais materiais de capeamento e fundação"
+    },
+    {
+        "linhaPlanilha":  103,
+        "descricao":  "Gastos Gerais Variáveis",
+        "formula":  "SUM(B104:B107)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Gastos gerais relacionados aos serviços"
+    },
+    {
+        "linhaPlanilha":  104,
+        "descricao":  "Acessórios e Ferramentas",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B45",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Bardelas e ráfias de estocagem, e materiais gastos no processo de montagem, não inclusos nas peças"
+    },
+    {
+        "linhaPlanilha":  105,
+        "descricao":  "Madeiras e Madeirites",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B46",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Madeiras e madeirites para caixaria"
+    },
+    {
+        "linhaPlanilha":  106,
+        "descricao":  "Manutenção do Maquinário",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B47",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Materiais e serviços requisitados para a manutenção do maquinário"
+    },
+    {
+        "linhaPlanilha":  107,
+        "descricao":  "Equipamentos Locados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B48",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Locação de equipamentos para a produção"
+    },
+    {
+        "linhaPlanilha":  108,
+        "descricao":  "Gastos Gerais Diretos",
+        "formula":  "SUM(B109:B116)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Gastos gerais relacionados à mão de obra direta"
+    },
+    {
+        "linhaPlanilha":  109,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B50",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  110,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B51",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  111,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B52",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  112,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B53",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  113,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B54",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  114,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B55",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  115,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B56",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  116,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B57",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  117,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B118:B125)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Gastos gerais relacionados à mão de obra indireta"
+    },
+    {
+        "linhaPlanilha":  118,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B59",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  119,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B60",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  120,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B61",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  121,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B62",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  122,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B63",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  123,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B64",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  124,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B65",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  125,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B66",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  126,
+        "descricao":  "Depreciação",
+        "formula":  "B127",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Depreciação",
+        "atribuicaoSigla":  "D",
+        "definicao":  "Variação do estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  127,
+        "descricao":  "Depreciação do Maquinário",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B68",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSM",
+        "atribuicao":  "Depreciação",
+        "atribuicaoSigla":  "D",
+        "definicao":  "Variação do estoque de produto acabado"
+    },
+    {
+        "linhaPlanilha":  128,
+        "descricao":  "CUSTOS DE SERVIÇOS: COMPLEMENTARES (CSC)",
+        "formula":  "SUM(B129:B176)/2",
+        "grupo":  "-",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  129,
+        "descricao":  "Mão de Obra Direta",
+        "formula":  "SUM(B130:B134)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Direta"
+    },
+    {
+        "linhaPlanilha":  130,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B71",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  131,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B72",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  132,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B73",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  133,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B74",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  134,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B75",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Direta",
+        "atribuicaoSigla":  "MOD",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  135,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B136:B140)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  136,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B77",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  137,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B78",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  138,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B79",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  139,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B80",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  140,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B81",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  141,
+        "descricao":  "Mão de Obra Terceirizada",
+        "formula":  "SUM(B142:B147)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Materiais utilizados para a montagem das peças e serviços in-loco"
+    },
+    {
+        "linhaPlanilha":  142,
+        "descricao":  "Projetos Terceirizados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B83",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização do serviço de montagem do pré-fabricado"
+    },
+    {
+        "linhaPlanilha":  143,
+        "descricao":  "Montagem dos Pré-Fabricados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B84",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização do serviço de montagem do pré-fabricado"
+    },
+    {
+        "linhaPlanilha":  144,
+        "descricao":  "Vedação dos Pré-Fabricados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B85",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "terceirização de serviços auxiliares in-loco"
+    },
+    {
+        "linhaPlanilha":  145,
+        "descricao":  "Serviços de Montagem Diversos",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B86",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "terceirização de serviços de montagem auxiliares (como locação)"
+    },
+    {
+        "linhaPlanilha":  146,
+        "descricao":  "Serviços de Corte e Dobra do Aço",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B87",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "terceirização de serviços auxiliares in-loco"
+    },
+    {
+        "linhaPlanilha":  147,
+        "descricao":  "Execução de Etapas In-Loco",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B88",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Mão de Obra Terceirizada",
+        "atribuicaoSigla":  "MOT",
+        "definicao":  "Terceirização da execução da fundação, capeamento, montagem de estruturas metálicas e telhamento"
+    },
+    {
+        "linhaPlanilha":  148,
+        "descricao":  "Matérias Primas",
+        "formula":  "SUM(B149:B153)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Materiais utilizados para a montagem das peças e serviços in-loco"
+    },
+    {
+        "linhaPlanilha":  149,
+        "descricao":  "Concreto e Graute",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B90",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Concreto usinado e grautes puros e mistos"
+    },
+    {
+        "linhaPlanilha":  150,
+        "descricao":  "Materiais de Vedação",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B91",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Polietileno, EPS de enchimento, fita de vedação e materiais de aplicação e limpeza da vedação"
+    },
+    {
+        "linhaPlanilha":  151,
+        "descricao":  "Aço CA e CP",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B92",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Aço CA-50, CA-60, tela soldada, e arame recozido para elementos concrtados in-loco"
+    },
+    {
+        "linhaPlanilha":  152,
+        "descricao":  "Insertos Metálicos e Ferragens",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B93",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Aço CA-50, CA-60, tela soldada, e arame recozido para elementos concrtados in-loco"
+    },
+    {
+        "linhaPlanilha":  153,
+        "descricao":  "Materiais Aplicados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B94",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Matérias Primas",
+        "atribuicaoSigla":  "MP",
+        "definicao":  "Aço CA-50, CA-60, tela soldada, e arame recozido para elementos concrtados in-loco"
+    },
+    {
+        "linhaPlanilha":  154,
+        "descricao":  "Gastos Gerais Variáveis",
+        "formula":  "SUM(B155:B158)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Gastos gerais relacionados aos serviços"
+    },
+    {
+        "linhaPlanilha":  155,
+        "descricao":  "Acessórios e Ferramentas",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B96",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Bardelas e ráfias de estocagem, e materiais gastos no processo de montagem, não inclusos nas peças"
+    },
+    {
+        "linhaPlanilha":  156,
+        "descricao":  "Madeiras e Madeirites",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B97",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Madeiras e madeirites para caixaria"
+    },
+    {
+        "linhaPlanilha":  157,
+        "descricao":  "Manutenção do Maquinário",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B98",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Materiais e serviços requisitados para a manutenção do maquinário"
+    },
+    {
+        "linhaPlanilha":  158,
+        "descricao":  "Equipamentos Locados",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B99",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Locação de equipamentos para a produção"
+    },
+    {
+        "linhaPlanilha":  159,
+        "descricao":  "Gastos Gerais Diretos",
+        "formula":  "SUM(B160:B167)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Gastos gerais relacionados à mão de obra direta"
+    },
+    {
+        "linhaPlanilha":  160,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B101",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  161,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B102",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  162,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B103",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  163,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B104",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  164,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B105",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  165,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B106",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  166,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B107",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  167,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B108",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Diretos",
+        "atribuicaoSigla":  "GGD",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  168,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B169:B176)",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Gastos gerais relacionados à mão de obra indireta"
+    },
+    {
+        "linhaPlanilha":  169,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B110",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  170,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B111",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  171,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B112",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  172,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B113",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  173,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B114",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  174,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B115",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  175,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B116",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  176,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Serviços)\u0027!B117",
+        "grupo":  "CUSTOS DE SERVIÇOS (CS)",
+        "grupoSigla":  "CSC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  177,
+        "descricao":  "MARGEM BRUTA (MB)",
+        "formula":  "B11-B26",
+        "grupo":  "-",
+        "grupoSigla":  "MB",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  178,
+        "descricao":  "DESPESAS VARIÁVEIS DE VENDA (DVV)",
+        "formula":  "B179",
+        "grupo":  "-",
+        "grupoSigla":  "DVV",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  179,
+        "descricao":  "Gastos Gerais Variáveis",
+        "formula":  "SUM(B180:B181)",
+        "grupo":  "DESPESAS VARIÁVEIS DE VENDA (DVV)",
+        "grupoSigla":  "DVV",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Gastos gerais relacionados à expedição"
+    },
+    {
+        "linhaPlanilha":  180,
+        "descricao":  "Frete e Descarga",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B73+\u0027Realizado (Filial)\u0027!B74",
+        "grupo":  "DESPESAS VARIÁVEIS DE VENDA (DVV)",
+        "grupoSigla":  "DVV",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Notas fiscais de frete e devolução"
+    },
+    {
+        "linhaPlanilha":  181,
+        "descricao":  "Comissões de Representantes e Terceiros",
+        "formula":  "\u0027Realizado (Matriz)\u0027!B74+\u0027Realizado (Filial)\u0027!B75+\u0027Realizado (Serviços)\u0027!B121",
+        "grupo":  "DESPESAS VARIÁVEIS DE VENDA (DVV)",
+        "grupoSigla":  "DVV",
+        "atribuicao":  "Gastos Gerais Variáveis",
+        "atribuicaoSigla":  "GGV",
+        "definicao":  "Comissões de representantes, de terceiros, de indicações e retenções comerciais"
+    },
+    {
+        "linhaPlanilha":  182,
+        "descricao":  "MARGEM DE CONTRIBUIÇÃO (MC)",
+        "formula":  "B177-B178",
+        "grupo":  "-",
+        "grupoSigla":  "MC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  183,
+        "descricao":  "DESPESA FIXA OPERACIONAL (DFO)",
+        "formula":  "B184+B199+B214+B238",
+        "grupo":  "-",
+        "grupoSigla":  "DFO",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  184,
+        "descricao":  "DESPESAS DE LOGÍSTICA (DL)",
+        "formula":  "SUM(B185:B198)/2",
+        "grupo":  "-",
+        "grupoSigla":  "DL",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  185,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B186:B190)",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  186,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B6",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  187,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B7",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  188,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B8",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  189,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B9",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  190,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B10",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  191,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B192:B198)",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais e serviços adicionais para a administração"
+    },
+    {
+        "linhaPlanilha":  192,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B12",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Terceirização da vigilância, portaria e limpeza"
+    },
+    {
+        "linhaPlanilha":  193,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B13",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  194,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B14",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  195,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B15",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  196,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B16",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  197,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B17",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  198,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B18",
+        "grupo":  "DESPESAS DE LOGÍSTICA (DL)",
+        "grupoSigla":  "DL",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  199,
+        "descricao":  "DESPESAS TÉCNICAS (DT)",
+        "formula":  "SUM(B200:B213)/2",
+        "grupo":  "-",
+        "grupoSigla":  "DT",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  200,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B201:B205)",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  201,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B21",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  202,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B22",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  203,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B23",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  204,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B24",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  205,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B25",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  206,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B207:B213)",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais e serviços adicionais para a administração"
+    },
+    {
+        "linhaPlanilha":  207,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B27",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Terceirização da vigilância, portaria e limpeza"
+    },
+    {
+        "linhaPlanilha":  208,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B28",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  209,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B29",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  210,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B30",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  211,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B31",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  212,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B32",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  213,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B33",
+        "grupo":  "DESPESAS TÉCNICAS (DT)",
+        "grupoSigla":  "DT",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  214,
+        "descricao":  "DESPESAS COMERCIAIS (DC)",
+        "formula":  "SUM(B215:B237)/2",
+        "grupo":  "-",
+        "grupoSigla":  "DC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  215,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B216:B220)",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  216,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B36",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  217,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B37",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  218,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B38",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  219,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B39",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  220,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B40",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  221,
+        "descricao":  "Gastos Gerais Comerciais",
+        "formula":  "SUM(B222:B228)",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Materiais e serviços adicionais para o comercial"
+    },
+    {
+        "linhaPlanilha":  222,
+        "descricao":  "Marketing e Publicidade",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B42",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Agência de publicidade e ações de marketing"
+    },
+    {
+        "linhaPlanilha":  223,
+        "descricao":  "Feiras e Eventos Externos",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B43",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Feiras e eventos externos"
+    },
+    {
+        "linhaPlanilha":  224,
+        "descricao":  "Apoios e Patrocínios",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B44",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Feiras e eventos externos"
+    },
+    {
+        "linhaPlanilha":  225,
+        "descricao":  "Tráfego Pago",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B45",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Tráfego pago"
+    },
+    {
+        "linhaPlanilha":  226,
+        "descricao":  "Ações com Clientes",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B46",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Ações com clientes"
+    },
+    {
+        "linhaPlanilha":  227,
+        "descricao":  "Materiais Gráficos",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B47",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Materiais gráficos"
+    },
+    {
+        "linhaPlanilha":  228,
+        "descricao":  "Brindes e Premiações",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B48",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Comerciais",
+        "atribuicaoSigla":  "GGC",
+        "definicao":  "Brindes e premiações"
+    },
+    {
+        "linhaPlanilha":  229,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B230:B237)",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais e serviços adicionais para o comercial"
+    },
+    {
+        "linhaPlanilha":  230,
+        "descricao":  "Assessorias e Consultorias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B50",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Assessorias e consultorias comerciais"
+    },
+    {
+        "linhaPlanilha":  231,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B51",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  232,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B52",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  233,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B53",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  234,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B54",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  235,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B55",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  236,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B56",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  237,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B57",
+        "grupo":  "DESPESAS COMERCIAIS (DC)",
+        "grupoSigla":  "DC",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  238,
+        "descricao":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "formula":  "SUM(B239:B258)/2",
+        "grupo":  "-",
+        "grupoSigla":  "DA",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  239,
+        "descricao":  "Mão de Obra Indireta",
+        "formula":  "SUM(B240:B245)",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Folha, Encargos e Benefícios dos Centros de Custo com atribuição Indireta"
+    },
+    {
+        "linhaPlanilha":  240,
+        "descricao":  "Remunerações CLT",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B60",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Folha para funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  241,
+        "descricao":  "Remunerações PJ",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B61",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Valor das NF de pagamento mensal dos funcionários PJ"
+    },
+    {
+        "linhaPlanilha":  242,
+        "descricao":  "Encargos e Benefícios",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B62",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Férias, Férias Provisionadas, Rescisões Provisionadas e Benefícios Sociais"
+    },
+    {
+        "linhaPlanilha":  243,
+        "descricao":  "Horas Extras",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B63",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Eventos de Hora Extra nas Folhas dos funcionários CLT"
+    },
+    {
+        "linhaPlanilha":  244,
+        "descricao":  "Multas Rescisórias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B64",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Aviso Prévio Indenizado e saldo sobre Rescisões Provisionadas"
+    },
+    {
+        "linhaPlanilha":  245,
+        "descricao":  "Pró Labore Diretoria",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B65",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Mão de Obra Indireta",
+        "atribuicaoSigla":  "MOI",
+        "definicao":  "Pagamentos referentes ao recolhimento do Pró-Labore da Diretoria"
+    },
+    {
+        "linhaPlanilha":  246,
+        "descricao":  "Gastos Gerais Indiretos",
+        "formula":  "SUM(B247:B256)",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais e serviços adicionais para a administração"
+    },
+    {
+        "linhaPlanilha":  247,
+        "descricao":  "Assessorias e Consultorias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B67",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Assessorias e consultorias administrativas"
+    },
+    {
+        "linhaPlanilha":  248,
+        "descricao":  "Vigilância, Portaria e Limpeza",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B68",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Terceirização da vigilância, portaria e limpeza"
+    },
+    {
+        "linhaPlanilha":  249,
+        "descricao":  "Seguro Patrimonial",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B69",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Seguro patrimonial"
+    },
+    {
+        "linhaPlanilha":  250,
+        "descricao":  "Viagens e Estadias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B70",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Deslocamento, alimentação e estadia"
+    },
+    {
+        "linhaPlanilha":  251,
+        "descricao":  "Eventos Internos",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B71",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Eventos e festividades internas"
+    },
+    {
+        "linhaPlanilha":  252,
+        "descricao":  "Treinamentos e Capacitações",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B72",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Treinamentos, palestras, cursos e workshops"
+    },
+    {
+        "linhaPlanilha":  253,
+        "descricao":  "Licenças de Software",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B73",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Licenças de software"
+    },
+    {
+        "linhaPlanilha":  254,
+        "descricao":  "Água, Energia, Gás, Telefone e Internet",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B74",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Água, Energia, Gás, Telefone e Internet"
+    },
+    {
+        "linhaPlanilha":  255,
+        "descricao":  "Materiais de Expediente e EPI",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B75",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Materiais de expediente, limpeza e escritório"
+    },
+    {
+        "linhaPlanilha":  256,
+        "descricao":  "Outros Custos/Despesas",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B76",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Gastos Gerais Indiretos",
+        "atribuicaoSigla":  "GGI",
+        "definicao":  "Demais custos não listados acima"
+    },
+    {
+        "linhaPlanilha":  257,
+        "descricao":  "Depreciação",
+        "formula":  "SUM(B258:B258)",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Depreciação",
+        "atribuicaoSigla":  "D",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  258,
+        "descricao":  "Depreciação do Patrimônio",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B78",
+        "grupo":  "DESPESAS ADMINISTRATIVAS (DA)",
+        "grupoSigla":  "DA",
+        "atribuicao":  "Depreciação",
+        "atribuicaoSigla":  "D",
+        "definicao":  "Depreciação de veículos, maquinário, equipamentos e mobília"
+    },
+    {
+        "linhaPlanilha":  259,
+        "descricao":  "LUCRO OPERACIONAL (EBITDA)",
+        "formula":  "B182-B183+B75+B126+B257",
+        "grupo":  "-",
+        "grupoSigla":  "EBITDA",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  260,
+        "descricao":  "MARGEM LÍQUIDA (EBIT)",
+        "formula":  "B259-B75-B126-B257",
+        "grupo":  "-",
+        "grupoSigla":  "EBIT",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  261,
+        "descricao":  "DEDUÇÕES DA MARGEM LÍQUIDA (DML)",
+        "formula":  "B262",
+        "grupo":  "-",
+        "grupoSigla":  "DML",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  262,
+        "descricao":  "Imposto de Renda e Contribuição Social",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B81+\u0027Realizado (RN)\u0027!B5",
+        "grupo":  "DEDUÇÕES DA MARGEM LÍQUIDA (DML)",
+        "grupoSigla":  "DML",
+        "atribuicao":  "Imposto de Renda e Contribuição Social",
+        "atribuicaoSigla":  "IRCS",
+        "definicao":  "Contribuição sobre o lucro no período e excedentes trimestrais"
+    },
+    {
+        "linhaPlanilha":  263,
+        "descricao":  "LUCRO OPERACIONAL LÍQUIDO (NOPAT)",
+        "formula":  "B260-B261",
+        "grupo":  "-",
+        "grupoSigla":  "NOPAT",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  264,
+        "descricao":  "RECEITAS FINANCEIRAS (RF) (+)",
+        "formula":  "SUM(B265,B268)",
+        "grupo":  "-",
+        "grupoSigla":  "NOPAT",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  265,
+        "descricao":  "RECEITAS FINANCEIRAS CORRENTES (RFC) (+)",
+        "formula":  "SUM(B266:B267)",
+        "grupo":  "-",
+        "grupoSigla":  "RFC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  266,
+        "descricao":  "Juros e Multas de Clientes (+)",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B84+\u0027Realizado (RN)\u0027!B8",
+        "grupo":  "RECEITAS FINANCEIRAS CORRENTES (RFC) (+)",
+        "grupoSigla":  "RFC",
+        "atribuicao":  "Juros e Multas de Clientes (+)",
+        "atribuicaoSigla":  "JMC",
+        "definicao":  "Juros e multas devidas de clientes"
+    },
+    {
+        "linhaPlanilha":  267,
+        "descricao":  "Rendimentos de Aplicações (+)",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B85+\u0027Realizado (RN)\u0027!B9",
+        "grupo":  "RECEITAS FINANCEIRAS CORRENTES (RFC) (+)",
+        "grupoSigla":  "RFC",
+        "atribuicao":  "Rendimentos de Aplicações (+)",
+        "atribuicaoSigla":  "RA",
+        "definicao":  "Rendimentos de aplicações"
+    },
+    {
+        "linhaPlanilha":  268,
+        "descricao":  "RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+)",
+        "formula":  "B269",
+        "grupo":  "-",
+        "grupoSigla":  "RFNC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  269,
+        "descricao":  "Receitas Financeiras Não Correntes (+)",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B87+\u0027Realizado (RN)\u0027!B11",
+        "grupo":  "RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+)",
+        "grupoSigla":  "RFNC",
+        "atribuicao":  "Receitas Financeiras Não Correntes (+)",
+        "atribuicaoSigla":  "RFNC",
+        "definicao":  "Receitas não correntes de movimentos financeiros"
+    },
+    {
+        "linhaPlanilha":  270,
+        "descricao":  "DESPESAS FINANCEIRAS (DF)",
+        "formula":  "SUM(B271,B276)",
+        "grupo":  "-",
+        "grupoSigla":  "NOPAT",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  271,
+        "descricao":  "DESPESAS FINANCEIRAS CORRENTES (DFC)",
+        "formula":  "B272",
+        "grupo":  "-",
+        "grupoSigla":  "DFC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  272,
+        "descricao":  "Despesas Financeiras Correntes",
+        "formula":  "SUM(B273:B275)",
+        "grupo":  "DESPESAS FINANCEIRAS CORRENTES (DFC)",
+        "grupoSigla":  "DFC",
+        "atribuicao":  "Despesas Financeiras Correntes",
+        "atribuicaoSigla":  "DFC",
+        "definicao":  "Despesas correntes de movimentos financeiros"
+    },
+    {
+        "linhaPlanilha":  273,
+        "descricao":  "Despesas Bancárias",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B91+\u0027Realizado (RN)\u0027!B15",
+        "grupo":  "DESPESAS FINANCEIRAS CORRENTES (DFC)",
+        "grupoSigla":  "DFC",
+        "atribuicao":  "Despesas Financeiras Correntes",
+        "atribuicaoSigla":  "DFC",
+        "definicao":  "Despesas de movimentações bancárias"
+    },
+    {
+        "linhaPlanilha":  274,
+        "descricao":  "Juros, Encargos e Multas",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B92+\u0027Realizado (RN)\u0027!B16",
+        "grupo":  "DESPESAS FINANCEIRAS CORRENTES (DFC)",
+        "grupoSigla":  "DFC",
+        "atribuicao":  "Despesas Financeiras Correntes",
+        "atribuicaoSigla":  "DFC",
+        "definicao":  "Despesas com juros, encargos e multas, não operacionais"
+    },
+    {
+        "linhaPlanilha":  275,
+        "descricao":  "Despesas da Diretoria",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B93+\u0027Realizado (RN)\u0027!B17",
+        "grupo":  "DESPESAS FINANCEIRAS CORRENTES (DFC)",
+        "grupoSigla":  "DFC",
+        "atribuicao":  "Despesas Financeiras Correntes",
+        "atribuicaoSigla":  "DFC",
+        "definicao":  "Despesas financeiras diversas, não operacionais"
+    },
+    {
+        "linhaPlanilha":  276,
+        "descricao":  "DESPESAS FINANCEIRAS NÃO CORRENTES (DFNC)",
+        "formula":  "B277",
+        "grupo":  "-",
+        "grupoSigla":  "DFNC",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "DFNC",
+        "definicao":  "-"
+    },
+    {
+        "linhaPlanilha":  277,
+        "descricao":  "Despesas Financeiras Não Correntes",
+        "formula":  "\u0027Realizado (Desp.+Extra)\u0027!B95+\u0027Realizado (RN)\u0027!B19",
+        "grupo":  "DESPESAS FINANCEIRAS NÃO CORRENTES (DFNC)",
+        "grupoSigla":  "DFNC",
+        "atribuicao":  "Despesas Financeiras Não Correntes",
+        "atribuicaoSigla":  "DFNC",
+        "definicao":  "Despesas não correntes de movimentos financeiros"
+    },
+    {
+        "linhaPlanilha":  278,
+        "descricao":  "RESULTADO LÍQUIDO (RL)",
+        "formula":  "B263+B264-B270",
+        "grupo":  "-",
+        "grupoSigla":  "RL",
+        "atribuicao":  "-",
+        "atribuicaoSigla":  "-",
+        "definicao":  "-"
+    }
+]
