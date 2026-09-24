@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id           String   @id @default(uuid())
+  nome         String
+  email        String   @unique
+  senhaHash    String   @map("senha_hash")
+  permissions  String[] @default([])
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("usuarios")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  acao        String
+  entidade    String?
+  entidadeId  String?  @map("entidade_id")
+  usuarioId   String?  @map("usuario_id")
+  usuarioNome String?  @map("usuario_nome")
+  ip          String?
+  userAgent   String?  @map("user_agent")
+  dadosAntes  Json?    @map("dados_antes")
+  dadosDepois Json?    @map("dados_depois")
+  metadados   Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([usuarioId, createdAt(sort: Desc)])
+  @@index([entidade, entidadeId])
+  @@map("audit_log")
+}

@@ -1,0 +1,46 @@
+---
+name: Melhoria no molde
+description: Propor melhoria no template projeto-padrao-bpm (apenas TI)
+title: "[Molde] "
+labels: ["molde", "ti"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use este template para melhorias no **molde oficial**.  
+        Dúvidas de uso de projetos filhos → template "Dúvida de uso".
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema ou oportunidade
+      placeholder: O que o molde não cobre hoje?
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta
+      placeholder: Doc, exemplo de código, script...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área principal
+      options:
+        - Documentação (Docs/)
+        - Frontend (exemplos)
+        - Backend (exemplos)
+        - Processo / onboarding
+        - Outro
+    validations:
+      required: true
+  - type: checkboxes
+    id: impacto
+    attributes:
+      label: Impacto em projetos filhos
+      options:
+        - label: Requer comunicação / SYNC-MOLDE após merge
+          required: false
+        - label: Breaking change em convenções
+          required: false

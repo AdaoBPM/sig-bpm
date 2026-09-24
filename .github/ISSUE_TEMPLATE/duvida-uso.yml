@@ -1,0 +1,34 @@
+---
+name: Dúvida de uso
+description: Dúvida sobre como usar o template ou criar projeto filho
+title: "[Dúvida] "
+labels: ["duvida"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Para **criar seu projeto**, comece por [COMO-CRIAR-SEU-PROJETO.md](https://github.com/bpmghb/projeto-padrao-bpm/blob/main/Docs/projeto/COMO-CRIAR-SEU-PROJETO.md).
+  - type: input
+    id: repo
+    attributes:
+      label: Seu repositório (se já tiver)
+      placeholder: bpmghb/meu-dashboard-2026
+  - type: textarea
+    id: duvida
+    attributes:
+      label: Sua dúvida
+    validations:
+      required: true
+  - type: dropdown
+    id: etapa
+    attributes:
+      label: Em qual etapa você está?
+      options:
+        - Ainda não tenho repo (preciso criar cópia)
+        - Clone / npm install / npm run dev
+        - Entrevista ou SPEC com a IA
+        - Aprovação TI
+        - Implementação
+        - Deploy / homolog
+    validations:
+      required: true
