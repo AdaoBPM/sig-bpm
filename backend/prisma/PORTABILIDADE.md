@@ -116,6 +116,11 @@ um `String[]` não daria. O mesmo vale para `ReceitaPrevia.precoContratoIds`.
 | `StatusImportacao` | `Importacao.status` |
 | `TipoDivergencia` | `Divergencia.tipo` |
 | `StatusDivergencia` | `Divergencia.status` |
+| `TipoVenda` | `Obra.tipoVenda` |
+| `SituacaoCadastroObra` | `Obra.situacaoCadastro` |
+| `TipoAlocacao` | `LancamentoContabil.alocacao` |
+| `ValidacaoLancamento` | `LancamentoContabil.validacao` |
+| `UnidadeMedida` | as treze listas operacionais |
 
 ### Convenção 5 — Ordem dos cadastros
 

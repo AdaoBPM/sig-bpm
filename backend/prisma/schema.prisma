@@ -194,6 +194,21 @@ model UnidadeNegocio {
   regrasRateio   RegraRateio[]
   /// LISTA: linhas da DRE que se aplicam a esta unidade.
   linhasDRE      LinhaDREUnidade[]
+  obras          Obra[]
+
+  projetos            Projeto[]
+  producoes           Producao[]
+  producoesPista      ProducaoPista[]
+  producoesArmadura   ProducaoArmadura[]
+  producoesMetalurgia ProducaoMetalurgia[]
+  expedicoes          Expedicao[]
+  montagens           Montagem[]
+  acompanhamentos     Acompanhamento[]
+  medicoes            Medicao[]
+  devolucoes          Devolucao[]
+  saidas              Saida[]
+  faturamentos        Faturamento[]
+  obrasEncerradas     ObraEncerrada[]
 
   @@map("unidades_negocio")
 }
@@ -220,6 +235,9 @@ model CentroCusto {
   unidadeNegocioId String?      @map("unidade_negocio_id")
 
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+
+  lancamentosContabeis LancamentoContabil[]
+  lancamentosManuais   LancamentoManual[]
 
   @@index([nomeControladoria])
   @@index([chaveRateio])
@@ -249,6 +267,9 @@ model ContaResultado {
   linhaDREId  String?      @map("linha_dre_id")
 
   linhaDRE LinhaDRE? @relation(fields: [linhaDREId], references: [id])
+
+  lancamentosContabeis LancamentoContabil[]
+  lancamentosManuais   LancamentoManual[]
 
   @@index([conta])
   @@index([linhaDREId])
@@ -282,6 +303,9 @@ model LinhaDRE {
   contas    ContaResultado[]
   /// LISTA: em quais unidades esta linha aparece.
   unidades  LinhaDREUnidade[]
+
+  lancamentosContabeis LancamentoContabil[]
+  lancamentosManuais   LancamentoManual[]
 
   @@index([grupoSigla])
   @@map("linhas_dre")
@@ -338,6 +362,10 @@ model TipoMovimento {
   ativo          Boolean  @default(true)
   criadoEm       DateTime @default(now()) @map("criado_em")
   atualizadoEm   DateTime @updatedAt @map("atualizado_em")
+
+  devolucoes   Devolucao[]
+  saidas       Saida[]
+  faturamentos Faturamento[]
 
   @@map("tipos_movimento")
 }
@@ -449,6 +477,24 @@ model Competencia {
   importacoes          Importacao[]
   divergencias         Divergencia[]
 
+  lancamentosContabeis LancamentoContabil[]
+  lancamentosManuais   LancamentoManual[]
+  estoqueSaldos        EstoqueSaldo[]
+
+  projetos            Projeto[]
+  producoes           Producao[]
+  producoesPista      ProducaoPista[]
+  producoesArmadura   ProducaoArmadura[]
+  producoesMetalurgia ProducaoMetalurgia[]
+  expedicoes          Expedicao[]
+  montagens           Montagem[]
+  acompanhamentos     Acompanhamento[]
+  medicoes            Medicao[]
+  devolucoes          Devolucao[]
+  saidas              Saida[]
+  faturamentos        Faturamento[]
+  obrasEncerradas     ObraEncerrada[]
+
   @@unique([ano, mes])
   @@index([status])
   @@map("competencias")
@@ -493,7 +539,8 @@ model Importacao {
   competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   usuario     Usuario     @relation(fields: [importadoPor], references: [id])
 
-  divergencias Divergencia[]
+  divergencias         Divergencia[]
+  lancamentosContabeis LancamentoContabil[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -527,8 +574,520 @@ model Divergencia {
 
   competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   importacao  Importacao  @relation(fields: [importacaoId], references: [id])
+  obra        Obra?       @relation(fields: [obraId], references: [id])
 
   @@index([competenciaId, status])
   @@index([status])
   @@map("divergencias")
+}
+
+// =============================================================================
+// MOVIMENTO (Passo 4)
+//
+// O que entra por importação ou digitação em cada competência: obras, preços
+// de contrato, lançamentos contábeis e manuais, as listas operacionais e o
+// saldo de estoque.
+// =============================================================================
+
+/// ENUM: modalidade de venda da obra.
+enum TipoVenda {
+  GLOBAL
+  MERCANTIL
+}
+
+/// ENUM: situação do cadastro da obra, apurada na importação.
+/// GENERICA são os estoques de acabados sem projeto vendido (G11, M2, M3, M9999),
+/// precificados por tabela. SEM_CONTRATO e INCONSISTENTE são pendências a reportar.
+enum SituacaoCadastroObra {
+  OK
+  SEM_CONTRATO
+  GENERICA
+  INCONSISTENTE
+}
+
+/// ENUM: se o lançamento vai direto para uma unidade ou é rateado.
+enum TipoAlocacao {
+  DIRETO
+  RATEIO
+}
+
+/// ENUM: resultado da checagem de classificação do lançamento (RF006 do SPEC).
+/// Qualquer valor diferente de OK impede o fechamento da competência.
+enum ValidacaoLancamento {
+  OK
+  ERRO_DEPARTAMENTO
+  ERRO_ATRIBUICAO
+  SEM_DESTINO
+}
+
+/// ENUM: unidade de medida das listas operacionais.
+enum UnidadeMedida {
+  M3
+  M2
+  M
+  KG
+  PISTA
+  DIA
+  UND
+}
+
+model Obra {
+  id               String               @id @default(uuid())
+  codigo           String               @unique
+  nome             String
+  unidadeNegocioId String?              @map("unidade_negocio_id")
+  linha            String?
+  tipoVenda        TipoVenda?           @map("tipo_venda")
+  /// Estoque de acabados sem projeto vendido — precificado por tabela.
+  generica         Boolean              @default(false)
+  situacaoCadastro SituacaoCadastroObra @default(OK) @map("situacao_cadastro")
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem            Int                  @default(0)
+  criadoEm         DateTime             @default(now()) @map("criado_em")
+  atualizadoEm     DateTime             @updatedAt @map("atualizado_em")
+
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+
+  precos        PrecoContrato[]
+  estoques      EstoqueSaldo[]
+  divergencias  Divergencia[]
+
+  projetos            Projeto[]
+  producoes           Producao[]
+  producoesPista      ProducaoPista[]
+  producoesArmadura   ProducaoArmadura[]
+  producoesMetalurgia ProducaoMetalurgia[]
+  expedicoes          Expedicao[]
+  montagens           Montagem[]
+  acompanhamentos     Acompanhamento[]
+  medicoes            Medicao[]
+  devolucoes          Devolucao[]
+  saidas              Saida[]
+  faturamentos        Faturamento[]
+  obrasEncerradas     ObraEncerrada[]
+
+  @@index([situacaoCadastro])
+  @@map("obras")
+}
+
+/// Preço de contrato vindo da aba `DRE` do CONTROLE DAS VENDAS.
+/// HISTORIADO, não sobrescrito: uma reimportação marca o anterior como
+/// substituído e cria o novo, para que a receita de competências já apuradas
+/// continue explicável. Ver o Princípio de Congelamento no SPEC.md.
+model PrecoContrato {
+  id             String   @id @default(uuid())
+  obraId         String   @map("obra_id")
+  versao         Int
+  linha          String
+  /// Natureza da receita, ex.: "Receita Bruta do Pré-Fabricado".
+  contaResultado String   @map("conta_resultado")
+  /// DECIMAL: aritmética sempre em JavaScript. Ver PORTABILIDADE.md.
+  valorUnitario  Decimal  @map("valor_unitario")
+  valorTotal     Decimal  @map("valor_total")
+  etapa          String?
+  importacaoId   String?  @map("importacao_id")
+  vigenteDesde   DateTime @default(now()) @map("vigente_desde")
+  substituidoEm  DateTime? @map("substituido_em")
+
+  obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  @@index([obraId, versao])
+  @@index([substituidoEm])
+  @@map("precos_contrato")
+}
+
+/// Lançamento do balancete. É IMUTÁVEL — divergência de classificação se
+/// corrige no cadastro e se reflete aqui na próxima apuração.
+/// O valor gravado é a MOVIMENTAÇÃO DO MÊS, não o saldo da conta.
+model LancamentoContabil {
+  id            String @id @default(uuid())
+  competenciaId String @map("competencia_id")
+  importacaoId  String @map("importacao_id")
+  filial        Int
+  centroCustoId String? @map("centro_custo_id")
+  contaResultadoId String @map("conta_resultado_id")
+  /// DECIMAL: movimentação do mês.
+  valorMovimento Decimal @map("valor_movimento")
+
+  // --- campos derivados, recalculados a cada apuração e congelados com ela ---
+  departamento String?
+  atribuicao   String?
+  linhaDREId   String?              @map("linha_dre_id")
+  chaveRateio  ChaveRateio?         @map("chave_rateio")
+  alocacao     TipoAlocacao?
+  /// Chave de agregação: departamento.atribuicao.conta, prefixada pelo rateio
+  /// quando houver. É o equivalente da coluna ETIQUETA da planilha.
+  etiqueta     String?
+  validacao    ValidacaoLancamento  @default(OK)
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  competencia    Competencia    @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao     Importacao     @relation(fields: [importacaoId], references: [id])
+  centroCusto    CentroCusto?   @relation(fields: [centroCustoId], references: [id])
+  contaResultado ContaResultado @relation(fields: [contaResultadoId], references: [id])
+  linhaDRE       LinhaDRE?      @relation(fields: [linhaDREId], references: [id])
+
+  @@index([competenciaId, validacao])
+  @@index([competenciaId, etiqueta])
+  @@index([competenciaId, filial])
+  @@map("lancamentos_contabeis")
+}
+
+/// Lançamento que não vem do ERP — hoje é o canal da RN, cujas movimentações
+/// não são lançadas no TOTVS RM, e de ajustes como depreciação.
+model LancamentoManual {
+  id               String       @id @default(uuid())
+  competenciaId    String       @map("competencia_id")
+  motivo           String
+  filial           Int
+  centroCustoId    String?      @map("centro_custo_id")
+  contaResultadoId String?      @map("conta_resultado_id")
+  chaveRateio      ChaveRateio? @map("chave_rateio")
+  descricao        String
+  linhaDREId       String       @map("linha_dre_id")
+  /// DECIMAL: aritmética sempre em JavaScript.
+  valor            Decimal
+  criadoPor        String?      @map("criado_por")
+  criadoEm         DateTime     @default(now()) @map("criado_em")
+  atualizadoEm     DateTime     @updatedAt @map("atualizado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id])
+  contaResultado ContaResultado? @relation(fields: [contaResultadoId], references: [id])
+  linhaDRE       LinhaDRE        @relation(fields: [linhaDREId], references: [id])
+
+  @@index([competenciaId, motivo])
+  @@map("lancamentos_manuais")
+}
+
+/// Saldo de estoque por obra e linha. CONGELADO na apuração.
+model EstoqueSaldo {
+  id            String   @id @default(uuid())
+  competenciaId String   @map("competencia_id")
+  obraId        String   @map("obra_id")
+  linha         String
+  /// DECIMAL: volume e valor do saldo, e preço médio do período.
+  saldoVolume   Decimal  @map("saldo_volume")
+  saldoValor    Decimal  @map("saldo_valor")
+  precoMedio    Decimal  @map("preco_medio")
+  apuradoEm     DateTime @default(now()) @map("apurado_em")
+  congelado     Boolean  @default(false)
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  obra        Obra        @relation(fields: [obraId], references: [id])
+
+  @@unique([competenciaId, obraId, linha])
+  @@map("estoque_saldos")
+}
+
+// -----------------------------------------------------------------------------
+// LISTAS OPERACIONAIS
+//
+// Treze entidades, uma por tipo, conforme decidido na entrevista. Compartilham a
+// mesma forma base — competência, unidade, obra, linha, quantidade e unidade de
+// medida — e cada uma acrescenta o que lhe é próprio.
+//
+// `importacaoId` é coluna indexada sem chave estrangeira, de propósito: é
+// proveniência, usada para substituir um lote na reimportação, e criar treze
+// relações inversas em `Importacao` só para isso poluiria o schema. A integridade
+// que importa — competência, obra e unidade — está garantida por relação.
+// -----------------------------------------------------------------------------
+
+model Projeto {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("projetos")
+}
+
+model Producao {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  grupo            String?
+  secao            String?
+  comprimento      Decimal?
+  quantidadePecas  Int?          @map("quantidade_pecas")
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId, linha])
+  @@index([importacaoId])
+  @@map("producoes")
+}
+
+model ProducaoPista {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(PISTA) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("producoes_pista")
+}
+
+model ProducaoArmadura {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("producoes_armadura")
+}
+
+model ProducaoMetalurgia {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  /// Finalidade do item metálico: INSERTO METÁLICO, FERRAGEM, MANUTENÇÃO etc.
+  /// É ela que direciona o rateio da metalurgia entre as unidades.
+  finalidade       String?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId, finalidade])
+  @@index([importacaoId])
+  @@map("producoes_metalurgia")
+}
+
+model Expedicao {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  /// DECIMAL: frete cobrado na expedição, base da receita de frete.
+  valorFrete       Decimal?      @map("valor_frete")
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId, linha])
+  @@index([importacaoId])
+  @@map("expedicoes")
+}
+
+model Montagem {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("montagens")
+}
+
+model Acompanhamento {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(DIA) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("acompanhamentos")
+}
+
+model Medicao {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  /// DECIMAL: valor medido no período, usado na conferência do faturamento.
+  valorMedido      Decimal?      @map("valor_medido")
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("medicoes")
+}
+
+model Devolucao {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  tipoMovimentoId  String?       @map("tipo_movimento_id")
+  /// DECIMAL: valor devolvido.
+  valor            Decimal?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+  tipoMovimento  TipoMovimento?  @relation(fields: [tipoMovimentoId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("devolucoes")
+}
+
+model Saida {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  tipoMovimentoId  String?       @map("tipo_movimento_id")
+  /// DECIMAL: valor da saída.
+  valor            Decimal?
+  quantidade       Decimal
+  unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+  tipoMovimento  TipoMovimento?  @relation(fields: [tipoMovimentoId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("saidas")
+}
+
+model Faturamento {
+  id               String        @id @default(uuid())
+  competenciaId    String        @map("competencia_id")
+  importacaoId     String?       @map("importacao_id")
+  unidadeNegocioId String?       @map("unidade_negocio_id")
+  obraId           String?       @map("obra_id")
+  linha            String?
+  notaFiscal       String?       @map("nota_fiscal")
+  tipoMovimentoId  String?       @map("tipo_movimento_id")
+  /// DECIMAL: faturamento fiscal bruto e líquido.
+  valorBruto       Decimal?      @map("valor_bruto")
+  valorLiquido     Decimal?      @map("valor_liquido")
+  quantidade       Decimal       @default(0)
+  unidadeMedida    UnidadeMedida @default(UND) @map("unidade_medida")
+  criadoPor        String?       @map("criado_por")
+  criadoEm         DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+  tipoMovimento  TipoMovimento?  @relation(fields: [tipoMovimentoId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("faturamentos")
+}
+
+model ObraEncerrada {
+  id                String        @id @default(uuid())
+  competenciaId     String        @map("competencia_id")
+  importacaoId      String?       @map("importacao_id")
+  unidadeNegocioId  String?       @map("unidade_negocio_id")
+  obraId            String?       @map("obra_id")
+  linha             String?
+  dataEncerramento  DateTime?     @map("data_encerramento")
+  quantidade        Decimal       @default(0)
+  unidadeMedida     UnidadeMedida @default(UND) @map("unidade_medida")
+  criadoPor         String?       @map("criado_por")
+  criadoEm          DateTime      @default(now()) @map("criado_em")
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  obra           Obra?           @relation(fields: [obraId], references: [id])
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("obras_encerradas")
 }
