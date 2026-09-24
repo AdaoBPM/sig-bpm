@@ -91,7 +91,7 @@ conversão é um `UPDATE ... array_agg` — mas não há necessidade.
 | `Usuario` | `permissions String[]` (molde) | `UsuarioPermissao` | 1 |
 | `LinhaDRE` | `unidadesAplicaveis` | `LinhaDREUnidade` | 2 |
 | `Usuario` | `setores` | `UsuarioSetor` | 3 |
-| `ReceitaPrevia` | `precoContratoIds` | *a criar* | 5 |
+| `ReceitaPrevia` | `precoContratoIds` | `ReceitaPreviaPreco` | 5 |
 
 *(Atualizar esta tabela a cada lista nova.)*
 
@@ -121,6 +121,8 @@ um `String[]` não daria. O mesmo vale para `ReceitaPrevia.precoContratoIds`.
 | `TipoAlocacao` | `LancamentoContabil.alocacao` |
 | `ValidacaoLancamento` | `LancamentoContabil.validacao` |
 | `UnidadeMedida` | as treze listas operacionais |
+| `TipoLinha` | `Linha.tipo` |
+| `NaturezaReceita` | `ReceitaPrevia.natureza` |
 
 ### Convenção 5 — Ordem dos cadastros
 

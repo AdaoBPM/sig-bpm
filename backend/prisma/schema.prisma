@@ -179,6 +179,55 @@ enum BaseFisica {
   DIA
 }
 
+/// ENUM: a que domínio a linha pertence.
+/// A planilha chama as três de "linha", mas são vocabulários distintos:
+/// PRODUTO classifica a peça produzida, OBRA a etapa do serviço, e FATURAMENTO
+/// a natureza do que se fatura na obra.
+enum TipoLinha {
+  PRODUTO
+  OBRA
+  FATURAMENTO
+}
+
+/// Linhas de produto, de obra e de faturamento — hoje mantidas na aba `Listas`
+/// do LISTAS PRODUÇÃO E SERVIÇOS, promovidas a cadastro.
+///
+/// Um só cadastro com discriminador `tipo`, em vez de três tabelas: é uma tela
+/// só com filtro, e acrescentar um domínio novo não exige tabela nova. A
+/// contrapartida é que a coerência entre o tipo da linha e o registro que a
+/// referencia (uma produção deve usar linha de PRODUTO) é validada na aplicação.
+model Linha {
+  id           String    @id @default(uuid())
+  tipo         TipoLinha
+  codigo       String
+  nome         String
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem        Int       @default(0)
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  obras             Obra[]
+  precosContrato    PrecoContrato[]
+  estoqueSaldos     EstoqueSaldo[]
+  projetos          Projeto[]
+  producoes         Producao[]
+  producoesPista    ProducaoPista[]
+  producoesArmadura ProducaoArmadura[]
+  expedicoes        Expedicao[]
+  montagens         Montagem[]
+  acompanhamentos   Acompanhamento[]
+  medicoes          Medicao[]
+  devolucoes        Devolucao[]
+  saidas            Saida[]
+  faturamentos      Faturamento[]
+  obrasEncerradas   ObraEncerrada[]
+
+  @@unique([tipo, codigo])
+  @@index([tipo, ordem])
+  @@map("linhas")
+}
+
 model UnidadeNegocio {
   id        String      @id @default(uuid())
   codigo    Int         @unique
@@ -210,6 +259,10 @@ model UnidadeNegocio {
   faturamentos        Faturamento[]
   obrasEncerradas     ObraEncerrada[]
 
+  receitasPrevias     ReceitaPrevia[]
+  volumesOperacionais VolumeOperacional[]
+  resultadosApurados  ResultadoApurado[]
+
   @@map("unidades_negocio")
 }
 
@@ -238,6 +291,7 @@ model CentroCusto {
 
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
+  resultadosApurados   ResultadoApurado[]
 
   @@index([nomeControladoria])
   @@index([chaveRateio])
@@ -306,6 +360,7 @@ model LinhaDRE {
 
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
+  resultadosApurados   ResultadoApurado[]
 
   @@index([grupoSigla])
   @@map("linhas_dre")
@@ -345,6 +400,8 @@ model RegraRateio {
   atualizadoEm     DateTime    @updatedAt @map("atualizado_em")
 
   unidadeDestino UnidadeNegocio @relation(fields: [unidadeDestinoId], references: [id])
+
+  volumesOperacionais VolumeOperacional[]
 
   @@unique([chave, unidadeDestinoId, vigenciaInicio])
   @@index([chave])
@@ -495,6 +552,10 @@ model Competencia {
   faturamentos        Faturamento[]
   obrasEncerradas     ObraEncerrada[]
 
+  receitasPrevias     ReceitaPrevia[]
+  volumesOperacionais VolumeOperacional[]
+  resultadosApurados  ResultadoApurado[]
+
   @@unique([ano, mes])
   @@index([status])
   @@map("competencias")
@@ -636,7 +697,8 @@ model Obra {
   codigo           String               @unique
   nome             String
   unidadeNegocioId String?              @map("unidade_negocio_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   tipoVenda        TipoVenda?           @map("tipo_venda")
   /// Estoque de acabados sem projeto vendido — precificado por tabela.
   generica         Boolean              @default(false)
@@ -678,7 +740,8 @@ model PrecoContrato {
   id             String   @id @default(uuid())
   obraId         String   @map("obra_id")
   versao         Int
-  linha          String
+  linhaId          String? @map("linha_id")
+  linha          Linha?  @relation(fields: [linhaId], references: [id])
   /// Natureza da receita, ex.: "Receita Bruta do Pré-Fabricado".
   contaResultado String   @map("conta_resultado")
   /// DECIMAL: aritmética sempre em JavaScript. Ver PORTABILIDADE.md.
@@ -690,6 +753,8 @@ model PrecoContrato {
   substituidoEm  DateTime? @map("substituido_em")
 
   obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  receitasPrevias ReceitaPreviaPreco[]
 
   @@index([obraId, versao])
   @@index([substituidoEm])
@@ -766,7 +831,8 @@ model EstoqueSaldo {
   id            String   @id @default(uuid())
   competenciaId String   @map("competencia_id")
   obraId        String   @map("obra_id")
-  linha         String
+  linhaId         String? @map("linha_id")
+  linha         Linha?  @relation(fields: [linhaId], references: [id])
   /// DECIMAL: volume e valor do saldo, e preço médio do período.
   saldoVolume   Decimal  @map("saldo_volume")
   saldoValor    Decimal  @map("saldo_valor")
@@ -777,7 +843,7 @@ model EstoqueSaldo {
   competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   obra        Obra        @relation(fields: [obraId], references: [id])
 
-  @@unique([competenciaId, obraId, linha])
+  @@unique([competenciaId, obraId, linhaId])
   @@map("estoque_saldos")
 }
 
@@ -800,7 +866,8 @@ model Projeto {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
@@ -821,7 +888,8 @@ model Producao {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   grupo            String?
   secao            String?
   comprimento      Decimal?
@@ -835,7 +903,7 @@ model Producao {
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
   obra           Obra?           @relation(fields: [obraId], references: [id])
 
-  @@index([competenciaId, linha])
+  @@index([competenciaId, linhaId])
   @@index([importacaoId])
   @@map("producoes")
 }
@@ -846,7 +914,8 @@ model ProducaoPista {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
   unidadeMedida    UnidadeMedida @default(PISTA) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
@@ -867,7 +936,8 @@ model ProducaoArmadura {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
   unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
@@ -911,7 +981,8 @@ model Expedicao {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   /// DECIMAL: frete cobrado na expedição, base da receita de frete.
   valorFrete       Decimal?      @map("valor_frete")
   quantidade       Decimal
@@ -923,7 +994,7 @@ model Expedicao {
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
   obra           Obra?           @relation(fields: [obraId], references: [id])
 
-  @@index([competenciaId, linha])
+  @@index([competenciaId, linhaId])
   @@index([importacaoId])
   @@map("expedicoes")
 }
@@ -934,7 +1005,8 @@ model Montagem {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
@@ -955,7 +1027,8 @@ model Acompanhamento {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
   unidadeMedida    UnidadeMedida @default(DIA) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
@@ -976,7 +1049,8 @@ model Medicao {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   /// DECIMAL: valor medido no período, usado na conferência do faturamento.
   valorMedido      Decimal?      @map("valor_medido")
   quantidade       Decimal
@@ -999,7 +1073,8 @@ model Devolucao {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   tipoMovimentoId  String?       @map("tipo_movimento_id")
   /// DECIMAL: valor devolvido.
   valor            Decimal?
@@ -1024,7 +1099,8 @@ model Saida {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   tipoMovimentoId  String?       @map("tipo_movimento_id")
   /// DECIMAL: valor da saída.
   valor            Decimal?
@@ -1049,7 +1125,8 @@ model Faturamento {
   importacaoId     String?       @map("importacao_id")
   unidadeNegocioId String?       @map("unidade_negocio_id")
   obraId           String?       @map("obra_id")
-  linha            String?
+  linhaId            String? @map("linha_id")
+  linha            Linha?  @relation(fields: [linhaId], references: [id])
   notaFiscal       String?       @map("nota_fiscal")
   tipoMovimentoId  String?       @map("tipo_movimento_id")
   /// DECIMAL: faturamento fiscal bruto e líquido.
@@ -1076,7 +1153,8 @@ model ObraEncerrada {
   importacaoId      String?       @map("importacao_id")
   unidadeNegocioId  String?       @map("unidade_negocio_id")
   obraId            String?       @map("obra_id")
-  linha             String?
+  linhaId             String? @map("linha_id")
+  linha             Linha?  @relation(fields: [linhaId], references: [id])
   dataEncerramento  DateTime?     @map("data_encerramento")
   quantidade        Decimal       @default(0)
   unidadeMedida     UnidadeMedida @default(UND) @map("unidade_medida")
@@ -1090,4 +1168,118 @@ model ObraEncerrada {
   @@index([competenciaId])
   @@index([importacaoId])
   @@map("obras_encerradas")
+}
+
+// =============================================================================
+// APURAÇÃO (Passo 5)
+//
+// O retrato da competência. Tudo aqui é CONGELADO na apuração: uma vez
+// apurados, estes valores não mudam ainda que os cadastros de origem mudem.
+// Só a reabertura da competência permite nova apuração — é o Princípio de
+// Congelamento da Apuração descrito no SPEC.md.
+// =============================================================================
+
+/// ENUM: natureza da receita na prévia operacional.
+enum NaturezaReceita {
+  PRE_FABRICADO
+  FRETE
+  MONTAGEM
+  COMPLEMENTAR
+  DEVOLUCOES_INVENTARIOS
+}
+
+/// Receita apurada a partir das listas operacionais valoradas.
+///
+/// É GRAVADA COMO VALOR, não recalculada quando consultada. Guarda quais preços
+/// de contrato usou, de modo que a apuração continue explicável mesmo depois de
+/// a equipe comercial atualizar a DRE de venda de uma obra já em produção — que
+/// é exatamente o motivo pelo qual, na planilha, essas fórmulas foram
+/// convertidas em valores à mão.
+model ReceitaPrevia {
+  id               String          @id @default(uuid())
+  competenciaId    String          @map("competencia_id")
+  unidadeNegocioId String          @map("unidade_negocio_id")
+  natureza         NaturezaReceita
+  /// DECIMAL: receita bruta, impostos e receita líquida.
+  receitaBruta     Decimal         @map("receita_bruta")
+  impostos         Decimal
+  receitaLiquida   Decimal         @map("receita_liquida")
+  apuradoEm        DateTime        @default(now()) @map("apurado_em")
+  congelado        Boolean         @default(false)
+
+  competencia    Competencia    @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio @relation(fields: [unidadeNegocioId], references: [id])
+
+  /// LISTA: preços de contrato usados nesta valoração.
+  precos ReceitaPreviaPreco[]
+
+  @@unique([competenciaId, unidadeNegocioId, natureza])
+  @@map("receitas_previas")
+}
+
+/// LISTA-DE: ReceitaPrevia.precoContratoIds
+///
+/// Qual preço valorou qual receita. Virou tabela de relação pelo mesmo motivo
+/// das demais listas — e aqui a relação é indispensável, porque é ela que torna
+/// a apuração auditável depois que o preço vigente muda.
+model ReceitaPreviaPreco {
+  receitaPreviaId String @map("receita_previa_id")
+  precoContratoId String @map("preco_contrato_id")
+
+  receitaPrevia ReceitaPrevia @relation(fields: [receitaPreviaId], references: [id], onDelete: Cascade)
+  precoContrato PrecoContrato @relation(fields: [precoContratoId], references: [id])
+
+  @@id([receitaPreviaId, precoContratoId])
+  @@index([precoContratoId])
+  @@map("receitas_previas_precos")
+}
+
+/// Volume físico realizado por chave de rateio, e a participação de cada
+/// unidade. O percentual NUNCA é digitado — é calculado aqui.
+model VolumeOperacional {
+  id               String   @id @default(uuid())
+  competenciaId    String   @map("competencia_id")
+  regraRateioId    String   @map("regra_rateio_id")
+  unidadeNegocioId String   @map("unidade_negocio_id")
+  /// DECIMAL: volume físico realizado no mês.
+  quantidade       Decimal
+  /// DECIMAL: participação na chave. A soma por chave é 1, ou 0 sem volume.
+  percentual       Decimal
+  apuradoEm        DateTime @default(now()) @map("apurado_em")
+  congelado        Boolean  @default(false)
+
+  competencia    Competencia    @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  regraRateio    RegraRateio    @relation(fields: [regraRateioId], references: [id])
+  unidadeNegocio UnidadeNegocio @relation(fields: [unidadeNegocioId], references: [id])
+
+  @@unique([competenciaId, regraRateioId, unidadeNegocioId])
+  @@map("volumes_operacionais")
+}
+
+/// A DRE apurada. Uma linha por (competência × visão × linha da DRE).
+///
+/// A visão é dada por `unidadeNegocioId` OU `centroCustoId`: com unidade, é a
+/// DRE daquela unidade; com centro de custo, a visão por centro; com os dois
+/// nulos, o consolidado.
+model ResultadoApurado {
+  id               String   @id @default(uuid())
+  competenciaId    String   @map("competencia_id")
+  unidadeNegocioId String?  @map("unidade_negocio_id")
+  centroCustoId    String?  @map("centro_custo_id")
+  linhaDREId       String   @map("linha_dre_id")
+  /// DECIMAL: valor apurado e participação sobre a ROL.
+  valor            Decimal
+  percentualROL    Decimal? @map("percentual_rol")
+  apuradoEm        DateTime @default(now()) @map("apurado_em")
+  apuradoPor       String?  @map("apurado_por")
+  congelado        Boolean  @default(false)
+
+  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
+  centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id])
+  linhaDRE       LinhaDRE        @relation(fields: [linhaDREId], references: [id])
+
+  @@unique([competenciaId, unidadeNegocioId, centroCustoId, linhaDREId])
+  @@index([competenciaId, linhaDREId])
+  @@map("resultados_apurados")
 }
