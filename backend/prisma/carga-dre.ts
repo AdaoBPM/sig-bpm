@@ -25,6 +25,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getPrismaClient } from "../src/config/prisma.js";
 import type { TipoLinhaDRE, TipoUnidade } from "../src/generated/prisma/enums.js";
+import { ajusteDaConta, relatarAjustesConta } from "./ajustes-carga.js";
 
 const prisma = getPrismaClient();
 const aqui = dirname(fileURLToPath(import.meta.url));
@@ -267,6 +268,7 @@ const contas: LinhaConta[] = JSON.parse(
   readFileSync(join(aqui, "carga-inicial", "contas-resultado.json"), "utf8"),
 );
 
+
 // A conta aponta para a linha pela tripla (departamento, atribuição, conta DRE),
 // que é exatamente a chave que a planilha usa nos SOMASES.
 const porTripla = new Map<string, string>();
@@ -323,11 +325,13 @@ for (const conta of contas) {
   const reduzido = texto(conta.CD_REDUZIDO);
   if (!reduzido) continue;
 
-  const contaDRE = texto(conta["CONTA DRE"]);
+  const ajuste = ajusteDaConta(reduzido);
+
+  const contaDRE = ajuste?.contaDRE ?? texto(conta["CONTA DRE"]);
   if (!contaDRE) continue;
 
-  const dep = texto(conta.DEPARTAMENTO);
-  const depSigla = texto(conta["DEP."]);
+  const dep = ajuste?.departamento ?? texto(conta.DEPARTAMENTO);
+  const depSigla = ajuste?.depSigla ?? texto(conta["DEP."]);
   if (dep && depSigla) {
     const siglasValidas = siglaPorGrupo.get(dep);
     if (siglasValidas && !siglasValidas.has(depSigla)) {
@@ -337,11 +341,7 @@ for (const conta of contas) {
     }
   }
 
-  const chave = [
-    texto(conta.DEPARTAMENTO),
-    texto(conta["ATRIBUIÇÃO"]),
-    contaDRE,
-  ]
+  const chave = [dep, ajuste?.atribuicao ?? texto(conta["ATRIBUIÇÃO"]), contaDRE]
     .map((x) => x ?? "")
     .join("|");
 
@@ -372,6 +372,8 @@ console.log(`Vínculos linha↔unidade: ${vinculosUnidade}`);
 console.log(`\nContas vinculadas a uma linha da DRE: ${vinculadas}`);
 console.log(`Contas com destino declarado mas sem linha correspondente: ${semDestino}`);
 for (const e of semDestinoExemplos) console.log(`  ${e}`);
+
+relatarAjustesConta();
 
 console.log(
   `\nContas com departamento e sigla incoerentes: ${incoerentes.length}`,

@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getPrismaClient } from "../src/config/prisma.js";
+import { ajusteDaConta, relatarAjustesConta } from "./ajustes-carga.js";
 import type {
   AtribuicaoCusto,
   BaldeAlocacao,
@@ -327,12 +328,14 @@ async function carregarContasResultado() {
     const sinalBalancete: SinalBalancete | null =
       sinalBruto === "+" ? "POSITIVO" : sinalBruto === "-" ? "NEGATIVO" : null;
 
+    const ajuste = ajusteDaConta(reduzido);
+
     const dados = {
       conta,
       descricao,
       tipoConta,
-      departamento: texto(l.DEPARTAMENTO),
-      atribuicao: texto(l["ATRIBUIÇÃO"]),
+      departamento: ajuste?.departamento ?? texto(l.DEPARTAMENTO),
+      atribuicao: ajuste?.atribuicao ?? texto(l["ATRIBUIÇÃO"]),
       sinalBalancete,
       balde: balde(l.RATEIO, "contas-resultado", conta),
       ordem: i + 1,
@@ -398,7 +401,9 @@ const previstos = [
   ...CENTRO_CUSTO_DESCARTAR.map((d2) => ({ chave: `descartar:${d2.codigo}:${d2.nomeRM}`, d: `descartar ${d2.nomeRM} (${d2.codigo})` })),
 ];
 const obsoletos = previstos.filter((p) => !ajustesUsados.has(p.chave));
-console.log(`\nAjustes aplicados   : ${ajustesUsados.size} de ${previstos.length}`);
+relatarAjustesConta();
+
+console.log(`\nAjustes de centro de custo aplicados: ${ajustesUsados.size} de ${previstos.length}`);
 if (obsoletos.length > 0) {
   console.log("Ajustes sem correspondência (a planilha já foi corrigida?):");
   for (const o of obsoletos) console.log(`  - ${o.d}`);
