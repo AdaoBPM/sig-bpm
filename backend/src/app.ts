@@ -10,6 +10,10 @@ import { authRoutes } from "./routes/authRoutes.js";
 import { cadastrosRoutes } from "./routes/cadastros/cadastrosRoutes.js";
 import { competenciasRoutes } from "./routes/competencias/competenciasRoutes.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
+import {
+  importacoesDaCompetenciaRoutes,
+  importacoesRoutes,
+} from "./routes/importacoes/importacoesRoutes.js";
 
 export const app = express();
 
@@ -41,7 +45,9 @@ app.use("/health", healthRoutes);
 app.use("/auth", authRoutes);
 app.use("/auditoria", auditoriaRoutes);
 app.use("/cadastros", cadastrosRoutes);
+app.use("/competencias/:anoMes/importacoes", importacoesDaCompetenciaRoutes);
 app.use("/competencias", competenciasRoutes);
+app.use("/importacoes", importacoesRoutes);
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Rota não encontrada" });

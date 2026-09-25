@@ -26,6 +26,9 @@ const envSchema = z
     TOTVS_WSDL_URL: z.string().optional(),
     TOTVS_USER: z.string().optional(),
     TOTVS_PASSWORD: z.string().optional(),
+    /** Onde os arquivos importados ficam guardados, nomeados pelo hash. */
+    UPLOAD_DIR: z.string().default("./uploads"),
+    UPLOAD_MAX_MB: z.coerce.number().positive().default(50),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV !== "production") return;

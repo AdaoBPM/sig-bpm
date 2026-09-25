@@ -1,0 +1,304 @@
+import { readFile } from "node:fs/promises";
+
+import { getPrismaClient } from "../../../config/prisma.js";
+import { Prisma } from "../../../generated/prisma/client.js";
+import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
+import { logger } from "../../../utils/logger.js";
+import { caminhoDoArquivo } from "../arquivosImportados.js";
+import {
+  ABA_BALANCETE,
+  conferirTotal,
+  interpretarBalancete,
+  type LinhaBalancete,
+  type Rejeicao,
+} from "./leiauteBalancete.js";
+
+const Decimal = Prisma.Decimal;
+type Decimal = Prisma.Decimal;
+
+/**
+ * Centros de custo de obra. Não estão no cadastro — são um por obra, criados
+ * no RM a cada contrato — e a planilha os trata à parte (LEFT(COD_CUSTO, 4)).
+ * Na importação eles entram com o código guardado e sem vínculo; é a
+ * classificação que decide o destino deles.
+ */
+const PREFIXOS_OBRA = ["1.98", "1.99"];
+
+const LOTE_GRAVACAO = 500;
+
+/** Recusa do arquivo inteiro: nada é gravado. */
+class ArquivoRecusado extends Error {}
+
+function ehObra(codigo: string) {
+  return PREFIXOS_OBRA.some((p) => codigo === p || codigo.startsWith(`${p}.`));
+}
+
+/**
+ * Escolhe a aba: a de nome conhecido, se existir; senão a única do arquivo —
+ * é o caso de quem copia a aba para uma pasta de trabalho à parte.
+ */
+function escolherAba(abas: string[]): string | null {
+  const exata = abas.find((a) => a === ABA_BALANCETE);
+  if (exata) return exata;
+  const parecida = abas.find(
+    (a) => a.trim().toLowerCase() === ABA_BALANCETE.toLowerCase(),
+  );
+  if (parecida) return parecida;
+  return abas.length === 1 ? abas[0] : null;
+}
+
+type CentroSemCadastro = {
+  codigo: string;
+  nome: string | null;
+  obra: boolean;
+  linhas: number;
+  valor: Decimal;
+};
+
+async function progresso(id: string, valor: number) {
+  await getPrismaClient().importacao.update({
+    where: { id },
+    data: { progresso: valor },
+  });
+}
+
+async function recusar(
+  id: string,
+  motivo: string,
+  contagem?: { linhasLidas: number; linhasIgnoradas: number },
+) {
+  await getPrismaClient().importacao.update({
+    where: { id },
+    data: {
+      status: "REJEITADA",
+      progresso: 100,
+      motivoRejeicao: motivo,
+      linhasLidas: contagem?.linhasLidas ?? 0,
+      linhasIgnoradas: contagem?.linhasIgnoradas ?? 0,
+      linhasAceitas: 0,
+      linhasRejeitadas: 0,
+    },
+  });
+}
+
+export async function processarBalancete(importacaoId: string): Promise<void> {
+  const prisma = getPrismaClient();
+
+  try {
+    const importacao = await prisma.importacao.findUniqueOrThrow({
+      where: { id: importacaoId },
+      include: { competencia: { select: { id: true, ano: true, mes: true } } },
+    });
+    const { competencia } = importacao;
+
+    const conteudo = await readFile(caminhoDoArquivo(importacao.hashArquivo));
+    const aba = lerAba(conteudo, escolherAba);
+    await progresso(importacaoId, 30);
+
+    const leitura = interpretarBalancete(aba.linhas, competencia.ano, competencia.mes);
+    if (!leitura.ok) throw new ArquivoRecusado(leitura.motivo);
+
+    const contagemLeitura = {
+      linhasLidas: leitura.linhasLidas,
+      linhasIgnoradas: leitura.ignoradas.subtotais + leitura.ignoradas.semMovimento,
+    };
+
+    const divergenciaTotal = conferirTotal(leitura.somaArquivo, leitura.totalGeral);
+    if (divergenciaTotal) {
+      await recusar(importacaoId, divergenciaTotal, contagemLeitura);
+      return;
+    }
+    if (leitura.lancamentos.length === 0 && leitura.rejeicoes.length === 0) {
+      await recusar(
+        importacaoId,
+        `O arquivo não tem movimentação em ` +
+          `${String(competencia.mes).padStart(2, "0")}/${competencia.ano}. ` +
+          "Confira se o balancete do mês já foi exportado do RM.",
+        contagemLeitura,
+      );
+      return;
+    }
+    await progresso(importacaoId, 50);
+
+    // Resolução contra o cadastro. Conta é obrigatória: sem ela o lançamento
+    // não tem natureza. Centro de custo não — fica o código de origem.
+    const [contas, centros] = await Promise.all([
+      prisma.contaResultado.findMany({ select: { id: true, reduzido: true } }),
+      prisma.centroCusto.findMany({
+        where: { codigoRM: { not: null } },
+        select: { id: true, codigoRM: true },
+      }),
+    ]);
+    const contaPorReduzido = new Map(contas.map((c) => [c.reduzido, c.id]));
+    const centroPorCodigo = new Map(centros.map((c) => [c.codigoRM!, c.id]));
+
+    const rejeicoes: Rejeicao[] = [...leitura.rejeicoes];
+    const aceitos: Array<LinhaBalancete & { contaResultadoId: string; centroCustoId: string | null }> = [];
+    const semCadastro = new Map<string, CentroSemCadastro>();
+
+    for (const l of leitura.lancamentos) {
+      const contaResultadoId = contaPorReduzido.get(l.reduzido);
+      if (!contaResultadoId) {
+        rejeicoes.push({
+          linha: l.linhaArquivo,
+          codigo: "CONTA_NAO_CADASTRADA",
+          mensagem: `Conta ${l.reduzido}${l.descricaoConta ? ` (${l.descricaoConta})` : ""} não está no cadastro de contas de resultado.`,
+          filial: String(l.filial),
+          codigoCentroCusto: l.codigoCentroCusto,
+          reduzido: l.reduzido,
+          valor: l.valorMovimento.toFixed(2),
+        });
+        continue;
+      }
+
+      let centroCustoId: string | null = null;
+      if (l.codigoCentroCusto) {
+        centroCustoId = centroPorCodigo.get(l.codigoCentroCusto) ?? null;
+        if (!centroCustoId) {
+          const atual = semCadastro.get(l.codigoCentroCusto) ?? {
+            codigo: l.codigoCentroCusto,
+            nome: l.nomeCentroCusto,
+            obra: ehObra(l.codigoCentroCusto),
+            linhas: 0,
+            valor: new Decimal(0),
+          };
+          atual.linhas++;
+          atual.valor = atual.valor.plus(l.valorMovimento);
+          semCadastro.set(l.codigoCentroCusto, atual);
+        }
+      }
+
+      aceitos.push({ ...l, contaResultadoId, centroCustoId });
+    }
+    rejeicoes.sort((a, b) => a.linha - b.linha);
+    await progresso(importacaoId, 60);
+
+    const somar = (valores: Decimal[]) =>
+      valores.reduce((acc, v) => acc.plus(v), new Decimal(0));
+
+    const porFilial = new Map<number, { linhas: number; valor: Decimal }>();
+    for (const a of aceitos) {
+      const f = porFilial.get(a.filial) ?? { linhas: 0, valor: new Decimal(0) };
+      f.linhas++;
+      f.valor = f.valor.plus(a.valorMovimento);
+      porFilial.set(a.filial, f);
+    }
+
+    const centrosSemCadastro = [...semCadastro.values()].sort((a, b) =>
+      a.codigo.localeCompare(b.codigo),
+    );
+
+    // Gravação: o lote anterior do mesmo tipo sai por inteiro e o novo entra,
+    // na mesma transação. Ou fica o lote antigo, ou fica o novo.
+    const substituidas = await prisma.$transaction(
+      async (tx) => {
+        const atual = await tx.competencia.findUniqueOrThrow({
+          where: { id: competencia.id },
+          select: { status: true },
+        });
+        if (atual.status === "FECHADA") {
+          throw new ArquivoRecusado(
+            "A competência foi fechada enquanto o arquivo era processado. Nada foi gravado.",
+          );
+        }
+
+        const anteriores = await tx.importacao.findMany({
+          where: {
+            competenciaId: competencia.id,
+            tipo: "BALANCETE",
+            status: "CONCLUIDA",
+            substituidaEm: null,
+            id: { not: importacaoId },
+          },
+          select: { id: true },
+        });
+        const idsAnteriores = anteriores.map((a) => a.id);
+        if (idsAnteriores.length > 0) {
+          await tx.lancamentoContabil.deleteMany({
+            where: { importacaoId: { in: idsAnteriores } },
+          });
+          await tx.importacao.updateMany({
+            where: { id: { in: idsAnteriores } },
+            data: { substituidaEm: new Date() },
+          });
+        }
+
+        for (let i = 0; i < aceitos.length; i += LOTE_GRAVACAO) {
+          await tx.lancamentoContabil.createMany({
+            data: aceitos.slice(i, i + LOTE_GRAVACAO).map((a) => ({
+              competenciaId: competencia.id,
+              importacaoId,
+              filial: a.filial,
+              centroCustoId: a.centroCustoId,
+              contaResultadoId: a.contaResultadoId,
+              valorMovimento: a.valorMovimento,
+              codigoCentroCusto: a.codigoCentroCusto,
+              nomeCentroCusto: a.nomeCentroCusto,
+              linhaArquivo: a.linhaArquivo,
+            })),
+          });
+        }
+
+        await tx.importacao.update({
+          where: { id: importacaoId },
+          data: {
+            status: "CONCLUIDA",
+            progresso: 100,
+            linhasLidas: leitura.linhasLidas,
+            linhasAceitas: aceitos.length,
+            linhasRejeitadas: rejeicoes.length,
+            linhasIgnoradas: contagemLeitura.linhasIgnoradas,
+            relatorioErros: rejeicoes,
+            resumo: {
+              aba: aba.nome,
+              somaArquivo: leitura.somaArquivo.toFixed(2),
+              totalGeral: leitura.totalGeral?.toFixed(2) ?? null,
+              valorAceito: somar(aceitos.map((a) => a.valorMovimento)).toFixed(2),
+              valorRejeitado: somar(
+                rejeicoes.map((r) => new Decimal(r.valor ?? 0)),
+              ).toFixed(2),
+              ignoradas: leitura.ignoradas,
+              porFilial: [...porFilial.entries()]
+                .sort(([a], [b]) => a - b)
+                .map(([filial, f]) => ({
+                  filial,
+                  linhas: f.linhas,
+                  valor: f.valor.toFixed(2),
+                })),
+              centrosSemCadastro: centrosSemCadastro.map((c) => ({
+                ...c,
+                valor: c.valor.toFixed(2),
+              })),
+              substituiu: idsAnteriores,
+            },
+          },
+        });
+
+        return idsAnteriores.length;
+      },
+      { timeout: 60_000 },
+    );
+
+    logger("info", "Balancete importado", {
+      importacaoId,
+      competencia: `${competencia.mes}/${competencia.ano}`,
+      aceitas: aceitos.length,
+      rejeitadas: rejeicoes.length,
+      substituidas,
+    });
+  } catch (error) {
+    if (error instanceof ArquivoRecusado || error instanceof ArquivoInvalidoError) {
+      await recusar(importacaoId, error.message);
+      return;
+    }
+    logger("error", "Falha ao processar balancete", {
+      importacaoId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    await recusar(
+      importacaoId,
+      "Erro inesperado no processamento. Nada foi gravado. Se persistir, " +
+        "encaminhe o arquivo ao responsável pelo sistema.",
+    );
+  }
+}

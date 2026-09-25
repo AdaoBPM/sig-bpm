@@ -8,6 +8,12 @@ const monorepoRoot = path.join(__dirname, "..");
 const nextConfig = {
   reactCompiler: true,
   cacheComponents: true,
+  experimental: {
+    // Com o proxy.ts ativo, o Next limita o corpo das requisições a 10 MB e
+    // corta o excedente. As planilhas do SIG passam disso (o LISTAS FOLHA tem
+    // 23 MB); o limite de fato é o UPLOAD_MAX_MB do backend.
+    proxyClientMaxBodySize: "60mb",
+  },
   // Monorepo: dependências ficam em node_modules na raiz (npm workspaces)
   outputFileTracingRoot: monorepoRoot,
   turbopack: {

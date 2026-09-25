@@ -542,9 +542,6 @@ enum StatusCompetencia {
 /// Alimentador pode preencher (`UsuarioSetor.tipoLista`).
 enum TipoImportacao {
   BALANCETE
-  FOLHA
-  REQUISICOES
-  NOTAS_FISCAIS
   DRE_COMERCIAL
   ESTOQUE_INICIAL
   PROJETO
@@ -666,9 +663,19 @@ model Importacao {
   linhasLidas     Int              @default(0) @map("linhas_lidas")
   linhasAceitas   Int              @default(0) @map("linhas_aceitas")
   linhasRejeitadas Int             @default(0) @map("linhas_rejeitadas")
+  /// Linhas do arquivo que não são lançamento: subtotais da tabela dinâmica e
+  /// linhas sem movimentação no mês. Lidas = aceitas + rejeitadas + ignoradas.
+  linhasIgnoradas Int              @default(0) @map("linhas_ignoradas")
   status          StatusImportacao @default(PROCESSANDO)
+  /// Percentual processado, de 0 a 100, para a tela acompanhar.
+  progresso       Int              @default(0)
+  /// Motivo quando o arquivo inteiro é recusado — leiaute, mês ausente,
+  /// total que não confere. Nesse caso nenhuma linha é gravada.
+  motivoRejeicao  String?          @map("motivo_rejeicao")
   /// JSON: erros por linha, para o relatório de importação.
   relatorioErros  Json?            @map("relatorio_erros")
+  /// JSON: totais conferidos e avisos que não impedem a gravação.
+  resumo          Json?
   /// Uma reimportação do mesmo tipo na mesma competência substitui a anterior,
   /// que fica marcada aqui em vez de ser apagada.
   substituidaEm   DateTime?        @map("substituida_em")
@@ -849,6 +856,16 @@ model LancamentoContabil {
   contaResultadoId String @map("conta_resultado_id")
   /// DECIMAL: movimentação do mês.
   valorMovimento Decimal @map("valor_movimento")
+
+  // --- origem, como veio no arquivo ---
+  /// Código e nome do centro de custo no arquivo, gravados mesmo quando o
+  /// centro não está no cadastro — é o caso dos centros de obra (1.98, 1.99).
+  /// Com eles a classificação resolve o centro de novo depois de o cadastro
+  /// ser corrigido, sem reimportar.
+  codigoCentroCusto String? @map("codigo_centro_custo")
+  nomeCentroCusto   String? @map("nome_centro_custo")
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo      Int     @map("linha_arquivo")
 
   // --- campos derivados, recalculados a cada apuração e congelados com ela ---
   departamento String?

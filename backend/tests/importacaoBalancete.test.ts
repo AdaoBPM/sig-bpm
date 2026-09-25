@@ -1,0 +1,174 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import { strToU8, zipSync } from "fflate";
+
+import {
+  conferirTotal,
+  interpretarBalancete,
+} from "../src/services/importacoes/balancete/leiauteBalancete.js";
+import { ArquivoInvalidoError, lerAba, listarAbas, type LinhaPlanilha, type ValorCelula } from "../src/lib/xlsx.js";
+
+// 46235 = 01/08/2026 e 46266 = 01/09/2026, como o Excel grava no cabeçalho.
+const AGO = 46235;
+const SET = 46266;
+const CABECALHO: ValorCelula[] = [
+  "FILIAL", "COD_CUSTO", "C_CUSTO", "SUB_COD_CONTA_4", "REDUZIDO_CONTA", "CONTA",
+  AGO, AGO, AGO, SET, SET, SET, "Total Geral",
+];
+
+function planilha(...dados: ValorCelula[][]): LinhaPlanilha[] {
+  return [CABECALHO, ...dados].map((celulas, i) => ({ numero: i + 1, celulas }));
+}
+
+/** Linha de dado: crédito, débito e movimentação de agosto. */
+function linha(
+  filial: ValorCelula,
+  cc: string | null,
+  conta: string,
+  credito: number | null,
+  debito: number | null,
+  total: number | null,
+): ValorCelula[] {
+  return [filial, cc, cc ? `CENTRO ${cc}` : null, "3.02", conta, `CONTA ${conta}`, credito, debito, total];
+}
+
+describe("interpretarBalancete", () => {
+  it("lê a movimentação do mês e ignora subtotais e linhas zeradas", () => {
+    const r = interpretarBalancete(
+      planilha(
+        linha(1, "1.01.00000001", "2683", -100, null, -100),
+        linha(1, "1.01.00000001", "2721", null, 40.004, 40.004),
+        linha(1, "1.98.00003168", "45586", null, null, null),
+        [1, "1.01.00000001", "FINANCEIRO", "3.02 Total", null, null, -100, 40, -60],
+        ["Total Geral", null, null, null, null, null, -100, 40, -60],
+      ),
+      2026,
+      8,
+    );
+
+    assert.ok(r.ok);
+    assert.equal(r.lancamentos.length, 2);
+    assert.equal(r.lancamentos[1].valorMovimento.toFixed(2), "40.00");
+    assert.equal(r.lancamentos[0].codigoCentroCusto, "1.01.00000001");
+    assert.deepEqual(r.ignoradas, { subtotais: 2, semMovimento: 1 });
+    assert.equal(r.linhasLidas, 5);
+    assert.equal(r.totalGeral?.toFixed(2), "-60.00");
+    assert.equal(conferirTotal(r.somaArquivo, r.totalGeral), null);
+  });
+
+  it("recusa a linha cuja movimentação não é crédito + débito", () => {
+    const r = interpretarBalancete(
+      planilha(linha(1, "1.01", "2683", -100, 30, -60)),
+      2026,
+      8,
+    );
+    assert.ok(r.ok);
+    assert.equal(r.lancamentos.length, 0);
+    assert.equal(r.rejeicoes[0].codigo, "TOTAL_DIVERGENTE");
+  });
+
+  it("recusa filial inválida e linha repetida", () => {
+    const r = interpretarBalancete(
+      planilha(
+        linha("X", "1.01", "2683", -1, null, -1),
+        linha(2, "1.01", "2683", -1, null, -1),
+        linha(2, "1.01", "2683", -2, null, -2),
+      ),
+      2026,
+      8,
+    );
+    assert.ok(r.ok);
+    assert.deepEqual(
+      r.rejeicoes.map((x) => x.codigo),
+      ["FILIAL_INVALIDA", "LINHA_DUPLICADA"],
+    );
+    assert.equal(r.lancamentos.length, 1);
+  });
+
+  it("recusa o arquivo sem a coluna do mês, dizendo quais meses ele traz", () => {
+    const r = interpretarBalancete(planilha(linha(1, null, "2683", -1, null, -1)), 2026, 3);
+    assert.equal(r.ok, false);
+    assert.match(!r.ok ? r.motivo : "", /mar\/2026.*ago\/2026, set\/2026/);
+  });
+
+  it("recusa o arquivo sem as colunas obrigatórias", () => {
+    const r = interpretarBalancete(
+      [{ numero: 1, celulas: ["FILIAL", "REDUZIDO_CONTA", AGO] }],
+      2026,
+      8,
+    );
+    assert.equal(r.ok, false);
+    assert.match(!r.ok ? r.motivo : "", /COD_CUSTO, C_CUSTO, CONTA/);
+  });
+
+  it("aponta quando a soma das linhas não confere com o Total Geral", () => {
+    const r = interpretarBalancete(
+      planilha(
+        linha(1, null, "2683", -100, null, -100),
+        ["Total Geral", null, null, null, null, null, -150, null, -150],
+      ),
+      2026,
+      8,
+    );
+    assert.ok(r.ok);
+    assert.match(conferirTotal(r.somaArquivo, r.totalGeral) ?? "", /diferença de 50.00/);
+  });
+});
+
+/** Monta um .xlsx mínimo em memória, com as partes que o leitor usa. */
+function xlsx(abas: Record<string, string>, textos: string[]): Uint8Array {
+  const nomes = Object.keys(abas);
+  const arquivos: Record<string, Uint8Array> = {
+    "xl/workbook.xml": strToU8(
+      `<workbook xmlns:r="r"><sheets>${nomes
+        .map((n, i) => `<sheet name="${n.replace(/&/g, "&amp;")}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+        .join("")}</sheets></workbook>`,
+    ),
+    "xl/_rels/workbook.xml.rels": strToU8(
+      `<Relationships>${nomes
+        .map((_, i) => `<Relationship Id="rId${i + 1}" Target="worksheets/sheet${i + 1}.xml"/>`)
+        .join("")}</Relationships>`,
+    ),
+    "xl/sharedStrings.xml": strToU8(
+      `<sst>${textos.map((t) => `<si>${t}</si>`).join("")}</sst>`,
+    ),
+  };
+  nomes.forEach((n, i) => {
+    arquivos[`xl/worksheets/sheet${i + 1}.xml`] = strToU8(
+      `<worksheet><sheetData>${abas[n]}</sheetData></worksheet>`,
+    );
+  });
+  return zipSync(arquivos);
+}
+
+describe("lerAba", () => {
+  it("resolve textos compartilhados, texto em linha, entidades e colunas vazias", () => {
+    const arquivo = xlsx(
+      {
+        "Resumo": `<row r="1"><c r="A1"><v>1</v></c></row>`,
+        "P&D": [
+          `<row r="1"><c r="A1" t="s"><v>0</v></c><c r="C1" t="s"><v>1</v></c></row>`,
+          `<row r="3"><c r="B3" t="inlineStr"><is><t>A &amp; B</t></is></c>`,
+          `<c r="D3"><f>1+1</f><v>158881.51999999999</v></c><c r="E3" t="b"><v>1</v></c></row>`,
+        ].join(""),
+      },
+      ["<t>FILIAL</t>", "<r><t>REDU</t></r><r><t>ZIDO</t></r><rPh><t>x</t></rPh>"],
+    );
+
+    assert.deepEqual(listarAbas(arquivo), ["Resumo", "P&D"]);
+    const aba = lerAba(arquivo, (abas) => abas[1]);
+    assert.equal(aba.nome, "P&D");
+    assert.deepEqual(aba.linhas[0], { numero: 1, celulas: ["FILIAL", null, "REDUZIDO"] });
+    assert.deepEqual(aba.linhas[1], {
+      numero: 3,
+      celulas: [null, "A & B", null, 158881.51999999999, true],
+    });
+  });
+
+  it("recusa o que não é .xlsx e a escolha de aba inexistente", () => {
+    assert.throws(() => listarAbas(strToU8("não sou um zip")), ArquivoInvalidoError);
+    const arquivo = xlsx({ "Planilha1": "" }, []);
+    assert.throws(() => lerAba(arquivo, () => null), /Abas encontradas: Planilha1/);
+  });
+});

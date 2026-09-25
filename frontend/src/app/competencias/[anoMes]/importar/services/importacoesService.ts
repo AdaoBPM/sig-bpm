@@ -1,0 +1,105 @@
+import { api } from "@/lib/api";
+
+import type { StatusCompetencia } from "../../../services/competenciasService";
+
+export type TipoImportacao = "BALANCETE";
+export type StatusImportacao = "PROCESSANDO" | "CONCLUIDA" | "REJEITADA";
+
+export type Importacao = {
+  id: string;
+  tipo: string;
+  nomeArquivo: string;
+  importadoEm: string;
+  status: StatusImportacao;
+  progresso: number;
+  linhasLidas: number;
+  linhasAceitas: number;
+  linhasRejeitadas: number;
+  linhasIgnoradas: number;
+  motivoRejeicao: string | null;
+  substituidaEm: string | null;
+  usuario: { nome: string } | null;
+};
+
+export type Rejeicao = {
+  linha: number;
+  codigo: string;
+  mensagem: string;
+  filial?: string;
+  codigoCentroCusto?: string | null;
+  reduzido?: string | null;
+  valor?: string;
+};
+
+export type CentroSemCadastro = {
+  codigo: string;
+  nome: string | null;
+  obra: boolean;
+  linhas: number;
+  valor: string;
+};
+
+export type ResumoBalancete = {
+  aba: string;
+  somaArquivo: string;
+  totalGeral: string | null;
+  valorAceito: string;
+  valorRejeitado: string;
+  ignoradas: { subtotais: number; semMovimento: number };
+  porFilial: Array<{ filial: number; linhas: number; valor: string }>;
+  centrosSemCadastro: CentroSemCadastro[];
+  substituiu: string[];
+};
+
+export type ImportacaoDetalhe = Importacao & {
+  hashArquivo: string;
+  relatorioErros: Rejeicao[] | null;
+  resumo: ResumoBalancete | null;
+  competencia: { ano: number; mes: number; status: StatusCompetencia };
+};
+
+export type ImportacoesDaCompetencia = {
+  competencia: { id: string; ano: number; mes: number; status: StatusCompetencia };
+  itens: Importacao[];
+};
+
+/** Resposta de erro do backend: mensagem pronta e, às vezes, um código. */
+export type ErroImportacao = { error?: string; codigo?: string };
+
+export const importacoesService = {
+  listar: async (anoMes: string): Promise<ImportacoesDaCompetencia> => {
+    const { data } = await api.get<{ data: ImportacoesDaCompetencia }>(
+      `/proxy/competencias/${anoMes}/importacoes`,
+    );
+    return data.data;
+  },
+
+  detalhar: async (id: string): Promise<ImportacaoDetalhe> => {
+    const { data } = await api.get<{ data: ImportacaoDetalhe }>(
+      `/proxy/importacoes/${id}`,
+    );
+    return data.data;
+  },
+
+  /** O arquivo vai cru no corpo; tipo e nome, na query. */
+  enviar: async (
+    anoMes: string,
+    tipo: TipoImportacao,
+    arquivo: File,
+    forcar: boolean,
+    onProgresso?: (percentual: number) => void,
+  ): Promise<Importacao> => {
+    const { data } = await api.post<{ data: Importacao }>(
+      `/proxy/competencias/${anoMes}/importacoes`,
+      arquivo,
+      {
+        params: { tipo, nomeArquivo: arquivo.name, forcar: forcar || undefined },
+        headers: { "Content-Type": "application/octet-stream" },
+        onUploadProgress: (e) => {
+          if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
+        },
+      },
+    );
+    return data.data;
+  },
+};

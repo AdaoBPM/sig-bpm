@@ -55,8 +55,10 @@ async function proxyRequest(
   };
 
   if (method !== "GET" && method !== "HEAD") {
-    const body = await request.text();
-    if (body) init.body = body;
+    // Bytes, não texto: o upload de planilha é binário, e decodificá-lo como
+    // UTF-8 corromperia o arquivo. Para JSON o efeito é o mesmo.
+    const body = await request.arrayBuffer();
+    if (body.byteLength > 0) init.body = body;
   }
 
   try {
