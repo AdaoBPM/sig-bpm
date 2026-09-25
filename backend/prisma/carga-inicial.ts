@@ -17,8 +17,10 @@ import { fileURLToPath } from "node:url";
 import { getPrismaClient } from "../src/config/prisma.js";
 import { ajusteDaConta, relatarAjustesConta } from "./ajustes-carga.js";
 import type {
+  AcaoPermissao,
   AtribuicaoCusto,
   BaldeAlocacao,
+  RecursoSistema,
   SinalBalancete,
   TipoConta,
 } from "../src/generated/prisma/enums.js";
@@ -382,11 +384,125 @@ async function carregarUnidades() {
 
 // -----------------------------------------------------------------------------
 
+
+// -----------------------------------------------------------------------------
+// Perfis e usuário inicial
+//
+// A partir do Passo 9 as entidades registram autor — quem abriu a competência,
+// quem apurou, quem fechou. Sem um usuário real no banco, a chave estrangeira
+// não fecha. Estes registros são o mínimo para isso; as telas de gestão de
+// usuários e a autenticação real entram no Passo 22.
+// -----------------------------------------------------------------------------
+
+const RECURSOS: RecursoSistema[] = [
+  "CADASTROS",
+  "USUARIOS",
+  "COMPETENCIA",
+  "IMPORTACAO",
+  "LISTAS_OPERACIONAIS",
+  "LANCAMENTOS_MANUAIS",
+  "CLASSIFICACAO",
+  "APURACAO",
+  "DRE",
+  "DIVERGENCIA",
+  "AUDITORIA",
+];
+
+const ACOES: AcaoPermissao[] = ["VER", "LER", "EDITAR"];
+
+const PERFIS: Array<{
+  codigo: string;
+  nome: string;
+  descricao: string;
+  ordem: number;
+  permissoes: Array<{ recurso: RecursoSistema; acao: AcaoPermissao }>;
+}> = [
+  {
+    codigo: "CONTABIL",
+    nome: "Contábil",
+    descricao: "Opera o fechamento, parametriza os cadastros e confere os resultados",
+    ordem: 1,
+    permissoes: RECURSOS.flatMap((recurso) => ACOES.map((acao) => ({ recurso, acao }))),
+  },
+  {
+    codigo: "ALIMENTADOR",
+    nome: "Alimentador",
+    descricao: "Digita e importa as listas operacionais dos seus setores",
+    ordem: 2,
+    permissoes: (["VER", "LER", "EDITAR"] as AcaoPermissao[]).map((acao) => ({
+      recurso: "LISTAS_OPERACIONAIS" as RecursoSistema,
+      acao,
+    })),
+  },
+  {
+    codigo: "GESTAO",
+    nome: "Gestão",
+    descricao: "Consulta a DRE apurada, os fechamentos e as divergências",
+    ordem: 3,
+    permissoes: (["DRE", "DIVERGENCIA"] as RecursoSistema[]).flatMap((recurso) =>
+      (["VER", "LER"] as AcaoPermissao[]).map((acao) => ({ recurso, acao })),
+    ),
+  },
+];
+
+/** Mesmo id que o login de desenvolvimento emite no `sub` do token, para que
+ *  o usuário autenticado corresponda a uma linha real do banco. */
+const USUARIO_INICIAL_ID = "00000000-0000-0000-0000-000000000001";
+/** bcrypt de "admin123" — herdado do login de demonstração do molde. */
+const USUARIO_INICIAL_SENHA =
+  "$2b$10$TfWpTldLcP8P4w0bOlhMw.b5i1v2neNtOCAGdEJjZNZGhF6BPPsQ6";
+
+async function carregarPerfisEUsuario() {
+  let perfilContabilId = "";
+
+  for (const p of PERFIS) {
+    const perfil = await prisma.perfil.upsert({
+      where: { codigo: p.codigo },
+      create: {
+        codigo: p.codigo,
+        nome: p.nome,
+        descricao: p.descricao,
+        sistema: true,
+        ordem: p.ordem,
+      },
+      update: { nome: p.nome, descricao: p.descricao, sistema: true, ordem: p.ordem },
+    });
+
+    // A matriz é reescrita inteira: é pequena, e assim a carga reflete
+    // exatamente o que está declarado aqui.
+    await prisma.perfilPermissao.deleteMany({ where: { perfilId: perfil.id } });
+    for (const perm of p.permissoes) {
+      await prisma.perfilPermissao.create({
+        data: { perfilId: perfil.id, recurso: perm.recurso, acao: perm.acao },
+      });
+    }
+
+    if (p.codigo === "CONTABIL") perfilContabilId = perfil.id;
+  }
+
+  await prisma.usuario.upsert({
+    where: { id: USUARIO_INICIAL_ID },
+    create: {
+      id: USUARIO_INICIAL_ID,
+      nome: "Administrador BPM",
+      email: "admin@bpm.com",
+      senhaHash: USUARIO_INICIAL_SENHA,
+      perfilId: perfilContabilId,
+      ordem: 1,
+    },
+    update: { perfilId: perfilContabilId, ativo: true },
+  });
+
+  return { perfis: PERFIS.length };
+}
+
+const perfis = await carregarPerfisEUsuario();
 const un = await carregarUnidades();
 const cc = await carregarCentrosCusto();
 const cr = await carregarContasResultado();
 
 console.log("Carga inicial dos cadastros\n");
+console.log(`Perfis              : ${perfis.perfis} gravados, com o usuário inicial`);
 console.log(`Unidades de negócio : ${un} gravadas`);
 console.log(
   `Centros de custo    : ${cc.gravados} gravados, ${cc.descartados} descartados por ajuste, ${cc.ignorados} ignorados (de ${cc.lidos} lidos)`,

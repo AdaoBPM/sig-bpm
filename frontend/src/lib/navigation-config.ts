@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  CalendarDays,
   FileText,
   Globe,
   LayoutDashboard,
@@ -18,6 +19,7 @@ export type NavItem = {
 
 export const navPrincipal: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Competências", href: "/competencias", icon: CalendarDays },
   { title: "Centros de custo", href: "/cadastros/centros-custo", icon: Building2 },
   {
     title: "Contas de resultado",
@@ -35,6 +37,7 @@ export const navReferencias: NavItem[] = [
 
 export const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/competencias": "Competências",
   "/cadastros/centros-custo": "Centros de custo",
   "/cadastros/contas-resultado": "Contas de resultado",
   "/cadastros/estrutura-dre": "Estrutura da DRE",
