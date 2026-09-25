@@ -11,11 +11,38 @@ export type AuthUser = {
   permissions: string[];
 };
 
+/**
+ * Login de desenvolvimento, herdado do molde. Vale enquanto não houver usuários
+ * no banco — a autenticação real e o cadastro de perfis entram no Passo 22 do
+ * plano de implementação, e então este atalho sai.
+ *
+ * As permissões reproduzem o perfil Contábil: todos os recursos, todas as ações.
+ */
+const RECURSOS_SIG = [
+  "cadastros",
+  "usuarios",
+  "competencia",
+  "importacao",
+  "listas_operacionais",
+  "lancamentos_manuais",
+  "classificacao",
+  "apuracao",
+  "dre",
+  "divergencia",
+  "auditoria",
+];
+
 const TEMPLATE_USER: AuthUser = {
   id: "00000000-0000-0000-0000-000000000001",
   nome: "Administrador BPM",
   email: "admin@bpm.com",
-  permissions: ["dashboard:view", "pedidos:view", "pedidos:create"],
+  permissions: [
+    ...RECURSOS_SIG.flatMap((r) => [`${r}:ver`, `${r}:ler`, `${r}:editar`]),
+    // Telas de referência do molde, ainda presentes no projeto.
+    "dashboard:view",
+    "pedidos:view",
+    "pedidos:create",
+  ],
 };
 
 const TEMPLATE_PASSWORD_HASH =

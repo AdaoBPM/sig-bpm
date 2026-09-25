@@ -1,3 +1,8 @@
+// Carrega o backend/.env antes de qualquer leitura de process.env.
+// Sem isto, o .env criado pelo `npm run setup` nunca chega a ser lido e todas
+// as variáveis caem no valor padrão — inclusive DATABASE_URL e JWT_SECRET.
+import "dotenv/config";
+
 import { z } from "zod";
 
 const WEAK_SECRETS = new Set(["altere-em-producao", "change-me", "secret", "jwt-secret"]);

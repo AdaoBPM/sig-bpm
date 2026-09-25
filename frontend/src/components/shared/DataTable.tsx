@@ -7,6 +7,9 @@ type DataTableProps<T> = {
   isLoading?: boolean;
   error?: string | null;
   emptyMessage?: string;
+  /** Texto de apoio do estado vazio. Telas de consulta não pedem "crie o
+   *  primeiro item" — ali o vazio costuma ser resultado de uma busca. */
+  emptyHint?: string;
   renderRow: (item: T) => ReactNode;
   columns: string[];
 };
@@ -16,6 +19,7 @@ export function DataTable<T>({
   isLoading = false,
   error = null,
   emptyMessage = "Nenhum item encontrado",
+  emptyHint = "Crie o primeiro item para começar.",
   renderRow,
   columns,
 }: DataTableProps<T>) {
@@ -41,9 +45,7 @@ export function DataTable<T>({
     return (
       <div className="py-12 text-center">
         <p className="text-sm font-medium text-gray-900">{emptyMessage}</p>
-        <p className="mt-1 text-sm text-gray-600">
-          Crie o primeiro item para começar.
-        </p>
+        <p className="mt-1 text-sm text-gray-600">{emptyHint}</p>
       </div>
     );
   }
