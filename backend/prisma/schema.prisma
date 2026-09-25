@@ -397,7 +397,10 @@ model ContaResultado {
   linhaDRE LinhaDRE? @relation(fields: [linhaDREId], references: [id])
 
   lancamentosContabeis LancamentoContabil[]
+  lancamentosAdotados  LancamentoContabil[] @relation("ContaAdotada")
   lancamentosManuais   LancamentoManual[]
+  reclassificacoesOrigem  ReclassificacaoConta[] @relation("ReclassificacaoOrigem")
+  reclassificacoesDestino ReclassificacaoConta[] @relation("ReclassificacaoDestino")
 
   @@index([conta])
   @@index([linhaDREId])
@@ -759,9 +762,16 @@ enum TipoAlocacao {
 /// Qualquer valor diferente de OK impede o fechamento da competência.
 enum ValidacaoLancamento {
   OK
+  /// <ERRO!> da planilha: o centro tem departamento ou atribuição e a conta não.
+  ERRO_PARAMETRIZACAO
+  /// <DEP.!>: departamento do centro diferente do departamento da conta.
   ERRO_DEPARTAMENTO
+  /// <ATR.!>: atribuição do centro incompatível com a da conta.
   ERRO_ATRIBUICAO
+  /// Conta analítica sem linha na DRE.
   SEM_DESTINO
+  /// Código de centro de custo que não está no cadastro (fora os de obra).
+  CENTRO_NAO_CADASTRADO
 }
 
 /// ENUM: unidade de medida das listas operacionais.
@@ -868,6 +878,11 @@ model LancamentoContabil {
   linhaArquivo      Int     @map("linha_arquivo")
 
   // --- campos derivados, recalculados a cada apuração e congelados com ela ---
+  /// Conta que vale na DRE: a do balancete, ou a do cadastro de
+  /// reclassificação para este centro e esta conta. É a coluna CONTA (ADOT.).
+  contaAdotadaId String?  @map("conta_adotada_id")
+  /// Quando a classificação foi calculada pela última vez.
+  classificadoEm DateTime? @map("classificado_em")
   departamento String?
   atribuicao   String?
   linhaDREId   String?              @map("linha_dre_id")
@@ -884,6 +899,7 @@ model LancamentoContabil {
   importacao     Importacao     @relation(fields: [importacaoId], references: [id])
   centroCusto    CentroCusto?   @relation(fields: [centroCustoId], references: [id])
   contaResultado ContaResultado @relation(fields: [contaResultadoId], references: [id])
+  contaAdotada   ContaResultado? @relation("ContaAdotada", fields: [contaAdotadaId], references: [id])
   linhaDRE       LinhaDRE?      @relation(fields: [linhaDREId], references: [id])
 
   @@index([competenciaId, validacao])
@@ -1375,4 +1391,32 @@ model ResultadoApurado {
   @@unique([competenciaId, unidadeNegocioId, centroCustoId, linhaDREId])
   @@index([competenciaId, linhaDREId])
   @@map("resultados_apurados")
+}
+
+/// Reclassificação de conta por centro de custo — a versão de cadastro da
+/// coluna CONTA (ALOC.) da planilha. Corrige o lançamento que o RM gravou numa
+/// conta de outro departamento ou de outra atribuição (folha, requisição, nota
+/// fiscal lançadas no centro errado): para este centro, a conta de origem vale
+/// como a conta de destino.
+///
+/// Fica no cadastro, e não no lançamento, pela regra do SPEC — a correção é
+/// sempre no cadastro. Vale para todas as competências ainda não apuradas.
+/// O centro é identificado pelo CÓDIGO do RM, como no balancete.
+model ReclassificacaoConta {
+  id                String   @id @default(uuid())
+  codigoCentroCusto String   @map("codigo_centro_custo")
+  contaOrigemId     String   @map("conta_origem_id")
+  contaDestinoId    String   @map("conta_destino_id")
+  motivo            String?
+  /// ORDEM: posição na tela, reorganizável pelo usuário.
+  ordem             Int      @default(0)
+  ativo             Boolean  @default(true)
+  criadoEm          DateTime @default(now()) @map("criado_em")
+  atualizadoEm      DateTime @updatedAt @map("atualizado_em")
+
+  contaOrigem  ContaResultado @relation("ReclassificacaoOrigem", fields: [contaOrigemId], references: [id])
+  contaDestino ContaResultado @relation("ReclassificacaoDestino", fields: [contaDestinoId], references: [id])
+
+  @@unique([codigoCentroCusto, contaOrigemId])
+  @@map("reclassificacoes_conta")
 }

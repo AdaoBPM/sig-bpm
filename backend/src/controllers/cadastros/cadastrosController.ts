@@ -50,6 +50,18 @@ export const cadastrosController = {
     return response.json({ data });
   },
 
+  async listarReclassificacoes(request: Request, response: Response) {
+    const parametros = lerParametros(request);
+    if (!parametros.success) {
+      return response
+        .status(400)
+        .json({ error: "Dados inválidos", details: parametros.error.issues });
+    }
+
+    const data = await cadastrosService.listarReclassificacoes(parametros.data);
+    return response.json({ data });
+  },
+
   async resumo(_request: Request, response: Response) {
     const data = await cadastrosService.resumo();
     return response.json({ data });

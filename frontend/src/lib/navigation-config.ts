@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ListTree,
   Package,
+  Shuffle,
   Table2,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navPrincipal: NavItem[] = [
     icon: Table2,
   },
   { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree },
+  { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle },
 ];
 
 export const navReferencias: NavItem[] = [
@@ -41,6 +43,7 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/centros-custo": "Centros de custo",
   "/cadastros/contas-resultado": "Contas de resultado",
   "/cadastros/estrutura-dre": "Estrutura da DRE",
+  "/cadastros/reclassificacoes": "Reclassificações de conta",
   "/pedidos/listagem": "Pedidos",
   "/exemplo/formulario": "Formulário",
 };

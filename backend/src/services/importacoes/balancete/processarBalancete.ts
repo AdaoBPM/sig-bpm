@@ -4,6 +4,8 @@ import { getPrismaClient } from "../../../config/prisma.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
 import { logger } from "../../../utils/logger.js";
+import { ehCentroDeObra } from "../../classificacao/centrosObra.js";
+import { classificacaoService } from "../../classificacao/classificacaoService.js";
 import { caminhoDoArquivo } from "../arquivosImportados.js";
 import {
   ABA_BALANCETE,
@@ -16,22 +18,10 @@ import {
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
 
-/**
- * Centros de custo de obra. Não estão no cadastro — são um por obra, criados
- * no RM a cada contrato — e a planilha os trata à parte (LEFT(COD_CUSTO, 4)).
- * Na importação eles entram com o código guardado e sem vínculo; é a
- * classificação que decide o destino deles.
- */
-const PREFIXOS_OBRA = ["1.98", "1.99"];
-
 const LOTE_GRAVACAO = 500;
 
 /** Recusa do arquivo inteiro: nada é gravado. */
 class ArquivoRecusado extends Error {}
-
-function ehObra(codigo: string) {
-  return PREFIXOS_OBRA.some((p) => codigo === p || codigo.startsWith(`${p}.`));
-}
 
 /**
  * Escolhe a aba: a de nome conhecido, se existir; senão a única do arquivo —
@@ -158,7 +148,7 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
           const atual = semCadastro.get(l.codigoCentroCusto) ?? {
             codigo: l.codigoCentroCusto,
             nome: l.nomeCentroCusto,
-            obra: ehObra(l.codigoCentroCusto),
+            obra: ehCentroDeObra(l.codigoCentroCusto),
             linhas: 0,
             valor: new Decimal(0),
           };
@@ -286,6 +276,18 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
       rejeitadas: rejeicoes.length,
       substituidas,
     });
+
+    // A classificação corre logo depois, no mesmo trabalho da fila. Se falhar,
+    // a importação continua válida: os lançamentos ficam sem classificação e a
+    // tela de classificação permite recalcular.
+    try {
+      await classificacaoService.classificarCompetencia(competencia.id);
+    } catch (error) {
+      logger("error", "Falha ao classificar após a importação", {
+        importacaoId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   } catch (error) {
     if (error instanceof ArquivoRecusado || error instanceof ArquivoInvalidoError) {
       await recusar(importacaoId, error.message);

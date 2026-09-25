@@ -8,7 +8,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
-import { BaldeBadge } from "../components/BaldeBadge";
+import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { CadastroShell } from "../components/CadastroShell";
 import {
   cadastrosService,

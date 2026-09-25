@@ -8,6 +8,7 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import { auditoriaRoutes } from "./routes/auditoriaRoutes.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { cadastrosRoutes } from "./routes/cadastros/cadastrosRoutes.js";
+import { classificacaoRoutes } from "./routes/classificacao/classificacaoRoutes.js";
 import { competenciasRoutes } from "./routes/competencias/competenciasRoutes.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
 import {
@@ -46,6 +47,7 @@ app.use("/auth", authRoutes);
 app.use("/auditoria", auditoriaRoutes);
 app.use("/cadastros", cadastrosRoutes);
 app.use("/competencias/:anoMes/importacoes", importacoesDaCompetenciaRoutes);
+app.use("/competencias/:anoMes/classificacao", classificacaoRoutes);
 app.use("/competencias", competenciasRoutes);
 app.use("/importacoes", importacoesRoutes);
 

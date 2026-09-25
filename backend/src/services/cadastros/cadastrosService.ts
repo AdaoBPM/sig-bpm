@@ -99,6 +99,61 @@ export const cadastrosService = {
     return { itens, total, pagina: input.pagina, porPagina: input.porPagina };
   },
 
+  /**
+   * Reclassificações de conta por centro de custo. O centro é guardado pelo
+   * código do RM, sem relação no banco; o nome é buscado à parte para a tela.
+   */
+  async listarReclassificacoes(input: ListarCadastroInput) {
+    const prisma = getPrismaClient();
+    const busca = input.busca?.trim();
+
+    const where = busca
+      ? {
+          OR: [
+            { codigoCentroCusto: { contains: busca } },
+            { contaOrigem: { reduzido: { contains: busca } } },
+            { contaOrigem: { descricao: { contains: busca } } },
+            { contaDestino: { reduzido: { contains: busca } } },
+            { contaDestino: { descricao: { contains: busca } } },
+          ],
+        }
+      : {};
+
+    const conta = {
+      select: { reduzido: true, descricao: true, departamento: true, atribuicao: true },
+    } as const;
+
+    const [itens, total] = await Promise.all([
+      prisma.reclassificacaoConta.findMany({
+        where,
+        orderBy: [{ codigoCentroCusto: "asc" }, { ordem: "asc" }],
+        ...paginacao(input),
+        select: {
+          id: true,
+          codigoCentroCusto: true,
+          motivo: true,
+          ativo: true,
+          contaOrigem: conta,
+          contaDestino: conta,
+        },
+      }),
+      prisma.reclassificacaoConta.count({ where }),
+    ]);
+
+    const centros = await prisma.centroCusto.findMany({
+      where: { codigoRM: { in: [...new Set(itens.map((i) => i.codigoCentroCusto))] } },
+      select: { codigoRM: true, nomeRM: true, departamento: true, atribuicao: true },
+    });
+    const centroPorCodigo = new Map(centros.map((c) => [c.codigoRM, c]));
+
+    return {
+      itens: itens.map((i) => ({ ...i, centro: centroPorCodigo.get(i.codigoCentroCusto) ?? null })),
+      total,
+      pagina: input.pagina,
+      porPagina: input.porPagina,
+    };
+  },
+
   async listarLinhasDRE(input: ListarCadastroInput) {
     const prisma = getPrismaClient();
     const busca = input.busca?.trim();

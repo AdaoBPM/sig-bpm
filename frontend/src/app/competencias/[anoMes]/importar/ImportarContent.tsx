@@ -24,7 +24,7 @@ import {
   lerAnoMes,
   MESES,
   rotuloCompetencia,
-} from "./utils/formatacao";
+} from "../utils/formatacao";
 
 const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }> = {
   PROCESSANDO: { classe: "border-blue-200 bg-blue-50 text-blue-700", rotulo: "Processando" },

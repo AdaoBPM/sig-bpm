@@ -13,7 +13,7 @@ import {
   inteiro,
   moeda,
   ROTULO_REJEICAO,
-} from "../utils/formatacao";
+} from "../../utils/formatacao";
 
 /** Acima disso a tabela de rejeições corta — o relatório completo fica no banco. */
 const MAX_REJEICOES = 200;

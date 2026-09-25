@@ -27,6 +27,12 @@ cadastrosRoutes.get(
 );
 
 cadastrosRoutes.get(
+  "/reclassificacoes",
+  autenticacao,
+  asyncHandler(cadastrosController.listarReclassificacoes),
+);
+
+cadastrosRoutes.get(
   "/linhas-dre",
   autenticacao,
   asyncHandler(cadastrosController.listarLinhasDRE),

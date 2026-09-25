@@ -55,6 +55,28 @@ export type LinhaDRE = {
   _count: { contas: number };
 };
 
+/** Conta vista pela verificação do lançamento: código, nome e parâmetros. */
+export type ContaResumida = {
+  reduzido: string;
+  descricao: string;
+  departamento: string | null;
+  atribuicao: string | null;
+};
+
+export type Reclassificacao = {
+  id: string;
+  codigoCentroCusto: string;
+  motivo: string | null;
+  ativo: boolean;
+  contaOrigem: ContaResumida;
+  contaDestino: ContaResumida;
+  centro: {
+    nomeRM: string;
+    departamento: string | null;
+    atribuicao: "DIRETA" | "INDIRETA" | null;
+  } | null;
+};
+
 export type ResumoCadastros = {
   unidades: number;
   centrosCusto: number;
@@ -91,4 +113,6 @@ export const cadastrosService = {
   contasResultado: (p: ParametrosListagem) =>
     listar<ContaResultado>("contas-resultado", p),
   linhasDRE: (p: ParametrosListagem) => listar<LinhaDRE>("linhas-dre", p),
+  reclassificacoes: (p: ParametrosListagem) =>
+    listar<Reclassificacao>("reclassificacoes", p),
 };
