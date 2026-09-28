@@ -9,6 +9,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { CadastroShell } from "../components/CadastroShell";
+import { RecarregarPlanilha } from "../components/RecarregarPlanilha";
 import {
   cadastrosService,
   type CentroCusto,
@@ -42,7 +43,8 @@ export function CentrosCustoContent() {
   return (
     <CadastroShell
       titulo="Centros de custo"
-      descricao="Conferência da carga inicial. Somente leitura."
+      descricao="Carregados da planilha UNIDADES E CENTROS DE CUSTO. A edição aqui entra no Passo 25."
+      acoes={<RecarregarPlanilha />}
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Código, nome ou departamento…"

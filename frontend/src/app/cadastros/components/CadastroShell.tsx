@@ -17,6 +17,8 @@ type CadastroShellProps = {
   porPagina: number;
   onPaginaChange: (pagina: number) => void;
   carregando: boolean;
+  /** Botões ao lado da busca, como o de recarga da planilha. */
+  acoes?: ReactNode;
   children: ReactNode;
 };
 
@@ -37,6 +39,7 @@ export function CadastroShell({
   porPagina,
   onPaginaChange,
   carregando,
+  acoes,
   children,
 }: CadastroShellProps) {
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
@@ -52,7 +55,9 @@ export function CadastroShell({
           </h1>
           <p className="text-sm text-gray-600">{descricao}</p>
         </div>
-        <div className="relative w-full sm:max-w-xs">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          {acoes}
+        <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
           <Input
             value={busca}
@@ -60,6 +65,7 @@ export function CadastroShell({
             placeholder={placeholderBusca}
             className="rounded-sm border-gray-300 pl-9 focus:border-black focus:ring-1 focus:ring-black"
           />
+        </div>
         </div>
       </div>
 

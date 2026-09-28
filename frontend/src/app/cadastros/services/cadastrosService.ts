@@ -101,7 +101,51 @@ async function listar<T>(
   return data.data;
 }
 
+export type MudancaCadastro = {
+  chave: string;
+  rotulo: string;
+  campos: Array<{ campo: string; antes: string | null; depois: string | null }>;
+};
+
+export type SecaoRecarga = {
+  contagem: { novos: number; alterados: number; removidos: number; mantidos: number; iguais: number };
+  novos: MudancaCadastro[];
+  alterados: MudancaCadastro[];
+  removidos: MudancaCadastro[];
+  mantidos: MudancaCadastro[];
+};
+
+export type PreviaRecarga = {
+  hash: string;
+  centros: SecaoRecarga;
+  contas: SecaoRecarga;
+  dre: SecaoRecarga;
+  semDestino: string[];
+  avisos: Array<{ origem: string; chave: string; motivo: string }>;
+  ajustesObsoletos: string[];
+};
+
+export type ResultadoRecarga = {
+  centros: number;
+  centrosRemovidos: number;
+  contas: number;
+  linhasDRE: number;
+  linhasRemovidas: number;
+  contasVinculadas: number;
+  reclassificadas: string[];
+};
+
 export const cadastrosService = {
+  recargaPrevia: async (arquivo: File): Promise<PreviaRecarga> => {
+    const { data } = await api.post<{ data: PreviaRecarga }>("/proxy/cadastros/recarga/previa", arquivo, {
+      headers: { "Content-Type": "application/octet-stream" },
+    });
+    return data.data;
+  },
+  recargaConfirmar: async (hash: string): Promise<ResultadoRecarga> => {
+    const { data } = await api.post<{ data: ResultadoRecarga }>("/proxy/cadastros/recarga/confirmar", { hash });
+    return data.data;
+  },
   resumo: async (): Promise<ResumoCadastros> => {
     const { data } = await api.get<{ data: ResumoCadastros }>(
       "/proxy/cadastros/resumo",

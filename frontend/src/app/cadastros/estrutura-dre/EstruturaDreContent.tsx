@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { CadastroShell } from "../components/CadastroShell";
+import { RecarregarPlanilha } from "../components/RecarregarPlanilha";
 import { cadastrosService, type LinhaDRE } from "../services/cadastrosService";
 
 const POR_PAGINA = 100;
@@ -53,7 +54,8 @@ export function EstruturaDreContent() {
   return (
     <CadastroShell
       titulo="Estrutura da DRE"
-      descricao="A DRE é cadastro, não código. Somente leitura por enquanto."
+      descricao="A DRE é cadastro, não código. Carregada da aba Realizado (Consolidado); a edição aqui entra no Passo 25."
+      acoes={<RecarregarPlanilha />}
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Código, descrição ou grupo…"
