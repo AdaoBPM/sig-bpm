@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { ValidacaoLancamento } from "../../generated/prisma/enums.js";
+import { lancamentosManuaisService } from "../lancamentosManuais/lancamentosManuaisService.js";
 import {
   classificarLancamento,
   type CentroParaClassificar,
@@ -144,8 +145,12 @@ export const classificacaoService = {
       { timeout: 120_000 },
     );
 
+    // Os lançamentos manuais derivam rateio e destino da conta: correm junto.
+    const manuais = await lancamentosManuaisService.rederivar(competenciaId);
+
     return {
       lancamentos: lancamentos.length,
+      manuais,
       reclassificados,
       porValidacao: Object.fromEntries(contagem),
       duracaoMs: Date.now() - inicio,

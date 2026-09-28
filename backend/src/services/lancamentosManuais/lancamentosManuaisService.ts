@@ -1,0 +1,253 @@
+import { getPrismaClient } from "../../config/prisma.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import type { BaldeAlocacao } from "../../generated/prisma/enums.js";
+import type { LancamentoManualInput } from "../../schemas/lancamentosManuais/lancamentoManualSchema.js";
+
+/** Erro de regra — vira 400/404/409 no controller, não 500. */
+export class RegraLancamentoManualError extends Error {
+  constructor(
+    readonly status: 400 | 404 | 409,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+function rotulo(ano: number, mes: number) {
+  return `${String(mes).padStart(2, "0")}/${ano}`;
+}
+
+/**
+ * Derivados do lançamento, na regra das colunas E a I da Gastos (Lanç.
+ * Manuais): o rateio é o do centro, quando há centro, senão o da conta; o
+ * destino na DRE é a linha da conta.
+ */
+export function derivarLancamentoManual(
+  conta: { balde: BaldeAlocacao | null; linhaDREId: string | null },
+  centro: { balde: BaldeAlocacao | null } | null,
+) {
+  return { balde: centro ? centro.balde : conta.balde, linhaDREId: conta.linhaDREId };
+}
+
+async function competenciaPorAnoMes(ano: number, mes: number) {
+  const competencia = await getPrismaClient().competencia.findUnique({
+    where: { ano_mes: { ano, mes } },
+    select: { id: true, ano: true, mes: true, status: true },
+  });
+  if (!competencia) {
+    throw new RegraLancamentoManualError(404, `A competência ${rotulo(ano, mes)} não existe.`);
+  }
+  return competencia;
+}
+
+function exigirAberta(c: { ano: number; mes: number; status: string }) {
+  if (c.status === "FECHADA") {
+    throw new RegraLancamentoManualError(
+      409,
+      `A competência ${rotulo(c.ano, c.mes)} está fechada. Lançar nela exige reabri-la.`,
+    );
+  }
+}
+
+/** Valida conta e centro e devolve os derivados. */
+async function resolver(input: LancamentoManualInput) {
+  const prisma = getPrismaClient();
+  const [conta, centro] = await Promise.all([
+    prisma.contaResultado.findUnique({
+      where: { id: input.contaResultadoId },
+      select: { tipoConta: true, balde: true, linhaDREId: true, reduzido: true },
+    }),
+    input.centroCustoId
+      ? prisma.centroCusto.findUnique({ where: { id: input.centroCustoId }, select: { balde: true } })
+      : Promise.resolve(null),
+  ]);
+  if (!conta) throw new RegraLancamentoManualError(400, "Conta não encontrada.");
+  if (conta.tipoConta !== "ANALITICA") {
+    throw new RegraLancamentoManualError(400, `A conta ${conta.reduzido} é sintética; lance numa conta analítica.`);
+  }
+  if (!conta.linhaDREId) {
+    throw new RegraLancamentoManualError(
+      400,
+      `A conta ${conta.reduzido} não tem destino na DRE. Corrija o cadastro antes de lançar.`,
+    );
+  }
+  if (input.centroCustoId && !centro) {
+    throw new RegraLancamentoManualError(400, "Centro de custo não encontrado.");
+  }
+  return derivarLancamentoManual(conta, centro);
+}
+
+async function competenciaDoLancamento(id: string) {
+  const atual = await getPrismaClient().lancamentoManual.findUnique({
+    where: { id },
+    select: { competencia: { select: { ano: true, mes: true, status: true } } },
+  });
+  if (!atual) throw new RegraLancamentoManualError(404, "Lançamento não encontrado.");
+  return atual.competencia;
+}
+
+const SELECAO = {
+  id: true,
+  motivo: true,
+  filial: true,
+  descricao: true,
+  valor: true,
+  balde: true,
+  atualizadoEm: true,
+  centroCusto: { select: { id: true, codigoRM: true, nomeRM: true } },
+  contaResultado: {
+    select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true },
+  },
+  linhaDRE: { select: { codigo: true, descricao: true, grupo: true } },
+} as const;
+
+type Linha = Prisma.LancamentoManualGetPayload<{ select: typeof SELECAO }>;
+const apresentar = ({ valor, ...l }: Linha) => ({ ...l, valor: valor.toFixed(2) });
+
+function dados(input: LancamentoManualInput) {
+  return {
+    motivo: input.motivo,
+    filial: input.filial,
+    centroCustoId: input.centroCustoId ?? null,
+    contaResultadoId: input.contaResultadoId,
+    descricao: input.descricao,
+    valor: new Prisma.Decimal(input.valor),
+  };
+}
+
+export const lancamentosManuaisService = {
+  async listar(ano: number, mes: number) {
+    const competencia = await competenciaPorAnoMes(ano, mes);
+    const itens = await getPrismaClient().lancamentoManual.findMany({
+      where: { competenciaId: competencia.id },
+      orderBy: [{ motivo: "asc" }, { criadoEm: "asc" }],
+      select: SELECAO,
+    });
+    const total = itens.reduce((a, l) => a.plus(l.valor), new Prisma.Decimal(0));
+    return { competencia, itens: itens.map(apresentar), total: total.toFixed(2) };
+  },
+
+  /** O que a tela precisa para montar o formulário. */
+  async opcoes() {
+    const prisma = getPrismaClient();
+    const [contas, centros, motivos] = await Promise.all([
+      prisma.contaResultado.findMany({
+        where: { tipoConta: "ANALITICA", linhaDREId: { not: null }, ativo: true },
+        orderBy: { ordem: "asc" },
+        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true },
+      }),
+      prisma.centroCusto.findMany({
+        where: { codigoRM: { not: null }, ativo: true },
+        orderBy: { ordem: "asc" },
+        select: { id: true, codigoRM: true, nomeRM: true },
+      }),
+      prisma.lancamentoManual.findMany({
+        distinct: ["motivo"],
+        select: { motivo: true },
+        orderBy: { motivo: "asc" },
+      }),
+    ]);
+    return { contas, centros, motivos: motivos.map((m) => m.motivo) };
+  },
+
+  async criar(ano: number, mes: number, input: LancamentoManualInput, usuarioId: string) {
+    const competencia = await competenciaPorAnoMes(ano, mes);
+    exigirAberta(competencia);
+    const derivados = await resolver(input);
+    const criado = await getPrismaClient().lancamentoManual.create({
+      data: { competenciaId: competencia.id, criadoPor: usuarioId, ...dados(input), ...derivados },
+      select: SELECAO,
+    });
+    return apresentar(criado);
+  },
+
+  async atualizar(id: string, input: LancamentoManualInput) {
+    exigirAberta(await competenciaDoLancamento(id));
+    const derivados = await resolver(input);
+    const salvo = await getPrismaClient().lancamentoManual.update({
+      where: { id },
+      data: { ...dados(input), ...derivados },
+      select: SELECAO,
+    });
+    return apresentar(salvo);
+  },
+
+  async excluir(id: string) {
+    exigirAberta(await competenciaDoLancamento(id));
+    await getPrismaClient().lancamentoManual.delete({ where: { id } });
+  },
+
+  /**
+   * Copia os lançamentos do mês anterior, com os mesmos valores, para o
+   * Contábil ajustar — a RN se repete quase igual de um mês para o outro. Só
+   * numa competência ainda sem lançamentos manuais.
+   */
+  async copiarDoMesAnterior(ano: number, mes: number, usuarioId: string) {
+    const prisma = getPrismaClient();
+    const competencia = await competenciaPorAnoMes(ano, mes);
+    exigirAberta(competencia);
+    const [anoAnt, mesAnt] = mes === 1 ? [ano - 1, 12] : [ano, mes - 1];
+    const anterior = await prisma.competencia.findUnique({
+      where: { ano_mes: { ano: anoAnt, mes: mesAnt } },
+      select: { id: true },
+    });
+    if (!anterior) {
+      throw new RegraLancamentoManualError(404, `Não há competência ${rotulo(anoAnt, mesAnt)} para copiar.`);
+    }
+    if ((await prisma.lancamentoManual.count({ where: { competenciaId: competencia.id } })) > 0) {
+      throw new RegraLancamentoManualError(
+        409,
+        "Esta competência já tem lançamentos manuais. A cópia só é feita numa competência vazia.",
+      );
+    }
+    const origem = await prisma.lancamentoManual.findMany({
+      where: { competenciaId: anterior.id },
+      select: {
+        motivo: true,
+        filial: true,
+        centroCustoId: true,
+        contaResultadoId: true,
+        descricao: true,
+        valor: true,
+        contaResultado: { select: { balde: true, linhaDREId: true } },
+        centroCusto: { select: { balde: true } },
+      },
+    });
+    if (origem.length === 0) {
+      throw new RegraLancamentoManualError(404, `A competência ${rotulo(anoAnt, mesAnt)} não tem lançamentos manuais.`);
+    }
+    await prisma.lancamentoManual.createMany({
+      data: origem.map(({ contaResultado, centroCusto, ...l }) => ({
+        ...l,
+        competenciaId: competencia.id,
+        criadoPor: usuarioId,
+        // Derivados com o cadastro de hoje, não com o do mês copiado.
+        ...(contaResultado
+          ? derivarLancamentoManual(contaResultado, centroCusto)
+          : { balde: null, linhaDREId: null }),
+      })),
+    });
+    return { copiados: origem.length };
+  },
+
+  /** Recalcula os derivados com o cadastro vigente. Chamado na reclassificação. */
+  async rederivar(competenciaId: string) {
+    const prisma = getPrismaClient();
+    const lancamentos = await prisma.lancamentoManual.findMany({
+      where: { competenciaId },
+      select: {
+        id: true,
+        contaResultado: { select: { balde: true, linhaDREId: true } },
+        centroCusto: { select: { balde: true } },
+      },
+    });
+    for (const l of lancamentos) {
+      if (!l.contaResultado) continue;
+      await prisma.lancamentoManual.update({
+        where: { id: l.id },
+        data: derivarLancamentoManual(l.contaResultado, l.centroCusto),
+      });
+    }
+    return lancamentos.length;
+  },
+};

@@ -909,9 +909,16 @@ model LancamentoManual {
   filial           Int
   centroCustoId    String?      @map("centro_custo_id")
   contaResultadoId String?      @map("conta_resultado_id")
-  balde      BaldeAlocacao? @map("balde")
+  /// Texto livre; a tela sugere a descrição da conta, como a planilha fazia.
   descricao        String
-  linhaDREId       String       @map("linha_dre_id")
+
+  // --- derivados da conta (e do centro, quando houver), como as colunas E a I
+  // da Gastos (Lanç. Manuais); recalculados ao gravar e a cada reclassificação,
+  // e congelados com a apuração ---
+  /// Rateio: o do centro, se houver centro; senão o da conta.
+  balde            BaldeAlocacao? @map("balde")
+  /// Destino na DRE: a linha da conta. Nulo se a conta perder o vínculo.
+  linhaDREId       String?      @map("linha_dre_id")
   /// DECIMAL: aritmética sempre em JavaScript.
   valor            Decimal
   criadoPor        String?      @map("criado_por")
@@ -921,7 +928,7 @@ model LancamentoManual {
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id])
   contaResultado ContaResultado? @relation(fields: [contaResultadoId], references: [id])
-  linhaDRE       LinhaDRE        @relation(fields: [linhaDREId], references: [id])
+  linhaDRE       LinhaDRE?       @relation(fields: [linhaDREId], references: [id])
 
   @@index([competenciaId, motivo])
   @@map("lancamentos_manuais")

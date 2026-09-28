@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, ListChecks, Upload } from "lucide-react";
+import { CalendarDays, ListChecks, NotebookPen, Upload } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import {
@@ -159,6 +159,13 @@ export function CompetenciasContent() {
                   >
                     <ListChecks className="size-3.5" />
                     Classificação
+                  </Link>
+                  <Link
+                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/lancamentos-manuais`}
+                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                  >
+                    <NotebookPen className="size-3.5" />
+                    Lançamentos
                   </Link>
                 </td>
               </tr>
