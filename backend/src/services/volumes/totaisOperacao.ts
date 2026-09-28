@@ -93,6 +93,7 @@ export function somarTotais(itens: ItemVolume[], tipos?: TipoListaRateio[]) {
   }
   return LINHAS_TOTAIS.filter((l) => soma.has(l.codigo)).map((l) => ({
     codigo: l.codigo,
+    tipo: l.tipo,
     rotulo: l.rotulo,
     medida: l.medida,
     quantidade: soma.get(l.codigo)!,

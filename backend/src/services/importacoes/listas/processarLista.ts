@@ -11,7 +11,7 @@ import { DEFINICOES_LISTAS, ehListaRateio, type TipoListaRateio } from "./defini
 import type { RegistroLista } from "./leituraListas.js";
 import { garantirObras } from "./obras.js";
 
-type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
+export type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
 const LOTE_GRAVACAO = 500;
 
@@ -19,15 +19,16 @@ const LOTE_GRAVACAO = 500;
 class ArquivoRecusado extends Error {}
 
 /** Campos comuns a toda lista operacional, na forma do createMany. */
-type LinhaGravada = {
+export type LinhaGravada = {
   competenciaId: string;
-  importacaoId: string;
+  /** Nulo quando o registro foi digitado. */
+  importacaoId: string | null;
   unidadeNegocioId: string | null;
   obraId: string | null;
   linhaId?: string | null;
   quantidade: Prisma.Decimal;
   criadoPor: string;
-  linhaArquivo: number;
+  linhaArquivo: number | null;
   /** Mais os campos próprios da lista (RegistroLista.campos). */
   [campo: string]: unknown;
 };
@@ -51,7 +52,7 @@ async function apagarLotes(tx: Tx, tipo: TipoListaRateio, importacoes: string[])
   }
 }
 
-async function gravar(tx: Tx, tipo: TipoListaRateio, dados: LinhaGravada[]) {
+export async function gravar(tx: Tx, tipo: TipoListaRateio, dados: LinhaGravada[]) {
   switch (tipo) {
     case "PROJETO": return tx.projeto.createMany({ data: dados as Prisma.ProjetoCreateManyInput[] });
     case "PRODUCAO": return tx.producao.createMany({ data: dados as Prisma.ProducaoCreateManyInput[] });
@@ -62,6 +63,46 @@ async function gravar(tx: Tx, tipo: TipoListaRateio, dados: LinhaGravada[]) {
     case "MONTAGEM": return tx.montagem.createMany({ data: dados as Prisma.MontagemCreateManyInput[] });
     case "ACOMPANHAMENTO": return tx.acompanhamento.createMany({ data: dados as Prisma.AcompanhamentoCreateManyInput[] });
   }
+}
+
+/**
+ * Registros lidos → linhas prontas para o createMany: resolve unidade, linha e
+ * obra (cadastrando as obras novas). Serve à importação e à digitação.
+ */
+export async function prepararGravacao(
+  tx: Tx,
+  tipo: TipoListaRateio,
+  registros: RegistroLista[],
+  contexto: { competenciaId: string; importacaoId: string | null; criadoPor: string },
+): Promise<{ dados: LinhaGravada[]; obrasCriadas: number }> {
+  const [unidades, linhas] = await Promise.all([
+    tx.unidadeNegocio.findMany({ select: { id: true, codigo: true } }),
+    tx.linha.findMany({ select: { id: true, tipo: true, codigo: true } }),
+  ]);
+  const unidadePorCodigo = new Map(unidades.map((u) => [u.codigo, u.id]));
+  const linhaPorChave = new Map(linhas.map((l) => [`${l.tipo}|${l.codigo}`, l.id]));
+  const temLinha = tipo !== "PRODUCAO_METALURGIA";
+
+  const obrasCitadas = new Map<string, string | null>();
+  for (const r of registros) {
+    if (r.obra && !obrasCitadas.has(r.obra.codigo)) obrasCitadas.set(r.obra.codigo, r.obra.nome);
+  }
+  const { porCodigo, criadas } = await garantirObras(tx, obrasCitadas);
+
+  const dados = registros.map((r) => ({
+    competenciaId: contexto.competenciaId,
+    importacaoId: contexto.importacaoId,
+    unidadeNegocioId: r.unidade ? (unidadePorCodigo.get(r.unidade) ?? null) : null,
+    obraId: r.obra ? (porCodigo.get(r.obra.codigo) ?? null) : null,
+    ...(temLinha
+      ? { linhaId: r.linha ? (linhaPorChave.get(`${r.linha.tipo}|${r.linha.codigo}`) ?? null) : null }
+      : {}),
+    quantidade: r.quantidade,
+    criadoPor: contexto.criadoPor,
+    linhaArquivo: contexto.importacaoId ? r.linhaArquivo : null,
+    ...r.campos,
+  }));
+  return { dados, obrasCriadas: criadas };
 }
 
 /** O que a regra dos Totais precisa de cada registro lido. */
@@ -108,19 +149,6 @@ export async function processarLista(importacaoId: string): Promise<void> {
     }
     await registrarProgresso(importacaoId, 50);
 
-    const [unidades, linhas] = await Promise.all([
-      prisma.unidadeNegocio.findMany({ select: { id: true, codigo: true } }),
-      prisma.linha.findMany({ select: { id: true, tipo: true, codigo: true } }),
-    ]);
-    const unidadePorCodigo = new Map(unidades.map((u) => [u.codigo, u.id]));
-    const linhaPorChave = new Map(linhas.map((l) => [`${l.tipo}|${l.codigo}`, l.id]));
-    const temLinha = tipo !== "PRODUCAO_METALURGIA";
-
-    const obrasCitadas = new Map<string, string | null>();
-    for (const r of leitura.registros) {
-      if (r.obra && !obrasCitadas.has(r.obra.codigo)) obrasCitadas.set(r.obra.codigo, r.obra.nome);
-    }
-
     const totais = somarTotais(leitura.registros.map((r) => itemDoRegistro(tipo, r)), [tipo]);
 
     const { substituidas, obrasCriadas } = await prisma.$transaction(
@@ -133,8 +161,6 @@ export async function processarLista(importacaoId: string): Promise<void> {
           throw new ArquivoRecusado("A competência foi fechada enquanto o arquivo era processado. Nada foi gravado.");
         }
 
-        const { porCodigo, criadas } = await garantirObras(tx, obrasCitadas);
-
         const anteriores = await tx.importacao.findMany({
           where: { competenciaId: competencia.id, tipo, status: "CONCLUIDA", substituidaEm: null, id: { not: importacaoId } },
           select: { id: true },
@@ -145,19 +171,11 @@ export async function processarLista(importacaoId: string): Promise<void> {
           await tx.importacao.updateMany({ where: { id: { in: ids } }, data: { substituidaEm: new Date() } });
         }
 
-        const dados: LinhaGravada[] = leitura.registros.map((r) => ({
+        const { dados, obrasCriadas: criadas } = await prepararGravacao(tx, tipo, leitura.registros, {
           competenciaId: competencia.id,
           importacaoId,
-          unidadeNegocioId: r.unidade ? (unidadePorCodigo.get(r.unidade) ?? null) : null,
-          obraId: r.obra ? (porCodigo.get(r.obra.codigo) ?? null) : null,
-          ...(temLinha
-            ? { linhaId: r.linha ? (linhaPorChave.get(`${r.linha.tipo}|${r.linha.codigo}`) ?? null) : null }
-            : {}),
-          quantidade: r.quantidade,
           criadoPor: importacao.importadoPor,
-          linhaArquivo: r.linhaArquivo,
-          ...r.campos,
-        }));
+        });
         for (let i = 0; i < dados.length; i += LOTE_GRAVACAO) {
           await gravar(tx, tipo, dados.slice(i, i + LOTE_GRAVACAO));
         }
