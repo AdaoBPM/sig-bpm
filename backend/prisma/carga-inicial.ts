@@ -352,6 +352,44 @@ const UNIDADES = [
   { codigo: 5, nome: "RN", tipo: "RN" as const },
 ];
 
+/**
+ * Os três vocabulários de "linha" da planilha (ver SPEC, entidade Linha).
+ *
+ *  - PRODUTO: não está em nenhuma aba — é o resultado das fórmulas de Linha das
+ *    listas operacionais (ESTRUTURA na Unidade 01; ESTACAS ou ALVEOLARES na 02).
+ *  - OBRA e FATURAMENTO: colunas LINHAS (OBRAS) e FATURAMENTOS (OBRAS) da aba
+ *    Listas do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO).
+ *
+ * O código é o texto que as listas usam; é por ele que a importação resolve a linha.
+ */
+const LINHAS: Array<{ tipo: "PRODUTO" | "OBRA" | "FATURAMENTO"; codigo: string; nome: string }> = [
+  { tipo: "PRODUTO", codigo: "ESTRUTURA", nome: "Estrutura" },
+  { tipo: "PRODUTO", codigo: "ALVEOLARES", nome: "Alveolares" },
+  { tipo: "PRODUTO", codigo: "ESTACAS", nome: "Estacas" },
+  { tipo: "OBRA", codigo: "FUNDAÇÃO", nome: "Fundação" },
+  { tipo: "OBRA", codigo: "MONTAGEM", nome: "Montagem" },
+  { tipo: "OBRA", codigo: "VEDAÇÃO", nome: "Vedação" },
+  { tipo: "OBRA", codigo: "CAPEAMENTO", nome: "Capeamento" },
+  { tipo: "OBRA", codigo: "METÁLICA", nome: "Metálica" },
+  { tipo: "OBRA", codigo: "TELHAMENTO", nome: "Telhamento" },
+  { tipo: "OBRA", codigo: "OUTROS", nome: "Outros" },
+  { tipo: "FATURAMENTO", codigo: "Frete e Descarga", nome: "Frete e Descarga" },
+  { tipo: "FATURAMENTO", codigo: "Execução de Serviços", nome: "Execução de Serviços" },
+  { tipo: "FATURAMENTO", codigo: "Materiais Aplicados", nome: "Materiais Aplicados" },
+  { tipo: "FATURAMENTO", codigo: "Equipamentos Locados", nome: "Equipamentos Locados" },
+];
+
+async function carregarLinhas() {
+  for (const [i, l] of LINHAS.entries()) {
+    await prisma.linha.upsert({
+      where: { tipo_codigo: { tipo: l.tipo, codigo: l.codigo } },
+      create: { ...l, ordem: i + 1 },
+      update: { nome: l.nome, ordem: i + 1 },
+    });
+  }
+  return LINHAS.length;
+}
+
 async function carregarUnidades() {
   for (const [i, u] of UNIDADES.entries()) {
     const dados = { nome: u.nome, tipo: u.tipo, ordem: i + 1 };
@@ -480,12 +518,14 @@ async function carregarPerfisEUsuario() {
 
 const perfis = await carregarPerfisEUsuario();
 const un = await carregarUnidades();
+const linhas = await carregarLinhas();
 const cc = await carregarCentrosCusto();
 const cr = await carregarContasResultado();
 
 console.log("Carga inicial dos cadastros\n");
 console.log(`Perfis              : ${perfis.perfis} gravados, com o usuário inicial`);
 console.log(`Unidades de negócio : ${un} gravadas`);
+console.log(`Linhas              : ${linhas} gravadas (produto, obra e faturamento)`);
 console.log(
   `Centros de custo    : ${cc.gravados} gravados, ${cc.descartados} descartados por ajuste, ${cc.ignorados} ignorados (de ${cc.lidos} lidos)`,
 );

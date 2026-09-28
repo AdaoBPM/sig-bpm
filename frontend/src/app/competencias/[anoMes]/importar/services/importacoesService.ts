@@ -2,7 +2,16 @@ import { api } from "@/lib/api";
 
 import type { StatusCompetencia } from "../../../services/competenciasService";
 
-export type TipoImportacao = "BALANCETE";
+export type TipoImportacao =
+  | "BALANCETE"
+  | "PROJETO"
+  | "PRODUCAO"
+  | "PRODUCAO_PISTA"
+  | "PRODUCAO_ARMADURA"
+  | "PRODUCAO_METALURGIA"
+  | "EXPEDICAO"
+  | "MONTAGEM"
+  | "ACOMPANHAMENTO";
 export type StatusImportacao = "PROCESSANDO" | "CONCLUIDA" | "REJEITADA";
 
 export type Importacao = {
@@ -51,10 +60,23 @@ export type ResumoBalancete = {
   substituiu: string[];
 };
 
+/** Resumo das listas operacionais: volumes pelas linhas da aba Totais. */
+export type ResumoLista = {
+  aba: string;
+  lista: string;
+  registros: number;
+  ignoradas: { vazias: number; outrosMeses: number };
+  totais: Array<{ codigo: string; rotulo: string; medida: string; quantidade: string }>;
+  obrasCriadas: number;
+  avisos: string[];
+  substituiu: string[];
+};
+
 export type ImportacaoDetalhe = Importacao & {
   hashArquivo: string;
   relatorioErros: Rejeicao[] | null;
-  resumo: ResumoBalancete | null;
+  /** ResumoBalancete quando tipo é BALANCETE; ResumoLista nas listas. */
+  resumo: ResumoBalancete | ResumoLista | null;
   competencia: { ano: number; mes: number; status: StatusCompetencia };
 };
 

@@ -6,6 +6,8 @@ import type { TipoImportacao } from "../../generated/prisma/enums.js";
 import { enfileirar } from "../../lib/filaProcessamento.js";
 import { caminhoDoArquivo, diretorioUploads } from "./arquivosImportados.js";
 import { processarBalancete } from "./balancete/processarBalancete.js";
+import { DEFINICOES_LISTAS, ehListaRateio } from "./listas/definicoesListas.js";
+import { processarLista } from "./listas/processarLista.js";
 
 /**
  * Erro de regra da importação, com o status HTTP que o controller devolve.
@@ -23,8 +25,15 @@ export class RegraImportacaoError extends Error {
   }
 }
 
-/** Tipos com processamento implementado. Os demais entram nos passos 12 a 14. */
-const TIPOS_DISPONIVEIS: TipoImportacao[] = ["BALANCETE"];
+/**
+ * Tipos com processamento implementado: o balancete e as listas que alimentam
+ * os rateios. As listas da receita prévia entram no Passo 12b, e a DRE do
+ * Comercial no Passo 14.
+ */
+const TIPOS_DISPONIVEIS: TipoImportacao[] = [
+  "BALANCETE",
+  ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
+];
 
 function rotulo(ano: number, mes: number) {
   return `${String(mes).padStart(2, "0")}/${ano}`;
@@ -162,7 +171,9 @@ export const importacoesService = {
     });
 
     enfileirar(`importação ${importacao.id}`, () =>
-      processarBalancete(importacao.id),
+      ehListaRateio(importacao.tipo)
+        ? processarLista(importacao.id)
+        : processarBalancete(importacao.id),
     );
 
     return importacao;

@@ -7,6 +7,7 @@ import { logger } from "../../../utils/logger.js";
 import { ehCentroDeObra } from "../../classificacao/centrosObra.js";
 import { classificacaoService } from "../../classificacao/classificacaoService.js";
 import { caminhoDoArquivo } from "../arquivosImportados.js";
+import { escolherAba, recusarImportacao as recusar, registrarProgresso as progresso } from "../statusImportacao.js";
 import {
   ABA_BALANCETE,
   conferirTotal,
@@ -23,20 +24,6 @@ const LOTE_GRAVACAO = 500;
 /** Recusa do arquivo inteiro: nada é gravado. */
 class ArquivoRecusado extends Error {}
 
-/**
- * Escolhe a aba: a de nome conhecido, se existir; senão a única do arquivo —
- * é o caso de quem copia a aba para uma pasta de trabalho à parte.
- */
-function escolherAba(abas: string[]): string | null {
-  const exata = abas.find((a) => a === ABA_BALANCETE);
-  if (exata) return exata;
-  const parecida = abas.find(
-    (a) => a.trim().toLowerCase() === ABA_BALANCETE.toLowerCase(),
-  );
-  if (parecida) return parecida;
-  return abas.length === 1 ? abas[0] : null;
-}
-
 type CentroSemCadastro = {
   codigo: string;
   nome: string | null;
@@ -44,32 +31,6 @@ type CentroSemCadastro = {
   linhas: number;
   valor: Decimal;
 };
-
-async function progresso(id: string, valor: number) {
-  await getPrismaClient().importacao.update({
-    where: { id },
-    data: { progresso: valor },
-  });
-}
-
-async function recusar(
-  id: string,
-  motivo: string,
-  contagem?: { linhasLidas: number; linhasIgnoradas: number },
-) {
-  await getPrismaClient().importacao.update({
-    where: { id },
-    data: {
-      status: "REJEITADA",
-      progresso: 100,
-      motivoRejeicao: motivo,
-      linhasLidas: contagem?.linhasLidas ?? 0,
-      linhasIgnoradas: contagem?.linhasIgnoradas ?? 0,
-      linhasAceitas: 0,
-      linhasRejeitadas: 0,
-    },
-  });
-}
 
 export async function processarBalancete(importacaoId: string): Promise<void> {
   const prisma = getPrismaClient();
@@ -82,7 +43,7 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
     const { competencia } = importacao;
 
     const conteudo = await readFile(caminhoDoArquivo(importacao.hashArquivo));
-    const aba = lerAba(conteudo, escolherAba);
+    const aba = lerAba(conteudo, escolherAba([ABA_BALANCETE]));
     await progresso(importacaoId, 30);
 
     const leitura = interpretarBalancete(aba.linhas, competencia.ano, competencia.mes);

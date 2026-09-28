@@ -44,4 +44,19 @@ export const ROTULO_REJEICAO: Record<string, string> = {
   VALOR_INVALIDO: "Valor inválido",
   TOTAL_DIVERGENTE: "Total ≠ crédito + débito",
   LINHA_DUPLICADA: "Linha repetida",
+  DATA_INVALIDA: "Data inválida",
+  UNIDADE_INVALIDA: "Unidade inválida",
+  QUANTIDADE_INVALIDA: "Quantidade inválida",
+};
+
+export const ROTULO_TIPO: Record<string, string> = {
+  BALANCETE: "Balancete",
+  PROJETO: "Projetos",
+  PRODUCAO: "Produção (m³)",
+  PRODUCAO_PISTA: "Produção (pistas)",
+  PRODUCAO_ARMADURA: "Armadura",
+  PRODUCAO_METALURGIA: "Metalurgia",
+  EXPEDICAO: "Expedição",
+  MONTAGEM: "Montagem",
+  ACOMPANHAMENTO: "Acompanhamento",
 };

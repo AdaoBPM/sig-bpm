@@ -970,6 +970,17 @@ model Projeto {
   linhaId            String? @map("linha_id")
   linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
+  /// Data da liberação do projeto (coluna Data da Projetos (Lista)).
+  data             DateTime?
+  nomePeca         String?       @map("nome_peca")
+  codigoPeca       String?       @map("codigo_peca")
+  produto          String?
+  grupo            String?
+  secao            String?
+  comprimento      Decimal?
+  pesoKg           Decimal?      @map("peso_kg")
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -996,6 +1007,12 @@ model Producao {
   comprimento      Decimal?
   quantidadePecas  Int?          @map("quantidade_pecas")
   quantidade       Decimal
+  data             DateTime?
+  codigoControle   String?       @map("codigo_controle")
+  produto          String?
+  nomePeca         String?       @map("nome_peca")
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1018,6 +1035,10 @@ model ProducaoPista {
   linhaId            String? @map("linha_id")
   linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
+  /// Dia da produção. A linha (alveolares ou estacas) diz de que pista é.
+  data             DateTime?
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(PISTA) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1040,6 +1061,11 @@ model ProducaoArmadura {
   linhaId            String? @map("linha_id")
   linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
+  /// Rótulo da linha na Produção (Lista Arm.): "Matriz (kg)", "Ferragem (kg)"…
+  /// É ela que diz para qual destino do rateio de armadura o peso vai.
+  categoria        String?
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1063,6 +1089,8 @@ model ProducaoMetalurgia {
   /// É ela que direciona o rateio da metalurgia entre as unidades.
   finalidade       String?
   quantidade       Decimal
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1087,6 +1115,16 @@ model Expedicao {
   /// DECIMAL: frete cobrado na expedição, base da receita de frete.
   valorFrete       Decimal?      @map("valor_frete")
   quantidade       Decimal
+  /// quantidade é o VOLUME ADOTADO: o informado, ou o calculado pela seção e
+  /// comprimento da peça, ou o peso / 2.500 — a regra da coluna V. Adot. (m³).
+  data             DateTime?
+  numeroCarga      String?       @map("numero_carga")
+  nomePeca         String?       @map("nome_peca")
+  codigoControle   String?       @map("codigo_controle")
+  pesoKg           Decimal?      @map("peso_kg")
+  volumeInformado  Decimal?      @map("volume_informado")
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1109,6 +1147,12 @@ model Montagem {
   linhaId            String? @map("linha_id")
   linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
+  data             DateTime?
+  grupo            String?
+  secao            String?
+  quantidadePecas  Decimal?      @map("quantidade_pecas")
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1131,6 +1175,12 @@ model Acompanhamento {
   linhaId            String? @map("linha_id")
   linha            Linha?  @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
+  /// Etapa da obra acompanhada (MONTAGEM, FUNDAÇÃO, SAC…). MONTAGEM e SAC
+  /// contam para o rateio da Montagem; as demais, para o Complementar.
+  etapa            String?
+  observacao       String?
+  /// Linha da planilha de origem, para o relatório e a conferência.
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(DIA) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")

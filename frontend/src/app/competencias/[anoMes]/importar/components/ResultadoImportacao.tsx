@@ -7,6 +7,9 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react"
 import {
   importacoesService,
   type ImportacaoDetalhe,
+  type Rejeicao,
+  type ResumoBalancete,
+  type ResumoLista,
 } from "../services/importacoesService";
 import {
   dataHora,
@@ -49,8 +52,85 @@ function Contador({
   );
 }
 
-function Concluida({ imp }: { imp: ImportacaoDetalhe }) {
-  const resumo = imp.resumo;
+/** Linhas recusadas. No balancete, com filial, centro, conta e valor. */
+function TabelaRejeicoes({
+  rejeicoes,
+  balancete = false,
+}: {
+  rejeicoes: Rejeicao[];
+  balancete?: boolean;
+}) {
+  if (rejeicoes.length === 0) return null;
+  const colunas = balancete
+    ? ["Linha", "Motivo", "Detalhe", "Filial", "Centro", "Conta", "Valor"]
+    : ["Linha", "Motivo", "Detalhe"];
+  return (
+    <div className="border border-gray-200 rounded-sm">
+      <div className="border-b border-gray-200 px-4 py-3">
+        <h3 className="text-sm font-bold text-gray-900">Linhas rejeitadas</h3>
+        <p className="text-xs text-gray-500">
+          Não foram gravadas. Corrija o cadastro ou o arquivo e importe de novo.
+          {rejeicoes.length > MAX_REJEICOES
+            ? ` Mostrando as primeiras ${MAX_REJEICOES} de ${inteiro(rejeicoes.length)}.`
+            : null}
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              {colunas.map((c) => (
+                <th
+                  key={c}
+                  className="px-4 py-2 text-left text-xs font-bold tracking-wide text-gray-600 uppercase"
+                >
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rejeicoes.slice(0, MAX_REJEICOES).map((r) => (
+              <tr key={`${r.linha}-${r.codigo}`} className="border-b border-gray-100">
+                <td className="px-4 py-2 text-sm tabular-nums">{r.linha}</td>
+                <td className="px-4 py-2 text-sm font-medium text-red-700">
+                  {ROTULO_REJEICAO[r.codigo] ?? r.codigo}
+                </td>
+                <td className="px-4 py-2 text-sm text-gray-600">{r.mensagem}</td>
+                {balancete ? (
+                  <>
+                    <td className="px-4 py-2 text-sm">{r.filial ?? "—"}</td>
+                    <td className="px-4 py-2 text-sm">{r.codigoCentroCusto ?? "—"}</td>
+                    <td className="px-4 py-2 text-sm">{r.reduzido ?? "—"}</td>
+                    <td className="px-4 py-2 text-right text-sm tabular-nums">
+                      {r.valor ? moeda(r.valor) : "—"}
+                    </td>
+                  </>
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function LoteSubstituido({ em }: { em: string | null }) {
+  if (!em) return null;
+  return (
+    <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-3">
+      <AlertCircle className="size-4 shrink-0 text-gray-500" />
+      <p className="text-sm text-gray-600">
+        Lote substituído por uma importação posterior em {dataHora(em)}. Os
+        registros dele não estão mais na competência.
+      </p>
+    </div>
+  );
+}
+
+function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as ResumoBalancete | null;
   const rejeicoes = imp.relatorioErros ?? [];
   const centros = resumo?.centrosSemCadastro ?? [];
   const foraDoCadastro = centros.filter((c) => !c.obra);
@@ -58,16 +138,7 @@ function Concluida({ imp }: { imp: ImportacaoDetalhe }) {
 
   return (
     <div className="space-y-4">
-      {imp.substituidaEm ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-3">
-          <AlertCircle className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">
-            Lote substituído por uma importação posterior em{" "}
-            {dataHora(imp.substituidaEm)}. Os lançamentos dele não estão mais na
-            competência.
-          </p>
-        </div>
-      ) : null}
+      <LoteSubstituido em={imp.substituidaEm} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />
@@ -183,52 +254,88 @@ function Concluida({ imp }: { imp: ImportacaoDetalhe }) {
         </p>
       ) : null}
 
-      {rejeicoes.length > 0 ? (
-        <div className="border border-gray-200 rounded-sm">
-          <div className="border-b border-gray-200 px-4 py-3">
-            <h3 className="text-sm font-bold text-gray-900">Linhas rejeitadas</h3>
-            <p className="text-xs text-gray-500">
-              Não foram gravadas. Corrija o cadastro ou o arquivo e importe de novo.
-              {rejeicoes.length > MAX_REJEICOES
-                ? ` Mostrando as primeiras ${MAX_REJEICOES} de ${inteiro(rejeicoes.length)}.`
-                : null}
+      <TabelaRejeicoes rejeicoes={rejeicoes} balancete />
+    </div>
+  );
+}
+
+function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as ResumoLista | null;
+  const rejeicoes = imp.relatorioErros ?? [];
+
+  return (
+    <div className="space-y-4">
+      <LoteSubstituido em={imp.substituidaEm} />
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />
+        <Contador rotulo="Aceitas" valor={imp.linhasAceitas} destaque="ok" detalhe="registros do mês gravados" />
+        <Contador
+          rotulo="Rejeitadas"
+          valor={imp.linhasRejeitadas}
+          destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined}
+        />
+        <Contador
+          rotulo="Ignoradas"
+          valor={imp.linhasIgnoradas}
+          detalhe={
+            resumo
+              ? `${inteiro(resumo.ignoradas.outrosMeses)} de outros meses · ${inteiro(resumo.ignoradas.vazias)} sem dado`
+              : undefined
+          }
+        />
+      </div>
+
+      {resumo ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="border border-gray-200 rounded-sm p-4">
+            <h3 className="text-sm font-bold text-gray-900">Volumes para os rateios</h3>
+            <p className="mt-0.5 text-xs text-gray-500">
+              As linhas da aba Totais do BASE REALIZADO (OPERAÇÃO) que esta lista alimenta.
             </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  {["Linha", "Motivo", "Detalhe", "Filial", "Centro", "Conta", "Valor"].map((c) => (
-                    <th
-                      key={c}
-                      className="px-4 py-2 text-left text-xs font-bold tracking-wide text-gray-600 uppercase"
-                    >
-                      {c}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+            <table className="mt-2 w-full text-sm">
               <tbody>
-                {rejeicoes.slice(0, MAX_REJEICOES).map((r) => (
-                  <tr key={`${r.linha}-${r.codigo}`} className="border-b border-gray-100">
-                    <td className="px-4 py-2 text-sm tabular-nums">{r.linha}</td>
-                    <td className="px-4 py-2 text-sm font-medium text-red-700">
-                      {ROTULO_REJEICAO[r.codigo] ?? r.codigo}
+                {resumo.totais.map((t) => (
+                  <tr key={t.codigo} className="border-t border-gray-100">
+                    <td className="py-1.5 text-gray-700">{t.rotulo}</td>
+                    <td className="py-1.5 text-right font-medium tabular-nums">
+                      {Number(t.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-600">{r.mensagem}</td>
-                    <td className="px-4 py-2 text-sm">{r.filial ?? "—"}</td>
-                    <td className="px-4 py-2 text-sm">{r.codigoCentroCusto ?? "—"}</td>
-                    <td className="px-4 py-2 text-sm">{r.reduzido ?? "—"}</td>
-                    <td className="px-4 py-2 text-right text-sm tabular-nums">
-                      {r.valor ? moeda(r.valor) : "—"}
-                    </td>
+                    <td className="py-1.5 pl-2 text-xs text-gray-500">{t.medida}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <div className="border border-gray-200 rounded-sm p-4 text-sm text-gray-600">
+            <h3 className="text-sm font-bold text-gray-900">Leitura</h3>
+            <p className="mt-2">
+              Aba lida: <span className="font-medium text-gray-900">{resumo.aba}</span>
+            </p>
+            <p className="mt-1">
+              {resumo.obrasCriadas > 0
+                ? `${inteiro(resumo.obrasCriadas)} obra(s) nova(s) cadastradas a partir desta lista.`
+                : "Nenhuma obra nova."}
+            </p>
+            {resumo.substituiu.length > 0 ? <p className="mt-1">Substituiu o lote anterior desta lista.</p> : null}
+          </div>
         </div>
       ) : null}
+
+      {resumo && resumo.avisos.length > 0 ? (
+        <div className="rounded-sm border border-yellow-200 bg-yellow-50 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-800" />
+            <ul className="space-y-1 text-sm text-yellow-800">
+              {resumo.avisos.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
+      <TabelaRejeicoes rejeicoes={rejeicoes} />
     </div>
   );
 }
@@ -295,7 +402,7 @@ export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
           </div>
         </div>
       ) : (
-        <Concluida imp={imp} />
+        imp.tipo === "BALANCETE" ? <ConcluidaBalancete imp={imp} /> : <ConcluidaLista imp={imp} />
       )}
     </div>
   );

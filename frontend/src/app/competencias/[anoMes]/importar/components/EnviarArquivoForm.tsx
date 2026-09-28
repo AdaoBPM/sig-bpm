@@ -23,14 +23,24 @@ import {
   type TipoImportacao,
 } from "../services/importacoesService";
 
+const LISTAS = "SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)";
+
 /**
- * Os tipos de arquivo do fechamento. Só o balancete tem processamento por
- * enquanto; os demais aparecem desabilitados para o usuário saber que virão.
+ * Os tipos de arquivo do fechamento, com a aba que o sistema procura. Os que
+ * ainda não têm processamento aparecem desabilitados, para o usuário saber que
+ * virão.
  */
-const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean }> = [
-  { valor: "BALANCETE", rotulo: "Balancete (TOTVS RM)", disponivel: true },
+const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?: string }> = [
+  { valor: "BALANCETE", rotulo: "Balancete (TOTVS RM)", disponivel: true, origem: "aba Balancete (Lista) do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS). O sistema lê as colunas do mês e confere a soma com o Total Geral do arquivo" },
+  { valor: "PROJETO", rotulo: "Projetos liberados", disponivel: true, origem: `aba Projetos (Lista) do ${LISTAS}` },
+  { valor: "PRODUCAO", rotulo: "Produção (m³)", disponivel: true, origem: `aba Produção (Lista m3) do ${LISTAS}` },
+  { valor: "PRODUCAO_PISTA", rotulo: "Produção (pistas)", disponivel: true, origem: `aba Produção (Lista pst) do ${LISTAS}` },
+  { valor: "PRODUCAO_ARMADURA", rotulo: "Produção de armadura", disponivel: true, origem: `aba Produção (Lista Arm.) do ${LISTAS}` },
+  { valor: "PRODUCAO_METALURGIA", rotulo: "Produção da metalurgia", disponivel: true, origem: "aba Produção Mensal da Planilha Padrão de Requisição e Itens Metálicos Acabados" },
+  { valor: "EXPEDICAO", rotulo: "Expedição", disponivel: true, origem: `aba Expedição (Lista) do ${LISTAS}` },
+  { valor: "MONTAGEM", rotulo: "Montagem", disponivel: true, origem: `aba Montagem (Lista) do ${LISTAS}` },
+  { valor: "ACOMPANHAMENTO", rotulo: "Acompanhamento de obra", disponivel: true, origem: `aba Acompanhamentos do ${LISTAS}` },
   { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: false },
-  { valor: "PRODUCAO_METALURGIA", rotulo: "Produção da metalurgia", disponivel: false },
 ];
 
 type EnviarArquivoFormProps = {
@@ -75,10 +85,10 @@ export function EnviarArquivoForm({ anoMes, onEnviado }: EnviarArquivoFormProps)
         Enviar arquivo
       </h2>
       <p className="mt-1 text-sm text-gray-600">
-        Envie a planilha com a aba <strong>Balancete (Lista)</strong>, ou uma
-        pasta de trabalho só com ela. O sistema lê as colunas do mês desta
-        competência e confere a soma com o Total Geral do arquivo. Reimportar
-        substitui o lote anterior por inteiro.
+        Envie a planilha com a {TIPOS.find((t) => t.valor === tipo)?.origem}, ou uma
+        pasta de trabalho só com essa aba. Só os registros do mês desta
+        competência são gravados. Reimportar substitui o lote anterior do mesmo
+        tipo por inteiro.
       </p>
 
       <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end">

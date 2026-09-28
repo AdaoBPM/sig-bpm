@@ -24,6 +24,7 @@ import {
   lerAnoMes,
   MESES,
   rotuloCompetencia,
+  ROTULO_TIPO,
 } from "../utils/formatacao";
 
 const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }> = {
@@ -147,7 +148,7 @@ export function ImportarContent() {
                 <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
                   {dataHora(imp.importadoEm)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900">{imp.tipo}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">{ROTULO_TIPO[imp.tipo] ?? imp.tipo}</td>
                 <td className="max-w-xs truncate px-4 py-3 text-sm text-gray-900">
                   {imp.nomeArquivo}
                 </td>
