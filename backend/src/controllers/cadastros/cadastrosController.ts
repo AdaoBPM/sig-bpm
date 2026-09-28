@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 
 import { cadastrosService } from "../../services/cadastros/cadastrosService.js";
 import { RecargaInvalida, recargaCadastrosService } from "../../services/cadastros/recargaCadastrosService.js";
-import { listarCadastroSchema } from "../../schemas/cadastros/listarCadastroSchema.js";
+import { listarCadastroSchema, listarPrecosSchema } from "../../schemas/cadastros/listarCadastroSchema.js";
 
 /**
  * O Express 5 expõe `req.query` como getter, então o middleware `validacao`
@@ -60,6 +60,18 @@ export const cadastrosController = {
     }
 
     const data = await cadastrosService.listarReclassificacoes(parametros.data);
+    return response.json({ data });
+  },
+
+  async listarPrecosContrato(request: Request, response: Response) {
+    const parametros = listarPrecosSchema.safeParse({ ...request.query });
+    if (!parametros.success) {
+      return response
+        .status(400)
+        .json({ error: "Dados inválidos", details: parametros.error.issues });
+    }
+
+    const data = await cadastrosService.listarPrecosContrato(parametros.data);
     return response.json({ data });
   },
 

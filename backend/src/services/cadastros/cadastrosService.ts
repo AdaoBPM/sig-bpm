@@ -1,5 +1,5 @@
 import { getPrismaClient } from "../../config/prisma.js";
-import type { ListarCadastroInput } from "../../schemas/cadastros/listarCadastroSchema.js";
+import type { ListarCadastroInput, ListarPrecosInput } from "../../schemas/cadastros/listarCadastroSchema.js";
 
 type Pagina<T> = {
   itens: T[];
@@ -151,6 +151,59 @@ export const cadastrosService = {
       pagina: input.pagina,
       porPagina: input.porPagina,
     };
+  },
+
+  /**
+   * Preços do contrato, da DRE do Comercial. Com histórico, cada preço
+   * substituído aparece logo abaixo do que o substituiu (mesma chave).
+   */
+  async listarPrecosContrato(input: ListarPrecosInput) {
+    const prisma = getPrismaClient();
+    const busca = input.busca?.trim();
+
+    const where = {
+      ...(input.historico ? {} : { substituidoEm: null }),
+      ...(busca
+        ? {
+            OR: [
+              { obra: { codigo: { contains: busca } } },
+              { obra: { nome: { contains: busca } } },
+              { contaResultado: { contains: busca } },
+              { linhaTexto: { contains: busca } },
+              { atribuicao: { contains: busca } },
+            ],
+          }
+        : {}),
+    };
+
+    const [itens, total, substituidos] = await Promise.all([
+      prisma.precoContrato.findMany({
+        where,
+        orderBy: [{ obra: { codigo: "asc" } }, { versao: "asc" }, { chave: "asc" }, { vigenteDesde: "desc" }],
+        ...paginacao(input),
+        select: {
+          id: true,
+          versao: true,
+          etapa: true,
+          linhaTexto: true,
+          contaResultado: true,
+          departamento: true,
+          atribuicao: true,
+          unidade: true,
+          fornecimento: true,
+          valorUnitario: true,
+          valorTotal: true,
+          percentualRL: true,
+          vigenteDesde: true,
+          substituidoEm: true,
+          obra: { select: { codigo: true, nome: true, situacaoCadastro: true } },
+        },
+      }),
+      prisma.precoContrato.count({ where }),
+      prisma.precoContrato.count({ where: { substituidoEm: { not: null } } }),
+    ]);
+
+    return { itens, total, substituidos, pagina: input.pagina, porPagina: input.porPagina };
   },
 
   async listarLinhasDRE(input: ListarCadastroInput) {

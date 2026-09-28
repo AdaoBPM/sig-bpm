@@ -13,3 +13,13 @@ export const listarCadastroSchema = z.object({
 });
 
 export type ListarCadastroInput = z.infer<typeof listarCadastroSchema>;
+
+/** Preços do contrato: por padrão só os vigentes; com histórico, também os substituídos. */
+export const listarPrecosSchema = listarCadastroSchema.extend({
+  historico: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+});
+
+export type ListarPrecosInput = z.infer<typeof listarPrecosSchema>;

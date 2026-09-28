@@ -40,7 +40,7 @@ const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?
   { valor: "EXPEDICAO", rotulo: "Expedição", disponivel: true, origem: `aba Expedição (Lista) do ${LISTAS}` },
   { valor: "MONTAGEM", rotulo: "Montagem", disponivel: true, origem: `aba Montagem (Lista) do ${LISTAS}` },
   { valor: "ACOMPANHAMENTO", rotulo: "Acompanhamento de obra", disponivel: true, origem: `aba Acompanhamentos do ${LISTAS}` },
-  { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: false },
+  { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: true, origem: "aba DRE do CONTROLE DAS VENDAS - COMERCIAL. Os preços valem para todas as competências; um preço alterado substitui o anterior, que fica no histórico" },
 ];
 
 type EnviarArquivoFormProps = {

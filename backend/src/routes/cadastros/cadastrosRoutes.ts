@@ -52,6 +52,12 @@ cadastrosRoutes.get(
 );
 
 cadastrosRoutes.get(
+  "/precos-contrato",
+  autenticacao,
+  asyncHandler(cadastrosController.listarPrecosContrato),
+);
+
+cadastrosRoutes.get(
   "/linhas-dre",
   autenticacao,
   asyncHandler(cadastrosController.listarLinhasDRE),

@@ -76,6 +76,24 @@ export type Reclassificacao = {
   } | null;
 };
 
+export type PrecoContrato = {
+  id: string;
+  versao: number;
+  etapa: string | null;
+  linhaTexto: string;
+  contaResultado: string;
+  departamento: string | null;
+  atribuicao: string | null;
+  unidade: string | null;
+  fornecimento: string | null;
+  valorUnitario: string | null;
+  valorTotal: string | null;
+  percentualRL: string | null;
+  vigenteDesde: string;
+  substituidoEm: string | null;
+  obra: { codigo: string; nome: string; situacaoCadastro: string };
+};
+
 export type ResumoCadastros = {
   unidades: number;
   centrosCusto: number;
@@ -156,6 +174,13 @@ export const cadastrosService = {
   contasResultado: (p: ParametrosListagem) =>
     listar<ContaResultado>("contas-resultado", p),
   linhasDRE: (p: ParametrosListagem) => listar<LinhaDRE>("linhas-dre", p),
+  precosContrato: async (p: ParametrosListagem & { historico: boolean }) => {
+    const { data } = await api.get<{ data: PaginaCadastro<PrecoContrato> & { substituidos: number } }>(
+      "/proxy/cadastros/precos-contrato",
+      { params: { ...p, historico: String(p.historico) } },
+    );
+    return data.data;
+  },
   reclassificacoes: (p: ParametrosListagem) =>
     listar<Reclassificacao>("reclassificacoes", p),
 };

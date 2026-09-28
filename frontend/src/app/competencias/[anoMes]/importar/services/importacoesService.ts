@@ -72,11 +72,32 @@ export type ResumoLista = {
   substituiu: string[];
 };
 
+/** Resumo da DRE do Comercial: o que a importação fez com os preços vigentes. */
+export type ResumoDreComercial = {
+  aba: string;
+  obras: number;
+  obrasCriadas: number;
+  precos: { novos: number; alterados: number; inalterados: number; removidos: number };
+  alteracoes: Array<{
+    obra: string;
+    etapa: string | null;
+    linha: string;
+    conta: string;
+    departamento: string | null;
+    antes: { unitario: string | null; total: string | null };
+    depois: { unitario: string | null; total: string | null };
+  }>;
+  removidosExemplos: Array<{ obra: string; etapa: string | null; linha: string; conta: string }>;
+  obrasComAditivo: string[];
+  obrasRepetidas: Array<{ obra: string; linhas: number }>;
+  obrasSemContrato: number;
+};
+
 export type ImportacaoDetalhe = Importacao & {
   hashArquivo: string;
   relatorioErros: Rejeicao[] | null;
   /** ResumoBalancete quando tipo é BALANCETE; ResumoLista nas listas. */
-  resumo: ResumoBalancete | ResumoLista | null;
+  resumo: ResumoBalancete | ResumoLista | ResumoDreComercial | null;
   competencia: { ano: number; mes: number; status: StatusCompetencia };
 };
 

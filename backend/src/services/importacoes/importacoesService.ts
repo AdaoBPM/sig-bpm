@@ -6,6 +6,7 @@ import type { TipoImportacao } from "../../generated/prisma/enums.js";
 import { enfileirar } from "../../lib/filaProcessamento.js";
 import { caminhoDoArquivo, diretorioUploads } from "./arquivosImportados.js";
 import { processarBalancete } from "./balancete/processarBalancete.js";
+import { processarDreComercial } from "./dreComercial/processarDreComercial.js";
 import { DEFINICOES_LISTAS, ehListaRateio } from "./listas/definicoesListas.js";
 import { processarLista } from "./listas/processarLista.js";
 
@@ -26,12 +27,13 @@ export class RegraImportacaoError extends Error {
 }
 
 /**
- * Tipos com processamento implementado: o balancete e as listas que alimentam
- * os rateios. As listas da receita prévia entram no Passo 12b, e a DRE do
- * Comercial no Passo 14.
+ * Tipos com processamento implementado: o balancete, as listas que alimentam
+ * os rateios e a DRE do Comercial. As listas da receita prévia entram no
+ * Passo 12b.
  */
 const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   "BALANCETE",
+  "DRE_COMERCIAL",
   ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
 ];
 
@@ -143,7 +145,9 @@ export const importacoesService = {
           `Este arquivo já foi importado nesta competência em ` +
             `${repetida.importadoEm.toLocaleString("pt-BR")}` +
             (repetida.usuario ? ` por ${repetida.usuario.nome}` : "") +
-            ". Importar de novo substitui o lote atual pelo mesmo conteúdo.",
+            (input.tipo === "DRE_COMERCIAL"
+              ? ". Importar de novo não muda nenhum preço."
+              : ". Importar de novo substitui o lote atual pelo mesmo conteúdo."),
           "ARQUIVO_JA_IMPORTADO",
           { importacao: repetida },
         );
@@ -173,7 +177,9 @@ export const importacoesService = {
     enfileirar(`importação ${importacao.id}`, () =>
       ehListaRateio(importacao.tipo)
         ? processarLista(importacao.id)
-        : processarBalancete(importacao.id),
+        : importacao.tipo === "DRE_COMERCIAL"
+          ? processarDreComercial(importacao.id)
+          : processarBalancete(importacao.id),
     );
 
     return importacao;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -9,6 +10,7 @@ import {
   type ImportacaoDetalhe,
   type Rejeicao,
   type ResumoBalancete,
+  type ResumoDreComercial,
   type ResumoLista,
 } from "../services/importacoesService";
 import {
@@ -340,6 +342,156 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
   );
 }
 
+function valorOuTraco(v: string | null) {
+  return v === null ? "—" : moeda(v);
+}
+
+function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as ResumoDreComercial | null;
+  const rejeicoes = imp.relatorioErros ?? [];
+  const p = resumo?.precos;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />
+        <Contador
+          rotulo="Preços"
+          valor={imp.linhasAceitas}
+          destaque="ok"
+          detalhe={resumo ? `de ${inteiro(resumo.obras)} obras` : undefined}
+        />
+        <Contador
+          rotulo="Rejeitadas"
+          valor={imp.linhasRejeitadas}
+          destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined}
+        />
+        <Contador rotulo="Ignoradas" valor={imp.linhasIgnoradas} detalhe="vazias ou repetidas" />
+      </div>
+
+      {resumo && p ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="border border-gray-200 rounded-sm p-4">
+            <h3 className="text-sm font-bold text-gray-900">O que mudou nos preços</h3>
+            <dl className="mt-3 space-y-1.5 text-sm">
+              {(
+                [
+                  ["Novos", p.novos, "text-green-700"],
+                  ["Alterados (o anterior fica no histórico)", p.alterados, "text-yellow-800"],
+                  ["Sem mudança", p.inalterados, "text-gray-900"],
+                  ["Fora do arquivo (encerrados, ficam no histórico)", p.removidos, "text-red-700"],
+                ] as const
+              ).map(([rotulo, n, cor]) => (
+                <div key={rotulo} className="flex justify-between gap-4">
+                  <dt className="text-gray-600">{rotulo}</dt>
+                  <dd className={`font-bold tabular-nums ${cor}`}>{inteiro(n)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <div className="border border-gray-200 rounded-sm p-4 text-sm text-gray-600">
+            <h3 className="text-sm font-bold text-gray-900">Obras</h3>
+            <p className="mt-2">
+              Aba lida: <span className="font-medium text-gray-900">{resumo.aba}</span>
+            </p>
+            <p className="mt-1">
+              {resumo.obrasCriadas > 0
+                ? `${inteiro(resumo.obrasCriadas)} obra(s) nova(s) cadastradas a partir da DRE.`
+                : "Nenhuma obra nova."}
+            </p>
+            <p className="mt-1">
+              {resumo.obrasComAditivo.length > 0
+                ? `Com aditivo (versão acima de 0): ${resumo.obrasComAditivo.join(", ")}.`
+                : "Nenhuma obra com aditivo."}
+            </p>
+            <p className="mt-1">
+              {inteiro(resumo.obrasSemContrato)} obra(s) cadastrada(s) sem preço vigente na versão 0
+              (sem contrato).
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {resumo && resumo.obrasRepetidas.length > 0 ? (
+        <div className="rounded-sm border border-yellow-200 bg-yellow-50 p-4">
+          <div className="flex items-start gap-2 text-sm text-yellow-800">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="font-medium">DRE colada mais de uma vez</p>
+              <p className="mt-0.5">
+                Linhas idênticas repetidas foram gravadas uma vez só. Na planilha, a soma da
+                receita contaria essas linhas em dobro.
+              </p>
+              <p className="mt-1">
+                {resumo.obrasRepetidas.map((o) => `${o.obra} (${o.linhas} linha(s))`).join(", ")}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {resumo && p && resumo.alteracoes.length > 0 ? (
+        <div className="border border-gray-200 rounded-sm">
+          <div className="border-b border-gray-200 px-4 py-3">
+            <h3 className="text-sm font-bold text-gray-900">Preços alterados</h3>
+            <p className="text-xs text-gray-500">
+              O preço anterior continua registrado para o que já foi apurado com ele.
+              {resumo.alteracoes.length < p.alterados
+                ? ` Mostrando ${resumo.alteracoes.length} de ${inteiro(p.alterados)}.`
+                : null}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
+                  <th className="px-4 py-2">Obra</th>
+                  <th className="px-4 py-2">Etapa · linha</th>
+                  <th className="px-4 py-2">Conta</th>
+                  <th className="px-4 py-2 text-right">V. unit.</th>
+                  <th className="px-4 py-2 text-right">V. total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumo.alteracoes.map((a) => (
+                  <tr
+                    key={`${a.obra}|${a.etapa}|${a.linha}|${a.conta}|${a.departamento}`}
+                    className="border-b border-gray-100"
+                  >
+                    <td className="px-4 py-2 font-medium">{a.obra}</td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {a.etapa ?? "—"} · {a.linha}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">{a.conta}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      <span className="text-red-700 line-through">{valorOuTraco(a.antes.unitario)}</span>{" "}
+                      <span className="text-green-700">{valorOuTraco(a.depois.unitario)}</span>
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      <span className="text-red-700 line-through">{valorOuTraco(a.antes.total)}</span>{" "}
+                      <span className="text-green-700">{valorOuTraco(a.depois.total)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="text-xs text-gray-500">
+        Consulte os preços e o histórico em{" "}
+        <Link href="/cadastros/precos-contrato" className="underline">
+          Preços do contrato
+        </Link>
+        .
+      </p>
+
+      <TabelaRejeicoes rejeicoes={rejeicoes} />
+    </div>
+  );
+}
+
 export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
   const queryClient = useQueryClient();
   const { data: imp, isPending, isError } = useQuery({
@@ -402,7 +554,13 @@ export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
           </div>
         </div>
       ) : (
-        imp.tipo === "BALANCETE" ? <ConcluidaBalancete imp={imp} /> : <ConcluidaLista imp={imp} />
+        imp.tipo === "BALANCETE" ? (
+          <ConcluidaBalancete imp={imp} />
+        ) : imp.tipo === "DRE_COMERCIAL" ? (
+          <ConcluidaDreComercial imp={imp} />
+        ) : (
+          <ConcluidaLista imp={imp} />
+        )
       )}
     </div>
   );

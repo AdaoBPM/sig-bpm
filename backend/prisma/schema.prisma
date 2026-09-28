@@ -824,15 +824,32 @@ model Obra {
 model PrecoContrato {
   id             String   @id @default(uuid())
   obraId         String   @map("obra_id")
+  /// VERSÃO (N) da DRE do Comercial: 0 é o contrato original (VER00), os
+  /// demais são aditivos — guardados, mas fora da apuração na V1.
   versao         Int
-  linhaId          String? @map("linha_id")
-  linha          Linha?  @relation(fields: [linhaId], references: [id])
-  /// Natureza da receita, ex.: "Receita Bruta do Pré-Fabricado".
-  contaResultado String   @map("conta_resultado")
-  /// DECIMAL: aritmética sempre em JavaScript. Ver PORTABILIDADE.md.
-  valorUnitario  Decimal  @map("valor_unitario")
-  valorTotal     Decimal  @map("valor_total")
+  /// Chave do preço no histórico: obra | versão | etapa | linha | conta | departamento.
+  /// Uma reimportação compara pela chave: igual fica, diferente substitui.
+  chave          String
   etapa          String?
+  /// LINHA como vem na DRE; linhaId quando ela existe no cadastro de linhas
+  /// (METALÚRGICA, por exemplo, não existe).
+  linhaTexto     String   @map("linha_texto")
+  linhaId        String?  @map("linha_id")
+  linha          Linha?   @relation(fields: [linhaId], references: [id])
+  /// CONTA CONTÁBIL da DRE de venda, ex.: "Receita Bruta do Pré-Fabricado".
+  contaResultado String   @map("conta_resultado")
+  /// DEPTO. e ATRIBUIÇÃO da DRE de venda. A receita prévia procura o preço pela
+  /// atribuição ("Receita Bruta do Pré-Fabricado", "Receita Bruta de Frete"…).
+  departamento   String?
+  atribuicao     String?
+  /// UNIDADE e FORNECIMENTO da DRE de venda (MATRIZ, FILIAL, OBRAS; Obra, Lajes, Estacas).
+  unidade        String?
+  fornecimento   String?
+  /// DECIMAL: aritmética sempre em JavaScript. Ver PORTABILIDADE.md.
+  /// Nulos quando a DRE traz "-" ou vazio.
+  valorUnitario  Decimal? @map("valor_unitario")
+  valorTotal     Decimal? @map("valor_total")
+  percentualRL   Decimal? @map("percentual_rl")
   importacaoId   String?  @map("importacao_id")
   vigenteDesde   DateTime @default(now()) @map("vigente_desde")
   substituidoEm  DateTime? @map("substituido_em")
@@ -842,6 +859,7 @@ model PrecoContrato {
   receitasPrevias ReceitaPreviaPreco[]
 
   @@index([obraId, versao])
+  @@index([chave, substituidoEm])
   @@index([substituidoEm])
   @@map("precos_contrato")
 }

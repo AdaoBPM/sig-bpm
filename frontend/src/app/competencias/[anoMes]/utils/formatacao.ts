@@ -47,6 +47,7 @@ export const ROTULO_REJEICAO: Record<string, string> = {
   DATA_INVALIDA: "Data inválida",
   UNIDADE_INVALIDA: "Unidade inválida",
   QUANTIDADE_INVALIDA: "Quantidade inválida",
+  VERSAO_INVALIDA: "Versão inválida",
 };
 
 export const ROTULO_TIPO: Record<string, string> = {
@@ -59,4 +60,5 @@ export const ROTULO_TIPO: Record<string, string> = {
   EXPEDICAO: "Expedição",
   MONTAGEM: "Montagem",
   ACOMPANHAMENTO: "Acompanhamento",
+  DRE_COMERCIAL: "DRE do Comercial",
 };

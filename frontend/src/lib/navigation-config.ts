@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BadgeDollarSign,
   Building2,
   CalendarDays,
   FileText,
@@ -29,6 +30,7 @@ export const navPrincipal: NavItem[] = [
   },
   { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree },
   { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle },
+  { title: "Preços do contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign },
 ];
 
 export const navReferencias: NavItem[] = [
@@ -44,6 +46,7 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/contas-resultado": "Contas de resultado",
   "/cadastros/estrutura-dre": "Estrutura da DRE",
   "/cadastros/reclassificacoes": "Reclassificações de conta",
+  "/cadastros/precos-contrato": "Preços do contrato",
   "/pedidos/listagem": "Pedidos",
   "/exemplo/formulario": "Formulário",
 };
