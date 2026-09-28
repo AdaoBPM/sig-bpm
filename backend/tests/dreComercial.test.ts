@@ -65,7 +65,9 @@ describe("leitura da DRE do Comercial", () => {
     const [a] = (interpretarDreComercial(planilha(CABECALHO, linha("L1", "R", 1000, 250))) as { precos: never[] }).precos;
     const [b] = (interpretarDreComercial(planilha(CABECALHO, linha("L1", "R", "1000.00", "250.0"))) as { precos: never[] }).precos;
     const [c] = (interpretarDreComercial(planilha(CABECALHO, linha("L1", "R", 1000, 251))) as { precos: never[] }).precos;
+    const [ruido] = (interpretarDreComercial(planilha(CABECALHO, linha("L1", "R", 1000, 250.00000000000003))) as { precos: never[] }).precos;
     assert.equal(assinaturaDoPreco(a), assinaturaDoPreco(b));
+    assert.equal(assinaturaDoPreco(a), assinaturaDoPreco(ruido));
     assert.notEqual(assinaturaDoPreco(a), assinaturaDoPreco(c));
   });
 });

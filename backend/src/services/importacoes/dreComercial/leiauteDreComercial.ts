@@ -67,7 +67,12 @@ export function chaveDoPreco(p: Pick<PrecoLido, "obra" | "versao" | "etapa" | "l
   return [p.obra, p.versao, p.etapa ?? "", p.linhaTexto, p.contaResultado, p.departamento ?? ""].join(" | ");
 }
 
-/** Os campos que, se mudarem numa reimportação, fazem o preço ser substituído. */
+/**
+ * Os campos que, se mudarem numa reimportação, fazem o preço ser substituído.
+ * Os valores entram arredondados a 6 casas: a DRE é calculada em ponto
+ * flutuante, e a mesma DRE salva de novo pode variar no 16º dígito
+ * (3490.00983024315 × 3490.0098302431506) sem que o preço tenha mudado.
+ */
 export function assinaturaDoPreco(p: {
   atribuicao: string | null;
   unidade: string | null;
@@ -76,7 +81,7 @@ export function assinaturaDoPreco(p: {
   valorTotal: Decimal | null;
   percentualRL: Decimal | null;
 }) {
-  const d = (x: Decimal | null) => (x === null ? "" : x.toString());
+  const d = (x: Decimal | null) => (x === null ? "" : x.toDecimalPlaces(6).toString());
   return [p.atribuicao, p.unidade, p.fornecimento, d(p.valorUnitario), d(p.valorTotal), d(p.percentualRL)].join(" | ");
 }
 

@@ -33,8 +33,10 @@ const UNIDADES = [
 /**
  * Os três vocabulários de "linha" da planilha (ver SPEC, entidade Linha).
  *
- *  - PRODUTO: não está em nenhuma aba — é o resultado das fórmulas de Linha das
+ *  - PRODUTO: ESTRUTURA, ALVEOLARES e ESTACAS não estão em nenhuma aba — são o resultado das fórmulas de Linha das
  *    listas operacionais (ESTRUTURA na Unidade 01; ESTACAS ou ALVEOLARES na 02).
+ *    METALÚRGICA vem da coluna LINHA da aba DRE do CONTROLE DAS VENDAS - COMERCIAL
+ *    (itens metálicos produzidos na Matriz).
  *  - OBRA e FATURAMENTO: colunas LINHAS (OBRAS) e FATURAMENTOS (OBRAS) da aba
  *    Listas do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO).
  *
@@ -44,6 +46,7 @@ const LINHAS: Array<{ tipo: "PRODUTO" | "OBRA" | "FATURAMENTO"; codigo: string; 
   { tipo: "PRODUTO", codigo: "ESTRUTURA", nome: "Estrutura" },
   { tipo: "PRODUTO", codigo: "ALVEOLARES", nome: "Alveolares" },
   { tipo: "PRODUTO", codigo: "ESTACAS", nome: "Estacas" },
+  { tipo: "PRODUTO", codigo: "METALÚRGICA", nome: "Metalúrgica" },
   { tipo: "OBRA", codigo: "FUNDAÇÃO", nome: "Fundação" },
   { tipo: "OBRA", codigo: "MONTAGEM", nome: "Montagem" },
   { tipo: "OBRA", codigo: "VEDAÇÃO", nome: "Vedação" },
