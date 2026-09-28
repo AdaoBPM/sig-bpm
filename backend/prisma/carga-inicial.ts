@@ -21,7 +21,6 @@ import type {
   AtribuicaoCusto,
   BaldeAlocacao,
   RecursoSistema,
-  SinalBalancete,
   TipoConta,
 } from "../src/generated/prisma/enums.js";
 
@@ -104,13 +103,8 @@ const CENTRO_CUSTO_RENOMEAR: Array<{
   novoCodigo: string;
   motivo: string;
 }> = [
-  {
-    codigo: "1.11.00000006",
-    nomeRM: "LABORATORIO",
-    novoCodigo: "1.11.00000006.1",
-    motivo:
-      "setor novo, criado gerencialmente para atender as duas filiais; o código definitivo do ERP ainda será cadastrado",
-  },
+  // Vazio desde 28/09/2026: o código 1.11.00000006.1 do LABORATORIO novo foi
+  // incorporado à planilha.
 ];
 
 const CENTRO_CUSTO_CONTROLADORIA: Array<{
@@ -119,12 +113,7 @@ const CENTRO_CUSTO_CONTROLADORIA: Array<{
   nomeControladoria: string;
   motivo: string;
 }> = [
-  {
-    codigo: "1.11.00000006",
-    nomeRM: "LABORATORIO (CRI)",
-    nomeControladoria: "LABORATÓRIO (CRI)",
-    motivo: "diferenciar do LABORATORIO novo, que herdou o nome de grupo",
-  },
+  // Vazio desde 28/09/2026: "LABORATÓRIO (CRI)" foi incorporado à planilha.
 ];
 
 /** Registros descartados: mesmo código, nome que mudou ao longo do tempo. */
@@ -162,44 +151,7 @@ const CENTRO_CUSTO_DESCARTAR: Array<{
   },
 ];
 
-/**
- * Rateio corrigido pela controladoria em 25/09/2026, ainda não refletido na
- * planilha. Tem precedência sobre a substituição geral abaixo.
- */
-const CENTRO_CUSTO_RATEIO: Array<{ codigo: string; rateio: string; motivo: string }> = [
-  {
-    codigo: "1.15.00000004",
-    rateio: "DESPESAS",
-    motivo:
-      "FATURAMENTO (FOR) é despesa administrativa; a planilha já o tratava assim, por coincidência de nome com 1.01.00000008",
-  },
-];
-
-/**
- * Rateio de centro de custo que deixa de existir (controladoria, 25/09/2026):
- * MATRIZ e FILIAL passam a UNIDADE. Aplicado a todo centro, e não por registro.
- */
-const CENTRO_CUSTO_RATEIO_SUBSTITUIR: Record<string, string> = {
-  MATRIZ: "UNIDADE",
-  FILIAL: "UNIDADE",
-};
-
 const ajustesUsados = new Set<string>();
-
-function rateioDoCentro(codigoRM: string | null, rateio: string | null): string | null {
-  const especifico = CENTRO_CUSTO_RATEIO.find((r) => r.codigo === codigoRM);
-  if (especifico) {
-    ajustesUsados.add(`rateio:${especifico.codigo}`);
-    return especifico.rateio;
-  }
-  const bruto = texto(rateio)?.toUpperCase();
-  const novo = bruto ? CENTRO_CUSTO_RATEIO_SUBSTITUIR[bruto] : undefined;
-  if (novo) {
-    ajustesUsados.add(`substituir:${bruto}`);
-    return novo;
-  }
-  return rateio;
-}
 
 type LinhaCentroCusto = {
   COLIGADA: string | null;
@@ -285,7 +237,7 @@ async function carregarCentrosCusto() {
       departamentoSigla: texto(l["DEP."]),
       atribuicao,
       atribuicaoSigla: texto(l["ATR."]),
-      balde: balde(rateioDoCentro(codigoRM, l.RATEIO), "centros-custo", codigoRM ?? nomeRM),
+      balde: balde(l.RATEIO, "centros-custo", codigoRM ?? nomeRM),
       ordem: i + 1,
     };
 
@@ -326,7 +278,6 @@ type LinhaContaResultado = {
   "ATR.": string | null;
   "CONTA DRE": string | null;
   RATEIO: string | null;
-  "SINAL BAL.": string | null;
 };
 
 async function carregarContasResultado() {
@@ -362,11 +313,6 @@ async function carregarContasResultado() {
       });
     }
 
-    // Aqui "-" É um valor: significa negativo. Só vazio é ausência.
-    const sinalBruto = (l["SINAL BAL."] ?? "").trim();
-    const sinalBalancete: SinalBalancete | null =
-      sinalBruto === "+" ? "POSITIVO" : sinalBruto === "-" ? "NEGATIVO" : null;
-
     const ajuste = ajusteDaConta(reduzido);
 
     const dados = {
@@ -375,7 +321,6 @@ async function carregarContasResultado() {
       tipoConta,
       departamento: ajuste?.departamento ?? texto(l.DEPARTAMENTO),
       atribuicao: ajuste?.atribuicao ?? texto(l["ATRIBUIÇÃO"]),
-      sinalBalancete,
       balde: balde(l.RATEIO, "contas-resultado", conta),
       ordem: i + 1,
       // linhaDREId é preenchido no Passo 7, depois que a estrutura da DRE existir.
@@ -552,8 +497,6 @@ const previstos = [
   ...CENTRO_CUSTO_RENOMEAR.map((r) => ({ chave: `renomear:${r.codigo}:${r.nomeRM}`, d: `renomear ${r.nomeRM} (${r.codigo})` })),
   ...CENTRO_CUSTO_CONTROLADORIA.map((c) => ({ chave: `controladoria:${c.codigo}:${c.nomeRM}`, d: `controladoria de ${c.nomeRM}` })),
   ...CENTRO_CUSTO_DESCARTAR.map((d2) => ({ chave: `descartar:${d2.codigo}:${d2.nomeRM}`, d: `descartar ${d2.nomeRM} (${d2.codigo})` })),
-  ...CENTRO_CUSTO_RATEIO.map((r) => ({ chave: `rateio:${r.codigo}`, d: `rateio ${r.rateio} para ${r.codigo}` })),
-  ...Object.entries(CENTRO_CUSTO_RATEIO_SUBSTITUIR).map(([de, para]) => ({ chave: `substituir:${de}`, d: `rateio ${de} → ${para}` })),
 ];
 const obsoletos = previstos.filter((p) => !ajustesUsados.has(p.chave));
 relatarAjustesConta();

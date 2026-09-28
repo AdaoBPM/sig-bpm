@@ -328,7 +328,10 @@ for (const conta of contas) {
   const ajuste = ajusteDaConta(reduzido);
 
   const contaDRE = ajuste?.contaDRE ?? texto(conta["CONTA DRE"]);
-  if (!contaDRE) continue;
+  if (!contaDRE) {
+    await prisma.contaResultado.update({ where: { reduzido }, data: { linhaDREId: null } });
+    continue;
+  }
 
   const dep = ajuste?.departamento ?? texto(conta.DEPARTAMENTO);
   const depSigla = ajuste?.depSigla ?? texto(conta["DEP."]);
@@ -347,6 +350,8 @@ for (const conta of contas) {
 
   const codigo = porTripla.get(chave);
   if (!codigo) {
+    // Sem linha correspondente: o vínculo de uma carga anterior não pode sobreviver.
+    await prisma.contaResultado.update({ where: { reduzido }, data: { linhaDREId: null } });
     semDestino++;
     if (semDestinoExemplos.length < 8) semDestinoExemplos.push(`${reduzido} → ${chave}`);
     continue;

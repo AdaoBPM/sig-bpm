@@ -114,7 +114,6 @@ um `String[]` não daria. O mesmo vale para `ReceitaPrevia.precoContratoIds`.
 |---|---|
 | `TipoUnidade` | `UnidadeNegocio.tipo` |
 | `TipoConta` | `ContaResultado.tipoConta` |
-| `SinalBalancete` | `ContaResultado.sinalBalancete` |
 | `TipoLinhaDRE` | `LinhaDRE.tipo` |
 | `AtribuicaoCusto` | `CentroCusto.atribuicao` |
 | `ChaveRateio` | `CentroCusto.chaveRateio`, `ContaResultado.chaveRateio`, `RegraRateio.chave` |

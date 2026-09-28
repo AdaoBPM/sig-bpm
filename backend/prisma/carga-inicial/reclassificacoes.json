@@ -1,6 +1,6 @@
 [
   {
-    "LINHA": 83,
+    "LINHA": 84,
     "FILIAL": "1",
     "COD_CUSTO": "1.01",
     "C_CUSTO": "ADMINISTRATIVO",
@@ -9,7 +9,7 @@
     "CONTA (ALOC.)": "19011"
   },
   {
-    "LINHA": 103,
+    "LINHA": 104,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000001",
     "C_CUSTO": "FINANCEIRO",
@@ -18,7 +18,7 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 158,
+    "LINHA": 159,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000002",
     "C_CUSTO": "DIRETORIA",
@@ -27,7 +27,7 @@
     "CONTA (ALOC.)": "4682"
   },
   {
-    "LINHA": 159,
+    "LINHA": 160,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000002",
     "C_CUSTO": "DIRETORIA",
@@ -36,7 +36,7 @@
     "CONTA (ALOC.)": "4682"
   },
   {
-    "LINHA": 186,
+    "LINHA": 187,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -45,7 +45,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 187,
+    "LINHA": 188,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -54,7 +54,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 188,
+    "LINHA": 189,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -63,7 +63,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 189,
+    "LINHA": 190,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -72,7 +72,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 190,
+    "LINHA": 191,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -81,7 +81,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 191,
+    "LINHA": 192,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -90,7 +90,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 192,
+    "LINHA": 193,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -99,7 +99,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 193,
+    "LINHA": 194,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -108,7 +108,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 194,
+    "LINHA": 195,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -117,7 +117,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 195,
+    "LINHA": 196,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -126,7 +126,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 196,
+    "LINHA": 197,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -135,7 +135,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 197,
+    "LINHA": 198,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -144,7 +144,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 198,
+    "LINHA": 199,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -153,7 +153,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 199,
+    "LINHA": 200,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -162,7 +162,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 200,
+    "LINHA": 201,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -171,7 +171,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 201,
+    "LINHA": 202,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -180,7 +180,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 203,
+    "LINHA": 204,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -189,7 +189,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 204,
+    "LINHA": 205,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -198,7 +198,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 205,
+    "LINHA": 206,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -207,7 +207,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 206,
+    "LINHA": 207,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -216,7 +216,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 208,
+    "LINHA": 209,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -225,7 +225,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 209,
+    "LINHA": 210,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -234,7 +234,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 210,
+    "LINHA": 211,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -243,7 +243,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 211,
+    "LINHA": 212,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -252,7 +252,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 275,
+    "LINHA": 276,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000005",
     "C_CUSTO": "FATURAMENTO (CRI)",
@@ -261,7 +261,7 @@
     "CONTA (ALOC.)": "4676"
   },
   {
-    "LINHA": 276,
+    "LINHA": 277,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000005",
     "C_CUSTO": "FATURAMENTO (CRI)",
@@ -270,7 +270,7 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 324,
+    "LINHA": 325,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -279,7 +279,7 @@
     "CONTA (ALOC.)": "4676"
   },
   {
-    "LINHA": 325,
+    "LINHA": 326,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -288,7 +288,7 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 326,
+    "LINHA": 327,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -297,7 +297,7 @@
     "CONTA (ALOC.)": "2855"
   },
   {
-    "LINHA": 327,
+    "LINHA": 328,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -306,7 +306,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 328,
+    "LINHA": 329,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -315,7 +315,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 329,
+    "LINHA": 330,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -324,7 +324,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 330,
+    "LINHA": 331,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -333,7 +333,7 @@
     "CONTA (ALOC.)": "3197"
   },
   {
-    "LINHA": 331,
+    "LINHA": 332,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -342,7 +342,7 @@
     "CONTA (ALOC.)": "4558"
   },
   {
-    "LINHA": 368,
+    "LINHA": 369,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000010",
     "C_CUSTO": "CONTABILIDADE",
@@ -351,7 +351,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 375,
+    "LINHA": 376,
     "FILIAL": "1",
     "COD_CUSTO": "1.02.00000001",
     "C_CUSTO": "ORCAMENTOS",
@@ -360,7 +360,7 @@
     "CONTA (ALOC.)": "2967"
   },
   {
-    "LINHA": 376,
+    "LINHA": 377,
     "FILIAL": "1",
     "COD_CUSTO": "1.02.00000001",
     "C_CUSTO": "ORCAMENTOS",
@@ -369,7 +369,7 @@
     "CONTA (ALOC.)": "3821"
   },
   {
-    "LINHA": 402,
+    "LINHA": 403,
     "FILIAL": "1",
     "COD_CUSTO": "1.02.00000001",
     "C_CUSTO": "ORCAMENTOS",
@@ -378,7 +378,7 @@
     "CONTA (ALOC.)": "4937"
   },
   {
-    "LINHA": 463,
+    "LINHA": 464,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000001",
     "C_CUSTO": "ESTRUTURA",
@@ -387,7 +387,7 @@
     "CONTA (ALOC.)": "2832"
   },
   {
-    "LINHA": 473,
+    "LINHA": 474,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000001",
     "C_CUSTO": "ESTRUTURA",
@@ -396,7 +396,7 @@
     "CONTA (ALOC.)": "3056"
   },
   {
-    "LINHA": 552,
+    "LINHA": 553,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000005",
     "C_CUSTO": "ACABAMENTO",
@@ -405,7 +405,7 @@
     "CONTA (ALOC.)": "44871"
   },
   {
-    "LINHA": 553,
+    "LINHA": 554,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000005",
     "C_CUSTO": "ACABAMENTO",
@@ -414,7 +414,7 @@
     "CONTA (ALOC.)": "44888"
   },
   {
-    "LINHA": 570,
+    "LINHA": 571,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -423,7 +423,7 @@
     "CONTA (ALOC.)": "50162"
   },
   {
-    "LINHA": 571,
+    "LINHA": 572,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -432,7 +432,7 @@
     "CONTA (ALOC.)": "44813"
   },
   {
-    "LINHA": 572,
+    "LINHA": 573,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -441,7 +441,7 @@
     "CONTA (ALOC.)": "44836"
   },
   {
-    "LINHA": 574,
+    "LINHA": 575,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -450,7 +450,7 @@
     "CONTA (ALOC.)": "44871"
   },
   {
-    "LINHA": 575,
+    "LINHA": 576,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -459,7 +459,7 @@
     "CONTA (ALOC.)": "44888"
   },
   {
-    "LINHA": 576,
+    "LINHA": 577,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -468,7 +468,7 @@
     "CONTA (ALOC.)": "44894"
   },
   {
-    "LINHA": 577,
+    "LINHA": 578,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -477,7 +477,7 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 620,
+    "LINHA": 621,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000008",
     "C_CUSTO": "EXPEDICAO (CRI)",
@@ -486,7 +486,7 @@
     "CONTA (ALOC.)": "2832"
   },
   {
-    "LINHA": 622,
+    "LINHA": 623,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000008",
     "C_CUSTO": "EXPEDICAO (CRI)",
@@ -495,7 +495,7 @@
     "CONTA (ALOC.)": "3027"
   },
   {
-    "LINHA": 671,
+    "LINHA": 672,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000001",
     "C_CUSTO": "PCP (CRI)",
@@ -504,7 +504,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 672,
+    "LINHA": 673,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000001",
     "C_CUSTO": "PCP (CRI)",
@@ -513,7 +513,7 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 687,
+    "LINHA": 688,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000001",
     "C_CUSTO": "PCP (CRI)",
@@ -522,7 +522,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 691,
+    "LINHA": 692,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000001",
     "C_CUSTO": "PCP (CRI)",
@@ -531,7 +531,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 703,
+    "LINHA": 704,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000002",
     "C_CUSTO": "COMPRAS",
@@ -540,7 +540,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 720,
+    "LINHA": 721,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000002",
     "C_CUSTO": "COMPRAS",
@@ -549,7 +549,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 753,
+    "LINHA": 754,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000004",
     "C_CUSTO": "ALMOXARIFADO (CRI)",
@@ -558,7 +558,7 @@
     "CONTA (ALOC.)": "45327"
   },
   {
-    "LINHA": 755,
+    "LINHA": 756,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000004",
     "C_CUSTO": "ALMOXARIFADO (CRI)",
@@ -567,7 +567,7 @@
     "CONTA (ALOC.)": "111432"
   },
   {
-    "LINHA": 768,
+    "LINHA": 769,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000004",
     "C_CUSTO": "ALMOXARIFADO (CRI)",
@@ -576,7 +576,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 773,
+    "LINHA": 774,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000004",
     "C_CUSTO": "ALMOXARIFADO (CRI)",
@@ -585,7 +585,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 791,
+    "LINHA": 792,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000006",
     "C_CUSTO": "GESTAO OPERACIONAL",
@@ -594,7 +594,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 804,
+    "LINHA": 805,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000007",
     "C_CUSTO": "MANUTENCAO (CRI)",
@@ -603,7 +603,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 805,
+    "LINHA": 806,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000007",
     "C_CUSTO": "MANUTENCAO (CRI)",
@@ -612,7 +612,7 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 843,
+    "LINHA": 844,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -621,7 +621,7 @@
     "CONTA (ALOC.)": "113879"
   },
   {
-    "LINHA": 844,
+    "LINHA": 845,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -630,7 +630,7 @@
     "CONTA (ALOC.)": "113974"
   },
   {
-    "LINHA": 845,
+    "LINHA": 846,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -639,7 +639,7 @@
     "CONTA (ALOC.)": "113856"
   },
   {
-    "LINHA": 846,
+    "LINHA": 847,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -648,7 +648,7 @@
     "CONTA (ALOC.)": "113891"
   },
   {
-    "LINHA": 847,
+    "LINHA": 848,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -657,7 +657,7 @@
     "CONTA (ALOC.)": "114034"
   },
   {
-    "LINHA": 873,
+    "LINHA": 874,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -666,7 +666,7 @@
     "CONTA (ALOC.)": "968256"
   },
   {
-    "LINHA": 874,
+    "LINHA": 875,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -675,7 +675,7 @@
     "CONTA (ALOC.)": "114034"
   },
   {
-    "LINHA": 877,
+    "LINHA": 878,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -684,7 +684,7 @@
     "CONTA (ALOC.)": "968023"
   },
   {
-    "LINHA": 878,
+    "LINHA": 879,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -693,7 +693,7 @@
     "CONTA (ALOC.)": "968025"
   },
   {
-    "LINHA": 879,
+    "LINHA": 880,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -702,7 +702,7 @@
     "CONTA (ALOC.)": "968026"
   },
   {
-    "LINHA": 880,
+    "LINHA": 881,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -711,7 +711,7 @@
     "CONTA (ALOC.)": "968028"
   },
   {
-    "LINHA": 881,
+    "LINHA": 882,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -720,7 +720,7 @@
     "CONTA (ALOC.)": "968031"
   },
   {
-    "LINHA": 882,
+    "LINHA": 883,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -729,7 +729,7 @@
     "CONTA (ALOC.)": "968032"
   },
   {
-    "LINHA": 883,
+    "LINHA": 884,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -738,7 +738,7 @@
     "CONTA (ALOC.)": "968033"
   },
   {
-    "LINHA": 884,
+    "LINHA": 885,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -747,7 +747,7 @@
     "CONTA (ALOC.)": "968039"
   },
   {
-    "LINHA": 885,
+    "LINHA": 886,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -756,7 +756,7 @@
     "CONTA (ALOC.)": "968035"
   },
   {
-    "LINHA": 886,
+    "LINHA": 887,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -765,7 +765,7 @@
     "CONTA (ALOC.)": "968037"
   },
   {
-    "LINHA": 934,
+    "LINHA": 935,
     "FILIAL": "1",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -774,7 +774,7 @@
     "CONTA (ALOC.)": "46829"
   },
   {
-    "LINHA": 935,
+    "LINHA": 936,
     "FILIAL": "1",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -783,7 +783,7 @@
     "CONTA (ALOC.)": "4529"
   },
   {
-    "LINHA": 936,
+    "LINHA": 937,
     "FILIAL": "1",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -792,7 +792,7 @@
     "CONTA (ALOC.)": "4363"
   },
   {
-    "LINHA": 973,
+    "LINHA": 974,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000001",
     "C_CUSTO": "SUPORTE INTERNO",
@@ -801,7 +801,7 @@
     "CONTA (ALOC.)": "968298"
   },
   {
-    "LINHA": 976,
+    "LINHA": 977,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000001",
     "C_CUSTO": "SUPORTE INTERNO",
@@ -810,7 +810,7 @@
     "CONTA (ALOC.)": "45646"
   },
   {
-    "LINHA": 977,
+    "LINHA": 978,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000001",
     "C_CUSTO": "SUPORTE INTERNO",
@@ -819,7 +819,7 @@
     "CONTA (ALOC.)": "4423"
   },
   {
-    "LINHA": 980,
+    "LINHA": 981,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -828,7 +828,7 @@
     "CONTA (ALOC.)": "45511"
   },
   {
-    "LINHA": 981,
+    "LINHA": 982,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -837,7 +837,7 @@
     "CONTA (ALOC.)": "45534"
   },
   {
-    "LINHA": 982,
+    "LINHA": 983,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -846,7 +846,7 @@
     "CONTA (ALOC.)": "45570"
   },
   {
-    "LINHA": 983,
+    "LINHA": 984,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -855,7 +855,7 @@
     "CONTA (ALOC.)": "45617"
   },
   {
-    "LINHA": 984,
+    "LINHA": 985,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -864,7 +864,7 @@
     "CONTA (ALOC.)": "45623"
   },
   {
-    "LINHA": 985,
+    "LINHA": 986,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -873,7 +873,7 @@
     "CONTA (ALOC.)": "45557"
   },
   {
-    "LINHA": 986,
+    "LINHA": 987,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -882,7 +882,7 @@
     "CONTA (ALOC.)": "4138"
   },
   {
-    "LINHA": 987,
+    "LINHA": 988,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -891,7 +891,7 @@
     "CONTA (ALOC.)": "45630"
   },
   {
-    "LINHA": 988,
+    "LINHA": 989,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -900,7 +900,7 @@
     "CONTA (ALOC.)": "45592"
   },
   {
-    "LINHA": 989,
+    "LINHA": 990,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -909,7 +909,7 @@
     "CONTA (ALOC.)": "45586"
   },
   {
-    "LINHA": 992,
+    "LINHA": 993,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -918,7 +918,7 @@
     "CONTA (ALOC.)": "45675"
   },
   {
-    "LINHA": 995,
+    "LINHA": 996,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -927,7 +927,7 @@
     "CONTA (ALOC.)": "45511"
   },
   {
-    "LINHA": 1005,
+    "LINHA": 1006,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -936,7 +936,7 @@
     "CONTA (ALOC.)": "45630"
   },
   {
-    "LINHA": 1011,
+    "LINHA": 1012,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -945,7 +945,7 @@
     "CONTA (ALOC.)": "45511"
   },
   {
-    "LINHA": 1016,
+    "LINHA": 1017,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -954,7 +954,7 @@
     "CONTA (ALOC.)": "4423"
   },
   {
-    "LINHA": 1017,
+    "LINHA": 1018,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -963,7 +963,7 @@
     "CONTA (ALOC.)": "45570"
   },
   {
-    "LINHA": 1024,
+    "LINHA": 1025,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -972,7 +972,7 @@
     "CONTA (ALOC.)": "50067"
   },
   {
-    "LINHA": 1041,
+    "LINHA": 1042,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -981,7 +981,7 @@
     "CONTA (ALOC.)": "50067"
   },
   {
-    "LINHA": 1045,
+    "LINHA": 1046,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -990,7 +990,7 @@
     "CONTA (ALOC.)": "50067"
   },
   {
-    "LINHA": 1046,
+    "LINHA": 1047,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -999,7 +999,7 @@
     "CONTA (ALOC.)": "50104"
   },
   {
-    "LINHA": 1047,
+    "LINHA": 1048,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -1008,7 +1008,7 @@
     "CONTA (ALOC.)": "50073"
   },
   {
-    "LINHA": 1048,
+    "LINHA": 1049,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -1017,7 +1017,7 @@
     "CONTA (ALOC.)": "50127"
   },
   {
-    "LINHA": 1049,
+    "LINHA": 1050,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -1026,7 +1026,7 @@
     "CONTA (ALOC.)": "50111"
   },
   {
-    "LINHA": 1050,
+    "LINHA": 1051,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -1035,7 +1035,7 @@
     "CONTA (ALOC.)": "50156"
   },
   {
-    "LINHA": 1051,
+    "LINHA": 1052,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -1044,7 +1044,7 @@
     "CONTA (ALOC.)": "50274"
   },
   {
-    "LINHA": 1064,
+    "LINHA": 1065,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
@@ -1053,7 +1053,7 @@
     "CONTA (ALOC.)": "45698"
   },
   {
-    "LINHA": 1065,
+    "LINHA": 1066,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
@@ -1062,7 +1062,7 @@
     "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1066,
+    "LINHA": 1067,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
@@ -1071,7 +1071,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1067,
+    "LINHA": 1068,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
@@ -1080,7 +1080,7 @@
     "CONTA (ALOC.)": "111395"
   },
   {
-    "LINHA": 1070,
+    "LINHA": 1071,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
@@ -1089,7 +1089,7 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1072,
+    "LINHA": 1073,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
@@ -1098,7 +1098,7 @@
     "CONTA (ALOC.)": "968299"
   },
   {
-    "LINHA": 1074,
+    "LINHA": 1075,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000005",
     "C_CUSTO": "EQUIPE DE OBRAS",
@@ -1107,7 +1107,7 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1077,
+    "LINHA": 1078,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -1116,7 +1116,7 @@
     "CONTA (ALOC.)": "111142"
   },
   {
-    "LINHA": 1078,
+    "LINHA": 1079,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -1125,7 +1125,7 @@
     "CONTA (ALOC.)": "111120"
   },
   {
-    "LINHA": 1079,
+    "LINHA": 1080,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -1134,7 +1134,7 @@
     "CONTA (ALOC.)": "111165"
   },
   {
-    "LINHA": 1080,
+    "LINHA": 1081,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -1143,7 +1143,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 1099,
+    "LINHA": 1100,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000026",
     "C_CUSTO": "MAQUINA JATO DE AREIA - MOD. 280",
@@ -1152,7 +1152,7 @@
     "CONTA (ALOC.)": "4831"
   },
   {
-    "LINHA": 1116,
+    "LINHA": 1117,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000044",
     "C_CUSTO": "PONTE 5 (SETOR ARMADURA)",
@@ -1161,7 +1161,7 @@
     "CONTA (ALOC.)": "4506"
   },
   {
-    "LINHA": 1142,
+    "LINHA": 1143,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -1170,7 +1170,7 @@
     "CONTA (ALOC.)": "112294.D"
   },
   {
-    "LINHA": 1143,
+    "LINHA": 1144,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -1179,7 +1179,7 @@
     "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1148,
+    "LINHA": 1149,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -1188,7 +1188,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1161,
+    "LINHA": 1162,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000030",
     "C_CUSTO": "GUINDASTE CLARCK 1",
@@ -1197,7 +1197,7 @@
     "CONTA (ALOC.)": "2861"
   },
   {
-    "LINHA": 1163,
+    "LINHA": 1164,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000030",
     "C_CUSTO": "GUINDASTE CLARCK 1",
@@ -1206,7 +1206,7 @@
     "CONTA (ALOC.)": "3027"
   },
   {
-    "LINHA": 1170,
+    "LINHA": 1171,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",
@@ -1215,7 +1215,7 @@
     "CONTA (ALOC.)": "112294.D"
   },
   {
-    "LINHA": 1174,
+    "LINHA": 1175,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",
@@ -1224,7 +1224,7 @@
     "CONTA (ALOC.)": "45771.D"
   },
   {
-    "LINHA": 1175,
+    "LINHA": 1176,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",
@@ -1233,97 +1233,97 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1177,
+    "LINHA": 1178,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000033",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
     "REDUZIDO_CONTA": "112294",
     "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
     "CONTA (ALOC.)": "112294.D"
-  },
-  {
-    "LINHA": 1179,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000033",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "4015",
-    "CONTA": "VIAGENS/ESTADIAS",
-    "CONTA (ALOC.)": "4015.D"
   },
   {
     "LINHA": 1180,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000033",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "4423",
-    "CONTA": "OUTROS CUSTOS DIVERSOS",
-    "CONTA (ALOC.)": "4423.D"
+    "REDUZIDO_CONTA": "4015",
+    "CONTA": "VIAGENS/ESTADIAS",
+    "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1183,
+    "LINHA": 1181,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000033",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "45764",
-    "CONTA": "MATERIAIS DE EXPEDIENTE",
-    "CONTA (ALOC.)": "45764.D"
+    "REDUZIDO_CONTA": "4423",
+    "CONTA": "OUTROS CUSTOS DIVERSOS",
+    "CONTA (ALOC.)": "4423.D"
   },
   {
     "LINHA": 1184,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000033",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
+    "REDUZIDO_CONTA": "45764",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "45764.D"
+  },
+  {
+    "LINHA": 1185,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000033",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
     "REDUZIDO_CONTA": "45787",
     "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1186,
+    "LINHA": 1187,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000034",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
     "REDUZIDO_CONTA": "112294",
     "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
     "CONTA (ALOC.)": "112294.D"
-  },
-  {
-    "LINHA": 1188,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000034",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
-    "REDUZIDO_CONTA": "4015",
-    "CONTA": "VIAGENS/ESTADIAS",
-    "CONTA (ALOC.)": "4015.D"
   },
   {
     "LINHA": 1189,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000034",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
-    "REDUZIDO_CONTA": "4423",
-    "CONTA": "OUTROS CUSTOS DIVERSOS",
-    "CONTA (ALOC.)": "4423.D"
+    "REDUZIDO_CONTA": "4015",
+    "CONTA": "VIAGENS/ESTADIAS",
+    "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1192,
+    "LINHA": 1190,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000034",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
-    "REDUZIDO_CONTA": "45764",
-    "CONTA": "MATERIAIS DE EXPEDIENTE",
-    "CONTA (ALOC.)": "45764.D"
+    "REDUZIDO_CONTA": "4423",
+    "CONTA": "OUTROS CUSTOS DIVERSOS",
+    "CONTA (ALOC.)": "4423.D"
   },
   {
     "LINHA": 1193,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000034",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
+    "REDUZIDO_CONTA": "45764",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "45764.D"
+  },
+  {
+    "LINHA": 1194,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000034",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
     "REDUZIDO_CONTA": "45787",
     "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1197,
+    "LINHA": 1198,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
@@ -1332,7 +1332,7 @@
     "CONTA (ALOC.)": "112294.D"
   },
   {
-    "LINHA": 1199,
+    "LINHA": 1200,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
@@ -1341,7 +1341,7 @@
     "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1200,
+    "LINHA": 1201,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
@@ -1350,7 +1350,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1203,
+    "LINHA": 1204,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
@@ -1359,7 +1359,7 @@
     "CONTA (ALOC.)": "45764.D"
   },
   {
-    "LINHA": 1204,
+    "LINHA": 1205,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
@@ -1368,7 +1368,7 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1208,
+    "LINHA": 1209,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000036",
     "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
@@ -1377,7 +1377,7 @@
     "CONTA (ALOC.)": "112294.D"
   },
   {
-    "LINHA": 1210,
+    "LINHA": 1211,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000036",
     "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
@@ -1386,7 +1386,7 @@
     "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1211,
+    "LINHA": 1212,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000036",
     "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
@@ -1395,7 +1395,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1214,
+    "LINHA": 1215,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000036",
     "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
@@ -1404,7 +1404,7 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1990,
+    "LINHA": 2024,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000001",
     "C_CUSTO": "FINANCEIRO",
@@ -1413,7 +1413,7 @@
     "CONTA (ALOC.)": "3197"
   },
   {
-    "LINHA": 2007,
+    "LINHA": 2041,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1422,7 +1422,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 2008,
+    "LINHA": 2042,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1431,7 +1431,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 2009,
+    "LINHA": 2043,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1440,7 +1440,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 2010,
+    "LINHA": 2044,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1449,7 +1449,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 2011,
+    "LINHA": 2045,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1458,7 +1458,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 2012,
+    "LINHA": 2046,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1467,7 +1467,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 2013,
+    "LINHA": 2047,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1476,7 +1476,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 2014,
+    "LINHA": 2048,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1485,7 +1485,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 2028,
+    "LINHA": 2062,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000004",
     "C_CUSTO": "CONTABILIDADE E CONTROLADORIA",
@@ -1494,7 +1494,7 @@
     "CONTA (ALOC.)": "2855"
   },
   {
-    "LINHA": 2029,
+    "LINHA": 2063,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000004",
     "C_CUSTO": "CONTABILIDADE E CONTROLADORIA",
@@ -1503,7 +1503,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 2045,
+    "LINHA": 2079,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -1512,7 +1512,7 @@
     "CONTA (ALOC.)": "2855"
   },
   {
-    "LINHA": 2079,
+    "LINHA": 2113,
     "FILIAL": "2",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -1521,7 +1521,7 @@
     "CONTA (ALOC.)": "113840"
   },
   {
-    "LINHA": 2080,
+    "LINHA": 2114,
     "FILIAL": "2",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -1530,7 +1530,7 @@
     "CONTA (ALOC.)": "113879"
   },
   {
-    "LINHA": 2081,
+    "LINHA": 2115,
     "FILIAL": "2",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -1539,7 +1539,7 @@
     "CONTA (ALOC.)": "113885"
   },
   {
-    "LINHA": 2082,
+    "LINHA": 2116,
     "FILIAL": "2",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -1548,7 +1548,7 @@
     "CONTA (ALOC.)": "113891"
   },
   {
-    "LINHA": 2110,
+    "LINHA": 2144,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000001",
     "C_CUSTO": "ESTACAS",
@@ -1557,7 +1557,7 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 2151,
+    "LINHA": 2185,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000002",
     "C_CUSTO": "ALVEOLARES",
@@ -1566,7 +1566,7 @@
     "CONTA (ALOC.)": "44813"
   },
   {
-    "LINHA": 2152,
+    "LINHA": 2186,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000002",
     "C_CUSTO": "ALVEOLARES",
@@ -1575,7 +1575,7 @@
     "CONTA (ALOC.)": "44919"
   },
   {
-    "LINHA": 2153,
+    "LINHA": 2187,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000002",
     "C_CUSTO": "ALVEOLARES",
@@ -1584,7 +1584,7 @@
     "CONTA (ALOC.)": "44865"
   },
   {
-    "LINHA": 2179,
+    "LINHA": 2213,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1593,7 +1593,7 @@
     "CONTA (ALOC.)": "50162"
   },
   {
-    "LINHA": 2180,
+    "LINHA": 2214,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1602,7 +1602,7 @@
     "CONTA (ALOC.)": "44813"
   },
   {
-    "LINHA": 2181,
+    "LINHA": 2215,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1611,7 +1611,7 @@
     "CONTA (ALOC.)": "44865"
   },
   {
-    "LINHA": 2182,
+    "LINHA": 2216,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1620,7 +1620,7 @@
     "CONTA (ALOC.)": "44871"
   },
   {
-    "LINHA": 2183,
+    "LINHA": 2217,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1629,7 +1629,7 @@
     "CONTA (ALOC.)": "44888"
   },
   {
-    "LINHA": 2186,
+    "LINHA": 2220,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1638,7 +1638,7 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 2211,
+    "LINHA": 2245,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000004",
     "C_CUSTO": "CENTRAL DE CONCRETO (FOR)",
@@ -1647,7 +1647,7 @@
     "CONTA (ALOC.)": "44894"
   },
   {
-    "LINHA": 2231,
+    "LINHA": 2265,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000005",
     "C_CUSTO": "MANUSEIO (FOR)",
@@ -1656,7 +1656,7 @@
     "CONTA (ALOC.)": "44813"
   },
   {
-    "LINHA": 2232,
+    "LINHA": 2266,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000005",
     "C_CUSTO": "MANUSEIO (FOR)",
@@ -1665,7 +1665,7 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 2253,
+    "LINHA": 2287,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1674,7 +1674,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 2265,
+    "LINHA": 2299,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1683,7 +1683,7 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2266,
+    "LINHA": 2300,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1692,7 +1692,7 @@
     "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2268,
+    "LINHA": 2302,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1701,7 +1701,7 @@
     "CONTA (ALOC.)": "45340"
   },
   {
-    "LINHA": 2269,
+    "LINHA": 2303,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1710,7 +1710,7 @@
     "CONTA (ALOC.)": "111113"
   },
   {
-    "LINHA": 2271,
+    "LINHA": 2305,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1719,7 +1719,7 @@
     "CONTA (ALOC.)": "4009"
   },
   {
-    "LINHA": 2272,
+    "LINHA": 2306,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1728,7 +1728,7 @@
     "CONTA (ALOC.)": "4067"
   },
   {
-    "LINHA": 2273,
+    "LINHA": 2307,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1737,7 +1737,7 @@
     "CONTA (ALOC.)": "4529"
   },
   {
-    "LINHA": 2274,
+    "LINHA": 2308,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1746,7 +1746,7 @@
     "CONTA (ALOC.)": "4943"
   },
   {
-    "LINHA": 2275,
+    "LINHA": 2309,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1755,7 +1755,7 @@
     "CONTA (ALOC.)": "2855"
   },
   {
-    "LINHA": 2276,
+    "LINHA": 2310,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1764,7 +1764,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 2277,
+    "LINHA": 2311,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1773,7 +1773,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 2278,
+    "LINHA": 2312,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1782,7 +1782,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 2279,
+    "LINHA": 2313,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1791,7 +1791,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 2280,
+    "LINHA": 2314,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1800,7 +1800,7 @@
     "CONTA (ALOC.)": "3286"
   },
   {
-    "LINHA": 2281,
+    "LINHA": 2315,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1809,7 +1809,7 @@
     "CONTA (ALOC.)": "3197"
   },
   {
-    "LINHA": 2282,
+    "LINHA": 2316,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1818,7 +1818,7 @@
     "CONTA (ALOC.)": "4558"
   },
   {
-    "LINHA": 2283,
+    "LINHA": 2317,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1827,7 +1827,7 @@
     "CONTA (ALOC.)": "3139"
   },
   {
-    "LINHA": 2294,
+    "LINHA": 2328,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1836,7 +1836,7 @@
     "CONTA (ALOC.)": "4943"
   },
   {
-    "LINHA": 2295,
+    "LINHA": 2329,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1845,7 +1845,7 @@
     "CONTA (ALOC.)": "2855"
   },
   {
-    "LINHA": 2296,
+    "LINHA": 2330,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1854,7 +1854,7 @@
     "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 2297,
+    "LINHA": 2331,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1863,7 +1863,7 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 2298,
+    "LINHA": 2332,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1872,7 +1872,7 @@
     "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 2299,
+    "LINHA": 2333,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1881,7 +1881,7 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 2300,
+    "LINHA": 2334,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1890,7 +1890,7 @@
     "CONTA (ALOC.)": "4558"
   },
   {
-    "LINHA": 2301,
+    "LINHA": 2335,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1899,7 +1899,7 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 2330,
+    "LINHA": 2364,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000006",
     "C_CUSTO": "ALMOXARIFADO (FOR)",
@@ -1908,7 +1908,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 2331,
+    "LINHA": 2365,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000006",
     "C_CUSTO": "ALMOXARIFADO (FOR)",
@@ -1917,7 +1917,7 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2342,
+    "LINHA": 2376,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000006",
     "C_CUSTO": "ALMOXARIFADO (FOR)",
@@ -1926,7 +1926,7 @@
     "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2351,
+    "LINHA": 2385,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1935,7 +1935,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 2352,
+    "LINHA": 2386,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1944,7 +1944,7 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2353,
+    "LINHA": 2387,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1953,7 +1953,7 @@
     "CONTA (ALOC.)": "111113"
   },
   {
-    "LINHA": 2367,
+    "LINHA": 2401,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1962,7 +1962,7 @@
     "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2371,
+    "LINHA": 2405,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1971,7 +1971,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 2377,
+    "LINHA": 2411,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -1980,7 +1980,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 2378,
+    "LINHA": 2412,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -1989,7 +1989,7 @@
     "CONTA (ALOC.)": "45327"
   },
   {
-    "LINHA": 2379,
+    "LINHA": 2413,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -1998,7 +1998,7 @@
     "CONTA (ALOC.)": "45422"
   },
   {
-    "LINHA": 2380,
+    "LINHA": 2414,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -2007,7 +2007,7 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2381,
+    "LINHA": 2415,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -2016,7 +2016,7 @@
     "CONTA (ALOC.)": "45362"
   },
   {
-    "LINHA": 2382,
+    "LINHA": 2416,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -2025,7 +2025,7 @@
     "CONTA (ALOC.)": "45379"
   },
   {
-    "LINHA": 2393,
+    "LINHA": 2427,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -2034,7 +2034,7 @@
     "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2397,
+    "LINHA": 2431,
     "FILIAL": "2",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -2043,7 +2043,7 @@
     "CONTA (ALOC.)": "50274"
   },
   {
-    "LINHA": 2399,
+    "LINHA": 2433,
     "FILIAL": "2",
     "COD_CUSTO": "1.16.00000005",
     "C_CUSTO": "EQUIPE DE OBRAS",
@@ -2052,7 +2052,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 2400,
+    "LINHA": 2434,
     "FILIAL": "2",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -2061,7 +2061,7 @@
     "CONTA (ALOC.)": "111142"
   },
   {
-    "LINHA": 2401,
+    "LINHA": 2435,
     "FILIAL": "2",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -2070,7 +2070,7 @@
     "CONTA (ALOC.)": "111120"
   },
   {
-    "LINHA": 2402,
+    "LINHA": 2436,
     "FILIAL": "2",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -2079,7 +2079,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 2430,
+    "LINHA": 2464,
     "FILIAL": "2",
     "COD_CUSTO": "1.18.00000025",
     "C_CUSTO": "MAQUINA EXTRUDER EVO2",
@@ -2088,7 +2088,7 @@
     "CONTA (ALOC.)": "45126"
   },
   {
-    "LINHA": 2445,
+    "LINHA": 2479,
     "FILIAL": "2",
     "COD_CUSTO": "1.18.00000050",
     "C_CUSTO": "PORTICO 1 (FILIAL)",
@@ -2097,7 +2097,7 @@
     "CONTA (ALOC.)": "45161"
   },
   {
-    "LINHA": 2455,
+    "LINHA": 2489,
     "FILIAL": "2",
     "COD_CUSTO": "1.18.00000053",
     "C_CUSTO": "PORTICO 6 - BAUMA 2 (FILIAL)",
@@ -2106,7 +2106,7 @@
     "CONTA (ALOC.)": "45178"
   },
   {
-    "LINHA": 2468,
+    "LINHA": 2502,
     "FILIAL": "2",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -2115,7 +2115,7 @@
     "CONTA (ALOC.)": "45764.D"
   },
   {
-    "LINHA": 2470,
+    "LINHA": 2504,
     "FILIAL": "2",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",

@@ -7,7 +7,7 @@ import { strFromU8, unzipSync } from "fflate";
  * da tabela de textos compartilhados: um leitor em streaming teria de guardar a
  * aba inteira esperando os textos chegarem. Aqui o zip é aberto por acesso
  * direto — descompacta-se só a tabela de textos e a aba pedida, e as demais
- * abas do arquivo (o LISTAS FOLHA tem 230 MB de XML) nem são tocadas.
+ * abas do arquivo (o LISTAS REALIZADO (RESULTADOS) tem 230 MB de XML) nem são tocadas.
  *
  * Fórmulas não são avaliadas: vale o último valor que o Excel gravou.
  */

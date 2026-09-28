@@ -183,13 +183,6 @@ enum TipoConta {
   ANALITICA
 }
 
-/// ENUM: sinal com que a conta entra no balancete.
-/// Na planilha aparece como "+" e "-" na coluna SINAL BAL.
-enum SinalBalancete {
-  POSITIVO
-  NEGATIVO
-}
-
 /// ENUM: papel da linha na estrutura da DRE.
 /// SECAO é só rótulo e não carrega valor; ITEM soma lançamentos;
 /// SUBTOTAL e TOTAL são calculados pela `expressao`.
@@ -260,7 +253,7 @@ enum TipoLinha {
 }
 
 /// Linhas de produto, de obra e de faturamento — hoje mantidas na aba `Listas`
-/// do LISTAS PRODUÇÃO E SERVIÇOS, promovidas a cadastro.
+/// do LISTAS REALIZADO (OPERAÇÃO), promovidas a cadastro.
 ///
 /// Um só cadastro com discriminador `tipo`, em vez de três tabelas: é uma tela
 /// só com filtro, e acrescentar um domínio novo não exige tabela nova. A
@@ -384,7 +377,6 @@ model ContaResultado {
   /// Subgrupo na DRE, ex.: "Receita Bruta de Montagem". Não confundir com a
   /// ATRIBUIÇÃO do centro de custo, que é direta/indireta — ver PORTABILIDADE.md.
   atribuicao     String?
-  sinalBalancete SinalBalancete? @map("sinal_balancete")
   /// ORDEM: posição na tela, reorganizável pelo usuário.
   ordem          Int            @default(0)
   ativo          Boolean        @default(true)

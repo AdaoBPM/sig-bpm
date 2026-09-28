@@ -34,7 +34,6 @@ export type ContaResultado = {
   departamento: string | null;
   atribuicao: string | null;
   balde: string | null;
-  sinalBalancete: "POSITIVO" | "NEGATIVO" | null;
   ativo: boolean;
   linhaDRE: { codigo: string; descricao: string } | null;
 };

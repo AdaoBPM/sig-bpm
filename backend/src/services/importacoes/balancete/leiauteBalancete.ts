@@ -6,7 +6,7 @@ type Decimal = Prisma.Decimal;
 
 /**
  * Interpretação do arquivo do balancete — leiaute da aba `Balancete (Lista)`
- * do SIG BPM 2026 - LISTAS FOLHA, REQUISIÇÕES E NF.
+ * do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS).
  *
  * A aba é uma tabela dinâmica do exercício inteiro, em forma tabular:
  *

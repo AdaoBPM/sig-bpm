@@ -88,7 +88,6 @@ export const cadastrosService = {
           departamento: true,
           atribuicao: true,
           balde: true,
-          sinalBalancete: true,
           ativo: true,
           linhaDRE: { select: { codigo: true, descricao: true } },
         },
