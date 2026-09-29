@@ -1644,10 +1644,10 @@
     "CENTRO DE CUSTO (RM)": "PISO AREA ESTOCAGEM DE ESTOCAGEM MATRIZ",
     "CENTRO DE CUSTO (CONTROLADORIA)": "INVESTIMENTO",
     "DEPARTAMENTO": "INVESTIMENTO",
-    "DEP.": "-",
-    "ATRIBUIÇÃO": "-",
-    "ATR.": "-",
-    "RATEIO": "-"
+    "DEP.": "CPP",
+    "ATRIBUIÇÃO": "DIRETA",
+    "ATR.": "DIR",
+    "RATEIO": "UNIDADE"
   },
   {
     "COLIGADA": "-",

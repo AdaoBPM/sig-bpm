@@ -139,7 +139,9 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     },
   };
 
-  // Guardas das fórmulas: IF(B$4=0,0,…) e, nos custos de Serviços, IF(B$6=0,0,…).
+  // Guardas das fórmulas: IF(B$4=0,0,…) e, em Serviços, IF(B$6=0,0,…) — a montagem
+  // do mês — nos custos, na receita de montagem e nos impostos (correção do
+  // usuário de 29/09/2026 na aba Realizado (Serviços)); as comissões seguem na B$4.
   const guarda: Record<number, Decimal> = {
     1: total("PREFABRICADO_MATRIZ"),
     2: total("PREFABRICADO_FILIAL"),
@@ -231,7 +233,6 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   // --- Serviços -------------------------------------------------------------
   {
     const u = UNIDADE.SERVICOS;
-    const semMetalurgia = guarda[u].isZero();
     const semMontagem = guardaCustosServicos.isZero();
     const compl = previa(u, "COMPLEMENTAR");
     for (const l of itensDa(u)) {
@@ -244,7 +245,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       if (ehComissao(l)) continue;
       if (desc === n("Receita Bruta de Montagem")) {
         const c = somaDireto(l.id, { filial: 1 });
-        gravar(u, l, semMetalurgia ? zero() : compl.receitaBruta.neg().minus(c), {
+        gravar(u, l, semMontagem ? zero() : compl.receitaBruta.neg().minus(c), {
           regra: "−(complementar da receita prévia) − (receita contábil da filial 1)",
           direto: c.toFixed(2),
         });
@@ -284,12 +285,12 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     }
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
-      const v = semMetalurgia ? zero() : somaDireto(io.id, { filial: 1, balde: (b) => b === "OBRAS" });
+      const v = semMontagem ? zero() : somaDireto(io.id, { filial: 1, balde: (b) => b === "OBRAS" });
       gravar(u, io, v, { regra: "Lançamentos contábeis da filial 1, balde OBRAS", direto: v.toFixed(2) });
       const rlm = linhaPorDescricao(u, "Receita Líquida de Montagem");
       if (rlm) {
         const rbm = itemDe(u, "Receita Bruta de Montagem");
-        gravar(u, rlm, semMetalurgia ? zero() : rbm.minus(v.minus(compl.receitaBruta.minus(compl.receitaLiquida))), {
+        gravar(u, rlm, semMontagem ? zero() : rbm.minus(v.minus(compl.receitaBruta.minus(compl.receitaLiquida))), {
           regra: "Bruta de montagem − (IRB − impostos da complementar)",
         });
       }
