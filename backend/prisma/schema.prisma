@@ -969,17 +969,28 @@ model EstoqueSaldo {
   obraId        String   @map("obra_id")
   linhaId         String? @map("linha_id")
   linha         Linha?  @relation(fields: [linhaId], references: [id])
+  /// Linha como texto (ESTRUTURA, ALVEOLARES, ESTACAS): a chave do saldo é obra + linha.
+  linhaTexto    String   @map("linha_texto")
+  /// DECIMAL: movimento do mês (produção − expedição) e o valor dele.
+  movimentoVolume Decimal @default(0) @map("movimento_volume")
+  movimentoValor  Decimal @default(0) @map("movimento_valor")
+  /// DECIMAL: preço líquido por m³ do movimento; nulo nas estacas (tabela, peça a peça).
+  precoMovimento  Decimal? @map("preco_movimento")
+  /// Como o movimento foi valorado; nulo sem movimento.
+  criterio        CriterioReceita?
   /// DECIMAL: volume e valor do saldo, e preço médio do período.
   saldoVolume   Decimal  @map("saldo_volume")
   saldoValor    Decimal  @map("saldo_valor")
   precoMedio    Decimal  @map("preco_medio")
+  /// Saldo carregado por importação (o saldo inicial), em vez de apurado.
+  importacaoId  String?  @map("importacao_id")
   apuradoEm     DateTime @default(now()) @map("apurado_em")
   congelado     Boolean  @default(false)
 
   competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   obra        Obra        @relation(fields: [obraId], references: [id])
 
-  @@unique([competenciaId, obraId, linhaId])
+  @@unique([competenciaId, obraId, linhaTexto])
   @@map("estoque_saldos")
 }
 

@@ -11,6 +11,7 @@ import {
   type Rejeicao,
   type ResumoBalancete,
   type ResumoDreComercial,
+  type ResumoEstoqueInicial,
   type ResumoLista,
 } from "../services/importacoesService";
 import {
@@ -499,6 +500,40 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
   );
 }
 
+function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as ResumoEstoqueInicial | null;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />
+        <Contador rotulo="Saldos" valor={resumo?.saldos ?? 0} destaque="ok" detalhe="por obra e linha" />
+        <Contador rotulo="Rejeitadas" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
+        <Contador rotulo="Obras novas" valor={resumo?.obrasCriadas ?? 0} />
+      </div>
+      {resumo ? (
+        <div className="border border-gray-200 rounded-sm p-4">
+          <h3 className="text-sm font-bold text-gray-900">Saldo por linha</h3>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {resumo.porLinha.map((l) => (
+                <tr key={l.linha} className="border-t border-gray-100">
+                  <td className="py-1.5 text-gray-700">{l.linha}</td>
+                  <td className="py-1.5 text-right tabular-nums">{Number(l.volume).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} m³</td>
+                  <td className="py-1.5 text-right tabular-nums">{moeda(l.valor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-gray-500">
+            Aba lida: {resumo.aba}. Vale como o saldo final desta competência; a apuração do mês seguinte parte dele.
+          </p>
+        </div>
+      ) : null}
+      <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />
+    </div>
+  );
+}
+
 export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
   const queryClient = useQueryClient();
   const { data: imp, isPending, isError } = useQuery({
@@ -565,6 +600,8 @@ export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
           <ConcluidaBalancete imp={imp} />
         ) : imp.tipo === "DRE_COMERCIAL" ? (
           <ConcluidaDreComercial imp={imp} />
+        ) : imp.tipo === "ESTOQUE_INICIAL" ? (
+          <ConcluidaEstoqueInicial imp={imp} />
         ) : (
           <ConcluidaLista imp={imp} />
         )

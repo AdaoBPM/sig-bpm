@@ -7,6 +7,7 @@ import { enfileirar } from "../../lib/filaProcessamento.js";
 import { caminhoDoArquivo, diretorioUploads } from "./arquivosImportados.js";
 import { processarBalancete } from "./balancete/processarBalancete.js";
 import { processarDreComercial } from "./dreComercial/processarDreComercial.js";
+import { processarEstoqueInicial } from "./estoqueInicial/processarEstoqueInicial.js";
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
@@ -29,11 +30,13 @@ export class RegraImportacaoError extends Error {
 
 /**
  * Tipos com processamento implementado: o balancete, as listas que alimentam
- * os rateios, as que alimentam só a receita prévia e a DRE do Comercial.
+ * os rateios, as que alimentam só a receita prévia, a DRE do Comercial e o
+ * saldo inicial do estoque.
  */
 const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   "BALANCETE",
   "DRE_COMERCIAL",
+  "ESTOQUE_INICIAL",
   ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
   ...(Object.keys(DEFINICOES_LISTAS_RECEITA) as TipoImportacao[]),
 ];
@@ -180,7 +183,9 @@ export const importacoesService = {
         ? processarLista(importacao.id)
         : importacao.tipo === "DRE_COMERCIAL"
           ? processarDreComercial(importacao.id)
-          : processarBalancete(importacao.id),
+          : importacao.tipo === "ESTOQUE_INICIAL"
+            ? processarEstoqueInicial(importacao.id)
+            : processarBalancete(importacao.id),
     );
 
     return importacao;

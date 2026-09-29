@@ -61,6 +61,7 @@ export const ROTULO_TIPO: Record<string, string> = {
   MONTAGEM: "Montagem",
   ACOMPANHAMENTO: "Acompanhamento",
   DRE_COMERCIAL: "DRE do Comercial",
+  ESTOQUE_INICIAL: "Saldo inicial do estoque",
   MEDICAO: "Medições",
   DEVOLUCAO: "Devoluções",
   SAIDA: "Saídas",

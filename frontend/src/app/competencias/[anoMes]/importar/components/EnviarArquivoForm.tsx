@@ -43,6 +43,7 @@ const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?
   { valor: "MEDICAO", rotulo: "Medições", disponivel: true, origem: `aba Medições do ${LISTAS}` },
   { valor: "DEVOLUCAO", rotulo: "Devoluções", disponivel: true, origem: `aba Devoluções (Lista) do ${LISTAS}` },
   { valor: "SAIDA", rotulo: "Saídas", disponivel: true, origem: `aba Saídas (Lista) do ${LISTAS}` },
+  { valor: "ESTOQUE_INICIAL", rotulo: "Saldo inicial do estoque", disponivel: true, origem: `aba Estoque (2025) do ${LISTAS}. Importe na competência de 12/2025: vale como o saldo final do mês, de onde parte a apuração de janeiro` },
   { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: true, origem: "aba DRE do CONTROLE DAS VENDAS - COMERCIAL. Os preços valem para todas as competências; um preço alterado substitui o anterior, que fica no histórico" },
 ];
 

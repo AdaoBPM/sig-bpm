@@ -95,11 +95,19 @@ export type ResumoDreComercial = {
   obrasSemContrato: number;
 };
 
+/** Resumo do saldo inicial do estoque. */
+export type ResumoEstoqueInicial = {
+  aba: string;
+  saldos: number;
+  obrasCriadas: number;
+  porLinha: Array<{ linha: string; saldos: number; volume: string; valor: string }>;
+};
+
 export type ImportacaoDetalhe = Importacao & {
   hashArquivo: string;
   relatorioErros: Rejeicao[] | null;
   /** ResumoBalancete quando tipo é BALANCETE; ResumoLista nas listas. */
-  resumo: ResumoBalancete | ResumoLista | ResumoDreComercial | null;
+  resumo: ResumoBalancete | ResumoLista | ResumoDreComercial | ResumoEstoqueInicial | null;
   competencia: { ano: number; mes: number; status: StatusCompetencia };
 };
 

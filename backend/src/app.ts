@@ -17,6 +17,7 @@ import {
   lancamentosManuaisRoutes,
 } from "./routes/lancamentosManuais/lancamentosManuaisRoutes.js";
 import { lancamentosReceitaRoutes, receitaPreviaRoutes } from "./routes/receitaPrevia/receitaPreviaRoutes.js";
+import { estoqueRoutes } from "./routes/estoque/estoqueRoutes.js";
 import { rateiosRoutes } from "./routes/rateios/rateiosRoutes.js";
 import {
   importacoesDaCompetenciaRoutes,
@@ -59,6 +60,7 @@ app.use("/competencias/:anoMes/lancamentos-manuais", lancamentosDaCompetenciaRou
 app.use("/competencias/:anoMes/listas", listasDaCompetenciaRoutes);
 app.use("/competencias/:anoMes/receita-previa", receitaPreviaRoutes);
 app.use("/competencias/:anoMes/rateios", rateiosRoutes);
+app.use("/competencias/:anoMes/estoque", estoqueRoutes);
 app.use("/competencias", competenciasRoutes);
 app.use("/importacoes", importacoesRoutes);
 app.use("/lancamentos-manuais", lancamentosManuaisRoutes);
