@@ -235,6 +235,14 @@ enum BaldeAlocacao {
 }
 
 /// ENUM: grandeza física que serve de direcionador do rateio.
+/// Destino de uma parcela de rateio.
+enum DestinoRateio {
+  MATRIZ
+  FILIAL
+  MONTAGEM
+  COMPLEMENTAR
+}
+
 enum BaseFisica {
   M3
   KG
@@ -456,9 +464,16 @@ model RegraRateio {
   /// Só os cinco valores de rateio de `BaldeAlocacao` são válidos aqui;
   /// a restrição é aplicada na aplicação, já que o enum é um só.
   chave            BaldeAlocacao
+  /// Destino nominal da parcela. Montagem e Complementar são as duas visões
+  /// de Serviços, por isso a unidade sozinha não identifica o destino.
+  destino          DestinoRateio
+  /// Unidade de negócio que recebe o custo (Serviços para Montagem e Complementar).
   unidadeDestinoId String      @map("unidade_destino_id")
+  /// Rótulo da linha na aba Rateios, ex.: "(P) Metalurgia: Montagem".
+  rotulo           String
   baseFisica       BaseFisica  @map("base_fisica")
-  /// Qual lista operacional fornece o volume, ex.: "Producao", "ProducaoMetalurgia".
+  /// Linha dos Totais que fornece o volume, pelo código (ex.: METALURGIA_MONTAGEM):
+  /// o vínculo é nominal, não pela posição na planilha.
   origemDoVolume   String      @map("origem_do_volume")
   vigenciaInicio   DateTime    @map("vigencia_inicio")
   vigenciaFim      DateTime?   @map("vigencia_fim")
@@ -471,7 +486,7 @@ model RegraRateio {
 
   volumesOperacionais VolumeOperacional[]
 
-  @@unique([chave, unidadeDestinoId, vigenciaInicio])
+  @@unique([chave, destino, vigenciaInicio])
   @@index([chave])
   @@map("regras_rateio")
 }
@@ -1411,7 +1426,7 @@ model VolumeOperacional {
   regraRateio    RegraRateio    @relation(fields: [regraRateioId], references: [id])
   unidadeNegocio UnidadeNegocio @relation(fields: [unidadeNegocioId], references: [id])
 
-  @@unique([competenciaId, regraRateioId, unidadeNegocioId])
+  @@unique([competenciaId, regraRateioId])
   @@map("volumes_operacionais")
 }
 

@@ -11,6 +11,7 @@
 import "dotenv/config";
 import { getPrismaClient } from "../src/config/prisma.js";
 import type { AcaoPermissao, RecursoSistema } from "../src/generated/prisma/enums.js";
+import { REGRAS_RATEIO, VIGENCIA_REGRAS } from "../src/services/volumes/regrasRateio.js";
 import { carregarCadastrosDaPasta } from "./cargaCadastros.js";
 
 const prisma = getPrismaClient();
@@ -195,12 +196,34 @@ async function carregarPerfisEUsuario() {
   return { perfis: PERFIS.length };
 }
 
+/** As 14 regras da aba Rateios do BASE REALIZADO (OPERAÇÃO) — ver regrasRateio.ts. */
+async function carregarRegrasRateio() {
+  const unidades = new Map((await prisma.unidadeNegocio.findMany({ select: { id: true, codigo: true } })).map((u) => [u.codigo, u.id]));
+  for (const [i, r] of REGRAS_RATEIO.entries()) {
+    const dados = {
+      unidadeDestinoId: unidades.get(r.unidade)!,
+      rotulo: r.rotulo,
+      baseFisica: r.baseFisica,
+      origemDoVolume: r.origem,
+      ordem: i + 1,
+    };
+    await prisma.regraRateio.upsert({
+      where: { chave_destino_vigenciaInicio: { chave: r.chave, destino: r.destino, vigenciaInicio: VIGENCIA_REGRAS } },
+      create: { chave: r.chave, destino: r.destino, vigenciaInicio: VIGENCIA_REGRAS, ...dados },
+      update: dados,
+    });
+  }
+  return REGRAS_RATEIO.length;
+}
+
 const perfis = await carregarPerfisEUsuario();
 const un = await carregarUnidades();
 const linhas = await carregarLinhas();
+const regras = await carregarRegrasRateio();
 
 console.log("Carga inicial\n");
 console.log(`Perfis              : ${perfis.perfis} gravados, com o usuário inicial`);
 console.log(`Unidades de negócio : ${un} gravadas`);
 console.log(`Linhas              : ${linhas} gravadas (produto, obra e faturamento)`);
+console.log(`Regras de rateio    : ${regras} gravadas`);
 await carregarCadastrosDaPasta();
