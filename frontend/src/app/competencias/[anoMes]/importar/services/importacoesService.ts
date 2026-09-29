@@ -65,8 +65,10 @@ export type ResumoLista = {
   aba: string;
   lista: string;
   registros: number;
-  ignoradas: { vazias: number; outrosMeses: number };
+  ignoradas: { vazias: number; outrosMeses: number; semEfeito?: number };
   totais: Array<{ codigo: string; rotulo: string; medida: string; quantidade: string }>;
+  /** Lista da receita prévia: os totais são por unidade, não linhas da Totais. */
+  receita?: boolean;
   obrasCriadas: number;
   avisos: string[];
   substituiu: string[];

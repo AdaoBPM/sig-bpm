@@ -74,7 +74,7 @@ function exigirAba(abas: string[], aba: string) {
 }
 
 /** Aba de cadastro: cabeçalho na linha 1, um objeto por linha não vazia. */
-function lerTabela<T>(buffer: Uint8Array, aba: string): T[] {
+export function lerTabela<T>(buffer: Uint8Array, aba: string): T[] {
   const { linhas } = lerAba(buffer, (abas) => exigirAba(abas, aba));
   const cabecalho = linhas[0]?.celulas.map((c) => texto(c)) ?? [];
   const colunas = cabecalho

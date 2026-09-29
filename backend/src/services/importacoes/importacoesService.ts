@@ -7,8 +7,9 @@ import { enfileirar } from "../../lib/filaProcessamento.js";
 import { caminhoDoArquivo, diretorioUploads } from "./arquivosImportados.js";
 import { processarBalancete } from "./balancete/processarBalancete.js";
 import { processarDreComercial } from "./dreComercial/processarDreComercial.js";
-import { DEFINICOES_LISTAS, ehListaRateio } from "./listas/definicoesListas.js";
-import { processarLista } from "./listas/processarLista.js";
+import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
+import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
+import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
 
 /**
  * Erro de regra da importação, com o status HTTP que o controller devolve.
@@ -28,13 +29,13 @@ export class RegraImportacaoError extends Error {
 
 /**
  * Tipos com processamento implementado: o balancete, as listas que alimentam
- * os rateios e a DRE do Comercial. As listas da receita prévia entram no
- * Passo 12b.
+ * os rateios, as que alimentam só a receita prévia e a DRE do Comercial.
  */
 const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   "BALANCETE",
   "DRE_COMERCIAL",
   ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
+  ...(Object.keys(DEFINICOES_LISTAS_RECEITA) as TipoImportacao[]),
 ];
 
 function rotulo(ano: number, mes: number) {
@@ -175,7 +176,7 @@ export const importacoesService = {
     });
 
     enfileirar(`importação ${importacao.id}`, () =>
-      ehListaRateio(importacao.tipo)
+      ehListaOperacional(importacao.tipo)
         ? processarLista(importacao.id)
         : importacao.tipo === "DRE_COMERCIAL"
           ? processarDreComercial(importacao.id)

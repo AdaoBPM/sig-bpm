@@ -1,0 +1,27 @@
+[
+  {
+    "MOVIMENTO": "1.2.18",
+    "DESCRIÇÃO": "Venda mercantil",
+    "RETORNA ESTOQUE?": "Sim"
+  },
+  {
+    "MOVIMENTO": "1.2.20",
+    "DESCRIÇÃO": "Venda global",
+    "RETORNA ESTOQUE?": "Sim"
+  },
+  {
+    "MOVIMENTO": "1.2.23",
+    "DESCRIÇÃO": "Venda mercantil (sem movimentar estoque)",
+    "RETORNA ESTOQUE?": "Não"
+  },
+  {
+    "MOVIMENTO": "1.2.24",
+    "DESCRIÇÃO": "Venda mercantil (remessa de simples faturamento)",
+    "RETORNA ESTOQUE?": "Sim"
+  },
+  {
+    "MOVIMENTO": "1.2.32",
+    "DESCRIÇÃO": "Venda mercantil (remessa de simples faturamento)",
+    "RETORNA ESTOQUE?": "Sim"
+  }
+]

@@ -20,12 +20,12 @@ export type RegistroLista = {
   linha: { tipo: "PRODUTO" | "OBRA"; codigo: string } | null;
   quantidade: Decimal;
   /** Campos próprios do modelo da lista, com os nomes do schema. */
-  campos: Record<string, string | Date | Decimal | null>;
+  campos: Record<string, string | number | Date | Decimal | null>;
 };
 
 export type RejeicaoLista = {
   linha: number;
-  codigo: "DATA_INVALIDA" | "UNIDADE_INVALIDA" | "QUANTIDADE_INVALIDA";
+  codigo: "DATA_INVALIDA" | "UNIDADE_INVALIDA" | "QUANTIDADE_INVALIDA" | "VALOR_INVALIDO";
   mensagem: string;
 };
 
@@ -37,7 +37,11 @@ export type LeituraLista =
       linhasLidas: number;
       registros: RegistroLista[];
       rejeicoes: RejeicaoLista[];
-      ignoradas: { vazias: number; outrosMeses: number };
+      /**
+       * semEfeito: linhas que as fórmulas da planilha deixam de fora (sem
+       * projeto, ou linha "-"), nas listas da receita prévia.
+       */
+      ignoradas: { vazias: number; outrosMeses: number; semEfeito?: number };
       /** Observações que não impedem a gravação. */
       avisos: string[];
     };
@@ -147,3 +151,48 @@ export function colunaDoMes(
       (encontrados.length ? `Meses encontrados: ${encontrados.join(", ")}.` : "Nenhum mês reconhecido no cabeçalho."),
   };
 }
+
+// ---------------------------------------------------------------------------
+
+export type Resultado =
+  | { tipo: "vazia" }
+  | { tipo: "outroMes" }
+  | { tipo: "semEfeito" }
+  | { tipo: "rejeitada"; rejeicao: RejeicaoLista }
+  | { tipo: "registros"; registros: RegistroLista[] };
+
+/** Esqueleto comum: percorre as linhas abaixo do cabeçalho e contabiliza. */
+export function percorrer(
+  linhas: LinhaPlanilha[],
+  cabecalho: number,
+  ler: (l: LinhaPlanilha, c: (i: number) => ValorCelula) => Resultado,
+  avisos: string[] = [],
+): LeituraLista {
+  const registros: RegistroLista[] = [];
+  const rejeicoes: RejeicaoLista[] = [];
+  const ignoradas = { vazias: 0, outrosMeses: 0, semEfeito: 0 };
+  let linhasLidas = 0;
+  for (const l of linhas) {
+    if (l.numero <= cabecalho) continue;
+    linhasLidas++;
+    const r = ler(l, (i) => (i < 0 ? null : (l.celulas[i] ?? null)));
+    if (r.tipo === "vazia") ignoradas.vazias++;
+    else if (r.tipo === "outroMes") ignoradas.outrosMeses++;
+    else if (r.tipo === "semEfeito") ignoradas.semEfeito++;
+    else if (r.tipo === "rejeitada") rejeicoes.push(r.rejeicao);
+    else if (r.registros.length === 0) ignoradas.vazias++;
+    else registros.push(...r.registros);
+  }
+  return { ok: true, linhasLidas, registros, rejeicoes, ignoradas, avisos };
+}
+
+export const rejeitar = (linha: number, codigo: RejeicaoLista["codigo"], mensagem: string): Resultado => ({
+  tipo: "rejeitada",
+  rejeicao: { linha, codigo, mensagem },
+});
+
+export function obraDe(codigo: ValorCelula, nome: ValorCelula) {
+  const c = texto(codigo);
+  return c ? { codigo: c, nome: texto(nome) } : null;
+}
+

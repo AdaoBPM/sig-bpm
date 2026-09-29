@@ -282,7 +282,8 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
           valor={imp.linhasIgnoradas}
           detalhe={
             resumo
-              ? `${inteiro(resumo.ignoradas.outrosMeses)} de outros meses · ${inteiro(resumo.ignoradas.vazias)} sem dado`
+              ? `${inteiro(resumo.ignoradas.outrosMeses)} de outros meses · ${inteiro(resumo.ignoradas.vazias)} sem dado` +
+                (resumo.ignoradas.semEfeito ? ` · ${inteiro(resumo.ignoradas.semEfeito)} fora da receita` : "")
               : undefined
           }
         />
@@ -291,9 +292,13 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
       {resumo ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="border border-gray-200 rounded-sm p-4">
-            <h3 className="text-sm font-bold text-gray-900">Volumes para os rateios</h3>
+            <h3 className="text-sm font-bold text-gray-900">
+              {resumo.receita ? "Totais da lista" : "Volumes para os rateios"}
+            </h3>
             <p className="mt-0.5 text-xs text-gray-500">
-              As linhas da aba Totais do BASE REALIZADO (OPERAÇÃO) que esta lista alimenta.
+              {resumo.receita
+                ? "Por unidade, para conferir com a aba de resumo da lista. Alimentam a receita prévia."
+                : "As linhas da aba Totais do BASE REALIZADO (OPERAÇÃO) que esta lista alimenta."}
             </p>
             <table className="mt-2 w-full text-sm">
               <tbody>
@@ -301,7 +306,9 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
                   <tr key={t.codigo} className="border-t border-gray-100">
                     <td className="py-1.5 text-gray-700">{t.rotulo}</td>
                     <td className="py-1.5 text-right font-medium tabular-nums">
-                      {Number(t.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
+                      {t.medida === "R$"
+                        ? moeda(t.quantidade)
+                        : Number(t.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
                     </td>
                     <td className="py-1.5 pl-2 text-xs text-gray-500">{t.medida}</td>
                   </tr>

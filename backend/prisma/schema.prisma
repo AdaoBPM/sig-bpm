@@ -502,9 +502,13 @@ model TabelaEstaca {
   id             String    @id @default(uuid())
   secao          String
   grupo          String
+  /// Código da peça: grupo + os dois primeiros dígitos da seção (ex.: ES26).
+  peca           String
   /// DECIMAL: aritmética sempre em JavaScript, nunca em SQL cru.
   /// Ver a ressalva de precisão do SQLite em PORTABILIDADE.md.
   precoUnitario  Decimal   @map("preco_unitario")
+  /// DECIMAL: RL PROD. (R$/m³), a receita líquida de produção por m³.
+  precoLiquido   Decimal   @map("preco_liquido")
   vigenciaInicio DateTime  @map("vigencia_inicio")
   vigenciaFim    DateTime? @map("vigencia_fim")
   /// ORDEM: posição na tela, reorganizável pelo usuário.
@@ -1229,7 +1233,17 @@ model Medicao {
   linha            Linha?  @relation(fields: [linhaId], references: [id])
   /// DECIMAL: valor medido no período, usado na conferência do faturamento.
   valorMedido      Decimal?      @map("valor_medido")
+  /// quantidade é a diferença de execução do mês (Exec. Atual − Exec. Ant.);
+  /// valorMedido = quantidade × valorFaturamento, a ROB Serviços da planilha.
   quantidade       Decimal
+  tipoLancamento   String?       @map("tipo_lancamento")
+  cliente          String?
+  tipoFaturamento  String?       @map("tipo_faturamento")
+  /// DECIMAL: Fat. BPM (R$), o valor do tipo de faturamento no contrato.
+  valorFaturamento Decimal?      @map("valor_faturamento")
+  execucaoAnterior Decimal?      @map("execucao_anterior")
+  execucaoAtual    Decimal?      @map("execucao_atual")
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1255,6 +1269,17 @@ model Devolucao {
   /// DECIMAL: valor devolvido.
   valor            Decimal?
   quantidade       Decimal
+  /// Colunas da nota fiscal, como vêm do RM.
+  data             DateTime?
+  notaFiscal       String?       @map("nota_fiscal")
+  filial           Int?
+  codigoProduto    String?       @map("codigo_produto")
+  descricao        String?
+  /// Código do tipo de movimento (ex.: 1.2.18); tipoMovimentoId quando cadastrado.
+  movimento        String?
+  /// DECIMAL: ICMS + PIS + COFINS, zero em obra de venda global — as deduções da receita.
+  creditos         Decimal?
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1281,6 +1306,17 @@ model Saida {
   /// DECIMAL: valor da saída.
   valor            Decimal?
   quantidade       Decimal
+  /// Colunas da nota fiscal, como vêm do RM.
+  data             DateTime?
+  notaFiscal       String?       @map("nota_fiscal")
+  filial           Int?
+  codigoProduto    String?       @map("codigo_produto")
+  descricao        String?
+  /// Código do tipo de movimento (ex.: 1.2.18); tipoMovimentoId quando cadastrado.
+  movimento        String?
+  /// DECIMAL: ICMS + PIS + COFINS, zero em obra de venda global — as deduções da receita.
+  creditos         Decimal?
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1309,6 +1345,12 @@ model Faturamento {
   valorBruto       Decimal?      @map("valor_bruto")
   valorLiquido     Decimal?      @map("valor_liquido")
   quantidade       Decimal       @default(0)
+  data             DateTime?
+  filial           Int?
+  codigoProduto    String?       @map("codigo_produto")
+  descricao        String?
+  movimento        String?
+  linhaArquivo     Int?          @map("linha_arquivo")
   unidadeMedida    UnidadeMedida @default(UND) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
@@ -1332,7 +1374,9 @@ model ObraEncerrada {
   linhaId             String? @map("linha_id")
   linha             Linha?  @relation(fields: [linhaId], references: [id])
   dataEncerramento  DateTime?     @map("data_encerramento")
+  /// quantidade é o volume final da obra (m³).
   quantidade        Decimal       @default(0)
+  linhaArquivo      Int?          @map("linha_arquivo")
   unidadeMedida     UnidadeMedida @default(UND) @map("unidade_medida")
   criadoPor         String?       @map("criado_por")
   criadoEm          DateTime      @default(now()) @map("criado_em")

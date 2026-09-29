@@ -2,12 +2,21 @@ import { readFile } from "node:fs/promises";
 
 import { getPrismaClient } from "../../../config/prisma.js";
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client.js";
+import type { TipoImportacao } from "../../../generated/prisma/enums.js";
 import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
 import { logger } from "../../../utils/logger.js";
 import { somarTotais, type ItemVolume } from "../../volumes/totaisOperacao.js";
 import { caminhoDoArquivo } from "../arquivosImportados.js";
 import { escolherAba, recusarImportacao, registrarProgresso } from "../statusImportacao.js";
 import { DEFINICOES_LISTAS, ehListaRateio, type TipoListaRateio } from "./definicoesListas.js";
+import { DEFINICOES_LISTAS_RECEITA, ehListaReceita, type TipoListaReceita } from "./definicoesListasReceita.js";
+
+/** As listas operacionais importadas por este processamento: as dos rateios e as da receita prévia. */
+export type TipoListaOperacional = TipoListaRateio | TipoListaReceita;
+
+export function ehListaOperacional(tipo: TipoImportacao): tipo is TipoListaOperacional {
+  return ehListaRateio(tipo) || ehListaReceita(tipo);
+}
 import type { RegistroLista } from "./leituraListas.js";
 import { garantirObras } from "./obras.js";
 
@@ -38,7 +47,7 @@ export type LinhaGravada = {
  * operações que a importação faz — apagar o lote anterior e gravar o novo —
  * ficam aqui, uma por modelo.
  */
-async function apagarLotes(tx: Tx, tipo: TipoListaRateio, importacoes: string[]) {
+async function apagarLotes(tx: Tx, tipo: TipoListaOperacional, importacoes: string[]) {
   const where = { importacaoId: { in: importacoes } };
   switch (tipo) {
     case "PROJETO": return tx.projeto.deleteMany({ where });
@@ -49,10 +58,15 @@ async function apagarLotes(tx: Tx, tipo: TipoListaRateio, importacoes: string[])
     case "EXPEDICAO": return tx.expedicao.deleteMany({ where });
     case "MONTAGEM": return tx.montagem.deleteMany({ where });
     case "ACOMPANHAMENTO": return tx.acompanhamento.deleteMany({ where });
+    case "DEVOLUCAO": return tx.devolucao.deleteMany({ where });
+    case "SAIDA": return tx.saida.deleteMany({ where });
+    case "MEDICAO": return tx.medicao.deleteMany({ where });
+    case "OBRA_ENCERRADA": return tx.obraEncerrada.deleteMany({ where });
+    case "FATURAMENTO": return tx.faturamento.deleteMany({ where });
   }
 }
 
-export async function gravar(tx: Tx, tipo: TipoListaRateio, dados: LinhaGravada[]) {
+export async function gravar(tx: Tx, tipo: TipoListaOperacional, dados: LinhaGravada[]) {
   switch (tipo) {
     case "PROJETO": return tx.projeto.createMany({ data: dados as Prisma.ProjetoCreateManyInput[] });
     case "PRODUCAO": return tx.producao.createMany({ data: dados as Prisma.ProducaoCreateManyInput[] });
@@ -62,8 +76,16 @@ export async function gravar(tx: Tx, tipo: TipoListaRateio, dados: LinhaGravada[
     case "EXPEDICAO": return tx.expedicao.createMany({ data: dados as Prisma.ExpedicaoCreateManyInput[] });
     case "MONTAGEM": return tx.montagem.createMany({ data: dados as Prisma.MontagemCreateManyInput[] });
     case "ACOMPANHAMENTO": return tx.acompanhamento.createMany({ data: dados as Prisma.AcompanhamentoCreateManyInput[] });
+    case "DEVOLUCAO": return tx.devolucao.createMany({ data: dados as Prisma.DevolucaoCreateManyInput[] });
+    case "SAIDA": return tx.saida.createMany({ data: dados as Prisma.SaidaCreateManyInput[] });
+    case "MEDICAO": return tx.medicao.createMany({ data: dados as Prisma.MedicaoCreateManyInput[] });
+    case "OBRA_ENCERRADA": return tx.obraEncerrada.createMany({ data: dados as Prisma.ObraEncerradaCreateManyInput[] });
+    case "FATURAMENTO": return tx.faturamento.createMany({ data: dados as Prisma.FaturamentoCreateManyInput[] });
   }
 }
+
+/** Listas com tipo de movimento: o código vira o vínculo com o cadastro, quando existe. */
+const COM_MOVIMENTO = new Set<TipoListaOperacional>(["DEVOLUCAO", "SAIDA", "FATURAMENTO"]);
 
 /**
  * Registros lidos → linhas prontas para o createMany: resolve unidade, linha e
@@ -71,14 +93,16 @@ export async function gravar(tx: Tx, tipo: TipoListaRateio, dados: LinhaGravada[
  */
 export async function prepararGravacao(
   tx: Tx,
-  tipo: TipoListaRateio,
+  tipo: TipoListaOperacional,
   registros: RegistroLista[],
   contexto: { competenciaId: string; importacaoId: string | null; criadoPor: string },
 ): Promise<{ dados: LinhaGravada[]; obrasCriadas: number }> {
-  const [unidades, linhas] = await Promise.all([
+  const [unidades, linhas, movimentos] = await Promise.all([
     tx.unidadeNegocio.findMany({ select: { id: true, codigo: true } }),
     tx.linha.findMany({ select: { id: true, tipo: true, codigo: true } }),
+    COM_MOVIMENTO.has(tipo) ? tx.tipoMovimento.findMany({ select: { id: true, codigo: true } }) : [],
   ]);
+  const movimentoPorCodigo = new Map(movimentos.map((m) => [m.codigo, m.id]));
   const unidadePorCodigo = new Map(unidades.map((u) => [u.codigo, u.id]));
   const linhaPorChave = new Map(linhas.map((l) => [`${l.tipo}|${l.codigo}`, l.id]));
   const temLinha = tipo !== "PRODUCAO_METALURGIA";
@@ -101,6 +125,9 @@ export async function prepararGravacao(
     criadoPor: contexto.criadoPor,
     linhaArquivo: contexto.importacaoId ? r.linhaArquivo : null,
     ...r.campos,
+    ...(COM_MOVIMENTO.has(tipo)
+      ? { tipoMovimentoId: movimentoPorCodigo.get(String(r.campos.movimento ?? "")) ?? null }
+      : {}),
   }));
   return { dados, obrasCriadas: criadas };
 }
@@ -128,8 +155,8 @@ export async function processarLista(importacaoId: string): Promise<void> {
       include: { competencia: { select: { id: true, ano: true, mes: true } } },
     });
     const { competencia, tipo } = importacao;
-    if (!ehListaRateio(tipo)) throw new Error(`Tipo ${tipo} não é lista operacional de rateio`);
-    const def = DEFINICOES_LISTAS[tipo];
+    if (!ehListaOperacional(tipo)) throw new Error(`Tipo ${tipo} não é lista operacional`);
+    const def = ehListaRateio(tipo) ? DEFINICOES_LISTAS[tipo] : DEFINICOES_LISTAS_RECEITA[tipo];
     const mesAno = `${String(competencia.mes).padStart(2, "0")}/${competencia.ano}`;
 
     const conteudo = await readFile(caminhoDoArquivo(importacao.hashArquivo));
@@ -138,7 +165,7 @@ export async function processarLista(importacaoId: string): Promise<void> {
 
     const leitura = def.interpretar(aba.linhas, competencia.ano, competencia.mes);
     if (!leitura.ok) throw new ArquivoRecusado(leitura.motivo);
-    const linhasIgnoradas = leitura.ignoradas.vazias + leitura.ignoradas.outrosMeses;
+    const linhasIgnoradas = leitura.ignoradas.vazias + leitura.ignoradas.outrosMeses + (leitura.ignoradas.semEfeito ?? 0);
     if (leitura.registros.length === 0 && leitura.rejeicoes.length === 0) {
       await recusarImportacao(
         importacaoId,
@@ -149,7 +176,11 @@ export async function processarLista(importacaoId: string): Promise<void> {
     }
     await registrarProgresso(importacaoId, 50);
 
-    const totais = somarTotais(leitura.registros.map((r) => itemDoRegistro(tipo, r)), [tipo]);
+    // Listas dos rateios: as linhas da aba Totais que alimentam. Listas da
+    // receita: os totais por unidade, para conferir com as abas de resumo.
+    const totais = ehListaRateio(tipo)
+      ? somarTotais(leitura.registros.map((r) => itemDoRegistro(tipo, r)), [tipo]).map((t) => ({ ...t, quantidade: t.quantidade.toFixed(3) }))
+      : DEFINICOES_LISTAS_RECEITA[tipo].totalizar(leitura.registros);
 
     const { substituidas, obrasCriadas } = await prisma.$transaction(
       async (tx) => {
@@ -195,7 +226,8 @@ export async function processarLista(importacaoId: string): Promise<void> {
               lista: def.rotulo,
               registros: leitura.registros.length,
               ignoradas: leitura.ignoradas,
-              totais: totais.map((t) => ({ ...t, quantidade: t.quantidade.toFixed(3) })),
+              totais,
+              receita: ehListaReceita(tipo),
               obrasCriadas: criadas,
               avisos: leitura.avisos,
               substituiu: ids,

@@ -66,7 +66,7 @@ describe("leitura das listas", () => {
     );
     assert.ok(leitura.ok);
     assert.deepEqual(leitura.registros.map((r) => r.linha?.codigo), ["ESTRUTURA", "ESTACAS", "ALVEOLARES"]);
-    assert.deepEqual(leitura.ignoradas, { vazias: 1, outrosMeses: 1 });
+    assert.deepEqual(leitura.ignoradas, { vazias: 1, outrosMeses: 1, semEfeito: 0 });
     assert.equal(leitura.rejeicoes[0].codigo, "UNIDADE_INVALIDA");
 
     // Projetos liberados só contam venda global (sigla com G).

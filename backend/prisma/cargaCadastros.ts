@@ -13,6 +13,7 @@ import { ajustesPrevistos } from "../src/services/cadastros/carga/ajustesCarga.j
 import { gravarCadastros } from "../src/services/cadastros/carga/aplicarCarga.js";
 import type { PlanilhaCadastros } from "../src/services/cadastros/carga/planilhaCadastros.js";
 import { prepararCadastros } from "../src/services/cadastros/carga/prepararCadastros.js";
+import { gravarTabelasReceita } from "../src/services/cadastros/carga/tabelasReceita.js";
 
 const aqui = dirname(fileURLToPath(import.meta.url));
 const lerJson = <T>(arquivo: string): T[] => JSON.parse(readFileSync(join(aqui, "carga-inicial", arquivo), "utf8"));
@@ -25,6 +26,9 @@ export async function carregarCadastrosDaPasta() {
   };
   const preparado = prepararCadastros(planilha);
   const r = await getPrismaClient().$transaction((tx) => gravarCadastros(tx, preparado), { timeout: 120_000 });
+  const tabelas = await getPrismaClient().$transaction((tx) =>
+    gravarTabelasReceita(tx, { tiposMovimento: lerJson("tipos-movimento.json"), estacas: lerJson("tabela-estacas.json") }),
+  );
 
   console.log(
     `Centros de custo    : ${r.centros} gravados, ${preparado.centros.descartados} descartados por ajuste, ` +
@@ -33,6 +37,7 @@ export async function carregarCadastrosDaPasta() {
   console.log(`Contas de resultado : ${r.contas} gravadas, ${preparado.contas.ignorados} ignoradas (de ${preparado.contas.lidos} lidas)`);
   console.log(`Estrutura da DRE    : ${r.linhasDRE} linhas, ${r.linhasRemovidas} removidas de cargas anteriores`);
   console.log(`Contas vinculadas a uma linha da DRE: ${r.contasVinculadas}`);
+  console.log(`Tipos de movimento  : ${tabelas.tiposMovimento}; tabela de estacas: ${tabelas.estacas} peças`);
   if (preparado.semDestino.length > 0) {
     console.log(`Contas com destino declarado mas sem linha correspondente: ${preparado.semDestino.length}`);
     for (const s of preparado.semDestino.slice(0, 10)) console.log(`  ${s}`);

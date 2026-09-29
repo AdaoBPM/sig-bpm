@@ -10,6 +10,7 @@ import { ajustesPrevistos } from "./carga/ajustesCarga.js";
 import { compararComBanco, gravarCadastros, type Diferencas } from "./carga/aplicarCarga.js";
 import { lerPlanilhaCadastros } from "./carga/planilhaCadastros.js";
 import { prepararCadastros } from "./carga/prepararCadastros.js";
+import { gravarTabelasReceita, lerTabelasReceita } from "./carga/tabelasReceita.js";
 
 /**
  * Recarga dos cadastros a partir do SIG BPM 2026 - UNIDADES E CENTROS DE CUSTO,
@@ -81,7 +82,17 @@ export const recargaCadastrosService = {
     }
     const preparado = preparar(conteudo);
     const prisma = getPrismaClient();
-    const gravado = await prisma.$transaction((tx) => gravarCadastros(tx, preparado), { timeout: 120_000 });
+    const tabelas = lerTabelasReceita(conteudo);
+    const gravado = await prisma.$transaction(
+      async (tx) => {
+        const g = await gravarCadastros(tx, preparado);
+        // Tipos de movimento e tabela de estacas vêm do mesmo arquivo e são
+        // gravados como estão, sem prévia: são tabelas pequenas de consulta.
+        await gravarTabelasReceita(tx, tabelas);
+        return g;
+      },
+      { timeout: 120_000 },
+    );
 
     // Corrigir o cadastro reclassifica as competências abertas (RF006). As
     // fechadas ficam como estão: lá a classificação está congelada.
