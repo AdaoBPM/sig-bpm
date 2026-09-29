@@ -16,6 +16,7 @@ import {
   lancamentosDaCompetenciaRoutes,
   lancamentosManuaisRoutes,
 } from "./routes/lancamentosManuais/lancamentosManuaisRoutes.js";
+import { lancamentosReceitaRoutes, receitaPreviaRoutes } from "./routes/receitaPrevia/receitaPreviaRoutes.js";
 import {
   importacoesDaCompetenciaRoutes,
   importacoesRoutes,
@@ -55,10 +56,12 @@ app.use("/competencias/:anoMes/importacoes", importacoesDaCompetenciaRoutes);
 app.use("/competencias/:anoMes/classificacao", classificacaoRoutes);
 app.use("/competencias/:anoMes/lancamentos-manuais", lancamentosDaCompetenciaRoutes);
 app.use("/competencias/:anoMes/listas", listasDaCompetenciaRoutes);
+app.use("/competencias/:anoMes/receita-previa", receitaPreviaRoutes);
 app.use("/competencias", competenciasRoutes);
 app.use("/importacoes", importacoesRoutes);
 app.use("/lancamentos-manuais", lancamentosManuaisRoutes);
 app.use("/listas", listasRoutes);
+app.use("/lancamentos-receita", lancamentosReceitaRoutes);
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Rota não encontrada" });

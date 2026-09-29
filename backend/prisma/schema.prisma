@@ -323,6 +323,7 @@ model UnidadeNegocio {
   obrasEncerradas     ObraEncerrada[]
 
   receitasPrevias     ReceitaPrevia[]
+  lancamentosReceita  LancamentoReceita[]
   volumesOperacionais VolumeOperacional[]
   resultadosApurados  ResultadoApurado[]
 
@@ -625,6 +626,7 @@ model Competencia {
   obrasEncerradas     ObraEncerrada[]
 
   receitasPrevias     ReceitaPrevia[]
+  lancamentosReceita  LancamentoReceita[]
   volumesOperacionais VolumeOperacional[]
   resultadosApurados  ResultadoApurado[]
 
@@ -1424,6 +1426,9 @@ model ReceitaPrevia {
   receitaBruta     Decimal         @map("receita_bruta")
   impostos         Decimal
   receitaLiquida   Decimal         @map("receita_liquida")
+  /// DECIMAL: variação do estoque (CPP) que acompanha a natureza — na
+  /// Filial, a das estacas, valorada pela tabela de estacas.
+  variacaoEstoque  Decimal         @default(0) @map("variacao_estoque")
   apuradoEm        DateTime        @default(now()) @map("apurado_em")
   congelado        Boolean         @default(false)
 
@@ -1432,6 +1437,8 @@ model ReceitaPrevia {
 
   /// LISTA: preços de contrato usados nesta valoração.
   precos ReceitaPreviaPreco[]
+  /// LISTA: memória de cálculo, um item por registro de lista ou lançamento.
+  itens  ReceitaPreviaItem[]
 
   @@unique([competenciaId, unidadeNegocioId, natureza])
   @@map("receitas_previas")
@@ -1530,4 +1537,91 @@ model ReclassificacaoConta {
 
   @@unique([codigoCentroCusto, contaOrigemId])
   @@map("reclassificacoes_conta")
+}
+
+/// De onde veio cada parcela da receita prévia.
+enum OrigemReceita {
+  PRODUCAO
+  EXPEDICAO
+  SAIDA
+  DEVOLUCAO
+  MEDICAO
+  LANCAMENTO
+}
+
+/// Como o item foi valorado — as colunas Cad.? das abas de receita.
+enum CriterioReceita {
+  /// Preço da DRE do Comercial, versão 0.
+  CONTRATO
+  /// Obra sem DRE: preço padrão por linha ("X").
+  SEM_CONTRATO
+  /// Obra genérica (G11, M2, M3, M9999): preço padrão ("E").
+  GENERICA
+  /// Linha incoerente com a unidade: preço padrão ("L").
+  LINHA_INCONSISTENTE
+  /// Estaca valorada pela tabela de estacas.
+  TABELA_ESTACA
+  /// Valor da nota fiscal (saídas e devoluções).
+  NOTA_FISCAL
+  /// Medição: diferença de execução × Fat. BPM.
+  MEDICAO
+  LANCAMENTO
+}
+
+/// Parte da receita prévia que um lançamento manual ajusta.
+enum ComponenteReceita {
+  BRUTA
+  LIQUIDA
+  VARIACAO_ESTOQUE
+}
+
+/// Memória de cálculo da receita prévia: congelada junto com ela.
+model ReceitaPreviaItem {
+  id              String          @id @default(uuid())
+  receitaPreviaId String          @map("receita_previa_id")
+  origem          OrigemReceita
+  /// Registro de origem (lista ou lançamento); só referência, sem chave
+  /// estrangeira, porque a lista pode ser reimportada depois da apuração.
+  registroId      String?         @map("registro_id")
+  obraCodigo      String?         @map("obra_codigo")
+  linha           String?
+  /// DECIMAL: volume, quantidade ou fração executada, conforme a origem.
+  quantidade      Decimal?
+  criterio        CriterioReceita
+  /// DECIMAL: preço unitário bruto e líquido usados.
+  precoBruto      Decimal?        @map("preco_bruto")
+  precoLiquido    Decimal?        @map("preco_liquido")
+  precoBrutoId    String?         @map("preco_bruto_id")
+  precoLiquidoId  String?         @map("preco_liquido_id")
+  receitaBruta    Decimal         @default(0) @map("receita_bruta")
+  receitaLiquida  Decimal         @default(0) @map("receita_liquida")
+  variacaoEstoque Decimal         @default(0) @map("variacao_estoque")
+  observacao      String?
+
+  receitaPrevia ReceitaPrevia @relation(fields: [receitaPreviaId], references: [id], onDelete: Cascade)
+
+  @@index([receitaPreviaId])
+  @@map("receitas_previas_itens")
+}
+
+/// Lançamento manual de receita — a aba Receita (Lanç. Manuais) do BASE
+/// PRÉVIAS: correções e redistribuições digitadas pelo Contábil.
+model LancamentoReceita {
+  id               String            @id @default(uuid())
+  competenciaId    String            @map("competencia_id")
+  unidadeNegocioId String            @map("unidade_negocio_id")
+  natureza         NaturezaReceita
+  componente       ComponenteReceita
+  /// DECIMAL: aritmética sempre em JavaScript.
+  valor            Decimal
+  observacao       String
+  criadoPor        String?           @map("criado_por")
+  criadoEm         DateTime          @default(now()) @map("criado_em")
+  atualizadoEm     DateTime          @updatedAt @map("atualizado_em")
+
+  competencia    Competencia    @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  unidadeNegocio UnidadeNegocio @relation(fields: [unidadeNegocioId], references: [id])
+
+  @@index([competenciaId])
+  @@map("lancamentos_receita")
 }

@@ -63,6 +63,10 @@ async function proxyRequest(
 
   try {
     const response = await fetch(backendUrl, init);
+    // 204 e 304 não podem ter corpo, nem vazio: o construtor da resposta lança.
+    if (response.status === 204 || response.status === 304) {
+      return new NextResponse(null, { status: response.status });
+    }
     const contentType = response.headers.get("content-type") ?? "application/json";
     const data = await response.text();
 
