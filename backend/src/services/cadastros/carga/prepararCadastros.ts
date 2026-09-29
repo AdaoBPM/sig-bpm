@@ -271,14 +271,23 @@ function prepararDre(brutas: LinhaBrutaDRE[], avisos: Aviso[]) {
     c.codigo = codigo;
   }
 
-  // Filhos diretos de um subtotal: os subtotais contidos no intervalo; na
-  // ausência deles, os itens.
+  // Filhos diretos de um subtotal: os subtotais e os totais contidos no
+  // intervalo que não estão dentro de outro (um total como "Estoque" = B74 é o
+  // agrupador do item de baixo e conta como um subtotal); na ausência deles,
+  // os itens.
   const filhosDiretos = (c: Classificada) => {
     if (!c.intervalo) return [];
     const [ini, fim] = c.intervalo;
     const dentro = classificadas.filter((x) => x.linhaPlanilha >= ini && x.linhaPlanilha <= fim);
-    const subtotais = dentro.filter((x) => x.tipo === "SUBTOTAL");
-    return subtotais.length > 0 ? subtotais : dentro.filter((x) => x.tipo === "ITEM");
+    const agrupadores = dentro.filter((x) => x.tipo === "SUBTOTAL" || x.tipo === "TOTAL");
+    const coberto = (x: Classificada) =>
+      agrupadores.some(
+        (y) =>
+          y !== x &&
+          ((y.intervalo && x.linhaPlanilha >= y.intervalo[0] && x.linhaPlanilha <= y.intervalo[1]) || y.referencias.includes(x.linhaPlanilha)),
+      );
+    const diretos = agrupadores.filter((x) => !coberto(x));
+    return diretos.length > 0 ? diretos : dentro.filter((x) => x.tipo === "ITEM");
   };
 
   // Do fim para o começo: os filhos já estão resolvidos quando o pai é visto.

@@ -1455,6 +1455,9 @@ model ResultadoApurado {
   /// DECIMAL: valor apurado e participação sobre a ROL.
   valor            Decimal
   percentualROL    Decimal? @map("percentual_rol")
+  /// JSON: como o valor foi formado — a regra, a soma dos diretos e cada rateio
+  /// com base e percentual. É a memória de cálculo e o ponto de partida do detalhamento.
+  composicao       Json?
   apuradoEm        DateTime @default(now()) @map("apurado_em")
   apuradoPor       String?  @map("apurado_por")
   congelado        Boolean  @default(false)

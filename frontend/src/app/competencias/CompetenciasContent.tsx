@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Calculator, CalendarDays, ListChecks, NotebookPen, Percent, Rows3, Upload, Warehouse } from "lucide-react";
+import { Calculator, CalendarDays, FileBarChart, ListChecks, NotebookPen, Percent, Rows3, Upload, Warehouse } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import {
@@ -194,6 +194,13 @@ export function CompetenciasContent() {
                   >
                     <Warehouse className="size-3.5" />
                     Estoque
+                  </Link>
+                  <Link
+                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/dre`}
+                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                  >
+                    <FileBarChart className="size-3.5" />
+                    DRE
                   </Link>
                 </td>
               </tr>
