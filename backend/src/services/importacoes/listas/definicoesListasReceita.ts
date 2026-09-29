@@ -22,8 +22,9 @@ type Decimal = Prisma.Decimal;
 
 /**
  * Leiaute das listas que alimentam só a receita prévia (Passo 12b), das abas
- * do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO): devoluções, saídas, medições,
- * obras encerradas e faturamentos.
+ * do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO): devoluções, saídas e medições.
+ * (Obras encerradas e faturamentos só alimentavam a aba Fechamentos
+ * (Faturamento), que ficou fora da ferramenta.)
  *
  * Como nas listas dos rateios, as colunas calculadas da planilha (Período,
  * Linha, Créditos, Etiqueta) são refeitas aqui a partir das colunas de origem,
@@ -31,7 +32,7 @@ type Decimal = Prisma.Decimal;
  * projeto, ou com linha "-") não são erro: contam como "sem efeito".
  */
 
-export type TipoListaReceita = Extract<TipoImportacao, "DEVOLUCAO" | "SAIDA" | "MEDICAO" | "OBRA_ENCERRADA" | "FATURAMENTO">;
+export type TipoListaReceita = Extract<TipoImportacao, "DEVOLUCAO" | "SAIDA" | "MEDICAO">;
 
 /** Total de um campo da lista, por unidade, para o resumo da importação. */
 export type TotalLista = { codigo: string; rotulo: string; medida: string; quantidade: string };
@@ -249,93 +250,10 @@ const medicoes: DefinicaoListaReceita = {
   totalizar: (r) => totalPorUnidade(r, (x) => x.campos.valorMedido as Decimal, "ROB Serviços", "R$"),
 };
 
-const obrasEncerradas: DefinicaoListaReceita = {
-  tipo: "OBRA_ENCERRADA",
-  rotulo: "Obras encerradas",
-  abas: ["Obras Encerradas (Lista)"],
-  interpretar(linhas, ano, mes) {
-    const cab = localizarCabecalho(linhas, ["PERÍODO", "UNIDADE", "OBRA", "VOL. FINAL (M³)"], ["NOME DA OBRA"]);
-    if ("erro" in cab) return { ok: false, motivo: cab.erro };
-    const k = cab.col;
-    return percorrer(linhas, cab.numero, (l, c) => {
-      if (vazia(c(k["PERÍODO"]))) return { tipo: "vazia" };
-      const d = data(c(k["PERÍODO"]));
-      if (!d) return rejeitar(l.numero, "DATA_INVALIDA", `Período "${c(k["PERÍODO"])}" inválido.`);
-      if (!mesmoMes(d, ano, mes)) return { tipo: "outroMes" };
-      const unidade = numero(c(k.UNIDADE))?.toNumber();
-      if (unidade !== 1 && unidade !== 2) return rejeitar(l.numero, "UNIDADE_INVALIDA", `Unidade "${c(k.UNIDADE)}" não é 1 nem 2.`);
-      const volume = numero(c(k["VOL. FINAL (M³)"]));
-      if (!volume) return rejeitar(l.numero, "QUANTIDADE_INVALIDA", "Volume final não é número.");
-      return {
-        tipo: "registros",
-        registros: [{
-          linhaArquivo: l.numero,
-          obra: obraDe(c(k.OBRA), c(k["NOME DA OBRA"])),
-          unidade,
-          linha: null,
-          quantidade: volume,
-          campos: { dataEncerramento: d, unidadeMedida: "M3" },
-        }],
-      };
-    });
-  },
-  totalizar: (r) => totalPorUnidade(r, (x) => x.quantidade, "Volume final", "m³"),
-};
-
-const faturamentos: DefinicaoListaReceita = {
-  tipo: "FATURAMENTO",
-  rotulo: "Faturamentos",
-  abas: ["Faturamentos (Lista)"],
-  interpretar(linhas, ano, mes) {
-    const cab = localizarCabecalho(
-      linhas,
-      ["DATA_EMISSAO", "NF", "PROJETO", "FILIAL", "DESCRICAO_ITEM", "QTD", "VLR_TOTAL"],
-      ["CD_PRODUTO", "TIPO_MOV"],
-    );
-    if ("erro" in cab) return { ok: false, motivo: cab.erro };
-    const k = cab.col;
-    return percorrer(linhas, cab.numero, (l, c) => {
-      if (vazia(c(k.DATA_EMISSAO))) return { tipo: "vazia" };
-      const d = data(c(k.DATA_EMISSAO));
-      if (!d) return rejeitar(l.numero, "DATA_INVALIDA", `Data de emissão "${c(k.DATA_EMISSAO)}" inválida.`);
-      if (!mesmoMes(d, ano, mes)) return { tipo: "outroMes" };
-      const [qtd, total, filial] = ["QTD", "VLR_TOTAL", "FILIAL"].map((n) => numero(c(k[n])));
-      if (!qtd || !total || !filial) return rejeitar(l.numero, "VALOR_INVALIDO", "Quantidade, valor ou filial não é número.");
-      const descricao = texto(c(k.DESCRICAO_ITEM));
-      // Etiqueta (UND.OBRA): peça "PM…" é da Matriz; o resto, da filial da nota.
-      const unidade = normalizar(descricao).startsWith("PM") ? 1 : filial.toNumber();
-      if (unidade !== 1 && unidade !== 2) return rejeitar(l.numero, "UNIDADE_INVALIDA", `Filial "${c(k.FILIAL)}" não é 1 nem 2.`);
-      return {
-        tipo: "registros",
-        registros: [{
-          linhaArquivo: l.numero,
-          obra: obraDe(c(k.PROJETO), null),
-          unidade,
-          linha: null,
-          quantidade: qtd,
-          campos: {
-            data: d,
-            notaFiscal: texto(c(k.NF)),
-            filial: filial.toNumber(),
-            codigoProduto: texto(c(k.CD_PRODUTO)),
-            descricao,
-            movimento: texto(c(k.TIPO_MOV)),
-            valorBruto: total,
-            unidadeMedida: "UND",
-          },
-        }],
-      };
-    });
-  },
-  totalizar: (r) => totalPorUnidade(r, (x) => x.campos.valorBruto as Decimal, "Valor faturado", "R$"),
-};
-
 export const DEFINICOES_LISTAS_RECEITA: Record<TipoListaReceita, DefinicaoListaReceita> = {
   DEVOLUCAO: devolucoes,
   SAIDA: saidas,
   MEDICAO: medicoes,
-  OBRA_ENCERRADA: obrasEncerradas,
-  FATURAMENTO: faturamentos,
 };
 
 export function ehListaReceita(tipo: TipoImportacao): tipo is TipoListaReceita {

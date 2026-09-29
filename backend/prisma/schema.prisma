@@ -283,8 +283,6 @@ model Linha {
   medicoes          Medicao[]
   devolucoes        Devolucao[]
   saidas            Saida[]
-  faturamentos      Faturamento[]
-  obrasEncerradas   ObraEncerrada[]
 
   @@unique([tipo, codigo])
   @@index([tipo, ordem])
@@ -319,8 +317,6 @@ model UnidadeNegocio {
   medicoes            Medicao[]
   devolucoes          Devolucao[]
   saidas              Saida[]
-  faturamentos        Faturamento[]
-  obrasEncerradas     ObraEncerrada[]
 
   receitasPrevias     ReceitaPrevia[]
   lancamentosReceita  LancamentoReceita[]
@@ -494,7 +490,6 @@ model TipoMovimento {
 
   devolucoes   Devolucao[]
   saidas       Saida[]
-  faturamentos Faturamento[]
 
   @@map("tipos_movimento")
 }
@@ -555,8 +550,6 @@ enum TipoImportacao {
   MEDICAO
   DEVOLUCAO
   SAIDA
-  FATURAMENTO
-  OBRA_ENCERRADA
 }
 
 /// ENUM: estado do processamento de uma importação.
@@ -622,8 +615,6 @@ model Competencia {
   medicoes            Medicao[]
   devolucoes          Devolucao[]
   saidas              Saida[]
-  faturamentos        Faturamento[]
-  obrasEncerradas     ObraEncerrada[]
 
   receitasPrevias     ReceitaPrevia[]
   lancamentosReceita  LancamentoReceita[]
@@ -816,8 +807,6 @@ model Obra {
   medicoes            Medicao[]
   devolucoes          Devolucao[]
   saidas              Saida[]
-  faturamentos        Faturamento[]
-  obrasEncerradas     ObraEncerrada[]
 
   @@index([situacaoCadastro])
   @@map("obras")
@@ -1333,64 +1322,7 @@ model Saida {
   @@map("saidas")
 }
 
-model Faturamento {
-  id               String        @id @default(uuid())
-  competenciaId    String        @map("competencia_id")
-  importacaoId     String?       @map("importacao_id")
-  unidadeNegocioId String?       @map("unidade_negocio_id")
-  obraId           String?       @map("obra_id")
-  linhaId            String? @map("linha_id")
-  linha            Linha?  @relation(fields: [linhaId], references: [id])
-  notaFiscal       String?       @map("nota_fiscal")
-  tipoMovimentoId  String?       @map("tipo_movimento_id")
-  /// DECIMAL: faturamento fiscal bruto e líquido.
-  valorBruto       Decimal?      @map("valor_bruto")
-  valorLiquido     Decimal?      @map("valor_liquido")
-  quantidade       Decimal       @default(0)
-  data             DateTime?
-  filial           Int?
-  codigoProduto    String?       @map("codigo_produto")
-  descricao        String?
-  movimento        String?
-  linhaArquivo     Int?          @map("linha_arquivo")
-  unidadeMedida    UnidadeMedida @default(UND) @map("unidade_medida")
-  criadoPor        String?       @map("criado_por")
-  criadoEm         DateTime      @default(now()) @map("criado_em")
 
-  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
-  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
-  obra           Obra?           @relation(fields: [obraId], references: [id])
-  tipoMovimento  TipoMovimento?  @relation(fields: [tipoMovimentoId], references: [id])
-
-  @@index([competenciaId])
-  @@index([importacaoId])
-  @@map("faturamentos")
-}
-
-model ObraEncerrada {
-  id                String        @id @default(uuid())
-  competenciaId     String        @map("competencia_id")
-  importacaoId      String?       @map("importacao_id")
-  unidadeNegocioId  String?       @map("unidade_negocio_id")
-  obraId            String?       @map("obra_id")
-  linhaId             String? @map("linha_id")
-  linha             Linha?  @relation(fields: [linhaId], references: [id])
-  dataEncerramento  DateTime?     @map("data_encerramento")
-  /// quantidade é o volume final da obra (m³).
-  quantidade        Decimal       @default(0)
-  linhaArquivo      Int?          @map("linha_arquivo")
-  unidadeMedida     UnidadeMedida @default(UND) @map("unidade_medida")
-  criadoPor         String?       @map("criado_por")
-  criadoEm          DateTime      @default(now()) @map("criado_em")
-
-  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
-  unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
-  obra           Obra?           @relation(fields: [obraId], references: [id])
-
-  @@index([competenciaId])
-  @@index([importacaoId])
-  @@map("obras_encerradas")
-}
 
 // =============================================================================
 // APURAÇÃO (Passo 5)

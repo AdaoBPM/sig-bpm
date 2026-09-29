@@ -61,8 +61,6 @@ async function apagarLotes(tx: Tx, tipo: TipoListaOperacional, importacoes: stri
     case "DEVOLUCAO": return tx.devolucao.deleteMany({ where });
     case "SAIDA": return tx.saida.deleteMany({ where });
     case "MEDICAO": return tx.medicao.deleteMany({ where });
-    case "OBRA_ENCERRADA": return tx.obraEncerrada.deleteMany({ where });
-    case "FATURAMENTO": return tx.faturamento.deleteMany({ where });
   }
 }
 
@@ -79,13 +77,11 @@ export async function gravar(tx: Tx, tipo: TipoListaOperacional, dados: LinhaGra
     case "DEVOLUCAO": return tx.devolucao.createMany({ data: dados as Prisma.DevolucaoCreateManyInput[] });
     case "SAIDA": return tx.saida.createMany({ data: dados as Prisma.SaidaCreateManyInput[] });
     case "MEDICAO": return tx.medicao.createMany({ data: dados as Prisma.MedicaoCreateManyInput[] });
-    case "OBRA_ENCERRADA": return tx.obraEncerrada.createMany({ data: dados as Prisma.ObraEncerradaCreateManyInput[] });
-    case "FATURAMENTO": return tx.faturamento.createMany({ data: dados as Prisma.FaturamentoCreateManyInput[] });
   }
 }
 
 /** Listas com tipo de movimento: o código vira o vínculo com o cadastro, quando existe. */
-const COM_MOVIMENTO = new Set<TipoListaOperacional>(["DEVOLUCAO", "SAIDA", "FATURAMENTO"]);
+const COM_MOVIMENTO = new Set<TipoListaOperacional>(["DEVOLUCAO", "SAIDA"]);
 
 /**
  * Registros lidos → linhas prontas para o createMany: resolve unidade, linha e

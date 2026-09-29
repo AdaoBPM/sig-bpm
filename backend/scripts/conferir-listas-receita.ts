@@ -1,15 +1,12 @@
 /**
  * Conferência das listas da receita prévia (Passo 12b) contra a planilha.
  *
- * Lê as cinco listas do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO) com as
+ * Lê as três listas do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO) com as
  * regras da importação, mês a mês, e compara com o que a planilha calcula:
  *  - Devoluções e Saídas: com as abas `Devoluções (Resumo)` e `Saídas (Resumo)`,
  *    por etiqueta (período, projeto, linha e movimento), valor e deduções;
- *  - Faturamentos: com a `Faturamentos (Resumo)`, por unidade e obra, somando
- *    os meses lidos (o resumo não separa por mês);
- *  - Medições e Obras encerradas, que não têm resumo: com as cópias do
- *    SIG BPM 2026 - BASE PRÉVIAS (RECEITAS E ESTOQUE), `Receita (Serviços)` e
- *    `Obras Encerradas (Operação)`.
+ *  - Medições, que não têm resumo: com a `Receita (Serviços)` do
+ *    SIG BPM 2026 - BASE PRÉVIAS (RECEITAS E ESTOQUE).
  *
  * Uso: npx tsx scripts/conferir-listas-receita.ts "<LISTAS (OPERAÇÃO).xlsx>" "<BASE PRÉVIAS.xlsx>" 1 8
  */
@@ -107,29 +104,6 @@ for (const [tipo, abaResumo, rotuloLinha] of [
   for (const r of rejeicoes.slice(0, 5)) console.log(`  rejeitada: ${r}`);
 }
 
-// Faturamentos ----------------------------------------------------------------
-{
-  const { porMes, rejeicoes } = ler("FATURAMENTO");
-  const sistema = new Map<string, Par>();
-  for (const rs of porMes.values()) for (const r of rs) acumular(sistema, `${r.unidade}.${r.obra?.codigo ?? ""}`, r.campos.valorBruto as Prisma.Decimal, new Prisma.Decimal(0));
-  // O resumo soma a lista inteira; para comparar, a lista também é somada
-  // direto da aba, sem filtro de mês, e os meses fora do intervalo são mostrados.
-  const planilha = new Map<string, Par>();
-  for (const l of aba(listas, "Faturamentos (Resumo)").slice(1)) {
-    if (!l.celulas[4]) continue;
-    acumular(planilha, String(l.celulas[4]), D(l.celulas[3]), new Prisma.Decimal(0));
-  }
-  const foraDoIntervalo = new Map<string, number>();
-  for (const l of aba(listas, "Faturamentos (Lista)").slice(1)) {
-    if (!l.celulas[0] || !l.celulas[20]) continue;
-    const p = serial(l.celulas[20]);
-    if (!dentro(p)) foraDoIntervalo.set(p, (foraDoIntervalo.get(p) ?? 0) + 1);
-  }
-  comparar("Faturamentos × Faturamentos (Resumo)", sistema, planilha, ["valor", "—"]);
-  if (foraDoIntervalo.size) console.log(`  linhas da lista fora dos meses lidos: ${[...foraDoIntervalo].map(([p, n]) => `${p} (${n})`).join(", ")}`);
-  for (const r of rejeicoes.slice(0, 5)) console.log(`  rejeitada: ${r}`);
-}
-
 // Medições × Receita (Serviços) -------------------------------------------------
 {
   const { porMes, rejeicoes } = ler("MEDICAO");
@@ -144,22 +118,5 @@ for (const [tipo, abaResumo, rotuloLinha] of [
     acumular(planilha, `${p}.${projeto}.${String(linha ?? "").trim().toUpperCase()}`, D(l.celulas[11]), D(l.celulas[10]));
   }
   comparar("Medições × Receita (Serviços) do BASE PRÉVIAS", sistema, planilha, ["ROB serviços", "exec. dif."]);
-  for (const r of rejeicoes.slice(0, 5)) console.log(`  rejeitada: ${r}`);
-}
-
-// Obras encerradas × Obras Encerradas (Operação) ------------------------------------
-{
-  const { porMes, rejeicoes } = ler("OBRA_ENCERRADA");
-  const sistema = new Map<string, Par>();
-  for (const [m, rs] of porMes) for (const r of rs) acumular(sistema, `${mm(m)}.${r.unidade}.${r.obra?.codigo}`, r.quantidade, new Prisma.Decimal(0));
-  const planilha = new Map<string, Par>();
-  for (const l of aba(previas, "Obras Encerradas (Operação)").slice(1)) {
-    const [periodo, unidade, obra, , volume] = l.celulas;
-    if (!periodo || typeof periodo !== "number") continue;
-    const p = serial(periodo);
-    if (!dentro(p)) continue;
-    acumular(planilha, `${p}.${unidade}.${obra}`, D(volume), new Prisma.Decimal(0));
-  }
-  comparar("Obras encerradas × Obras Encerradas (Operação) do BASE PRÉVIAS", sistema, planilha, ["volume", "—"]);
   for (const r of rejeicoes.slice(0, 5)) console.log(`  rejeitada: ${r}`);
 }

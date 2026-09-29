@@ -90,18 +90,4 @@ describe("leitura das listas da receita", () => {
     assert.equal(r.quantidade.toFixed(2), "0.15");
     assert.equal((r.campos.valorMedido as { toFixed: (n: number) => string }).toFixed(2), "151728.00");
   });
-
-  it("faturamento: peça PM é da Matriz, o resto da filial da nota", () => {
-    const l = DEFINICOES_LISTAS_RECEITA.FATURAMENTO.interpretar(
-      planilha(
-        ["DATA_EMISSAO", "NF", "PROJETO", "FILIAL", "DESCRICAO_ITEM", "QTD", "VLR_TOTAL"],
-        [46028, "1", "G3168", 2, "PM-10 - G3168", 1, 100],
-        [46028, "2", "G3168", 2, "L-1007I", 1, 50],
-      ),
-      2026,
-      1,
-    );
-    assert.ok(l.ok);
-    assert.deepEqual(l.registros.map((r) => r.unidade), [1, 2]);
-  });
 });

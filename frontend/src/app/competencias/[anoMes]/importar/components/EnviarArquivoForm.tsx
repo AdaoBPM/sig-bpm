@@ -43,8 +43,6 @@ const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?
   { valor: "MEDICAO", rotulo: "Medições", disponivel: true, origem: `aba Medições do ${LISTAS}` },
   { valor: "DEVOLUCAO", rotulo: "Devoluções", disponivel: true, origem: `aba Devoluções (Lista) do ${LISTAS}` },
   { valor: "SAIDA", rotulo: "Saídas", disponivel: true, origem: `aba Saídas (Lista) do ${LISTAS}` },
-  { valor: "FATURAMENTO", rotulo: "Faturamentos", disponivel: true, origem: `aba Faturamentos (Lista) do ${LISTAS}` },
-  { valor: "OBRA_ENCERRADA", rotulo: "Obras encerradas", disponivel: true, origem: `aba Obras Encerradas (Lista) do ${LISTAS}` },
   { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: true, origem: "aba DRE do CONTROLE DAS VENDAS - COMERCIAL. Os preços valem para todas as competências; um preço alterado substitui o anterior, que fica no histórico" },
 ];
 
