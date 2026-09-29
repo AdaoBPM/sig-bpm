@@ -36,7 +36,7 @@ const UNIDADES = [
  *  - PRODUTO: ESTRUTURA, ALVEOLARES e ESTACAS não estão em nenhuma aba — são o resultado das fórmulas de Linha das
  *    listas operacionais (ESTRUTURA na Unidade 01; ESTACAS ou ALVEOLARES na 02).
  *    METALÚRGICA vem da coluna LINHA da aba DRE do CONTROLE DAS VENDAS - COMERCIAL
- *    (itens metálicos produzidos na Matriz).
+ *    (itens metálicos produzidos na Matriz). TURN-KEY, de obra, também vem de lá.
  *  - OBRA e FATURAMENTO: colunas LINHAS (OBRAS) e FATURAMENTOS (OBRAS) da aba
  *    Listas do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO).
  *
@@ -53,6 +53,7 @@ const LINHAS: Array<{ tipo: "PRODUTO" | "OBRA" | "FATURAMENTO"; codigo: string; 
   { tipo: "OBRA", codigo: "CAPEAMENTO", nome: "Capeamento" },
   { tipo: "OBRA", codigo: "METÁLICA", nome: "Metálica" },
   { tipo: "OBRA", codigo: "TELHAMENTO", nome: "Telhamento" },
+  { tipo: "OBRA", codigo: "TURN-KEY", nome: "Turn-key" },
   { tipo: "OBRA", codigo: "OUTROS", nome: "Outros" },
   { tipo: "FATURAMENTO", codigo: "Frete e Descarga", nome: "Frete e Descarga" },
   { tipo: "FATURAMENTO", codigo: "Execução de Serviços", nome: "Execução de Serviços" },
