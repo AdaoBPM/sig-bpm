@@ -140,8 +140,8 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   };
 
   // Guardas das fórmulas: IF(B$4=0,0,…) e, em Serviços, IF(B$6=0,0,…) — a montagem
-  // do mês — nos custos, na receita de montagem e nos impostos (correção do
-  // usuário de 29/09/2026 na aba Realizado (Serviços)); as comissões seguem na B$4.
+  // do mês — nos custos, na receita de montagem, nos impostos e nas comissões
+  // (correção do usuário de 29/09/2026 na aba Realizado (Serviços)).
   const guarda: Record<number, Decimal> = {
     1: total("PREFABRICADO_MATRIZ"),
     2: total("PREFABRICADO_FILIAL"),
@@ -334,7 +334,8 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     for (const l of itensDa(u).filter(ehComissao)) {
       const c = somaDireto(l.id);
       const rob = robDe(u);
-      const v = guarda[u].isZero() || robConsolidada.isZero() ? zero() : c.div(robConsolidada).times(rob);
+      const semBase = u === UNIDADE.SERVICOS ? guardaCustosServicos.isZero() : guarda[u].isZero();
+      const v = semBase || robConsolidada.isZero() ? zero() : c.div(robConsolidada).times(rob);
       gravar(u, l, v, { regra: "Diretos da linha / ROB consolidada × ROB da unidade", direto: c.toFixed(2), observacao: `ROB ${rob.toFixed(2)} de ${robConsolidada.toFixed(2)}` });
     }
   }

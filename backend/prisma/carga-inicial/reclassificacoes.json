@@ -1404,6 +1404,33 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
+    "LINHA": 1249,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.97.00000054",
+    "C_CUSTO": "FABRICAÇÃO FORMA L - MATRIZ",
+    "REDUZIDO_CONTA": "111142",
+    "CONTA": "MATERIAL DE EXPEDIENTE",
+    "CONTA (ALOC.)": "4506"
+  },
+  {
+    "LINHA": 1250,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.97.00000054",
+    "C_CUSTO": "FABRICAÇÃO FORMA L - MATRIZ",
+    "REDUZIDO_CONTA": "111171",
+    "CONTA": "CUSTOS DIVERSOS",
+    "CONTA (ALOC.)": "4921"
+  },
+  {
+    "LINHA": 1254,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.97.00000059",
+    "C_CUSTO": "PISO AREA ESTOCAGEM DE ESTOCAGEM MATRIZ",
+    "REDUZIDO_CONTA": "3471",
+    "CONTA": "ALUGUEL DE BENS/EQUIPAMENTOS",
+    "CONTA (ALOC.)": "3441"
+  },
+  {
     "LINHA": 2024,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000001",

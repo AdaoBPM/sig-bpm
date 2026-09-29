@@ -525,7 +525,7 @@
     "ATRIBUIÇÃO": "Estoque",
     "ATR.": "E",
     "CONTA DRE": "Variação do Estoque",
-    "RATEIO": "-"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "44687",
@@ -537,7 +537,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "-"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "44693",
@@ -549,7 +549,7 @@
     "ATRIBUIÇÃO": "Estoque",
     "ATR.": "E",
     "CONTA DRE": "Variação do Estoque",
-    "RATEIO": "-"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "44701",
@@ -561,7 +561,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "-"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "44724",
