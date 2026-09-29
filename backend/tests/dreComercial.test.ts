@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { LinhaPlanilha, ValorCelula } from "../src/lib/xlsx.js";
-import { assinaturaDoPreco, interpretarDreComercial } from "../src/services/importacoes/dreComercial/leiauteDreComercial.js";
+import { assinaturaDoPreco, interpretarDreComercial, usadoNaReceita } from "../src/services/importacoes/dreComercial/leiauteDreComercial.js";
 
 const planilha = (...linhas: ValorCelula[][]): LinhaPlanilha[] =>
   linhas.map((celulas, i) => ({ numero: i + 1, celulas }));
@@ -69,5 +69,14 @@ describe("leitura da DRE do Comercial", () => {
     assert.equal(assinaturaDoPreco(a), assinaturaDoPreco(b));
     assert.equal(assinaturaDoPreco(a), assinaturaDoPreco(ruido));
     assert.notEqual(assinaturaDoPreco(a), assinaturaDoPreco(c));
+  });
+
+  it("só entram os preços de pré-fabricado e frete, e ROB e IRB da linha MONTAGEM", () => {
+    const ok = (atribuicao: string, linhaTexto: string, departamento: string) => usadoNaReceita({ atribuicao, linhaTexto, departamento });
+    assert.equal(ok("Receita Líquida de Frete", "ALVEOLARES", "ROL"), true);
+    assert.equal(ok("Impostos Operacionais", "MONTAGEM", "IRB"), true);
+    assert.equal(ok("Receita Bruta de Montagem", "MONTAGEM", "ROB"), true);
+    assert.equal(ok("Impostos Operacionais", "ESTRUTURA", "IRB"), false);
+    assert.equal(ok("Matérias Primas", "ESTRUTURA", "CPP"), false);
   });
 });

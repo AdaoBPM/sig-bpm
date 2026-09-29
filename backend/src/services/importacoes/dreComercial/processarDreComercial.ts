@@ -133,6 +133,7 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
           obrasComAditivo: aditivos,
           obrasRepetidas: [...leitura.obrasRepetidas].map(([obra, linhas]) => ({ obra, linhas })),
           obrasSemContrato: semContrato,
+          ignoradas: leitura.ignoradas,
         };
 
         await tx.importacao.update({
@@ -143,7 +144,7 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
             linhasLidas: leitura.linhasLidas,
             linhasAceitas: leitura.precos.length,
             linhasRejeitadas: leitura.rejeicoes.length,
-            linhasIgnoradas: leitura.ignoradas.vazias + leitura.ignoradas.repetidas,
+            linhasIgnoradas: leitura.ignoradas.vazias + leitura.ignoradas.repetidas + leitura.ignoradas.foraDoFiltro,
             relatorioErros: leitura.rejeicoes,
             resumo,
           },

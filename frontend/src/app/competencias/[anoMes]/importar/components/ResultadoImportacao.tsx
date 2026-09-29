@@ -374,7 +374,15 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
           valor={imp.linhasRejeitadas}
           destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined}
         />
-        <Contador rotulo="Ignoradas" valor={imp.linhasIgnoradas} detalhe="vazias ou repetidas" />
+        <Contador
+          rotulo="Ignoradas"
+          valor={imp.linhasIgnoradas}
+          detalhe={
+            resumo?.ignoradas
+              ? `${inteiro(resumo.ignoradas.foraDoFiltro)} fora dos preços · ${inteiro(resumo.ignoradas.repetidas)} repetidas · ${inteiro(resumo.ignoradas.vazias)} vazias`
+              : "vazias ou repetidas"
+          }
+        />
       </div>
 
       {resumo && p ? (

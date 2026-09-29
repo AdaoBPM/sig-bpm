@@ -17,6 +17,22 @@ type Decimal = Prisma.Decimal;
 
 export const ABA_DRE_COMERCIAL = "DRE";
 
+/**
+ * Só entram as linhas da DRE que a receita prévia usa (decisão do usuário,
+ * 29/09/2026): os preços de pré-fabricado e frete, pela ATRIBUIÇÃO, e, na
+ * LINHA MONTAGEM, as de DEPTO. ROB e IRB — delas sai a proporção que dá a
+ * receita líquida das medições (Receita (Serviços), coluna M).
+ */
+const ATRIBUICOES_DE_PRECO = new Set(
+  ["Receita Bruta do Pré-Fabricado", "Receita Líquida do Pré-Fabricado", "Receita Bruta de Frete", "Receita Líquida de Frete"].map((a) => a.toUpperCase()),
+);
+
+export function usadoNaReceita(p: Pick<PrecoLido, "atribuicao" | "linhaTexto" | "departamento">) {
+  if (ATRIBUICOES_DE_PRECO.has((p.atribuicao ?? "").trim().toUpperCase())) return true;
+  const depto = (p.departamento ?? "").trim().toUpperCase();
+  return p.linhaTexto === "MONTAGEM" && (depto === "ROB" || depto === "IRB");
+}
+
 export type PrecoLido = {
   linhaArquivo: number;
   obra: string;
@@ -44,7 +60,8 @@ export type LeituraDreComercial =
       linhasLidas: number;
       precos: PrecoLido[];
       rejeicoes: RejeicaoPreco[];
-      ignoradas: { vazias: number; repetidas: number };
+      /** foraDoFiltro: linhas da DRE que a receita prévia não usa. */
+      ignoradas: { vazias: number; repetidas: number; foraDoFiltro: number };
       /** Obras com linhas idênticas repetidas: código → quantas linhas sobraram. */
       obrasRepetidas: Map<string, number>;
     };
@@ -93,7 +110,7 @@ export function interpretarDreComercial(linhas: LinhaPlanilha[]): LeituraDreCome
 
   const precos: PrecoLido[] = [];
   const rejeicoes: RejeicaoPreco[] = [];
-  const ignoradas = { vazias: 0, repetidas: 0 };
+  const ignoradas = { vazias: 0, repetidas: 0, foraDoFiltro: 0 };
   const obrasRepetidas = new Map<string, number>();
   const vistos = new Map<string, { linha: number; assinatura: string }>();
   let linhasLidas = 0;
@@ -135,6 +152,10 @@ export function interpretarDreComercial(linhas: LinhaPlanilha[]): LeituraDreCome
       valorTotal: valores.valorTotal as Decimal | null,
       percentualRL: valores.percentualRL as Decimal | null,
     };
+    if (!usadoNaReceita(preco)) {
+      ignoradas.foraDoFiltro++;
+      continue;
+    }
     preco.chave = chaveDoPreco(preco);
 
     const assinatura = assinaturaDoPreco(preco);

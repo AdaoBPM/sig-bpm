@@ -93,6 +93,8 @@ export type ResumoDreComercial = {
   obrasComAditivo: string[];
   obrasRepetidas: Array<{ obra: string; linhas: number }>;
   obrasSemContrato: number;
+  /** foraDoFiltro: linhas da DRE que a receita prévia não usa (custos, quantidades…). */
+  ignoradas?: { vazias: number; repetidas: number; foraDoFiltro: number };
 };
 
 /** Resumo do saldo inicial do estoque. */
