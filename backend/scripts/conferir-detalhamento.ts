@@ -12,9 +12,11 @@
 import "dotenv/config";
 
 import { getPrismaClient } from "../src/config/prisma.js";
+import { apuracaoService } from "../src/services/apuracao/apuracaoService.js";
 import { detalhamentoService, type Visao } from "../src/services/dre/detalhamentoService.js";
 import { dreService } from "../src/services/dre/dreService.js";
 
+const USUARIO = "00000000-0000-0000-0000-000000000001"; // administrador da carga
 const [anoTexto, de, ate = de] = process.argv.slice(2);
 if (!anoTexto || !de) {
   console.error("Uso: npx tsx scripts/conferir-detalhamento.ts 2026 1 8");
@@ -25,7 +27,7 @@ const prisma = getPrismaClient();
 let falhas = 0;
 
 for (let mes = Number(de); mes <= Number(ate); mes++) {
-  await dreService.apurar(ano, mes);
+  await apuracaoService.apurar(ano, mes, USUARIO);
   const visoes: Array<[string, Visao, Awaited<ReturnType<typeof dreService.consultarUnidade>>["linhas"]]> = [];
   for (const u of [1, 2, 3, 4, 5]) visoes.push([`unidade ${u}`, { unidade: u }, (await dreService.consultarUnidade(ano, mes, u)).linhas]);
   visoes.push(["consolidado", { consolidado: true }, (await dreService.consultarConsolidado(ano, mes)).linhas]);

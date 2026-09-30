@@ -106,7 +106,7 @@ export const receitaPreviaService = {
     const prisma = getPrismaClient();
     const congelada = await prisma.receitaPrevia.count({ where: { competenciaId: competencia.id, congelado: true } });
     if (congelada > 0) {
-      throw new RegraReceitaError(409, `A receita prévia de ${rotulo(ano, mes)} está congelada pela apuração do mês.`);
+      throw new RegraReceitaError(409, `A receita prévia de ${rotulo(ano, mes)} está congelada pela apuração da competência. Para recalcular, reapure a competência (tela da DRE).`);
     }
 
     const dados = await carregarDados(competencia.id);

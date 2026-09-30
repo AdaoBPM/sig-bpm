@@ -84,7 +84,7 @@ export const dreService = {
     if (c.status === "FECHADA") throw new RegraDREError(409, `A competência ${rotulo(ano, mes)} está fechada. Reapurar exige reabri-la.`);
     const prisma = getPrismaClient();
     if (await prisma.resultadoApurado.count({ where: { competenciaId: c.id, congelado: true } })) {
-      throw new RegraDREError(409, `A DRE de ${rotulo(ano, mes)} está congelada.`);
+      throw new RegraDREError(409, `A DRE de ${rotulo(ano, mes)} está congelada pela apuração da competência. Para recalcular, reapure a competência (tela da DRE).`);
     }
     const [linhas, lancamentos, manuais, volumes, receitas, totais, pendentes] = await Promise.all([
       estrutura(),

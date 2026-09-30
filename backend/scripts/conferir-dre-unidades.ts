@@ -14,8 +14,10 @@ import { readFileSync } from "node:fs";
 
 import { getPrismaClient } from "../src/config/prisma.js";
 import { lerAba } from "../src/lib/xlsx.js";
+import { apuracaoService } from "../src/services/apuracao/apuracaoService.js";
 import { dreService } from "../src/services/dre/dreService.js";
 
+const USUARIO = "00000000-0000-0000-0000-000000000001"; // administrador da carga
 const [arquivo, anoTexto, de, ate = de, soUnidade] = process.argv.slice(2);
 if (!arquivo || !anoTexto || !de) {
   console.error('Uso: npx tsx scripts/conferir-dre-unidades.ts "<BASE REALIZADO (RESULTADOS).xlsx>" 2026 1 8 [unidade]');
@@ -47,8 +49,8 @@ function ligar(linhas: ReturnType<typeof lerAba>["linhas"]) {
 
 let totalDif = 0;
 for (let mes = Number(de); mes <= Number(ate); mes++) {
-  const r = await dreService.apurar(ano, mes);
-  console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}: ${r.resultados} valores apurados`);
+  const r = await apuracaoService.apurar(ano, mes, USUARIO);
+  console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}: apurada (${r.etapas.join(", ")})`);
   for (const a of r.avisos) console.log(`  aviso: ${a}`);
   for (const u of [1, 2, 3, 4, 5]) {
     if (soUnidade && Number(soUnidade) !== u) continue;

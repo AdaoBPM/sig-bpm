@@ -113,7 +113,7 @@ export function RecarregarPlanilha() {
     mutationFn: () => cadastrosService.recargaConfirmar(previa!.hash),
     onSuccess: (r) => {
       toast.success(
-        `Cadastros recarregados.${r.reclassificadas.length ? ` Competências reclassificadas: ${r.reclassificadas.join(", ")}.` : ""}`,
+        `Cadastros recarregados.${r.reclassificadas.length ? ` Competências reclassificadas: ${r.reclassificadas.join(", ")}.` : ""}${r.apuradasSemReclassificar.length ? ` Apuradas, sem mudança até serem reapuradas: ${r.apuradasSemReclassificar.join(", ")}.` : ""}`,
       );
       queryClient.invalidateQueries({ queryKey: ["cadastros"] });
       queryClient.invalidateQueries({ queryKey: ["classificacao"] });
@@ -147,7 +147,8 @@ export function RecarregarPlanilha() {
             <DialogDescription>
               Envie o SIG BPM 2026 - UNIDADES E CENTROS DE CUSTO. O sistema mostra o que
               muda nos centros de custo, nas contas de resultado e na estrutura da DRE
-              antes de gravar. As competências abertas são reclassificadas depois.
+              antes de gravar. As competências ainda não apuradas são reclassificadas depois; as apuradas
+              ficam como foram apuradas até serem reapuradas.
             </DialogDescription>
           </DialogHeader>
 

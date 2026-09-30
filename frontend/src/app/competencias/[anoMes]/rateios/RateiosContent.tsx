@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, Lock } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calculator } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
+import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, rotuloCompetencia } from "../utils/formatacao";
 import { MEDIDA_BASE, mensagemDeErro, rateiosService, ROTULO_CHAVE } from "./services/rateiosService";
@@ -88,10 +89,7 @@ export function RateiosContent() {
       </div>
 
       {bloqueada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">Rateios congelados: não podem ser reapurados.</p>
-        </div>
+        <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do rateio" />
       ) : null}
       {desatualizado && !bloqueada ? (
         <div className="flex items-center gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4">

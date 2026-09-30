@@ -14,8 +14,10 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 
 import { lerAba } from "../src/lib/xlsx.js";
+import { apuracaoService } from "../src/services/apuracao/apuracaoService.js";
 import { receitaPreviaService } from "../src/services/receitaPrevia/receitaPreviaService.js";
 
+const USUARIO = "00000000-0000-0000-0000-000000000001"; // administrador da carga
 const args = process.argv.slice(2);
 const semManuais = args.includes("--sem-manuais");
 const [arquivo, anoTexto, de, ate = de] = args.filter((a) => !a.startsWith("--"));
@@ -66,7 +68,8 @@ function manual(mes: number, unidade: number, rotulo: string) {
 
 let totalDiferencas = 0;
 for (let mes = Number(de); mes <= Number(ate); mes++) {
-  const r = await receitaPreviaService.apurar(ano, mes);
+  const { avisos } = await apuracaoService.apurar(ano, mes, USUARIO);
+  const r = { ...(await receitaPreviaService.consultar(ano, mes)), avisos };
   const col = 1 + (mes - 1) * 2;
   console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}${semManuais ? " (planilha sem os lançamentos manuais)" : ""}`);
   for (const a of r.avisos) console.log(`  aviso: ${a}`);

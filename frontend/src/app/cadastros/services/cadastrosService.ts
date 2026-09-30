@@ -151,6 +151,8 @@ export type ResultadoRecarga = {
   linhasRemovidas: number;
   contasVinculadas: number;
   reclassificadas: string[];
+  /** Competências apuradas: ficam com a classificação da apuração até serem reapuradas. */
+  apuradasSemReclassificar: string[];
 };
 
 export const cadastrosService = {

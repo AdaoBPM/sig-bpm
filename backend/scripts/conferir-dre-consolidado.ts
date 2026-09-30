@@ -19,8 +19,10 @@ import { readFileSync } from "node:fs";
 
 import { getPrismaClient } from "../src/config/prisma.js";
 import { lerAba } from "../src/lib/xlsx.js";
+import { apuracaoService } from "../src/services/apuracao/apuracaoService.js";
 import { dreService, SEM_AGRUPAMENTO } from "../src/services/dre/dreService.js";
 
+const USUARIO = "00000000-0000-0000-0000-000000000001"; // administrador da carga
 const [arquivo, anoTexto, de, ate = de] = process.argv.slice(2);
 if (!arquivo || !anoTexto || !de) {
   console.error('Uso: npx tsx scripts/conferir-dre-consolidado.ts "<BASE REALIZADO (RESULTADOS).xlsx>" 2026 1 8');
@@ -52,8 +54,8 @@ const ligacao = new Map<number, (typeof estrutura)[number]>();
 
 let totalDif = 0;
 for (let mes = Number(de); mes <= Number(ate); mes++) {
-  const r = await dreService.apurar(ano, mes);
-  console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}: ${r.consolidado} linhas consolidadas, ${r.centros} valores por centro`);
+  await apuracaoService.apurar(ano, mes, USUARIO);
+  console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}`);
 
   // --- Consolidado --------------------------------------------------------
   const col = consolidado.linhas[0].celulas.findIndex((v) => n(v) === `${MESES[mes - 1]}/${String(ano).slice(2)}`);

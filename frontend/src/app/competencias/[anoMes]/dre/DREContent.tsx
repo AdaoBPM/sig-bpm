@@ -3,17 +3,16 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, ChevronDown, ChevronRight, Lock, Search } from "lucide-react";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronRight, Search } from "lucide-react";
 
-import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
+import { PainelApuracao } from "./components/PainelApuracao";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
@@ -177,7 +176,6 @@ export function DREContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/dre`);
   const periodo = lerAnoMes(anoMes);
-  const queryClient = useQueryClient();
   const [visao, setVisao] = useState<Visao>("consolidado");
   const [avisos, setAvisos] = useState<string[]>([]);
 
@@ -192,15 +190,6 @@ export function DREContent() {
     queryFn: () => dreService.consultar(anoMes, visao as number),
     enabled: periodo !== null && typeof visao === "number",
   });
-  const apurar = useMutation({
-    mutationFn: () => dreService.apurar(anoMes),
-    onSuccess: (r) => {
-      setAvisos(r.avisos);
-      toast.success("DRE apurada.");
-      queryClient.invalidateQueries({ queryKey: ["dre", anoMes] });
-    },
-    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível apurar a DRE.")),
-  });
 
   if (!periodo) {
     return (
@@ -210,7 +199,6 @@ export function DREContent() {
     );
   }
   const cabecalho = consolidado.data;
-  const bloqueada = cabecalho?.competencia.status === "FECHADA" || cabecalho?.congelado;
   const consulta = visao === "consolidado" ? consolidado : unidade;
 
   return (
@@ -233,19 +221,6 @@ export function DREContent() {
               {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
             </p>
           </div>
-          {!bloqueada && cabecalho ? (
-            <PermissionGuard permission="apuracao:editar">
-              <Button
-                type="button"
-                onClick={() => apurar.mutate()}
-                disabled={apurar.isPending}
-                className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
-              >
-                <Calculator className="size-4" />
-                {apurar.isPending ? "Apurando…" : cabecalho.apuradoEm ? "Apurar de novo" : "Apurar DRE"}
-              </Button>
-            </PermissionGuard>
-          ) : null}
         </div>
       </div>
 
@@ -262,12 +237,7 @@ export function DREContent() {
         ))}
       </div>
 
-      {bloqueada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">DRE congelada: não pode ser reapurada.</p>
-        </div>
-      ) : null}
+      <PainelApuracao anoMes={anoMes} onAvisos={setAvisos} />
       {avisos.length > 0 ? (
         <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />

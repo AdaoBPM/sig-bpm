@@ -45,7 +45,7 @@ export const rateiosService = {
     if (c.status === "FECHADA") throw new RegraRateioError(409, `A competência ${rotulo(ano, mes)} está fechada. Reapurar exige reabri-la.`);
     const prisma = getPrismaClient();
     if (await prisma.volumeOperacional.count({ where: { competenciaId: c.id, congelado: true } })) {
-      throw new RegraRateioError(409, `Os rateios de ${rotulo(ano, mes)} estão congelados pela apuração do mês.`);
+      throw new RegraRateioError(409, `Os rateios de ${rotulo(ano, mes)} estão congelados pela apuração da competência. Para recalcular, reapure a competência (tela da DRE).`);
     }
     const [regras, totais] = await Promise.all([regrasVigentes(ano, mes), totaisDaCompetencia(c.id)]);
     if (regras.length === 0) throw new RegraRateioError(409, "Não há regras de rateio vigentes. Carregue o cadastro.");

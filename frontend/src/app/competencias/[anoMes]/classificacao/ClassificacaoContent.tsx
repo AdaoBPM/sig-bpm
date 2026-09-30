@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
+import { AvisoCongelado } from "../../components/AvisoCongelado";
+import { apuracaoService } from "../../services/apuracaoService";
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, inteiro, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
 import { VALIDACOES, ValidacaoBadge } from "./components/ValidacaoBadge";
@@ -116,6 +118,7 @@ export function ClassificacaoContent() {
   const [pagina, setPagina] = useState(1);
   const buscaDebounced = useDebounce(busca, 300);
 
+  const apuracao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
   const resumo = useQuery({
     queryKey: ["classificacao", anoMes, "resumo"],
     queryFn: () => classificacaoService.resumo(anoMes),
@@ -166,6 +169,8 @@ export function ClassificacaoContent() {
     (v) => v !== "OK" && quantidade(v) > 0,
   );
   const fechada = r?.competencia.status === "FECHADA";
+  // Apurada, a classificação faz parte do retrato congelado: só a reapuração a refaz.
+  const apurada = apuracao.data?.apurada ?? false;
   const totalPaginas = Math.max(1, Math.ceil((lista.data?.total ?? 0) / POR_PAGINA));
 
   function filtrar(s: Situacao) {
@@ -197,7 +202,7 @@ export function ClassificacaoContent() {
               LANÇ. OK?. A correção é sempre no cadastro — depois dela, reclassifique.
             </p>
           </div>
-          {!fechada ? (
+          {!fechada && !apurada ? (
             <PermissionGuard permission="classificacao:editar">
               <Button
                 type="button"
@@ -213,6 +218,8 @@ export function ClassificacaoContent() {
           ) : null}
         </div>
       </div>
+
+      {fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
 
       {r && r.total > 0 ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

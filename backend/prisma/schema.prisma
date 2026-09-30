@@ -602,6 +602,10 @@ model Competencia {
   apuracoes  Int       @default(0) @map("apuracoes")
   fechadaEm  DateTime? @map("fechada_em")
   fechadaPor String?   @map("fechada_por")
+  /// JSON: retrato das entradas no momento da apuração (contagens e somas dos
+  /// lançamentos, das listas e das importações ativas). Comparado com as
+  /// entradas atuais, diz se algo mudou depois da apuração (Passo 21).
+  entradasApuradas Json? @map("entradas_apuradas")
 
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
@@ -650,6 +654,9 @@ model ReaberturaCompetencia {
   justificativa String
   reabertaEm    DateTime @default(now()) @map("reaberta_em")
   reabertaPor   String   @map("reaberta_por")
+  /// O fechamento que a reabertura desfez.
+  fechamentoAnteriorEm  DateTime? @map("fechamento_anterior_em")
+  fechamentoAnteriorPor String?   @map("fechamento_anterior_por")
 
   competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   usuario     Usuario     @relation(fields: [reabertaPor], references: [id])

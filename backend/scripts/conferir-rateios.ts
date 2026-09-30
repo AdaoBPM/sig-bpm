@@ -10,8 +10,10 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 
 import { lerAba } from "../src/lib/xlsx.js";
+import { apuracaoService } from "../src/services/apuracao/apuracaoService.js";
 import { rateiosService } from "../src/services/volumes/rateiosService.js";
 
+const USUARIO = "00000000-0000-0000-0000-000000000001"; // administrador da carga
 const [arquivo, anoTexto, de, ate = de] = process.argv.slice(2);
 if (!arquivo || !anoTexto || !de) {
   console.error('Uso: npx tsx scripts/conferir-rateios.ts "<BASE REALIZADO (OPERAÇÃO).xlsx>" 2026 1 8');
@@ -32,7 +34,8 @@ for (let mes = Number(de); mes <= Number(ate); mes++) {
   const col = colunaDoMes(mes);
   if (col < 0) throw new Error(`A aba Rateios não tem a coluna de ${mes}/${ano}`);
   const planilha = new Map(aba.linhas.slice(1).map((l) => [String(l.celulas[0] ?? "").trim(), Number(l.celulas[col] ?? 0)]));
-  const r = await rateiosService.apurar(ano, mes);
+  await apuracaoService.apurar(ano, mes, USUARIO);
+  const r = await rateiosService.consultar(ano, mes);
   console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}`);
   for (const k of r.chaves) {
     for (const d of k.destinos as Array<{ rotulo: string; quantidade: string; percentual: string }>) {

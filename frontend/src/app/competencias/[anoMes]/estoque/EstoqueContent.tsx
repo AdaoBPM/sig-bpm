@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, Info, Lock, Search } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calculator, Info, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
+import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
 import { estoqueService, mensagemDeErro, ROTULO_CRITERIO_ESTOQUE } from "./services/estoqueService";
@@ -101,10 +102,7 @@ export function EstoqueContent() {
           <p className="text-sm text-gray-600">Saldo inicial, importado da aba Estoque (2025). Os meses seguintes partem dele.</p>
         </div>
       ) : dados?.congelado || dados?.competencia.status === "FECHADA" ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">Saldo congelado: não pode ser reapurado.</p>
-        </div>
+        <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />
       ) : null}
       {avisos.length > 0 ? (
         <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">

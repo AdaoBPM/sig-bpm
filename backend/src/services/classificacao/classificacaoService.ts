@@ -157,8 +157,20 @@ export const classificacaoService = {
     };
   },
 
+  /**
+   * Reclassificação avulsa, pela tela. Recusada em competência apurada: a
+   * classificação dos lançamentos é parte do retrato congelado (Passo 21), e só
+   * a reapuração da competência a refaz — junto com o resto do resultado.
+   */
   async reclassificar(ano: number, mes: number) {
     const competencia = await competenciaPorAnoMes(ano, mes);
+    const { apuradaEm } = await getPrismaClient().competencia.findUniqueOrThrow({ where: { id: competencia.id }, select: { apuradaEm: true } });
+    if (apuradaEm) {
+      throw new RegraClassificacaoError(
+        409,
+        `A competência ${rotulo(ano, mes)} está apurada; a classificação dela está congelada. Para recalcular, reapure a competência (tela da DRE).`,
+      );
+    }
     return this.classificarCompetencia(competencia.id);
   },
 

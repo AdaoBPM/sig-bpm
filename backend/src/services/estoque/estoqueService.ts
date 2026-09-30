@@ -41,7 +41,7 @@ export const estoqueService = {
         409,
         atuais.importacaoId
           ? `O saldo de ${rotulo(ano, mes)} é o saldo inicial importado; não é apurado.`
-          : `O saldo de ${rotulo(ano, mes)} está congelado pela apuração do mês.`,
+          : `O saldo de ${rotulo(ano, mes)} está congelado pela apuração da competência. Para recalcular, reapure a competência (tela da DRE).`,
       );
     }
     const a = anterior(ano, mes);

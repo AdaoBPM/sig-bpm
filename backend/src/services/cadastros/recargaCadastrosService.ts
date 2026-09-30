@@ -94,10 +94,11 @@ export const recargaCadastrosService = {
       { timeout: 120_000 },
     );
 
-    // Corrigir o cadastro reclassifica as competências abertas (RF006). As
-    // fechadas ficam como estão: lá a classificação está congelada.
+    // Corrigir o cadastro reclassifica as competências ainda não apuradas
+    // (RF006). As apuradas ficam como estão — a classificação faz parte do
+    // retrato congelado — até serem reapuradas (Passo 21).
     const abertas = await prisma.competencia.findMany({
-      where: { status: { not: "FECHADA" } },
+      where: { status: { not: "FECHADA" }, apuradaEm: null },
       select: { id: true, ano: true, mes: true },
       orderBy: [{ ano: "asc" }, { mes: "asc" }],
     });
@@ -107,7 +108,16 @@ export const recargaCadastrosService = {
       reclassificadas.push(`${String(c.mes).padStart(2, "0")}/${c.ano}`);
     }
 
-    logger("info", "Cadastros recarregados da planilha", { usuarioId, hash, ...gravado, reclassificadas });
-    return { ...gravado, reclassificadas };
+    // As apuradas continuam com a classificação da apuração; reapurá-las aplica o cadastro novo.
+    const apuradas = (
+      await prisma.competencia.findMany({
+        where: { status: { not: "FECHADA" }, apuradaEm: { not: null } },
+        select: { ano: true, mes: true },
+        orderBy: [{ ano: "asc" }, { mes: "asc" }],
+      })
+    ).map((c) => `${String(c.mes).padStart(2, "0")}/${c.ano}`);
+
+    logger("info", "Cadastros recarregados da planilha", { usuarioId, hash, ...gravado, reclassificadas, apuradas });
+    return { ...gravado, reclassificadas, apuradasSemReclassificar: apuradas };
   },
 };

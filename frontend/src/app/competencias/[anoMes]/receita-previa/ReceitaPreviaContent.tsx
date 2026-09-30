@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calculator, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -12,6 +12,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
+import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
 import { LancamentoReceitaDialog } from "./components/LancamentoReceitaDialog";
@@ -123,12 +124,7 @@ export function ReceitaPreviaContent() {
       </div>
 
       {bloqueada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">
-            {fechada ? "Competência fechada" : "Receita congelada pela apuração do mês"}: a receita e os lançamentos não podem ser alterados.
-          </p>
-        </div>
+        <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da receita prévia" />
       ) : null}
 
       {avisos.length > 0 || (dados?.observacoes.length ?? 0) > 0 ? (
@@ -175,7 +171,7 @@ export function ReceitaPreviaContent() {
             <h2 className="text-lg font-bold text-gray-900">Lançamentos de receita</h2>
             <p className="text-sm text-gray-600">Entram na receita na próxima apuração.</p>
           </div>
-          {!bloqueada ? (
+          {!fechada ? (
             <PermissionGuard permission="lancamentos_manuais:editar">
               <Button
                 type="button"
@@ -204,7 +200,7 @@ export function ReceitaPreviaContent() {
                 <td className="px-4 py-3 text-sm text-gray-600">{l.observacao}</td>
                 <td className="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap">{moeda(l.valor)}</td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
-                  {!bloqueada ? (
+                  {!fechada ? (
                     <PermissionGuard permission="lancamentos_manuais:editar">
                       <Button type="button" variant="ghost" size="icon" onClick={() => setEditando(l)} aria-label="Editar">
                         <Pencil className="size-4" />

@@ -11,8 +11,10 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 
 import { lerAba } from "../src/lib/xlsx.js";
+import { apuracaoService } from "../src/services/apuracao/apuracaoService.js";
 import { estoqueService } from "../src/services/estoque/estoqueService.js";
 
+const USUARIO = "00000000-0000-0000-0000-000000000001"; // administrador da carga
 const [arquivo, anoTexto, de, ate = de] = process.argv.slice(2);
 if (!arquivo || !anoTexto || !de) {
   console.error('Uso: npx tsx scripts/conferir-estoque.ts "<BASE PRÉVIAS.xlsx>" 2026 1 8');
@@ -38,7 +40,8 @@ const medias = aba("Estoque (Médias)");
 
 let diferencas = 0;
 for (let mes = Number(de); mes <= Number(ate); mes++) {
-  const r = await estoqueService.apurar(ano, mes);
+  const { avisos } = await apuracaoService.apurar(ano, mes, USUARIO);
+  const r = { ...(await estoqueService.consultar(ano, mes)), avisos };
   const pm3 = m3(mes), prs = rs(mes);
   const sistema = new Map(r.saldos.map((s) => [`${s.obra}.${s.linha}`.toUpperCase(), s]));
   let difMes = 0;
