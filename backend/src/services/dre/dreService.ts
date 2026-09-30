@@ -69,7 +69,7 @@ function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[]) {
  * achado pelo código RM; sem essa coluna preenchida, fica num grupo à parte.
  */
 export const SEM_AGRUPAMENTO = "(sem centro de custo da controladoria)";
-const grupoDoCentro = (cc: { nomeControladoria: string | null }) => cc.nomeControladoria?.trim() || SEM_AGRUPAMENTO;
+export const grupoDoCentro = (cc: { nomeControladoria: string | null }) => cc.nomeControladoria?.trim() || SEM_AGRUPAMENTO;
 
 export const dreService = {
   /**

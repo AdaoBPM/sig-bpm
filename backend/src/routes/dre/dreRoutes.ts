@@ -10,4 +10,5 @@ export const dreRoutes = Router({ mergeParams: true });
 dreRoutes.get("/", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.consultar));
 dreRoutes.get("/consolidado", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.consolidado));
 dreRoutes.get("/centros", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.centros));
+dreRoutes.get("/detalhe", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.detalhe));
 dreRoutes.post("/apurar", autenticacao, verificarPermissao("apuracao:editar"), asyncHandler(c.apurar));

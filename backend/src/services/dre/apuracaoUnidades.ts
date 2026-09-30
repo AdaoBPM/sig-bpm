@@ -53,9 +53,31 @@ export type DadosApuracao = {
   receitas: ReceitaPreviaApuracao[];
 };
 
-export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string };
+export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string; linhaId?: string };
 export type ParcelaUnidade = { unidade: number; nome: string; valor: string };
-export type Composicao = { regra: string; direto?: string; rateios?: ParcelaRateio[]; unidades?: ParcelaUnidade[]; observacao?: string };
+/**
+ * De onde o valor saiu, na forma de filtros sobre os dados da competência —
+ * é o que o detalhamento usa para chegar aos lançamentos de origem (Passo 20).
+ * - contabil: lançamentos contábeis que não são de rateio, da linha, com os
+ *   filtros de filial e balde da regra, multiplicados pelo fator.
+ * - rateios: lançamentos de rateio da chave (o balde) na linha de base, ×
+ *   percentual (estão em ParcelaRateio, com linhaId).
+ * - manual: lançamentos manuais da linha e do balde.
+ * - previa: a receita prévia da unidade e da natureza, com o sinal.
+ */
+export type OrigemValor = {
+  contabil?: { linhaId: string; filial?: number; baldes?: string[]; excetoBaldes?: string[]; fator?: string };
+  manual?: { linhaId: string; balde: string };
+  previa?: Array<{ unidade: number; natureza: string; componente: "BRUTA" | "LIQUIDA"; sinal: 1 | -1 }>;
+};
+export type Composicao = {
+  regra: string;
+  direto?: string;
+  rateios?: ParcelaRateio[];
+  unidades?: ParcelaUnidade[];
+  observacao?: string;
+  origem?: OrigemValor;
+};
 export type ResultadoLinha = { unidade: number; linhaId: string; codigo: string; valor: Decimal; composicao: Composicao | null };
 
 const zero = () => new Decimal(0);
@@ -108,6 +130,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     base: `${linhaBase?.codigo ?? "?"}: ${base.toFixed(2)}`,
     percentual: p.toFixed(10),
     valor: base.times(p).toFixed(2),
+    linhaId: linhaBase?.id,
   });
 
   // Valores por unidade, linha → valor.
@@ -179,14 +202,21 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           regra: "−(frete da receita prévia) − (receita contábil da filial)",
           direto: contabil.toFixed(2),
           observacao: `Frete da receita prévia: ${receitaFrete.receitaBruta.toFixed(2)}`,
+          origem: { contabil: { linhaId: l.id, filial: u, fator: "-1" }, previa: [{ unidade: u, natureza: "FRETE", componente: "BRUTA", sinal: -1 }] },
         });
       } else if (desc === n("Receita Bruta de Frete")) {
-        gravar(u, l, receitaFrete.receitaBruta, { regra: "Receita bruta de frete da receita prévia" });
+        gravar(u, l, receitaFrete.receitaBruta, {
+          regra: "Receita bruta de frete da receita prévia",
+          origem: { previa: [{ unidade: u, natureza: "FRETE", componente: "BRUTA", sinal: 1 }] },
+        });
       } else if (desc === n("Receita Bruta de Devoluções e Inventários")) {
         const c = somaDireto(l.id, { filial: u });
-        gravar(u, l, c, { regra: "Lançamentos contábeis da filial", direto: c.toFixed(2) });
+        gravar(u, l, c, { regra: "Lançamentos contábeis da filial", direto: c.toFixed(2), origem: { contabil: { linhaId: l.id, filial: u } } });
       } else if (desc === n("Receita Líquida de Frete")) {
-        gravar(u, l, receitaFrete.receitaLiquida, { regra: "Receita líquida de frete da receita prévia" });
+        gravar(u, l, receitaFrete.receitaLiquida, {
+          regra: "Receita líquida de frete da receita prévia",
+          origem: { previa: [{ unidade: u, natureza: "FRETE", componente: "LIQUIDA", sinal: 1 }] },
+        });
       } else if (desc === n("Receita Líquida do Pré-Fabricado") || desc === n("Receita Líquida de Devoluções e Inventários")) {
         continue; // depois dos impostos
       } else {
@@ -200,7 +230,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           rateios.push(parcela(chave, destino, l, base, p));
           v = v.plus(base.times(p));
         }
-        gravar(u, l, v, { regra: "Diretos da filial + rateios × percentual da unidade", direto: dir.toFixed(2), rateios });
+        gravar(u, l, v, { regra: "Diretos da filial + rateios × percentual da unidade", direto: dir.toFixed(2), rateios, origem: { contabil: { linhaId: l.id, filial: u } } });
       }
     }
     // Impostos Operacionais: no Consolidado é ROB − ROL; na unidade, o contábil
@@ -208,7 +238,11 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
       const v = semProducao ? zero() : somaDireto(io.id, { filial: u, balde: (b) => b !== "OBRAS" });
-      gravar(u, io, v, { regra: "Lançamentos contábeis da filial, fora do balde OBRAS", direto: v.toFixed(2) });
+      gravar(u, io, v, {
+        regra: "Lançamentos contábeis da filial, fora do balde OBRAS",
+        direto: v.toFixed(2),
+        origem: semProducao ? undefined : { contabil: { linhaId: io.id, filial: u, excetoBaldes: ["OBRAS"] } },
+      });
     }
     // Receitas líquidas do pré-fabricado e das devoluções: a bruta menos a
     // parte dos impostos (sem os do frete), na proporção da bruta.
@@ -226,7 +260,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       if (!l) continue;
       gravar(u, l, semProducao ? zero() : rob.minus(fator.times(rob)), {
         regra: "Bruta − (IRB − impostos do frete) / (bruta do pré-fabricado + devoluções) × bruta",
-        observacao: `fator ${fator.toFixed(10)}`,
+        observacao: `Bruta ${rob.toFixed(2)} − (IRB ${irb.toFixed(2)} − impostos do frete ${impostosFrete.toFixed(2)}) / ${base.toFixed(2)} × bruta; fator ${fator.toFixed(10)}`,
       });
     }
   }
@@ -249,11 +283,20 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
         gravar(u, l, semMontagem ? zero() : compl.receitaBruta.neg().minus(c), {
           regra: "−(complementar da receita prévia) − (receita contábil da filial 1)",
           direto: c.toFixed(2),
+          origem: semMontagem
+            ? undefined
+            : { contabil: { linhaId: l.id, filial: 1, fator: "-1" }, previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "BRUTA", sinal: -1 }] },
         });
       } else if (desc === n("Receita Bruta Complementar")) {
-        gravar(u, l, compl.receitaBruta, { regra: "Receita bruta complementar da receita prévia" });
+        gravar(u, l, compl.receitaBruta, {
+          regra: "Receita bruta complementar da receita prévia",
+          origem: { previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "BRUTA", sinal: 1 }] },
+        });
       } else if (desc === n("Receita Líquida Complementar")) {
-        gravar(u, l, compl.receitaLiquida, { regra: "Receita líquida complementar da receita prévia" });
+        gravar(u, l, compl.receitaLiquida, {
+          regra: "Receita líquida complementar da receita prévia",
+          origem: { previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "LIQUIDA", sinal: 1 }] },
+        });
       } else if (desc === n("Receita Líquida de Montagem")) {
         continue; // depois dos impostos
       } else if (l.grupoSigla === "CSM" || l.grupoSigla === "CSC") {
@@ -278,7 +321,12 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           rateios.push(parcela(chave, destino, linhaBase, baseV, p));
           v = v.plus(baseV.times(p));
         }
-        gravar(u, l, v, { regra: `Diretos do balde ${montagem ? "OBRAS" : "COMPLEMENTAR"} + rateios × percentual de ${destino.toLowerCase()}`, direto: dir.toFixed(2), rateios });
+        gravar(u, l, v, {
+          regra: `Diretos do balde ${montagem ? "OBRAS" : "COMPLEMENTAR"} + rateios × percentual de ${destino.toLowerCase()}`,
+          direto: dir.toFixed(2),
+          rateios,
+          origem: { contabil: { linhaId: l.id, baldes: [montagem ? "OBRAS" : "COMPLEMENTAR"] } },
+        });
       } else {
         gravar(u, l, zero(), { regra: "Linha sem regra na unidade" });
         avisos.push(`Serviços: a linha ${l.codigo} não tem regra de apuração.`);
@@ -287,12 +335,17 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
       const v = semMontagem ? zero() : somaDireto(io.id, { filial: 1, balde: (b) => b === "OBRAS" });
-      gravar(u, io, v, { regra: "Lançamentos contábeis da filial 1, balde OBRAS", direto: v.toFixed(2) });
+      gravar(u, io, v, {
+        regra: "Lançamentos contábeis da filial 1, balde OBRAS",
+        direto: v.toFixed(2),
+        origem: semMontagem ? undefined : { contabil: { linhaId: io.id, filial: 1, baldes: ["OBRAS"] } },
+      });
       const rlm = linhaPorDescricao(u, "Receita Líquida de Montagem");
       if (rlm) {
         const rbm = itemDe(u, "Receita Bruta de Montagem");
         gravar(u, rlm, semMontagem ? zero() : rbm.minus(v.minus(compl.receitaBruta.minus(compl.receitaLiquida))), {
           regra: "Bruta de montagem − (IRB − impostos da complementar)",
+          observacao: `Bruta de montagem ${rbm.toFixed(2)} − (IRB ${v.toFixed(2)} − impostos da complementar ${compl.receitaBruta.minus(compl.receitaLiquida).toFixed(2)})`,
         });
       }
     }
@@ -320,14 +373,18 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       const c = somaDireto(l.id);
       // Receitas financeiras entram com o sinal trocado (linhas 84, 85 e 87).
       const financeira = l.grupoSigla === "RFC" || l.grupoSigla === "RFNC";
-      gravar(u, l, financeira ? c.neg() : c, { regra: financeira ? "−(lançamentos contábeis diretos)" : "Lançamentos contábeis diretos", direto: c.toFixed(2) });
+      gravar(u, l, financeira ? c.neg() : c, {
+        regra: financeira ? "−(lançamentos contábeis diretos)" : "Lançamentos contábeis diretos",
+        direto: c.toFixed(2),
+        origem: { contabil: { linhaId: l.id, ...(financeira ? { fator: "-1" } : {}) } },
+      });
     }
   }
 
   // --- RN: lançamentos manuais do balde RN ----------------------------------
   for (const l of itensDa(UNIDADE.RN)) {
     const v = manualRN(l.id);
-    gravar(UNIDADE.RN, l, v, { regra: "Lançamentos manuais do balde RN" });
+    gravar(UNIDADE.RN, l, v, { regra: "Lançamentos manuais do balde RN", origem: { manual: { linhaId: l.id, balde: "RN" } } });
   }
 
   // --- Comissões: diretos × participação da unidade na ROB consolidada ------
@@ -337,7 +394,13 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       const rob = robDe(u);
       const semBase = u === UNIDADE.SERVICOS ? guardaCustosServicos.isZero() : guarda[u].isZero();
       const v = semBase || robConsolidada.isZero() ? zero() : c.div(robConsolidada).times(rob);
-      gravar(u, l, v, { regra: "Diretos da linha / ROB consolidada × ROB da unidade", direto: c.toFixed(2), observacao: `ROB ${rob.toFixed(2)} de ${robConsolidada.toFixed(2)}` });
+      const fator = semBase || robConsolidada.isZero() ? null : rob.div(robConsolidada);
+      gravar(u, l, v, {
+        regra: "Diretos da linha / ROB consolidada × ROB da unidade",
+        direto: c.toFixed(2),
+        observacao: `ROB ${rob.toFixed(2)} de ${robConsolidada.toFixed(2)}`,
+        origem: fator ? { contabil: { linhaId: l.id, fator: fator.toString() } } : undefined,
+      });
     }
   }
 

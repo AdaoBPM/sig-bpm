@@ -40,7 +40,52 @@ export type GruposCentros = {
   grupos: Array<{ grupo: string; departamentos: string[]; centros: number; total: string }>;
 };
 
+export type LancamentoDetalhe = {
+  id: string;
+  filial: number;
+  centro: { codigoRM: string | null; nome: string | null } | null;
+  conta: { reduzido: string; descricao: string };
+  contaAdotada: { reduzido: string; descricao: string } | null;
+  balde: string | null;
+  alocacao: string | null;
+  descricao?: string;
+  valor: string;
+  parcela: string;
+};
+
+export type BlocoDetalhe =
+  | {
+      tipo: "CONTABIL" | "RATEIO" | "MANUAL";
+      titulo: string;
+      unidade?: number;
+      filtro: string;
+      fator?: string;
+      percentual?: string;
+      total: string;
+      lancamentos: LancamentoDetalhe[];
+    }
+  | { tipo: "PREVIA"; titulo: string; unidade: number; natureza: string; componente: string; sinal: number; total: string };
+
+export type DetalheDRE = {
+  competencia: { ano: number; mes: number };
+  visao: string;
+  linha: { codigo: string; descricao: string; tipo: LinhaDRE["tipo"] };
+  valor: string | null;
+  regra: string | null;
+  observacao: string | null;
+  somaOrigens: string | null;
+  blocos: BlocoDetalhe[];
+};
+
+/** Em que visão o detalhamento é pedido: uma unidade, o consolidado ou um agrupamento de centros. */
+export type VisaoDetalhe = { unidade: number } | { consolidado: true } | { grupo: string };
+
 export const dreService = {
+  detalhe: async (anoMes: string, linha: string, visao: VisaoDetalhe): Promise<DetalheDRE> => {
+    const params = { linha, ...("unidade" in visao ? { unidade: visao.unidade } : "grupo" in visao ? { grupo: visao.grupo } : {}) };
+    const { data } = await api.get<{ data: DetalheDRE }>(`/proxy/competencias/${anoMes}/dre/detalhe`, { params });
+    return data.data;
+  },
   consolidado: async (anoMes: string): Promise<DREUnidade> => {
     const { data } = await api.get<{ data: DREUnidade }>(`/proxy/competencias/${anoMes}/dre/consolidado`);
     return data.data;

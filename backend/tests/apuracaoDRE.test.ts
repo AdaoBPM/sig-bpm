@@ -53,6 +53,10 @@ describe("apuração da DRE por unidade", () => {
     assert.equal(v(2, "CLT"), "800"); // 500 + 400 × 75%
     assert.equal(v(2, "CPP"), "880"); // inclui a depreciação
     assert.equal(v(1, "VOL"), "100");
+    // A composição guarda a origem que o detalhamento usa: os diretos da filial e o rateio na linha de base.
+    const c = resultados.find((r) => r.unidade === 2 && r.codigo === "CLT")?.composicao;
+    assert.deepEqual(c?.origem?.contabil, { linhaId: "CLT", filial: 2 });
+    assert.deepEqual(c?.rateios?.map((r) => [r.chave, r.linhaId, r.valor]), [["PRODUCAO", "CLT", "300.00"]]);
   });
 
   it("sem produção na unidade, os custos dela são zero (IF(B$4=0,0,…))", () => {

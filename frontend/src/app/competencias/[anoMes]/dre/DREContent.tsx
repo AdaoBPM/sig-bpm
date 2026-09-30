@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calculator, ChevronDown, ChevronRight, Lock, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -13,7 +13,8 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
-import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE } from "./services/dreService";
+import { DetalheDialog } from "./components/DetalheDialog";
+import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
 const volume = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
@@ -27,8 +28,12 @@ const VISOES: Array<{ visao: Visao; nome: string }> = [
   { visao: "centros", nome: "Centros de custo" },
 ];
 
+/** Linhas que abrem o detalhamento até os lançamentos: os itens e os impostos das unidades. */
+const detalhavel = (l: LinhaDRE) => !ehVolume(l) && (l.tipo === "ITEM" || l.descricao === "Impostos Operacionais");
+
 function Composicao({ l }: { l: LinhaDRE }) {
-  const c = l.composicao!;
+  const c = l.composicao;
+  if (!c) return null;
   return (
     <div className="space-y-1 text-xs text-gray-600">
       <p>{c.regra}</p>
@@ -54,8 +59,10 @@ function Composicao({ l }: { l: LinhaDRE }) {
   );
 }
 
-function TabelaDRE({ linhas }: { linhas: LinhaDRE[] }) {
+function TabelaDRE({ linhas, anoMes, visao }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe }) {
   const [aberta, setAberta] = useState<string | null>(null);
+  const [detalhe, setDetalhe] = useState<string | null>(null);
+  const abre = (l: LinhaDRE) => !!l.composicao || detalhavel(l);
   return (
     <div className="border border-gray-200 bg-white rounded-sm">
       <table className="w-full border-collapse text-sm">
@@ -68,12 +75,12 @@ function TabelaDRE({ linhas }: { linhas: LinhaDRE[] }) {
               return (
                 <Fragment key={l.codigo}>
                   <tr
-                    className={`border-t border-gray-100 ${destaque ? "bg-gray-50 font-bold" : ""} ${l.composicao ? "cursor-pointer hover:bg-gray-50" : ""}`}
-                    onClick={() => (l.composicao ? setAberta(aberto ? null : l.codigo) : undefined)}
+                    className={`border-t border-gray-100 ${destaque ? "bg-gray-50 font-bold" : ""} ${abre(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                    onClick={() => (abre(l) ? setAberta(aberto ? null : l.codigo) : undefined)}
                   >
                     <td className={`px-4 py-1.5 ${destaque ? "text-gray-900" : "pl-8 text-gray-700"}`}>
                       <span className="inline-flex items-center gap-1">
-                        {l.composicao ? (aberto ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />) : null}
+                        {abre(l) ? (aberto ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />) : null}
                         {l.descricao}
                       </span>
                     </td>
@@ -81,10 +88,16 @@ function TabelaDRE({ linhas }: { linhas: LinhaDRE[] }) {
                       {l.valor === null ? "—" : ehVolume(l) ? volume(l.valor) : moeda(l.valor)}
                     </td>
                   </tr>
-                  {aberto && l.composicao ? (
+                  {aberto && abre(l) ? (
                     <tr className="border-t border-gray-100 bg-gray-50/50">
-                      <td colSpan={2} className="px-8 py-2">
+                      <td colSpan={2} className="space-y-2 px-8 py-2">
                         <Composicao l={l} />
+                        {detalhavel(l) ? (
+                          <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setDetalhe(l.codigo)}>
+                            <Search className="size-3.5" />
+                            Ver lançamentos de origem
+                          </Button>
+                        ) : null}
                       </td>
                     </tr>
                   ) : null}
@@ -93,6 +106,7 @@ function TabelaDRE({ linhas }: { linhas: LinhaDRE[] }) {
             })}
         </tbody>
       </table>
+      {detalhe ? <DetalheDialog anoMes={anoMes} linha={detalhe} visao={visao} onFechar={() => setDetalhe(null)} /> : null}
     </div>
   );
 }
@@ -153,7 +167,7 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
       ) : centros.isPending ? (
         <Carregando />
       ) : (
-        <TabelaDRE linhas={dados?.linhas ?? []} />
+        <TabelaDRE linhas={dados?.linhas ?? []} anoMes={anoMes} visao={{ grupo: escolhido! }} />
       )}
     </div>
   );
@@ -215,7 +229,7 @@ export function DREContent() {
             </div>
             <p className="text-sm text-gray-600">
               A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da
-              receita prévia e dos lançamentos manuais. Clique numa linha para ver como o valor foi formado.{" "}
+              receita prévia e dos lançamentos manuais. Clique numa linha para ver como o valor foi formado e chegar aos lançamentos de origem.{" "}
               {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
             </p>
           </div>
@@ -268,7 +282,12 @@ export function DREContent() {
       ) : consulta.isPending ? (
         <Carregando />
       ) : (consulta.data?.linhas ?? []).some((l) => l.valor !== null) ? (
-        <TabelaDRE key={String(visao)} linhas={consulta.data!.linhas} />
+        <TabelaDRE
+          key={String(visao)}
+          linhas={consulta.data!.linhas}
+          anoMes={anoMes}
+          visao={visao === "consolidado" ? { consolidado: true } : { unidade: visao as number }}
+        />
       ) : (
         <SemApuracao />
       )}
