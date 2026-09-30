@@ -54,7 +54,8 @@ export type DadosApuracao = {
 };
 
 export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string };
-export type Composicao = { regra: string; direto?: string; rateios?: ParcelaRateio[]; observacao?: string };
+export type ParcelaUnidade = { unidade: number; nome: string; valor: string };
+export type Composicao = { regra: string; direto?: string; rateios?: ParcelaRateio[]; unidades?: ParcelaUnidade[]; observacao?: string };
 export type ResultadoLinha = { unidade: number; linhaId: string; codigo: string; valor: Decimal; composicao: Composicao | null };
 
 const zero = () => new Decimal(0);

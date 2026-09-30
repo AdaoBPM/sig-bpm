@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import { Prisma } from "../src/generated/prisma/client.js";
 import { apurarUnidades, type LinhaEstrutura } from "../src/services/dre/apuracaoUnidades.js";
+import { apurarCentros, consolidar } from "../src/services/dre/consolidacao.js";
 import { avaliarExpressao } from "../src/services/dre/expressao.js";
 
 const D = (v: number) => new Prisma.Decimal(v);
@@ -61,5 +62,50 @@ describe("apuração da DRE por unidade", () => {
       lancamentos: [{ filial: 1, linhaDREId: "CLT", balde: "UNIDADE", alocacao: "DIRETO", valor: D(1000) }],
     });
     assert.equal(resultados.find((r) => r.unidade === 1 && r.codigo === "CLT")?.valor.toString(), "0");
+  });
+});
+
+describe("consolidação e visão por centro de custo", () => {
+  const linha = (codigo: string, tipo: LinhaEstrutura["tipo"], expressao: string | null = null): LinhaEstrutura => ({
+    id: `id-${codigo}`, codigo, tipo, grupo: "G", grupoSigla: "G", atribuicao: "A", descricao: codigo, expressao, unidades: [],
+  });
+  const linhas = [
+    linha("ROB", "SUBTOTAL", "RB"),
+    linha("RB", "ITEM"),
+    linha("IO", "TOTAL", "ROB-ROL"),
+    linha("ROL", "SUBTOTAL", "RL"),
+    linha("RL", "ITEM"),
+    linha("CPP", "SUBTOTAL", "CLT + DEP"),
+    linha("CLT", "ITEM"),
+    linha("DEP", "ITEM"),
+    linha("MB", "TOTAL", "ROL-CPP"),
+  ];
+  const r = (unidade: number, codigo: string, v: number, tipo = "ITEM") => ({ unidade, linhaId: `id-${codigo}`, codigo, valor: D(v), composicao: tipo === "ITEM" ? { regra: "x" } : null });
+
+  it("consolidado: itens somados entre as unidades, subtotais e impostos pela estrutura", () => {
+    const c = consolidar(linhas, [r(1, "RB", 100), r(2, "RB", 50), r(1, "RL", 90), r(2, "RL", 45), r(1, "IO", 999, "TOTAL"), r(1, "CLT", 30), r(2, "CLT", 20)]);
+    const v = (codigo: string) => c.find((x) => x.codigo === codigo)?.valor.toString();
+    assert.equal(v("RB"), "150");
+    assert.equal(v("IO"), "15"); // ROB − ROL, não a soma das unidades
+    assert.equal(v("CPP"), "50");
+    assert.equal(v("MB"), "85");
+    assert.deepEqual(c.find((x) => x.codigo === "CLT")?.composicao?.unidades?.map((p) => p.valor), ["30.00", "20.00"]);
+    assert.equal(v("DEP"), undefined); // item sem valor em nenhuma unidade não entra
+  });
+
+  it("centro de custo: lançamentos por linha e só os agregadores que somam", () => {
+    const c = apurarCentros(linhas, [
+      { centroCustoId: "A", linhaDREId: "id-CLT", valor: D(10) },
+      { centroCustoId: "A", linhaDREId: "id-CLT", valor: D(5) },
+      { centroCustoId: "A", linhaDREId: "id-DEP", valor: D(2) },
+      { centroCustoId: "B", linhaDREId: "id-CLT", valor: D(7) },
+      { centroCustoId: null, linhaDREId: "id-CLT", valor: D(100) },
+    ]);
+    const v = (centro: string, codigo: string) => c.find((x) => x.centroCustoId === centro && x.codigo === codigo)?.valor.toString();
+    assert.equal(v("A", "CLT"), "15");
+    assert.equal(v("A", "CPP"), "17");
+    assert.equal(v("B", "CPP"), "7");
+    assert.equal(v("A", "MB"), undefined); // margem (com subtração) fica de fora
+    assert.equal(c.filter((x) => x.centroCustoId === null).length, 0);
   });
 });

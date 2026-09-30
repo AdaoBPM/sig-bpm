@@ -47,7 +47,7 @@ function ligar(linhas: ReturnType<typeof lerAba>["linhas"]) {
 
 let totalDif = 0;
 for (let mes = Number(de); mes <= Number(ate); mes++) {
-  const r = await dreService.apurarUnidades(ano, mes);
+  const r = await dreService.apurar(ano, mes);
   console.log(`\nCompetência ${String(mes).padStart(2, "0")}/${ano}: ${r.resultados} valores apurados`);
   for (const a of r.avisos) console.log(`  aviso: ${a}`);
   for (const u of [1, 2, 3, 4, 5]) {
