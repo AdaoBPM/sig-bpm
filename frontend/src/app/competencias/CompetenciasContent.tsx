@@ -3,7 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Calculator, CalendarDays, FileBarChart, ListChecks, NotebookPen, Percent, Rows3, Upload, Warehouse } from "lucide-react";
+import {
+  Calculator,
+  CalendarDays,
+  FileBarChart,
+  ListChecks,
+  NotebookPen,
+  Percent,
+  Rows3,
+  Upload,
+  Warehouse,
+} from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import {
@@ -63,9 +73,7 @@ export function CompetenciasContent() {
         <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <CalendarDays className="size-4" />
-            {isPending
-              ? "Carregando…"
-              : `${itens.length} competência(s)`}
+            {isPending ? "Carregando…" : `${itens.length} competência(s)`}
           </div>
           <Select value={ano} onValueChange={(v) => setAno(v ?? TODOS)}>
             <SelectTrigger className="w-40 rounded-sm">
@@ -100,10 +108,15 @@ export function CompetenciasContent() {
               "",
             ]}
             renderRow={(c) => (
-              <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
+              <tr
+                key={c.id}
+                className="border-b border-gray-100 hover:bg-gray-50"
+              >
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
                   {String(c.mes).padStart(2, "0")}/{c.ano}
-                  <span className="ml-2 text-xs text-gray-400">{c.nomeMes}</span>
+                  <span className="ml-2 text-xs text-gray-400">
+                    {c.nomeMes}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <StatusCompetenciaBadge status={c.status} />
@@ -145,63 +158,65 @@ export function CompetenciasContent() {
                     <span className="text-gray-400">0</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/importar`}
-                    className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <Upload className="size-3.5" />
-                    Importações
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/classificacao`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <ListChecks className="size-3.5" />
-                    Classificação
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/lancamentos-manuais`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <NotebookPen className="size-3.5" />
-                    Lançamentos
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/listas/projeto`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <Rows3 className="size-3.5" />
-                    Listas
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/receita-previa`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <Calculator className="size-3.5" />
-                    Receita
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/rateios`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <Percent className="size-3.5" />
-                    Rateios
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/estoque`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <Warehouse className="size-3.5" />
-                    Estoque
-                  </Link>
-                  <Link
-                    href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/dre`}
-                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                  >
-                    <FileBarChart className="size-3.5" />
-                    DRE
-                  </Link>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/importar`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <Upload className="size-3.5" />
+                      Importações
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/classificacao`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <ListChecks className="size-3.5" />
+                      Classificação
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/lancamentos-manuais`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <NotebookPen className="size-3.5" />
+                      Lançamentos
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/listas/projeto`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <Rows3 className="size-3.5" />
+                      Listas
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/receita-previa`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <Calculator className="size-3.5" />
+                      Receita
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/rateios`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <Percent className="size-3.5" />
+                      Rateios
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/estoque`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <Warehouse className="size-3.5" />
+                      Estoque
+                    </Link>
+                    <Link
+                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/dre`}
+                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      <FileBarChart className="size-3.5" />
+                      DRE
+                    </Link>
+                  </div>
                 </td>
               </tr>
             )}
