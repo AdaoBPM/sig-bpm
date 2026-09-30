@@ -6,6 +6,7 @@ import {
 } from "../../services/classificacao/classificacaoService.js";
 import { listarClassificacaoSchema } from "../../schemas/classificacao/classificacaoSchemas.js";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
+import { auditar } from "../../services/auditoriaService.js";
 
 function responderRegra(response: Response, error: unknown) {
   if (error instanceof RegraClassificacaoError) {
@@ -52,6 +53,14 @@ export const classificacaoController = {
         competencia.data.ano,
         competencia.data.mes,
       );
+      await auditar({
+        usuarioId: request.user!.sub,
+        usuarioNome: request.user!.nome,
+        acao: "RECLASSIFICACAO",
+        entidade: "classificacao",
+        entidadeId: `${competencia.data.ano}-${String(competencia.data.mes).padStart(2, "0")}`,
+        depois: data,
+      });
       return response.json({ data });
     } catch (error) {
       return responderRegra(response, error);

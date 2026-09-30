@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { estoqueService, RegraEstoqueError } from "../../services/estoque/estoqueService.js";
+import { auditar } from "../../services/auditoriaService.js";
 
 function competencia(request: Request, response: Response) {
   const c = anoMesSchema.safeParse(request.params.anoMes);
@@ -31,6 +32,10 @@ export const estoqueController = {
   async apurar(request: Request, response: Response) {
     const c = competencia(request, response);
     if (!c) return;
-    return responder(response, () => estoqueService.apurar(c.ano, c.mes));
+    return responder(response, () => (async () => {
+      const r = await estoqueService.apurar(c.ano, c.mes);
+      await auditar({ usuarioId: request.user!.sub, usuarioNome: request.user!.nome, acao: "APURACAO_PARCIAL", entidade: "competencia", entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`, metadados: { parte: "saldo de estoque" } });
+      return r;
+    })());
   },
 };

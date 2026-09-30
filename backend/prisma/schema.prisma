@@ -165,6 +165,8 @@ model UsuarioSetor {
   @@map("usuario_setores")
 }
 
+/// Log de auditoria (LogAuditoria do SPEC, Passo 23): imutável — gatilhos no
+/// banco recusam UPDATE e DELETE (migração 20260930140000_auditoria_imutavel).
 model AuditLog {
   id          String   @id @default(uuid())
   acao        String
@@ -182,6 +184,7 @@ model AuditLog {
 
   @@index([usuarioId, createdAt(sort: Desc)])
   @@index([entidade, entidadeId])
+  @@index([createdAt(sort: Desc)])
   @@map("audit_log")
 }
 

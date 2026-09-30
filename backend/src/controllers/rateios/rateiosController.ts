@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { rateiosService, RegraRateioError } from "../../services/volumes/rateiosService.js";
+import { auditar } from "../../services/auditoriaService.js";
 
 function competencia(request: Request, response: Response) {
   const c = anoMesSchema.safeParse(request.params.anoMes);
@@ -31,6 +32,10 @@ export const rateiosController = {
   async apurar(request: Request, response: Response) {
     const c = competencia(request, response);
     if (!c) return;
-    return responder(response, () => rateiosService.apurar(c.ano, c.mes));
+    return responder(response, () => (async () => {
+      const r = await rateiosService.apurar(c.ano, c.mes);
+      await auditar({ usuarioId: request.user!.sub, usuarioNome: request.user!.nome, acao: "APURACAO_PARCIAL", entidade: "competencia", entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`, metadados: { parte: "rateios" } });
+      return r;
+    })());
   },
 };

@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { BaldeAlocacao } from "../../generated/prisma/enums.js";
 import type { LancamentoManualInput } from "../../schemas/lancamentosManuais/lancamentoManualSchema.js";
+import { auditar } from "../auditoriaService.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraLancamentoManualError extends Error {
@@ -158,23 +159,30 @@ export const lancamentosManuaisService = {
       data: { competenciaId: competencia.id, criadoPor: usuarioId, ...dados(input), ...derivados },
       select: SELECAO,
     });
-    return apresentar(criado);
+    const r = apresentar(criado);
+    await auditar({ usuarioId, acao: "CRIACAO", entidade: "lancamento_manual", entidadeId: criado.id, depois: r, metadados: { competencia: rotulo(ano, mes) } });
+    return r;
   },
 
-  async atualizar(id: string, input: LancamentoManualInput) {
+  async atualizar(id: string, input: LancamentoManualInput, usuarioId: string) {
     exigirAberta(await competenciaDoLancamento(id));
+    const antes = await getPrismaClient().lancamentoManual.findUniqueOrThrow({ where: { id }, select: SELECAO });
     const derivados = await resolver(input);
     const salvo = await getPrismaClient().lancamentoManual.update({
       where: { id },
       data: { ...dados(input), ...derivados },
       select: SELECAO,
     });
-    return apresentar(salvo);
+    const r = apresentar(salvo);
+    await auditar({ usuarioId, acao: "ALTERACAO", entidade: "lancamento_manual", entidadeId: id, antes: apresentar(antes), depois: r });
+    return r;
   },
 
-  async excluir(id: string) {
+  async excluir(id: string, usuarioId: string) {
     exigirAberta(await competenciaDoLancamento(id));
+    const antes = await getPrismaClient().lancamentoManual.findUniqueOrThrow({ where: { id }, select: SELECAO });
     await getPrismaClient().lancamentoManual.delete({ where: { id } });
+    await auditar({ usuarioId, acao: "EXCLUSAO", entidade: "lancamento_manual", entidadeId: id, antes: apresentar(antes) });
   },
 
   /**
@@ -226,6 +234,13 @@ export const lancamentosManuaisService = {
           ? derivarLancamentoManual(contaResultado, centroCusto)
           : { balde: null, linhaDREId: null }),
       })),
+    });
+    await auditar({
+      usuarioId,
+      acao: "COPIA_MES_ANTERIOR",
+      entidade: "lancamento_manual",
+      entidadeId: rotulo(ano, mes),
+      metadados: { de: rotulo(anoAnt, mesAnt), para: rotulo(ano, mes), copiados: origem.length },
     });
     return { copiados: origem.length };
   },

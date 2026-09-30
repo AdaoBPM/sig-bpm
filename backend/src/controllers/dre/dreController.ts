@@ -4,6 +4,7 @@ import { z } from "zod";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { detalhamentoService } from "../../services/dre/detalhamentoService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
+import { auditar } from "../../services/auditoriaService.js";
 
 const unidadeSchema = z.coerce.number().int().min(1).max(5);
 const grupoSchema = z.string().trim().min(1).max(200).optional();
@@ -71,6 +72,10 @@ export const dreController = {
   async apurar(request: Request, response: Response) {
     const c = competencia(request, response);
     if (!c) return;
-    return responder(response, () => dreService.apurar(c.ano, c.mes, request.user!.sub));
+    return responder(response, () => (async () => {
+      const r = await dreService.apurar(c.ano, c.mes, request.user!.sub);
+      await auditar({ usuarioId: request.user!.sub, usuarioNome: request.user!.nome, acao: "APURACAO_PARCIAL", entidade: "competencia", entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`, metadados: { parte: "DRE" } });
+      return r;
+    })());
   },
 };

@@ -4,6 +4,7 @@ import type { AcaoPermissao, DepartamentoAcesso, RecursoSistema, TipoImportacao 
 import { hashSenha } from "../../lib/senha.js";
 import { ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { DEFINICOES_LISTAS } from "../importacoes/listas/definicoesListas.js";
+import { auditar } from "../auditoriaService.js";
 
 /**
  * Usuários e perfis (Passo 22). O perfil é cadastro, não código: a empresa
@@ -129,7 +130,7 @@ export const usuariosService = {
     return us.map(paraTela);
   },
 
-  async criar(d: DadosUsuario & { senha: string }) {
+  async criar(d: DadosUsuario & { senha: string }, quem: string) {
     const prisma = getPrismaClient();
     await perfilExistente(d.perfilId);
     const email = d.email.trim().toLowerCase();
@@ -147,13 +148,16 @@ export const usuariosService = {
       },
       select: selecaoUsuario,
     });
-    return paraTela(u);
+    const r = paraTela(u);
+    await auditar({ usuarioId: quem, acao: "CRIACAO", entidade: "usuario", entidadeId: u.id, depois: r, metadados: { nome: r.nome } });
+    return r;
   },
 
   async atualizar(id: string, d: DadosUsuario, quemEdita: string) {
     const prisma = getPrismaClient();
     const atual = await prisma.usuario.findUnique({ where: { id }, select: { id: true, perfilId: true } });
     if (!atual) throw new RegraUsuarioError(404, "Usuário não encontrado.");
+    const antes = paraTela(await prisma.usuario.findUniqueOrThrow({ where: { id }, select: selecaoUsuario }));
     await perfilExistente(d.perfilId);
     if (id === quemEdita && !d.ativo) throw new RegraUsuarioError(409, "Você não pode inativar o seu próprio usuário.");
     if (id === quemEdita && d.perfilId !== atual.perfilId) throw new RegraUsuarioError(409, "Você não pode trocar o seu próprio perfil.");
@@ -176,13 +180,18 @@ export const usuariosService = {
         select: selecaoUsuario,
       });
     });
-    return paraTela(u);
+    const r = paraTela(u);
+    await auditar({ usuarioId: quemEdita, acao: "ALTERACAO", entidade: "usuario", entidadeId: id, antes, depois: r, metadados: { nome: r.nome } });
+    return r;
   },
 
-  async redefinirSenha(id: string, senha: string) {
+  async redefinirSenha(id: string, senha: string, quem: string) {
     const prisma = getPrismaClient();
     if (!(await prisma.usuario.findUnique({ where: { id }, select: { id: true } }))) throw new RegraUsuarioError(404, "Usuário não encontrado.");
     await prisma.usuario.update({ where: { id }, data: { senhaHash: await hashSenha(senha) } });
+    // A senha nunca vai para o log: só o fato.
+    const nome = (await prisma.usuario.findUnique({ where: { id }, select: { nome: true } }))?.nome;
+    await auditar({ usuarioId: quem, acao: "REDEFINICAO_SENHA", entidade: "usuario", entidadeId: id, metadados: { nome } });
   },
 
   // ------------------------------------------------------------- perfis
@@ -207,7 +216,7 @@ export const usuariosService = {
     return ps.map(({ _count, ...p }) => ({ ...p, usuarios: _count.usuarios }));
   },
 
-  async criarPerfil(d: DadosPerfil & { codigo: string }) {
+  async criarPerfil(d: DadosPerfil & { codigo: string }, quem: string) {
     const prisma = getPrismaClient();
     const codigo = d.codigo.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
     if (await prisma.perfil.findUnique({ where: { codigo }, select: { id: true } })) throw new RegraUsuarioError(409, `Já existe um perfil com o código ${codigo}.`);
@@ -223,13 +232,17 @@ export const usuariosService = {
         permissoes: { create: normalizarPermissoes(d.permissoes) },
       },
     });
-    return this.listarPerfis();
+    const lista = await this.listarPerfis();
+    const criado = lista.find((p) => p.codigo === codigo);
+    await auditar({ usuarioId: quem, acao: "CRIACAO", entidade: "perfil", entidadeId: criado?.id, depois: criado, metadados: { nome: criado?.nome } });
+    return lista;
   },
 
   async atualizarPerfil(id: string, d: DadosPerfil, quemEdita: string) {
     const prisma = getPrismaClient();
     const atual = await prisma.perfil.findUnique({ where: { id }, select: { id: true } });
     if (!atual) throw new RegraUsuarioError(404, "Perfil não encontrado.");
+    const antes = (await this.listarPerfis()).find((p) => p.id === id);
     const permissoes = normalizarPermissoes(d.permissoes);
     const meu = (await prisma.usuario.findUniqueOrThrow({ where: { id: quemEdita }, select: { perfilId: true } })).perfilId === id;
     if (meu && !d.ativo) throw new RegraUsuarioError(409, "Você não pode inativar o seu próprio perfil.");
@@ -250,17 +263,21 @@ export const usuariosService = {
         },
       }),
     ]);
-    return this.listarPerfis();
+    const lista = await this.listarPerfis();
+    await auditar({ usuarioId: quemEdita, acao: "ALTERACAO", entidade: "perfil", entidadeId: id, antes, depois: lista.find((p) => p.id === id), metadados: { nome: d.nome } });
+    return lista;
   },
 
   /** Exclui um perfil que não é de sistema e não tem usuários. */
-  async excluirPerfil(id: string) {
+  async excluirPerfil(id: string, quem: string) {
     const prisma = getPrismaClient();
     const p = await prisma.perfil.findUnique({ where: { id }, select: { sistema: true, nome: true, _count: { select: { usuarios: true } } } });
     if (!p) throw new RegraUsuarioError(404, "Perfil não encontrado.");
     if (p.sistema) throw new RegraUsuarioError(409, `O perfil ${p.nome} é de sistema: pode ser inativado, mas não excluído.`);
     if (p._count.usuarios > 0) throw new RegraUsuarioError(409, `O perfil ${p.nome} tem ${p._count.usuarios} usuário(s); troque o perfil deles antes de excluir.`);
+    const antes = (await this.listarPerfis()).find((x) => x.id === id);
     await prisma.perfil.delete({ where: { id } });
+    await auditar({ usuarioId: quem, acao: "EXCLUSAO", entidade: "perfil", entidadeId: id, antes, metadados: { nome: antes?.nome } });
     return this.listarPerfis();
   },
 };

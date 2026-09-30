@@ -65,7 +65,7 @@ export const lancamentosManuaisController = {
     const b = corpo(request, response);
     if (!b) return;
     try {
-      const data = await lancamentosManuaisService.atualizar(String(request.params.id), b);
+      const data = await lancamentosManuaisService.atualizar(String(request.params.id), b, request.user!.sub);
       return response.json({ data });
     } catch (error) {
       return responderRegra(response, error);
@@ -74,7 +74,7 @@ export const lancamentosManuaisController = {
 
   async excluir(request: Request, response: Response) {
     try {
-      await lancamentosManuaisService.excluir(String(request.params.id));
+      await lancamentosManuaisService.excluir(String(request.params.id), request.user!.sub);
       return response.status(204).end();
     } catch (error) {
       return responderRegra(response, error);

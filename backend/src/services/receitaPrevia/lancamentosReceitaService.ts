@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { LINHAS_POR_UNIDADE, type LancamentoReceitaInput } from "../../schemas/receitaPrevia/receitaPreviaSchemas.js";
 import { competenciaPorAnoMes, RegraReceitaError } from "./receitaPreviaService.js";
+import { auditar } from "../auditoriaService.js";
 
 /**
  * Lançamentos manuais de receita — o que a aba Receita (Lanç. Manuais) do BASE
@@ -86,11 +87,14 @@ export const lancamentosReceitaService = {
       },
       select: SELECAO,
     });
-    return apresentar(l);
+    const r = apresentar(l);
+    await auditar({ usuarioId, acao: "CRIACAO", entidade: "lancamento_receita", entidadeId: l.id, depois: r, metadados: { competencia: `${String(mes).padStart(2, "0")}/${ano}` } });
+    return r;
   },
 
-  async atualizar(id: string, input: LancamentoReceitaInput) {
+  async atualizar(id: string, input: LancamentoReceitaInput, usuarioId: string) {
     await doLancamento(id);
+    const antes = apresentar(await getPrismaClient().lancamentoReceita.findUniqueOrThrow({ where: { id }, select: SELECAO }));
     const l = await getPrismaClient().lancamentoReceita.update({
       where: { id },
       data: {
@@ -102,11 +106,15 @@ export const lancamentosReceitaService = {
       },
       select: SELECAO,
     });
-    return apresentar(l);
+    const r = apresentar(l);
+    await auditar({ usuarioId, acao: "ALTERACAO", entidade: "lancamento_receita", entidadeId: id, antes, depois: r });
+    return r;
   },
 
-  async excluir(id: string) {
+  async excluir(id: string, usuarioId: string) {
     await doLancamento(id);
+    const antes = apresentar(await getPrismaClient().lancamentoReceita.findUniqueOrThrow({ where: { id }, select: SELECAO }));
     await getPrismaClient().lancamentoReceita.delete({ where: { id } });
+    await auditar({ usuarioId, acao: "EXCLUSAO", entidade: "lancamento_receita", entidadeId: id, antes });
   },
 };

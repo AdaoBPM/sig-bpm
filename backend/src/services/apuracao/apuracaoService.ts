@@ -5,6 +5,7 @@ import { dreService } from "../dre/dreService.js";
 import { estoqueService } from "../estoque/estoqueService.js";
 import { receitaPreviaService } from "../receitaPrevia/receitaPreviaService.js";
 import { rateiosService } from "../volumes/rateiosService.js";
+import { auditar } from "../auditoriaService.js";
 
 /**
  * Apuração congelada, fechamento e reabertura da competência (Passo 21).
@@ -200,6 +201,15 @@ export const apuracaoService = {
     } catch (e) {
       await prisma.competencia.update({ where: { id: c.id }, data: { apuradaEm: null, apuradaPor: null, entradasApuradas: Prisma.DbNull } });
       const msg = e instanceof Error ? e.message : String(e);
+      await auditar({
+        usuarioId,
+        acao: "APURACAO",
+        entidade: "competencia",
+        entidadeId: c.id,
+        antes: { status: c.status, apuradaEm: c.apuradaEm, apuracoes: c.apuracoes },
+        depois: { status: c.status, apuradaEm: null },
+        metadados: { competencia: rotulo(ano, mes), resultado: "interrompida", etapa, erro: msg },
+      });
       throw new RegraApuracaoError(409, `A apuração de ${rotulo(ano, mes)} parou na etapa "${etapa}": ${msg} A competência ficou sem apuração válida; corrija e apure de novo.`);
     }
 
@@ -215,6 +225,15 @@ export const apuracaoService = {
         ...(c.status === "ABERTA" ? { status: "EM_CONFERENCIA" as const } : {}),
       },
     });
+    await auditar({
+      usuarioId,
+      acao: "APURACAO",
+      entidade: "competencia",
+      entidadeId: c.id,
+      antes: { status: c.status, apuradaEm: c.apuradaEm, apuracoes: c.apuracoes },
+      depois: { status: c.status === "ABERTA" ? "EM_CONFERENCIA" : c.status, apuradaEm: agora, apuracoes: c.apuracoes + 1 },
+      metadados: { competencia: rotulo(ano, mes), resultado: "concluída", etapas: etapas.map((e) => e.etapa) },
+    });
     return { apuradaEm: agora, apuracoes: c.apuracoes + 1, etapas: etapas.map((e) => e.etapa), avisos: [...new Set(avisos)] };
   },
 
@@ -223,9 +242,19 @@ export const apuracaoService = {
     const s = await this.situacao(ano, mes);
     if (!s.podeFechar) throw new RegraApuracaoError(409, `A competência ${rotulo(ano, mes)} não pode ser fechada: ${s.motivosNaoFechar.join(" ")}`);
     const c = await competenciaPorAnoMes(ano, mes);
+    const fechadaEm = new Date();
     await getPrismaClient().competencia.update({
       where: { id: c.id },
-      data: { status: "FECHADA", fechadaEm: new Date(), fechadaPor: usuarioId },
+      data: { status: "FECHADA", fechadaEm, fechadaPor: usuarioId },
+    });
+    await auditar({
+      usuarioId,
+      acao: "FECHAMENTO",
+      entidade: "competencia",
+      entidadeId: c.id,
+      antes: { status: c.status, fechadaEm: null },
+      depois: { status: "FECHADA", fechadaEm },
+      metadados: { competencia: rotulo(ano, mes), apuradaEm: c.apuradaEm, apuracoes: c.apuracoes },
     });
     return this.situacao(ano, mes);
   },
@@ -246,6 +275,15 @@ export const apuracaoService = {
       }),
       prisma.competencia.update({ where: { id: c.id }, data: { status: "ABERTA", fechadaEm: null, fechadaPor: null } }),
     ]);
+    await auditar({
+      usuarioId,
+      acao: "REABERTURA",
+      entidade: "competencia",
+      entidadeId: c.id,
+      antes: { status: "FECHADA", fechadaEm: c.fechadaEm, fechadaPor: c.fechadaPor },
+      depois: { status: "ABERTA", fechadaEm: null },
+      metadados: { competencia: rotulo(ano, mes), justificativa: texto },
+    });
     return this.situacao(ano, mes);
   },
 };

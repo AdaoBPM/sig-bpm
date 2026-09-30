@@ -11,6 +11,7 @@ import { processarEstoqueInicial } from "./estoqueInicial/processarEstoqueInicia
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
+import { auditar } from "../auditoriaService.js";
 
 /**
  * Erro de regra da importação, com o status HTTP que o controller devolve.
@@ -178,15 +179,37 @@ export const importacoesService = {
       select: CAMPOS_RESUMO,
     });
 
-    enfileirar(`importação ${importacao.id}`, () =>
-      ehListaOperacional(importacao.tipo)
-        ? processarLista(importacao.id)
-        : importacao.tipo === "DRE_COMERCIAL"
-          ? processarDreComercial(importacao.id)
-          : importacao.tipo === "ESTOQUE_INICIAL"
-            ? processarEstoqueInicial(importacao.id)
-            : processarBalancete(importacao.id),
-    );
+    enfileirar(`importação ${importacao.id}`, async () => {
+      try {
+        await (ehListaOperacional(importacao.tipo)
+          ? processarLista(importacao.id)
+          : importacao.tipo === "DRE_COMERCIAL"
+            ? processarDreComercial(importacao.id)
+            : importacao.tipo === "ESTOQUE_INICIAL"
+              ? processarEstoqueInicial(importacao.id)
+              : processarBalancete(importacao.id));
+      } finally {
+        // Auditoria (Passo 23): o arquivo, o que ele substituiu e o resultado do processamento.
+        const fim = await getPrismaClient().importacao.findUnique({
+          where: { id: importacao.id },
+          select: { status: true, linhasLidas: true, linhasAceitas: true, linhasRejeitadas: true, linhasIgnoradas: true, motivoRejeicao: true },
+        });
+        const substituida = await getPrismaClient().importacao.findFirst({
+          where: { competenciaId: competencia.id, tipo: input.tipo, substituidaEm: { not: null }, id: { not: importacao.id } },
+          orderBy: { substituidaEm: "desc" },
+          select: { id: true, nomeArquivo: true, importadoEm: true },
+        });
+        await auditar({
+          usuarioId: input.usuarioId,
+          acao: "IMPORTACAO",
+          entidade: "importacao",
+          entidadeId: importacao.id,
+          antes: fim?.status === "CONCLUIDA" && substituida ? { substituiu: substituida } : undefined,
+          depois: fim,
+          metadados: { competencia: rotulo(input.ano, input.mes), tipo: input.tipo, arquivo: input.nomeArquivo, hash, forcar: !!input.forcar },
+        });
+      }
+    });
 
     return importacao;
   },

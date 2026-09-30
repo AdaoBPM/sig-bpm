@@ -83,7 +83,7 @@ export const listasController = {
     const corpo = corpoSchema.safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Dados inválidos" });
     try {
-      await listasService.atualizar(tipo, String(request.params.id), corpo.data.valores);
+      await listasService.atualizar(tipo, String(request.params.id), corpo.data.valores, request.user!.sub);
       return response.json({ data: { ok: true } });
     } catch (error) {
       return responderRegra(response, error);
@@ -94,7 +94,7 @@ export const listasController = {
     const tipo = tipoDaUrl(request, response);
     if (!tipo) return;
     try {
-      await listasService.excluir(tipo, String(request.params.id));
+      await listasService.excluir(tipo, String(request.params.id), request.user!.sub);
       return response.status(204).end();
     } catch (error) {
       return responderRegra(response, error);

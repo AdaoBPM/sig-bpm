@@ -11,6 +11,7 @@ import {
   listarRegistros,
   type RegistroBruto,
 } from "./repositorioListas.js";
+import { auditar } from "../auditoriaService.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraListaError extends Error {
@@ -161,9 +162,10 @@ export const listasService = {
       const { dados } = await prepararGravacao(tx, tipo, [registro], { competenciaId: c.id, importacaoId: null, criadoPor: usuarioId });
       await gravar(tx, tipo, dados);
     });
+    await auditar({ usuarioId, acao: "CRIACAO", entidade: "lista_operacional", entidadeId: tipo, depois: valores, metadados: { tipo, competencia: `${String(mes).padStart(2, "0")}/${ano}` } });
   },
 
-  async atualizar(tipo: TipoListaRateio, id: string, valores: Record<string, ValorCelula>) {
+  async atualizar(tipo: TipoListaRateio, id: string, valores: Record<string, ValorCelula>, usuarioId: string) {
     const r = await registroEditavel(tipo, id);
     const registro = lerOuRecusar(tipo, valores, r.competencia.ano, r.competencia.mes);
     await getPrismaClient().$transaction(async (tx) => {
@@ -179,11 +181,13 @@ export const listasService = {
       delete alteracao.importacaoId;
       await atualizarRegistro(tx, tipo, id, alteracao);
     });
+    await auditar({ usuarioId, acao: "ALTERACAO", entidade: "lista_operacional", entidadeId: id, antes: r, depois: valores, metadados: { tipo } });
   },
 
-  async excluir(tipo: TipoListaRateio, id: string) {
-    await registroEditavel(tipo, id);
+  async excluir(tipo: TipoListaRateio, id: string, usuarioId: string) {
+    const antes = await registroEditavel(tipo, id);
     await excluirRegistro(tipo, id);
+    await auditar({ usuarioId, acao: "EXCLUSAO", entidade: "lista_operacional", entidadeId: id, antes, metadados: { tipo } });
   },
 };
 

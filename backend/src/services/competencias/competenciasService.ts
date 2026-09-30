@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import type { AbrirCompetenciaInput } from "../../schemas/competencias/abrirCompetenciaSchema.js";
+import { auditar } from "../auditoriaService.js";
 
 /** Erro de regra de negócio — vira 409 no controller, não 500. */
 export class RegraCompetenciaError extends Error {}
@@ -67,6 +68,7 @@ export const competenciasService = {
       select: { id: true, ano: true, mes: true, status: true, abertaEm: true },
     });
 
+    await auditar({ usuarioId, acao: "ABERTURA", entidade: "competencia", entidadeId: criada.id, depois: criada, metadados: { competencia: `${String(criada.mes).padStart(2, "0")}/${criada.ano}` } });
     return { ...criada, nomeMes: MESES[criada.mes - 1] };
   },
 };

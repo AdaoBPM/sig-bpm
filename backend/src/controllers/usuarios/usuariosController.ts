@@ -47,7 +47,7 @@ export const usuariosController = {
   async criar(request: Request, response: Response) {
     const b = usuarioSchema.extend({ senha: novaSenhaSchema }).safeParse(request.body);
     if (!b.success) return invalido(response, b.error);
-    return responder(response, () => usuariosService.criar(b.data as never), 201);
+    return responder(response, () => usuariosService.criar(b.data as never, request.user!.sub), 201);
   },
 
   async atualizar(request: Request, response: Response) {
@@ -59,7 +59,7 @@ export const usuariosController = {
   async redefinirSenha(request: Request, response: Response) {
     const b = z.object({ senha: novaSenhaSchema }).safeParse(request.body);
     if (!b.success) return invalido(response, b.error);
-    return responder(response, () => usuariosService.redefinirSenha(String(request.params.id), b.data.senha));
+    return responder(response, () => usuariosService.redefinirSenha(String(request.params.id), b.data.senha, request.user!.sub));
   },
 
   listarPerfis: (_request: Request, response: Response) => responder(response, () => usuariosService.listarPerfis()),
@@ -67,7 +67,7 @@ export const usuariosController = {
   async criarPerfil(request: Request, response: Response) {
     const b = perfilSchema.extend({ codigo: z.string().trim().min(2).max(40) }).safeParse(request.body);
     if (!b.success) return invalido(response, b.error);
-    return responder(response, () => usuariosService.criarPerfil(b.data as never), 201);
+    return responder(response, () => usuariosService.criarPerfil(b.data as never, request.user!.sub), 201);
   },
 
   async atualizarPerfil(request: Request, response: Response) {
@@ -76,5 +76,5 @@ export const usuariosController = {
     return responder(response, () => usuariosService.atualizarPerfil(String(request.params.id), b.data as never, request.user!.sub));
   },
 
-  excluirPerfil: (request: Request, response: Response) => responder(response, () => usuariosService.excluirPerfil(String(request.params.id))),
+  excluirPerfil: (request: Request, response: Response) => responder(response, () => usuariosService.excluirPerfil(String(request.params.id), request.user!.sub)),
 };

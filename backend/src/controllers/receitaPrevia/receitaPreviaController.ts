@@ -4,6 +4,7 @@ import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { itensReceitaSchema, lancamentoReceitaSchema } from "../../schemas/receitaPrevia/receitaPreviaSchemas.js";
 import { lancamentosReceitaService } from "../../services/receitaPrevia/lancamentosReceitaService.js";
 import { receitaPreviaService, RegraReceitaError } from "../../services/receitaPrevia/receitaPreviaService.js";
+import { auditar } from "../../services/auditoriaService.js";
 
 function responderRegra(response: Response, error: unknown) {
   if (error instanceof RegraReceitaError) return response.status(error.status).json({ error: error.message });
@@ -43,7 +44,11 @@ export const receitaPreviaController = {
     const c = competencia(request, response);
     if (!c) return;
     try {
-      return response.json({ data: await receitaPreviaService.apurar(c.ano, c.mes) });
+      return response.json({ data: await (async () => {
+      const r = await receitaPreviaService.apurar(c.ano, c.mes);
+      await auditar({ usuarioId: request.user!.sub, usuarioNome: request.user!.nome, acao: "APURACAO_PARCIAL", entidade: "competencia", entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`, metadados: { parte: "receita prévia" } });
+      return r;
+    })() });
     } catch (error) {
       return responderRegra(response, error);
     }
@@ -91,7 +96,7 @@ export const receitaPreviaController = {
     const b = corpo(request, response);
     if (!b) return;
     try {
-      return response.json({ data: await lancamentosReceitaService.atualizar(String(request.params.id), b) });
+      return response.json({ data: await lancamentosReceitaService.atualizar(String(request.params.id), b, request.user!.sub) });
     } catch (error) {
       return responderRegra(response, error);
     }
@@ -99,7 +104,7 @@ export const receitaPreviaController = {
 
   async excluirLancamento(request: Request, response: Response) {
     try {
-      await lancamentosReceitaService.excluir(String(request.params.id));
+      await lancamentosReceitaService.excluir(String(request.params.id), request.user!.sub);
       return response.status(204).end();
     } catch (error) {
       return responderRegra(response, error);

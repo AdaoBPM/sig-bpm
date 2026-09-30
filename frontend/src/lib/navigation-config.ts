@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeDollarSign, Building2, CalendarDays, KeyRound, ListTree, Shuffle, Table2, Users } from "lucide-react";
+import { BadgeDollarSign, Building2, CalendarDays, History, KeyRound, ListTree, Shuffle, Table2, Users } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -32,6 +32,7 @@ export const navGrupos: NavGrupo[] = [
     itens: [
       { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ver" },
       { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "usuarios:ver" },
+      { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ver" },
     ],
   },
 ];
@@ -44,6 +45,7 @@ export const navGrupos: NavGrupo[] = [
 const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/cadastros(\/|$)/, "cadastros:ver"],
   [/^\/(usuarios|perfis)(\/|$)/, "usuarios:ver"],
+  [/^\/auditoria(\/|$)/, "auditoria:ver"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ver"],
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
   [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ver"],
@@ -67,6 +69,7 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/precos-contrato": "Preços do contrato",
   "/usuarios": "Usuários",
   "/perfis": "Perfis de usuário",
+  "/auditoria": "Auditoria",
 };
 
 export function getPageTitle(pathname: string): string {

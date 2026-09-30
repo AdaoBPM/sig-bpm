@@ -206,3 +206,13 @@ Quando a TI provisionar o servidor:
 O passo 4 merece atenção: migrações de SQLite **não** são reaproveitáveis no
 PostgreSQL. O que é reaproveitável é o `schema.prisma`, e é por isso que ele precisa
 continuar livre de recursos específicos de um conector.
+
+## Gatilhos do log de auditoria (Passo 23)
+
+A migração `20260930140000_auditoria_imutavel` cria, em SQLite, os gatilhos
+`audit_log_sem_alteracao` e `audit_log_sem_exclusao`, que recusam UPDATE e
+DELETE na tabela `audit_log` (o log é imutável — SPEC, RF011). O Prisma não
+gera gatilhos a partir do schema. Na migração para PostgreSQL, recriar como uma
+função plpgsql que levanta exceção, ligada a gatilhos `BEFORE UPDATE` e
+`BEFORE DELETE`. Opcionalmente, revogar UPDATE e DELETE da tabela para o
+usuário da aplicação.

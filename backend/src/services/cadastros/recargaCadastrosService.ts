@@ -11,6 +11,7 @@ import { compararComBanco, gravarCadastros, type Diferencas } from "./carga/apli
 import { lerPlanilhaCadastros } from "./carga/planilhaCadastros.js";
 import { prepararCadastros } from "./carga/prepararCadastros.js";
 import { gravarTabelasReceita, lerTabelasReceita } from "./carga/tabelasReceita.js";
+import { auditar } from "../auditoriaService.js";
 
 /**
  * Recarga dos cadastros a partir do SIG BPM 2026 - UNIDADES E CENTROS DE CUSTO,
@@ -83,6 +84,8 @@ export const recargaCadastrosService = {
     const preparado = preparar(conteudo);
     const prisma = getPrismaClient();
     const tabelas = lerTabelasReceita(conteudo);
+    // O que muda, para a auditoria: é a mesma comparação que a prévia mostrou.
+    const diferencas = await compararComBanco(preparado);
     const gravado = await prisma.$transaction(
       async (tx) => {
         const g = await gravarCadastros(tx, preparado);
@@ -118,6 +121,15 @@ export const recargaCadastrosService = {
     ).map((c) => `${String(c.mes).padStart(2, "0")}/${c.ano}`);
 
     logger("info", "Cadastros recarregados da planilha", { usuarioId, hash, ...gravado, reclassificadas, apuradas });
+    await auditar({
+      usuarioId,
+      acao: "RECARGA_CADASTROS",
+      entidade: "cadastros",
+      entidadeId: hash,
+      antes: { centros: resumir(diferencas.centros), contas: resumir(diferencas.contas), dre: resumir(diferencas.dre) },
+      depois: gravado,
+      metadados: { hash, reclassificadas, apuradasSemReclassificar: apuradas, avisos: preparado.avisos },
+    });
     return { ...gravado, reclassificadas, apuradasSemReclassificar: apuradas };
   },
 };
