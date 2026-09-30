@@ -67,6 +67,14 @@ model Perfil {
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
+  /// Recortes por dado, complementares à matriz de permissões (Passo 22):
+  /// com recorteSetor, o usuário só alcança as listas operacionais dos seus
+  /// setores; com recorteDepartamento, só as movimentações (lançamentos de
+  /// origem) e os centros de custo dos seus departamentos. A DRE apurada é
+  /// inteira para todos que têm a permissão DRE.
+  recorteSetor        Boolean @default(false) @map("recorte_setor")
+  recorteDepartamento Boolean @default(false) @map("recorte_departamento")
+
   /// LISTA: o que este perfil pode fazer, por recurso e ação.
   permissoes PerfilPermissao[]
   usuarios   Usuario[]
@@ -108,6 +116,9 @@ model Usuario {
   /// LISTA: quais listas operacionais este usuário pode preencher.
   /// Recorte por dado, complementar ao recorte por recurso que o perfil dá.
   setores UsuarioSetor[]
+  /// LISTA: departamentos cujas movimentações o usuário pode consultar, quando
+  /// o perfil tem recorte por departamento.
+  departamentos UsuarioDepartamento[]
 
   competenciasAbertas   Competencia[] @relation("CompetenciaAberta")
   competenciasApuradas  Competencia[] @relation("CompetenciaApurada")
@@ -122,6 +133,27 @@ model Usuario {
 ///
 /// Quais tipos de lista o Alimentador pode preencher. Reaproveita
 /// `TipoImportacao` porque o recorte de permissão é exatamente por tipo de lista.
+/// Os sete departamentos do recorte do Gestor (decisão do usuário, 30/09/2026).
+enum DepartamentoAcesso {
+  PRODUCAO
+  SERVICOS
+  LOGISTICA
+  TECNICO
+  COMERCIAL
+  ADMINISTRATIVO
+  EXTRA_OPERACIONAL
+}
+
+model UsuarioDepartamento {
+  usuarioId    String             @map("usuario_id")
+  departamento DepartamentoAcesso
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, departamento])
+  @@map("usuario_departamentos")
+}
+
 model UsuarioSetor {
   usuarioId String         @map("usuario_id")
   tipoLista TipoImportacao @map("tipo_lista")

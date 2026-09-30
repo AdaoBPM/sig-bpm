@@ -2,6 +2,8 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import type { Composicao, OrigemValor, ParcelaRateio } from "./apuracaoUnidades.js";
+import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
+import { podeVerCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
 
 /**
@@ -198,12 +200,16 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
 
 export const detalhamentoService = {
   /** O detalhamento de uma linha da DRE numa visão (unidade, consolidado ou agrupamento de centros). */
-  async detalhar(ano: number, mes: number, codigo: string, visao: Visao) {
+  async detalhar(ano: number, mes: number, codigo: string, visao: Visao, acesso: Acesso = ACESSO_TOTAL) {
     const prisma = getPrismaClient();
     const c = await prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true } });
     if (!c) throw new RegraDREError(404, `A competência ${rotulo(ano, mes)} não existe.`);
-    const linha = await prisma.linhaDRE.findUnique({ where: { codigo }, select: { id: true, codigo: true, descricao: true, tipo: true } });
+    const linha = await prisma.linhaDRE.findUnique({ where: { codigo }, select: { id: true, codigo: true, descricao: true, tipo: true, grupoSigla: true } });
     if (!linha) throw new RegraDREError(404, `A linha ${codigo} não está na estrutura da DRE.`);
+    // Recorte do Gestor (Passo 22): só as movimentações das linhas dos seus departamentos.
+    if (!podeVerMovimentos(acesso, linha)) {
+      throw new RegraDREError(403, `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
+    }
 
     let valor: Decimal | null = null;
     let regra: string | null = null;
@@ -213,8 +219,9 @@ export const detalhamentoService = {
 
     if ("grupo" in visao) {
       titulo = `Centro de custo ${visao.grupo}`;
-      const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true } });
-      const ids = centros.filter((x) => grupoDoCentro(x) === visao.grupo).map((x) => x.id);
+      const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true, departamento: true } });
+      const ids = centros.filter((x) => grupoDoCentro(x) === visao.grupo && podeVerCentro(acesso, x.departamento)).map((x) => x.id);
+      if (ids.length === 0) throw new RegraDREError(403, `O centro de custo ${visao.grupo} não é de um departamento seu.`);
       const [gravados, ls] = await Promise.all([
         prisma.resultadoApurado.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: { valor: true, composicao: true } }),
         prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: selecaoContabil }),

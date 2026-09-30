@@ -16,7 +16,6 @@ const envSchema = z
     JWT_EXPIRES_IN: z.string().default("7d"),
     REDIS_URL: z.string().optional(),
     CORS_ORIGIN: z.string().default("http://localhost:3000"),
-    ENABLE_TEMPLATE_AUTH: z.coerce.boolean().optional(),
     MSSQL_SERVER: z.string().optional(),
     MSSQL_DATABASE: z.string().optional(),
     MSSQL_USER: z.string().optional(),
@@ -47,8 +46,6 @@ const parsed = envSchema.parse(process.env);
 
 export const env = {
   ...parsed,
-  enableTemplateAuth:
-    parsed.ENABLE_TEMPLATE_AUTH ?? parsed.NODE_ENV === "development",
   enableSwagger: parsed.ENABLE_SWAGGER ?? parsed.NODE_ENV !== "production",
   enableAudit: parsed.ENABLE_AUDIT ?? true,
   totvsConfigured: Boolean(parsed.TOTVS_WSDL_URL),

@@ -163,12 +163,18 @@ Abra [http://localhost:3000](http://localhost:3000)
 Mensagens prontas: [`Docs/projeto/MENSAGENS-PRONTAS.md`](./Docs/projeto/MENSAGENS-PRONTAS.md)  
 Checklist de piloto: [`Docs/projeto/PILOTO-CHECKLIST.md`](./Docs/projeto/PILOTO-CHECKLIST.md)
 
-### Login de demonstração
+### Primeiro acesso
 
-O template inclui auth de **exemplo** para mostrar o padrão de sistemas internos:
+O login é pelos usuários do banco (Passo 22 do SPEC do SIG BPM). A carga inicial (`backend/prisma/carga-inicial.ts`) cria o usuário inicial, com o perfil Contábil:
 
-| Campo | Valor (somente dev) |
+| Campo | Valor |
 |---|---|
+| E-mail | `admin@bpm.com` |
+| Senha | `admin123` — troque no primeiro acesso, pelo menu do usuário |
+
+Os demais usuários e os perfis são cadastrados nas telas **Usuários** e **Perfis** (menu Administração).
+
+---|---|
 | E-mail | `admin@bpm.com` |
 | Senha | `admin123` |
 

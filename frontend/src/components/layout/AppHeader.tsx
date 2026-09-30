@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Settings, UserRound } from "lucide-react";
+import { KeyRound, LogOut } from "lucide-react";
 
 import {
   Avatar,
@@ -31,6 +32,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { getPageTitle } from "@/lib/navigation-config";
 
+import { TrocarSenhaDialog } from "./TrocarSenhaDialog";
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -43,6 +46,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
   const pageTitle = getPageTitle(pathname);
   const showPedidosCrumb = pathname.startsWith("/pedidos");
 
@@ -60,7 +64,7 @@ export function AppHeader() {
       <Breadcrumb className="hidden sm:block">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/dashboard" />}>
+            <BreadcrumbLink render={<Link href="/competencias" />}>
               Início
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -107,17 +111,14 @@ export function AppHeader() {
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium">{user?.nome}</span>
                   <span className="text-xs text-muted-foreground">{user?.email}</span>
+                  {user?.perfil ? <span className="text-xs text-muted-foreground">Perfil: {user.perfil.nome}</span> : null}
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <UserRound />
-              Perfil (SPEC)
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled>
-              <Settings />
-              Preferências
+            <DropdownMenuItem onClick={() => setTrocandoSenha(true)}>
+              <KeyRound />
+              Trocar senha
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => void handleLogout()}>
@@ -127,6 +128,7 @@ export function AppHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {trocandoSenha ? <TrocarSenhaDialog onFechar={() => setTrocandoSenha(false)} /> : null}
     </header>
   );
 }

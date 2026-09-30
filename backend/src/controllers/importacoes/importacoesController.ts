@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 
+import { alcancaLista } from "../../services/acesso/acesso.js";
 import {
   importacoesService,
   RegraImportacaoError,
@@ -33,6 +34,10 @@ export const importacoesController = {
         ],
       });
     }
+    // Recorte por setor (Passo 22): quem tem setores só importa as listas deles.
+    if (!alcancaLista(request.user!.acesso, parametros.data.tipo)) {
+      return response.status(403).json({ error: "Este tipo de arquivo não é de um setor seu." });
+    }
     if (!Buffer.isBuffer(request.body)) {
       return response
         .status(400)
@@ -63,7 +68,7 @@ export const importacoesController = {
         competencia.data.ano,
         competencia.data.mes,
       );
-      return response.json({ data });
+      return response.json({ data: { ...data, itens: data.itens.filter((i) => alcancaLista(request.user!.acesso, i.tipo)) } });
     } catch (error) {
       return responderRegra(response, error);
     }
@@ -72,6 +77,7 @@ export const importacoesController = {
   async detalhar(request: Request, response: Response) {
     try {
       const data = await importacoesService.detalhar(String(request.params.id));
+      if (!alcancaLista(request.user!.acesso, data.tipo)) return response.status(403).json({ error: "Esta importação não é de um setor seu." });
       return response.json({ data });
     } catch (error) {
       return responderRegra(response, error);

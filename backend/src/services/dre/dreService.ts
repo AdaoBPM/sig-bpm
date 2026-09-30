@@ -1,5 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
+import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
+import { podeVerCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { apurarUnidades, type LinhaEstrutura } from "./apuracaoUnidades.js";
 import { apurarCentros, consolidar } from "./consolidacao.js";
@@ -7,7 +9,7 @@ import { apurarCentros, consolidar } from "./consolidacao.js";
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraDREError extends Error {
   constructor(
-    readonly status: 400 | 404 | 409,
+    readonly status: 400 | 403 | 404 | 409,
     message: string,
   ) {
     super(message);
@@ -43,8 +45,12 @@ async function estrutura(): Promise<LinhaEstrutura[]> {
 
 type ValorGravado = { linhaDREId: string; valor: Prisma.Decimal; composicao: Prisma.JsonValue; apuradoEm: Date; congelado: boolean };
 
-/** As linhas da estrutura com valor gravado (e as seções), na ordem da DRE. */
-function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[]) {
+/**
+ * As linhas da estrutura com valor gravado (e as seções), na ordem da DRE.
+ * `podeDetalhar` diz se o usuário alcança as movimentações da linha (o recorte
+ * por departamento do Gestor, Passo 22): a DRE é inteira para todos.
+ */
+function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[], acesso: Acesso) {
   const porLinha = new Map(valores.map((v) => [v.linhaDREId, v]));
   return {
     apuradoEm: valores[0]?.apuradoEm ?? null,
@@ -59,6 +65,7 @@ function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[]) {
         descricao: l.descricao,
         valor: porLinha.get(l.id)?.valor.toFixed(2) ?? null,
         composicao: porLinha.get(l.id)?.composicao ?? null,
+        podeDetalhar: podeVerMovimentos(acesso, l),
       })),
   };
 }
@@ -136,7 +143,7 @@ export const dreService = {
   },
 
   /** A DRE apurada de uma unidade, na ordem da estrutura. */
-  async consultarUnidade(ano: number, mes: number, unidade: number) {
+  async consultarUnidade(ano: number, mes: number, unidade: number, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
     const [linhas, valores] = await Promise.all([
       estrutura(),
@@ -145,11 +152,11 @@ export const dreService = {
         select: { linhaDREId: true, valor: true, composicao: true, apuradoEm: true, congelado: true },
       }),
     ]);
-    return { competencia: { ano, mes, status: c.status }, unidade, ...montarLinhas(linhas, valores) };
+    return { competencia: { ano, mes, status: c.status }, unidade, ...montarLinhas(linhas, valores, acesso) };
   },
 
   /** A DRE consolidada, na ordem da estrutura. */
-  async consultarConsolidado(ano: number, mes: number) {
+  async consultarConsolidado(ano: number, mes: number, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
     const [linhas, valores] = await Promise.all([
       estrutura(),
@@ -158,14 +165,14 @@ export const dreService = {
         select: { linhaDREId: true, valor: true, composicao: true, apuradoEm: true, congelado: true },
       }),
     ]);
-    return { competencia: { ano, mes, status: c.status }, ...montarLinhas(linhas, valores) };
+    return { competencia: { ano, mes, status: c.status }, ...montarLinhas(linhas, valores, acesso) };
   },
 
   /**
    * Os agrupamentos de centros de custo com lançamento apurado no mês, com o
    * total dos lançamentos de cada um.
    */
-  async listarCentros(ano: number, mes: number) {
+  async listarCentros(ano: number, mes: number, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
     const valores = await getPrismaClient().resultadoApurado.findMany({
       where: { competenciaId: c.id, centroCustoId: { not: null }, linhaDRE: { tipo: "ITEM" } },
@@ -174,6 +181,7 @@ export const dreService = {
     const grupos = new Map<string, { departamentos: Set<string>; centros: Set<string>; total: Prisma.Decimal }>();
     for (const v of valores) {
       const cc = v.centroCusto!;
+      if (!podeVerCentro(acesso, cc.departamento)) continue; // recorte do Gestor
       const g = grupoDoCentro(cc);
       const x = grupos.get(g) ?? { departamentos: new Set<string>(), centros: new Set<string>(), total: new Prisma.Decimal(0) };
       if (cc.departamento) x.departamentos.add(cc.departamento);
@@ -191,7 +199,7 @@ export const dreService = {
   },
 
   /** A DRE de um agrupamento de centros de custo: a soma dos centros, com a parte de cada um. */
-  async consultarCentros(ano: number, mes: number, grupo: string) {
+  async consultarCentros(ano: number, mes: number, grupo: string, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
     const [linhas, valores] = await Promise.all([
       estrutura(),
@@ -202,11 +210,15 @@ export const dreService = {
           valor: true,
           apuradoEm: true,
           congelado: true,
-          centroCusto: { select: { id: true, codigoRM: true, nomeRM: true, nomeControladoria: true } },
+          centroCusto: { select: { id: true, codigoRM: true, nomeRM: true, nomeControladoria: true, departamento: true } },
         },
       }),
     ]);
-    const doGrupo = valores.filter((v) => grupoDoCentro(v.centroCusto!) === grupo);
+    // Recorte do Gestor: só os centros e as linhas dos departamentos dele.
+    const permitidas = new Set(linhas.filter((l) => podeVerMovimentos(acesso, l)).map((l) => l.id));
+    const doGrupo = valores.filter(
+      (v) => grupoDoCentro(v.centroCusto!) === grupo && podeVerCentro(acesso, v.centroCusto!.departamento) && permitidas.has(v.linhaDREId),
+    );
     if (doGrupo.length === 0) throw new RegraDREError(404, `Nenhum valor apurado para o centro de custo ${grupo} em ${rotulo(ano, mes)}.`);
     type Parte = { codigoRM: string | null; nome: string; valor: string };
     const porLinha = new Map<string, { valor: Prisma.Decimal; centros: Parte[] }>();
@@ -236,6 +248,7 @@ export const dreService = {
             descricao: l.descricao,
             valor: a?.valor.toFixed(2) ?? null,
             composicao: a && centros.size > 1 ? { regra: "Soma dos centros do agrupamento", centros: a.centros.sort(porCodigo) } : null,
+            podeDetalhar: true,
           };
         }),
     };

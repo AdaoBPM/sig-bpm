@@ -22,6 +22,8 @@ export type LinhaDRE = {
   descricao: string;
   valor: string | null;
   composicao: Composicao | null;
+  /** O usuário alcança as movimentações desta linha (recorte por departamento). */
+  podeDetalhar?: boolean;
 };
 
 export type DREUnidade = {

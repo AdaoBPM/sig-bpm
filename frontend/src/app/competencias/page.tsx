@@ -1,14 +1,12 @@
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
-import { PermissionGuard } from "@/components/shared/PermissionGuard";
 
 import { CompetenciasContent } from "./CompetenciasContent";
 
+/** A lista de competências é de todos os perfis (SPEC: "Quem visualiza: todos"); cada botão respeita a permissão da sua tela. */
 export default function CompetenciasPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="competencia:ler">
-        <CompetenciasContent />
-      </PermissionGuard>
+      <CompetenciasContent />
     </ProtectedLayout>
   );
 }

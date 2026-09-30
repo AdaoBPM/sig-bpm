@@ -6,6 +6,7 @@ import { AlertCircle, AlertTriangle, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -59,7 +60,10 @@ function erroDe(error: unknown): ErroImportacao & { status?: number } {
 }
 
 export function EnviarArquivoForm({ anoMes, onEnviado }: EnviarArquivoFormProps) {
-  const [tipo, setTipo] = useState<TipoImportacao>("BALANCETE");
+  // Recorte por setor (Passo 22): o Alimentador só importa as listas dos seus setores.
+  const { user } = useAuth();
+  const tipos = TIPOS.filter((t) => !user?.acesso.recorteSetor || user.acesso.setores.includes(t.valor));
+  const [tipo, setTipo] = useState<TipoImportacao>((tipos[0]?.valor ?? "BALANCETE") as TipoImportacao);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [envio, setEnvio] = useState(0);
   const campoArquivo = useRef<HTMLInputElement>(null);
@@ -110,7 +114,7 @@ export function EnviarArquivoForm({ anoMes, onEnviado }: EnviarArquivoFormProps)
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {TIPOS.map((t) => (
+              {tipos.map((t) => (
                 <SelectItem key={t.valor} value={t.valor} disabled={!t.disponivel}>
                   {t.rotulo}
                   {t.disponivel ? null : (

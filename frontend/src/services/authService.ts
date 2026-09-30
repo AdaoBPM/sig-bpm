@@ -1,10 +1,16 @@
 import { api } from "@/lib/api";
 
+/** Departamentos do recorte do Gestor (Passo 22). */
+export type DepartamentoAcesso = "PRODUCAO" | "SERVICOS" | "LOGISTICA" | "TECNICO" | "COMERCIAL" | "ADMINISTRATIVO" | "EXTRA_OPERACIONAL";
+
 export type AuthUser = {
   id: string;
   nome: string;
   email: string;
+  perfil: { codigo: string; nome: string };
   permissions: string[];
+  /** Recortes por dado: setores (listas) e departamentos (movimentações e centros de custo). */
+  acesso: { recorteSetor: boolean; setores: string[]; recorteDepartamento: boolean; departamentos: DepartamentoAcesso[] };
 };
 
 type LoginResponse = {
@@ -35,5 +41,10 @@ export const authService = {
   async me(): Promise<AuthUser> {
     const { data } = await api.get<MeResponse>("/auth/me");
     return data.data;
+  },
+
+  /** Troca da própria senha: exige a atual. */
+  async trocarSenha(atual: string, nova: string): Promise<void> {
+    await api.put("/proxy/auth/senha", { atual, nova });
   },
 };

@@ -47,7 +47,6 @@ DATABASE_URL=postgresql://...
 JWT_SECRET=<mínimo 32 caracteres aleatórios>
 JWT_EXPIRES_IN=7d
 CORS_ORIGIN=https://app-interna.bpm.com.br
-ENABLE_TEMPLATE_AUTH=false
 ENABLE_SWAGGER=false
 ENABLE_AUDIT=true
 ```
@@ -91,7 +90,7 @@ Internet/intranet → HTTPS → Nginx/IIS → :3000 (Next) + :3001 (Express)
 
 ## Checklist pré-deploy (TI)
 
-- [ ] `ENABLE_TEMPLATE_AUTH=false`
+- [ ] Senha do usuário inicial (`admin@bpm.com`) trocada
 - [ ] `JWT_SECRET` forte e único por ambiente
 - [ ] `ENABLE_SWAGGER=false` em prod (ou rede restrita)
 - [ ] HTTPS obrigatório

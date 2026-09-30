@@ -32,13 +32,13 @@ export const dreController = {
     if (!c) return;
     const u = unidadeSchema.safeParse(request.query.unidade ?? 1);
     if (!u.success) return response.status(400).json({ error: "Unidade inválida" });
-    return responder(response, () => dreService.consultarUnidade(c.ano, c.mes, u.data));
+    return responder(response, () => dreService.consultarUnidade(c.ano, c.mes, u.data, request.user!.acesso));
   },
 
   async consolidado(request: Request, response: Response) {
     const c = competencia(request, response);
     if (!c) return;
-    return responder(response, () => dreService.consultarConsolidado(c.ano, c.mes));
+    return responder(response, () => dreService.consultarConsolidado(c.ano, c.mes, request.user!.acesso));
   },
 
   /** Sem ?grupo, a lista dos agrupamentos de centros; com ele, a DRE do agrupamento. */
@@ -47,7 +47,7 @@ export const dreController = {
     if (!c) return;
     const g = grupoSchema.safeParse(request.query.grupo);
     if (!g.success) return response.status(400).json({ error: "Centro de custo inválido" });
-    return responder(response, () => (g.data ? dreService.consultarCentros(c.ano, c.mes, g.data) : dreService.listarCentros(c.ano, c.mes)));
+    return responder(response, () => (g.data ? dreService.consultarCentros(c.ano, c.mes, g.data, request.user!.acesso) : dreService.listarCentros(c.ano, c.mes, request.user!.acesso)));
   },
 
   /** Detalhamento de uma linha: ?linha=código e ?unidade=1..5, ?grupo=centro, ou nenhum dos dois (consolidado). */
@@ -65,7 +65,7 @@ export const dreController = {
       if (!u.success) return response.status(400).json({ error: "Unidade inválida" });
       visao = { unidade: u.data };
     }
-    return responder(response, () => detalhamentoService.detalhar(c.ano, c.mes, linha.data, visao));
+    return responder(response, () => detalhamentoService.detalhar(c.ano, c.mes, linha.data, visao, request.user!.acesso));
   },
 
   async apurar(request: Request, response: Response) {

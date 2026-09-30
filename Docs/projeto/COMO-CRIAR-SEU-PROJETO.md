@@ -189,7 +189,7 @@ Se não quiser usar Git: TI ou colega faz o push por você; você foca na conver
 | `Permission denied` no `git push` | `gh auth login` ou pedir acesso write ao repo à TI |
 | `Repository not found` (clone) | Repo privado — autenticar no GitHub |
 | Frontend sobe, backend não | Verificar `backend/.env` (rode `npm run setup`) |
-| Login não funciona | Backend rodando? `ENABLE_TEMPLATE_AUTH=true` em dev |
+| Login não funciona | Backend rodando? Banco carregado (`carga-inicial.ts` cria o usuário inicial)? |
 | Turbopack / HMR estranho | O molde usa `next dev --webpack` — normal |
 | `Cannot find module react` em `frontend/node_modules` | Apague `frontend/node_modules` e rode `npm install` **na raiz** (não dentro de `frontend/`) |
 

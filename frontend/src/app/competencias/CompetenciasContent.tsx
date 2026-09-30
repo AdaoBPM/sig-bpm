@@ -23,9 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { AbrirCompetenciaForm } from "./components/AbrirCompetenciaForm";
+
+/** As listas operacionais de rateio, na ordem da tela de listas. */
+const LISTAS_RATEIO = ["PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO"];
 import { StatusCompetenciaBadge } from "./components/StatusCompetenciaBadge";
 import {
   competenciasService,
@@ -44,6 +50,8 @@ function dataCurta(iso: string | null) {
 }
 
 export function CompetenciasContent() {
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   useRegistrarAcessoTela("/competencias");
 
   const [ano, setAno] = useState<string>(TODOS);
@@ -56,6 +64,24 @@ export function CompetenciasContent() {
 
   const itens = data?.itens ?? [];
 
+  // As telas de cada mês que o perfil do usuário alcança (Passo 22). As listas
+  // abrem na primeira lista que ele pode ver (o Alimentador, nas do seu setor).
+  const primeiraLista = user?.acesso.recorteSetor
+    ? LISTAS_RATEIO.find((t) => user.acesso.setores.includes(t))
+    : "PROJETO";
+  const etapas = [
+    { caminho: "importar", rotulo: "Importações", icone: Upload, permissao: "importacao:ver" },
+    { caminho: "classificacao", rotulo: "Classificação", icone: ListChecks, permissao: "classificacao:ver" },
+    { caminho: "lancamentos-manuais", rotulo: "Lançamentos", icone: NotebookPen, permissao: "lancamentos_manuais:ver" },
+    ...(primeiraLista
+      ? [{ caminho: `listas/${primeiraLista.toLowerCase().replace(/_/g, "-")}`, rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
+      : []),
+    { caminho: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ver" },
+    { caminho: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },
+    { caminho: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ver" },
+    { caminho: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ver" },
+  ].filter((e) => hasPermission(e.permissao));
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -67,7 +93,9 @@ export function CompetenciasContent() {
         </p>
       </div>
 
-      <AbrirCompetenciaForm />
+      <PermissionGuard permission="competencia:editar">
+        <AbrirCompetenciaForm />
+      </PermissionGuard>
 
       <div className="border border-gray-200 bg-white rounded-sm">
         <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -160,62 +188,16 @@ export function CompetenciasContent() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap justify-end gap-2">
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/importar`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <Upload className="size-3.5" />
-                      Importações
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/classificacao`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <ListChecks className="size-3.5" />
-                      Classificação
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/lancamentos-manuais`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <NotebookPen className="size-3.5" />
-                      Lançamentos
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/listas/projeto`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <Rows3 className="size-3.5" />
-                      Listas
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/receita-previa`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <Calculator className="size-3.5" />
-                      Receita
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/rateios`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <Percent className="size-3.5" />
-                      Rateios
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/estoque`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <Warehouse className="size-3.5" />
-                      Estoque
-                    </Link>
-                    <Link
-                      href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/dre`}
-                      className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                    >
-                      <FileBarChart className="size-3.5" />
-                      DRE
-                    </Link>
+                    {etapas.map((e) => (
+                      <Link
+                        key={e.rotulo}
+                        href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/${e.caminho}`}
+                        className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
+                      >
+                        <e.icone className="size-3.5" />
+                        {e.rotulo}
+                      </Link>
+                    ))}
                   </div>
                 </td>
               </tr>

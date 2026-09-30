@@ -14,6 +14,7 @@ export const cadastrosRoutes = Router();
 cadastrosRoutes.get(
   "/resumo",
   autenticacao,
+  verificarPermissao("cadastros:ler"),
   asyncHandler(cadastrosController.resumo),
 );
 
@@ -36,29 +37,34 @@ cadastrosRoutes.post(
 cadastrosRoutes.get(
   "/centros-custo",
   autenticacao,
+  verificarPermissao("cadastros:ler"),
   asyncHandler(cadastrosController.listarCentrosCusto),
 );
 
 cadastrosRoutes.get(
   "/contas-resultado",
   autenticacao,
+  verificarPermissao("cadastros:ler"),
   asyncHandler(cadastrosController.listarContasResultado),
 );
 
 cadastrosRoutes.get(
   "/reclassificacoes",
   autenticacao,
+  verificarPermissao("cadastros:ler"),
   asyncHandler(cadastrosController.listarReclassificacoes),
 );
 
 cadastrosRoutes.get(
   "/precos-contrato",
   autenticacao,
+  verificarPermissao("cadastros:ler"),
   asyncHandler(cadastrosController.listarPrecosContrato),
 );
 
 cadastrosRoutes.get(
   "/linhas-dre",
   autenticacao,
+  verificarPermissao("cadastros:ler"),
   asyncHandler(cadastrosController.listarLinhasDRE),
 );

@@ -115,6 +115,8 @@ const PERFIS: Array<{
   nome: string;
   descricao: string;
   ordem: number;
+  recorteSetor?: boolean;
+  recorteDepartamento?: boolean;
   permissoes: Array<{ recurso: RecursoSistema; acao: AcaoPermissao }>;
 }> = [
   {
@@ -129,16 +131,18 @@ const PERFIS: Array<{
     nome: "Alimentador",
     descricao: "Digita e importa as listas operacionais dos seus setores",
     ordem: 2,
-    permissoes: (["VER", "LER", "EDITAR"] as AcaoPermissao[]).map((acao) => ({
-      recurso: "LISTAS_OPERACIONAIS" as RecursoSistema,
-      acao,
-    })),
+    recorteSetor: true,
+    // A importação dele fica restrita às listas dos seus setores (recorteSetor).
+    permissoes: (["LISTAS_OPERACIONAIS", "IMPORTACAO"] as RecursoSistema[]).flatMap((recurso) =>
+      (["VER", "LER", "EDITAR"] as AcaoPermissao[]).map((acao) => ({ recurso, acao })),
+    ),
   },
   {
     codigo: "GESTAO",
     nome: "Gestão",
     descricao: "Consulta a DRE apurada, os fechamentos e as divergências",
     ordem: 3,
+    recorteDepartamento: true,
     permissoes: (["DRE", "DIVERGENCIA"] as RecursoSistema[]).flatMap((recurso) =>
       (["VER", "LER"] as AcaoPermissao[]).map((acao) => ({ recurso, acao })),
     ),
@@ -156,21 +160,26 @@ async function carregarPerfisEUsuario() {
   let perfilContabilId = "";
 
   for (const p of PERFIS) {
-    const perfil = await prisma.perfil.upsert({
-      where: { codigo: p.codigo },
-      create: {
+    // Os perfis são cadastro da empresa (tela de Perfis, Passo 22): a carga só
+    // cria os que faltam e nunca reescreve um perfil existente — senão cada
+    // recarga desfaria as permissões editadas na tela.
+    const existente = await prisma.perfil.findUnique({ where: { codigo: p.codigo }, select: { id: true } });
+    if (existente) {
+      if (p.codigo === "CONTABIL") perfilContabilId = existente.id;
+      continue;
+    }
+    const perfil = await prisma.perfil.create({
+      data: {
         codigo: p.codigo,
         nome: p.nome,
         descricao: p.descricao,
         sistema: true,
         ordem: p.ordem,
+        recorteSetor: p.recorteSetor ?? false,
+        recorteDepartamento: p.recorteDepartamento ?? false,
       },
-      update: { nome: p.nome, descricao: p.descricao, sistema: true, ordem: p.ordem },
     });
 
-    // A matriz é reescrita inteira: é pequena, e assim a carga reflete
-    // exatamente o que está declarado aqui.
-    await prisma.perfilPermissao.deleteMany({ where: { perfilId: perfil.id } });
     for (const perm of p.permissoes) {
       await prisma.perfilPermissao.create({
         data: { perfilId: perfil.id, recurso: perm.recurso, acao: perm.acao },

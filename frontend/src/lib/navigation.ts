@@ -1,4 +1,4 @@
-const DEFAULT_REDIRECT = "/dashboard";
+const DEFAULT_REDIRECT = "/competencias";
 
 /**
  * Permite apenas paths internos relativos (evita open redirect).

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
+import { alcancaLista } from "../../services/acesso/acesso.js";
 import { ehListaRateio, type TipoListaRateio } from "../../services/importacoes/listas/definicoesListas.js";
 import { listasService, RegraListaError } from "../../services/listas/listasService.js";
 
@@ -20,6 +21,11 @@ function tipoDaUrl(request: Request, response: Response): TipoListaRateio | null
   const tipo = String(request.params.tipo ?? "").toUpperCase().replace(/-/g, "_");
   if (!ehListaRateio(tipo as never)) {
     response.status(404).json({ error: "Lista desconhecida" });
+    return null;
+  }
+  // Recorte por setor (Passo 22): o Alimentador só alcança as listas dos seus setores.
+  if (!alcancaLista(request.user!.acesso, tipo)) {
+    response.status(403).json({ error: "Esta lista não é de um setor seu." });
     return null;
   }
   return tipo as TipoListaRateio;

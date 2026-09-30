@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, ChevronDown, ChevronRight, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
@@ -27,8 +28,12 @@ const VISOES: Array<{ visao: Visao; nome: string }> = [
   { visao: "centros", nome: "Centros de custo" },
 ];
 
-/** Linhas que abrem o detalhamento até os lançamentos: os itens e os impostos das unidades. */
-const detalhavel = (l: LinhaDRE) => !ehVolume(l) && (l.tipo === "ITEM" || l.descricao === "Impostos Operacionais");
+/**
+ * Linhas que abrem o detalhamento até os lançamentos: os itens e os impostos
+ * das unidades, desde que o usuário alcance as movimentações delas (o recorte
+ * do Gestor por departamento, Passo 22, que o backend informa em podeDetalhar).
+ */
+const detalhavel = (l: LinhaDRE) => !ehVolume(l) && (l.tipo === "ITEM" || l.descricao === "Impostos Operacionais") && l.podeDetalhar !== false;
 
 function Composicao({ l }: { l: LinhaDRE }) {
   const c = l.composicao;
@@ -123,6 +128,7 @@ const SemApuracao = () => (
 );
 
 function VisaoCentros({ anoMes }: { anoMes: string }) {
+  const { user } = useAuth();
   const [grupo, setGrupo] = useState<string | null>(null);
   const grupos = useQuery({ queryKey: ["dre", anoMes, "grupos"], queryFn: () => dreService.grupos(anoMes) });
   const lista = grupos.data?.grupos ?? [];
@@ -135,7 +141,15 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
 
   if (grupos.isError) return <Erro erro={grupos.error} padrao="Erro ao carregar os centros de custo." />;
   if (grupos.isPending) return <Carregando />;
-  if (lista.length === 0) return <SemApuracao />;
+  if (lista.length === 0) {
+    return user?.acesso.recorteDepartamento ? (
+      <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">
+        Nenhum centro de custo dos seus departamentos tem lançamento neste mês.
+      </div>
+    ) : (
+      <SemApuracao />
+    );
+  }
   const dados = centros.data;
   return (
     <div className="space-y-4">

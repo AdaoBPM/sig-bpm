@@ -16,3 +16,4 @@ authRoutes.post(
   asyncHandler(authController.login),
 );
 authRoutes.get("/me", autenticacao, asyncHandler(authController.me));
+authRoutes.put("/senha", autenticacao, asyncHandler(authController.trocarSenha));

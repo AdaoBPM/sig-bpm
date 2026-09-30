@@ -11,6 +11,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
@@ -24,6 +25,7 @@ const POR_PAGINA = 50;
 const quantidade = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
 export function ListaContent() {
+  const { user } = useAuth();
   const { anoMes, tipo: slug } = useParams<{ anoMes: string; tipo: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/listas/${slug}`);
   const periodo = lerAnoMes(anoMes);
@@ -104,7 +106,7 @@ export function ListaContent() {
       </div>
 
       <nav className="flex flex-wrap gap-2" aria-label="Listas">
-        {LISTAS.map((l) => (
+        {LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo)).map((l) => (
           <Link
             key={l.slug}
             href={`/competencias/${anoMes}/listas/${l.slug}`}

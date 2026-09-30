@@ -4,11 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { BpmLogo } from "@/components/layout/BpmLogo";
-import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -18,9 +16,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { navPrincipal, navReferencias } from "@/lib/navigation-config";
+import { usePermissions } from "@/context/PermissionContext";
+import { navGrupos } from "@/lib/navigation-config";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -28,22 +26,22 @@ function isActivePath(pathname: string, href: string) {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { hasPermission } = usePermissions();
+  // O menu mostra só o que o perfil do usuário alcança (Passo 22).
+  const grupos = navGrupos
+    .map((g) => ({ ...g, itens: g.itens.filter((i) => !i.permission || hasPermission(i.permission)) }))
+    .filter((g) => g.itens.length > 0);
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={<Link href="/dashboard" />}
-            >
+            <SidebarMenuButton size="lg" render={<Link href="/competencias" />}>
               <BpmLogo className="h-7 w-auto" priority />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">BPM Pré-Moldados</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">
-                  Sistema interno
-                </span>
+                <span className="truncate text-xs text-sidebar-foreground/70">SIG · Fechamento mensal</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -51,76 +49,25 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Operação</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navPrincipal.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={isActivePath(pathname, item.href)}
-                    tooltip={item.title}
-                    render={<Link href={item.href} />}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                  {item.badge ? (
-                    <SidebarMenuBadge className="bg-bpm-primary text-black">
-                      {item.badge}
-                    </SidebarMenuBadge>
-                  ) : null}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Referências</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navReferencias.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={isActivePath(pathname, item.href)}
-                    tooltip={item.title}
-                    render={<Link href={item.href} />}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {grupos.map((g) => (
+          <SidebarGroup key={g.titulo}>
+            <SidebarGroupLabel>{g.titulo}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {g.itens.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton isActive={isActivePath(pathname, item.href)} tooltip={item.title} render={<Link href={item.href} />}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                    {item.badge ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge}</SidebarMenuBadge> : null}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              className="h-auto py-2"
-              render={<Link href="/dashboard" />}
-            >
-              <div className="flex size-8 items-center justify-center rounded-md bg-bpm-primary/20">
-                <Badge variant="outline" className="border-bpm-primary/40 bg-transparent text-[10px]">
-                  DEV
-                </Badge>
-              </div>
-              <div className="grid flex-1 text-left text-xs leading-tight">
-                <span className="truncate font-medium">Template BPM</span>
-                <span className="truncate text-sidebar-foreground/60">
-                  Dados mock — substituir no SPEC
-                </span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>

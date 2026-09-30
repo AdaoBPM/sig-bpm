@@ -1,9 +1,10 @@
-import type { JwtPayload } from "../lib/jwt.js";
+import type { UsuarioAutenticado } from "../services/acesso/acesso.js";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      /** O usuário da requisição, relido do banco pelo middleware de autenticação. */
+      user?: UsuarioAutenticado;
     }
   }
 }
