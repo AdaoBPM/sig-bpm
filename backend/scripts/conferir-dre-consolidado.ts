@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 
 import { getPrismaClient } from "../src/config/prisma.js";
 import { lerAba } from "../src/lib/xlsx.js";
-import { dreService } from "../src/services/dre/dreService.js";
+import { dreService, SEM_AGRUPAMENTO } from "../src/services/dre/dreService.js";
 
 const [arquivo, anoTexto, de, ate = de] = process.argv.slice(2);
 if (!arquivo || !anoTexto || !de) {
@@ -99,7 +99,7 @@ for (let mes = Number(de); mes <= Number(ate); mes++) {
   const sistema = new Map<string, number>();
   for (const g of gravados) {
     if (!(g.composicao as { direto?: string } | null)?.direto) continue; // só as linhas com lançamento; os agregadores são somas delas
-    const grupo = n(g.centroCusto!.nomeControladoria || g.centroCusto!.nomeRM);
+    const grupo = n(g.centroCusto!.nomeControladoria || SEM_AGRUPAMENTO);
     const k = `${grupo}|${n(g.linhaDRE.grupo)}|${n(g.linhaDRE.atribuicao)}|${n(g.linhaDRE.descricao)}`;
     sistema.set(k, (sistema.get(k) ?? 0) + Number(g.valor));
   }

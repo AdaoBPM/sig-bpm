@@ -140,7 +140,7 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
         </select>
         <p className="text-xs text-gray-500">
           Os lançamentos contábeis dos centros, diretos e de rateio, em todas as filiais, pela linha da DRE em que foram
-          classificados — antes do rateio. Os centros são agrupados pelo nome da controladoria.
+          classificados — antes do rateio. Os centros são agrupados pela coluna CENTRO DE CUSTO (CONTROLADORIA) do cadastro.
         </p>
       </div>
       {dados && dados.centros.length > 0 ? (

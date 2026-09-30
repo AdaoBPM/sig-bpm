@@ -63,8 +63,13 @@ function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[]) {
   };
 }
 
-/** Agrupamento do centro na visão por centro de custo: o nome da controladoria, ou o do RM. */
-const grupoDoCentro = (cc: { nomeRM: string; nomeControladoria: string | null }) => (cc.nomeControladoria?.trim() || cc.nomeRM).trim();
+/**
+ * Agrupamento do centro na visão por centro de custo: a coluna CENTRO DE CUSTO
+ * (CONTROLADORIA) do cadastro (decisão do usuário de 30/09/2026). O centro é
+ * achado pelo código RM; sem essa coluna preenchida, fica num grupo à parte.
+ */
+export const SEM_AGRUPAMENTO = "(sem centro de custo da controladoria)";
+const grupoDoCentro = (cc: { nomeControladoria: string | null }) => cc.nomeControladoria?.trim() || SEM_AGRUPAMENTO;
 
 export const dreService = {
   /**

@@ -42,8 +42,6 @@ export const AJUSTES_CONTA: AjusteConta[] = [
  */
 export const CENTRO_CUSTO_DESCARTAR: Array<{ codigo: string; nomeRM: string; motivo: string }> = [
   { codigo: "1.01.00000004", nomeRM: "CONTROLADORIA", motivo: "nome antigo; vale CONTABILIDADE E CONTROLADORIA" },
-  { codigo: "1.15.00000008", nomeRM: "MANUTENCAO PREDIAL FILIAL (ADMINISTRATIVO / REFEITORIO)", motivo: "nome antigo; vale PREDIAL (FOR)" },
-  { codigo: "1.15.00000008", nomeRM: "MANUTENCAO PREDIAL/PATIO FILIAL (FABRICA)", motivo: "nome antigo; vale PREDIAL (FOR)" },
   {
     codigo: "1.96.00000012",
     nomeRM: "BPM",
