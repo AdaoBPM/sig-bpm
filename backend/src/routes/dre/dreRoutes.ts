@@ -11,4 +11,5 @@ dreRoutes.get("/", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.c
 dreRoutes.get("/consolidado", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.consolidado));
 dreRoutes.get("/centros", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.centros));
 dreRoutes.get("/detalhe", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.detalhe));
+dreRoutes.get("/exportar", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.exportar));
 dreRoutes.post("/apurar", autenticacao, verificarPermissao("apuracao:editar"), asyncHandler(c.apurar));

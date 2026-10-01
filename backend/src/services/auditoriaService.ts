@@ -49,6 +49,7 @@ export const ROTULO_ACAO: Record<string, string> = {
   COPIA_MES_ANTERIOR: "Cópia do mês anterior",
   JUSTIFICATIVA: "Divergência justificada",
   RESOLUCAO: "Divergência resolvida",
+  EXPORTACAO: "Exportação da DRE",
 };
 
 /** Entidades registradas, com o rótulo da tela de consulta. */

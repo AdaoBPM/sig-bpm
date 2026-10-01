@@ -4,6 +4,7 @@ import { z } from "zod";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { detalhamentoService } from "../../services/dre/detalhamentoService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
+import { exportacaoService, type VisaoExportacao } from "../../services/dre/exportacaoService.js";
 import { auditar } from "../../services/auditoriaService.js";
 
 const unidadeSchema = z.coerce.number().int().min(1).max(5);
@@ -77,5 +78,44 @@ export const dreController = {
       await auditar({ usuarioId: request.user!.sub, usuarioNome: request.user!.nome, acao: "APURACAO_PARCIAL", entidade: "competencia", entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`, metadados: { parte: "DRE" } });
       return r;
     })());
+  },
+
+  /**
+   * A DRE apurada em Excel ou PDF (Passo 26): ?formato=xlsx|pdf e ?visao=
+   * consolidado, todas ou 1..5, ou ?grupo= para um agrupamento de centros.
+   */
+  async exportar(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    const formato = z.enum(["xlsx", "pdf"]).safeParse(request.query.formato);
+    if (!formato.success) return response.status(400).json({ error: "Formato inválido: use xlsx ou pdf." });
+    const g = grupoSchema.safeParse(request.query.grupo);
+    if (!g.success) return response.status(400).json({ error: "Centro de custo inválido" });
+    let visao: VisaoExportacao;
+    const v = String(request.query.visao ?? "consolidado");
+    if (g.data) visao = { tipo: "centros", grupo: g.data };
+    else if (v === "consolidado" || v === "todas") visao = { tipo: v };
+    else {
+      const u = unidadeSchema.safeParse(v);
+      if (!u.success) return response.status(400).json({ error: "Visão inválida: use consolidado, todas ou a unidade (1 a 5)." });
+      visao = { tipo: "unidade", unidade: u.data };
+    }
+    try {
+      const r = await exportacaoService.exportar(c.ano, c.mes, visao, formato.data, request.user!.nome, request.user!.acesso);
+      await auditar({
+        usuarioId: request.user!.sub,
+        usuarioNome: request.user!.nome,
+        acao: "EXPORTACAO",
+        entidade: "competencia",
+        entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`,
+        metadados: { formato: formato.data, visoes: r.visoes, arquivo: r.nomeArquivo },
+      });
+      response.setHeader("Content-Type", r.tipo);
+      response.setHeader("Content-Disposition", `attachment; filename="${r.nomeArquivo.normalize("NFD").replace(/[^\x20-\x7e]/g, "")}"; filename*=UTF-8''${encodeURIComponent(r.nomeArquivo)}`);
+      return response.send(Buffer.from(r.conteudo));
+    } catch (error) {
+      if (error instanceof RegraDREError) return response.status(error.status).json({ error: error.message });
+      throw error;
+    }
   },
 };

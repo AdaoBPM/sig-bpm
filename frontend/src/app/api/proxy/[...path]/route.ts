@@ -68,12 +68,13 @@ async function proxyRequest(
       return new NextResponse(null, { status: response.status });
     }
     const contentType = response.headers.get("content-type") ?? "application/json";
-    const data = await response.text();
+    // Bytes, não texto: a exportação da DRE (Excel e PDF) é binária.
+    const data = await response.arrayBuffer();
+    const headers: Record<string, string> = { "Content-Type": contentType };
+    const disposicao = response.headers.get("content-disposition");
+    if (disposicao) headers["Content-Disposition"] = disposicao;
 
-    return new NextResponse(data, {
-      status: response.status,
-      headers: { "Content-Type": contentType },
-    });
+    return new NextResponse(data, { status: response.status, headers });
   } catch {
     return NextResponse.json(
       { error: "Não foi possível conectar ao backend" },

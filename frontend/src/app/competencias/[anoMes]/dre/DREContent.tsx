@@ -13,6 +13,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
+import { ExportarDRE } from "./components/ExportarDRE";
 import { PainelApuracao } from "./components/PainelApuracao";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
@@ -157,14 +158,17 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
         <label htmlFor="dre-grupo" className="text-sm font-medium text-gray-900">
           Centro de custo
         </label>
-        <select id="dre-grupo" value={escolhido ?? ""} onChange={(e) => setGrupo(e.target.value)} className={selectClasse}>
-          {lista.map((g) => (
-            <option key={g.grupo} value={g.grupo}>
-              {g.grupo} — {moeda(g.total)}
-              {g.centros > 1 ? ` (${g.centros} centros)` : ""}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select id="dre-grupo" value={escolhido ?? ""} onChange={(e) => setGrupo(e.target.value)} className={selectClasse}>
+            {lista.map((g) => (
+              <option key={g.grupo} value={g.grupo}>
+                {g.grupo} — {moeda(g.total)}
+                {g.centros > 1 ? ` (${g.centros} centros)` : ""}
+              </option>
+            ))}
+          </select>
+          {escolhido && grupos.data?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={{ grupo: escolhido }} /> : null}
+        </div>
         <p className="text-xs text-gray-500">
           Os lançamentos contábeis dos centros, diretos e de rateio, em todas as filiais, pela linha da DRE em que foram
           classificados — antes do rateio. Os centros são agrupados pela coluna CENTRO DE CUSTO (CONTROLADORIA) do cadastro.
@@ -238,7 +242,7 @@ export function DREContent() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {VISOES.map((v) => (
           <button
             key={String(v.visao)}
@@ -249,6 +253,11 @@ export function DREContent() {
             {v.nome}
           </button>
         ))}
+        {visao !== "centros" && cabecalho?.apuradoEm ? (
+          <div className="ml-auto">
+            <ExportarDRE anoMes={anoMes} visao={visao} />
+          </div>
+        ) : null}
       </div>
 
       <PainelApuracao anoMes={anoMes} onAvisos={setAvisos} />
