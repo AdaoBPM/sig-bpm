@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { getPrismaClient } from "../../config/prisma.js";
 import type { ValorCelula } from "../../lib/xlsx.js";
 import { DEFINICOES_LISTAS, type TipoListaRateio } from "../importacoes/listas/definicoesListas.js";
@@ -8,6 +10,7 @@ import {
   atualizarRegistro,
   buscarRegistro,
   excluirRegistro,
+  lerRegistroCompleto,
   listarRegistros,
   type RegistroBruto,
 } from "./repositorioListas.js";
@@ -158,15 +161,19 @@ export const listasService = {
     const c = await competencia(ano, mes);
     exigirAberta(c);
     const registro = lerOuRecusar(tipo, valores, ano, mes);
+    // O id é dado aqui (createMany não o devolve), para o log apontar o registro criado.
+    const id = randomUUID();
     await getPrismaClient().$transaction(async (tx) => {
       const { dados } = await prepararGravacao(tx, tipo, [registro], { competenciaId: c.id, importacaoId: null, criadoPor: usuarioId });
+      (dados[0] as Record<string, unknown>).id = id;
       await gravar(tx, tipo, dados);
     });
-    await auditar({ usuarioId, acao: "CRIACAO", entidade: "lista_operacional", entidadeId: tipo, depois: valores, metadados: { tipo, competencia: `${String(mes).padStart(2, "0")}/${ano}` } });
+    await auditar({ usuarioId, acao: "CRIACAO", entidade: "lista_operacional", entidadeId: id, depois: await lerRegistroCompleto(tipo, id), metadados: { tipo, competencia: `${String(mes).padStart(2, "0")}/${ano}` } });
   },
 
   async atualizar(tipo: TipoListaRateio, id: string, valores: Record<string, ValorCelula>, usuarioId: string) {
     const r = await registroEditavel(tipo, id);
+    const antes = await lerRegistroCompleto(tipo, id);
     const registro = lerOuRecusar(tipo, valores, r.competencia.ano, r.competencia.mes);
     await getPrismaClient().$transaction(async (tx) => {
       const { dados } = await prepararGravacao(tx, tipo, [registro], {
@@ -181,11 +188,12 @@ export const listasService = {
       delete alteracao.importacaoId;
       await atualizarRegistro(tx, tipo, id, alteracao);
     });
-    await auditar({ usuarioId, acao: "ALTERACAO", entidade: "lista_operacional", entidadeId: id, antes: r, depois: valores, metadados: { tipo } });
+    await auditar({ usuarioId, acao: "ALTERACAO", entidade: "lista_operacional", entidadeId: id, antes, depois: await lerRegistroCompleto(tipo, id), metadados: { tipo } });
   },
 
   async excluir(tipo: TipoListaRateio, id: string, usuarioId: string) {
-    const antes = await registroEditavel(tipo, id);
+    await registroEditavel(tipo, id);
+    const antes = await lerRegistroCompleto(tipo, id);
     await excluirRegistro(tipo, id);
     await auditar({ usuarioId, acao: "EXCLUSAO", entidade: "lista_operacional", entidadeId: id, antes, metadados: { tipo } });
   },

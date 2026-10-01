@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { edicaoService, mensagemDeErro, textoDoEfeito, type Campo, type DefinicaoCadastro, type Registro } from "../services/edicaoService";
 
@@ -96,8 +97,7 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
   const concluir = (msg: string, efeito?: { reclassificadas: string[]; apuradasPorReapurar: string[] }) => {
     const extra = efeito ? textoDoEfeito(efeito) : "";
     toast.success(`${msg}${extra ? ` ${extra}` : ""}`);
-    queryClient.invalidateQueries({ queryKey: ["cadastros"] });
-    queryClient.invalidateQueries({ queryKey: ["edicao", entidade] });
+    atualizarCompetencia(queryClient);
     onFechar();
   };
   const salvar = useMutation({

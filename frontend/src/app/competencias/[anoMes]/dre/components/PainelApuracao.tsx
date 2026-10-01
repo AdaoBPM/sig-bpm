@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/context/AuthContext";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { StatusCompetenciaBadge } from "../../../components/StatusCompetenciaBadge";
 import { apuracaoService } from "../../../services/apuracaoService";
@@ -25,14 +27,15 @@ const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font
  */
 export function PainelApuracao({ anoMes, onAvisos }: Props) {
   const queryClient = useQueryClient();
+  const { refresh } = useAuth();
   const [dialogo, setDialogo] = useState<"fechar" | "reabrir" | null>(null);
   const [justificativa, setJustificativa] = useState("");
   const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
 
   // A apuração refaz a classificação, o estoque, a receita, os rateios e a DRE: tudo do mês se atualiza.
   const atualizar = () => {
-    queryClient.invalidateQueries({ predicate: (q) => q.queryKey.includes(anoMes) });
-    queryClient.invalidateQueries({ queryKey: ["competencias"] });
+    atualizarCompetencia(queryClient, anoMes);
+    void refresh(); // as divergências de preço resolvidas saem do aviso
   };
   const apurar = useMutation({
     mutationFn: () => apuracaoService.apurar(anoMes),
@@ -64,6 +67,13 @@ export function PainelApuracao({ anoMes, onAvisos }: Props) {
   });
 
   const s = situacao.data;
+  if (situacao.isError) {
+    return (
+      <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {mensagemDeErro(situacao.error, "Não foi possível carregar a situação da apuração.")}
+      </div>
+    );
+  }
   if (!s) return <div className="h-24 animate-pulse rounded-sm bg-gray-100" />;
   const fechada = s.competencia.status === "FECHADA";
 

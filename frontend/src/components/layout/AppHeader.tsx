@@ -48,7 +48,6 @@ export function AppHeader() {
   const { user, logout } = useAuth();
   const [trocandoSenha, setTrocandoSenha] = useState(false);
   const pageTitle = getPageTitle(pathname);
-  const showPedidosCrumb = pathname.startsWith("/pedidos");
 
   async function handleLogout() {
     await logout();
@@ -68,16 +67,6 @@ export function AppHeader() {
               Início
             </BreadcrumbLink>
           </BreadcrumbItem>
-          {showPedidosCrumb ? (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink render={<Link href="/pedidos/listagem" />}>
-                  Pedidos
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </>
-          ) : null}
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>{pageTitle}</BreadcrumbPage>

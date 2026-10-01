@@ -69,7 +69,8 @@ export const recargaCadastrosService = {
       contas: resumir(diferencas.contas),
       dre: resumir(diferencas.dre),
       semDestino: preparado.semDestino,
-      avisos: preparado.avisos,
+      avisos: [...diferencas.bloqueios.map((b) => ({ origem: "estrutura da DRE", chave: "bloqueio", motivo: `${b} A recarga será recusada.` })), ...preparado.avisos],
+      bloqueios: diferencas.bloqueios,
       ajustesObsoletos: obsoletos.map((o) => o.descricao),
     };
   },
@@ -86,6 +87,7 @@ export const recargaCadastrosService = {
     const tabelas = lerTabelasReceita(conteudo);
     // O que muda, para a auditoria: é a mesma comparação que a prévia mostrou.
     const diferencas = await compararComBanco(preparado);
+    if (diferencas.bloqueios.length) throw new RecargaInvalida(diferencas.bloqueios.join(" "));
     const gravado = await prisma.$transaction(
       async (tx) => {
         const g = await gravarCadastros(tx, preparado);

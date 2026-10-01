@@ -978,7 +978,7 @@ model LancamentoContabil {
 
   competencia    Competencia    @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   importacao     Importacao     @relation(fields: [importacaoId], references: [id])
-  centroCusto    CentroCusto?   @relation(fields: [centroCustoId], references: [id])
+  centroCusto    CentroCusto?   @relation(fields: [centroCustoId], references: [id], onDelete: Restrict)
   contaResultado ContaResultado @relation(fields: [contaResultadoId], references: [id])
   contaAdotada   ContaResultado? @relation("ContaAdotada", fields: [contaAdotadaId], references: [id])
   linhaDRE       LinhaDRE?      @relation(fields: [linhaDREId], references: [id])
@@ -1015,7 +1015,7 @@ model LancamentoManual {
   atualizadoEm     DateTime     @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
-  centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id])
+  centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id], onDelete: Restrict)
   contaResultado ContaResultado? @relation(fields: [contaResultadoId], references: [id])
   linhaDRE       LinhaDRE?       @relation(fields: [linhaDREId], references: [id])
 
@@ -1091,6 +1091,8 @@ model Projeto {
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1123,6 +1125,8 @@ model Producao {
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1149,6 +1153,8 @@ model ProducaoPista {
   unidadeMedida    UnidadeMedida @default(PISTA) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1176,6 +1182,8 @@ model ProducaoArmadura {
   unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1201,6 +1209,8 @@ model ProducaoMetalurgia {
   unidadeMedida    UnidadeMedida @default(KG) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1235,6 +1245,8 @@ model Expedicao {
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1263,6 +1275,8 @@ model Montagem {
   unidadeMedida    UnidadeMedida @default(M3) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1291,6 +1305,8 @@ model Acompanhamento {
   unidadeMedida    UnidadeMedida @default(DIA) @map("unidade_medida")
   criadoPor        String?       @map("criado_por")
   criadoEm         DateTime      @default(now()) @map("criado_em")
+  /// Última alteração do registro (digitado): entra no retrato das entradas da apuração.
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
@@ -1525,7 +1541,7 @@ model ResultadoApurado {
 
   competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   unidadeNegocio UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id])
-  centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id])
+  centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id], onDelete: Restrict)
   linhaDRE       LinhaDRE        @relation(fields: [linhaDREId], references: [id])
 
   @@unique([competenciaId, unidadeNegocioId, centroCustoId, linhaDREId])

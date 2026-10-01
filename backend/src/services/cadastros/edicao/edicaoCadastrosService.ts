@@ -14,7 +14,7 @@ import { apresentar, DEFINICOES, RegraCadastroError, type DefinicaoCadastro, typ
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 
 function definicao(entidade: string): DefinicaoCadastro {
-  const d = DEFINICOES[entidade];
+  const d = Object.hasOwn(DEFINICOES, entidade) ? DEFINICOES[entidade] : undefined;
   if (!d) throw new RegraCadastroError(404, `Cadastro ${entidade} desconhecido.`);
   return d;
 }

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/context/PermissionContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { lerNumero } from "@/lib/numero";
 
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
@@ -24,8 +25,8 @@ const GRUPOS_DE_VOLUME = new Set(["PRODUÇÃO (P)", "SERVIÇOS (S)"]);
 const volume = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 const valor = (l: { grupo: string }, v: string | number | null) => (v === null ? "—" : GRUPOS_DE_VOLUME.has(l.grupo) ? volume(Number(v)) : moeda(v));
 const lerLimite = (t: string) => {
-  const n = Number(t.replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  const n = lerNumero(t);
+  return n !== null && n >= 0 ? n : null;
 };
 
 function EnviarPlanilha({ anoMes, coluna }: { anoMes: string; coluna: string }) {

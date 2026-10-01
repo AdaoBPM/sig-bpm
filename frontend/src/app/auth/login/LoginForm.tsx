@@ -47,7 +47,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm border-black/10 shadow-lg">
+    <Card className="w-full max-w-sm border-black/10 shadow-sm">
       <CardHeader className="items-center text-center">
         <BpmLogo className="h-10 w-auto" priority />
         <CardTitle className="text-2xl">Entrar</CardTitle>

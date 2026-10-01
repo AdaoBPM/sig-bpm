@@ -60,6 +60,31 @@ const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [
 ];
 const DEPARTAMENTOS = Object.keys(ROTULO_DEPARTAMENTO) as DepartamentoAcesso[];
 
+/** Setores são as listas operacionais: balancete, DRE do Comercial e saldo inicial não são de setor. */
+function exigirSetores(setores: TipoImportacao[]) {
+  const validos = new Set(SETORES.map((s) => s.tipo));
+  const fora = setores.filter((s) => !validos.has(s));
+  if (fora.length) throw new RegraUsuarioError(400, `Setor inválido: ${fora.join(", ")}. Os setores são as listas operacionais.`);
+}
+
+/**
+ * O recorte por departamento (Gestor) vale na DRE, nos centros de custo e nas
+ * divergências. As telas de classificação, lançamentos manuais, apuração e
+ * auditoria mostram lançamentos de todos os departamentos: um perfil com recorte
+ * não pode lê-las, senão o recorte seria contornado.
+ */
+const SEM_RECORTE_DE_DEPARTAMENTO: RecursoSistema[] = ["CLASSIFICACAO", "LANCAMENTOS_MANUAIS", "APURACAO", "AUDITORIA"];
+function exigirCoerencia(recorteDepartamento: boolean, permissoes: Permissao[]) {
+  if (!recorteDepartamento) return;
+  const conflito = [...new Set(permissoes.filter((p) => p.acao !== "VER" && SEM_RECORTE_DE_DEPARTAMENTO.includes(p.recurso)).map((p) => ROTULO_RECURSO[p.recurso] ?? p.recurso))];
+  if (conflito.length) {
+    throw new RegraUsuarioError(
+      400,
+      `Perfil com recorte por departamento não pode ler ${conflito.join(", ")}: essas telas mostram lançamentos de todos os departamentos.`,
+    );
+  }
+}
+
 export type Permissao = { recurso: RecursoSistema; acao: AcaoPermissao };
 export type DadosUsuario = {
   nome: string;
@@ -131,6 +156,7 @@ export const usuariosService = {
   },
 
   async criar(d: DadosUsuario & { senha: string }, quem: string) {
+    exigirSetores(d.setores);
     const prisma = getPrismaClient();
     await perfilExistente(d.perfilId);
     const email = d.email.trim().toLowerCase();
@@ -154,6 +180,7 @@ export const usuariosService = {
   },
 
   async atualizar(id: string, d: DadosUsuario, quemEdita: string) {
+    exigirSetores(d.setores);
     const prisma = getPrismaClient();
     const atual = await prisma.usuario.findUnique({ where: { id }, select: { id: true, perfilId: true } });
     if (!atual) throw new RegraUsuarioError(404, "Usuário não encontrado.");
@@ -217,6 +244,7 @@ export const usuariosService = {
   },
 
   async criarPerfil(d: DadosPerfil & { codigo: string }, quem: string) {
+    exigirCoerencia(d.recorteDepartamento, normalizarPermissoes(d.permissoes));
     const prisma = getPrismaClient();
     const codigo = d.codigo.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
     if (await prisma.perfil.findUnique({ where: { codigo }, select: { id: true } })) throw new RegraUsuarioError(409, `Já existe um perfil com o código ${codigo}.`);
@@ -239,6 +267,7 @@ export const usuariosService = {
   },
 
   async atualizarPerfil(id: string, d: DadosPerfil, quemEdita: string) {
+    exigirCoerencia(d.recorteDepartamento, normalizarPermissoes(d.permissoes));
     const prisma = getPrismaClient();
     const atual = await prisma.perfil.findUnique({ where: { id }, select: { id: true } });
     if (!atual) throw new RegraUsuarioError(404, "Perfil não encontrado.");

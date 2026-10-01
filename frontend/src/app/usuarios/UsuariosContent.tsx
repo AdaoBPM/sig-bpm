@@ -36,7 +36,7 @@ function RedefinirSenhaDialog({ usuario, onFechar }: { usuario: Usuario; onFecha
             Nova senha de {usuario.nome} ({usuario.email}). Passe a ele por um canal seguro; ele pode trocá-la depois, no menu do usuário.
           </DialogDescription>
         </DialogHeader>
-        <Input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="ao menos 8 caracteres" className="rounded-sm" />
+        <Input type="password" aria-label="Nova senha" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="ao menos 8 caracteres" className="rounded-sm" />
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar

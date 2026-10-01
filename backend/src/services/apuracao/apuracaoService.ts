@@ -60,14 +60,14 @@ async function retratoEntradas(competenciaId: string): Promise<Retrato> {
     prisma.lancamentoManual.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
     prisma.lancamentoReceita.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
     prisma.importacao.findMany({ where: { ...where, status: "CONCLUIDA", substituidaEm: null, comparacao: false }, select: { id: true }, orderBy: { id: "asc" } }),
-    prisma.projeto.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.producao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.producaoPista.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.producaoArmadura.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.producaoMetalurgia.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.expedicao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.montagem.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
-    prisma.acompanhamento.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
+    prisma.projeto.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.producao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.producaoPista.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.producaoArmadura.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.producaoMetalurgia.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.expedicao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.montagem.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
+    prisma.acompanhamento.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
     prisma.medicao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
     prisma.devolucao.aggregate({ where, _count: true, _sum: { valor: true }, _max: { criadoEm: true } }),
     prisma.saida.aggregate({ where, _count: true, _sum: { valor: true }, _max: { criadoEm: true } }),
@@ -79,11 +79,26 @@ async function retratoEntradas(competenciaId: string): Promise<Retrato> {
     receita: { rotulo: "lançamentos de receita", n: receita._count, soma: q(receita._sum.valor), ultima: d(receita._max.atualizadoEm) },
     importacoes: { rotulo: "importações", n: importacoes.length, soma: importacoes.map((i) => i.id).join(",") },
   };
+  // As listas de rateio guardam a última alteração (um registro digitado pode
+  // mudar de unidade ou de etapa sem mudar a soma); as demais, só a criação.
   listas.forEach((a, i) => {
     const s = a._sum as { quantidade?: Prisma.Decimal | null; valor?: Prisma.Decimal | null };
-    r[`lista${i}`] = { rotulo: `lista de ${NOMES[i]}`, n: a._count, soma: q(s.quantidade ?? s.valor), ultima: d(a._max.criadoEm) };
+    const m = a._max as { atualizadoEm?: Date | null; criadoEm?: Date | null };
+    r[`lista${i}`] = { rotulo: `lista de ${NOMES[i]}`, n: a._count, soma: q(s.quantidade ?? s.valor), ultima: d(m.atualizadoEm ?? m.criadoEm) };
   });
   return r;
+}
+
+/**
+ * Competências com apuração em andamento neste processo. Apurar, fechar e
+ * reabrir a mesma competência ao mesmo tempo misturaria os retratos: um
+ * fechamento no meio da reapuração, ou duas apurações intercaladas.
+ */
+const emApuracao = new Set<string>();
+function exigirLivre(ano: number, mes: number) {
+  if (emApuracao.has(`${ano}-${mes}`)) {
+    throw new RegraApuracaoError(409, `A competência ${rotulo(ano, mes)} está sendo apurada agora. Espere terminar e tente de novo.`);
+  }
 }
 
 /** O que mudou nas entradas desde a apuração, em frases. */
@@ -175,7 +190,22 @@ export const apuracaoService = {
     const prisma = getPrismaClient();
     const c = await competenciaPorAnoMes(ano, mes);
     if (c.status === "FECHADA") throw new RegraApuracaoError(409, `A competência ${rotulo(ano, mes)} está fechada. Reapurar exige reabri-la.`);
+    exigirLivre(ano, mes);
+    emApuracao.add(`${ano}-${mes}`);
+    try {
+      return await this.apurarSemTrava(c, ano, mes, usuarioId);
+    } finally {
+      emApuracao.delete(`${ano}-${mes}`);
+    }
+  },
 
+  /** A apuração em si: chamada só por apurar(), com a trava da competência. */
+  async apurarSemTrava(c: Awaited<ReturnType<typeof competenciaPorAnoMes>>, ano: number, mes: number, usuarioId: string) {
+    const prisma = getPrismaClient();
+    // O retrato das entradas é o do início: o que chegar durante a apuração (uma
+    // lista que termina de importar na fila) não entrou no cálculo e tem de
+    // aparecer como mudança depois dela.
+    const retrato = await retratoEntradas(c.id);
     await congelar(c.id, false);
     const etapas: Array<{ etapa: string; resumo: unknown }> = [];
     const avisos: string[] = [];
@@ -222,7 +252,7 @@ export const apuracaoService = {
         apuradaEm: agora,
         apuradaPor: usuarioId,
         apuracoes: { increment: 1 },
-        entradasApuradas: (await retratoEntradas(c.id)) as Prisma.InputJsonValue,
+        entradasApuradas: retrato as Prisma.InputJsonValue,
         ...(c.status === "ABERTA" ? { status: "EM_CONFERENCIA" as const } : {}),
       },
     });
@@ -242,6 +272,7 @@ export const apuracaoService = {
 
   /** Fecha a competência: exige apuração em dia e nenhuma pendência de classificação. */
   async fechar(ano: number, mes: number, usuarioId: string) {
+    exigirLivre(ano, mes);
     const s = await this.situacao(ano, mes);
     if (!s.podeFechar) throw new RegraApuracaoError(409, `A competência ${rotulo(ano, mes)} não pode ser fechada: ${s.motivosNaoFechar.join(" ")}`);
     const c = await competenciaPorAnoMes(ano, mes);

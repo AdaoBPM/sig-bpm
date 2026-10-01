@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { textoParaDecimal } from "@/lib/numero";
 
 import {
   lancamentosManuaisService,
@@ -122,8 +124,8 @@ export function LancamentoManualDialog({ anoMes, opcoes, editando, aberto, onFec
         centroCustoId: centroId || null,
         contaResultadoId: conta?.id ?? "",
         descricao,
-        // "3.832,50" é o formato brasileiro; "3832.5" fica como está.
-        valor: valor.includes(",") ? valor.trim().replace(/\./g, "").replace(",", ".") : valor.trim(),
+        // "3.832,50", "1.298" ou "3832.5".
+        valor: textoParaDecimal(valor),
       };
       return editando
         ? lancamentosManuaisService.atualizar(editando.id, entrada)
@@ -131,7 +133,7 @@ export function LancamentoManualDialog({ anoMes, opcoes, editando, aberto, onFec
     },
     onSuccess: () => {
       toast.success(editando ? "Lançamento atualizado." : "Lançamento incluído.");
-      queryClient.invalidateQueries({ queryKey: ["lancamentos-manuais", anoMes] });
+      atualizarCompetencia(queryClient, anoMes);
       onFechar();
     },
   });

@@ -94,6 +94,22 @@ export async function buscarRegistro(tipo: TipoListaRateio, id: string) {
   }
 }
 
+/** O registro inteiro, para o log de auditoria guardar o antes e o depois. */
+export async function lerRegistroCompleto(tipo: TipoListaRateio, id: string) {
+  const p = getPrismaClient();
+  const args = { where: { id } };
+  switch (tipo) {
+    case "PROJETO": return p.projeto.findUnique(args);
+    case "PRODUCAO": return p.producao.findUnique(args);
+    case "PRODUCAO_PISTA": return p.producaoPista.findUnique(args);
+    case "PRODUCAO_ARMADURA": return p.producaoArmadura.findUnique(args);
+    case "PRODUCAO_METALURGIA": return p.producaoMetalurgia.findUnique(args);
+    case "EXPEDICAO": return p.expedicao.findUnique(args);
+    case "MONTAGEM": return p.montagem.findUnique(args);
+    case "ACOMPANHAMENTO": return p.acompanhamento.findUnique(args);
+  }
+}
+
 export async function atualizarRegistro(tx: Tx, tipo: TipoListaRateio, id: string, dados: Record<string, unknown>) {
   const args = { where: { id }, data: dados };
   switch (tipo) {

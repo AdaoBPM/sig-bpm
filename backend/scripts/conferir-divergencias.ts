@@ -91,7 +91,11 @@ const colunasDoMes = cabecalho.celulas
 if (colunasDoMes.length !== 3) throw new Error(`esperava 3 colunas do mês, achei ${colunasDoMes.length}`);
 const [colCred, , colMov] = colunasDoMes;
 const alvos = leitura.lancamentos.filter((l) => l.valorMovimento.abs().greaterThan(1000)).slice(0, 2);
-const deltas = [1000, -500];
+// Os centavos mudam a cada execução: uma diferença já registrada com o mesmo
+// valor recebido não volta a entrar (regra da detecção), e a conferência tem de
+// poder ser repetida.
+const centavos = (Date.now() % 9000) / 100;
+const deltas = [Math.round((1000 + centavos) * 100) / 100, -Math.round((500 + centavos) * 100) / 100];
 const linhaTotal = aba.linhas.find((l) => String(l.celulas[0] ?? "").trim().toUpperCase() === "TOTAL GERAL")!;
 const letra = (i: number) => {
   let s = "";
@@ -180,8 +184,11 @@ try {
   // --- 4. Preço de contrato -------------------------------------------------
   console.log("\n4. Preço de contrato substituído depois da apuração");
   await api.post(`/competencias/${am(mes)}/apuracao/apurar`);
+  // Um preço que ainda não tem divergência: a detecção não repete a do mesmo
+  // preço substituído, e a conferência tem de poder ser repetida.
+  const jaTem = (await prisma.divergencia.findMany({ where: { precoContratoId: { not: null } }, select: { precoContratoId: true } })).map((d) => d.precoContratoId!);
   const item = await prisma.receitaPreviaItem.findFirstOrThrow({
-    where: { precoBrutoId: { not: null }, quantidade: { gt: 0 }, receitaPrevia: { competencia: { ano, mes } } },
+    where: { precoBrutoId: { not: null, notIn: jaTem }, quantidade: { gt: 0 }, receitaPrevia: { competencia: { ano, mes } } },
     select: { precoBrutoId: true, precoBruto: true, obraCodigo: true },
   });
   const preco = await prisma.precoContrato.findUniqueOrThrow({ where: { id: item.precoBrutoId! }, select: { valorUnitario: true } });

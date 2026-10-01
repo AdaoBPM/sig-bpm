@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { apuracaoService } from "../../services/apuracaoService";
@@ -144,7 +145,7 @@ export function ClassificacaoContent() {
       toast.success(
         `${inteiro(r.lancamentos)} lançamentos classificados em ${(r.duracaoMs / 1000).toFixed(1)} s.`,
       );
-      queryClient.invalidateQueries({ queryKey: ["classificacao", anoMes] });
+      atualizarCompetencia(queryClient, anoMes);
     },
     onError: (e) => {
       toast.error(
@@ -298,6 +299,7 @@ export function ClassificacaoContent() {
             <div className="relative w-full lg:max-w-xs">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
               <Input
+                aria-label="Buscar lançamentos"
                 value={busca}
                 onChange={(e) => {
                   setBusca(e.target.value);

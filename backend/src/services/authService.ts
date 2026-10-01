@@ -5,6 +5,10 @@ import type { LoginInput } from "../schemas/auth/loginSchema.js";
 import { carregarUsuario, type UsuarioAutenticado } from "./acesso/acesso.js";
 import { divergenciasService } from "./divergencias/divergenciasService.js";
 
+/** Um hash qualquer, para o login de e-mail inexistente levar o mesmo tempo. */
+let ficticio: Promise<string> | null = null;
+const hashFicticio = () => (ficticio ??= hashSenha("senha-ficticia-para-o-tempo-de-resposta"));
+
 /**
  * Autenticação por e-mail corporativo e senha, contra os usuários do banco
  * (Passo 22). O login de demonstração herdado do molde saiu: a instalação
@@ -28,7 +32,11 @@ function publico(u: UsuarioAutenticado) {
 export const authService = {
   async login(input: LoginInput) {
     const usuario = await carregarUsuario({ email: input.email.trim().toLowerCase() });
-    if (!usuario || !(await compararSenha(input.password, usuario.senhaHash))) throw new RegraAuthError(401, "E-mail ou senha inválidos");
+    if (!usuario) {
+      await compararSenha(input.password, await hashFicticio());
+      throw new RegraAuthError(401, "E-mail ou senha inválidos");
+    }
+    if (!(await compararSenha(input.password, usuario.senhaHash))) throw new RegraAuthError(401, "E-mail ou senha inválidos");
     const token = signToken({ sub: usuario.sub, email: usuario.email, permissions: usuario.permissions });
     return { user: await this.me(usuario), token };
   },

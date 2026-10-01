@@ -5,7 +5,13 @@ import "dotenv/config";
 
 import { z } from "zod";
 
-const WEAK_SECRETS = new Set(["altere-em-producao", "change-me", "secret", "jwt-secret"]);
+const WEAK_SECRETS = new Set([
+  "altere-em-producao",
+  "change-me",
+  "secret",
+  "jwt-secret",
+  "use-uma-string-aleatoria-com-pelo-menos-32-caracteres", // o do .env.example
+]);
 
 const envSchema = z
   .object({
@@ -20,8 +26,9 @@ const envSchema = z
     MSSQL_DATABASE: z.string().optional(),
     MSSQL_USER: z.string().optional(),
     MSSQL_PASSWORD: z.string().optional(),
-    ENABLE_SWAGGER: z.coerce.boolean().optional(),
-    ENABLE_AUDIT: z.coerce.boolean().optional(),
+    // "true"/"false", "1"/"0", "sim"... — z.coerce.boolean() tomaria "false" por verdadeiro.
+    ENABLE_SWAGGER: z.stringbool().optional(),
+    ENABLE_AUDIT: z.stringbool().optional(),
     TOTVS_WSDL_URL: z.string().optional(),
     TOTVS_USER: z.string().optional(),
     TOTVS_PASSWORD: z.string().optional(),

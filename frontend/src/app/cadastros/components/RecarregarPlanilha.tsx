@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import {
   cadastrosService,
@@ -115,8 +116,7 @@ export function RecarregarPlanilha() {
       toast.success(
         `Cadastros recarregados.${r.reclassificadas.length ? ` Competências reclassificadas: ${r.reclassificadas.join(", ")}.` : ""}${r.apuradasSemReclassificar.length ? ` Apuradas, sem mudança até serem reapuradas: ${r.apuradasSemReclassificar.join(", ")}.` : ""}`,
       );
-      queryClient.invalidateQueries({ queryKey: ["cadastros"] });
-      queryClient.invalidateQueries({ queryKey: ["classificacao"] });
+      atualizarCompetencia(queryClient);
       fechar();
     },
   });
@@ -156,6 +156,7 @@ export function RecarregarPlanilha() {
           {!previa ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <Input
+                aria-label="Planilha UNIDADES E CENTROS DE CUSTO (.xlsx)"
                 type="file"
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={(e) => {

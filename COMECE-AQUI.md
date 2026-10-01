@@ -150,14 +150,10 @@ npm run dev:frontend  # porta 3000
 
 Abra [http://localhost:3000](http://localhost:3000)
 
-**Exemplos no template:**
+**Telas do SIG BPM:** depois do login, a ferramenta abre em `/competencias`, a lista dos meses com os atalhos de cada etapa (importações, classificação, lançamentos, listas, receita, rateios, estoque, DRE e conferência com a planilha). As telas de demonstração do molde (dashboard, pedidos e exemplos) foram removidas na revisão final (Passo 28). As telas estão descritas na seção "Telas e Fluxos" do SPEC.
 
 | Rota | O que mostra |
 |---|---|
-| `/auth/login` → `/dashboard` | KPIs, filtro de período, tabela, export CSV |
-| `/pedidos/listagem` | Listagem mock com DataTable |
-| `/exemplo/formulario` | Formulário Field + RHF + Zod |
-| [`/exemplo/landing`](http://localhost:3000/exemplo/landing) | Landing pública — hero, benefícios, leads |
 | [`/api/docs`](http://localhost:3001/api/docs) (backend) | Swagger — documentação interativa da API |
 
 Mensagens prontas: [`Docs/projeto/MENSAGENS-PRONTAS.md`](./Docs/projeto/MENSAGENS-PRONTAS.md)  

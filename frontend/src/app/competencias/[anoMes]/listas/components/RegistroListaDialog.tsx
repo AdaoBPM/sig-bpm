@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import {
   listasService,
@@ -53,8 +54,7 @@ export function RegistroListaDialog({ anoMes, slug, rotuloLista, campos, editand
         : listasService.criar(anoMes, slug, valores),
     onSuccess: () => {
       toast.success(editando ? "Registro atualizado." : "Registro incluído.");
-      queryClient.invalidateQueries({ queryKey: ["listas", anoMes, slug] });
-      queryClient.invalidateQueries({ queryKey: ["classificacao", anoMes] });
+      atualizarCompetencia(queryClient, anoMes);
       onFechar();
     },
   });

@@ -31,10 +31,21 @@ export class ArquivoInvalidoError extends Error {}
 
 type Pacote = Record<string, Uint8Array>;
 
+/** Maior parte do .xlsx que se descompacta (uma aba): acima disso, o arquivo é recusado. */
+const MAXIMO_DESCOMPACTADO = 1024 * 1024 * 1024;
+
 function abrir(buffer: Uint8Array, caminhos: Set<string>): Pacote {
+  let grande: string | null = null;
   try {
-    return unzipSync(buffer, { filter: (f) => caminhos.has(f.name) });
+    return unzipSync(buffer, {
+      filter: (f) => {
+        if (!caminhos.has(f.name)) return false;
+        if (f.originalSize > MAXIMO_DESCOMPACTADO) grande = f.name;
+        return grande === null;
+      },
+    });
   } catch {
+    if (grande) throw new ArquivoInvalidoError("Uma aba do arquivo passa de 1 GB descompactada. Envie uma planilha menor.");
     throw new ArquivoInvalidoError(
       "O arquivo não é uma planilha .xlsx válida. Salve-o no Excel como " +
         "\"Pasta de Trabalho do Excel (.xlsx)\" e envie de novo.",
@@ -55,7 +66,7 @@ function decodificar(texto: string): string {
       const n = e[1] === "x" || e[1] === "X"
         ? parseInt(e.slice(2), 16)
         : parseInt(e.slice(1), 10);
-      return String.fromCodePoint(n);
+      return Number.isInteger(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : "";
     })
     // O Excel escapa caracteres de controle como _xHHHH_.
     .replace(/_x([0-9a-f]{4})_/gi, (_, h: string) =>

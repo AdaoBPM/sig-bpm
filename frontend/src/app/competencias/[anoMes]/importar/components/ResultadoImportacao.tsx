@@ -20,6 +20,8 @@ import {
   moeda,
   ROTULO_REJEICAO,
 } from "../../utils/formatacao";
+import { useAuth } from "@/context/AuthContext";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 /** Acima disso a tabela de rejeições corta — o relatório completo fica no banco. */
 const MAX_REJEICOES = 200;
@@ -577,6 +579,7 @@ function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
 
 export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
   const queryClient = useQueryClient();
+  const { refresh } = useAuth();
   const { data: imp, isPending, isError } = useQuery({
     queryKey: ["importacao", id],
     queryFn: () => importacoesService.detalhar(id),
@@ -588,9 +591,11 @@ export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
   const status = imp?.status;
   useEffect(() => {
     if (status && status !== "PROCESSANDO") {
-      queryClient.invalidateQueries({ queryKey: ["importacoes", anoMes] });
+      // A importação muda o mês inteiro (e, no balancete de mês fechado, as divergências e o aviso).
+      atualizarCompetencia(queryClient, anoMes);
+      void refresh();
     }
-  }, [status, anoMes, queryClient]);
+  }, [status, anoMes, queryClient, refresh]);
 
   if (isPending) {
     return <div className="h-32 animate-pulse rounded-sm bg-gray-100" />;

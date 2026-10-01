@@ -5,8 +5,6 @@ const PUBLIC_PATHS = [
   "/auth/login",
   "/api/auth/login",
   "/api/auth/logout",
-  "/exemplo/landing",
-  "/api/leads",
 ];
 
 export function proxy(request: NextRequest) {

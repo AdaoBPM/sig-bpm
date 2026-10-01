@@ -230,3 +230,11 @@ Enquanto o banco for SQLite, **não usar `_sum` em `groupBy`**: somar com
 `aggregate` por grupo, ou somar no código. O resumo da classificação já faz
 assim. Nenhum cálculo da apuração usa `groupBy`. No PostgreSQL o problema não
 existe, mas a regra pode continuar valendo sem custo.
+
+## Concorrência com o adaptador do SQLite
+
+O `@prisma/adapter-better-sqlite3` responde de forma síncrona. Uma operação longa (a apuração de uma competência, uns 5 s) roda sem devolver a vez ao Node: nenhuma outra requisição é atendida no meio dela. Os outros usuários esperam, e uma ação pedida durante a apuração só corre depois dela.
+
+O adaptador também tem uma conexão só. Enquanto uma transação está aberta, as consultas de outras requisições rodam dentro dela, e um rollback desfaria também o que elas gravaram. Na prática, isso é raro, pelo item anterior.
+
+No PostgreSQL as duas coisas mudam: as consultas devolvem a vez e cada requisição tem a sua conexão. Por isso a apuração tem uma trava por competência (`apuracaoService`, Passo 28): apurar, fechar e reabrir a mesma competência ao mesmo tempo é recusado. Com o SQLite a trava não chega a agir, mas fica pronta para a migração.

@@ -60,8 +60,6 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ver"],
   [/^\/competencias\/[^/]+\/(receita-previa|rateios|estoque|conferencia-planilha)/, "apuracao:ver"],
   [/^\/competencias\/[^/]+\/dre/, "dre:ver"],
-  // Telas de demonstração herdadas do molde: fora do SIG, ninguém tem a permissão.
-  [/^\/(dashboard|pedidos)(\/|$)/, "molde:ver"],
 ];
 
 export function permissaoDaTela(pathname: string): string | null {

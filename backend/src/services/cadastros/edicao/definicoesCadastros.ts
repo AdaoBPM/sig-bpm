@@ -75,9 +75,10 @@ const inteiro = (v: unknown, rotulo: string, obrigatorio = false) => {
   return n;
 };
 const decimal = (v: unknown, rotulo: string) => {
-  // Aceita "1298.19", "1298,19" e "1.298,19": com vírgula, o ponto é de milhar.
+  // Aceita "1298.19", "1298,19", "1.298,19" e "1.298": com vírgula, ou só com
+  // pontos de milhar (grupos de três), o ponto é de milhar; senão, decimal.
   const bruto = texto(v);
-  const t = bruto?.includes(",") ? bruto.replace(/\./g, "").replace(",", ".") : bruto;
+  const t = bruto && (bruto.includes(",") || /^-?[1-9]\d{0,2}(\.\d{3})+$/.test(bruto)) ? bruto.replace(/\./g, "").replace(",", ".") : bruto;
   if (!t || Number.isNaN(Number(t))) throw new RegraCadastroError(400, `${rotulo} precisa ser um número.`);
   return new Decimal(t);
 };

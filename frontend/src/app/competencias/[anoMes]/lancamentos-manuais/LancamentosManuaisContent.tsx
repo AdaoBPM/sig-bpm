@@ -12,6 +12,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
 import { lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
@@ -41,7 +42,7 @@ export function LancamentosManuaisContent() {
     staleTime: 5 * 60_000,
   });
 
-  const invalidar = () => queryClient.invalidateQueries({ queryKey: ["lancamentos-manuais", anoMes] });
+  const invalidar = () => atualizarCompetencia(queryClient, anoMes);
   const excluir = useMutation({
     mutationFn: (id: string) => lancamentosManuaisService.excluir(id),
     onSuccess: () => {

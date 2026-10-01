@@ -89,7 +89,9 @@ export function PerfisContent() {
                     size="icon"
                     aria-label="Excluir"
                     disabled={excluir.isPending}
-                    onClick={() => excluir.mutate(p.id)}
+                    onClick={() => {
+                      if (window.confirm(`Excluir o perfil ${p.nome}? A exclusão fica no log de auditoria.`)) excluir.mutate(p.id);
+                    }}
                   >
                     <Trash2 className="size-4" />
                   </Button>

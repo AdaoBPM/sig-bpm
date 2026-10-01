@@ -199,7 +199,9 @@ async function carregarPerfisEUsuario() {
       perfilId: perfilContabilId,
       ordem: 1,
     },
-    update: { perfilId: perfilContabilId, ativo: true },
+    // Só cria: se o usuário já existe, a carga não o reativa nem muda o perfil
+    // (a carga roda a cada atualização de planilha; inativar o inicial tem de valer).
+    update: {},
   });
 
   return { perfis: PERFIS.length };

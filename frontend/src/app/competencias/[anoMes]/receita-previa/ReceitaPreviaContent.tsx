@@ -11,6 +11,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
@@ -67,7 +68,7 @@ export function ReceitaPreviaContent() {
     mutationFn: (id: string) => receitaPreviaService.excluirLancamento(id),
     onSuccess: () => {
       toast.success("Lançamento excluído. Apure de novo para refletir na receita.");
-      queryClient.invalidateQueries({ queryKey: ["receita-previa", anoMes, "lancamentos"] });
+      atualizarCompetencia(queryClient, anoMes);
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir.")),
   });

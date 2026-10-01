@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { textoParaDecimal } from "@/lib/numero";
 
 import {
   mensagemDeErro,
@@ -52,14 +54,14 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
   const salvar = useMutation({
     mutationFn: () => {
       const [natureza, componente] = linha.split("|") as [Natureza, Componente];
-      const entrada = { unidade: Number(unidade), natureza, componente, valor: valor.trim().replace(/\./g, "").replace(",", "."), observacao };
+      const entrada = { unidade: Number(unidade), natureza, componente, valor: textoParaDecimal(valor), observacao };
       return editando
         ? receitaPreviaService.atualizarLancamento(editando.id, entrada)
         : receitaPreviaService.criarLancamento(anoMes, entrada);
     },
     onSuccess: () => {
       toast.success(editando ? "Lançamento alterado. Apure de novo para refletir na receita." : "Lançamento incluído. Apure de novo para refletir na receita.");
-      queryClient.invalidateQueries({ queryKey: ["receita-previa", anoMes, "lancamentos"] });
+      atualizarCompetencia(queryClient, anoMes);
       onFechar();
     },
   });

@@ -83,7 +83,7 @@ export const estoqueService = {
     const obras = new Map((await prisma.obra.findMany({ where: { codigo: { in: [...new Set(saldos.map((s) => s.obra))] } }, select: { id: true, codigo: true } })).map((o) => [o.codigo.toUpperCase(), o.id]));
     const linhas = new Map((await prisma.linha.findMany({ where: { tipo: "PRODUTO" }, select: { id: true, codigo: true } })).map((l) => [l.codigo, l.id]));
     const semObra = saldos.filter((s) => !obras.has(s.obra)).map((s) => s.obra);
-    if (semObra.length) throw new Error(`Obras sem cadastro no saldo: ${[...new Set(semObra)].join(", ")}`);
+    if (semObra.length) throw new RegraEstoqueError(409, `Obras sem cadastro no saldo: ${[...new Set(semObra)].join(", ")}. Importe a DRE do Comercial ou as listas que as cadastram.`);
     const agora = new Date();
     await prisma.$transaction([
       prisma.estoqueSaldo.deleteMany({ where: { competenciaId: c.id } }),

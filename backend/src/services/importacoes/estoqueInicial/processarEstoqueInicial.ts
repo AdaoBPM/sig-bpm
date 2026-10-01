@@ -63,6 +63,13 @@ export async function processarEstoqueInicial(importacaoId: string): Promise<voi
       async (tx) => {
         const { porCodigo, criadas } = await garantirObras(tx, new Map([...saldos.values()].map((s) => [s.obra, s.nome])));
         const linhas = new Map((await tx.linha.findMany({ where: { tipo: "PRODUTO" }, select: { id: true, codigo: true } })).map((l) => [l.codigo, l.id]));
+        // Conferido dentro da transação: o saldo inicial não apaga o saldo apurado
+        // (e congelado) de um mês, nem entra numa competência fechada.
+        const competencia = await tx.competencia.findUniqueOrThrow({ where: { id: importacao.competenciaId }, select: { status: true } });
+        if (competencia.status === "FECHADA") throw new ArquivoRecusado("A competência está fechada: o saldo inicial não pode ser importado nela.");
+        if (await tx.estoqueSaldo.count({ where: { competenciaId: importacao.competenciaId, importacaoId: null } })) {
+          throw new ArquivoRecusado("Esta competência já tem saldo de estoque apurado. O saldo inicial vai na competência anterior ao primeiro mês apurado (12/2025).");
+        }
         await tx.estoqueSaldo.deleteMany({ where: { competenciaId: importacao.competenciaId } });
         await tx.estoqueSaldo.createMany({
           data: [...saldos.values()].map((s) => ({

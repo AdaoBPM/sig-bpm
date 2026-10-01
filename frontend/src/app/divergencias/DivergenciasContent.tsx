@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { StatusCompetenciaBadge } from "../competencias/components/StatusCompetenciaBadge";
 import { dataHora, inteiro, moeda } from "../competencias/[anoMes]/utils/formatacao";
@@ -45,7 +46,7 @@ function DialogoTexto({ titulo, descricao, acao, onConfirmar, onFechar, pendente
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{descricao}</DialogDescription>
         </DialogHeader>
-        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm" placeholder="ao menos 15 caracteres" />
+        <textarea aria-label="Justificativa" value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm" placeholder="ao menos 15 caracteres" />
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
@@ -76,8 +77,7 @@ export function DivergenciasContent() {
   const atualizar = () => {
     setMarcadas(new Set());
     setDialogo(null);
-    queryClient.invalidateQueries({ queryKey: ["divergencias"] });
-    queryClient.invalidateQueries({ queryKey: ["competencias"] });
+    atualizarCompetencia(queryClient);
     void refresh(); // o aviso de abertas no menu
   };
   const justificar = useMutation({

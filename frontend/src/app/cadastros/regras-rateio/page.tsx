@@ -1,12 +1,13 @@
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { SemLeitura } from "@/components/shared/SemLeitura";
 
 import { ListaCadastroContent } from "../components/ListaCadastroContent";
 
 export default function RegrasRateioPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros:ler">
+      <PermissionGuard permission="cadastros:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="regras-rateio"
           rota="/cadastros/regras-rateio"

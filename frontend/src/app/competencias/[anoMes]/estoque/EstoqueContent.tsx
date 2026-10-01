@@ -135,7 +135,7 @@ export function EstoqueContent() {
               <h2 className="text-sm font-bold text-gray-900">Saldo por obra e linha</h2>
               <div className="relative w-full sm:w-72">
                 <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Obra ou linha…" className="rounded-sm border-gray-300 pl-9" />
+                <Input aria-label="Buscar obra ou linha" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Obra ou linha…" className="rounded-sm border-gray-300 pl-9" />
               </div>
             </div>
             <div className="overflow-x-auto">

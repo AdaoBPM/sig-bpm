@@ -56,13 +56,14 @@ async function resolver(input: LancamentoManualInput) {
   const [conta, centro] = await Promise.all([
     prisma.contaResultado.findUnique({
       where: { id: input.contaResultadoId },
-      select: { tipoConta: true, balde: true, linhaDREId: true, reduzido: true },
+      select: { tipoConta: true, balde: true, linhaDREId: true, reduzido: true, ativo: true },
     }),
     input.centroCustoId
-      ? prisma.centroCusto.findUnique({ where: { id: input.centroCustoId }, select: { balde: true } })
+      ? prisma.centroCusto.findUnique({ where: { id: input.centroCustoId }, select: { balde: true, ativo: true, nomeRM: true } })
       : Promise.resolve(null),
   ]);
   if (!conta) throw new RegraLancamentoManualError(400, "Conta não encontrada.");
+  if (!conta.ativo) throw new RegraLancamentoManualError(400, `A conta ${conta.reduzido} está inativa no cadastro.`);
   if (conta.tipoConta !== "ANALITICA") {
     throw new RegraLancamentoManualError(400, `A conta ${conta.reduzido} é sintética; lance numa conta analítica.`);
   }
@@ -75,6 +76,7 @@ async function resolver(input: LancamentoManualInput) {
   if (input.centroCustoId && !centro) {
     throw new RegraLancamentoManualError(400, "Centro de custo não encontrado.");
   }
+  if (centro && !centro.ativo) throw new RegraLancamentoManualError(400, `O centro de custo ${centro.nomeRM} está inativo no cadastro.`);
   return derivarLancamentoManual(conta, centro);
 }
 
@@ -252,15 +254,18 @@ export const lancamentosManuaisService = {
       where: { competenciaId },
       select: {
         id: true,
+        atualizadoEm: true,
         contaResultado: { select: { balde: true, linhaDREId: true } },
         centroCusto: { select: { balde: true } },
       },
     });
+    // Recalcular os campos derivados não é alteração do lançamento: a data de
+    // alteração fica (ela entra no retrato das entradas da apuração).
     for (const l of lancamentos) {
       if (!l.contaResultado) continue;
       await prisma.lancamentoManual.update({
         where: { id: l.id },
-        data: derivarLancamentoManual(l.contaResultado, l.centroCusto),
+        data: { ...derivarLancamentoManual(l.contaResultado, l.centroCusto), atualizadoEm: l.atualizadoEm },
       });
     }
     return lancamentos.length;

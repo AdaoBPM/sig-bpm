@@ -23,7 +23,7 @@ type PermissionProviderProps = {
 export function PermissionProvider({ children }: PermissionProviderProps) {
   const { user } = useAuth();
 
-  const permissions = user?.permissions ?? [];
+  const permissions = useMemo(() => user?.permissions ?? [], [user]);
 
   const value = useMemo<PermissionContextValue>(
     () => ({
