@@ -77,6 +77,9 @@ function prepararCentros(linhas: LinhaCentroCusto[], avisos: Aviso[], usados: Se
   for (const [i, l] of linhas.entries()) {
     let codigoRM = texto(l["CÓDIGO RM"]);
     const nomeRM = texto(l["CENTRO DE CUSTO (RM)"]);
+    // Sem código e sem nome não é centro: é o fim da tabela ou uma linha só com
+    // "-" (a linha 155 da aba Centros de Custo, depois do último centro, na 154).
+    if (!nomeRM && !codigoRM) continue;
     if (!nomeRM) {
       ignorados++;
       avisos.push({ origem: "centros de custo", chave: codigoRM ?? `linha ${i + 2}`, motivo: "sem nome" });
