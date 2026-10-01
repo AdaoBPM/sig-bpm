@@ -164,10 +164,22 @@ export const auditoriaService = {
   /** O que os filtros da tela oferecem: usuários que aparecem no log, ações e entidades. */
   async opcoes() {
     const db = getPrismaClient();
-    const usuarios = await db.auditLog.groupBy({ by: ["usuarioId", "usuarioNome"], where: { usuarioId: { not: null } } });
+    // Um usuário por id. O nome gravado no log pode variar: os acessos anteriores
+    // ao Passo 22 guardaram o e-mail no lugar do nome, e o log não se corrige
+    // (é imutável). Vale o nome atual do cadastro; para quem já foi excluído,
+    // o último nome registrado.
+    const nomesNoLog = await db.auditLog.groupBy({ by: ["usuarioId", "usuarioNome"], where: { usuarioId: { not: null } }, _max: { createdAt: true } });
+    const ultimoNome = new Map<string, { nome: string | null; em: Date }>();
+    for (const n of nomesNoLog) {
+      const atual = ultimoNome.get(n.usuarioId!);
+      if (!atual || n._max.createdAt! > atual.em) ultimoNome.set(n.usuarioId!, { nome: n.usuarioNome, em: n._max.createdAt! });
+    }
+    const cadastro = new Map(
+      (await db.usuario.findMany({ where: { id: { in: [...ultimoNome.keys()] } }, select: { id: true, nome: true } })).map((u) => [u.id, u.nome]),
+    );
     return {
-      usuarios: usuarios
-        .map((u) => ({ id: u.usuarioId!, nome: u.usuarioNome ?? u.usuarioId! }))
+      usuarios: [...ultimoNome]
+        .map(([id, n]) => ({ id, nome: cadastro.get(id) ?? n.nome ?? id }))
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
       acoes: Object.entries(ROTULO_ACAO).map(([acao, rotulo]) => ({ acao, rotulo })),
       entidades: Object.entries(ROTULO_ENTIDADE).map(([entidade, rotulo]) => ({ entidade, rotulo })),
