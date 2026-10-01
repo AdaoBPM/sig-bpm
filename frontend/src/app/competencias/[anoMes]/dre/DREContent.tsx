@@ -4,10 +4,11 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronRight, GitCompareArrows, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
@@ -196,6 +197,7 @@ export function DREContent() {
   const periodo = lerAnoMes(anoMes);
   const [visao, setVisao] = useState<Visao>("consolidado");
   const [avisos, setAvisos] = useState<string[]>([]);
+  const { hasPermission } = usePermissions();
 
   // A consolidada também traz o estado da competência e da apuração para o cabeçalho.
   const consolidado = useQuery({
@@ -239,6 +241,12 @@ export function DREContent() {
               {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
             </p>
           </div>
+          {hasPermission("apuracao:ver") ? (
+            <Link href={`/competencias/${anoMes}/conferencia-planilha`} className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900">
+              <GitCompareArrows className="size-4" />
+              Conferir com a planilha
+            </Link>
+          ) : null}
         </div>
       </div>
 

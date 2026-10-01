@@ -19,6 +19,7 @@ import {
 import { lancamentosReceitaRoutes, receitaPreviaRoutes } from "./routes/receitaPrevia/receitaPreviaRoutes.js";
 import { dreRoutes } from "./routes/dre/dreRoutes.js";
 import { apuracaoRoutes } from "./routes/apuracao/apuracaoRoutes.js";
+import { conferenciaPlanilhaRoutes } from "./routes/conferencia/conferenciaPlanilhaRoutes.js";
 import { edicaoCadastrosRoutes } from "./routes/cadastros/edicaoCadastrosRoutes.js";
 import { divergenciasRoutes } from "./routes/divergencias/divergenciasRoutes.js";
 import { perfisRoutes, usuariosRoutes } from "./routes/usuarios/usuariosRoutes.js";
@@ -69,6 +70,7 @@ app.use("/competencias/:anoMes/rateios", rateiosRoutes);
 app.use("/competencias/:anoMes/estoque", estoqueRoutes);
 app.use("/competencias/:anoMes/dre", dreRoutes);
 app.use("/competencias/:anoMes/apuracao", apuracaoRoutes);
+app.use("/competencias/:anoMes/conferencia-planilha", conferenciaPlanilhaRoutes);
 app.use("/competencias", competenciasRoutes);
 app.use("/usuarios", usuariosRoutes);
 app.use("/divergencias", divergenciasRoutes);

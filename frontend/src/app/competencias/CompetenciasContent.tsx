@@ -7,6 +7,7 @@ import {
   Calculator,
   CalendarDays,
   FileBarChart,
+  GitCompareArrows,
   ListChecks,
   NotebookPen,
   Percent,
@@ -80,6 +81,7 @@ export function CompetenciasContent() {
     { caminho: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },
     { caminho: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ver" },
     { caminho: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ver" },
+    { caminho: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "apuracao:ver" },
   ].filter((e) => hasPermission(e.permissao));
 
   return (

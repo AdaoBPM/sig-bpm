@@ -125,6 +125,7 @@ model Usuario {
   competenciasFechadas  Competencia[] @relation("CompetenciaFechada")
   reaberturas           ReaberturaCompetencia[]
   importacoes           Importacao[]
+  conferenciasPlanilha  ConferenciaPlanilha[]
 
   @@map("usuarios")
 }
@@ -676,6 +677,7 @@ model Competencia {
   lancamentosReceita  LancamentoReceita[]
   volumesOperacionais VolumeOperacional[]
   resultadosApurados  ResultadoApurado[]
+  conferenciasPlanilha ConferenciaPlanilha[]
 
   @@unique([ano, mes])
   @@index([status])
@@ -1644,4 +1646,28 @@ model LancamentoReceita {
 
   @@index([competenciaId])
   @@map("lancamentos_receita")
+}
+
+/// Conferência da DRE apurada contra a DRE da planilha, no período de paralelo
+/// (Passo 27, RF013). Guarda os valores que o arquivo traz para o mês, por aba
+/// e linha, já ligados às linhas da estrutura; a comparação com a DRE é feita
+/// na consulta, com o limite de arredondamento pedido, de modo que uma
+/// reapuração aparece sem reenviar o arquivo. O arquivo não fica guardado, só
+/// o hash, como nas importações.
+model ConferenciaPlanilha {
+  id            String   @id @default(uuid())
+  competenciaId String   @map("competencia_id")
+  nomeArquivo   String   @map("nome_arquivo")
+  hashArquivo   String   @map("hash_arquivo")
+  enviadoPor    String   @map("enviado_por")
+  enviadoEm     DateTime @default(now()) @map("enviado_em")
+  /// JSON: [{ unidade (0 = consolidado), aba, linha, descricao, codigo, valor }]
+  /// — codigo é a linha da estrutura ligada pela descrição, ou null.
+  valores       Json
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [enviadoPor], references: [id])
+
+  @@index([competenciaId, enviadoEm])
+  @@map("conferencias_planilha")
 }

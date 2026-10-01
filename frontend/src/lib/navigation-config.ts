@@ -58,7 +58,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
   [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ver"],
   [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ver"],
-  [/^\/competencias\/[^/]+\/(receita-previa|rateios|estoque)/, "apuracao:ver"],
+  [/^\/competencias\/[^/]+\/(receita-previa|rateios|estoque|conferencia-planilha)/, "apuracao:ver"],
   [/^\/competencias\/[^/]+\/dre/, "dre:ver"],
   // Telas de demonstração herdadas do molde: fora do SIG, ninguém tem a permissão.
   [/^\/(dashboard|pedidos)(\/|$)/, "molde:ver"],

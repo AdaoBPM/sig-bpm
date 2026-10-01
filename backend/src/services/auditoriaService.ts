@@ -50,6 +50,7 @@ export const ROTULO_ACAO: Record<string, string> = {
   JUSTIFICATIVA: "Divergência justificada",
   RESOLUCAO: "Divergência resolvida",
   EXPORTACAO: "Exportação da DRE",
+  CONFERENCIA_PLANILHA: "Planilha enviada para conferência",
 };
 
 /** Entidades registradas, com o rótulo da tela de consulta. */
