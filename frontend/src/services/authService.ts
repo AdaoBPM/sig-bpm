@@ -11,6 +11,8 @@ export type AuthUser = {
   permissions: string[];
   /** Recortes por dado: setores (listas) e departamentos (movimentações e centros de custo). */
   acesso: { recorteSetor: boolean; setores: string[]; recorteDepartamento: boolean; departamentos: DepartamentoAcesso[] };
+  /** Divergências abertas que o usuário alcança: o aviso ao entrar (Passo 24). */
+  divergenciasAbertas?: number;
 };
 
 type LoginResponse = {

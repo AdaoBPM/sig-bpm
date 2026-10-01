@@ -27,6 +27,8 @@ export type Importacao = {
   linhasIgnoradas: number;
   motivoRejeicao: string | null;
   substituidaEm: string | null;
+  /** Balancete de competência fechada: só comparado com o gravado (Passo 24). */
+  comparacao: boolean;
   usuario: { nome: string } | null;
 };
 
@@ -58,6 +60,12 @@ export type ResumoBalancete = {
   porFilial: Array<{ filial: number; linhas: number; valor: string }>;
   centrosSemCadastro: CentroSemCadastro[];
   substituiu: string[];
+  /** Comparação com competência fechada: quantas divergências entraram. */
+  modo?: "COMPARACAO";
+  divergencias?: number;
+  diferenca?: string;
+  /** Os outros meses fechados do arquivo, comparados com o gravado. */
+  retroativas?: Array<{ competencia: string; divergencias: number; diferenca: string }>;
 };
 
 /** Resumo das listas operacionais: volumes pelas linhas da aba Totais. */

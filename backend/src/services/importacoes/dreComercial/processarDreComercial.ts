@@ -13,6 +13,7 @@ import {
   interpretarDreComercial,
   type PrecoLido,
 } from "./leiauteDreComercial.js";
+import { detectarPrecos, type SubstituicaoPreco } from "../../divergencias/divergenciasService.js";
 
 /**
  * Importação da DRE do Comercial, com o preço historiado, não sobrescrito
@@ -149,11 +150,27 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
             resumo,
           },
         });
-        return resumo.precos;
+        // Os preços que saíram de vigência, para a detecção de divergência (Passo 24).
+        const substituicoes: SubstituicaoPreco[] = [
+          ...alterados.map((a) => ({ anteriorId: a.anterior.id, valorAnterior: a.anterior.valorUnitario, valorNovo: a.lido.valorUnitario })),
+          ...removidos.map((r) => ({ anteriorId: r.id, valorAnterior: r.valorUnitario, valorNovo: null })),
+        ];
+        return { precos: resumo.precos, substituicoes };
       },
       { timeout: 120_000 },
     );
-    logger("info", "DRE do Comercial importada", { importacaoId, ...resultado });
+    logger("info", "DRE do Comercial importada", { importacaoId, ...resultado.precos });
+    // Preço diferente do que valorou a receita de um mês apurado vira divergência;
+    // o mês apurado não muda (Passo 24).
+    try {
+      const divergencias = await detectarPrecos(importacaoId, resultado.substituicoes);
+      if (divergencias.length) {
+        const atual = await prisma.importacao.findUniqueOrThrow({ where: { id: importacaoId }, select: { resumo: true } });
+        await prisma.importacao.update({ where: { id: importacaoId }, data: { resumo: { ...((atual.resumo as Prisma.JsonObject | null) ?? {}), divergencias } } });
+      }
+    } catch (error) {
+      logger("error", "Falha ao detectar divergências de preço", { importacaoId, error: error instanceof Error ? error.message : String(error) });
+    }
   } catch (error) {
     if (error instanceof ArquivoRecusado || error instanceof ArquivoInvalidoError) {
       await recusarImportacao(importacaoId, error.message);

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeDollarSign, Building2, CalendarDays, History, KeyRound, ListTree, Shuffle, Table2, Users } from "lucide-react";
+import { BadgeDollarSign, Building2, CalendarDays, GitCompareArrows, History, KeyRound, ListTree, Shuffle, Table2, Users } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -15,7 +15,10 @@ export type NavGrupo = { titulo: string; itens: NavItem[] };
 export const navGrupos: NavGrupo[] = [
   {
     titulo: "Operação",
-    itens: [{ title: "Competências", href: "/competencias", icon: CalendarDays }],
+    itens: [
+      { title: "Competências", href: "/competencias", icon: CalendarDays },
+      { title: "Divergências", href: "/divergencias", icon: GitCompareArrows, permission: "divergencia:ver" },
+    ],
   },
   {
     titulo: "Cadastros",
@@ -46,6 +49,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/cadastros(\/|$)/, "cadastros:ver"],
   [/^\/(usuarios|perfis)(\/|$)/, "usuarios:ver"],
   [/^\/auditoria(\/|$)/, "auditoria:ver"],
+  [/^\/divergencias(\/|$)/, "divergencia:ver"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ver"],
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
   [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ver"],
@@ -70,6 +74,7 @@ export const pageTitles: Record<string, string> = {
   "/usuarios": "Usuários",
   "/perfis": "Perfis de usuário",
   "/auditoria": "Auditoria",
+  "/divergencias": "Divergências",
 };
 
 export function getPageTitle(pathname: string): string {

@@ -17,6 +17,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { navGrupos } from "@/lib/navigation-config";
 
@@ -27,6 +28,9 @@ function isActivePath(pathname: string, href: string) {
 export function AppSidebar() {
   const pathname = usePathname();
   const { hasPermission } = usePermissions();
+  const { user } = useAuth();
+  // O número de divergências abertas vira o selo do item no menu.
+  const selo = (href: string) => (href === "/divergencias" && user?.divergenciasAbertas ? String(user.divergenciasAbertas) : undefined);
   // O menu mostra só o que o perfil do usuário alcança (Passo 22).
   const grupos = navGrupos
     .map((g) => ({ ...g, itens: g.itens.filter((i) => !i.permission || hasPermission(i.permission)) }))
@@ -60,7 +64,7 @@ export function AppSidebar() {
                       <item.icon />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
-                    {item.badge ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge}</SidebarMenuBadge> : null}
+                    {(item.badge ?? selo(item.href)) ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge ?? selo(item.href)}</SidebarMenuBadge> : null}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>

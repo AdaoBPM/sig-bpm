@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldOff } from "lucide-react";
+import { AlertTriangle, ShieldOff } from "lucide-react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -32,7 +32,7 @@ function SemAcesso() {
 
 export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const pathname = usePathname();
-  const { isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
   const exigida = permissaoDaTela(pathname);
   const bloqueada = !isLoading && exigida !== null && !hasPermission(exigida);
@@ -42,6 +42,13 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
       <AppSidebar />
       <SidebarInset className="bg-muted/30">
         <AppHeader />
+        {user?.divergenciasAbertas && !pathname.startsWith("/divergencias") ? (
+          // O aviso ao entrar no sistema quando há divergência aberta (Passo 24).
+          <Link href="/divergencias" className="flex items-center gap-2 border-b border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 hover:bg-yellow-100 md:px-6">
+            <AlertTriangle className="size-4 shrink-0" />
+            {user.divergenciasAbertas} divergência(s) retroativa(s) em aberto: dado recebido depois do fechamento ou da apuração difere do gravado. Ver divergências
+          </Link>
+        ) : null}
         <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
           {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso /> : children}
         </div>

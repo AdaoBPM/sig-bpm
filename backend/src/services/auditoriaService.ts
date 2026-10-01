@@ -47,6 +47,8 @@ export const ROTULO_ACAO: Record<string, string> = {
   RECARGA_CADASTROS: "Recarga dos cadastros pela planilha",
   RECLASSIFICACAO: "Reclassificação dos lançamentos",
   COPIA_MES_ANTERIOR: "Cópia do mês anterior",
+  JUSTIFICATIVA: "Divergência justificada",
+  RESOLUCAO: "Divergência resolvida",
 };
 
 /** Entidades registradas, com o rótulo da tela de consulta. */

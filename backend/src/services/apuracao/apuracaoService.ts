@@ -6,6 +6,7 @@ import { estoqueService } from "../estoque/estoqueService.js";
 import { receitaPreviaService } from "../receitaPrevia/receitaPreviaService.js";
 import { rateiosService } from "../volumes/rateiosService.js";
 import { auditar } from "../auditoriaService.js";
+import { divergenciasService } from "../divergencias/divergenciasService.js";
 
 /**
  * Apuração congelada, fechamento e reabertura da competência (Passo 21).
@@ -58,7 +59,7 @@ async function retratoEntradas(competenciaId: string): Promise<Retrato> {
     prisma.lancamentoContabil.aggregate({ where, _count: true, _sum: { valorMovimento: true }, _max: { criadoEm: true } }),
     prisma.lancamentoManual.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
     prisma.lancamentoReceita.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
-    prisma.importacao.findMany({ where: { ...where, status: "CONCLUIDA", substituidaEm: null }, select: { id: true }, orderBy: { id: "asc" } }),
+    prisma.importacao.findMany({ where: { ...where, status: "CONCLUIDA", substituidaEm: null, comparacao: false }, select: { id: true }, orderBy: { id: "asc" } }),
     prisma.projeto.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
     prisma.producao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
     prisma.producaoPista.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { criadoEm: true } }),
@@ -225,13 +226,15 @@ export const apuracaoService = {
         ...(c.status === "ABERTA" ? { status: "EM_CONFERENCIA" as const } : {}),
       },
     });
+    // A receita foi refeita com os preços vigentes: as divergências de preço da competência se resolvem.
+    const precosResolvidos = await divergenciasService.resolverPrecosPorReapuracao(c.id, usuarioId);
     await auditar({
       usuarioId,
       acao: "APURACAO",
       entidade: "competencia",
       entidadeId: c.id,
       antes: { status: c.status, apuradaEm: c.apuradaEm, apuracoes: c.apuracoes },
-      depois: { status: c.status === "ABERTA" ? "EM_CONFERENCIA" : c.status, apuradaEm: agora, apuracoes: c.apuracoes + 1 },
+      depois: { status: c.status === "ABERTA" ? "EM_CONFERENCIA" : c.status, apuradaEm: agora, apuracoes: c.apuracoes + 1, divergenciasDePrecoResolvidas: precosResolvidos },
       metadados: { competencia: rotulo(ano, mes), resultado: "concluída", etapas: etapas.map((e) => e.etapa) },
     });
     return { apuradaEm: agora, apuracoes: c.apuracoes + 1, etapas: etapas.map((e) => e.etapa), avisos: [...new Set(avisos)] };

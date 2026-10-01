@@ -15,6 +15,7 @@ import {
   type LinhaBalancete,
   type Rejeicao,
 } from "./leiauteBalancete.js";
+import { compararBalancete } from "../../divergencias/divergenciasService.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -57,6 +58,26 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
     const divergenciaTotal = conferirTotal(leitura.somaArquivo, leitura.totalGeral);
     if (divergenciaTotal) {
       await recusar(importacaoId, divergenciaTotal, contagemLeitura);
+      return;
+    }
+    // Competência fechada: só a comparação com o gravado (Passo 24).
+    if (importacao.comparacao) {
+      const r = await compararBalancete(aba.linhas, competencia, importacaoId);
+      await prisma.importacao.update({
+        where: { id: importacaoId },
+        data: {
+          status: "CONCLUIDA",
+          progresso: 100,
+          substituidaEm: new Date(), // nunca é o lote ativo da competência
+          linhasLidas: leitura.linhasLidas,
+          linhasAceitas: leitura.lancamentos.length,
+          linhasRejeitadas: leitura.rejeicoes.length,
+          linhasIgnoradas: contagemLeitura.linhasIgnoradas,
+          relatorioErros: leitura.rejeicoes,
+          resumo: { aba: aba.nome, modo: "COMPARACAO", divergencias: r?.registradas ?? 0, diferenca: r?.diferenca ?? "0.00", somaArquivo: leitura.somaArquivo.toFixed(2) },
+        },
+      });
+      logger("info", "Balancete comparado com competência fechada", { importacaoId, ...r });
       return;
     }
     if (leitura.lancamentos.length === 0 && leitura.rejeicoes.length === 0) {
@@ -237,6 +258,30 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
       rejeitadas: rejeicoes.length,
       substituidas,
     });
+
+    // O arquivo traz o exercício inteiro: os outros meses dele que já estão
+    // fechados são comparados com o gravado (divergência retroativa, Passo 24).
+    try {
+      const fechadas = await prisma.competencia.findMany({
+        where: { ano: competencia.ano, status: "FECHADA", id: { not: competencia.id } },
+        select: { id: true, ano: true, mes: true },
+        orderBy: { mes: "asc" },
+      });
+      const retroativas: Array<{ competencia: string; divergencias: number; diferenca: string }> = [];
+      for (const f of fechadas) {
+        const r = await compararBalancete(aba.linhas, f, importacaoId);
+        if (r) retroativas.push({ competencia: `${String(f.mes).padStart(2, "0")}/${f.ano}`, divergencias: r.registradas, diferenca: r.diferenca });
+      }
+      if (retroativas.length) {
+        const atual = await prisma.importacao.findUniqueOrThrow({ where: { id: importacaoId }, select: { resumo: true } });
+        await prisma.importacao.update({
+          where: { id: importacaoId },
+          data: { resumo: { ...((atual.resumo as Prisma.JsonObject | null) ?? {}), retroativas } },
+        });
+      }
+    } catch (error) {
+      logger("error", "Falha ao comparar os meses fechados", { importacaoId, error: error instanceof Error ? error.message : String(error) });
+    }
 
     // A classificação corre logo depois, no mesmo trabalho da fila. Se falhar,
     // a importação continua válida: os lançamentos ficam sem classificação e a

@@ -3,6 +3,7 @@ import { compararSenha, hashSenha } from "../lib/senha.js";
 import { getPrismaClient } from "../config/prisma.js";
 import type { LoginInput } from "../schemas/auth/loginSchema.js";
 import { carregarUsuario, type UsuarioAutenticado } from "./acesso/acesso.js";
+import { divergenciasService } from "./divergencias/divergenciasService.js";
 
 /**
  * Autenticação por e-mail corporativo e senha, contra os usuários do banco
@@ -29,11 +30,13 @@ export const authService = {
     const usuario = await carregarUsuario({ email: input.email.trim().toLowerCase() });
     if (!usuario || !(await compararSenha(input.password, usuario.senhaHash))) throw new RegraAuthError(401, "E-mail ou senha inválidos");
     const token = signToken({ sub: usuario.sub, email: usuario.email, permissions: usuario.permissions });
-    return { user: publico(usuario), token };
+    return { user: await this.me(usuario), token };
   },
 
-  me(usuario: UsuarioAutenticado) {
-    return publico(usuario);
+  /** O usuário, e o aviso de divergências abertas ao entrar (Passo 24) para quem pode lê-las. */
+  async me(usuario: UsuarioAutenticado) {
+    const divergenciasAbertas = usuario.permissions.includes("divergencia:ler") ? await divergenciasService.contarAbertas(usuario.acesso) : 0;
+    return { ...publico(usuario), divergenciasAbertas };
   },
 
   /** Troca da própria senha: exige a senha atual. */

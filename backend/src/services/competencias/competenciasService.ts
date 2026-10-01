@@ -32,7 +32,7 @@ export const competenciasService = {
         _count: {
           select: {
             importacoes: true,
-            divergencias: true,
+            divergencias: { where: { status: "ABERTA" } },
             historicoReaberturas: true,
           },
         },

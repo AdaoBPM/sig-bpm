@@ -139,9 +139,42 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
   const foraDoCadastro = centros.filter((c) => !c.obra);
   const obras = centros.filter((c) => c.obra);
 
+  if (resumo?.modo === "COMPARACAO") {
+    return (
+      <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+        <p>
+          Competência fechada: o balancete foi só comparado com o gravado, e nada foi substituído.{" "}
+          {resumo.divergencias
+            ? `${inteiro(resumo.divergencias)} divergência(s) nova(s), somando ${resumo.diferenca} de diferença.`
+            : "Nenhuma diferença nova em relação ao que está gravado."}{" "}
+          <Link href="/divergencias" className="font-medium underline underline-offset-2">
+            Ver divergências
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <LoteSubstituido em={imp.substituidaEm} />
+      {resumo?.retroativas?.some((r) => r.divergencias > 0) ? (
+        <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <p>
+            O arquivo traz meses já fechados que diferem do gravado:{" "}
+            {resumo.retroativas
+              .filter((r) => r.divergencias > 0)
+              .map((r) => `${r.competencia} (${inteiro(r.divergencias)} divergência(s))`)
+              .join(", ")}
+            .{" "}
+            <Link href="/divergencias" className="font-medium underline underline-offset-2">
+              Ver divergências
+            </Link>
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />

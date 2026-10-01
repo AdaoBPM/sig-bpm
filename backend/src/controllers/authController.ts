@@ -27,7 +27,7 @@ export const authController = {
   },
 
   async me(request: Request, response: Response) {
-    return response.json({ data: authService.me(request.user!) });
+    return response.json({ data: await authService.me(request.user!) });
   },
 
   async trocarSenha(request: Request, response: Response) {

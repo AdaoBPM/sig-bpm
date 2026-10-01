@@ -620,6 +620,8 @@ enum StatusDivergencia {
   ABERTA
   JUSTIFICADA
   RESOLVIDA_POR_REABERTURA
+  /// A competência, ainda aberta, foi reapurada com o preço novo (Passo 24).
+  RESOLVIDA_POR_REAPURACAO
 }
 
 model Competencia {
@@ -702,6 +704,9 @@ model ReaberturaCompetencia {
 
 model Importacao {
   id              String           @id @default(uuid())
+  /// Balancete recebido para competência fechada (Passo 24): só é comparado com
+  /// o gravado, e as diferenças viram divergências — nada é substituído.
+  comparacao      Boolean          @default(false)
   competenciaId   String           @map("competencia_id")
   tipo            TipoImportacao
   nomeArquivo     String           @map("nome_arquivo")
@@ -748,9 +753,21 @@ model Divergencia {
   tipo          TipoDivergencia
   importacaoId  String            @map("importacao_id")
 
-  /// Preenchidos quando `tipo` é BALANCETE.
+  /// Preenchidos quando `tipo` é BALANCETE: a chave da comparação é filial +
+  /// centro de custo + conta, como vêm no arquivo (o centro e a conta podem
+  /// não estar no cadastro — obras, contas novas).
   contaResultadoId String? @map("conta_resultado_id")
   centroCustoId    String? @map("centro_custo_id")
+  filial            Int?
+  codigoCentroCusto String? @map("codigo_centro_custo")
+  codigoConta       String? @map("codigo_conta")
+  /// Preenchido quando `tipo` é PRECO_CONTRATO: o preço que valorou a receita
+  /// apurada e foi substituído na reimportação da DRE do Comercial.
+  precoContratoId   String? @map("preco_contrato_id")
+  /// O que é a diferença, em texto: conta e centro, ou obra, linha e conta da DRE de venda.
+  descricao         String?
+  /// DECIMAL: no preço, o efeito na receita apurada (quantidade × diferença do preço).
+  impacto           Decimal?
   /// Preenchido quando `tipo` é PRECO_CONTRATO.
   /// A relação com Obra é criada no Passo 4, quando o modelo existir.
   obraId           String? @map("obra_id")

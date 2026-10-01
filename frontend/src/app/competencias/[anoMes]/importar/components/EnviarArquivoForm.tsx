@@ -50,6 +50,8 @@ const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?
 
 type EnviarArquivoFormProps = {
   anoMes: string;
+  /** Competência fechada: só o balancete, para comparar (Passo 24). */
+  somenteBalancete?: boolean;
   onEnviado: (importacao: Importacao) => void;
 };
 
@@ -59,10 +61,10 @@ function erroDe(error: unknown): ErroImportacao & { status?: number } {
   return { status: resposta?.status, ...resposta?.data };
 }
 
-export function EnviarArquivoForm({ anoMes, onEnviado }: EnviarArquivoFormProps) {
+export function EnviarArquivoForm({ anoMes, somenteBalancete, onEnviado }: EnviarArquivoFormProps) {
   // Recorte por setor (Passo 22): o Alimentador só importa as listas dos seus setores.
   const { user } = useAuth();
-  const tipos = TIPOS.filter((t) => !user?.acesso.recorteSetor || user.acesso.setores.includes(t.valor));
+  const tipos = TIPOS.filter((t) => (!somenteBalancete || t.valor === "BALANCETE") && (!user?.acesso.recorteSetor || user.acesso.setores.includes(t.valor)));
   const [tipo, setTipo] = useState<TipoImportacao>((tipos[0]?.valor ?? "BALANCETE") as TipoImportacao);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [envio, setEnvio] = useState(0);

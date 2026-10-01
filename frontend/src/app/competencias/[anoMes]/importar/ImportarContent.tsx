@@ -34,6 +34,13 @@ const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }
 };
 
 function StatusImportacaoBadge({ imp }: { imp: Importacao }) {
+  if (imp.comparacao && imp.status === "CONCLUIDA") {
+    return (
+      <span className="inline-block rounded-sm border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-800">
+        Comparação
+      </span>
+    );
+  }
   if (imp.substituidaEm) {
     return (
       <span className="inline-block rounded-sm border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
@@ -106,13 +113,18 @@ export function ImportarContent() {
       ) : null}
 
       {fechada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">
-            Competência fechada: não recebe importações. Para importar, ela
-            precisa ser reaberta.
-          </p>
-        </div>
+        <>
+          <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
+            <Lock className="size-4 shrink-0 text-gray-500" />
+            <p className="text-sm text-gray-600">
+              Competência fechada: só recebe o balancete, para comparar com o que está gravado. As diferenças viram divergências
+              (tela Divergências) e a competência não muda. Para substituir dados, ela precisa ser reaberta.
+            </p>
+          </div>
+          <PermissionGuard permission="importacao:editar">
+            <EnviarArquivoForm anoMes={anoMes} somenteBalancete onEnviado={(imp) => setSelecionada(imp.id)} />
+          </PermissionGuard>
+        </>
       ) : data ? (
         <PermissionGuard permission="importacao:editar">
           <EnviarArquivoForm anoMes={anoMes} onEnviado={(imp) => setSelecionada(imp.id)} />

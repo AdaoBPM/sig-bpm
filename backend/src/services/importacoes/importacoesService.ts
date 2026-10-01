@@ -84,6 +84,7 @@ const CAMPOS_RESUMO = {
   linhasIgnoradas: true,
   motivoRejeicao: true,
   substituidaEm: true,
+  comparacao: true,
   usuario: { select: { nome: true } },
 } as const;
 
@@ -102,7 +103,10 @@ export const importacoesService = {
     }
 
     const competencia = await competenciaPorAnoMes(input.ano, input.mes);
-    if (competencia.status === "FECHADA") {
+    // Balancete de competência fechada (Passo 24): é recebido só para comparar
+    // com o gravado; as diferenças viram divergências e nada é substituído.
+    const comparacao = competencia.status === "FECHADA" && input.tipo === "BALANCETE";
+    if (competencia.status === "FECHADA" && !comparacao) {
       throw new RegraImportacaoError(
         409,
         `A competência ${rotulo(input.ano, input.mes)} está fechada. ` +
@@ -133,7 +137,7 @@ export const importacoesService = {
     // arquivo do balancete traz o exercício inteiro e é legitimamente
     // importado em janeiro, em fevereiro e assim por diante.
     const hash = createHash("sha256").update(input.conteudo).digest("hex");
-    if (!input.forcar) {
+    if (!input.forcar && !comparacao) {
       const repetida = await prisma.importacao.findFirst({
         where: {
           competenciaId: competencia.id,
@@ -175,6 +179,7 @@ export const importacoesService = {
         nomeArquivo: input.nomeArquivo,
         hashArquivo: hash,
         importadoPor: input.usuarioId,
+        comparacao,
       },
       select: CAMPOS_RESUMO,
     });
