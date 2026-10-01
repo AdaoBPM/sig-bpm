@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { CadastroShell } from "../components/CadastroShell";
+import { useEdicaoCadastro } from "../components/EdicaoCadastro";
 import { RecarregarPlanilha } from "../components/RecarregarPlanilha";
 import { cadastrosService, type LinhaDRE } from "../services/cadastrosService";
 
@@ -34,6 +35,7 @@ export function EstruturaDreContent() {
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const buscaDebounced = useDebounce(busca, 300);
+  const edicao = useEdicaoCadastro("estrutura-dre");
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["cadastros", "linhas-dre", buscaDebounced, pagina],
@@ -54,8 +56,13 @@ export function EstruturaDreContent() {
   return (
     <CadastroShell
       titulo="Estrutura da DRE"
-      descricao="A DRE é cadastro, não código. Carregada da aba Realizado (Consolidado); a edição aqui entra no Passo 25."
-      acoes={<RecarregarPlanilha />}
+      descricao="A DRE é cadastro, não código. Carregada da aba Realizado (Consolidado) e editável aqui; a composição é validada antes de gravar."
+      acoes={
+        <div className="flex items-center gap-2">
+          <RecarregarPlanilha />
+          {edicao.botaoNovo}
+        </div>
+      }
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Código, descrição ou grupo…"
@@ -71,7 +78,7 @@ export function EstruturaDreContent() {
         error={isError ? "Erro ao carregar a estrutura da DRE." : null}
         emptyMessage="Nenhuma linha encontrada"
         emptyHint="Ajuste a busca para ver outras linhas."
-        columns={["#", "Linha", "Tipo", "Grupo", "Composição", "Unidades", "Contas"]}
+        columns={["#", "Linha", "Tipo", "Grupo", "Composição", "Unidades", "Contas", ...edicao.colunaEditar]}
         renderRow={(item) => (
           <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
             <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
@@ -113,9 +120,11 @@ export function EstruturaDreContent() {
             <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
               {item._count.contas > 0 ? item._count.contas : "—"}
             </td>
+            {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(item.id)}</td> : null}
           </tr>
         )}
       />
+      {edicao.dialogo}
     </CadastroShell>
   );
 }

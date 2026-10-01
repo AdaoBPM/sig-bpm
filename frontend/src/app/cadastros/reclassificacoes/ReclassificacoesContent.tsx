@@ -9,6 +9,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { CadastroShell } from "../components/CadastroShell";
+import { useEdicaoCadastro } from "../components/EdicaoCadastro";
 import { Parametros } from "@/components/shared/Parametros";
 import {
   cadastrosService,
@@ -23,6 +24,7 @@ export function ReclassificacoesContent() {
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const buscaDebounced = useDebounce(busca, 300);
+  const edicao = useEdicaoCadastro("reclassificacoes");
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["cadastros", "reclassificacoes", buscaDebounced, pagina],
@@ -38,7 +40,8 @@ export function ReclassificacoesContent() {
   return (
     <CadastroShell
       titulo="Reclassificações de conta"
-      descricao="Para o centro de custo, a conta de origem vale como a de destino. Corrige lançamentos feitos em conta de outro departamento ou atribuição. Somente leitura."
+      descricao="Para o centro de custo, a conta de origem vale como a de destino. Corrige lançamentos feitos em conta de outro departamento ou atribuição."
+      acoes={edicao.botaoNovo}
       busca={busca}
       onBuscaChange={(v) => {
         setBusca(v);
@@ -57,7 +60,7 @@ export function ReclassificacoesContent() {
         error={isError ? "Erro ao carregar as reclassificações." : null}
         emptyMessage="Nenhuma reclassificação encontrada"
         emptyHint="Ajuste a busca para ver outros registros."
-        columns={["Centro de custo", "Conta de origem", "", "Conta adotada", "Origem do registro"]}
+        columns={["Centro de custo", "Conta de origem", "", "Conta adotada", "Origem do registro", ...edicao.colunaEditar]}
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
             <td className="px-4 py-3 text-sm">
@@ -96,9 +99,11 @@ export function ReclassificacoesContent() {
               />
             </td>
             <td className="px-4 py-3 text-xs text-gray-500">{r.motivo ?? "—"}</td>
+            {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(r.id)}</td> : null}
           </tr>
         )}
       />
+      {edicao.dialogo}
     </CadastroShell>
   );
 }

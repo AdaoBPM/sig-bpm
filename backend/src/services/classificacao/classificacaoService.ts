@@ -179,12 +179,19 @@ export const classificacaoService = {
     const competencia = await competenciaPorAnoMes(ano, mes);
 
     const [grupos, reclassificados, classificacao, naoClassificados] = await Promise.all([
-      prisma.lancamentoContabil.groupBy({
-        by: ["validacao"],
-        where: { competenciaId: competencia.id },
-        _count: { _all: true },
-        _sum: { valorMovimento: true },
-      }),
+      // A soma não vem do groupBy: com o adaptador do SQLite, o groupBy trunca
+      // todas as somas para inteiro quando a primeira do resultado é inteira.
+      // O aggregate, um por grupo, soma certo.
+      prisma.lancamentoContabil
+        .groupBy({ by: ["validacao"], where: { competenciaId: competencia.id }, _count: { _all: true } })
+        .then((gs) =>
+          Promise.all(
+            gs.map(async (g) => ({
+              ...g,
+              _sum: (await prisma.lancamentoContabil.aggregate({ where: { competenciaId: competencia.id, validacao: g.validacao }, _sum: { valorMovimento: true } }))._sum,
+            })),
+          ),
+        ),
       prisma.lancamentoContabil.count({
         where: {
           competenciaId: competencia.id,

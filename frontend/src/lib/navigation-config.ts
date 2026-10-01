@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeDollarSign, Building2, CalendarDays, GitCompareArrows, History, KeyRound, ListTree, Shuffle, Table2, Users } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Building2, CalendarDays, Columns3, GitCompareArrows, History, KeyRound, Landmark, ListTree, Percent, Shuffle, Table2, Users } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -28,6 +28,10 @@ export const navGrupos: NavGrupo[] = [
       { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros:ver" },
       { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros:ver" },
       { title: "Preços do contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
+      { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
+      { title: "Regras de rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
+      { title: "Tipos de movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros:ver" },
+      { title: "Tabela de estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros:ver" },
     ],
   },
   {
@@ -71,6 +75,10 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/estrutura-dre": "Estrutura da DRE",
   "/cadastros/reclassificacoes": "Reclassificações de conta",
   "/cadastros/precos-contrato": "Preços do contrato",
+  "/cadastros/unidades": "Unidades de negócio",
+  "/cadastros/regras-rateio": "Regras de rateio",
+  "/cadastros/tipos-movimento": "Tipos de movimento",
+  "/cadastros/tabela-estacas": "Tabela de estacas",
   "/usuarios": "Usuários",
   "/perfis": "Perfis de usuário",
   "/auditoria": "Auditoria",

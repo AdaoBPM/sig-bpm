@@ -64,6 +64,14 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   lancamento_receita: "Lançamento de receita",
   lista_operacional: "Lista operacional",
   divergencia: "Divergência",
+  centro_custo: "Centro de custo",
+  conta_resultado: "Conta de resultado",
+  reclassificacao: "Reclassificação de conta",
+  linha_dre: "Linha da DRE",
+  unidade_negocio: "Unidade de negócio",
+  regra_rateio: "Regra de rateio",
+  tipo_movimento: "Tipo de movimento",
+  tabela_estaca: "Tabela de estacas",
 };
 
 /** Deixa o JSON gravável: Decimal e Date viram texto, undefined some. */

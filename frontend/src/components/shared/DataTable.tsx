@@ -54,9 +54,9 @@ export function DataTable<T>({
     <table className="w-full border-collapse">
       <thead>
         <tr className="border-b border-gray-200 bg-gray-50">
-          {columns.map((column) => (
+          {columns.map((column, i) => (
             <th
-              key={column}
+              key={`${i}-${column}`}
               className="px-4 py-3 text-left text-xs font-bold tracking-wide text-gray-600 uppercase"
             >
               {column}

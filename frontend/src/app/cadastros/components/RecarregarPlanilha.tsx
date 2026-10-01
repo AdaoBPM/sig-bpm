@@ -148,7 +148,8 @@ export function RecarregarPlanilha() {
               Envie o SIG BPM 2026 - UNIDADES E CENTROS DE CUSTO. O sistema mostra o que
               muda nos centros de custo, nas contas de resultado e na estrutura da DRE
               antes de gravar. As competências ainda não apuradas são reclassificadas depois; as apuradas
-              ficam como foram apuradas até serem reapuradas.
+              ficam como foram apuradas até serem reapuradas. A planilha prevalece: uma correção feita
+              aqui na ferramenta e que não esteja nela aparece como alteração e é desfeita.
             </DialogDescription>
           </DialogHeader>
 

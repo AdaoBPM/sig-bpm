@@ -19,6 +19,7 @@ import {
 import { lancamentosReceitaRoutes, receitaPreviaRoutes } from "./routes/receitaPrevia/receitaPreviaRoutes.js";
 import { dreRoutes } from "./routes/dre/dreRoutes.js";
 import { apuracaoRoutes } from "./routes/apuracao/apuracaoRoutes.js";
+import { edicaoCadastrosRoutes } from "./routes/cadastros/edicaoCadastrosRoutes.js";
 import { divergenciasRoutes } from "./routes/divergencias/divergenciasRoutes.js";
 import { perfisRoutes, usuariosRoutes } from "./routes/usuarios/usuariosRoutes.js";
 import { estoqueRoutes } from "./routes/estoque/estoqueRoutes.js";
@@ -57,6 +58,7 @@ registerSwagger(app);
 app.use("/health", healthRoutes);
 app.use("/auth", authRoutes);
 app.use("/auditoria", auditoriaRoutes);
+app.use("/cadastros/edicao", edicaoCadastrosRoutes);
 app.use("/cadastros", cadastrosRoutes);
 app.use("/competencias/:anoMes/importacoes", importacoesDaCompetenciaRoutes);
 app.use("/competencias/:anoMes/classificacao", classificacaoRoutes);

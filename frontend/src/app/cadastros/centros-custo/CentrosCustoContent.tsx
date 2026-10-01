@@ -9,6 +9,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { CadastroShell } from "../components/CadastroShell";
+import { useEdicaoCadastro } from "../components/EdicaoCadastro";
 import { RecarregarPlanilha } from "../components/RecarregarPlanilha";
 import {
   cadastrosService,
@@ -23,6 +24,7 @@ export function CentrosCustoContent() {
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const buscaDebounced = useDebounce(busca, 300);
+  const edicao = useEdicaoCadastro("centros-custo");
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["cadastros", "centros-custo", buscaDebounced, pagina],
@@ -43,8 +45,13 @@ export function CentrosCustoContent() {
   return (
     <CadastroShell
       titulo="Centros de custo"
-      descricao="Carregados da planilha UNIDADES E CENTROS DE CUSTO. A edição aqui entra no Passo 25."
-      acoes={<RecarregarPlanilha />}
+      descricao="Carregados da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento é o do cadastro; a sigla vem dele."
+      acoes={
+        <div className="flex items-center gap-2">
+          <RecarregarPlanilha />
+          {edicao.botaoNovo}
+        </div>
+      }
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Código, nome ou departamento…"
@@ -67,6 +74,7 @@ export function CentrosCustoContent() {
           "Departamento",
           "Atribuição",
           "Balde",
+          ...edicao.colunaEditar,
         ]}
         renderRow={(item) => (
           <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -98,9 +106,11 @@ export function CentrosCustoContent() {
             <td className="px-4 py-3 text-sm">
               <BaldeBadge balde={item.balde} />
             </td>
+            {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(item.id)}</td> : null}
           </tr>
         )}
       />
+      {edicao.dialogo}
     </CadastroShell>
   );
 }

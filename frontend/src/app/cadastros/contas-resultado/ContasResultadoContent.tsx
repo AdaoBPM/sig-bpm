@@ -10,6 +10,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { CadastroShell } from "../components/CadastroShell";
+import { useEdicaoCadastro } from "../components/EdicaoCadastro";
 import { RecarregarPlanilha } from "../components/RecarregarPlanilha";
 import {
   cadastrosService,
@@ -24,6 +25,7 @@ export function ContasResultadoContent() {
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const buscaDebounced = useDebounce(busca, 300);
+  const edicao = useEdicaoCadastro("contas-resultado");
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["cadastros", "contas-resultado", buscaDebounced, pagina],
@@ -44,8 +46,13 @@ export function ContasResultadoContent() {
   return (
     <CadastroShell
       titulo="Contas de resultado"
-      descricao="Carregadas da planilha UNIDADES E CENTROS DE CUSTO. A edição aqui entra no Passo 25."
-      acoes={<RecarregarPlanilha />}
+      descricao="Carregadas da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento e a atribuição vêm do destino na DRE."
+      acoes={
+        <div className="flex items-center gap-2">
+          <RecarregarPlanilha />
+          {edicao.botaoNovo}
+        </div>
+      }
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Reduzido, conta ou descrição…"
@@ -68,6 +75,7 @@ export function ContasResultadoContent() {
           "Tipo",
           "Destino na DRE",
           "Balde",
+          ...edicao.colunaEditar,
         ]}
         renderRow={(item) => {
           // Conta analítica sem destino na DRE não entra na apuração — é a
@@ -106,10 +114,12 @@ export function ContasResultadoContent() {
               <td className="px-4 py-3 text-sm">
                 <BaldeBadge balde={item.balde} />
               </td>
+              {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(item.id)}</td> : null}
             </tr>
           );
         }}
       />
+      {edicao.dialogo}
     </CadastroShell>
   );
 }

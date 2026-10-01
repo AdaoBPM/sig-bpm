@@ -216,3 +216,17 @@ gera gatilhos a partir do schema. Na migração para PostgreSQL, recriar como um
 função plpgsql que levanta exceção, ligada a gatilhos `BEFORE UPDATE` e
 `BEFORE DELETE`. Opcionalmente, revogar UPDATE e DELETE da tabela para o
 usuário da aplicação.
+
+## Soma no `groupBy` com o adaptador do SQLite
+
+Com `@prisma/adapter-better-sqlite3`, o `groupBy` com `_sum` sobre coluna
+`Decimal` trunca **todas** as somas para inteiro quando a primeira soma do
+resultado é inteira: o tipo da coluna é deduzido da primeira linha. Foi visto
+em 01/10/2026 (Passo 25): agrupando os lançamentos de agosto por conta, os 298
+grupos vieram inteiros (264.143,30 virou 264.143). O `aggregate` não tem o
+problema, e o SQL direto também não.
+
+Enquanto o banco for SQLite, **não usar `_sum` em `groupBy`**: somar com
+`aggregate` por grupo, ou somar no código. O resumo da classificação já faz
+assim. Nenhum cálculo da apuração usa `groupBy`. No PostgreSQL o problema não
+existe, mas a regra pode continuar valendo sem custo.
