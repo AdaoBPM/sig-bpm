@@ -25,6 +25,8 @@ export type VisaoConferencia = {
   linhas: LinhaConferencia[];
   soNaPlanilha: Array<{ linha: number; descricao: string; planilha: number | null }>;
   soNoSistema: Array<{ codigo: string; descricao: string; sistema: string | null }>;
+  /** Totais que só a planilha mostra; a DRE da ferramenta não os tem. */
+  totaisDaPlanilha: Array<{ linha: number; descricao: string; planilha: number | null }>;
 };
 
 export type RelatorioConferencia = {

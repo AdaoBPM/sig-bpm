@@ -59,6 +59,35 @@ function comparar<T extends Record<string, unknown>>(
   return d;
 }
 
+type LinhaNoBanco = { id: string; codigo: string; tipo: string; grupo: string; ordem: number };
+
+/**
+ * Linhas da DRE renomeadas na planilha. O código da linha sai da descrição
+ * (prepararCadastros), então mudar a descrição na planilha muda o código. Sem
+ * isto, a recarga criaria uma linha nova e tentaria apagar a antiga, que tem
+ * valores apurados (e o banco recusa). Uma linha da planilha com código novo
+ * é a renomeação de uma linha do banco que saiu da planilha quando as duas
+ * estão na mesma posição, com o mesmo tipo e grupo (a atribuição não serve:
+ * nas linhas de volume ela é a própria descrição e muda junto). A linha do
+ * banco fica com o código novo, e os valores apurados continuam ligados a ela.
+ * A prévia da recarga mostra a renomeação como alteração, para o Contábil ver.
+ * Devolve código novo → linha do banco.
+ */
+export function renomeacoesDaDre(p: CadastrosPreparados, noBanco: LinhaNoBanco[]) {
+  const naPlanilha = new Set(p.dre.linhas.map((l) => l.codigo));
+  const existentes = new Set(noBanco.map((l) => l.codigo));
+  const sairiam = noBanco.filter((l) => !naPlanilha.has(l.codigo));
+  const renomeacoes = new Map<string, LinhaNoBanco>();
+  for (const l of p.dre.linhas) {
+    if (existentes.has(l.codigo)) continue;
+    const antiga = sairiam.find(
+      (b) => b.ordem === l.dados.ordem && b.tipo === l.dados.tipo && b.grupo === l.dados.grupo && ![...renomeacoes.values()].includes(b),
+    );
+    if (antiga) renomeacoes.set(l.codigo, antiga);
+  }
+  return renomeacoes;
+}
+
 export async function compararComBanco(p: CadastrosPreparados) {
   const prisma = getPrismaClient();
   const [centros, contas, linhas] = await Promise.all([
@@ -82,9 +111,11 @@ export async function compararComBanco(p: CadastrosPreparados) {
     false,
   );
 
+  // A linha renomeada aparece como alterada (a descrição), não como nova e removida.
+  const codigoNovo = new Map([...renomeacoesDaDre(p, linhas)].map(([novo, antiga]) => [antiga.codigo, novo]));
   const dreDif = comparar(
     new Map(p.dre.linhas.map((l) => [l.codigo, { rotulo: l.dados.descricao, valores: { ...l.dados, unidades: l.unidades.join(", ") } }])),
-    new Map(linhas.map((l) => [l.codigo, {
+    new Map(linhas.map((l) => [codigoNovo.get(l.codigo) ?? l.codigo, {
       rotulo: l.descricao,
       valores: { ...l, unidades: l.unidades.map((u) => u.unidadeNegocio.tipo).sort().join(", ") },
     }])),
@@ -118,6 +149,10 @@ export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
   const unidades = await tx.unidadeNegocio.findMany({ select: { id: true, tipo: true } });
   const unidadePorTipo = new Map(unidades.map((u) => [u.tipo, u.id]));
   const idPorCodigo = new Map<string, string>();
+  const noBanco = await tx.linhaDRE.findMany({ select: { id: true, codigo: true, tipo: true, grupo: true, ordem: true } });
+  for (const [novo, antiga] of renomeacoesDaDre(p, noBanco)) {
+    await tx.linhaDRE.update({ where: { id: antiga.id }, data: { codigo: novo } });
+  }
   for (const l of p.dre.linhas) {
     const linha = await tx.linhaDRE.upsert({ where: { codigo: l.codigo }, create: { codigo: l.codigo, ...l.dados }, update: l.dados });
     idPorCodigo.set(l.codigo, linha.id);

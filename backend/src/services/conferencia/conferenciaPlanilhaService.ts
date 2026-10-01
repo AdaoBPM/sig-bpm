@@ -46,6 +46,17 @@ const n = (s: unknown) => String(s ?? "").trim().toUpperCase();
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 const mesmaAba = (a: string, b: string) => a.normalize("NFC") === b.normalize("NFC");
 
+/**
+ * Totais que só as abas da planilha mostram, para somar os gastos da unidade,
+ * e que a DRE da ferramenta não tem nem precisa ter (decisão do usuário de
+ * 01/10/2026). Não entram na comparação nem contam como linha sem par.
+ */
+const TOTAIS_SO_DA_PLANILHA: Record<string, string[]> = {
+  "Resultados (Desp.+Extra)": ["DESPESAS + EXTRA OPERACIONAL (DEO)"],
+  "Resultados (RN)": ["EXTRA OPERACIONAL (EO)"],
+};
+const soDaPlanilha = (aba: string, descricao: string) => (TOTAIS_SO_DA_PLANILHA[aba] ?? []).some((d) => n(d) === n(descricao));
+
 /** Uma linha da aba, como fica guardada. */
 type ValorPlanilha = { unidade: number; aba: string; linha: number; descricao: string; codigo: string | null; repeteLinha?: number; valor: number | null };
 
@@ -166,7 +177,12 @@ export const conferenciaPlanilhaService = {
       const daAba = valores.filter((v) => v.unidade === unidade);
       const linhas: LinhaRelatorio[] = [];
       const soNaPlanilha: Array<{ linha: number; descricao: string; planilha: number | null }> = [];
+      const totaisDaPlanilha: Array<{ linha: number; descricao: string; planilha: number | null }> = [];
       for (const v of daAba) {
+        if (!v.codigo && soDaPlanilha(aba, v.descricao)) {
+          totaisDaPlanilha.push({ linha: v.linha, descricao: v.descricao, planilha: v.valor });
+          continue;
+        }
         if (!v.codigo) {
           soNaPlanilha.push({ linha: v.linha, descricao: v.descricao, planilha: v.valor });
           continue;
@@ -212,6 +228,7 @@ export const conferenciaPlanilhaService = {
         linhas,
         soNaPlanilha,
         soNoSistema,
+        totaisDaPlanilha,
       });
     }
     return {

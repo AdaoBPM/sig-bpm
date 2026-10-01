@@ -41,11 +41,11 @@
   },
   {
     "linhaPlanilha": 5,
-    "descricao": "Produção do Pré-Fabricado (pst)",
+    "descricao": "Produção do Pré-Fabricado (pistas)",
     "formula": "'Realizado (Filial)'!B5",
     "grupo": "PRODUÇÃO (P)",
     "grupoSigla": "P",
-    "atribuicao": "Produção do Pré-Fabricado (pst)",
+    "atribuicao": "Produção do Pré-Fabricado (pistas)",
     "atribuicaoSigla": "-",
     "definicao": "Volume das baixas de OP (com perdas)"
   },
