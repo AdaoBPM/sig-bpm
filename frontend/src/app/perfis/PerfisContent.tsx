@@ -40,7 +40,7 @@ export function PerfisContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Perfis de usuário"
+        titulo="Perfis de Usuário"
         sobre={
           <p>
             Os tipos de usuário e o que cada um pode fazer, por recurso e ação. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser

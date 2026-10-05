@@ -38,7 +38,7 @@ export function PrecosContratoContent() {
 
   return (
     <CadastroShell
-      titulo="Preços do contrato"
+      titulo="Preços do Contrato"
       descricao="Da DRE de venda do Comercial, importada em Importações. Um preço alterado numa reimportação substitui o anterior, que fica no histórico. Somente leitura."
       busca={busca}
       onBuscaChange={(v) => {

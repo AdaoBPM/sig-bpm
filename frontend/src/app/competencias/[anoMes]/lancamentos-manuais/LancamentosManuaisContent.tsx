@@ -95,7 +95,7 @@ export function LancamentosManuaisContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Lançamentos manuais"
+        titulo="Lançamentos Manuais"
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes. É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
         acoes={

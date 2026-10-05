@@ -23,8 +23,8 @@ export const navGrupos: NavGrupo[] = [
   {
     titulo: "Cadastros contábeis",
     itens: [
-      { title: "Centros de custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
-      { title: "Contas de resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
+      { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
+      { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
       { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros:ver" },
       { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros:ver" },
     ],
@@ -32,11 +32,11 @@ export const navGrupos: NavGrupo[] = [
   {
     titulo: "Cadastros da operação",
     itens: [
-      { title: "Preços do contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
+      { title: "Preços do Contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
       { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
-      { title: "Regras de rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
-      { title: "Tipos de movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros:ver" },
-      { title: "Tabela de estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros:ver" },
+      { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
+      { title: "Tipos de Movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros:ver" },
+      { title: "Tabela de Estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros:ver" },
     ],
   },
   {
@@ -73,17 +73,17 @@ export function permissaoDaTela(pathname: string): string | null {
 
 export const pageTitles: Record<string, string> = {
   "/competencias": "Competências",
-  "/cadastros/centros-custo": "Centros de custo",
-  "/cadastros/contas-resultado": "Contas de resultado",
+  "/cadastros/centros-custo": "Centros de Custo",
+  "/cadastros/contas-resultado": "Contas de Resultado",
   "/cadastros/estrutura-dre": "Estrutura da DRE",
-  "/cadastros/reclassificacoes": "Reclassificações de conta",
-  "/cadastros/precos-contrato": "Preços do contrato",
-  "/cadastros/unidades": "Unidades de negócio",
-  "/cadastros/regras-rateio": "Regras de rateio",
-  "/cadastros/tipos-movimento": "Tipos de movimento",
-  "/cadastros/tabela-estacas": "Tabela de estacas",
+  "/cadastros/reclassificacoes": "Reclassificações de Conta",
+  "/cadastros/precos-contrato": "Preços do Contrato",
+  "/cadastros/unidades": "Unidades de Negócio",
+  "/cadastros/regras-rateio": "Regras de Rateio",
+  "/cadastros/tipos-movimento": "Tipos de Movimento",
+  "/cadastros/tabela-estacas": "Tabela de Estacas",
   "/usuarios": "Usuários",
-  "/perfis": "Perfis de usuário",
+  "/perfis": "Perfis de Usuário",
   "/auditoria": "Auditoria",
   "/divergencias": "Divergências",
 };

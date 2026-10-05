@@ -89,7 +89,7 @@ export function ReceitaPreviaContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Receita prévia"
+        titulo="Receita Prévia"
         selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da receita prévia" /> : null}
         sobre={
           <p>

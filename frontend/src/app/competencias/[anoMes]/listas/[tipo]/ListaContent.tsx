@@ -95,7 +95,7 @@ export function ListaContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Listas operacionais"
+        titulo="Listas Operacionais"
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="das listas" /> : null}
         sobre={<p>Os volumes físicos de que saem os rateios. Registros importados se corrigem no arquivo; os digitados, aqui.</p>}
         acoes={

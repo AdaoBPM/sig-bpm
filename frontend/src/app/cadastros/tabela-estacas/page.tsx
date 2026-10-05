@@ -11,7 +11,7 @@ export default function TabelaEstacasPage() {
         <ListaCadastroContent
           entidade="tabela-estacas"
           rota="/cadastros/tabela-estacas"
-          titulo="Tabela de estacas"
+          titulo="Tabela de Estacas"
           descricao="Os preços das estacas por seção e grupo, com vigência (aba Tabela de Estacas do UNIDADES E CENTROS DE CUSTO), que valoram a variação do estoque de estacas."
         />
       </PermissionGuard>

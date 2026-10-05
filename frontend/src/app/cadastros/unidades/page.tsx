@@ -11,7 +11,7 @@ export default function UnidadesPage() {
         <ListaCadastroContent
           entidade="unidades"
           rota="/cadastros/unidades"
-          titulo="Unidades de negócio"
+          titulo="Unidades de Negócio"
           descricao="As unidades de negócio da DRE. O código e o tipo são fixos; o nome, a ordem e a situação são editáveis."
         />
       </PermissionGuard>

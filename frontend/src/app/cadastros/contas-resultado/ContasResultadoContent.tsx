@@ -46,7 +46,7 @@ export function ContasResultadoContent() {
 
   return (
     <CadastroShell
-      titulo="Contas de resultado"
+      titulo="Contas de Resultado"
       descricao="Carregadas da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento e a atribuição vêm do destino na DRE."
       acoes={
         <div className="flex items-center gap-2">

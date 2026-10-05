@@ -40,7 +40,7 @@ export function ReclassificacoesContent() {
 
   return (
     <CadastroShell
-      titulo="Reclassificações de conta"
+      titulo="Reclassificações de Conta"
       descricao="Para o centro de custo, a conta de origem vale como a de destino. Corrige lançamentos feitos em conta de outro departamento ou atribuição."
       acoes={edicao.botaoNovo}
       busca={busca}

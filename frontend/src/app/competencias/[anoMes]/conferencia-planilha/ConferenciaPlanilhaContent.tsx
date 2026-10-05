@@ -175,7 +175,7 @@ export function ConferenciaPlanilhaContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Conferência com a planilha"
+        titulo="Conferência com a Planilha"
         sobre={
           <p>
             Compara, linha a linha, a DRE apurada pela ferramenta com as abas Resultados (Consolidado), (Matriz), (Filial), (Serviços),

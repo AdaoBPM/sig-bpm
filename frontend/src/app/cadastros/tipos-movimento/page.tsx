@@ -11,7 +11,7 @@ export default function TiposMovimentoPage() {
         <ListaCadastroContent
           entidade="tipos-movimento"
           rota="/cadastros/tipos-movimento"
-          titulo="Tipos de movimento"
+          titulo="Tipos de Movimento"
           descricao="Os tipos de movimento de venda (aba Tipos de Movimento do UNIDADES E CENTROS DE CUSTO): uma devolução só vira receita quando o movimento está aqui."
         />
       </PermissionGuard>

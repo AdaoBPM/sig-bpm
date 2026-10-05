@@ -45,7 +45,7 @@ export function CentrosCustoContent() {
 
   return (
     <CadastroShell
-      titulo="Centros de custo"
+      titulo="Centros de Custo"
       descricao="Carregados da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento é o do cadastro; a sigla vem dele."
       acoes={
         <div className="flex items-center gap-2">
