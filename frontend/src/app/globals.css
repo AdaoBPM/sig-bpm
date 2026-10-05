@@ -104,7 +104,9 @@
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   position: sticky;
-  top: 0;
+  /* Abaixo do título da tela, que também fica fixo (--topo-tabela, medido pelo
+     CabecalhoDaTela). Nos diálogos, fora da área da tela, vale 0. */
+  top: var(--topo-tabela, 0px);
   z-index: 1;
   background-color: #f9fafb;
 }

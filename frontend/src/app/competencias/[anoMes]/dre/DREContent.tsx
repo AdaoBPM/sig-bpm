@@ -165,7 +165,7 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
   return (
     // A lista dos centros, com busca e o total de cada um, à esquerda da DRE do centro (E11 do levantamento de layout).
     <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-4">
+      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
         <div className="border-b border-gray-200 p-2">
           <CampoBusca rotulo="Buscar centro de custo" valor={busca} onMudar={setBusca} placeholder="Centro de custo…" largura="w-full" />
         </div>

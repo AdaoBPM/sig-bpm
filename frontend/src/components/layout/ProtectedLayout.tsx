@@ -44,7 +44,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="min-w-0 bg-muted/30">
+      {/* Fundo opaco (a mesma cor de antes), para o título fixo da tela cobrir o que passa por baixo. */}
+      <SidebarInset className="min-w-0 bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))]">
         <AppHeader />
         {user?.divergenciasAbertas && (pathname === "/competencias" || pathname.startsWith("/competencias/")) ? (
           // O aviso de divergência aberta (Passo 24), só nas telas de competência e do mês
