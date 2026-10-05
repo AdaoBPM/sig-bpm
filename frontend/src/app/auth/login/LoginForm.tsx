@@ -45,7 +45,7 @@ export function LoginForm() {
         <BpmLogo className="h-10 w-auto" priority />
         <div className="space-y-1">
           <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Entrar</h1>
-          <p className="text-sm text-gray-600">SIG BPM · Fechamento mensal</p>
+          <p className="text-sm text-gray-600">SIG BPM · Fechamento Mensal</p>
         </div>
       </div>
       {/* Campos e botão no mesmo espaçamento (space-y-4). */}

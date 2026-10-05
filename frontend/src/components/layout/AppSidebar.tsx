@@ -56,7 +56,7 @@ export function AppSidebar() {
               <BpmLogo className="h-7 w-auto" priority />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">BPM Pré-Moldados</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">SIG · Fechamento mensal</span>
+                <span className="truncate text-xs text-sidebar-foreground/70">SIG · Fechamento Mensal</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
