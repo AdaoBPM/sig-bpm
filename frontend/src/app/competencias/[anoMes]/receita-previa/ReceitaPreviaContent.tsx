@@ -141,7 +141,7 @@ export function ReceitaPreviaContent() {
       ) : receita.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : dados && dados.receitas.length > 0 ? (
-        <div className="max-w-4xl space-y-4">
+        <div className="space-y-4">
           {[1, 2, 3].map((u) => (
             <QuadroReceita key={u} unidade={u} receitas={dados.receitas} onAbrir={(unidade, natureza) => setMemoria({ unidade, natureza })} />
           ))}

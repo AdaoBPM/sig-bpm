@@ -74,10 +74,12 @@ export function AppSidebar() {
                     isActive={pathname.startsWith(`/competencias/${anoMes}`)}
                     tooltip={`Mês em trabalho: ${rotuloDoMes(anoMes)}`}
                     render={<Link href={`/competencias/${anoMes}/${primeiraEtapa.caminho}`} />}
+                    // Em destaque, no amarelo da marca BPM.
+                    className="bg-bpm-primary hover:bg-bpm-primary-hover active:bg-bpm-primary-hover data-active:bg-bpm-primary h-9 text-base font-bold text-black hover:text-black active:text-black data-active:font-bold data-active:text-black"
                   >
                     <CalendarClock />
                     <span>
-                      {rotuloDoMes(anoMes)} <span className="text-sidebar-foreground/60">· {emTrabalho!.nomeMes}</span>
+                      {rotuloDoMes(anoMes)} <span className="font-medium text-black/70">· {emTrabalho!.nomeMes}</span>
                     </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

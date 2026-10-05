@@ -58,8 +58,9 @@ function Linha({
 
 /**
  * Um bloco da aba Receitas (Prévia): ROB, IRB e ROL da unidade, por natureza.
- * Os três blocos ficam um embaixo do outro, com as mesmas colunas de largura
- * fixa (E7 do levantamento de layout), para os valores se alinharem entre eles.
+ * Os três blocos ficam um embaixo do outro, na largura das demais tabelas,
+ * com as mesmas colunas de largura fixa (E7 do levantamento de layout), para
+ * os valores se alinharem entre eles.
  */
 export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
   const naturezas = NATUREZAS_DA_UNIDADE[unidade];
