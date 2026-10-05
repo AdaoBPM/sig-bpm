@@ -10,7 +10,7 @@ import { edicaoService, type Campo, type Registro } from "../services/edicaoServ
 import { CadastroShell } from "./CadastroShell";
 import { useEdicaoCadastro } from "./EdicaoCadastro";
 
-const POR_PAGINA = 50;
+const POR_PAGINA_INICIAL = 50;
 
 function formatar(c: Campo, v: unknown) {
   if (v === null || v === undefined || v === "") return <span className="text-gray-400">—</span>;
@@ -28,6 +28,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Prop
   useRegistrarAcessoTela(rota);
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
   const edicao = useEdicaoCadastro(entidade, { criar: def.data?.criar ?? false });
@@ -38,7 +39,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Prop
     const todos = lista.data ?? [];
     return termo ? todos.filter((r) => campos.some((c) => String(r[c.nome] ?? "").toLowerCase().includes(termo))) : todos;
   }, [lista.data, busca, campos]);
-  const pagina_ = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+  const pagina_ = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
 
   return (
     <CadastroShell
@@ -53,7 +54,8 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Prop
       placeholderBusca="Buscar…"
       total={filtrados.length}
       pagina={pagina}
-      porPagina={POR_PAGINA}
+      porPagina={porPagina}
+      onPorPaginaChange={setPorPagina}
       onPaginaChange={setPagina}
       carregando={def.isPending || lista.isPending}
     >

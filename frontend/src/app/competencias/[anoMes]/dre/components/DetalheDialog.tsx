@@ -54,7 +54,7 @@ function Bloco({ b, consolidado, onMemoria }: { b: BlocoDetalhe; consolidado: bo
       {cabecalho}
       {b.lancamentos.length > 0 ? (
         <div className="max-h-80 overflow-auto">
-          <table className="w-full border-collapse text-xs">
+          <table className="tabela-sig w-full border-collapse text-xs">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="border-b border-gray-200 text-left font-bold tracking-wide text-gray-600 uppercase">
                 <th className="px-2 py-1.5">Filial</th>

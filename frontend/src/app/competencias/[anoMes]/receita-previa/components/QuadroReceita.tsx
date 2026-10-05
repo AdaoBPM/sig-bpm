@@ -69,7 +69,7 @@ export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
       <div className="border-b border-gray-200 px-4 py-3">
         <h2 className="text-sm font-bold tracking-wide text-gray-900 uppercase">{ROTULO_UNIDADE[unidade]}</h2>
       </div>
-      <table className="w-full border-collapse">
+      <table className="tabela-sig w-full border-collapse">
         <tbody>
           <Linha rotulo="RECEITA OPERACIONAL BRUTA (ROB)" valor={rob} base={rob} destaque />
           {naturezas.map((n) => (

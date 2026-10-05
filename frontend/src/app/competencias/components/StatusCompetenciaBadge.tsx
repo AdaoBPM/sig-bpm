@@ -27,7 +27,7 @@ export function StatusCompetenciaBadge({
   const { classe, rotulo } = ESTILO[status];
   return (
     <span
-      className={`inline-block rounded-sm border px-2 py-0.5 text-xs font-medium ${classe}`}
+      className={`inline-block rounded-sm border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${classe}`}
     >
       {rotulo}
     </span>

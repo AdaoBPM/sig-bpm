@@ -16,23 +16,24 @@ import {
   type Reclassificacao,
 } from "../services/cadastrosService";
 
-const POR_PAGINA = 50;
+const POR_PAGINA_INICIAL = 50;
 
 export function ReclassificacoesContent() {
   useRegistrarAcessoTela("/cadastros/reclassificacoes");
 
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("reclassificacoes");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "reclassificacoes", buscaDebounced, pagina],
+    queryKey: ["cadastros", "reclassificacoes", buscaDebounced, pagina, porPagina],
     queryFn: () =>
       cadastrosService.reclassificacoes({
         busca: buscaDebounced || undefined,
         pagina,
-        porPagina: POR_PAGINA,
+        porPagina: porPagina,
       }),
     placeholderData: keepPreviousData,
   });
@@ -50,7 +51,8 @@ export function ReclassificacoesContent() {
       placeholderBusca="Centro ou conta…"
       total={data?.total ?? 0}
       pagina={pagina}
-      porPagina={POR_PAGINA}
+      porPagina={porPagina}
+      onPorPaginaChange={setPorPagina}
       onPaginaChange={setPagina}
       carregando={isPending}
     >

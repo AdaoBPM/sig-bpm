@@ -2,18 +2,19 @@
 
 import { Fragment, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Carregando, ErroCarga } from "@/components/shared/Estados";
+import { BarraDeFiltros, SeletorFiltro } from "@/components/shared/Filtros";
+import { Paginacao } from "@/components/shared/Paginacao";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { dataHora, inteiro } from "../competencias/[anoMes]/utils/formatacao";
 import { auditoriaService, type FiltroAuditoria, type RegistroAuditoria } from "./services/auditoriaService";
 
-const classeSelect = "h-9 w-full rounded-sm border border-gray-300 bg-white px-3 text-sm";
 
 /** Achata um objeto em "caminho → valor", para comparar o antes e o depois campo a campo. */
 function achatar(x: unknown, prefixo = ""): Map<string, string> {
@@ -44,7 +45,7 @@ function Diferencas({ r }: { r: RegistroAuditoria }) {
   return (
     <div className="space-y-3 text-xs">
       {campos.length > 0 ? (
-        <table className="w-full border-collapse">
+        <table className="tabela-sig w-full border-collapse">
           <thead>
             <tr className="text-left text-gray-500">
               <th className="py-1 pr-3 font-medium">Campo</th>
@@ -89,7 +90,6 @@ export function AuditoriaContent() {
   const muda = (p: Partial<FiltroAuditoria>) => setFiltro((f) => ({ ...f, ...p, pagina: p.pagina ?? 1 }));
   const rotuloAcao = new Map(opcoes.data?.acoes.map((a) => [a.acao, a.rotulo]));
   const rotuloEntidade = new Map(opcoes.data?.entidades.map((e) => [e.entidade, e.rotulo]));
-  const totalPaginas = log.data ? Math.max(1, Math.ceil(log.data.total / log.data.porPagina)) : 1;
 
   return (
     <div className="space-y-6">
@@ -98,71 +98,52 @@ export function AuditoriaContent() {
         sobre={<p>Quem fez o quê, quando e em qual registro, com o estado antes e depois. O log é imutável: nenhum perfil altera ou apaga um registro.</p>}
       />
 
-      <div className="grid gap-3 rounded-sm border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="a-de">De</Label>
-          <Input id="a-de" type="date" value={filtro.de ?? ""} onChange={(e) => muda({ de: e.target.value || undefined })} className="rounded-sm" />
+      {/* Filtros no padrão (G8 do levantamento de layout). */}
+      <BarraDeFiltros
+        ativos={!!(filtro.de || filtro.ate || filtro.usuarioId || filtro.entidade || filtro.acao || filtro.incluirAcessos)}
+        onLimpar={() => setFiltro({ incluirAcessos: false, pagina: 1 })}
+      >
+        <div className="space-y-1">
+          <label htmlFor="a-de" className="block text-xs font-medium text-gray-600">De</label>
+          <Input id="a-de" type="date" value={filtro.de ?? ""} onChange={(e) => muda({ de: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="a-ate">Até</Label>
-          <Input id="a-ate" type="date" value={filtro.ate ?? ""} onChange={(e) => muda({ ate: e.target.value || undefined })} className="rounded-sm" />
+        <div className="space-y-1">
+          <label htmlFor="a-ate" className="block text-xs font-medium text-gray-600">Até</label>
+          <Input id="a-ate" type="date" value={filtro.ate ?? ""} onChange={(e) => muda({ ate: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="a-usuario">Usuário</Label>
-          <select id="a-usuario" value={filtro.usuarioId ?? ""} onChange={(e) => muda({ usuarioId: e.target.value || undefined })} className={classeSelect}>
-            <option value="">Todos</option>
-            {opcoes.data?.usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="a-entidade">Entidade</Label>
-          <select id="a-entidade" value={filtro.entidade ?? ""} onChange={(e) => muda({ entidade: e.target.value || undefined })} className={classeSelect}>
-            <option value="">Todas</option>
-            {opcoes.data?.entidades.map((e) => (
-              <option key={e.entidade} value={e.entidade}>
-                {e.rotulo}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="a-acao">Ação</Label>
-          <select id="a-acao" value={filtro.acao ?? ""} onChange={(e) => muda({ acao: e.target.value || undefined })} className={classeSelect}>
-            <option value="">Todas</option>
-            {opcoes.data?.acoes.map((a) => (
-              <option key={a.acao} value={a.acao}>
-                {a.rotulo}
-              </option>
-            ))}
-          </select>
-        </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm text-gray-700">
+        <SeletorFiltro
+          rotulo="Usuário"
+          valor={filtro.usuarioId}
+          onMudar={(v) => muda({ usuarioId: v })}
+          opcoes={(opcoes.data?.usuarios ?? []).map((u) => ({ valor: u.id, rotulo: u.nome }))}
+        />
+        <SeletorFiltro
+          rotulo="Entidade"
+          valor={filtro.entidade}
+          onMudar={(v) => muda({ entidade: v })}
+          todos="Todas"
+          opcoes={(opcoes.data?.entidades ?? []).map((e) => ({ valor: e.entidade, rotulo: e.rotulo }))}
+        />
+        <SeletorFiltro
+          rotulo="Ação"
+          valor={filtro.acao}
+          onMudar={(v) => muda({ acao: v })}
+          todos="Todas"
+          largura="w-56"
+          opcoes={(opcoes.data?.acoes ?? []).map((a) => ({ valor: a.acao, rotulo: a.rotulo }))}
+        />
+        <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={filtro.incluirAcessos} onChange={(e) => muda({ incluirAcessos: e.target.checked })} className="size-4 accent-black" />
           Incluir acessos às telas
         </label>
-      </div>
+      </BarraDeFiltros>
 
-      <div className="rounded-sm border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-600">
-          <span>{log.data ? `${inteiro(log.data.total)} registro(s)` : "…"}</span>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="icon" className="rounded-sm" disabled={filtro.pagina <= 1} onClick={() => muda({ pagina: filtro.pagina - 1 })} aria-label="Anterior">
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="tabular-nums">
-              {filtro.pagina} / {totalPaginas}
-            </span>
-            <Button type="button" variant="outline" size="icon" className="rounded-sm" disabled={filtro.pagina >= totalPaginas} onClick={() => muda({ pagina: filtro.pagina + 1 })} aria-label="Próxima">
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-        {log.isError ? <p className="p-4 text-sm text-red-700">Erro ao carregar o log.</p> : null}
-        <table className="w-full border-collapse text-sm">
+      <QuadroTabela
+        barra={<span className="text-xs text-gray-600">{log.data ? `${inteiro(log.data.total)} registro(s)` : ""}</span>}
+        rodape={log.data && log.data.total > 0 ? <Paginacao total={log.data.total} pagina={filtro.pagina} porPagina={log.data.porPagina} onPagina={(p) => muda({ pagina: p })} carregando={log.isFetching} /> : null}
+      >
+        {log.isError ? <ErroCarga mensagem="Erro ao carregar o log." /> : null}
+        <table className="tabela-sig w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
               <th className="px-4 py-2">Quando</th>
@@ -175,8 +156,8 @@ export function AuditoriaContent() {
           <tbody>
             {log.isPending && !log.data ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
-                  Carregando…
+                <td colSpan={5}>
+                  <Carregando linhas={4} />
                 </td>
               </tr>
             ) : log.data?.itens.length === 0 ? (
@@ -218,7 +199,7 @@ export function AuditoriaContent() {
             )}
           </tbody>
         </table>
-      </div>
+      </QuadroTabela>
     </div>
   );
 }

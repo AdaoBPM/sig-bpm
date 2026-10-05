@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import { Carregando, ErroCarga, Vazio } from "./Estados";
+
 type DataTableProps<T> = {
   data: T[];
   isLoading?: boolean;
@@ -23,35 +25,13 @@ export function DataTable<T>({
   renderRow,
   columns,
 }: DataTableProps<T>) {
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-12 animate-pulse rounded-sm bg-gray-100" />
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-sm border border-red-200 bg-red-50 p-4">
-        <p className="text-sm text-red-700">{error}</p>
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="py-12 text-center">
-        <p className="text-sm font-medium text-gray-900">{emptyMessage}</p>
-        <p className="mt-1 text-sm text-gray-600">{emptyHint}</p>
-      </div>
-    );
-  }
+  // Os estados padrão (G12 do levantamento de layout).
+  if (isLoading) return <Carregando />;
+  if (error) return <ErroCarga mensagem={error} />;
+  if (data.length === 0) return <Vazio titulo={emptyMessage} dica={emptyHint} />;
 
   return (
-    <table className="w-full border-collapse">
+    <table className="tabela-sig w-full border-collapse">
       <thead>
         <tr className="border-b border-gray-200 bg-gray-50">
           {columns.map((column, i) => (

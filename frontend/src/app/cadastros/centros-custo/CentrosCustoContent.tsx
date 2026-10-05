@@ -16,23 +16,24 @@ import {
   type CentroCusto,
 } from "../services/cadastrosService";
 
-const POR_PAGINA = 50;
+const POR_PAGINA_INICIAL = 50;
 
 export function CentrosCustoContent() {
   useRegistrarAcessoTela("/cadastros/centros-custo");
 
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("centros-custo");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "centros-custo", buscaDebounced, pagina],
+    queryKey: ["cadastros", "centros-custo", buscaDebounced, pagina, porPagina],
     queryFn: () =>
       cadastrosService.centrosCusto({
         busca: buscaDebounced || undefined,
         pagina,
-        porPagina: POR_PAGINA,
+        porPagina: porPagina,
       }),
     placeholderData: keepPreviousData,
   });
@@ -57,7 +58,8 @@ export function CentrosCustoContent() {
       placeholderBusca="Código, nome ou departamento…"
       total={data?.total ?? 0}
       pagina={pagina}
-      porPagina={POR_PAGINA}
+      porPagina={porPagina}
+      onPorPaginaChange={setPorPagina}
       onPaginaChange={setPagina}
       carregando={isPending}
     >

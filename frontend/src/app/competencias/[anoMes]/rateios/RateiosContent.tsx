@@ -101,7 +101,7 @@ export function RateiosContent() {
                   total {quant(k.total)} {MEDIDA_BASE[k.baseFisica] ?? ""}
                 </span>
               </div>
-              <table className="w-full border-collapse text-sm">
+              <table className="tabela-sig w-full border-collapse text-sm">
                 <tbody>
                   {k.destinos.map((d) => (
                     <tr key={d.destino} className="border-t border-gray-100">
@@ -135,7 +135,7 @@ export function RateiosContent() {
               não entram em nenhuma chave de rateio.
             </p>
           </div>
-          <table className="w-full border-collapse text-sm">
+          <table className="tabela-sig w-full border-collapse text-sm">
             <tbody>
               {dados.totais.map((t) => (
                 <tr key={t.codigo} className="border-t border-gray-100">

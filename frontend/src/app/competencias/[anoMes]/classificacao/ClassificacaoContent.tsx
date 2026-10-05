@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, ArrowRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
@@ -12,12 +12,15 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Parametros } from "@/components/shared/Parametros";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Abas } from "@/components/shared/Abas";
+import { CampoBusca } from "@/components/shared/Filtros";
+import { Paginacao } from "@/components/shared/Paginacao";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { apuracaoService } from "../../services/apuracaoService";
 import { dataHora, inteiro, lerAnoMes, moeda } from "../utils/formatacao";
@@ -29,37 +32,7 @@ import {
   type Validacao,
 } from "./services/classificacaoService";
 
-const POR_PAGINA = 50;
-
-function Filtro({
-  ativo,
-  onClick,
-  rotulo,
-  quantidade,
-  destaque,
-}: {
-  ativo: boolean;
-  onClick: () => void;
-  rotulo: string;
-  quantidade: number;
-  destaque?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-sm border px-3 py-1.5 text-sm font-medium ${
-        ativo
-          ? "border-black bg-black text-white"
-          : destaque
-            ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-            : "border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
-      }`}
-    >
-      {rotulo} <span className="tabular-nums opacity-80">{inteiro(quantidade)}</span>
-    </button>
-  );
-}
+const POR_PAGINA_INICIAL = 50;
 
 function CelulaCentro({ l }: { l: LancamentoClassificado }) {
   if (!l.codigoCentroCusto) {
@@ -117,6 +90,7 @@ export function ClassificacaoContent() {
   const [situacao, setSituacao] = useState<Situacao>("PENDENCIAS");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
 
   const apuracao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
@@ -127,13 +101,13 @@ export function ClassificacaoContent() {
   });
 
   const lista = useQuery({
-    queryKey: ["classificacao", anoMes, "lancamentos", situacao, buscaDebounced, pagina],
+    queryKey: ["classificacao", anoMes, "lancamentos", situacao, buscaDebounced, pagina, porPagina],
     queryFn: () =>
       classificacaoService.lancamentos(anoMes, {
         situacao,
         busca: buscaDebounced || undefined,
         pagina,
-        porPagina: POR_PAGINA,
+        porPagina,
       }),
     enabled: periodo !== null,
     placeholderData: keepPreviousData,
@@ -172,7 +146,6 @@ export function ClassificacaoContent() {
   const fechada = r?.competencia.status === "FECHADA";
   // Apurada, a classificação faz parte do retrato congelado: só a reapuração a refaz.
   const apurada = apuracao.data?.apurada ?? false;
-  const totalPaginas = Math.max(1, Math.ceil((lista.data?.total ?? 0) / POR_PAGINA));
 
   function filtrar(s: Situacao) {
     setSituacao(s);
@@ -256,118 +229,82 @@ export function ClassificacaoContent() {
           </p>
         </div>
       ) : (
-        <div className="border border-gray-200 bg-white rounded-sm">
-          <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              <Filtro
-                ativo={situacao === "PENDENCIAS"}
-                onClick={() => filtrar("PENDENCIAS")}
-                rotulo="Pendências"
-                quantidade={r?.pendentes ?? 0}
-                destaque={(r?.pendentes ?? 0) > 0}
-              />
-              {pendenciasPorTipo.map((v) => (
-                <Filtro
-                  key={v}
-                  ativo={situacao === v}
-                  onClick={() => filtrar(v)}
-                  rotulo={VALIDACOES[v].codigo.startsWith("<") ? VALIDACOES[v].codigo : VALIDACOES[v].rotulo}
-                  quantidade={quantidade(v)}
-                />
-              ))}
-              <Filtro
-                ativo={situacao === "TODOS"}
-                onClick={() => filtrar("TODOS")}
-                rotulo="Todos"
-                quantidade={r?.total ?? 0}
-              />
-            </div>
-            <div className="relative w-full lg:max-w-xs">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                aria-label="Buscar lançamentos"
-                value={busca}
-                onChange={(e) => {
-                  setBusca(e.target.value);
+        <div className="space-y-3">
+          <Abas
+            rotulo="Situação dos lançamentos"
+            ativa={situacao}
+            onMudar={(c) => filtrar(c as Situacao)}
+            abas={[
+              {
+                chave: "PENDENCIAS",
+                rotulo: "Pendências",
+                contagem: r?.pendentes ?? 0,
+                sinal: (r?.pendentes ?? 0) > 0 ? <span className="size-2 rounded-full bg-red-600" aria-hidden /> : undefined,
+              },
+              ...pendenciasPorTipo.map((v) => ({
+                chave: v,
+                rotulo: VALIDACOES[v].codigo.startsWith("<") ? VALIDACOES[v].codigo : VALIDACOES[v].rotulo,
+                contagem: quantidade(v),
+              })),
+              { chave: "TODOS", rotulo: "Todos", contagem: r?.total ?? 0 },
+            ]}
+          />
+          <QuadroTabela
+            barra={
+              <CampoBusca
+                rotulo="Buscar lançamentos"
+                valor={busca}
+                onMudar={(v) => {
+                  setBusca(v);
                   setPagina(1);
                 }}
                 placeholder="Centro ou conta…"
-                className="rounded-sm border-gray-300 pl-9"
               />
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <DataTable<LancamentoClassificado>
-              data={lista.data?.itens ?? []}
-              isLoading={lista.isPending}
-              error={lista.isError ? "Erro ao carregar os lançamentos." : null}
-              emptyMessage={
-                situacao === "PENDENCIAS" ? "Nenhuma pendência de classificação" : "Nenhum lançamento encontrado"
-              }
-              emptyHint={
-                situacao === "PENDENCIAS"
-                  ? "Todos os lançamentos têm destino e passaram na verificação."
-                  : "Ajuste a busca ou o filtro."
-              }
-              columns={["Filial", "Centro de custo", "Conta", "Verificação", "Rateio", "Linha da DRE", "Valor"]}
-              renderRow={(l) => (
-                <tr key={l.id} className="border-b border-gray-100 align-top hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm tabular-nums text-gray-900">{l.filial}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <CelulaCentro l={l} />
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <CelulaConta l={l} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <ValidacaoBadge validacao={l.validacao} />
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <BaldeBadge balde={l.balde} />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {l.linhaDRE?.descricao ?? <span className="text-red-700">sem destino</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900">
-                    {moeda(l.valorMovimento)}
-                  </td>
-                </tr>
-              )}
-            />
-          </div>
-
-          {lista.data && lista.data.total > POR_PAGINA ? (
-            <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-600">
-              <span className="tabular-nums">
-                {inteiro((pagina - 1) * POR_PAGINA + 1)}–
-                {inteiro(Math.min(pagina * POR_PAGINA, lista.data.total))} de{" "}
-                {inteiro(lista.data.total)}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pagina <= 1}
-                  onClick={() => setPagina((p) => p - 1)}
-                  className="rounded-sm"
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pagina >= totalPaginas}
-                  onClick={() => setPagina((p) => p + 1)}
-                  className="rounded-sm"
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-          ) : null}
+            }
+            rodape={
+              lista.data && lista.data.total > 0 ? (
+                <Paginacao total={lista.data.total} pagina={pagina} porPagina={porPagina} onPagina={setPagina} onPorPagina={setPorPagina} carregando={lista.isFetching} />
+              ) : null
+            }
+          >
+          <DataTable<LancamentoClassificado>
+            data={lista.data?.itens ?? []}
+            isLoading={lista.isPending}
+            error={lista.isError ? "Erro ao carregar os lançamentos." : null}
+            emptyMessage={
+              situacao === "PENDENCIAS" ? "Nenhuma pendência de classificação" : "Nenhum lançamento encontrado"
+            }
+            emptyHint={
+              situacao === "PENDENCIAS"
+                ? "Todos os lançamentos têm destino e passaram na verificação."
+                : "Ajuste a busca ou o filtro."
+            }
+            columns={["Filial", "Centro de custo", "Conta", "Verificação", "Rateio", "Linha da DRE", "Valor"]}
+            renderRow={(l) => (
+              <tr key={l.id} className="border-b border-gray-100 align-top hover:bg-gray-50">
+                <td className="px-4 py-3 text-sm tabular-nums text-gray-900">{l.filial}</td>
+                <td className="px-4 py-3 text-sm">
+                  <CelulaCentro l={l} />
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <CelulaConta l={l} />
+                </td>
+                <td className="px-4 py-3">
+                  <ValidacaoBadge validacao={l.validacao} />
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <BaldeBadge balde={l.balde} />
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600">
+                  {l.linhaDRE?.descricao ?? <span className="text-red-700">sem destino</span>}
+                </td>
+                <td className="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900">
+                  {moeda(l.valorMovimento)}
+                </td>
+              </tr>
+            )}
+          />
+          </QuadroTabela>
         </div>
       )}
     </div>

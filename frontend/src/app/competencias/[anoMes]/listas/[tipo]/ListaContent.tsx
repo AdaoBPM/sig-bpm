@@ -1,28 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Abas } from "@/components/shared/Abas";
+import { CampoBusca } from "@/components/shared/Filtros";
+import { Paginacao } from "@/components/shared/Paginacao";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { AvisoCongelado } from "../../../components/AvisoCongelado";
 import { inteiro, lerAnoMes } from "../../utils/formatacao";
 import { RegistroListaDialog } from "../components/RegistroListaDialog";
 import { LISTAS, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
 
-const POR_PAGINA = 50;
+const POR_PAGINA_INICIAL = 50;
 
 const quantidade = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
@@ -36,14 +38,15 @@ export function ListaContent() {
 
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   // undefined: diálogo fechado; null: novo; registro: edição.
   const [editando, setEditando] = useState<RegistroLista | null | undefined>(undefined);
 
   const definicoes = useQuery({ queryKey: ["listas", "campos"], queryFn: listasService.campos, staleTime: 30 * 60_000 });
   const dados = useQuery({
-    queryKey: ["listas", anoMes, slug, buscaDebounced, pagina],
-    queryFn: () => listasService.listar(anoMes, slug, { busca: buscaDebounced || undefined, pagina, porPagina: POR_PAGINA }),
+    queryKey: ["listas", anoMes, slug, buscaDebounced, pagina, porPagina],
+    queryFn: () => listasService.listar(anoMes, slug, { busca: buscaDebounced || undefined, pagina, porPagina }),
     enabled: periodo !== null && lista !== undefined,
     placeholderData: keepPreviousData,
   });
@@ -69,7 +72,6 @@ export function ListaContent() {
   const d = dados.data;
   const fechada = d?.competencia.status === "FECHADA";
   const colunasDetalhe = d?.itens[0]?.detalhes.map((x) => x.rotulo) ?? [];
-  const totalPaginas = Math.max(1, Math.ceil((d?.total ?? 0) / POR_PAGINA));
 
   return (
     <div className="space-y-6">
@@ -93,21 +95,15 @@ export function ListaContent() {
         }
       />
 
-      <nav className="flex flex-wrap gap-2" aria-label="Listas">
-        {LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo)).map((l) => (
-          <Link
-            key={l.slug}
-            href={`/competencias/${anoMes}/listas/${l.slug}`}
-            className={`rounded-sm border px-3 py-1.5 text-sm font-medium ${
-              l.slug === slug ? "border-black bg-black text-white" : "border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
-            }`}
-          >
-            {definicoes.data?.[l.tipo]?.rotulo ?? l.tipo}
-          </Link>
-        ))}
-      </nav>
-
-
+      <Abas
+        rotulo="Listas"
+        ativa={slug}
+        abas={LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo)).map((l) => ({
+          chave: l.slug,
+          rotulo: definicoes.data?.[l.tipo]?.rotulo ?? l.tipo,
+          href: `/competencias/${anoMes}/listas/${l.slug}`,
+        }))}
+      />
 
       {d && d.totais.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -122,24 +118,23 @@ export function ListaContent() {
         </div>
       ) : null}
 
-      <div className="border border-gray-200 bg-white rounded-sm">
-        <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-600">{d ? `${inteiro(d.total)} registro(s)` : "Carregando…"}</p>
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              aria-label="Buscar registros"
-              value={busca}
-              onChange={(e) => {
-                setBusca(e.target.value);
+      <QuadroTabela
+        barra={
+          <>
+            <CampoBusca
+              rotulo="Buscar registros"
+              valor={busca}
+              onMudar={(v) => {
+                setBusca(v);
                 setPagina(1);
               }}
               placeholder="Obra (sigla ou nome)…"
-              className="rounded-sm border-gray-300 pl-9"
             />
-          </div>
-        </div>
-        <div className="overflow-x-auto">
+            <p className="text-xs text-gray-600">{d ? `${inteiro(d.total)} registro(s)` : ""}</p>
+          </>
+        }
+        rodape={d && d.total > 0 ? <Paginacao total={d.total} pagina={pagina} porPagina={porPagina} onPagina={setPagina} onPorPagina={setPorPagina} carregando={dados.isFetching} /> : null}
+      >
           <DataTable<RegistroLista>
             data={d?.itens ?? []}
             isLoading={dados.isPending}
@@ -195,23 +190,7 @@ export function ListaContent() {
               </tr>
             )}
           />
-        </div>
-        {d && d.total > POR_PAGINA ? (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-600">
-            <span className="tabular-nums">
-              {inteiro((pagina - 1) * POR_PAGINA + 1)}–{inteiro(Math.min(pagina * POR_PAGINA, d.total))} de {inteiro(d.total)}
-            </span>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-sm">
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button type="button" variant="outline" size="sm" disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-sm">
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </div>
+      </QuadroTabela>
 
       {editando !== undefined && def ? (
         <RegistroListaDialog

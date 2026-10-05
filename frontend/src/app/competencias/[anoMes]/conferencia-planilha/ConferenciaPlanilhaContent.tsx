@@ -14,6 +14,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { lerNumero } from "@/lib/numero";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Abas } from "@/components/shared/Abas";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { conferenciaService, mensagemDeErro, type LinhaConferencia, type VisaoConferencia } from "./services/conferenciaService";
@@ -79,7 +80,7 @@ function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas
   const destaque = (l: LinhaConferencia) => l.tipo !== "ITEM";
   return (
     <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
-      <table className="w-full border-collapse text-sm">
+      <table className="tabela-sig w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
             <th className="px-3 py-2 text-right">Linha</th>
@@ -204,19 +205,18 @@ export function ConferenciaPlanilhaContent() {
       {r?.resumo && visao ? (
         <>
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              {r.visoes.map((v) => (
-                <button
-                  key={v.unidade}
-                  type="button"
-                  onClick={() => setUnidade(v.unidade)}
-                  className={`inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-sm font-medium ${visao.unidade === v.unidade ? "border-black bg-black text-white" : "border-gray-300 text-gray-900 hover:bg-gray-100"}`}
-                >
-                  {v.diferencas === 0 ? <CheckCircle2 className="size-3.5 text-green-600" /> : <AlertTriangle className="size-3.5 text-red-600" />}
-                  {v.nome}
-                  {v.diferencas > 0 ? <span className="text-xs">({v.diferencas})</span> : null}
-                </button>
-              ))}
+            <div className="min-w-0 flex-1">
+              <Abas
+                rotulo="Visão"
+                ativa={String(visao.unidade)}
+                onMudar={(c) => setUnidade(Number(c))}
+                abas={r.visoes.map((v) => ({
+                  chave: String(v.unidade),
+                  rotulo: v.nome,
+                  sinal: v.diferencas === 0 ? <CheckCircle2 className="size-3.5 text-green-600" /> : <AlertTriangle className="size-3.5 text-red-600" />,
+                  contagem: v.diferencas > 0 ? v.diferencas : undefined,
+                }))}
+              />
             </div>
             <div className="flex items-end gap-4">
               <div className="space-y-1.5">

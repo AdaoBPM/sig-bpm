@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, LockKeyholeOpen, MessageSquareText } from "lucide-react";
+import { LockKeyholeOpen, MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -13,6 +13,10 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Carregando, ErroCarga } from "@/components/shared/Estados";
+import { BarraDeFiltros, SeletorFiltro } from "@/components/shared/Filtros";
+import { Paginacao } from "@/components/shared/Paginacao";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { StatusCompetenciaBadge } from "../competencias/components/StatusCompetenciaBadge";
 import { dataHora, inteiro, moeda } from "../competencias/[anoMes]/utils/formatacao";
@@ -26,7 +30,6 @@ import {
   type TipoDivergencia,
 } from "./services/divergenciasService";
 
-const classeSelect = "h-9 w-full rounded-sm border border-gray-300 bg-white px-3 text-sm";
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 const anoMes = (ano: number, mes: number) => `${ano}-${String(mes).padStart(2, "0")}`;
@@ -100,7 +103,6 @@ export function DivergenciasContent() {
 
   const d = lista.data;
   const abertasNaPagina = d?.itens.filter((i) => i.status === "ABERTA") ?? [];
-  const totalPaginas = d ? Math.max(1, Math.ceil(d.total / d.porPagina)) : 1;
 
   return (
     <div className="space-y-6">
@@ -141,73 +143,49 @@ export function DivergenciasContent() {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 rounded-sm border border-gray-200 bg-white p-4 sm:flex-row sm:items-end">
-        <div className="min-w-40 space-y-1.5">
-          <label className="text-sm font-medium text-gray-900" htmlFor="d-comp">
-            Competência
-          </label>
-          <select id="d-comp" value={filtro.competencia ?? ""} onChange={(e) => muda({ competencia: e.target.value || undefined })} className={classeSelect}>
-            <option value="">Todas</option>
-            {d?.competencias.map((c) => (
-              <option key={anoMes(c.ano, c.mes)} value={anoMes(c.ano, c.mes)}>
-                {rotulo(c.ano, c.mes)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-40 space-y-1.5">
-          <label className="text-sm font-medium text-gray-900" htmlFor="d-tipo">
-            Tipo
-          </label>
-          <select id="d-tipo" value={filtro.tipo ?? ""} onChange={(e) => muda({ tipo: (e.target.value || undefined) as TipoDivergencia | undefined })} className={classeSelect}>
-            <option value="">Todos</option>
-            {Object.entries(ROTULO_TIPO).map(([v, r]) => (
-              <option key={v} value={v}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-48 space-y-1.5">
-          <label className="text-sm font-medium text-gray-900" htmlFor="d-status">
-            Situação
-          </label>
-          <select id="d-status" value={filtro.status ?? ""} onChange={(e) => muda({ status: (e.target.value || undefined) as StatusDivergencia | undefined })} className={classeSelect}>
-            <option value="">Todas</option>
-            {Object.entries(ROTULO_STATUS).map(([v, r]) => (
-              <option key={v} value={v}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex-1" />
-        {podeTratar ? (
-          <Button type="button" className={botaoPrimario} disabled={marcadas.size === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
-            <MessageSquareText className="size-4" />
-            Justificar {marcadas.size > 0 ? `(${marcadas.size})` : "selecionadas"}
-          </Button>
-        ) : null}
-      </div>
+      {/* Filtros no padrão (G8 do levantamento de layout); a situação padrão é "Aberta". */}
+      <BarraDeFiltros
+        ativos={!!filtro.competencia || !!filtro.tipo || filtro.status !== "ABERTA"}
+        onLimpar={() => muda({ competencia: undefined, tipo: undefined, status: "ABERTA" })}
+        direita={
+          podeTratar ? (
+            <Button type="button" className={botaoPrimario} disabled={marcadas.size === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
+              <MessageSquareText className="size-4" />
+              Justificar {marcadas.size > 0 ? `(${marcadas.size})` : "selecionadas"}
+            </Button>
+          ) : null
+        }
+      >
+        <SeletorFiltro
+          rotulo="Competência"
+          valor={filtro.competencia}
+          onMudar={(v) => muda({ competencia: v })}
+          todos="Todas"
+          largura="w-36"
+          opcoes={(d?.competencias ?? []).map((c) => ({ valor: anoMes(c.ano, c.mes), rotulo: rotulo(c.ano, c.mes) }))}
+        />
+        <SeletorFiltro
+          rotulo="Tipo"
+          valor={filtro.tipo}
+          onMudar={(v) => muda({ tipo: v as TipoDivergencia | undefined })}
+          opcoes={Object.entries(ROTULO_TIPO).map(([valor, r]) => ({ valor, rotulo: r }))}
+        />
+        <SeletorFiltro
+          rotulo="Situação"
+          valor={filtro.status}
+          onMudar={(v) => muda({ status: v as StatusDivergencia | undefined })}
+          todos="Todas"
+          largura="w-56"
+          opcoes={Object.entries(ROTULO_STATUS).map(([valor, r]) => ({ valor, rotulo: r }))}
+        />
+      </BarraDeFiltros>
 
-      <div className="rounded-sm border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-600">
-          <span>{d ? `${inteiro(d.total)} divergência(s)` : "…"}</span>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="icon" className="rounded-sm" disabled={filtro.pagina <= 1} onClick={() => muda({ pagina: filtro.pagina - 1 })} aria-label="Anterior">
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="tabular-nums">
-              {filtro.pagina} / {totalPaginas}
-            </span>
-            <Button type="button" variant="outline" size="icon" className="rounded-sm" disabled={filtro.pagina >= totalPaginas} onClick={() => muda({ pagina: filtro.pagina + 1 })} aria-label="Próxima">
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-        {lista.isError ? <p className="p-4 text-sm text-red-700">{mensagemDeErro(lista.error, "Erro ao carregar as divergências.")}</p> : null}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+      <QuadroTabela
+        barra={<span className="text-xs text-gray-600">{d ? `${inteiro(d.total)} divergência(s)` : ""}</span>}
+        rodape={d && d.total > 0 ? <Paginacao total={d.total} pagina={filtro.pagina} porPagina={d.porPagina} onPagina={(p) => muda({ pagina: p })} carregando={lista.isFetching} /> : null}
+      >
+        {lista.isError ? <ErroCarga mensagem={mensagemDeErro(lista.error, "Erro ao carregar as divergências.")} /> : null}
+          <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
                 {podeTratar ? (
@@ -232,8 +210,8 @@ export function DivergenciasContent() {
             <tbody>
               {lista.isPending && !d ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                    Carregando…
+                  <td colSpan={7}>
+                    <Carregando linhas={3} />
                   </td>
                 </tr>
               ) : d?.itens.length === 0 ? (
@@ -292,8 +270,7 @@ export function DivergenciasContent() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
+      </QuadroTabela>
 
       {dialogo?.tipo === "justificar" ? (
         <DialogoTexto

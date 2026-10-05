@@ -17,23 +17,24 @@ import {
   type ContaResultado,
 } from "../services/cadastrosService";
 
-const POR_PAGINA = 50;
+const POR_PAGINA_INICIAL = 50;
 
 export function ContasResultadoContent() {
   useRegistrarAcessoTela("/cadastros/contas-resultado");
 
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("contas-resultado");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "contas-resultado", buscaDebounced, pagina],
+    queryKey: ["cadastros", "contas-resultado", buscaDebounced, pagina, porPagina],
     queryFn: () =>
       cadastrosService.contasResultado({
         busca: buscaDebounced || undefined,
         pagina,
-        porPagina: POR_PAGINA,
+        porPagina: porPagina,
       }),
     placeholderData: keepPreviousData,
   });
@@ -58,7 +59,8 @@ export function ContasResultadoContent() {
       placeholderBusca="Reduzido, conta ou descrição…"
       total={data?.total ?? 0}
       pagina={pagina}
-      porPagina={POR_PAGINA}
+      porPagina={porPagina}
+      onPorPaginaChange={setPorPagina}
       onPaginaChange={setPagina}
       carregando={isPending}
     >

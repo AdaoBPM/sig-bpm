@@ -81,7 +81,7 @@ function TabelaRejeicoes({
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+        <table className="tabela-sig w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               {colunas.map((c) => (
@@ -235,7 +235,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
 
           <div className="border border-gray-200 rounded-sm p-4">
             <h3 className="text-sm font-bold text-gray-900">Por filial</h3>
-            <table className="mt-2 w-full text-sm">
+            <table className="tabela-sig mt-2 w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-500 uppercase">
                   <th className="py-1 font-bold">Filial</th>
@@ -336,7 +336,7 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
                 ? "Por unidade, para conferir com a aba de resumo da lista. Alimentam a receita prévia."
                 : "As linhas da aba Totais do BASE REALIZADO (OPERAÇÃO) que esta lista alimenta."}
             </p>
-            <table className="mt-2 w-full text-sm">
+            <table className="tabela-sig mt-2 w-full text-sm">
               <tbody>
                 {resumo.totais.map((t) => (
                   <tr key={t.codigo} className="border-t border-gray-100">
@@ -493,7 +493,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+            <table className="tabela-sig w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
                   <th className="px-4 py-2">Obra</th>
@@ -556,7 +556,7 @@ function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
       {resumo ? (
         <div className="border border-gray-200 rounded-sm p-4">
           <h3 className="text-sm font-bold text-gray-900">Saldo por linha</h3>
-          <table className="mt-2 w-full text-sm">
+          <table className="tabela-sig mt-2 w-full text-sm">
             <tbody>
               {resumo.porLinha.map((l) => (
                 <tr key={l.linha} className="border-t border-gray-100">

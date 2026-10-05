@@ -93,7 +93,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
               Recorta por departamento: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele
             </label>
           </div>
-          <table className="w-full border-collapse text-sm">
+          <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
                 <th className="px-3 py-2">Recurso</th>

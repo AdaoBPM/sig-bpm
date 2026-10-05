@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { UsuarioDialog } from "./components/UsuarioDialog";
 import { mensagemDeErro, usuariosService, type Usuario } from "./services/usuariosService";
@@ -80,36 +81,38 @@ export function UsuariosContent() {
         }
       />
 
-      <DataTable<Usuario>
-        data={usuarios.data ?? []}
-        isLoading={usuarios.isPending}
-        error={usuarios.isError ? mensagemDeErro(usuarios.error, "Erro ao carregar os usuários.") : null}
-        emptyMessage="Nenhum usuário"
-        columns={["Nome", "E-mail", "Perfil", "Recorte", "Situação", ""]}
-        renderRow={(u) => (
-          <tr key={u.id} className={`border-b border-gray-100 hover:bg-gray-50 ${u.ativo ? "" : "text-gray-400"}`}>
-            <td className="px-4 py-3 text-sm font-medium">{u.nome}</td>
-            <td className="px-4 py-3 text-sm">{u.email}</td>
-            <td className="px-4 py-3 text-sm">{u.perfil.nome}</td>
-            <td className="px-4 py-3 text-xs text-gray-600">
-              {u.perfil.recorteSetor ? `Setores: ${u.setores.map((s) => rotuloSetor.get(s) ?? s).join(", ") || "nenhum"}` : null}
-              {u.perfil.recorteDepartamento ? `Departamentos: ${u.departamentos.map((d) => rotuloDep.get(d) ?? d).join(", ") || "nenhum"}` : null}
-              {!u.perfil.recorteSetor && !u.perfil.recorteDepartamento ? "—" : null}
-            </td>
-            <td className="px-4 py-3 text-sm">{u.ativo ? "Ativo" : "Inativo"}</td>
-            <td className="px-4 py-3 text-right whitespace-nowrap">
-              <PermissionGuard permission="usuarios:editar">
-                <Button type="button" variant="ghost" size="icon" aria-label="Editar" disabled={!opcoes.data} onClick={() => setEditando(u)}>
-                  <Pencil className="size-4" />
-                </Button>
-                <Button type="button" variant="ghost" size="icon" aria-label="Redefinir senha" onClick={() => setSenhaDe(u)}>
-                  <KeyRound className="size-4" />
-                </Button>
-              </PermissionGuard>
-            </td>
-          </tr>
-        )}
-      />
+      <QuadroTabela>
+        <DataTable<Usuario>
+          data={usuarios.data ?? []}
+          isLoading={usuarios.isPending}
+          error={usuarios.isError ? mensagemDeErro(usuarios.error, "Erro ao carregar os usuários.") : null}
+          emptyMessage="Nenhum usuário"
+          columns={["Nome", "E-mail", "Perfil", "Recorte", "Situação", ""]}
+          renderRow={(u) => (
+            <tr key={u.id} className={`border-b border-gray-100 hover:bg-gray-50 ${u.ativo ? "" : "text-gray-400"}`}>
+              <td className="px-4 py-3 text-sm font-medium">{u.nome}</td>
+              <td className="px-4 py-3 text-sm">{u.email}</td>
+              <td className="px-4 py-3 text-sm">{u.perfil.nome}</td>
+              <td className="px-4 py-3 text-xs text-gray-600">
+                {u.perfil.recorteSetor ? `Setores: ${u.setores.map((s) => rotuloSetor.get(s) ?? s).join(", ") || "nenhum"}` : null}
+                {u.perfil.recorteDepartamento ? `Departamentos: ${u.departamentos.map((d) => rotuloDep.get(d) ?? d).join(", ") || "nenhum"}` : null}
+                {!u.perfil.recorteSetor && !u.perfil.recorteDepartamento ? "—" : null}
+              </td>
+              <td className="px-4 py-3 text-sm">{u.ativo ? "Ativo" : "Inativo"}</td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <PermissionGuard permission="usuarios:editar">
+                  <Button type="button" variant="ghost" size="icon" aria-label="Editar" disabled={!opcoes.data} onClick={() => setEditando(u)}>
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Redefinir senha" onClick={() => setSenhaDe(u)}>
+                    <KeyRound className="size-4" />
+                  </Button>
+                </PermissionGuard>
+              </td>
+            </tr>
+          )}
+        />
+      </QuadroTabela>
 
       {editando && opcoes.data ? (
         <UsuarioDialog key={editando === "novo" ? "novo" : editando.id} opcoes={opcoes.data} editando={editando === "novo" ? null : editando} onFechar={() => setEditando(null)} />

@@ -11,7 +11,7 @@ import { dataHora, moeda } from "../../competencias/[anoMes]/utils/formatacao";
 import { CadastroShell } from "../components/CadastroShell";
 import { cadastrosService, type PrecoContrato } from "../services/cadastrosService";
 
-const POR_PAGINA = 50;
+const POR_PAGINA_INICIAL = 50;
 
 const valor = (v: string | null) => (v === null ? "—" : moeda(v));
 
@@ -20,16 +20,17 @@ export function PrecosContratoContent() {
 
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const [historico, setHistorico] = useState(false);
   const buscaDebounced = useDebounce(busca, 300);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "precos-contrato", buscaDebounced, pagina, historico],
+    queryKey: ["cadastros", "precos-contrato", buscaDebounced, pagina, porPagina, historico],
     queryFn: () =>
       cadastrosService.precosContrato({
         busca: buscaDebounced || undefined,
         pagina,
-        porPagina: POR_PAGINA,
+        porPagina,
         historico,
       }),
     placeholderData: keepPreviousData,
@@ -47,7 +48,8 @@ export function PrecosContratoContent() {
       placeholderBusca="Obra, conta ou linha…"
       total={data?.total ?? 0}
       pagina={pagina}
-      porPagina={POR_PAGINA}
+      porPagina={porPagina}
+      onPorPaginaChange={setPorPagina}
       onPaginaChange={setPagina}
       carregando={isPending}
       acoes={

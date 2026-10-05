@@ -10,6 +10,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { mensagemDeErro, usuariosService, type Perfil } from "../usuarios/services/usuariosService";
 import { PerfilDialog } from "./components/PerfilDialog";
@@ -61,49 +62,51 @@ export function PerfisContent() {
         }
       />
 
-      <DataTable<Perfil>
-        data={perfis.data ?? []}
-        isLoading={perfis.isPending}
-        error={perfis.isError ? mensagemDeErro(perfis.error, "Erro ao carregar os perfis.") : null}
-        emptyMessage="Nenhum perfil"
-        columns={["Perfil", "Permissões", "Recorte", "Usuários", "Situação", ""]}
-        renderRow={(p) => (
-          <tr key={p.id} className={`border-b border-gray-100 hover:bg-gray-50 ${p.ativo ? "" : "text-gray-400"}`}>
-            <td className="px-4 py-3 text-sm">
-              <span className="font-medium">{p.nome}</span>
-              {p.sistema ? <span className="ml-2 text-xs text-gray-500">sistema</span> : null}
-              {p.descricao ? <div className="text-xs text-gray-500">{p.descricao}</div> : null}
-            </td>
-            <td className="px-4 py-3 text-xs text-gray-600">{resumoPermissoes(p)}</td>
-            <td className="px-4 py-3 text-xs text-gray-600">
-              {[p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ") || "—"}
-            </td>
-            <td className="px-4 py-3 text-sm tabular-nums">{p.usuarios}</td>
-            <td className="px-4 py-3 text-sm">{p.ativo ? "Ativo" : "Inativo"}</td>
-            <td className="px-4 py-3 text-right whitespace-nowrap">
-              <PermissionGuard permission="usuarios:editar">
-                <Button type="button" variant="ghost" size="icon" aria-label="Editar" disabled={!opcoes.data} onClick={() => setEditando(p)}>
-                  <Pencil className="size-4" />
-                </Button>
-                {!p.sistema ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Excluir"
-                    disabled={excluir.isPending}
-                    onClick={() => {
-                      if (window.confirm(`Excluir o perfil ${p.nome}? A exclusão fica no log de auditoria.`)) excluir.mutate(p.id);
-                    }}
-                  >
-                    <Trash2 className="size-4" />
+      <QuadroTabela>
+        <DataTable<Perfil>
+          data={perfis.data ?? []}
+          isLoading={perfis.isPending}
+          error={perfis.isError ? mensagemDeErro(perfis.error, "Erro ao carregar os perfis.") : null}
+          emptyMessage="Nenhum perfil"
+          columns={["Perfil", "Permissões", "Recorte", "Usuários", "Situação", ""]}
+          renderRow={(p) => (
+            <tr key={p.id} className={`border-b border-gray-100 hover:bg-gray-50 ${p.ativo ? "" : "text-gray-400"}`}>
+              <td className="px-4 py-3 text-sm">
+                <span className="font-medium">{p.nome}</span>
+                {p.sistema ? <span className="ml-2 text-xs text-gray-500">sistema</span> : null}
+                {p.descricao ? <div className="text-xs text-gray-500">{p.descricao}</div> : null}
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-600">{resumoPermissoes(p)}</td>
+              <td className="px-4 py-3 text-xs text-gray-600">
+                {[p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ") || "—"}
+              </td>
+              <td className="px-4 py-3 text-sm tabular-nums">{p.usuarios}</td>
+              <td className="px-4 py-3 text-sm">{p.ativo ? "Ativo" : "Inativo"}</td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <PermissionGuard permission="usuarios:editar">
+                  <Button type="button" variant="ghost" size="icon" aria-label="Editar" disabled={!opcoes.data} onClick={() => setEditando(p)}>
+                    <Pencil className="size-4" />
                   </Button>
-                ) : null}
-              </PermissionGuard>
-            </td>
-          </tr>
-        )}
-      />
+                  {!p.sistema ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Excluir"
+                      disabled={excluir.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Excluir o perfil ${p.nome}? A exclusão fica no log de auditoria.`)) excluir.mutate(p.id);
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  ) : null}
+                </PermissionGuard>
+              </td>
+            </tr>
+          )}
+        />
+      </QuadroTabela>
 
       {editando && opcoes.data ? (
         <PerfilDialog key={editando === "novo" ? "novo" : editando.id} opcoes={opcoes.data} editando={editando === "novo" ? null : editando} onFechar={() => setEditando(null)} />

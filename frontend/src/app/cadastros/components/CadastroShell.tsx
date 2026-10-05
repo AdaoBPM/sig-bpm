@@ -1,11 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { CampoBusca } from "@/components/shared/Filtros";
+import { Paginacao } from "@/components/shared/Paginacao";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 type CadastroShellProps = {
   titulo: string;
@@ -17,17 +17,18 @@ type CadastroShellProps = {
   pagina: number;
   porPagina: number;
   onPaginaChange: (pagina: number) => void;
+  /** Sem ele, a quantidade por página é fixa. */
+  onPorPaginaChange?: (porPagina: number) => void;
   carregando: boolean;
-  /** Botões ao lado da busca, como o de recarga da planilha. */
+  /** Botões à direita do título, como o de recarga da planilha. */
   acoes?: ReactNode;
   children: ReactNode;
 };
 
 /**
- * Moldura comum das telas de consulta: título, busca, contagem e paginação.
- *
- * As três telas de cadastro têm exatamente a mesma estrutura e só diferem nas
- * colunas, então a moldura vive aqui e cada tela cuida da sua tabela.
+ * Moldura comum das telas de cadastro: o cabeçalho único, a busca no topo da
+ * tabela e a paginação no rodapé (G6, G7 e G10 do levantamento de layout).
+ * Cada tela cuida só das colunas.
  */
 export function CadastroShell({
   titulo,
@@ -39,73 +40,25 @@ export function CadastroShell({
   pagina,
   porPagina,
   onPaginaChange,
+  onPorPaginaChange,
   carregando,
   acoes,
   children,
 }: CadastroShellProps) {
-  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
-  const primeiro = total === 0 ? 0 : (pagina - 1) * porPagina + 1;
-  const ultimo = Math.min(pagina * porPagina, total);
-
   return (
     <div className="space-y-4">
-      {/* Título e ações numa linha; a explicação recolhida (G10 do levantamento de layout). */}
       <CabecalhoDaTela titulo={titulo} sobre={<p>{descricao}</p>} acoes={acoes} />
-
-      <div className="border border-gray-200 bg-white rounded-sm">
-        {/* A busca no topo da tabela, como nas demais telas de consulta. */}
-        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-          <div className="relative w-full sm:w-80">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              aria-label="Buscar"
-              value={busca}
-              onChange={(e) => onBuscaChange(e.target.value)}
-              placeholder={placeholderBusca}
-              className="rounded-sm border-gray-300 pl-9 focus:border-black focus:ring-1 focus:ring-black"
-            />
-          </div>
-          <p className="hidden shrink-0 text-xs text-gray-600 sm:block">{carregando ? "" : `${total} registro(s)`}</p>
-        </div>
-        <div className="overflow-x-auto">{children}</div>
-
-        <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-gray-600" aria-live="polite">
-            {carregando
-              ? "Carregando…"
-              : total === 0
-                ? "Nenhum registro"
-                : `Mostrando ${primeiro}–${ultimo} de ${total} registro(s)`}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-sm border border-black text-black hover:bg-gray-100"
-              onClick={() => onPaginaChange(pagina - 1)}
-              disabled={pagina <= 1 || carregando}
-            >
-              <ChevronLeft className="size-4" />
-              Anterior
-            </Button>
-            <span className="text-xs text-gray-600 tabular-nums">
-              {pagina} / {totalPaginas}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-sm border border-black text-black hover:bg-gray-100"
-              onClick={() => onPaginaChange(pagina + 1)}
-              disabled={pagina >= totalPaginas || carregando}
-            >
-              Próxima
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      <QuadroTabela
+        barra={
+          <>
+            <CampoBusca valor={busca} onMudar={onBuscaChange} placeholder={placeholderBusca} />
+            <p className="hidden shrink-0 text-xs text-gray-600 sm:block">{carregando ? "" : `${total.toLocaleString("pt-BR")} registro(s)`}</p>
+          </>
+        }
+        rodape={<Paginacao total={total} pagina={pagina} porPagina={porPagina} onPagina={onPaginaChange} onPorPagina={onPorPaginaChange} carregando={carregando} />}
+      >
+        {children}
+      </QuadroTabela>
     </div>
   );
 }

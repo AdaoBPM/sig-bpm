@@ -12,7 +12,7 @@ import { useEdicaoCadastro } from "../components/EdicaoCadastro";
 import { RecarregarPlanilha } from "../components/RecarregarPlanilha";
 import { cadastrosService, type LinhaDRE } from "../services/cadastrosService";
 
-const POR_PAGINA = 100;
+const POR_PAGINA_INICIAL = 100;
 
 const ROTULO_TIPO: Record<LinhaDRE["tipo"], string> = {
   SECAO: "Seção",
@@ -34,16 +34,17 @@ export function EstruturaDreContent() {
 
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("estrutura-dre");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "linhas-dre", buscaDebounced, pagina],
+    queryKey: ["cadastros", "linhas-dre", buscaDebounced, pagina, porPagina],
     queryFn: () =>
       cadastrosService.linhasDRE({
         busca: buscaDebounced || undefined,
         pagina,
-        porPagina: POR_PAGINA,
+        porPagina: porPagina,
       }),
     placeholderData: keepPreviousData,
   });
@@ -68,7 +69,8 @@ export function EstruturaDreContent() {
       placeholderBusca="Código, descrição ou grupo…"
       total={data?.total ?? 0}
       pagina={pagina}
-      porPagina={POR_PAGINA}
+      porPagina={porPagina}
+      onPorPaginaChange={setPorPagina}
       onPaginaChange={setPagina}
       carregando={isPending}
     >

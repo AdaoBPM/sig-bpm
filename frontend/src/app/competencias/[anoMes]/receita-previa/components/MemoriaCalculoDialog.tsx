@@ -46,7 +46,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
         </DialogHeader>
         {isError ? <p className="text-sm text-red-700">Erro ao carregar a memória de cálculo.</p> : null}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+          <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
                 <th className="px-3 py-2">Origem</th>

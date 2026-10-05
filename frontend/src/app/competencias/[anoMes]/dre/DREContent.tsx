@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Abas } from "@/components/shared/Abas";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
@@ -69,7 +70,7 @@ function TabelaDRE({ linhas, anoMes, visao }: { linhas: LinhaDRE[]; anoMes: stri
   const abre = (l: LinhaDRE) => !!l.composicao || detalhavel(l);
   return (
     <div className="border border-gray-200 bg-white rounded-sm">
-      <table className="w-full border-collapse text-sm">
+      <table className="tabela-sig w-full border-collapse text-sm">
         <tbody>
           {linhas
             .filter((l) => l.tipo !== "SECAO")
@@ -231,22 +232,16 @@ export function DREContent() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        {VISOES.map((v) => (
-          <button
-            key={String(v.visao)}
-            type="button"
-            onClick={() => setVisao(v.visao)}
-            className={`rounded-sm border px-3 py-1.5 text-sm font-medium ${visao === v.visao ? "border-black bg-black text-white" : "border-gray-300 text-gray-900 hover:bg-gray-100"}`}
-          >
-            {v.nome}
-          </button>
-        ))}
-        {visao !== "centros" && cabecalho?.apuradoEm ? (
-          <div className="ml-auto">
-            <ExportarDRE anoMes={anoMes} visao={visao} />
-          </div>
-        ) : null}
+      <div className="flex items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <Abas
+            rotulo="Visão da DRE"
+            ativa={String(visao)}
+            onMudar={(c) => setVisao(VISOES.find((v) => String(v.visao) === c)!.visao)}
+            abas={VISOES.map((v) => ({ chave: String(v.visao), rotulo: v.nome }))}
+          />
+        </div>
+        {visao !== "centros" && cabecalho?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={visao} /> : null}
       </div>
 
       <PainelApuracao anoMes={anoMes} onAvisos={setAvisos} />

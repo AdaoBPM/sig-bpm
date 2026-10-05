@@ -3,24 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { etapasDoMes } from "@/lib/etapasDoMes";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { SeletorFiltro } from "@/components/shared/Filtros";
 
 import { AbrirCompetenciaForm } from "./components/AbrirCompetenciaForm";
 
@@ -67,28 +62,21 @@ export function CompetenciasContent() {
         <AbrirCompetenciaForm />
       </PermissionGuard>
 
-      <div className="border border-gray-200 bg-white rounded-sm">
-        <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <CalendarDays className="size-4" />
-            {isPending ? "Carregando…" : `${itens.length} competência(s)`}
-          </div>
-          <Select value={ano} onValueChange={(v) => setAno(v ?? TODOS)}>
-            <SelectTrigger className="w-40 rounded-sm">
-              <SelectValue placeholder="Exercício" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TODOS}>Todos os anos</SelectItem>
-              {(data?.anos ?? []).map((a) => (
-                <SelectItem key={a} value={String(a)}>
-                  {a}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="overflow-x-auto">
+      <QuadroTabela
+        barra={
+          <>
+            <SeletorFiltro
+              rotulo="Exercício"
+              valor={ano === TODOS ? undefined : ano}
+              onMudar={(v) => setAno(v ?? TODOS)}
+              todos="Todos os anos"
+              largura="w-40"
+              opcoes={(data?.anos ?? []).map((a) => ({ valor: String(a), rotulo: String(a) }))}
+            />
+            <span className="text-xs text-gray-600">{isPending ? "" : `${itens.length} competência(s)`}</span>
+          </>
+        }
+      >
           <DataTable<Competencia>
             data={itens}
             isLoading={isPending}
@@ -185,8 +173,7 @@ export function CompetenciasContent() {
               </tr>
             )}
           />
-        </div>
-      </div>
+      </QuadroTabela>
     </div>
   );
 }
