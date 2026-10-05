@@ -13,6 +13,8 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
@@ -27,6 +29,14 @@ import {
   type LancamentoReceita,
   type Natureza,
 } from "./services/receitaPreviaService";
+
+const COLUNAS: Coluna<LancamentoReceita>[] = [
+  { chave: "unidade", rotulo: "Unidade", valor: (l) => ROTULO_UNIDADE[l.unidade] },
+  { chave: "linha", rotulo: "Linha da receita", valor: (l) => rotuloLancamento(l.natureza, l.componente) },
+  { chave: "observacao", rotulo: "Observação", valor: (l) => l.observacao },
+  { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valor), texto: (l) => moeda(l.valor) },
+  { chave: "acoes", rotulo: "", semFiltro: true },
+];
 
 export function ReceitaPreviaContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
@@ -72,6 +82,7 @@ export function ReceitaPreviaContent() {
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir.")),
   });
+  const tabela = useTabelaFiltravel(lancamentos.data?.itens, COLUNAS);
 
   if (!periodo) {
     return (
@@ -84,7 +95,6 @@ export function ReceitaPreviaContent() {
   const dados = receita.data;
   const fechada = dados?.competencia.status === "FECHADA";
   const bloqueada = fechada || dados?.congelado;
-  const itensLanc = lancamentos.data?.itens ?? [];
 
   return (
     <div className="space-y-6">
@@ -172,9 +182,25 @@ export function ReceitaPreviaContent() {
             </PermissionGuard>
           ) : null}
         </div>
-        <QuadroTabela>
+        <QuadroTabela
+          barra={
+            tabela.ativos ? (
+              <div className="ml-auto flex shrink-0 items-center gap-3">
+                <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                  Limpar filtros
+                </button>
+                <span className="text-xs text-gray-600">
+                  {tabela.total !== tabela.totalGeral ? `${tabela.total} de ${tabela.totalGeral} lançamento(s)` : `${tabela.total} lançamento(s)`}
+                </span>
+              </div>
+            ) : null
+          }
+        >
           <DataTable<LancamentoReceita>
-            data={itensLanc}
+            data={tabela.visiveis}
+            cabecalho={tabela.cabecalho}
+            filtrosAtivos={tabela.ativos}
+            onLimparFiltros={tabela.limpar}
             isLoading={lancamentos.isPending}
             error={lancamentos.isError ? mensagemDeErro(lancamentos.error, "Erro ao carregar os lançamentos.") : null}
             emptyMessage="Nenhum lançamento de receita nesta competência"

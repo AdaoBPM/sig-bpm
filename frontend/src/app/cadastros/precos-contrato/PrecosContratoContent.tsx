@@ -6,35 +6,70 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { DataTable } from "@/components/shared/DataTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { dataHora, moeda } from "../../competencias/[anoMes]/utils/formatacao";
 import { CadastroShell } from "../components/CadastroShell";
 import { cadastrosService, type PrecoContrato } from "../services/cadastrosService";
 
 const POR_PAGINA_INICIAL = 50;
+/** O cadastro inteiro vem de uma vez: o filtro e a ordem das colunas valem para todos os preços. */
+const TODOS = 5000;
 
 const valor = (v: string | null) => (v === null ? "—" : moeda(v));
+const obra = (p: PrecoContrato) => (p.obra.nome !== p.obra.codigo ? `${p.obra.codigo} · ${p.obra.nome}` : p.obra.codigo);
+
+const COLUNAS: Coluna<PrecoContrato>[] = [
+  { chave: "obra", rotulo: "Obra", valor: obra },
+  { chave: "versao", rotulo: "Versão", valor: (p) => p.versao, tipo: "numero" },
+  { chave: "linha", rotulo: "Etapa · linha", valor: (p) => `${p.etapa ?? "—"} · ${p.linhaTexto}` },
+  { chave: "conta", rotulo: "Conta · atribuição", valor: (p) => p.contaResultado },
+  { chave: "unidade", rotulo: "Unidade", valor: (p) => p.unidade },
+  {
+    chave: "unitario",
+    rotulo: "V. unit.",
+    valor: (p) => (p.valorUnitario === null ? null : Number(p.valorUnitario)),
+    texto: (p) => (p.valorUnitario === null ? null : moeda(p.valorUnitario)),
+    tipo: "numero",
+    alinhamento: "direita",
+  },
+  {
+    chave: "total",
+    rotulo: "V. total",
+    valor: (p) => (p.valorTotal === null ? null : Number(p.valorTotal)),
+    texto: (p) => (p.valorTotal === null ? null : moeda(p.valorTotal)),
+    tipo: "numero",
+    alinhamento: "direita",
+  },
+  {
+    chave: "vigencia",
+    rotulo: "Vigência",
+    valor: (p) => new Date(p.vigenteDesde).getTime(),
+    texto: (p) => new Date(p.vigenteDesde).toLocaleDateString("pt-BR"),
+    tipo: "data",
+  },
+];
 
 export function PrecosContratoContent() {
   useRegistrarAcessoTela("/cadastros/precos-contrato");
 
   const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const [historico, setHistorico] = useState(false);
   const buscaDebounced = useDebounce(busca, 300);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "precos-contrato", buscaDebounced, pagina, porPagina, historico],
+    queryKey: ["cadastros", "precos-contrato", buscaDebounced, TODOS, historico],
     queryFn: () =>
       cadastrosService.precosContrato({
         busca: buscaDebounced || undefined,
-        pagina,
-        porPagina,
+        pagina: 1,
+        porPagina: TODOS,
         historico,
       }),
     placeholderData: keepPreviousData,
   });
+  const tabela = useTabelaFiltravel(data?.itens, COLUNAS, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   return (
     <CadastroShell
@@ -43,15 +78,16 @@ export function PrecosContratoContent() {
       busca={busca}
       onBuscaChange={(v) => {
         setBusca(v);
-        setPagina(1);
+        tabela.setPagina(1);
       }}
       placeholderBusca="Obra, conta ou linha…"
-      total={data?.total ?? 0}
-      pagina={pagina}
-      porPagina={porPagina}
-      onPorPaginaChange={setPorPagina}
-      onPaginaChange={setPagina}
+      total={tabela.total}
+      pagina={tabela.pagina}
+      porPagina={tabela.porPagina}
+      onPorPaginaChange={tabela.setPorPagina}
+      onPaginaChange={tabela.setPagina}
       carregando={isPending}
+      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
       acoes={
         <label className="flex items-center gap-2 text-sm whitespace-nowrap text-gray-700">
           <input
@@ -59,7 +95,7 @@ export function PrecosContratoContent() {
             checked={historico}
             onChange={(e) => {
               setHistorico(e.target.checked);
-              setPagina(1);
+              tabela.setPagina(1);
             }}
             className="size-4 accent-black"
           />
@@ -68,7 +104,10 @@ export function PrecosContratoContent() {
       }
     >
       <DataTable<PrecoContrato>
-        data={data?.itens ?? []}
+        data={tabela.visiveis}
+        cabecalho={tabela.cabecalho}
+        filtrosAtivos={tabela.ativos}
+        onLimparFiltros={tabela.limpar}
         isLoading={isPending}
         error={isError ? "Erro ao carregar os preços." : null}
         emptyMessage="Nenhum preço encontrado"
@@ -83,7 +122,7 @@ export function PrecosContratoContent() {
             >
               <td className="px-3 py-3 text-sm">
                 {/* A obra numa coluna só: código e nome na mesma linha, o nome cortado. */}
-                <div className="flex max-w-48 items-baseline gap-1.5" title={p.obra.nome !== p.obra.codigo ? p.obra.nome : undefined}>
+                <div className="flex max-w-40 items-baseline gap-1.5" title={p.obra.nome !== p.obra.codigo ? p.obra.nome : undefined}>
                   <span className={`font-medium whitespace-nowrap tabular-nums ${antigo ? "" : "text-gray-900"}`}>{p.obra.codigo}</span>
                   {p.obra.nome !== p.obra.codigo ? <span className="truncate text-xs">{p.obra.nome}</span> : null}
                 </div>

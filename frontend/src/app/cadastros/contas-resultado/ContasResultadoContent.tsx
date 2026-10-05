@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { CadastroShell } from "../components/CadastroShell";
@@ -18,30 +20,47 @@ import {
 } from "../services/cadastrosService";
 
 const POR_PAGINA_INICIAL = 50;
+/** O cadastro inteiro vem de uma vez: o filtro e a ordem das colunas valem para todas as contas. */
+const TODOS = 5000;
+
+const COLUNAS: Coluna<ContaResultado>[] = [
+  { chave: "reduzido", rotulo: "Reduzido", valor: (c) => c.reduzido },
+  { chave: "conta", rotulo: "Conta", valor: (c) => c.conta },
+  { chave: "descricao", rotulo: "Descrição", valor: (c) => c.descricao },
+  { chave: "tipo", rotulo: "Tipo", valor: (c) => (c.tipoConta === "ANALITICA" ? "Analítica" : "Sintética") },
+  {
+    chave: "destino",
+    rotulo: "Destino na DRE",
+    // A analítica sem destino aparece como "sem destino", para achar as pendências pelo filtro.
+    valor: (c) => c.linhaDRE?.descricao ?? (c.tipoConta === "ANALITICA" ? "sem destino" : null),
+  },
+  { chave: "balde", rotulo: "Balde", valor: (c) => c.balde },
+];
+const EDITAR: Coluna<ContaResultado> = { chave: "editar", rotulo: "", semFiltro: true };
 
 export function ContasResultadoContent() {
   useRegistrarAcessoTela("/cadastros/contas-resultado");
 
   const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("contas-resultado");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "contas-resultado", buscaDebounced, pagina, porPagina],
+    queryKey: ["cadastros", "contas-resultado", buscaDebounced, TODOS],
     queryFn: () =>
       cadastrosService.contasResultado({
         busca: buscaDebounced || undefined,
-        pagina,
-        porPagina: porPagina,
+        pagina: 1,
+        porPagina: TODOS,
       }),
     placeholderData: keepPreviousData,
   });
+  const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
+  const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   function aoBuscar(valor: string) {
     setBusca(valor);
-    setPagina(1);
+    tabela.setPagina(1);
   }
 
   return (
@@ -57,15 +76,19 @@ export function ContasResultadoContent() {
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Reduzido, conta ou descrição…"
-      total={data?.total ?? 0}
-      pagina={pagina}
-      porPagina={porPagina}
-      onPorPaginaChange={setPorPagina}
-      onPaginaChange={setPagina}
+      total={tabela.total}
+      pagina={tabela.pagina}
+      porPagina={tabela.porPagina}
+      onPorPaginaChange={tabela.setPorPagina}
+      onPaginaChange={tabela.setPagina}
       carregando={isPending}
+      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       <DataTable<ContaResultado>
-        data={data?.itens ?? []}
+        data={tabela.visiveis}
+        cabecalho={tabela.cabecalho}
+        filtrosAtivos={tabela.ativos}
+        onLimparFiltros={tabela.limpar}
         isLoading={isPending}
         error={isError ? "Erro ao carregar as contas de resultado." : null}
         emptyMessage="Nenhuma conta encontrada"

@@ -9,7 +9,8 @@ import { listasService, RegraListaError } from "../../services/listas/listasServ
 const filtroSchema = z.object({
   busca: z.string().trim().max(120).optional(),
   pagina: z.coerce.number().int().min(1).default(1),
-  porPagina: z.coerce.number().int().min(1).max(200).default(50),
+  // A tela carrega a lista inteira de uma vez para filtrar pelos rótulos das colunas.
+  porPagina: z.coerce.number().int().min(1).max(10000).default(50),
 });
 
 const corpoSchema = z.object({

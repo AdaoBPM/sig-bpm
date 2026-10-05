@@ -112,9 +112,11 @@ export async function auditar(e: EventoAuditoria) {
 export type FiltroAuditoria = {
   de?: Date;
   ate?: Date;
-  usuarioId?: string;
-  entidade?: string;
-  acao?: string;
+  usuarioId?: string[];
+  entidade?: string[];
+  acao?: string[];
+  /** A ordem da data (o padrão é a mais recente primeiro). */
+  ordem?: "asc" | "desc";
   entidadeId?: string;
   incluirAcessos: boolean;
   pagina: number;
@@ -200,15 +202,15 @@ export const auditoriaService = {
     const db = getPrismaClient();
     const where: Prisma.AuditLogWhereInput = {
       ...(f.de || f.ate ? { createdAt: { ...(f.de ? { gte: f.de } : {}), ...(f.ate ? { lte: f.ate } : {}) } } : {}),
-      ...(f.usuarioId ? { usuarioId: f.usuarioId } : {}),
-      ...(f.entidade ? { entidade: f.entidade } : {}),
+      ...(f.usuarioId ? { usuarioId: { in: f.usuarioId } } : {}),
+      ...(f.entidade ? { entidade: { in: f.entidade } } : {}),
       ...(f.entidadeId ? { entidadeId: f.entidadeId } : {}),
-      ...(f.acao ? { acao: f.acao } : !f.incluirAcessos ? { acao: { not: "ACESSO" } } : {}),
+      ...(f.acao ? { acao: { in: f.acao } } : !f.incluirAcessos ? { acao: { not: "ACESSO" } } : {}),
     };
     const [itens, total] = await Promise.all([
       db.auditLog.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: f.ordem ?? "desc" },
         skip: (f.pagina - 1) * f.porPagina,
         take: f.porPagina,
         select: { id: true, acao: true, entidade: true, entidadeId: true, usuarioId: true, usuarioNome: true, ip: true, dadosAntes: true, dadosDepois: true, metadados: true, createdAt: true },

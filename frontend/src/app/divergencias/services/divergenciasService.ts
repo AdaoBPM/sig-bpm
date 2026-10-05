@@ -30,7 +30,7 @@ export type ListaDivergencias = {
   competencias: Array<{ ano: number; mes: number; status: StatusCompetencia; abertas: number; total: number }>;
 };
 
-export type FiltroDivergencias = { competencia?: string; tipo?: TipoDivergencia; status?: StatusDivergencia; pagina: number };
+export type FiltroDivergencias = { competencia?: string; tipo?: TipoDivergencia; status?: StatusDivergencia };
 
 export const ROTULO_STATUS: Record<StatusDivergencia, string> = {
   ABERTA: "Aberta",
@@ -41,8 +41,8 @@ export const ROTULO_STATUS: Record<StatusDivergencia, string> = {
 export const ROTULO_TIPO: Record<TipoDivergencia, string> = { BALANCETE: "Balancete", PRECO_CONTRATO: "Preço de contrato" };
 
 export const divergenciasService = {
-  listar: async (f: FiltroDivergencias): Promise<ListaDivergencias> => {
-    const params = Object.fromEntries(Object.entries({ ...f, porPagina: 100 }).filter(([, v]) => v !== undefined && v !== ""));
+  listar: async (f: FiltroDivergencias & { pagina: number; porPagina: number }): Promise<ListaDivergencias> => {
+    const params = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined && v !== ""));
     return (await api.get<{ data: ListaDivergencias }>("/proxy/divergencias", { params })).data.data;
   },
   justificar: async (ids: string[], justificativa: string) => (await api.post<{ data: { justificadas: number } }>("/proxy/divergencias/justificar", { ids, justificativa })).data.data,

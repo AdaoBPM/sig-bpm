@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { CadastroShell } from "../components/CadastroShell";
 import { useEdicaoCadastro } from "../components/EdicaoCadastro";
@@ -17,26 +19,43 @@ import {
 } from "../services/cadastrosService";
 
 const POR_PAGINA_INICIAL = 50;
+/** O cadastro inteiro vem de uma vez: o filtro e a ordem das colunas valem para todas as reclassificações. */
+const TODOS = 5000;
+
+const conta = (c: Reclassificacao["contaOrigem"]) => `${c.reduzido} · ${c.descricao}`;
+
+const COLUNAS: Coluna<Reclassificacao>[] = [
+  {
+    chave: "centro",
+    rotulo: "Centro de custo",
+    valor: (r) => `${r.codigoCentroCusto} · ${r.centro?.nomeRM ?? "fora do cadastro"}`,
+  },
+  { chave: "origem", rotulo: "Conta de origem", valor: (r) => conta(r.contaOrigem) },
+  { chave: "seta", rotulo: "", semFiltro: true },
+  { chave: "destino", rotulo: "Conta adotada", valor: (r) => conta(r.contaDestino) },
+  { chave: "motivo", rotulo: "Origem do registro", valor: (r) => r.motivo },
+];
+const EDITAR: Coluna<Reclassificacao> = { chave: "editar", rotulo: "", semFiltro: true };
 
 export function ReclassificacoesContent() {
   useRegistrarAcessoTela("/cadastros/reclassificacoes");
 
   const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("reclassificacoes");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "reclassificacoes", buscaDebounced, pagina, porPagina],
+    queryKey: ["cadastros", "reclassificacoes", buscaDebounced, TODOS],
     queryFn: () =>
       cadastrosService.reclassificacoes({
         busca: buscaDebounced || undefined,
-        pagina,
-        porPagina: porPagina,
+        pagina: 1,
+        porPagina: TODOS,
       }),
     placeholderData: keepPreviousData,
   });
+  const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
+  const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   return (
     <CadastroShell
@@ -46,18 +65,22 @@ export function ReclassificacoesContent() {
       busca={busca}
       onBuscaChange={(v) => {
         setBusca(v);
-        setPagina(1);
+        tabela.setPagina(1);
       }}
       placeholderBusca="Centro ou conta…"
-      total={data?.total ?? 0}
-      pagina={pagina}
-      porPagina={porPagina}
-      onPorPaginaChange={setPorPagina}
-      onPaginaChange={setPagina}
+      total={tabela.total}
+      pagina={tabela.pagina}
+      porPagina={tabela.porPagina}
+      onPorPaginaChange={tabela.setPorPagina}
+      onPaginaChange={tabela.setPagina}
       carregando={isPending}
+      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       <DataTable<Reclassificacao>
-        data={data?.itens ?? []}
+        data={tabela.visiveis}
+        cabecalho={tabela.cabecalho}
+        filtrosAtivos={tabela.ativos}
+        onLimparFiltros={tabela.limpar}
         isLoading={isPending}
         error={isError ? "Erro ao carregar as reclassificações." : null}
         emptyMessage="Nenhuma reclassificação encontrada"

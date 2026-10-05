@@ -10,7 +10,8 @@ const filtroSchema = z.object({
   tipo: z.enum(["BALANCETE", "PRECO_CONTRATO"]).optional(),
   status: z.enum(["ABERTA", "JUSTIFICADA", "RESOLVIDA_POR_REABERTURA", "RESOLVIDA_POR_REAPURACAO"]).optional(),
   pagina: z.coerce.number().int().min(1).default(1),
-  porPagina: z.coerce.number().int().min(1).max(500).default(100),
+  // A tela carrega todas as do filtro de uma vez para filtrar pelos rótulos das colunas.
+  porPagina: z.coerce.number().int().min(1).max(5000).default(100),
 });
 const justificarSchema = z.object({ ids: z.array(z.string().min(1)).min(1).max(5000), justificativa: z.string().trim().min(15, "Explique a divergência (ao menos 15 caracteres).").max(2000) });
 const resolverSchema = z.object({ competencia: anoMesSchema, justificativa: z.string().trim().min(15, "Explique o motivo da reabertura (ao menos 15 caracteres).").max(2000) });

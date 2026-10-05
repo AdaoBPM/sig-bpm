@@ -6,9 +6,11 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
@@ -21,6 +23,17 @@ function resumoPermissoes(p: Perfil) {
   const ler = new Set(p.permissoes.filter((x) => x.acao === "LER").map((x) => x.recurso));
   return `${ler.size} recurso(s) com leitura, ${editar.size} com edição`;
 }
+
+const recorte = (p: Perfil) => [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ");
+
+const COLUNAS: Coluna<Perfil>[] = [
+  { chave: "perfil", rotulo: "Perfil", valor: (p) => p.nome },
+  { chave: "permissoes", rotulo: "Permissões", valor: resumoPermissoes },
+  { chave: "recorte", rotulo: "Recorte", valor: recorte },
+  { chave: "usuarios", rotulo: "Usuários", tipo: "numero", valor: (p) => p.usuarios, texto: (p) => String(p.usuarios) },
+  { chave: "situacao", rotulo: "Situação", valor: (p) => (p.ativo ? "Ativo" : "Inativo") },
+  { chave: "acoes", rotulo: "", semFiltro: true },
+];
 
 export function PerfisContent() {
   useRegistrarAcessoTela("/perfis");
@@ -36,6 +49,7 @@ export function PerfisContent() {
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir o perfil.")),
   });
+  const tabela = useTabelaFiltravel(perfis.data, COLUNAS);
 
   return (
     <div className="space-y-6">
@@ -62,9 +76,27 @@ export function PerfisContent() {
         }
       />
 
-      <QuadroTabela>
+      <QuadroTabela
+        barra={
+          tabela.ativos ? (
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                Limpar filtros
+              </button>
+              {tabela.total !== tabela.totalGeral ? (
+                <p className="text-xs text-gray-600">
+                  {tabela.total} de {tabela.totalGeral} perfil(is)
+                </p>
+              ) : null}
+            </div>
+          ) : undefined
+        }
+      >
         <DataTable<Perfil>
-          data={perfis.data ?? []}
+          data={tabela.visiveis}
+          cabecalho={tabela.cabecalho}
+          filtrosAtivos={tabela.ativos}
+          onLimparFiltros={tabela.limpar}
           isLoading={perfis.isPending}
           error={perfis.isError ? mensagemDeErro(perfis.error, "Erro ao carregar os perfis.") : null}
           emptyMessage="Nenhum perfil"
@@ -78,7 +110,7 @@ export function PerfisContent() {
               </td>
               <td className="px-4 py-3 text-xs text-gray-600">{resumoPermissoes(p)}</td>
               <td className="px-4 py-3 text-xs text-gray-600">
-                {[p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ") || "—"}
+                {recorte(p) || "—"}
               </td>
               <td className="px-4 py-3 text-sm tabular-nums">{p.usuarios}</td>
               <td className="px-4 py-3 text-sm">{p.ativo ? "Ativo" : "Inativo"}</td>

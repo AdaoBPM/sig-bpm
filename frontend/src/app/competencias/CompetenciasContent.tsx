@@ -17,9 +17,11 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { SeletorFiltro } from "@/components/shared/Filtros";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AbrirCompetenciaDialog } from "./components/AbrirCompetenciaDialog";
-import { StatusCompetenciaBadge } from "./components/StatusCompetenciaBadge";
+import { rotuloStatus, StatusCompetenciaBadge } from "./components/StatusCompetenciaBadge";
 import { competenciasService, type Competencia } from "./services/competenciasService";
 
 const TODOS = "todos";
@@ -74,6 +76,42 @@ const ESTILO_PASSO = {
   falta: { classe: "text-gray-400", Icone: Circle },
 } as const;
 
+/** O que falta no mês, em poucas palavras (o primeiro passo não feito), para filtrar a coluna Andamento. */
+const A_FAZER = ["A importar", "A classificar", "A apurar", "A fechar"];
+
+function andamentoResumido(c: Competencia) {
+  const passos = passosDe(c);
+  if (passos.length === 0) return null;
+  const i = passos.findIndex((p) => p.estado !== "feito");
+  if (i < 0) return "Fechado";
+  return i === 2 && passos[i].estado === "atencao" ? "A reapurar" : A_FAZER[i];
+}
+
+/** Os rótulos do StatusCompetenciaBadge, para o filtro da coluna Estado. */
+const instante = (iso: string | null) => (iso ? new Date(iso).getTime() : null);
+
+const COLUNAS: Coluna<Competencia>[] = [
+  { chave: "competencia", rotulo: "Competência", tipo: "data", valor: (c) => c.ano * 12 + c.mes, texto: (c) => `${String(c.mes).padStart(2, "0")}/${c.ano}` },
+  { chave: "estado", rotulo: "Estado", valor: (c) => rotuloStatus(c.status) },
+  { chave: "andamento", rotulo: "Andamento", valor: andamentoResumido },
+  {
+    chave: "divergencias",
+    rotulo: "Divergências",
+    tipo: "numero",
+    valor: (c) => c._count.divergencias,
+    texto: (c) => (c._count.divergencias > 0 ? `${c._count.divergencias} aberta(s)` : null),
+  },
+  {
+    chave: "apuracao",
+    rotulo: "Apurada em",
+    tipo: "data",
+    valor: (c) => (c.apuracoes === 0 ? null : instante(c.apuradaEm)),
+    texto: (c) => (c.apuracoes === 0 || !c.apuradaEm ? null : dataCurta(c.apuradaEm)),
+  },
+  { chave: "fechadaEm", rotulo: "Fechada em", tipo: "data", valor: (c) => instante(c.fechadaEm), texto: (c) => (c.fechadaEm ? dataCurta(c.fechadaEm) : null) },
+  { chave: "abrir", rotulo: "", semFiltro: true },
+];
+
 function Andamento({ c, etapas }: { c: Competencia; etapas: Etapa[] }) {
   return (
     <ol className="flex items-center gap-1" aria-label="Andamento do mês">
@@ -86,7 +124,7 @@ function Andamento({ c, etapas }: { c: Competencia; etapas: Etapa[] }) {
             {p.rotulo}
           </>
         );
-        const base = `inline-flex items-center gap-1 rounded-sm border border-transparent px-1.5 py-0.5 text-xs whitespace-nowrap ${classe}`;
+        const base = `inline-flex items-center gap-1 rounded-sm border border-transparent px-1 py-0.5 text-xs whitespace-nowrap ${classe}`;
         return (
           <li key={p.rotulo} title={p.dica}>
             {etapa ? (
@@ -118,7 +156,7 @@ export function CompetenciasContent() {
   // Todas as competências (a mesma consulta do menu lateral), para sugerir o próximo mês.
   const todas = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar() });
 
-  const itens = data?.itens ?? [];
+  const tabela = useTabelaFiltravel(data?.itens, COLUNAS);
 
   // As telas de cada mês que o perfil do usuário alcança (Passo 22), na ordem do fechamento.
   const etapas = etapasDoMes(hasPermission, user?.acesso);
@@ -156,17 +194,29 @@ export function CompetenciasContent() {
               largura="w-40"
               opcoes={(data?.anos ?? []).map((a) => ({ valor: String(a), rotulo: String(a) }))}
             />
-            <span className="text-xs text-gray-600">{isPending ? "" : `${itens.length} competência(s)`}</span>
+            <div className="flex shrink-0 items-center gap-3">
+              {tabela.ativos ? (
+                <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                  Limpar filtros
+                </button>
+              ) : null}
+              <span className="text-xs text-gray-600">
+                {isPending ? "" : tabela.total !== tabela.totalGeral ? `${tabela.total} de ${tabela.totalGeral} competência(s)` : `${tabela.total} competência(s)`}
+              </span>
+            </div>
           </>
         }
       >
         <DataTable<Competencia>
-          data={itens}
+          data={tabela.visiveis}
+          cabecalho={tabela.cabecalho}
+          filtrosAtivos={tabela.ativos}
+          onLimparFiltros={tabela.limpar}
           isLoading={isPending}
           error={isError ? "Erro ao carregar as competências." : null}
           emptyMessage="Nenhuma competência aberta"
           emptyHint="Use o botão Abrir competência para abrir o primeiro mês."
-          columns={["Competência", "Estado", "Andamento", "Divergências", "Última apuração", "Fechada em", ""]}
+          columns={["Competência", "Estado", "Andamento", "Divergências", "Apurada em", "Fechada em", ""]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrirMes(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
               <td className="px-4 text-sm whitespace-nowrap">

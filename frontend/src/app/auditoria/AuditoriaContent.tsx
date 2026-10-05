@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Carregando, ErroCarga } from "@/components/shared/Estados";
-import { BarraDeFiltros, SeletorFiltro } from "@/components/shared/Filtros";
+import { BarraDeFiltros } from "@/components/shared/Filtros";
+import { PainelFiltro } from "@/components/shared/TabelaFiltravel";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
@@ -101,7 +102,7 @@ export function AuditoriaContent() {
 
       {/* Filtros no padrão (G8 do levantamento de layout). */}
       <BarraDeFiltros
-        ativos={!!(filtro.de || filtro.ate || filtro.usuarioId || filtro.entidade || filtro.acao || filtro.incluirAcessos)}
+        ativos={!!(filtro.de || filtro.ate || filtro.usuarioId || filtro.entidade || filtro.acao || filtro.ordem || filtro.incluirAcessos)}
         onLimpar={() => setFiltro({ incluirAcessos: false, pagina: 1 })}
       >
         <div className="space-y-1">
@@ -112,27 +113,6 @@ export function AuditoriaContent() {
           <label htmlFor="a-ate" className="block text-xs font-medium text-gray-600">Até</label>
           <Input id="a-ate" type="date" value={filtro.ate ?? ""} onChange={(e) => muda({ ate: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
         </div>
-        <SeletorFiltro
-          rotulo="Usuário"
-          valor={filtro.usuarioId}
-          onMudar={(v) => muda({ usuarioId: v })}
-          opcoes={(opcoes.data?.usuarios ?? []).map((u) => ({ valor: u.id, rotulo: u.nome }))}
-        />
-        <SeletorFiltro
-          rotulo="Entidade"
-          valor={filtro.entidade}
-          onMudar={(v) => muda({ entidade: v })}
-          todos="Todas"
-          opcoes={(opcoes.data?.entidades ?? []).map((e) => ({ valor: e.entidade, rotulo: e.rotulo }))}
-        />
-        <SeletorFiltro
-          rotulo="Ação"
-          valor={filtro.acao}
-          onMudar={(v) => muda({ acao: v })}
-          todos="Todas"
-          largura="w-56"
-          opcoes={(opcoes.data?.acoes ?? []).map((a) => ({ valor: a.acao, rotulo: a.rotulo }))}
-        />
         <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={filtro.incluirAcessos} onChange={(e) => muda({ incluirAcessos: e.target.checked })} className="size-4 accent-black" />
           Incluir acessos às telas
@@ -145,12 +125,48 @@ export function AuditoriaContent() {
       >
         {log.isError ? <ErroCarga mensagem="Erro ao carregar o log." /> : null}
         <table className="tabela-sig w-full border-collapse text-sm">
+          {/* Filtros nos rótulos, como no Excel, aplicados no servidor: o log cresce sem parar e é paginado lá. */}
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
-              <th className="px-4 py-2">Quando</th>
-              <th className="px-4 py-2">Usuário</th>
-              <th className="px-4 py-2">Ação</th>
-              <th className="px-4 py-2">Entidade</th>
+              <th className="px-4 py-2">
+                <span className="inline-flex items-center gap-1">
+                  Quando
+                  <PainelFiltro
+                    rotulo="Quando"
+                    tipo="data"
+                    soOrdenar
+                    filtrado={false}
+                    ordem={filtro.ordem ? { decrescente: filtro.ordem === "desc" } : null}
+                    valores={() => []}
+                    marcadosAoAbrir={() => []}
+                    onOrdenar={(decrescente) => muda({ ordem: decrescente ? "desc" : "asc" })}
+                    onAplicar={() => undefined}
+                  />
+                </span>
+              </th>
+              {(
+                [
+                  ["Usuário", "usuarioId", (opcoes.data?.usuarios ?? []).map((u) => ({ chave: u.id, texto: u.nome }))],
+                  ["Ação", "acao", (opcoes.data?.acoes ?? []).map((a) => ({ chave: a.acao, texto: a.rotulo }))],
+                  ["Entidade", "entidade", (opcoes.data?.entidades ?? []).map((e) => ({ chave: e.entidade, texto: e.rotulo }))],
+                ] as const
+              ).map(([rotulo, campo, valores]) => (
+                <th key={campo} className="px-4 py-2">
+                  <span className="inline-flex items-center gap-1">
+                    {rotulo}
+                    <PainelFiltro
+                      rotulo={rotulo}
+                      filtrado={!!filtro[campo]}
+                      ordem={null}
+                      valores={() => [...valores]}
+                      marcadosAoAbrir={() => filtro[campo] ?? valores.map((v) => v.chave)}
+                      onOrdenar={() => undefined}
+                      onAplicar={(chaves) => muda({ [campo]: chaves ?? undefined })}
+                      semOrdem
+                    />
+                  </span>
+                </th>
+              ))}
               <th className="px-4 py-2">Registro</th>
             </tr>
           </thead>

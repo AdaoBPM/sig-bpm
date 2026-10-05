@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { edicaoService, type Campo, type Registro } from "../services/edicaoService";
 import { CadastroShell } from "./CadastroShell";
@@ -12,8 +14,9 @@ import { useEdicaoCadastro } from "./EdicaoCadastro";
 
 const POR_PAGINA_INICIAL = 50;
 
-function formatar(c: Campo, v: unknown) {
-  if (v === null || v === undefined || v === "") return <span className="text-gray-400">—</span>;
+/** O texto da célula; sem valor, null (a célula mostra "—" e o filtro, vazias). */
+function textoDoCampo(c: Campo, v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
   if (c.tipo === "booleano") return v ? "Sim" : "Não";
   if (c.tipo === "opcao") return c.opcoes?.find((o) => o.valor === String(v))?.rotulo ?? String(v);
   if (c.tipo === "decimal") return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
@@ -21,25 +24,54 @@ function formatar(c: Campo, v: unknown) {
   return String(v);
 }
 
+function formatar(c: Campo, v: unknown) {
+  return textoDoCampo(c, v) ?? <span className="text-gray-400">—</span>;
+}
+
+/** O valor que ordena: número nos campos de número e data, o texto da célula nos demais. */
+function valorDoCampo(c: Campo, v: unknown): string | number | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (c.tipo === "inteiro" || c.tipo === "decimal") return Number(v);
+  if (c.tipo === "data") {
+    const t = new Date(String(v)).getTime();
+    return Number.isNaN(t) ? null : t;
+  }
+  return textoDoCampo(c, v);
+}
+
+function colunaDoCampo(c: Campo): Coluna<Registro> {
+  return {
+    chave: c.nome,
+    rotulo: c.rotuloColuna ?? c.rotulo,
+    valor: (r) => valorDoCampo(c, r[c.nome]),
+    texto: (r) => textoDoCampo(c, r[c.nome]),
+    tipo: c.tipo === "inteiro" || c.tipo === "decimal" ? "numero" : c.tipo === "data" ? "data" : "texto",
+  };
+}
+
+const EDITAR: Coluna<Registro> = { chave: "editar", rotulo: "", semFiltro: true };
+
 type Props = { entidade: string; rota: string; titulo: string; descricao: string };
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
 export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Props) {
   useRegistrarAcessoTela(rota);
   const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
   const edicao = useEdicaoCadastro(entidade, { criar: def.data?.criar ?? false });
 
-  const campos = (def.data?.campos ?? []).filter((c) => c.tipo !== "multipla");
+  const campos = useMemo(() => (def.data?.campos ?? []).filter((c) => c.tipo !== "multipla"), [def.data]);
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const todos = lista.data ?? [];
     return termo ? todos.filter((r) => campos.some((c) => String(r[c.nome] ?? "").toLowerCase().includes(termo))) : todos;
   }, [lista.data, busca, campos]);
-  const pagina_ = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const colunas = useMemo(() => {
+    const doCadastro = campos.map(colunaDoCampo);
+    return edicao.pode ? [...doCadastro, EDITAR] : doCadastro;
+  }, [campos, edicao.pode]);
+  const tabela = useTabelaFiltravel(filtrados, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   return (
     <CadastroShell
@@ -49,23 +81,27 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Prop
       busca={busca}
       onBuscaChange={(v) => {
         setBusca(v);
-        setPagina(1);
+        tabela.setPagina(1);
       }}
       placeholderBusca="Buscar…"
-      total={filtrados.length}
-      pagina={pagina}
-      porPagina={porPagina}
-      onPorPaginaChange={setPorPagina}
-      onPaginaChange={setPagina}
+      total={tabela.total}
+      pagina={tabela.pagina}
+      porPagina={tabela.porPagina}
+      onPorPaginaChange={tabela.setPorPagina}
+      onPaginaChange={tabela.setPagina}
       carregando={def.isPending || lista.isPending}
+      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       <DataTable<Registro>
-        data={pagina_}
+        data={tabela.visiveis}
+        cabecalho={tabela.cabecalho}
+        filtrosAtivos={tabela.ativos}
+        onLimparFiltros={tabela.limpar}
         isLoading={def.isPending || lista.isPending}
         error={def.isError || lista.isError ? "Erro ao carregar o cadastro." : null}
         emptyMessage="Nenhum registro encontrado"
         emptyHint="Ajuste a busca para ver outros registros."
-        columns={[...campos.map((c) => c.rotulo), ...edicao.colunaEditar]}
+        columns={[...campos.map((c) => c.rotuloColuna ?? c.rotulo), ...edicao.colunaEditar]}
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
             {campos.map((c) => (

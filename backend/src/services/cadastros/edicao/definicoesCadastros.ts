@@ -26,6 +26,8 @@ export type Opcao = { valor: string; rotulo: string };
 export type Campo = {
   nome: string;
   rotulo: string;
+  /** O rótulo curto no cabeçalho da tabela, quando o do formulário é longo demais. */
+  rotuloColuna?: string;
   tipo: "texto" | "inteiro" | "decimal" | "booleano" | "data" | "opcao" | "multipla";
   obrigatorio?: boolean;
   /** Só na criação: a chave natural não muda depois (código RM, reduzido, código da linha). */
@@ -522,15 +524,16 @@ const regras: DefinicaoCadastro = {
     {
       nome: "unidadeDestinoId",
       rotulo: "Unidade que recebe",
+      rotuloColuna: "Unidade",
       tipo: "opcao",
       obrigatorio: true,
       opcoes: async (db) => (await db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: `${u.codigo} · ${u.nome}` })),
     },
     { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true },
-    { nome: "baseFisica", rotulo: "Base física", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas([["M3", "m³"], ["KG", "kg"], ["PISTA", "pista"], ["DIA", "dia"]]) },
-    { nome: "origemDoVolume", rotulo: "Linha dos Totais que dá o volume", tipo: "texto", obrigatorio: true, ajuda: "Ex.: METALURGIA_MONTAGEM." },
-    { nome: "vigenciaInicio", rotulo: "Vigência: início", tipo: "data", obrigatorio: true },
-    { nome: "vigenciaFim", rotulo: "Vigência: fim", tipo: "data" },
+    { nome: "baseFisica", rotulo: "Base física", rotuloColuna: "Base", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas([["M3", "m³"], ["KG", "kg"], ["PISTA", "pista"], ["DIA", "dia"]]) },
+    { nome: "origemDoVolume", rotulo: "Linha dos Totais que dá o volume", rotuloColuna: "Linha dos Totais", tipo: "texto", obrigatorio: true, ajuda: "Ex.: METALURGIA_MONTAGEM." },
+    { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
+    { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
   ],
   listar: async (db) => db.regraRateio.findMany({ orderBy: [{ ordem: "asc" }, { chave: "asc" }] }),
   ler: (db, id) => db.regraRateio.findUnique({ where: { id } }),
@@ -613,8 +616,8 @@ const estacas: DefinicaoCadastro = {
     { nome: "peca", rotulo: "Peça", tipo: "texto", obrigatorio: true },
     { nome: "precoUnitario", rotulo: "Preço bruto (m³)", tipo: "decimal", obrigatorio: true },
     { nome: "precoLiquido", rotulo: "Preço líquido (m³)", tipo: "decimal", obrigatorio: true },
-    { nome: "vigenciaInicio", rotulo: "Vigência: início", tipo: "data", obrigatorio: true },
-    { nome: "vigenciaFim", rotulo: "Vigência: fim", tipo: "data" },
+    { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
+    { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
   ],
   listar: async (db, busca) => (await db.tabelaEstaca.findMany({ orderBy: [{ ordem: "asc" }, { secao: "asc" }] })).filter((t) => contem(busca, t.secao, t.grupo, t.peca)),
   ler: (db, id) => db.tabelaEstaca.findUnique({ where: { id } }),

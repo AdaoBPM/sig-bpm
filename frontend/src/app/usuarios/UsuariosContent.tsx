@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { KeyRound, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
@@ -18,6 +20,16 @@ import { UsuarioDialog } from "./components/UsuarioDialog";
 import { mensagemDeErro, usuariosService, type Usuario } from "./services/usuariosService";
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
+
+const COLUNAS: Coluna<Usuario>[] = [
+  { chave: "nome", rotulo: "Nome", valor: (u) => u.nome },
+  { chave: "email", rotulo: "E-mail", valor: (u) => u.email },
+  { chave: "perfil", rotulo: "Perfil", valor: (u) => u.perfil.nome },
+];
+const DEPOIS_DO_RECORTE: Coluna<Usuario>[] = [
+  { chave: "situacao", rotulo: "Situação", valor: (u) => (u.ativo ? "Ativo" : "Inativo") },
+  { chave: "acoes", rotulo: "", semFiltro: true },
+];
 
 function RedefinirSenhaDialog({ usuario, onFechar }: { usuario: Usuario; onFechar: () => void }) {
   const [senha, setSenha] = useState("");
@@ -58,8 +70,24 @@ export function UsuariosContent() {
   const [senhaDe, setSenhaDe] = useState<Usuario | null>(null);
   const usuarios = useQuery({ queryKey: ["usuarios"], queryFn: usuariosService.listar });
   const opcoes = useQuery({ queryKey: ["usuarios", "opcoes"], queryFn: usuariosService.opcoes });
-  const rotuloSetor = new Map(opcoes.data?.setores.map((s) => [s.tipo, s.rotulo]));
-  const rotuloDep = new Map(opcoes.data?.departamentos.map((d) => [d.departamento, d.rotulo]));
+  const rotuloSetor = useMemo(() => new Map(opcoes.data?.setores.map((s) => [s.tipo, s.rotulo])), [opcoes.data]);
+  const rotuloDep = useMemo(() => new Map(opcoes.data?.departamentos.map((d) => [d.departamento, d.rotulo])), [opcoes.data]);
+  // O recorte mostra os rótulos dos setores e departamentos, que vêm das opções.
+  const colunas = useMemo((): Coluna<Usuario>[] => {
+    const recorte: Coluna<Usuario> = {
+      chave: "recorte",
+      rotulo: "Recorte",
+      valor: (u) =>
+        [
+          u.perfil.recorteSetor ? `Setores: ${u.setores.map((s) => rotuloSetor.get(s) ?? s).join(", ") || "nenhum"}` : null,
+          u.perfil.recorteDepartamento ? `Departamentos: ${u.departamentos.map((d) => rotuloDep.get(d) ?? d).join(", ") || "nenhum"}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || null,
+    };
+    return [...COLUNAS, recorte, ...DEPOIS_DO_RECORTE];
+  }, [rotuloSetor, rotuloDep]);
+  const tabela = useTabelaFiltravel(usuarios.data, colunas);
 
   return (
     <div className="space-y-6">
@@ -81,9 +109,27 @@ export function UsuariosContent() {
         }
       />
 
-      <QuadroTabela>
+      <QuadroTabela
+        barra={
+          tabela.ativos ? (
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                Limpar filtros
+              </button>
+              {tabela.total !== tabela.totalGeral ? (
+                <p className="text-xs text-gray-600">
+                  {tabela.total} de {tabela.totalGeral} usuário(s)
+                </p>
+              ) : null}
+            </div>
+          ) : undefined
+        }
+      >
         <DataTable<Usuario>
-          data={usuarios.data ?? []}
+          data={tabela.visiveis}
+          cabecalho={tabela.cabecalho}
+          filtrosAtivos={tabela.ativos}
+          onLimparFiltros={tabela.limpar}
           isLoading={usuarios.isPending}
           error={usuarios.isError ? mensagemDeErro(usuarios.error, "Erro ao carregar os usuários.") : null}
           emptyMessage="Nenhum usuário"

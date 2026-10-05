@@ -27,9 +27,11 @@ export type OpcoesAuditoria = {
 export type FiltroAuditoria = {
   de?: string;
   ate?: string;
-  usuarioId?: string;
-  entidade?: string;
-  acao?: string;
+  /** Os filtros dos rótulos das colunas: vários valores, como no Excel. */
+  usuarioId?: string[];
+  entidade?: string[];
+  acao?: string[];
+  ordem?: "asc" | "desc";
   incluirAcessos: boolean;
   pagina: number;
 };
@@ -37,7 +39,14 @@ export type FiltroAuditoria = {
 export const auditoriaService = {
   consultar: async (f: FiltroAuditoria): Promise<PaginaAuditoria> => {
     const params = Object.fromEntries(
-      Object.entries({ ...f, incluirAcessos: f.incluirAcessos ? "1" : "0", porPagina: 50 }).filter(([, v]) => v !== undefined && v !== ""),
+      Object.entries({
+        ...f,
+        usuarioId: f.usuarioId?.join(","),
+        entidade: f.entidade?.join(","),
+        acao: f.acao?.join(","),
+        incluirAcessos: f.incluirAcessos ? "1" : "0",
+        porPagina: 50,
+      }).filter(([, v]) => v !== undefined && v !== ""),
     );
     return (await api.get<{ data: PaginaAuditoria }>("/proxy/auditoria", { params })).data.data;
   },

@@ -15,6 +15,8 @@ import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { FaixaIndicadores, type Indicador } from "@/components/shared/FaixaIndicadores";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { lerAnoMes, moeda } from "../utils/formatacao";
@@ -31,6 +33,17 @@ function somaPor(itens: LancamentoManual[], chave: (l: LancamentoManual) => stri
   for (const l of itens) m.set(chave(l), (m.get(chave(l)) ?? 0) + Math.round(Number(l.valor) * 100));
   return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, c]) => ({ chave: k, valor: (c / 100).toFixed(2) }));
 }
+
+const COLUNAS: Coluna<LancamentoManual>[] = [
+  { chave: "motivo", rotulo: "Motivo", valor: (l) => l.motivo },
+  { chave: "filial", rotulo: "Filial", tipo: "numero", valor: (l) => l.filial, texto: (l) => String(l.filial) },
+  { chave: "conta", rotulo: "Conta", valor: (l) => l.contaResultado?.reduzido },
+  { chave: "descricao", rotulo: "Descrição", valor: (l) => l.descricao },
+  { chave: "destino", rotulo: "Destino na DRE", valor: (l) => l.linhaDRE?.descricao ?? "sem destino — corrija a conta" },
+  { chave: "rateio", rotulo: "Rateio", valor: (l) => l.balde },
+  { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valor), texto: (l) => moeda(l.valor) },
+  { chave: "acoes", rotulo: "", semFiltro: true },
+];
 
 export function LancamentosManuaisContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
@@ -68,6 +81,7 @@ export function LancamentosManuaisContent() {
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível copiar.")),
   });
+  const tabela = useTabelaFiltravel(lista.data?.itens, COLUNAS);
 
   if (!periodo) {
     return (
@@ -91,6 +105,9 @@ export function LancamentosManuaisContent() {
   ];
   if (porMotivo.length === 1) indicadores.push({ rotulo: "motivo", rotuloAntes: true, valor: <span className="text-sm font-bold">{porMotivo[0].chave}</span> });
   if (porFilial.length === 1) indicadores.push({ rotulo: "filial", rotuloAntes: true, valor: porFilial[0].chave });
+  // A faixa fica no mês inteiro; o rodapé soma o que os filtros dos rótulos deixam à vista.
+  const filtrado = tabela.total !== tabela.totalGeral;
+  const totalFiltrado = filtrado ? (tabela.filtradas.reduce((s, l) => s + Math.round(Number(l.valor) * 100), 0) / 100).toFixed(2) : null;
 
   return (
     <div className="space-y-6">
@@ -133,15 +150,25 @@ export function LancamentosManuaisContent() {
       <QuadroTabela
         rodape={
           itens.length > 0 ? (
-            <div className="flex justify-end gap-2 border-t border-gray-200 px-4 py-2.5 text-sm">
-              <span className="text-gray-600">Total</span>
-              <span className="font-bold tabular-nums text-gray-900">{moeda(dados?.total ?? "0")}</span>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-2.5 text-sm">
+              {tabela.ativos ? (
+                <button type="button" onClick={tabela.limpar} className="mr-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+                  Limpar filtros
+                </button>
+              ) : null}
+              <span className="text-gray-600">
+                {filtrado ? `Total filtrado (${tabela.total} de ${tabela.totalGeral})` : "Total"}
+              </span>
+              <span className="font-bold tabular-nums text-gray-900">{moeda(totalFiltrado ?? dados?.total ?? "0")}</span>
             </div>
           ) : null
         }
       >
           <DataTable<LancamentoManual>
-            data={itens}
+            data={tabela.visiveis}
+            cabecalho={tabela.cabecalho}
+            filtrosAtivos={tabela.ativos}
+            onLimparFiltros={tabela.limpar}
             isLoading={lista.isPending}
             error={lista.isError ? mensagemDeErro(lista.error, "Erro ao carregar os lançamentos.") : null}
             emptyMessage="Nenhum lançamento manual nesta competência"
@@ -160,7 +187,7 @@ export function LancamentosManuaisContent() {
                   ) : null}
                 </td>
                 <td className="px-4 text-sm text-gray-600">
-                  <div className="max-w-72 truncate" title={l.descricao}>
+                  <div className="max-w-64 truncate" title={l.descricao}>
                     {l.descricao}
                   </div>
                 </td>

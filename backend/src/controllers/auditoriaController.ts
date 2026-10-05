@@ -8,13 +8,23 @@ const dia = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .optional();
+/** Um ou mais valores separados por vírgula: o filtro do rótulo da coluna marca vários, como no Excel. */
+const lista = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(4000)
+    .transform((s) => s.split(",").map((x) => x.trim()).filter(Boolean))
+    .pipe(z.array(z.string().max(max)).min(1).max(200))
+    .optional();
 const filtroSchema = z.object({
   de: dia,
   ate: dia,
-  usuarioId: z.string().trim().min(1).max(64).optional(),
-  entidade: z.string().trim().max(60).optional(),
+  usuarioId: lista(64),
+  entidade: lista(60),
   entidadeId: z.string().trim().max(200).optional(),
-  acao: z.string().trim().max(60).optional(),
+  acao: lista(60),
+  ordem: z.enum(["asc", "desc"]).default("desc"),
   incluirAcessos: z.enum(["0", "1"]).default("0"),
   pagina: z.coerce.number().int().min(1).default(1),
   porPagina: z.coerce.number().int().min(1).max(200).default(50),

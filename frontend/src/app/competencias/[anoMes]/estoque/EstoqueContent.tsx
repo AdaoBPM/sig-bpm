@@ -13,13 +13,31 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Vazio } from "@/components/shared/Estados";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
-import { estoqueService, mensagemDeErro, ROTULO_CRITERIO_ESTOQUE } from "./services/estoqueService";
+import { estoqueService, mensagemDeErro, ROTULO_CRITERIO_ESTOQUE, type SaldoEstoque } from "./services/estoqueService";
 
 const m3 = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 const ROTULO_MEDIA: Record<string, string> = { ESTRUTURA: "Estrutura", ALVEOLARES: "Alveolares", ESTACAS: "Estacas", GERAL: "Geral" };
+
+/** Coluna de número à direita: ordena pelo valor e filtra pelo texto formatado como na célula. */
+function numerica(chave: string, rotulo: string, campo: (s: SaldoEstoque) => string, formato: (v: string) => string): Coluna<SaldoEstoque> {
+  return { chave, rotulo, tipo: "numero", alinhamento: "direita", valor: (s) => Number(campo(s)), texto: (s) => formato(campo(s)) };
+}
+
+const COLUNAS: Coluna<SaldoEstoque>[] = [
+  { chave: "obra", rotulo: "Obra", valor: (s) => s.obra, texto: (s) => (s.nomeObra !== s.obra ? `${s.obra} ${s.nomeObra}` : s.obra) },
+  { chave: "linha", rotulo: "Linha", valor: (s) => s.linha },
+  numerica("movimentoVolume", "Movimento (m³)", (s) => s.movimentoVolume, m3),
+  numerica("movimentoValor", "Movimento (R$)", (s) => s.movimentoValor, moeda),
+  { chave: "valoracao", rotulo: "Valoração", valor: (s) => (s.criterio ? ROTULO_CRITERIO_ESTOQUE[s.criterio] ?? s.criterio : null) },
+  numerica("saldoVolume", "Saldo (m³)", (s) => s.saldoVolume, m3),
+  numerica("saldoValor", "Saldo (R$)", (s) => s.saldoValor, moeda),
+  numerica("precoMedio", "R$/m³", (s) => s.precoMedio, moeda),
+];
 
 export function EstoqueContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
@@ -55,6 +73,8 @@ export function EstoqueContent() {
         (!t || `${s.obra} ${s.nomeObra} ${s.linha}`.toLowerCase().includes(t)),
     );
   }, [dados, busca, soMovimento]);
+  // A busca e o "só com movimento" vêm antes; os filtros dos rótulos atuam sobre o que sobra.
+  const tabela = useTabelaFiltravel(saldos, COLUNAS);
 
   if (!periodo) {
     return (
@@ -139,32 +159,29 @@ export function EstoqueContent() {
                     Só com movimento no mês
                   </label>
                 </div>
-                <span className="text-xs text-gray-600">
-                  {saldos.length.toLocaleString("pt-BR")} de {dados.saldos.length.toLocaleString("pt-BR")} saldo(s)
-                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                  {tabela.ativos ? (
+                    <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                      Limpar filtros
+                    </button>
+                  ) : null}
+                  <span className="text-xs text-gray-600">
+                    {tabela.total.toLocaleString("pt-BR")} de {dados.saldos.length.toLocaleString("pt-BR")} saldo(s)
+                  </span>
+                </div>
               </>
             }
           >
               <table className="tabela-sig w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
-                    <th className="px-4 py-2">Obra</th>
-                    <th className="px-4 py-2">Linha</th>
-                    <th className="px-4 py-2 text-right">Movimento (m³)</th>
-                    <th className="px-4 py-2 text-right">Movimento (R$)</th>
-                    <th className="px-4 py-2">Valoração</th>
-                    <th className="px-4 py-2 text-right">Saldo (m³)</th>
-                    <th className="px-4 py-2 text-right">Saldo (R$)</th>
-                    <th className="px-4 py-2 text-right">R$/m³</th>
-                  </tr>
-                </thead>
+                {tabela.cabecalho}
                 <tbody>
-                  {saldos.map((s) => (
+                  {saldos.length > 0 && tabela.total === 0 ? <SemResultado colunas={COLUNAS.length} onLimpar={tabela.limpar} /> : null}
+                  {tabela.visiveis.map((s) => (
                     <tr key={`${s.obra}|${s.linha}`} className="border-b border-gray-100">
                       <td className="px-4 py-2">
                         <div className="font-medium tabular-nums text-gray-900">{s.obra}</div>
                         {s.nomeObra !== s.obra ? (
-                          <div className="max-w-48 truncate text-xs text-gray-500" title={s.nomeObra}>
+                          <div className="max-w-32 truncate text-xs text-gray-500" title={s.nomeObra}>
                             {s.nomeObra}
                           </div>
                         ) : null}

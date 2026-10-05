@@ -19,6 +19,9 @@ const ESTILO: Record<StatusCompetencia, { classe: string; rotulo: string }> = {
   },
 };
 
+/** O nome do estado, como no selo (também no filtro da coluna Estado). */
+export const rotuloStatus = (status: StatusCompetencia) => ESTILO[status].rotulo;
+
 export function StatusCompetenciaBadge({
   status,
 }: {

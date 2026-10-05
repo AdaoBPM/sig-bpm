@@ -9,12 +9,14 @@ import { toast } from "sonner";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { DataTable } from "@/components/shared/DataTable";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Parametros } from "@/components/shared/Parametros";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
@@ -34,6 +36,30 @@ import {
 } from "./services/classificacaoService";
 
 const POR_PAGINA_INICIAL = 50;
+/** O mês inteiro da aba vem de uma vez: o filtro e a ordem das colunas valem para todos os lançamentos. */
+const TODOS = 5000;
+
+const textoValidacao = (v: Validacao) => (VALIDACOES[v].codigo === "-" ? VALIDACOES[v].rotulo : `${VALIDACOES[v].codigo} ${VALIDACOES[v].rotulo}`);
+
+const COLUNAS: Coluna<LancamentoClassificado>[] = [
+  { chave: "filial", rotulo: "Filial", tipo: "numero", valor: (l) => l.filial, texto: (l) => String(l.filial) },
+  {
+    chave: "centro",
+    rotulo: "Centro de custo",
+    valor: (l) => l.codigoCentroCusto,
+    texto: (l) => (l.codigoCentroCusto ? [l.codigoCentroCusto, l.nomeCentroCusto].filter(Boolean).join(" · ") : "sem centro de custo"),
+  },
+  {
+    chave: "conta",
+    rotulo: "Conta",
+    valor: (l) => (l.contaAdotada ?? l.contaResultado).reduzido,
+    texto: (l) => `${(l.contaAdotada ?? l.contaResultado).reduzido} · ${(l.contaAdotada ?? l.contaResultado).descricao}`,
+  },
+  { chave: "validacao", rotulo: "Verificação", valor: (l) => textoValidacao(l.validacao) },
+  { chave: "balde", rotulo: "Rateio", valor: (l) => l.balde },
+  { chave: "linhaDRE", rotulo: "Linha da DRE", valor: (l) => l.linhaDRE?.descricao, texto: (l) => l.linhaDRE?.descricao ?? "sem destino" },
+  { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valorMovimento), texto: (l) => moeda(l.valorMovimento) },
+];
 
 function CelulaCentro({ l }: { l: LancamentoClassificado }) {
   if (!l.codigoCentroCusto) {
@@ -41,7 +67,7 @@ function CelulaCentro({ l }: { l: LancamentoClassificado }) {
   }
   const obra = /^1\.9[89](\.|$)/.test(l.codigoCentroCusto);
   return (
-    <div>
+    <div className="max-w-48">
       <div className="font-medium tabular-nums text-gray-900">{l.codigoCentroCusto}</div>
       <div className="max-w-56 truncate text-xs text-gray-600" title={l.nomeCentroCusto ?? ""}>
         {l.nomeCentroCusto}
@@ -61,7 +87,7 @@ function CelulaCentro({ l }: { l: LancamentoClassificado }) {
 function CelulaConta({ l }: { l: LancamentoClassificado }) {
   const adotada = l.contaAdotada ?? l.contaResultado;
   return (
-    <div>
+    <div className="max-w-56">
       {l.reclassificado ? (
         <div className="flex items-center gap-1 text-xs text-gray-400 line-through">
           <span className="tabular-nums">{l.contaResultado.reduzido}</span>
@@ -73,7 +99,7 @@ function CelulaConta({ l }: { l: LancamentoClassificado }) {
           <ArrowRight className="size-3.5 shrink-0 text-yellow-700" aria-label="reclassificada" />
         ) : null}
         <span className="tabular-nums">{adotada.reduzido}</span>
-        <span className="max-w-56 truncate" title={adotada.descricao}>
+        <span className="min-w-0 truncate" title={adotada.descricao}>
           {adotada.descricao}
         </span>
       </div>
@@ -90,8 +116,6 @@ export function ClassificacaoContent() {
 
   const [situacao, setSituacao] = useState<Situacao>("PENDENCIAS");
   const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
 
   const apuracao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
@@ -102,17 +126,18 @@ export function ClassificacaoContent() {
   });
 
   const lista = useQuery({
-    queryKey: ["classificacao", anoMes, "lancamentos", situacao, buscaDebounced, pagina, porPagina],
+    queryKey: ["classificacao", anoMes, "lancamentos", situacao, buscaDebounced, TODOS],
     queryFn: () =>
       classificacaoService.lancamentos(anoMes, {
         situacao,
         busca: buscaDebounced || undefined,
-        pagina,
-        porPagina,
+        pagina: 1,
+        porPagina: TODOS,
       }),
     enabled: periodo !== null,
     placeholderData: keepPreviousData,
   });
+  const tabela = useTabelaFiltravel(lista.data?.itens, COLUNAS, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   const reclassificar = useMutation({
     mutationFn: () => classificacaoService.reclassificar(anoMes),
@@ -150,7 +175,7 @@ export function ClassificacaoContent() {
 
   function filtrar(s: Situacao) {
     setSituacao(s);
-    setPagina(1);
+    tabela.setPagina(1);
   }
 
   return (
@@ -237,24 +262,41 @@ export function ClassificacaoContent() {
           />
           <QuadroTabela
             barra={
-              <CampoBusca
-                rotulo="Buscar lançamentos"
-                valor={busca}
-                onMudar={(v) => {
-                  setBusca(v);
-                  setPagina(1);
-                }}
-                placeholder="Centro ou conta…"
-              />
+              <>
+                <CampoBusca
+                  rotulo="Buscar lançamentos"
+                  valor={busca}
+                  onMudar={(v) => {
+                    setBusca(v);
+                    tabela.setPagina(1);
+                  }}
+                  placeholder="Centro ou conta…"
+                />
+                {tabela.ativos ? (
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                      Limpar filtros
+                    </button>
+                    {tabela.total !== tabela.totalGeral ? (
+                      <p className="hidden text-xs text-gray-600 sm:block">
+                        {inteiro(tabela.total)} de {inteiro(tabela.totalGeral)} lançamento(s)
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
             }
             rodape={
-              lista.data && lista.data.total > 0 ? (
-                <Paginacao total={lista.data.total} pagina={pagina} porPagina={porPagina} onPagina={setPagina} onPorPagina={setPorPagina} carregando={lista.isFetching} />
+              lista.data && tabela.total > 0 ? (
+                <Paginacao total={tabela.total} pagina={tabela.pagina} porPagina={tabela.porPagina} onPagina={tabela.setPagina} onPorPagina={tabela.setPorPagina} carregando={lista.isFetching} />
               ) : null
             }
           >
           <DataTable<LancamentoClassificado>
-            data={lista.data?.itens ?? []}
+            data={tabela.visiveis}
+            cabecalho={tabela.cabecalho}
+            filtrosAtivos={tabela.ativos}
+            onLimparFiltros={tabela.limpar}
             isLoading={lista.isPending}
             error={lista.isError ? "Erro ao carregar os lançamentos." : null}
             emptyMessage={
@@ -282,7 +324,9 @@ export function ClassificacaoContent() {
                   <BaldeBadge balde={l.balde} />
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {l.linhaDRE?.descricao ?? <span className="text-red-700">sem destino</span>}
+                  <div className="max-w-40 truncate" title={l.linhaDRE?.descricao}>
+                    {l.linhaDRE?.descricao ?? <span className="text-red-700">sem destino</span>}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900">
                   {moeda(l.valorMovimento)}

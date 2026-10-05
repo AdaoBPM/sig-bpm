@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LockKeyholeOpen, MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ import { Carregando, ErroCarga } from "@/components/shared/Estados";
 import { BarraDeFiltros, SeletorFiltro } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { StatusCompetenciaBadge } from "../competencias/components/StatusCompetenciaBadge";
 import { dataHora, inteiro, moeda } from "../competencias/[anoMes]/utils/formatacao";
@@ -25,6 +27,7 @@ import {
   mensagemDeErro,
   ROTULO_STATUS,
   ROTULO_TIPO,
+  type Divergencia,
   type FiltroDivergencias,
   type StatusDivergencia,
   type TipoDivergencia,
@@ -33,12 +36,26 @@ import {
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 const anoMes = (ano: number, mes: number) => `${ano}-${String(mes).padStart(2, "0")}`;
+const POR_PAGINA = 100;
+/** Todas as do filtro da barra vêm de uma vez: o filtro e a ordem das colunas valem para todas. */
+const TODOS = 5000;
 const COR_STATUS: Record<StatusDivergencia, string> = {
   ABERTA: "border-yellow-200 bg-yellow-50 text-yellow-800",
   JUSTIFICADA: "border-gray-200 bg-gray-50 text-gray-600",
   RESOLVIDA_POR_REABERTURA: "border-green-200 bg-green-50 text-green-700",
   RESOLVIDA_POR_REAPURACAO: "border-green-200 bg-green-50 text-green-700",
 };
+
+// As células desta tabela têm px-3; o cabeçalho acompanha.
+const COLUNAS: Coluna<Divergencia>[] = [
+  { chave: "competencia", rotulo: "Competência", tipo: "data", valor: (i) => i.competencia.ano * 100 + i.competencia.mes, texto: (i) => rotulo(i.competencia.ano, i.competencia.mes), classe: "px-3!" },
+  { chave: "descricao", rotulo: "O que diverge", valor: (i) => i.descricao, classe: "px-3!" },
+  { chave: "gravado", rotulo: "Gravado", tipo: "numero", alinhamento: "direita", valor: (i) => Number(i.valorGravado), texto: (i) => moeda(i.valorGravado), classe: "px-3!" },
+  { chave: "recebido", rotulo: "Recebido", tipo: "numero", alinhamento: "direita", valor: (i) => Number(i.valorRecebido), texto: (i) => moeda(i.valorRecebido), classe: "px-3!" },
+  { chave: "diferenca", rotulo: "Diferença", tipo: "numero", alinhamento: "direita", valor: (i) => Number(i.diferenca), texto: (i) => moeda(i.diferenca), classe: "px-3!" },
+  { chave: "situacao", rotulo: "Situação", valor: (i) => ROTULO_STATUS[i.status], classe: "px-3!" },
+];
+const MARCAR: Coluna<Divergencia> = { chave: "marcar", rotulo: "", semFiltro: true, classe: "px-3!" };
 
 /** Justificar as escolhidas ou resolver uma competência por reabertura: ambos pedem texto. */
 function DialogoTexto({ titulo, descricao, acao, onConfirmar, onFechar, pendente }: { titulo: string; descricao: string; acao: string; onConfirmar: (t: string) => void; onFechar: () => void; pendente: boolean }) {
@@ -70,13 +87,22 @@ export function DivergenciasContent() {
   const { refresh } = useAuth();
   const { hasPermission } = usePermissions();
   const podeTratar = hasPermission("divergencia:editar");
-  const [filtro, setFiltro] = useState<FiltroDivergencias>({ status: "ABERTA", pagina: 1 });
+  const [filtro, setFiltro] = useState<FiltroDivergencias>({ status: "ABERTA" });
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [dialogo, setDialogo] = useState<{ tipo: "justificar" } | { tipo: "resolver"; competencia: string } | null>(null);
-  const lista = useQuery({ queryKey: ["divergencias", filtro], queryFn: () => divergenciasService.listar(filtro), placeholderData: keepPreviousData });
+  const lista = useQuery({
+    queryKey: ["divergencias", filtro, TODOS],
+    queryFn: () => divergenciasService.listar({ ...filtro, pagina: 1, porPagina: TODOS }),
+    placeholderData: keepPreviousData,
+  });
+  const colunas = useMemo(() => (podeTratar ? [MARCAR, ...COLUNAS] : COLUNAS), [podeTratar]);
+  const tabela = useTabelaFiltravel(lista.data?.itens, colunas, { porPaginaInicial: POR_PAGINA });
+  // Só se justifica o que está à vista: a marcada que o filtro ou a ordem tiram da página sai da conta.
+  const escolhidas = tabela.visiveis.filter((i) => marcadas.has(i.id)).map((i) => i.id);
   const muda = (p: Partial<FiltroDivergencias>) => {
     setMarcadas(new Set());
-    setFiltro((f) => ({ ...f, ...p, pagina: p.pagina ?? 1 }));
+    setFiltro((f) => ({ ...f, ...p }));
+    tabela.setPagina(1);
   };
   const atualizar = () => {
     setMarcadas(new Set());
@@ -85,7 +111,7 @@ export function DivergenciasContent() {
     void refresh(); // o aviso de abertas no menu
   };
   const justificar = useMutation({
-    mutationFn: (texto: string) => divergenciasService.justificar([...marcadas], texto),
+    mutationFn: (texto: string) => divergenciasService.justificar(escolhidas, texto),
     onSuccess: (r) => {
       toast.success(`${r.justificadas} divergência(s) justificada(s).`);
       atualizar();
@@ -102,7 +128,7 @@ export function DivergenciasContent() {
   });
 
   const d = lista.data;
-  const abertasNaPagina = d?.itens.filter((i) => i.status === "ABERTA") ?? [];
+  const abertasNaPagina = tabela.visiveis.filter((i) => i.status === "ABERTA");
 
   return (
     <div className="space-y-6">
@@ -149,9 +175,9 @@ export function DivergenciasContent() {
         onLimpar={() => muda({ competencia: undefined, tipo: undefined, status: "ABERTA" })}
         direita={
           podeTratar ? (
-            <Button type="button" className={botaoPrimario} disabled={marcadas.size === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
+            <Button type="button" className={botaoPrimario} disabled={escolhidas.length === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
               <MessageSquareText className="size-4" />
-              Justificar {marcadas.size > 0 ? `(${marcadas.size})` : "selecionadas"}
+              Justificar {escolhidas.length > 0 ? `(${escolhidas.length})` : "selecionadas"}
             </Button>
           ) : null
         }
@@ -181,32 +207,49 @@ export function DivergenciasContent() {
       </BarraDeFiltros>
 
       <QuadroTabela
-        barra={<span className="text-xs text-gray-600">{d ? `${inteiro(d.total)} divergência(s)` : ""}</span>}
-        rodape={d && d.total > 0 ? <Paginacao total={d.total} pagina={filtro.pagina} porPagina={d.porPagina} onPagina={(p) => muda({ pagina: p })} carregando={lista.isFetching} /> : null}
+        barra={
+          <>
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              {tabela.ativos ? (
+                <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                  Limpar filtros
+                </button>
+              ) : null}
+              <span className="text-xs text-gray-600">
+                {d ? (tabela.ativos && tabela.total !== tabela.totalGeral ? `${inteiro(tabela.total)} de ${inteiro(tabela.totalGeral)} divergência(s)` : `${inteiro(tabela.total)} divergência(s)`) : ""}
+              </span>
+            </div>
+          </>
+        }
+        rodape={
+          d && tabela.total > 0 ? (
+            <Paginacao
+              total={tabela.total}
+              pagina={tabela.pagina}
+              porPagina={tabela.porPagina}
+              onPagina={(p) => {
+                setMarcadas(new Set());
+                tabela.setPagina(p);
+              }}
+              carregando={lista.isFetching}
+            />
+          ) : null
+        }
       >
         {lista.isError ? <ErroCarga mensagem={mensagemDeErro(lista.error, "Erro ao carregar as divergências.")} /> : null}
           <table className="tabela-sig w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
-                {podeTratar ? (
-                  <th className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      aria-label="Marcar as abertas da página"
-                      checked={abertasNaPagina.length > 0 && abertasNaPagina.every((i) => marcadas.has(i.id))}
-                      onChange={(e) => setMarcadas(e.target.checked ? new Set(abertasNaPagina.map((i) => i.id)) : new Set())}
-                      className="size-4 accent-black"
-                    />
-                  </th>
-                ) : null}
-                <th className="px-3 py-2">Competência</th>
-                <th className="px-3 py-2">O que diverge</th>
-                <th className="px-3 py-2 text-right">Gravado</th>
-                <th className="px-3 py-2 text-right">Recebido</th>
-                <th className="px-3 py-2 text-right">Diferença</th>
-                <th className="px-3 py-2">Situação</th>
-              </tr>
-            </thead>
+            {tabela.cabecalhoCom({
+              marcar: (
+                <input
+                  type="checkbox"
+                  aria-label="Marcar as abertas da página"
+                  checked={abertasNaPagina.length > 0 && abertasNaPagina.every((i) => marcadas.has(i.id))}
+                  disabled={abertasNaPagina.length === 0}
+                  onChange={(e) => setMarcadas(e.target.checked ? new Set(abertasNaPagina.map((i) => i.id)) : new Set())}
+                  className="size-4 accent-black"
+                />
+              ),
+            })}
             <tbody>
               {lista.isPending && !d ? (
                 <tr>
@@ -220,8 +263,10 @@ export function DivergenciasContent() {
                     Nenhuma divergência com esses filtros.
                   </td>
                 </tr>
+              ) : d && tabela.visiveis.length === 0 ? (
+                <SemResultado colunas={colunas.length} onLimpar={tabela.limpar} />
               ) : (
-                d?.itens.map((i) => (
+                tabela.visiveis.map((i) => (
                   <tr key={i.id} className="border-b border-gray-100 align-top">
                     {podeTratar ? (
                       <td className="px-3 py-2">
@@ -274,7 +319,7 @@ export function DivergenciasContent() {
 
       {dialogo?.tipo === "justificar" ? (
         <DialogoTexto
-          titulo={`Justificar ${marcadas.size} divergência(s)`}
+          titulo={`Justificar ${escolhidas.length} divergência(s)`}
           descricao="A justificativa fica registrada com o seu nome. A competência continua como está."
           acao="Justificar"
           pendente={justificar.isPending}

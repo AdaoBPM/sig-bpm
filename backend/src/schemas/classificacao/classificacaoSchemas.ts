@@ -8,5 +8,6 @@ export const listarClassificacaoSchema = z.object({
     .default("PENDENCIAS"),
   busca: z.string().trim().max(120).optional(),
   pagina: z.coerce.number().int().min(1).default(1),
-  porPagina: z.coerce.number().int().min(1).max(200).default(50),
+  // A tela carrega o mês inteiro de uma vez para filtrar pelos rótulos das colunas.
+  porPagina: z.coerce.number().int().min(1).max(5000).default(50),
 });

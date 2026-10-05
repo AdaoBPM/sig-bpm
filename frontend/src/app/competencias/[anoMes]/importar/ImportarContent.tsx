@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Upload } from "lucide-react";
@@ -11,9 +11,10 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Carregando, ErroCarga, Vazio } from "@/components/shared/Estados";
-import { SeletorFiltro } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -39,10 +40,15 @@ function Selo({ classe, children }: { classe: string; children: React.ReactNode 
   return <span className={`inline-block rounded-sm border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${classe}`}>{children}</span>;
 }
 
+/** O selo da importação; o rótulo também é o texto do filtro da coluna Situação. */
+function estiloSituacao(imp: Importacao) {
+  if (imp.comparacao && imp.status === "CONCLUIDA") return { classe: "border-yellow-200 bg-yellow-50 text-yellow-800", rotulo: "Comparação" };
+  if (imp.substituidaEm) return { classe: "border-gray-200 bg-gray-50 text-gray-500", rotulo: "Substituída" };
+  return ESTILO_STATUS[imp.status];
+}
+
 function StatusImportacaoBadge({ imp }: { imp: Importacao }) {
-  if (imp.comparacao && imp.status === "CONCLUIDA") return <Selo classe="border-yellow-200 bg-yellow-50 text-yellow-800">Comparação</Selo>;
-  if (imp.substituidaEm) return <Selo classe="border-gray-200 bg-gray-50 text-gray-500">Substituída</Selo>;
-  const { classe, rotulo } = ESTILO_STATUS[imp.status];
+  const { classe, rotulo } = estiloSituacao(imp);
   return <Selo classe={classe}>{rotulo}</Selo>;
 }
 
@@ -58,6 +64,55 @@ function situacaoPorTipo(itens: Importacao[], tipos: string[]): Situacao[] {
   });
 }
 
+const instante = (iso: string) => new Date(iso).getTime();
+
+const COLUNAS_VIGOR: Coluna<Situacao>[] = [
+  { chave: "tipo", rotulo: "Tipo", valor: (s) => ROTULO_TIPO[s.tipo] ?? s.tipo },
+  { chave: "arquivo", rotulo: "Arquivo", valor: (s) => s.vigente?.nomeArquivo },
+  {
+    chave: "importadoEm",
+    rotulo: "Importado em",
+    tipo: "data",
+    valor: (s) => (s.vigente ? instante(s.vigente.importadoEm) : null),
+    texto: (s) => (s.vigente ? dataHora(s.vigente.importadoEm) : null),
+  },
+  { chave: "por", rotulo: "Por", valor: (s) => s.vigente?.usuario?.nome },
+  { chave: "aceitas", rotulo: "Aceitas", tipo: "numero", alinhamento: "direita", valor: (s) => s.vigente?.linhasAceitas, texto: (s) => (s.vigente ? inteiro(s.vigente.linhasAceitas) : null) },
+  {
+    chave: "rejeitadas",
+    rotulo: "Rejeitadas",
+    tipo: "numero",
+    alinhamento: "direita",
+    valor: (s) => s.vigente?.linhasRejeitadas,
+    texto: (s) => (s.vigente ? inteiro(s.vigente.linhasRejeitadas) : null),
+  },
+  { chave: "situacao", rotulo: "Situação", valor: (s) => (s.vigente ? estiloSituacao(s.vigente).rotulo : "Não importado") },
+  { chave: "acoes", rotulo: "", semFiltro: true },
+];
+
+const COLUNAS_HISTORICO: Coluna<Importacao>[] = [
+  { chave: "quando", rotulo: "Quando", tipo: "data", valor: (i) => instante(i.importadoEm), texto: (i) => dataHora(i.importadoEm) },
+  { chave: "tipo", rotulo: "Tipo", valor: (i) => ROTULO_TIPO[i.tipo] ?? i.tipo },
+  { chave: "arquivo", rotulo: "Arquivo", valor: (i) => i.nomeArquivo },
+  { chave: "situacao", rotulo: "Situação", valor: (i) => estiloSituacao(i).rotulo },
+  { chave: "aceitas", rotulo: "Aceitas", tipo: "numero", alinhamento: "direita", valor: (i) => i.linhasAceitas, texto: (i) => inteiro(i.linhasAceitas) },
+  { chave: "rejeitadas", rotulo: "Rejeitadas", tipo: "numero", alinhamento: "direita", valor: (i) => i.linhasRejeitadas, texto: (i) => inteiro(i.linhasRejeitadas) },
+  { chave: "por", rotulo: "Por", valor: (i) => i.usuario?.nome },
+];
+
+/** "N de M", só quando os filtros dos rótulos escondem linhas. */
+function contagem(t: { total: number; totalGeral: number }, nome: string) {
+  return t.total !== t.totalGeral ? `${inteiro(t.total)} de ${inteiro(t.totalGeral)} ${nome}` : `${inteiro(t.total)} ${nome}`;
+}
+
+function LimparFiltros({ onLimpar }: { onLimpar: () => void }) {
+  return (
+    <button type="button" onClick={onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+      Limpar filtros
+    </button>
+  );
+}
+
 export function ImportarContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/importar`);
@@ -68,15 +123,23 @@ export function ImportarContent() {
   const [aba, setAba] = useState<"vigor" | "historico">("vigor");
   const [aberta, setAberta] = useState<string | null>(null);
   const [envio, setEnvio] = useState<{ tipo?: string } | null>(null);
-  const [filtroTipo, setFiltroTipo] = useState<string | undefined>();
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(25);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["importacoes", anoMes],
     queryFn: () => importacoesService.listar(anoMes),
     enabled: periodo !== null,
   });
+
+  // Memorizadas porque entram no filtro dos rótulos, que recalcula quando a lista muda.
+  const situacoes = useMemo(() => {
+    const lista = data?.itens ?? [];
+    // Recorte por setor (Passo 22): o Alimentador só vê as listas dos seus setores.
+    const alcanca = (t: string) => !user?.acesso.recorteSetor || user.acesso.setores.includes(t);
+    const tipos = [...TIPOS_DO_MES.filter(alcanca), ...TIPOS_EVENTUAIS.filter((t) => lista.some((i) => i.tipo === t))];
+    return situacaoPorTipo(lista, tipos);
+  }, [data, user]);
+  const vigor = useTabelaFiltravel(situacoes, COLUNAS_VIGOR);
+  const historico = useTabelaFiltravel(data?.itens, COLUNAS_HISTORICO, { porPaginaInicial: 25 });
 
   if (!periodo) {
     return <ErroCarga mensagem={`Competência inválida na URL: ${anoMes}. Use o formato aaaa-mm.`} />;
@@ -85,14 +148,8 @@ export function ImportarContent() {
   const itens = data?.itens ?? [];
   const fechada = data?.competencia.status === "FECHADA";
   const podeImportar = hasPermission("importacao:editar");
-  // Recorte por setor (Passo 22): o Alimentador só vê as listas dos seus setores.
-  const alcanca = (t: string) => !user?.acesso.recorteSetor || user.acesso.setores.includes(t);
-  const tipos = [...TIPOS_DO_MES.filter(alcanca), ...TIPOS_EVENTUAIS.filter((t) => itens.some((i) => i.tipo === t))];
-  const situacoes = situacaoPorTipo(itens, tipos);
   const mensagemErro = (error as { response?: { data?: { error?: string } } } | null)?.response?.data?.error ?? "Erro ao carregar as importações.";
 
-  const historico = filtroTipo ? itens.filter((i) => i.tipo === filtroTipo) : itens;
-  const daPagina = historico.slice((pagina - 1) * porPagina, pagina * porPagina);
   const importados = situacoes.filter((s) => s.vigente).length;
 
   // Com o mês fechado, só o balancete entra, para comparar (Passo 24).
@@ -148,25 +205,24 @@ export function ImportarContent() {
       />
 
       {aba === "vigor" ? (
-        <QuadroTabela>
+        <QuadroTabela
+          barra={
+            vigor.ativos ? (
+              <div className="ml-auto flex shrink-0 items-center gap-3">
+                <LimparFiltros onLimpar={vigor.limpar} />
+                <span className="text-xs text-gray-600">{contagem(vigor, "tipo(s)")}</span>
+              </div>
+            ) : null
+          }
+        >
           {isPending ? (
             <Carregando linhas={6} />
           ) : (
             <table className="tabela-sig w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
-                  <th className="px-4">Tipo</th>
-                  <th className="px-4">Arquivo</th>
-                  <th className="px-4">Importado em</th>
-                  <th className="px-4">Por</th>
-                  <th className="px-4 text-right">Aceitas</th>
-                  <th className="px-4 text-right">Rejeitadas</th>
-                  <th className="px-4">Situação</th>
-                  <th className="px-4" />
-                </tr>
-              </thead>
+              {vigor.cabecalho}
               <tbody>
-                {situacoes.map(({ tipo, vigente, ultimaTentativa }) => (
+                {vigor.visiveis.length === 0 ? <SemResultado colunas={COLUNAS_VIGOR.length} onLimpar={vigor.limpar} /> : null}
+                {vigor.visiveis.map(({ tipo, vigente, ultimaTentativa }) => (
                   <tr
                     key={tipo}
                     onClick={vigente ? () => setAberta(vigente.id) : undefined}
@@ -217,54 +273,33 @@ export function ImportarContent() {
       ) : (
         <QuadroTabela
           barra={
-            <>
-              <SeletorFiltro
-                rotulo="Tipo"
-                valor={filtroTipo}
-                onMudar={(v) => {
-                  setFiltroTipo(v);
-                  setPagina(1);
-                }}
-                largura="w-52"
-                opcoes={[...new Set(itens.map((i) => i.tipo))].map((t) => ({ valor: t, rotulo: ROTULO_TIPO[t] ?? t }))}
-              />
-              <span className="text-xs text-gray-600">{data ? `${inteiro(historico.length)} importação(ões)` : ""}</span>
-            </>
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              {historico.ativos ? <LimparFiltros onLimpar={historico.limpar} /> : null}
+              <span className="text-xs text-gray-600">{data ? contagem(historico, "importação(ões)") : ""}</span>
+            </div>
           }
           rodape={
-            historico.length > 0 ? (
+            historico.total > 0 ? (
               <Paginacao
-                total={historico.length}
-                pagina={pagina}
-                porPagina={porPagina}
-                onPagina={setPagina}
-                onPorPagina={(n) => {
-                  setPorPagina(n);
-                  setPagina(1);
-                }}
+                total={historico.total}
+                pagina={historico.pagina}
+                porPagina={historico.porPagina}
+                onPagina={historico.setPagina}
+                onPorPagina={historico.setPorPagina}
               />
             ) : null
           }
         >
           {isPending ? (
             <Carregando linhas={6} />
-          ) : historico.length === 0 ? (
+          ) : itens.length === 0 ? (
             <Vazio titulo="Nenhuma importação nesta competência" dica={podeImportar ? "Use o botão Importar arquivo." : undefined} />
           ) : (
             <table className="tabela-sig w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
-                  <th className="px-4">Quando</th>
-                  <th className="px-4">Tipo</th>
-                  <th className="px-4">Arquivo</th>
-                  <th className="px-4">Situação</th>
-                  <th className="px-4 text-right">Aceitas</th>
-                  <th className="px-4 text-right">Rejeitadas</th>
-                  <th className="px-4">Por</th>
-                </tr>
-              </thead>
+              {historico.cabecalho}
               <tbody>
-                {daPagina.map((imp) => (
+                {historico.visiveis.length === 0 ? <SemResultado colunas={COLUNAS_HISTORICO.length} onLimpar={historico.limpar} /> : null}
+                {historico.visiveis.map((imp) => (
                   <tr key={imp.id} onClick={() => setAberta(imp.id)} className={`cursor-pointer border-b border-gray-100 hover:bg-gray-50 ${imp.substituidaEm ? "text-gray-500" : ""}`}>
                     <td className="px-4 text-sm whitespace-nowrap tabular-nums">{dataHora(imp.importadoEm)}</td>
                     <td className="px-4 text-sm whitespace-nowrap">{ROTULO_TIPO[imp.tipo] ?? imp.tipo}</td>

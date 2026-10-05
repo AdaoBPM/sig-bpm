@@ -4,6 +4,8 @@ export type Opcao = { valor: string; rotulo: string };
 export type Campo = {
   nome: string;
   rotulo: string;
+  /** O rótulo curto no cabeçalho da tabela, quando o do formulário é longo demais. */
+  rotuloColuna?: string;
   tipo: "texto" | "inteiro" | "decimal" | "booleano" | "data" | "opcao" | "multipla";
   obrigatorio?: boolean;
   somenteNaCriacao?: boolean;
