@@ -29,7 +29,7 @@ import { LISTAS, listasService, mensagemDeErro, type RegistroLista } from "../se
 const POR_PAGINA_INICIAL = 50;
 
 /** As quatro listas de produção ficam numa aba só, com a escolha entre elas logo abaixo (E6 do levantamento de layout). */
-const PRODUCAO: Record<string, string> = { PRODUCAO: "m³", PRODUCAO_PISTA: "pistas", PRODUCAO_METALURGIA: "metalurgia", PRODUCAO_ARMADURA: "armadura" };
+const PRODUCAO: Record<string, string> = { PRODUCAO: "m³", PRODUCAO_PISTA: "Pistas", PRODUCAO_METALURGIA: "Metalurgia", PRODUCAO_ARMADURA: "Armadura" };
 
 /** Os detalhes numéricos vêm como decimal ("2006.010"); códigos de peça e textos ficam como estão. */
 const ehDecimal = (v: string | null) => v !== null && /^-?\d+\.\d+$/.test(v);

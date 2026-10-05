@@ -66,13 +66,13 @@ export function AppSidebar() {
       <SidebarContent>
         {anoMes && primeiraEtapa ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Mês em trabalho</SidebarGroupLabel>
+            <SidebarGroupLabel>Mês em Trabalho</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={pathname.startsWith(`/competencias/${anoMes}`)}
-                    tooltip={`Mês em trabalho: ${rotuloDoMes(anoMes)}`}
+                    tooltip={`Mês em Trabalho: ${rotuloDoMes(anoMes)}`}
                     render={<Link href={`/competencias/${anoMes}/${primeiraEtapa.caminho}`} />}
                     // Em destaque, no amarelo da marca BPM.
                     className="bg-bpm-primary hover:bg-bpm-primary-hover active:bg-bpm-primary-hover data-active:bg-bpm-primary h-9 text-base font-bold text-black hover:text-black active:text-black data-active:font-bold data-active:text-black"

@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { iniciaisMaiusculas } from "@/lib/texto";
+
 export type Aba = {
   chave: string;
   rotulo: ReactNode;
@@ -19,7 +21,8 @@ type Props = { abas: Aba[]; ativa: string; onMudar?: (chave: string) => void; ro
 /**
  * As abas de todas as telas (G9 do levantamento de layout): sublinhado na
  * atual, para não se confundir com a barra de etapas do mês, e rolagem
- * horizontal quando não cabem.
+ * horizontal quando não cabem. Os rótulos saem com iniciais maiúsculas, como
+ * os nomes das telas.
  */
 export function Abas({ abas, ativa, onMudar, rotulo }: Props) {
   return (
@@ -32,7 +35,7 @@ export function Abas({ abas, ativa, onMudar, rotulo }: Props) {
         const conteudo = (
           <>
             {a.sinal}
-            {a.rotulo}
+            {typeof a.rotulo === "string" ? iniciaisMaiusculas(a.rotulo) : a.rotulo}
             {a.contagem !== undefined ? <span className={`text-xs tabular-nums ${atual ? "text-gray-700" : "text-gray-400"}`}>{a.contagem.toLocaleString("pt-BR")}</span> : null}
           </>
         );

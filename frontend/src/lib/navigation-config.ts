@@ -21,7 +21,7 @@ export const navGrupos: NavGrupo[] = [
     ],
   },
   {
-    titulo: "Cadastros contábeis",
+    titulo: "Cadastros Contábeis",
     itens: [
       { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
       { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
@@ -30,7 +30,7 @@ export const navGrupos: NavGrupo[] = [
     ],
   },
   {
-    titulo: "Cadastros da operação",
+    titulo: "Cadastros da Operação",
     itens: [
       { title: "Preços do Contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
       { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
