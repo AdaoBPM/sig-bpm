@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { CadastroShell } from "../components/CadastroShell";
@@ -17,30 +19,37 @@ import {
 } from "../services/cadastrosService";
 
 const POR_PAGINA_INICIAL = 50;
+/** O cadastro inteiro vem de uma vez: o filtro e a ordem das colunas valem para todos os centros. */
+const TODOS = 5000;
+
+const COLUNAS: Coluna<CentroCusto>[] = [
+  { chave: "codigo", rotulo: "Código RM", valor: (c) => c.codigoRM },
+  { chave: "nome", rotulo: "Nome", valor: (c) => c.nomeRM },
+  { chave: "controladoria", rotulo: "Controladoria", valor: (c) => c.nomeControladoria },
+  { chave: "departamento", rotulo: "Departamento", valor: (c) => c.departamento },
+  { chave: "atribuicao", rotulo: "Atribuição", valor: (c) => c.atribuicao },
+  { chave: "balde", rotulo: "Balde", valor: (c) => c.balde },
+];
+const EDITAR: Coluna<CentroCusto> = { chave: "editar", rotulo: "", semFiltro: true };
 
 export function CentrosCustoContent() {
   useRegistrarAcessoTela("/cadastros/centros-custo");
 
   const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("centros-custo");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "centros-custo", buscaDebounced, pagina, porPagina],
-    queryFn: () =>
-      cadastrosService.centrosCusto({
-        busca: buscaDebounced || undefined,
-        pagina,
-        porPagina: porPagina,
-      }),
+    queryKey: ["cadastros", "centros-custo", buscaDebounced, TODOS],
+    queryFn: () => cadastrosService.centrosCusto({ busca: buscaDebounced || undefined, pagina: 1, porPagina: TODOS }),
     placeholderData: keepPreviousData,
   });
+  const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
+  const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   function aoBuscar(valor: string) {
     setBusca(valor);
-    setPagina(1);
+    tabela.setPagina(1);
   }
 
   return (
@@ -56,15 +65,19 @@ export function CentrosCustoContent() {
       busca={busca}
       onBuscaChange={aoBuscar}
       placeholderBusca="Código, nome ou departamento…"
-      total={data?.total ?? 0}
-      pagina={pagina}
-      porPagina={porPagina}
-      onPorPaginaChange={setPorPagina}
-      onPaginaChange={setPagina}
+      total={tabela.total}
+      pagina={tabela.pagina}
+      porPagina={tabela.porPagina}
+      onPorPaginaChange={tabela.setPorPagina}
+      onPaginaChange={tabela.setPagina}
       carregando={isPending}
+      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       <DataTable<CentroCusto>
-        data={data?.itens ?? []}
+        data={tabela.visiveis}
+        cabecalho={tabela.cabecalho}
+        filtrosAtivos={tabela.ativos}
+        onLimparFiltros={tabela.limpar}
         isLoading={isPending}
         error={isError ? "Erro ao carregar os centros de custo." : null}
         emptyMessage="Nenhum centro de custo encontrado"
@@ -100,12 +113,14 @@ export function CentrosCustoContent() {
                 {item.nomeControladoria ?? "—"}
               </div>
             </td>
-            <td className="px-4 py-3 text-sm whitespace-nowrap text-gray-600">
+            <td className="px-4 py-3 text-sm text-gray-600">
+              <div className="max-w-64 truncate" title={item.departamento ?? undefined}>
               {item.departamento ?? "—"}
               {/* A sigla só quando o nome não a traz ("DESPESAS ADMINISTRATIVAS (DA)" já traz). */}
               {item.departamentoSigla && !item.departamento?.includes(`(${item.departamentoSigla})`) ? (
                 <span className="ml-1 text-xs text-gray-400">({item.departamentoSigla})</span>
               ) : null}
+              </div>
             </td>
             <td className="px-4 py-3 text-sm text-gray-600">
               {item.atribuicao ?? "—"}

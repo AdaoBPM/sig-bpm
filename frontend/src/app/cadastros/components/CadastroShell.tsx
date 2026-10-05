@@ -20,6 +20,8 @@ type CadastroShellProps = {
   /** Sem ele, a quantidade por página é fixa. */
   onPorPaginaChange?: (porPagina: number) => void;
   carregando: boolean;
+  /** Com filtro nos rótulos: o total antes dos filtros e o "Limpar filtros". */
+  filtros?: { totalGeral: number; ativos: boolean; onLimpar: () => void };
   /** Botões à direita do título, como o de recarga da planilha. */
   acoes?: ReactNode;
   children: ReactNode;
@@ -42,9 +44,11 @@ export function CadastroShell({
   onPaginaChange,
   onPorPaginaChange,
   carregando,
+  filtros,
   acoes,
   children,
 }: CadastroShellProps) {
+  const contagem = filtros?.ativos && filtros.totalGeral !== total ? `${total.toLocaleString("pt-BR")} de ${filtros.totalGeral.toLocaleString("pt-BR")} registro(s)` : `${total.toLocaleString("pt-BR")} registro(s)`;
   return (
     <div className="space-y-4">
       <CabecalhoDaTela titulo={titulo} sobre={<p>{descricao}</p>} acoes={acoes} />
@@ -52,7 +56,14 @@ export function CadastroShell({
         barra={
           <>
             <CampoBusca valor={busca} onMudar={onBuscaChange} placeholder={placeholderBusca} />
-            <p className="hidden shrink-0 text-xs text-gray-600 sm:block">{carregando ? "" : `${total.toLocaleString("pt-BR")} registro(s)`}</p>
+            <div className="flex shrink-0 items-center gap-3">
+              {filtros?.ativos ? (
+                <button type="button" onClick={filtros.onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                  Limpar filtros
+                </button>
+              ) : null}
+              <p className="hidden text-xs text-gray-600 sm:block">{carregando ? "" : contagem}</p>
+            </div>
           </>
         }
         rodape={<Paginacao total={total} pagina={pagina} porPagina={porPagina} onPagina={onPaginaChange} onPorPagina={onPorPaginaChange} carregando={carregando} />}
