@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -67,7 +66,9 @@ function Composicao({ l }: { l: LinhaDRE }) {
 function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe; titulo: string }) {
   const [aberta, setAberta] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<string | null>(null);
-  const abre = (l: LinhaDRE) => !!l.composicao || detalhavel(l);
+  // As linhas que chegam aos lançamentos abrem o detalhamento direto; as demais (totais, volumes) abrem a composição.
+  const abre = (l: LinhaDRE) => !!l.composicao && !detalhavel(l);
+  const clica = (l: LinhaDRE) => detalhavel(l) || abre(l);
   return (
     <div className="border border-gray-200 bg-white rounded-sm">
       <table className="tabela-sig w-full border-collapse text-sm">
@@ -87,12 +88,17 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
               return (
                 <Fragment key={l.codigo}>
                   <tr
-                    className={`border-t border-gray-100 ${destaque ? "bg-gray-50 font-bold" : ""} ${abre(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
-                    onClick={() => (abre(l) ? setAberta(aberto ? null : l.codigo) : undefined)}
+                    className={`border-t border-gray-100 ${destaque ? "bg-gray-50 font-bold" : ""} ${clica(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                    onClick={() => (detalhavel(l) ? setDetalhe(l.codigo) : abre(l) ? setAberta(aberto ? null : l.codigo) : undefined)}
+                    title={detalhavel(l) ? "Ver os lançamentos de origem" : undefined}
                   >
                     <td className={`px-4 py-1.5 ${destaque ? "text-gray-900" : "pl-8 text-gray-700"}`}>
                       <span className="inline-flex items-center gap-1">
-                        {abre(l) ? (aberto ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />) : null}
+                        {detalhavel(l) ? (
+                          <Search className="size-3.5 text-gray-400" />
+                        ) : abre(l) ? (
+                          aberto ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />
+                        ) : null}
                         {l.descricao}
                       </span>
                     </td>
@@ -102,14 +108,8 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
                   </tr>
                   {aberto && abre(l) ? (
                     <tr className="border-t border-gray-100 bg-gray-50/50">
-                      <td colSpan={2} className="space-y-2 px-8 py-2">
+                      <td colSpan={2} className="px-8 py-2">
                         <Composicao l={l} />
-                        {detalhavel(l) ? (
-                          <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setDetalhe(l.codigo)}>
-                            <Search className="size-3.5" />
-                            Ver lançamentos de origem
-                          </Button>
-                        ) : null}
                       </td>
                     </tr>
                   ) : null}
