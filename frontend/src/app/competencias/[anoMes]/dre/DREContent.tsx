@@ -10,16 +10,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
+import { CampoBusca } from "@/components/shared/Filtros";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
-import { PainelApuracao } from "./components/PainelApuracao";
+import { AcoesApuracao, SituacaoApuracao } from "./components/PainelApuracao";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
 const volume = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
-const selectClasse = "h-9 w-full max-w-xl rounded-sm border border-gray-300 bg-white px-3 text-sm";
 
 /** Consolidado, uma das unidades (1 a 5) ou a visão por centro de custo. */
 type Visao = "consolidado" | "centros" | number;
@@ -64,13 +64,20 @@ function Composicao({ l }: { l: LinhaDRE }) {
   );
 }
 
-function TabelaDRE({ linhas, anoMes, visao }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe }) {
+function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe; titulo: string }) {
   const [aberta, setAberta] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<string | null>(null);
   const abre = (l: LinhaDRE) => !!l.composicao || detalhavel(l);
   return (
     <div className="border border-gray-200 bg-white rounded-sm">
       <table className="tabela-sig w-full border-collapse text-sm">
+        {/* O cabeçalho fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
+        <thead>
+          <tr className="border-b border-gray-200 text-xs font-bold tracking-wide text-gray-600 uppercase">
+            <th className="px-4 text-left">{titulo}</th>
+            <th className="w-48 px-4 text-right">Valor</th>
+          </tr>
+        </thead>
         <tbody>
           {linhas
             .filter((l) => l.tipo !== "SECAO")
@@ -131,6 +138,7 @@ const SemApuracao = () => (
 function VisaoCentros({ anoMes }: { anoMes: string }) {
   const { user } = useAuth();
   const [grupo, setGrupo] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
   const grupos = useQuery({ queryKey: ["dre", anoMes, "grupos"], queryFn: () => dreService.grupos(anoMes) });
   const lista = grupos.data?.grupos ?? [];
   const escolhido = grupo ?? lista[0]?.grupo ?? null;
@@ -152,40 +160,59 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
     );
   }
   const dados = centros.data;
+  const t = busca.trim().toLowerCase();
+  const filtrados = lista.filter((g) => !t || g.grupo.toLowerCase().includes(t));
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label htmlFor="dre-grupo" className="text-sm font-medium text-gray-900">
-          Centro de custo
-        </label>
-        <div className="flex items-center gap-2">
-          <select id="dre-grupo" value={escolhido ?? ""} onChange={(e) => setGrupo(e.target.value)} className={selectClasse}>
-            {lista.map((g) => (
-              <option key={g.grupo} value={g.grupo}>
-                {g.grupo} — {moeda(g.total)}
-                {g.centros > 1 ? ` (${g.centros} centros)` : ""}
-              </option>
-            ))}
-          </select>
+    // A lista dos centros, com busca e o total de cada um, à esquerda da DRE do centro (E11 do levantamento de layout).
+    <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
+      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-4">
+        <div className="border-b border-gray-200 p-2">
+          <CampoBusca rotulo="Buscar centro de custo" valor={busca} onMudar={setBusca} placeholder="Centro de custo…" largura="w-full" />
+        </div>
+        <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Centros de custo">
+          {filtrados.map((g) => (
+            <li key={g.grupo}>
+              <button
+                type="button"
+                onClick={() => setGrupo(g.grupo)}
+                aria-current={g.grupo === escolhido ? "true" : undefined}
+                className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${g.grupo === escolhido ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate" title={g.grupo}>
+                    {g.grupo}
+                  </span>
+                  {g.centros > 1 ? <span className={`text-xs ${g.grupo === escolhido ? "text-gray-300" : "text-gray-500"}`}>{g.centros} centros</span> : null}
+                </span>
+                <span className="shrink-0 text-xs tabular-nums">{moeda(g.total)}</span>
+              </button>
+            </li>
+          ))}
+          {filtrados.length === 0 ? <li className="px-3 py-2 text-sm text-gray-500">Nenhum centro com esse nome.</li> : null}
+        </ul>
+      </div>
+
+      <div className="min-w-0 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            {dados && dados.centros.length > 0 ? (
+              <p className="text-xs text-gray-600">{dados.centros.map((c) => `${c.codigoRM ?? "sem código"} · ${c.nome}`).join("  |  ")}</p>
+            ) : null}
+            <p className="text-xs text-gray-500">
+              Os lançamentos contábeis dos centros, diretos e de rateio, em todas as filiais, pela linha da DRE em que foram classificados — antes
+              do rateio. Os centros são agrupados pela coluna CENTRO DE CUSTO (CONTROLADORIA) do cadastro.
+            </p>
+          </div>
           {escolhido && grupos.data?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={{ grupo: escolhido }} /> : null}
         </div>
-        <p className="text-xs text-gray-500">
-          Os lançamentos contábeis dos centros, diretos e de rateio, em todas as filiais, pela linha da DRE em que foram
-          classificados — antes do rateio. Os centros são agrupados pela coluna CENTRO DE CUSTO (CONTROLADORIA) do cadastro.
-        </p>
+        {centros.isError ? (
+          <Erro erro={centros.error} padrao="Erro ao carregar o centro de custo." />
+        ) : centros.isPending ? (
+          <Carregando />
+        ) : (
+          <TabelaDRE linhas={dados?.linhas ?? []} anoMes={anoMes} visao={{ grupo: escolhido! }} titulo={escolhido ?? ""} />
+        )}
       </div>
-      {dados && dados.centros.length > 0 ? (
-        <p className="text-xs text-gray-600">
-          {dados.centros.map((c) => `${c.codigoRM ?? "sem código"} · ${c.nome}`).join("  |  ")}
-        </p>
-      ) : null}
-      {centros.isError ? (
-        <Erro erro={centros.error} padrao="Erro ao carregar o centro de custo." />
-      ) : centros.isPending ? (
-        <Carregando />
-      ) : (
-        <TabelaDRE linhas={dados?.linhas ?? []} anoMes={anoMes} visao={{ grupo: escolhido! }} />
-      )}
     </div>
   );
 }
@@ -230,7 +257,16 @@ export function DREContent() {
             {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
           </p>
         }
+        acoes={<AcoesApuracao anoMes={anoMes} onAvisos={setAvisos} />}
       />
+
+      <SituacaoApuracao anoMes={anoMes} />
+      {avisos.length > 0 ? (
+        <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <ul>{avisos.map((a) => <li key={a}>{a}</li>)}</ul>
+        </div>
+      ) : null}
 
       <div className="flex items-end gap-3">
         <div className="min-w-0 flex-1">
@@ -244,14 +280,6 @@ export function DREContent() {
         {visao !== "centros" && cabecalho?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={visao} /> : null}
       </div>
 
-      <PainelApuracao anoMes={anoMes} onAvisos={setAvisos} />
-      {avisos.length > 0 ? (
-        <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <ul>{avisos.map((a) => <li key={a}>{a}</li>)}</ul>
-        </div>
-      ) : null}
-
       {visao === "centros" ? (
         <VisaoCentros key={anoMes} anoMes={anoMes} />
       ) : consulta.isError ? (
@@ -264,6 +292,7 @@ export function DREContent() {
           linhas={consulta.data!.linhas}
           anoMes={anoMes}
           visao={visao === "consolidado" ? { consolidado: true } : { unidade: visao as number }}
+          titulo={`DRE · ${VISOES.find((v) => v.visao === visao)?.nome ?? ""}`}
         />
       ) : (
         <SemApuracao />
