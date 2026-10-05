@@ -18,6 +18,7 @@ import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
+import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
@@ -182,29 +183,14 @@ export function ClassificacaoContent() {
       />
 
       {r && r.total > 0 ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { rotulo: "Lançamentos", valor: r.total },
-            { rotulo: "Pendências", valor: r.pendentes, erro: r.pendentes > 0 },
-            { rotulo: "Reclassificados", valor: r.reclassificados, detalhe: "pelo cadastro de reclassificação" },
-            {
-              rotulo: "Classificado em",
-              texto: r.classificadoEm ? dataHora(r.classificadoEm) : "nunca",
-            },
-          ].map((k) => (
-            <div key={k.rotulo} className="border border-gray-200 bg-white rounded-sm p-4">
-              <p className="text-xs font-bold tracking-wide text-gray-600 uppercase">{k.rotulo}</p>
-              <p
-                className={`mt-1 font-extrabold tabular-nums ${k.texto ? "text-base" : "text-2xl"} ${
-                  k.erro ? "text-red-700" : "text-gray-900"
-                }`}
-              >
-                {k.texto ?? inteiro(k.valor ?? 0)}
-              </p>
-              {k.detalhe ? <p className="mt-0.5 text-xs text-gray-500">{k.detalhe}</p> : null}
-            </div>
-          ))}
-        </div>
+        <FaixaIndicadores
+          itens={[
+            { rotulo: "lançamentos", valor: inteiro(r.total) },
+            { rotulo: r.pendentes === 1 ? "pendência" : "pendências", valor: inteiro(r.pendentes), tom: r.pendentes > 0 ? "atencao" : undefined },
+            { rotulo: "reclassificados", valor: inteiro(r.reclassificados), dica: "Pelo cadastro de reclassificação" },
+            { rotulo: "classificado em", rotuloAntes: true, valor: <span className="text-sm font-bold">{r.classificadoEm ? dataHora(r.classificadoEm) : "nunca"}</span> },
+          ]}
+        />
       ) : null}
 
       {r && r.naoClassificados > 0 ? (
