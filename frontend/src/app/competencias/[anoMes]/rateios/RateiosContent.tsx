@@ -96,7 +96,7 @@ export function RateiosContent() {
       ) : rateios.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : dados && dados.chaves.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
           {dados.chaves.map((k) => (
             <div key={k.chave} className="border border-gray-200 bg-white rounded-sm">
               <div className="flex items-baseline justify-between border-b border-gray-200 px-4 py-3">
@@ -105,12 +105,12 @@ export function RateiosContent() {
                   total {quant(k.total)} {MEDIDA_BASE[k.baseFisica] ?? ""}
                 </span>
               </div>
-              <table className="tabela-sig w-full border-collapse text-sm">
+              <table className="tabela-sig w-full table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500">
                     <th className="px-4 text-left font-medium">Destino</th>
-                    <th className="px-4 text-right font-medium">Volume apurado</th>
-                    <th className="px-4 text-right font-medium">%</th>
+                    <th className="w-48 px-4 text-right font-medium">Volume apurado</th>
+                    <th className="w-32 px-4 text-right font-medium">%</th>
                   </tr>
                 </thead>
                 <tbody>
