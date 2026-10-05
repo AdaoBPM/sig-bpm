@@ -165,7 +165,7 @@ export function ReceitaPreviaContent() {
       <div className="space-y-2">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Lançamentos de receita</h2>
+            <h2 className="text-lg font-bold text-gray-900">Lançamentos de Receita</h2>
             <p className="text-sm text-gray-600">Entram na receita na próxima apuração.</p>
           </div>
           {!fechada ? (

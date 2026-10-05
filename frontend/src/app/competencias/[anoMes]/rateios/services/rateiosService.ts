@@ -34,11 +34,11 @@ export const rateiosService = {
 };
 
 export const ROTULO_CHAVE: Record<string, string> = {
-  PROJETO: "Projetos liberados",
-  PRODUCAO: "Pré-fabricado",
+  PROJETO: "Projetos Liberados",
+  PRODUCAO: "Pré-Fabricado",
   METALURGIA: "Metalurgia",
   ARMADURA: "Armadura",
-  ACOMPANHAMENTO: "Acompanhamento de obra",
+  ACOMPANHAMENTO: "Acompanhamento de Obra",
 };
 
 export const MEDIDA_BASE: Record<string, string> = { M3: "m³", KG: "kg", PISTA: "pistas", DIA: "dias" };

@@ -10,6 +10,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes } from "../utils/formatacao";
@@ -99,17 +100,14 @@ export function RateiosContent() {
         <div className="space-y-4">
           {dados.chaves.map((k) => (
             <div key={k.chave} className="border border-gray-200 bg-white rounded-sm">
-              <div className="flex items-baseline justify-between border-b border-gray-200 px-4 py-3">
-                <h2 className="text-sm font-bold text-gray-900">{ROTULO_CHAVE[k.chave] ?? k.chave}</h2>
-                <span className="text-xs text-gray-500">
-                  total {quant(k.total)} {MEDIDA_BASE[k.baseFisica] ?? ""}
-                </span>
+              <div className="border-b border-gray-200 px-4 py-3">
+                <h2 className="text-sm font-bold text-gray-900">{iniciaisMaiusculas(ROTULO_CHAVE[k.chave] ?? k.chave)}</h2>
               </div>
               <table className="tabela-sig w-full table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500">
                     <th className="px-4 text-left font-medium">Destino</th>
-                    <th className="w-48 px-4 text-right font-medium">Volume apurado</th>
+                    <th className="w-48 px-4 text-right font-medium">Valor Apurado</th>
                     <th className="w-32 px-4 text-right font-medium">%</th>
                   </tr>
                 </thead>
@@ -129,6 +127,17 @@ export function RateiosContent() {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-300 bg-gray-50 font-bold text-gray-900">
+                    <td className="px-4 py-2">
+                      Total <span className="font-normal text-gray-500">({MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})</span>
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{quant(k.total)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      {pct(String(k.destinos.reduce((s, d) => s + Number(d.percentual), 0)))}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           ))}
@@ -142,7 +151,7 @@ export function RateiosContent() {
       {dados ? (
         <div className="border border-gray-200 bg-white rounded-sm">
           <div className="border-b border-gray-200 px-4 py-3">
-            <h2 className="text-sm font-bold text-gray-900">Memória de cálculo: volumes das listas (aba Totais)</h2>
+            <h2 className="text-sm font-bold text-gray-900">Memória de Cálculo: Volumes das Listas (Aba Totais)</h2>
             <p className="text-xs text-gray-500">
               Os volumes de hoje, somados das listas da competência. Expedição e montagem aparecem aqui, mas
               não entram em nenhuma chave de rateio.

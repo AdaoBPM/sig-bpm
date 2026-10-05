@@ -116,7 +116,7 @@ function SemPar({ visao }: { visao: VisaoConferencia }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div className="rounded-sm border border-gray-200 bg-white p-4">
-        <h3 className="text-sm font-bold text-gray-900">Só na planilha ({visao.soNaPlanilha.length})</h3>
+        <h3 className="text-sm font-bold text-gray-900">Só na Planilha ({visao.soNaPlanilha.length})</h3>
         <p className="mb-2 text-xs text-gray-500">Linhas da aba {visao.aba} sem linha com a mesma descrição na estrutura da DRE. Não entram na comparação.</p>
         {visao.soNaPlanilha.map((l) => (
           <p key={l.linha} className="flex justify-between gap-3 text-sm text-gray-700">
@@ -128,7 +128,7 @@ function SemPar({ visao }: { visao: VisaoConferencia }) {
         ))}
       </div>
       <div className="rounded-sm border border-gray-200 bg-white p-4">
-        <h3 className="text-sm font-bold text-gray-900">Só na ferramenta ({visao.soNoSistema.length})</h3>
+        <h3 className="text-sm font-bold text-gray-900">Só na Ferramenta ({visao.soNoSistema.length})</h3>
         <p className="mb-2 text-xs text-gray-500">Linhas da DRE apurada desta visão que nenhuma linha da aba alcança pela descrição.</p>
         {visao.soNoSistema.map((l) => (
           <p key={l.codigo} className="flex justify-between gap-3 text-sm text-gray-700">

@@ -75,7 +75,7 @@ function TabelaRejeicoes({
   return (
     <div className="border border-gray-200 rounded-sm">
       <div className="border-b border-gray-200 px-4 py-3">
-        <h3 className="text-sm font-bold text-gray-900">Linhas rejeitadas</h3>
+        <h3 className="text-sm font-bold text-gray-900">Linhas Rejeitadas</h3>
         <p className="text-xs text-gray-500">
           Não foram gravadas. Corrija o cadastro ou o arquivo e importe de novo.
           {rejeicoes.length > MAX_REJEICOES
@@ -203,7 +203,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
       {resumo ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="border border-gray-200 rounded-sm p-4">
-            <h3 className="text-sm font-bold text-gray-900">Conferência do arquivo</h3>
+            <h3 className="text-sm font-bold text-gray-900">Conferência do Arquivo</h3>
             <dl className="mt-3 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-gray-600">Soma das linhas do mês</dt>
@@ -237,7 +237,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
           </div>
 
           <div className="border border-gray-200 rounded-sm p-4">
-            <h3 className="text-sm font-bold text-gray-900">Por filial</h3>
+            <h3 className="text-sm font-bold text-gray-900">Por Filial</h3>
             <table className="tabela-sig mt-2 w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-500 uppercase">
@@ -332,7 +332,7 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="border border-gray-200 rounded-sm p-4">
             <h3 className="text-sm font-bold text-gray-900">
-              {resumo.receita ? "Totais da lista" : "Volumes para os rateios"}
+              {resumo.receita ? "Totais da Lista" : "Volumes para os Rateios"}
             </h3>
             <p className="mt-0.5 text-xs text-gray-500">
               {resumo.receita
@@ -426,7 +426,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
       {resumo && p ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="border border-gray-200 rounded-sm p-4">
-            <h3 className="text-sm font-bold text-gray-900">O que mudou nos preços</h3>
+            <h3 className="text-sm font-bold text-gray-900">O Que Mudou nos Preços</h3>
             <dl className="mt-3 space-y-1.5 text-sm">
               {(
                 [
@@ -487,7 +487,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
       {resumo && p && resumo.alteracoes.length > 0 ? (
         <div className="border border-gray-200 rounded-sm">
           <div className="border-b border-gray-200 px-4 py-3">
-            <h3 className="text-sm font-bold text-gray-900">Preços alterados</h3>
+            <h3 className="text-sm font-bold text-gray-900">Preços Alterados</h3>
             <p className="text-xs text-gray-500">
               O preço anterior continua registrado para o que já foi apurado com ele.
               {resumo.alteracoes.length < p.alterados
@@ -558,7 +558,7 @@ function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
       </div>
       {resumo ? (
         <div className="border border-gray-200 rounded-sm p-4">
-          <h3 className="text-sm font-bold text-gray-900">Saldo por linha</h3>
+          <h3 className="text-sm font-bold text-gray-900">Saldo por Linha</h3>
           <table className="tabela-sig mt-2 w-full text-sm">
             <tbody>
               {resumo.porLinha.map((l) => (
