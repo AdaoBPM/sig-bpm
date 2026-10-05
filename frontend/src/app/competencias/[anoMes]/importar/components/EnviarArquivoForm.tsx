@@ -31,7 +31,7 @@ const LISTAS = "SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)";
  * ainda não têm processamento aparecem desabilitados, para o usuário saber que
  * virão.
  */
-const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?: string }> = [
+export const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?: string }> = [
   { valor: "BALANCETE", rotulo: "Balancete (TOTVS RM)", disponivel: true, origem: "aba Balancete (Lista) do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS). O sistema lê as colunas do mês e confere a soma com o Total Geral do arquivo" },
   { valor: "PROJETO", rotulo: "Projetos liberados", disponivel: true, origem: `aba Projetos (Lista) do ${LISTAS}` },
   { valor: "PRODUCAO", rotulo: "Produção (m³)", disponivel: true, origem: `aba Produção (Lista m3) do ${LISTAS}` },
@@ -52,6 +52,8 @@ type EnviarArquivoFormProps = {
   anoMes: string;
   /** Competência fechada: só o balancete, para comparar (Passo 24). */
   somenteBalancete?: boolean;
+  /** O tipo já escolhido (ao reimportar a partir de uma linha da tela). */
+  tipoInicial?: string;
   onEnviado: (importacao: Importacao) => void;
 };
 
@@ -61,11 +63,12 @@ function erroDe(error: unknown): ErroImportacao & { status?: number } {
   return { status: resposta?.status, ...resposta?.data };
 }
 
-export function EnviarArquivoForm({ anoMes, somenteBalancete, onEnviado }: EnviarArquivoFormProps) {
+/** O formulário de envio, dentro do diálogo "Importar arquivo" (E3 do levantamento de layout). */
+export function EnviarArquivoForm({ anoMes, somenteBalancete, tipoInicial, onEnviado }: EnviarArquivoFormProps) {
   // Recorte por setor (Passo 22): o Alimentador só importa as listas dos seus setores.
   const { user } = useAuth();
   const tipos = TIPOS.filter((t) => (!somenteBalancete || t.valor === "BALANCETE") && (!user?.acesso.recorteSetor || user.acesso.setores.includes(t.valor)));
-  const [tipo, setTipo] = useState<TipoImportacao>((tipos[0]?.valor ?? "BALANCETE") as TipoImportacao);
+  const [tipo, setTipo] = useState<TipoImportacao>(((tipoInicial && tipos.some((t) => t.valor === tipoInicial) ? tipoInicial : tipos[0]?.valor) ?? "BALANCETE") as TipoImportacao);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [envio, setEnvio] = useState(0);
   const campoArquivo = useRef<HTMLInputElement>(null);
@@ -90,18 +93,15 @@ export function EnviarArquivoForm({ anoMes, somenteBalancete, onEnviado }: Envia
   const arquivoRepetido = erro?.codigo === "ARQUIVO_JA_IMPORTADO";
 
   return (
-    <div className="border border-gray-200 bg-white rounded-sm p-6">
-      <h2 className="text-xl font-bold tracking-tight text-gray-900">
-        Enviar arquivo
-      </h2>
-      <p className="mt-1 text-sm text-gray-600">
+    <div>
+      <p className="text-sm text-gray-600">
         Envie a planilha com a {TIPOS.find((t) => t.valor === tipo)?.origem}, ou uma
         pasta de trabalho só com essa aba. Só os registros do mês desta
         competência são gravados. Reimportar substitui o lote anterior do mesmo
         tipo por inteiro.
       </p>
 
-      <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end">
+      <div className="mt-4 flex flex-col gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="importacao-tipo" className="text-sm font-medium text-gray-900">
             Tipo de arquivo
@@ -112,8 +112,9 @@ export function EnviarArquivoForm({ anoMes, somenteBalancete, onEnviado }: Envia
               if (v) setTipo(v as TipoImportacao);
             }}
           >
-            <SelectTrigger id="importacao-tipo" className="w-64 rounded-sm">
-              <SelectValue />
+            <SelectTrigger id="importacao-tipo" className="w-72 rounded-sm">
+              {/* O nome do tipo, não o código (BALANCETE). */}
+              <SelectValue>{(v: string | null) => TIPOS.find((t) => t.valor === v)?.rotulo ?? ""}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {tipos.map((t) => (
@@ -128,7 +129,7 @@ export function EnviarArquivoForm({ anoMes, somenteBalancete, onEnviado }: Envia
           </Select>
         </div>
 
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor="importacao-arquivo" className="text-sm font-medium text-gray-900">
             Planilha (.xlsx)
           </Label>
@@ -149,7 +150,7 @@ export function EnviarArquivoForm({ anoMes, somenteBalancete, onEnviado }: Envia
           type="button"
           onClick={() => enviar.mutate(false)}
           disabled={!arquivo || enviar.isPending}
-          className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
+          className="self-end bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
         >
           <Upload className="size-4" />
           {enviar.isPending ? `Enviando… ${envio}%` : "Importar"}

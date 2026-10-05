@@ -16,6 +16,7 @@ import {
 } from "../services/importacoesService";
 import {
   dataHora,
+  ROTULO_TIPO,
   inteiro,
   moeda,
   ROTULO_REJEICAO,
@@ -29,6 +30,8 @@ const MAX_REJEICOES = 200;
 type ResultadoImportacaoProps = {
   id: string;
   anoMes: string;
+  /** No painel lateral, sem a moldura de cartão; o nome do arquivo vira o título do painel. */
+  noPainel?: boolean;
 };
 
 function Contador({
@@ -577,7 +580,7 @@ function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
   );
 }
 
-export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
+export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportacaoProps) {
   const queryClient = useQueryClient();
   const { refresh } = useAuth();
   const { data: imp, isPending, isError } = useQuery({
@@ -609,14 +612,15 @@ export function ResultadoImportacao({ id, anoMes }: ResultadoImportacaoProps) {
   }
 
   return (
-    <div className="border border-gray-200 bg-white rounded-sm p-6">
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div className={noPainel ? "" : "border border-gray-200 bg-white rounded-sm p-6"}>
+      <div className={`mb-4 flex flex-col gap-1 ${noPainel ? "pr-8" : "sm:flex-row sm:items-baseline sm:justify-between"}`}>
         <h2 className="text-xl font-bold tracking-tight text-gray-900">
-          {imp.nomeArquivo}
+          {ROTULO_TIPO[imp.tipo] ?? imp.tipo} · {imp.nomeArquivo}
         </h2>
         <p className="text-sm text-gray-500">
           {dataHora(imp.importadoEm)}
           {imp.usuario ? ` · ${imp.usuario.nome}` : null}
+          {imp.substituidaEm ? ` · substituída em ${dataHora(imp.substituidaEm)}` : null}
         </p>
       </div>
 
