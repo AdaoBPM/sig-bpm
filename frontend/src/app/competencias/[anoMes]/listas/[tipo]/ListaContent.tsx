@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -15,6 +16,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
+import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
@@ -25,6 +27,12 @@ import { RegistroListaDialog } from "../components/RegistroListaDialog";
 import { LISTAS, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
 
 const POR_PAGINA_INICIAL = 50;
+
+/** As quatro listas de produção ficam numa aba só, com a escolha entre elas logo abaixo (E6 do levantamento de layout). */
+const PRODUCAO: Record<string, string> = { PRODUCAO: "m³", PRODUCAO_PISTA: "pistas", PRODUCAO_METALURGIA: "metalurgia", PRODUCAO_ARMADURA: "armadura" };
+
+/** Os detalhes numéricos vêm como decimal ("2006.010"); códigos de peça e textos ficam como estão. */
+const ehDecimal = (v: string | null) => v !== null && /^-?\d+\.\d+$/.test(v);
 
 const quantidade = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
@@ -72,6 +80,17 @@ export function ListaContent() {
   const d = dados.data;
   const fechada = d?.competencia.status === "FECHADA";
   const colunasDetalhe = d?.itens[0]?.detalhes.map((x) => x.rotulo) ?? [];
+  const visiveis = LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo));
+  const producoes = visiveis.filter((l) => l.tipo in PRODUCAO);
+  const naProducao = lista.tipo in PRODUCAO;
+  // As abas: as listas avulsas e, no lugar da primeira de produção, o grupo.
+  const abas = visiveis.flatMap((l) => {
+    if (!(l.tipo in PRODUCAO)) {
+      return [{ chave: l.slug, rotulo: definicoes.data?.[l.tipo]?.rotulo ?? l.tipo, href: `/competencias/${anoMes}/listas/${l.slug}` }];
+    }
+    if (l !== producoes[0]) return [];
+    return [{ chave: "producao-grupo", rotulo: "Produção", href: `/competencias/${anoMes}/listas/${l.slug}` }];
+  });
 
   return (
     <div className="space-y-6">
@@ -95,27 +114,36 @@ export function ListaContent() {
         }
       />
 
-      <Abas
-        rotulo="Listas"
-        ativa={slug}
-        abas={LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo)).map((l) => ({
-          chave: l.slug,
-          rotulo: definicoes.data?.[l.tipo]?.rotulo ?? l.tipo,
-          href: `/competencias/${anoMes}/listas/${l.slug}`,
-        }))}
-      />
+      <div className="space-y-3">
+        <Abas rotulo="Listas" ativa={naProducao ? "producao-grupo" : slug} abas={abas} />
+        {naProducao && producoes.length > 1 ? (
+          <nav aria-label="Listas de produção" className="inline-flex rounded-sm border border-gray-300 bg-white p-0.5">
+            {producoes.map((l) => (
+              <Link
+                key={l.slug}
+                href={`/competencias/${anoMes}/listas/${l.slug}`}
+                aria-current={l.slug === slug ? "page" : undefined}
+                className={`rounded-sm px-3 py-1 text-sm ${l.slug === slug ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100"}`}
+              >
+                {PRODUCAO[l.tipo]}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </div>
 
       {d && d.totais.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {d.totais.map((t) => (
-            <div key={t.codigo} className="border border-gray-200 bg-white rounded-sm p-4">
-              <p className="text-xs font-bold tracking-wide text-gray-600 uppercase">{t.rotulo.replace(/^\([PS]\) /, "")}</p>
-              <p className="mt-1 text-2xl font-extrabold tabular-nums text-gray-900">
-                {quantidade(t.quantidade)} <span className="text-sm font-medium text-gray-500">{t.medida}</span>
-              </p>
-            </div>
-          ))}
-        </div>
+        <FaixaIndicadores
+          itens={d.totais.map((t) => ({
+            rotulo: t.rotulo.replace(/^\([PS]\) /, ""),
+            rotuloAntes: true,
+            valor: (
+              <>
+                {quantidade(t.quantidade)} <span className="text-xs font-medium text-gray-500">{t.medida}</span>
+              </>
+            ),
+          }))}
+        />
       ) : null}
 
       <QuadroTabela
@@ -141,22 +169,16 @@ export function ListaContent() {
             error={dados.isError ? mensagemDeErro(dados.error, "Erro ao carregar a lista.") : null}
             emptyMessage="Nenhum registro nesta competência"
             emptyHint="Importe a lista em Importações ou inclua um registro."
-            columns={["Origem", "Obra", "Unidade", "Linha", ...colunasDetalhe, "Quantidade", ""]}
+            columns={["Obra", "Unidade", "Linha", ...colunasDetalhe, "Quantidade", "Origem", ""]}
             renderRow={(r) => (
               <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-2 text-xs whitespace-nowrap">
-                  {r.origem === "DIGITADA" ? (
-                    <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-2 py-0.5 font-medium text-yellow-800">digitado</span>
-                  ) : (
-                    <span className="text-gray-500">importado · linha {r.linhaArquivo}</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-sm">
+                <td className="px-4 text-sm">
+                  {/* O nome só quando o cadastro tem um (a obra criada pela lista nasce com o código no nome). */}
                   {r.obra ? (
-                    <>
+                    <div className="flex max-w-80 items-baseline gap-1.5" title={r.obra.nome !== r.obra.codigo ? r.obra.nome : undefined}>
                       <span className="font-medium tabular-nums">{r.obra.codigo}</span>
-                      <span className="ml-1 text-xs text-gray-500">{r.obra.nome}</span>
-                    </>
+                      {r.obra.nome !== r.obra.codigo ? <span className="truncate text-xs text-gray-500">{r.obra.nome}</span> : null}
+                    </div>
                   ) : (
                     <span className="text-gray-400">—</span>
                   )}
@@ -164,10 +186,21 @@ export function ListaContent() {
                 <td className="px-4 py-2 text-sm text-gray-600">{r.unidade ?? "—"}</td>
                 <td className="px-4 py-2 text-sm text-gray-600">{r.linha ?? "—"}</td>
                 {r.detalhes.map((x) => (
-                  <td key={x.rotulo} className="px-4 py-2 text-sm text-gray-600">{x.valor ?? "—"}</td>
+                  <td key={x.rotulo} className={`px-4 py-2 text-sm text-gray-600 ${ehDecimal(x.valor) ? "text-right tabular-nums" : ""}`}>
+                    {ehDecimal(x.valor) ? quantidade(x.valor!) : (x.valor ?? "—")}
+                  </td>
                 ))}
                 <td className="px-4 py-2 text-right text-sm tabular-nums text-gray-900">{quantidade(r.quantidade)}</td>
-                <td className="px-4 py-2 text-right whitespace-nowrap">
+                <td className="px-4 text-xs whitespace-nowrap">
+                  {r.origem === "DIGITADA" ? (
+                    <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">digitado</span>
+                  ) : (
+                    <span className="text-gray-400" title={r.linhaArquivo ? `Linha ${r.linhaArquivo} do arquivo importado` : undefined}>
+                      importado
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-0 text-right whitespace-nowrap">
                   {r.origem === "DIGITADA" && !fechada ? (
                     <PermissionGuard permission="listas_operacionais:editar">
                       <Button type="button" variant="ghost" size="icon" aria-label="Editar" onClick={() => setEditando(r)}>
