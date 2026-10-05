@@ -56,13 +56,13 @@ function Bloco({ b, consolidado, onMemoria }: { b: BlocoDetalhe; consolidado: bo
         <div className="max-h-80 overflow-auto">
           <table className="tabela-sig w-full border-collapse text-xs">
             <thead className="sticky top-0 bg-gray-50">
-              <tr className="border-b border-gray-200 text-left font-bold tracking-wide text-gray-600 uppercase">
+              <tr className="border-b border-gray-200 text-left font-bold text-gray-600">
                 <th className="px-2 py-1.5">Filial</th>
-                <th className="px-2 py-1.5">Centro de custo</th>
+                <th className="px-2 py-1.5">Centro de Custo</th>
                 <th className="px-2 py-1.5">Conta</th>
                 <th className="px-2 py-1.5">Balde</th>
                 <th className="px-2 py-1.5 text-right">Valor</th>
-                {multiplica ? <th className="px-2 py-1.5 text-right">Na linha</th> : null}
+                {multiplica ? <th className="px-2 py-1.5 text-right">Na Linha</th> : null}
               </tr>
             </thead>
             <tbody>

@@ -49,16 +49,16 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
         <div className="overflow-x-auto">
           <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
+              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
                 <th className="px-3 py-2">Origem</th>
-                <th className="px-3 py-2">Obra · linha</th>
+                <th className="px-3 py-2">Obra · Linha</th>
                 <th className="px-3 py-2">Critério</th>
                 <th className="px-3 py-2 text-right">Quant.</th>
-                <th className="px-3 py-2 text-right">Preço bruto</th>
-                <th className="px-3 py-2 text-right">Preço líq.</th>
+                <th className="px-3 py-2 text-right">Preço Bruto</th>
+                <th className="px-3 py-2 text-right">Preço Líq.</th>
                 <th className="px-3 py-2 text-right">ROB</th>
                 <th className="px-3 py-2 text-right">ROL</th>
-                {mostraVariacao ? <th className="px-3 py-2 text-right">Var. estoque</th> : null}
+                {mostraVariacao ? <th className="px-3 py-2 text-right">Var. Estoque</th> : null}
               </tr>
             </thead>
             <tbody>

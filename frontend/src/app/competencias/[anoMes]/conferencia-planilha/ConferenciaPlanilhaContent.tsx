@@ -84,7 +84,7 @@ function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas
     <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
       <table className="tabela-sig w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
+          <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
             <th className="px-3 py-2 text-right">Linha</th>
             <th className="px-3 py-2">Descrição</th>
             <th className="px-3 py-2 text-right">Ferramenta</th>

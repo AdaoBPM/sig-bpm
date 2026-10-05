@@ -127,7 +127,7 @@ export function AuditoriaContent() {
         <table className="tabela-sig w-full border-collapse text-sm">
           {/* Filtros nos rótulos, como no Excel, aplicados no servidor: o log cresce sem parar e é paginado lá. */}
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
+            <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
               <th className="px-4 py-2">
                 <span className="inline-flex items-center gap-1">
                   Quando

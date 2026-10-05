@@ -105,10 +105,10 @@ export function RateiosContent() {
               </div>
               <table className="tabela-sig w-full table-fixed border-collapse text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-500">
-                    <th className="px-4 text-left font-medium">Destino</th>
-                    <th className="w-48 px-4 text-right font-medium">Valor Apurado</th>
-                    <th className="w-32 px-4 text-right font-medium">%</th>
+                  <tr className="text-xs font-bold text-gray-600">
+                    <th className="px-4 text-left">Destino</th>
+                    <th className="w-48 px-4 text-right">Valor Apurado</th>
+                    <th className="w-32 px-4 text-right">%</th>
                   </tr>
                 </thead>
                 <tbody>

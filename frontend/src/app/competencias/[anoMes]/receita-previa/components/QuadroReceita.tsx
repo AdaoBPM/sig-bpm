@@ -72,7 +72,7 @@ export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
   return (
     <div className="border border-gray-200 bg-white rounded-sm">
       <div className="border-b border-gray-200 px-4 py-3">
-        <h2 className="text-sm font-bold tracking-wide text-gray-900 uppercase">{ROTULO_UNIDADE[unidade]}</h2>
+        <h2 className="text-sm font-bold text-gray-900">{ROTULO_UNIDADE[unidade]}</h2>
       </div>
       <table className="tabela-sig w-full table-fixed border-collapse">
         <colgroup>

@@ -95,7 +95,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
           </div>
           <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
+              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
                 <th className="px-3 py-2">Recurso</th>
                 {opcoes.acoes.map((a) => (
                   <th key={a} className="px-3 py-2 text-center">

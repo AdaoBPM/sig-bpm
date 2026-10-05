@@ -5,6 +5,7 @@ import { Popover } from "@base-ui/react/popover";
 import { ArrowDown, ArrowDown01, ArrowDown10, ArrowDownAZ, ArrowDownZA, ArrowUp, ChevronDown, Filter, FilterX, Search } from "lucide-react";
 
 import { distintos, ESTADO_INICIAL, filtrar, ordenar, type Coluna, type EstadoTabela } from "@/lib/filtrosDeTabela";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 /** Acima disso, a lista do filtro mostra só os primeiros; a pesquisa acha os demais. */
 const MAXIMO_NA_LISTA = 500;
@@ -188,7 +189,7 @@ function FiltroDeColuna<T>({ coluna, linhas, colunas, estado, onMudar }: FiltroP
   const lista = () => distintos(filtrar(linhas, colunas, estado, coluna.chave), coluna).map((v) => ({ chave: v.texto, texto: v.texto, n: v.n }));
   return (
     <PainelFiltro
-      rotulo={coluna.rotulo}
+      rotulo={iniciaisMaiusculas(coluna.rotulo)}
       tipo={coluna.tipo}
       alinhamento={coluna.alinhamento}
       filtrado={!!estado.filtros[coluna.chave]}
@@ -237,13 +238,13 @@ export function useTabelaFiltravel<T>(linhas: T[] | undefined, colunas: Coluna<T
         {colunas.map((c) => (
           <th
             key={c.chave}
-            className={`px-4 py-3 text-xs font-bold tracking-wide text-gray-600 uppercase ${c.alinhamento === "direita" ? "text-right" : "text-left"} ${c.classe ?? ""}`}
+            className={`px-4 py-3 text-xs font-bold text-gray-600 ${c.alinhamento === "direita" ? "text-right" : "text-left"} ${c.classe ?? ""}`}
           >
             {c.semFiltro ? (
-              (extras[c.chave] ?? c.rotulo)
+              (extras[c.chave] ?? iniciaisMaiusculas(c.rotulo))
             ) : (
               <span className={`inline-flex items-center gap-1 ${c.alinhamento === "direita" ? "flex-row-reverse" : ""}`}>
-                {c.rotulo}
+                {iniciaisMaiusculas(c.rotulo)}
                 <FiltroDeColuna coluna={c} linhas={todas} colunas={colunas} estado={estado} onMudar={mudar} />
               </span>
             )}

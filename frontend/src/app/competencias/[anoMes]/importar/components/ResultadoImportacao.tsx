@@ -90,7 +90,7 @@ function TabelaRejeicoes({
               {colunas.map((c) => (
                 <th
                   key={c}
-                  className="px-4 py-2 text-left text-xs font-bold tracking-wide text-gray-600 uppercase"
+                  className="px-4 py-2 text-left text-xs font-bold text-gray-600"
                 >
                   {c}
                 </th>
@@ -240,7 +240,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
             <h3 className="text-sm font-bold text-gray-900">Por Filial</h3>
             <table className="tabela-sig mt-2 w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase">
+                <tr className="text-left text-xs text-gray-500">
                   <th className="py-1 font-bold">Filial</th>
                   <th className="py-1 text-right font-bold">Lançamentos</th>
                   <th className="py-1 text-right font-bold">Movimentação</th>
@@ -426,7 +426,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
       {resumo && p ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="border border-gray-200 rounded-sm p-4">
-            <h3 className="text-sm font-bold text-gray-900">O Que Mudou nos Preços</h3>
+            <h3 className="text-sm font-bold text-gray-900">Mudanças nos Preços</h3>
             <dl className="mt-3 space-y-1.5 text-sm">
               {(
                 [
@@ -498,12 +498,12 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
           <div className="overflow-x-auto">
             <table className="tabela-sig w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
+                <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
                   <th className="px-4 py-2">Obra</th>
-                  <th className="px-4 py-2">Etapa · linha</th>
+                  <th className="px-4 py-2">Etapa · Linha</th>
                   <th className="px-4 py-2">Conta</th>
-                  <th className="px-4 py-2 text-right">V. unit.</th>
-                  <th className="px-4 py-2 text-right">V. total</th>
+                  <th className="px-4 py-2 text-right">V. Unit.</th>
+                  <th className="px-4 py-2 text-right">V. Total</th>
                 </tr>
               </thead>
               <tbody>

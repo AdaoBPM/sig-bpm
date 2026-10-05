@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Carregando, ErroCarga, Vazio } from "./Estados";
 import { SemResultado } from "./TabelaFiltravel";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 type DataTableProps<T> = {
   data: T[];
@@ -57,9 +58,9 @@ export function DataTable<T>({
           {columns.map((column, i) => (
             <th
               key={`${i}-${column}`}
-              className="px-4 py-3 text-left text-xs font-bold tracking-wide text-gray-600 uppercase"
+              className="px-4 py-3 text-left text-xs font-bold text-gray-600"
             >
-              {column}
+              {iniciaisMaiusculas(column)}
             </th>
           ))}
         </tr>

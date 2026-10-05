@@ -10,6 +10,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
@@ -74,8 +75,8 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
       <table className="tabela-sig w-full border-collapse text-sm">
         {/* O cabeçalho fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
         <thead>
-          <tr className="border-b border-gray-200 text-xs font-bold tracking-wide text-gray-600 uppercase">
-            <th className="px-4 text-left">{titulo}</th>
+          <tr className="border-b border-gray-200 text-xs font-bold text-gray-600">
+            <th className="px-4 text-left">{iniciaisMaiusculas(titulo)}</th>
             <th className="w-48 px-4 text-right">Valor</th>
           </tr>
         </thead>
