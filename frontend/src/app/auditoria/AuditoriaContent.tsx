@@ -41,6 +41,7 @@ function Diferencas({ r }: { r: RegistroAuditoria }) {
   const antes = achatar(r.dadosAntes);
   const depois = achatar(r.dadosDepois);
   const meta = achatar(r.metadados);
+  if (r.entidadeId) meta.set("identificador", r.entidadeId);
   const campos = [...new Set([...antes.keys(), ...depois.keys()])];
   return (
     <div className="space-y-3 text-xs">
@@ -169,9 +170,6 @@ export function AuditoriaContent() {
             ) : (
               log.data?.itens.map((r) => {
                 const ab = aberto === r.id;
-                // O registro, pelo que o identifica para quem lê: o nome (usuário, perfil) ou a competência.
-                const nome = typeof r.metadados?.nome === "string" ? r.metadados.nome : null;
-                const competencia = nome ?? (typeof r.metadados?.competencia === "string" ? r.metadados.competencia : null);
                 return (
                   <Fragment key={r.id}>
                     <tr className="cursor-pointer border-b border-gray-100 hover:bg-gray-50" onClick={() => setAberto(ab ? null : r.id)}>
@@ -184,7 +182,12 @@ export function AuditoriaContent() {
                       <td className="px-4 py-2">{r.usuarioNome ?? "—"}</td>
                       <td className="px-4 py-2">{rotuloAcao.get(r.acao) ?? r.acao}</td>
                       <td className="px-4 py-2">{rotuloEntidade.get(r.entidade ?? "") ?? r.entidade ?? "—"}</td>
-                      <td className="px-4 py-2 text-xs text-gray-600">{competencia ?? r.entidadeId ?? "—"}</td>
+                      {/* O nome do registro; o identificador técnico fica no detalhe (E14 do levantamento de layout). */}
+                      <td className="px-4 py-2 text-xs text-gray-600">
+                        <div className="max-w-80 truncate" title={r.registro ?? undefined}>
+                          {r.registro ?? "—"}
+                        </div>
+                      </td>
                     </tr>
                     {ab ? (
                       <tr className="border-b border-gray-100 bg-gray-50/50">

@@ -12,6 +12,8 @@ export type RegistroAuditoria = {
   dadosDepois: unknown;
   metadados: Record<string, unknown> | null;
   createdAt: string;
+  /** O nome do registro para quem lê (competência, usuário, lançamento…), montado pelo backend. */
+  registro: string | null;
 };
 
 export type PaginaAuditoria = { itens: RegistroAuditoria[]; total: number; pagina: number; porPagina: number };

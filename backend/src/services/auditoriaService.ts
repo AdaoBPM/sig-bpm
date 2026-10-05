@@ -121,6 +121,62 @@ export type FiltroAuditoria = {
   porPagina: number;
 };
 
+const obj = (x: unknown): Record<string, unknown> => (x && typeof x === "object" && !Array.isArray(x) ? (x as Record<string, unknown>) : {});
+const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+const rotuloMes = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
+const LISTA: Record<string, string> = {
+  PROJETO: "Projetos", PRODUCAO: "Produção (m³)", PRODUCAO_PISTA: "Produção (pistas)", PRODUCAO_ARMADURA: "Armadura",
+  PRODUCAO_METALURGIA: "Metalurgia", EXPEDICAO: "Expedição", MONTAGEM: "Montagem", ACOMPANHAMENTO: "Acompanhamento",
+};
+
+type ItemDoLog = { id: string; acao: string; entidade: string | null; entidadeId: string | null; usuarioNome: string | null; metadados: unknown; dadosAntes: unknown; dadosDepois: unknown };
+
+/**
+ * O nome do registro, para quem lê o log (E14 do levantamento de layout): a
+ * competência, o usuário, o perfil, a descrição do lançamento ou da
+ * divergência, o arquivo. Vem do que o próprio log guardou e, quando não
+ * guardou (registros anteriores aos metadados), do cadastro atual pelo
+ * identificador. O identificador continua no detalhe.
+ */
+async function nomesDosRegistros(itens: ItemDoLog[]) {
+  const db = getPrismaClient();
+  const ids = [...new Set(itens.map((i) => i.entidadeId).filter((x): x is string => !!x))];
+  const [competencias, divergencias, usuarios, perfis] = await Promise.all([
+    db.competencia.findMany({ where: { id: { in: ids } }, select: { id: true, ano: true, mes: true } }),
+    db.divergencia.findMany({ where: { id: { in: ids } }, select: { id: true, descricao: true, competencia: { select: { ano: true, mes: true } } } }),
+    db.usuario.findMany({ where: { id: { in: ids } }, select: { id: true, nome: true } }),
+    db.perfil.findMany({ where: { id: { in: ids } }, select: { id: true, nome: true } }),
+  ]);
+  const mesPorId = new Map(competencias.map((c) => [c.id, rotuloMes(c.ano, c.mes)]));
+  const divPorId = new Map(divergencias.map((d) => [d.id, [rotuloMes(d.competencia.ano, d.competencia.mes), d.descricao].filter(Boolean).join(" · ")]));
+  const nomePorId = new Map([...usuarios, ...perfis].map((u) => [u.id, u.nome]));
+
+  const nomes = new Map<string, string>();
+  for (const i of itens) {
+    const m = obj(i.metadados);
+    const d = { ...obj(i.dadosAntes), ...obj(i.dadosDepois) };
+    const id = i.entidadeId;
+    const anoMes = id?.match(/^(\d{4})-(\d{2})$/);
+    const competencia = txt(m.competencia) ?? (anoMes ? `${anoMes[2]}/${anoMes[1]}` : id ? (mesPorId.get(id) ?? null) : null);
+    let nome: string | null;
+    if (i.entidade === "tela") nome = txt(m.tela) ?? id;
+    else if (i.acao === "LOGIN_FALHA") nome = txt(m.email);
+    else if (i.entidade === "usuario" || i.entidade === "perfil") {
+      const cadastrado = id ? nomePorId.get(id) : undefined;
+      nome = txt(m.nome) ?? txt(d.nome) ?? cadastrado ?? (i.acao === "LOGIN" ? i.usuarioNome : null);
+    }
+    else if (i.entidade === "divergencia") nome = (id ? divPorId.get(id) : null) ?? [competencia, txt(m.descricao)].filter(Boolean).join(" · ");
+    else if (i.entidade === "lista_operacional") nome = [competencia, LISTA[txt(m.tipo) ?? ""] ?? txt(m.tipo)].filter(Boolean).join(" · ");
+    else if (i.entidade === "cadastros") nome = "Planilha de cadastros";
+    else {
+      const detalhe = txt(m.nome) ?? txt(d.nome) ?? txt(d.descricao) ?? txt(m.arquivo) ?? txt(d.nomeRM);
+      nome = [competencia, detalhe].filter(Boolean).join(" · ");
+    }
+    if (nome) nomes.set(i.id, nome);
+  }
+  return nomes;
+}
+
 export const auditoriaService = {
   async registrarAcesso(params: { usuarioId: string; usuarioNome: string; tela: string; ip?: string; userAgent?: string }) {
     if (!prisma) {
@@ -159,7 +215,8 @@ export const auditoriaService = {
       }),
       db.auditLog.count({ where }),
     ]);
-    return { itens, total, pagina: f.pagina, porPagina: f.porPagina };
+    const nomes = await nomesDosRegistros(itens);
+    return { itens: itens.map((i) => ({ ...i, registro: nomes.get(i.id) ?? null })), total, pagina: f.pagina, porPagina: f.porPagina };
   },
 
   /** O que os filtros da tela oferecem: usuários que aparecem no log, ações e entidades. */
