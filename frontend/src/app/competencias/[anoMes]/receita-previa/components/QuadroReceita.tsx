@@ -56,7 +56,11 @@ function Linha({
   );
 }
 
-/** Um bloco da aba Receitas (Prévia): ROB, IRB e ROL da unidade, por natureza. */
+/**
+ * Um bloco da aba Receitas (Prévia): ROB, IRB e ROL da unidade, por natureza.
+ * Os três blocos ficam um embaixo do outro, com as mesmas colunas de largura
+ * fixa (E7 do levantamento de layout), para os valores se alinharem entre eles.
+ */
 export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
   const naturezas = NATUREZAS_DA_UNIDADE[unidade];
   const da = (n: Natureza) => receitas.find((r) => r.unidade === unidade && r.natureza === n);
@@ -69,7 +73,19 @@ export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
       <div className="border-b border-gray-200 px-4 py-3">
         <h2 className="text-sm font-bold tracking-wide text-gray-900 uppercase">{ROTULO_UNIDADE[unidade]}</h2>
       </div>
-      <table className="tabela-sig w-full border-collapse">
+      <table className="tabela-sig w-full table-fixed border-collapse">
+        <colgroup>
+          <col />
+          <col className="w-48" />
+          <col className="w-24" />
+        </colgroup>
+        <thead className="sr-only">
+          <tr>
+            <th>Linha</th>
+            <th>Valor</th>
+            <th>Participação</th>
+          </tr>
+        </thead>
         <tbody>
           <Linha rotulo="RECEITA OPERACIONAL BRUTA (ROB)" valor={rob} base={rob} destaque />
           {naturezas.map((n) => (

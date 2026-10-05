@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Carregando } from "@/components/shared/Estados";
 
 import { inteiro, moeda } from "../../utils/formatacao";
 import {
@@ -63,7 +64,9 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
             <tbody>
               {isPending && !data ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-gray-500">Carregando…</td>
+                  <td colSpan={9}>
+                    <Carregando linhas={4} />
+                  </td>
                 </tr>
               ) : (
                 data?.itens.map((i) => (

@@ -106,7 +106,7 @@ export const receitaPreviaService = {
   },
 };
 
-export const ROTULO_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Obras" };
+export const ROTULO_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços" };
 
 export const ROTULO_NATUREZA: Record<Natureza, string> = {
   PRE_FABRICADO: "Pré-fabricado",

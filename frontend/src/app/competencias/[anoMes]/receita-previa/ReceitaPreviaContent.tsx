@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
@@ -140,7 +141,7 @@ export function ReceitaPreviaContent() {
       ) : receita.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : dados && dados.receitas.length > 0 ? (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="max-w-4xl space-y-4">
           {[1, 2, 3].map((u) => (
             <QuadroReceita key={u} unidade={u} receitas={dados.receitas} onAbrir={(unidade, natureza) => setMemoria({ unidade, natureza })} />
           ))}
@@ -171,7 +172,7 @@ export function ReceitaPreviaContent() {
             </PermissionGuard>
           ) : null}
         </div>
-        <div className="border border-gray-200 bg-white rounded-sm">
+        <QuadroTabela>
           <DataTable<LancamentoReceita>
             data={itensLanc}
             isLoading={lancamentos.isPending}
@@ -180,12 +181,16 @@ export function ReceitaPreviaContent() {
             emptyHint="Correções da prévia contra o contábil, redistribuições e inventário."
             columns={["Unidade", "Linha da receita", "Observação", "Valor", ""]}
             renderRow={(l) => (
-              <tr key={l.id} className="border-b border-gray-100 align-top hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm">{ROTULO_UNIDADE[l.unidade]}</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{rotuloLancamento(l.natureza, l.componente)}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{l.observacao}</td>
-                <td className="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap">{moeda(l.valor)}</td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
+              <tr key={l.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="px-4 text-sm whitespace-nowrap">{ROTULO_UNIDADE[l.unidade]}</td>
+                <td className="px-4 text-sm text-gray-900">{rotuloLancamento(l.natureza, l.componente)}</td>
+                <td className="px-4 text-sm text-gray-600">
+                  <div className="max-w-md truncate" title={l.observacao}>
+                    {l.observacao}
+                  </div>
+                </td>
+                <td className="px-4 text-right text-sm tabular-nums whitespace-nowrap">{moeda(l.valor)}</td>
+                <td className="px-4 py-0 text-right whitespace-nowrap">
                   {!fechada ? (
                     <PermissionGuard permission="lancamentos_manuais:editar">
                       <Button type="button" variant="ghost" size="icon" onClick={() => setEditando(l)} aria-label="Editar">
@@ -208,7 +213,7 @@ export function ReceitaPreviaContent() {
               </tr>
             )}
           />
-        </div>
+        </QuadroTabela>
       </div>
 
       {memoria ? <MemoriaCalculoDialog anoMes={anoMes} {...memoria} onFechar={() => setMemoria(null)} /> : null}
