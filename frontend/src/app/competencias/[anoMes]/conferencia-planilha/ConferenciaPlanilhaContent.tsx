@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/context/PermissionContext";
@@ -29,7 +30,7 @@ const lerLimite = (t: string) => {
   return n !== null && n >= 0 ? n : null;
 };
 
-function EnviarPlanilha({ anoMes, coluna }: { anoMes: string; coluna: string }) {
+function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna: string; onEnviada: () => void }) {
   const queryClient = useQueryClient();
   const campo = useRef<HTMLInputElement>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -41,12 +42,13 @@ function EnviarPlanilha({ anoMes, coluna }: { anoMes: string; coluna: string }) 
       setArquivo(null);
       if (campo.current) campo.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["conferencia-planilha", anoMes] });
+      onEnviada();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível ler a planilha.")),
   });
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-      <div className="min-w-0 flex-1 space-y-1.5">
+    <div className="flex flex-col gap-4">
+      <div className="min-w-0 space-y-1.5">
         <Label htmlFor="conferencia-arquivo" className="text-sm font-medium text-gray-900">
           SIG BPM - BASE REALIZADO (RESULTADOS) (.xlsx)
         </Label>
@@ -63,7 +65,7 @@ function EnviarPlanilha({ anoMes, coluna }: { anoMes: string; coluna: string }) 
         type="button"
         onClick={() => enviar.mutate()}
         disabled={!arquivo || enviar.isPending}
-        className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
+        className="self-end bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
       >
         <Upload className="size-4" />
         {enviar.isPending ? `Enviando… ${envio}%` : "Enviar e conferir"}
@@ -150,6 +152,7 @@ export function ConferenciaPlanilhaContent() {
   const limite = lerLimite(limiteDebounced) ?? 0.05;
   const [unidade, setUnidade] = useState(0);
   const [soDiferencas, setSoDiferencas] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   const consulta = useQuery({
     queryKey: ["conferencia-planilha", anoMes, limite],
@@ -180,20 +183,46 @@ export function ConferenciaPlanilhaContent() {
             da estrutura. Diferença = ferramenta − planilha. Uma reapuração aparece aqui sem reenviar o arquivo.
           </p>
         }
+        acoes={
+          hasPermission("apuracao:editar") && consulta.isSuccess ? (
+            <Button
+              type="button"
+              onClick={() => setEnviando(true)}
+              className={r?.conferencia ? "rounded-sm" : "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"}
+              variant={r?.conferencia ? "outline" : "default"}
+            >
+              <Upload className="size-4" />
+              {r?.conferencia ? "Enviar outra planilha" : "Enviar planilha"}
+            </Button>
+          ) : null
+        }
       />
 
-      <div className="space-y-4 rounded-sm border border-gray-200 bg-white p-4">
-        {r?.conferencia ? (
-          <p className="text-sm text-gray-700">
-            Planilha em uso: <span className="font-medium text-gray-900">{r.conferencia.nomeArquivo}</span>, enviada em {dataHora(r.conferencia.enviadoEm)} por{" "}
-            {r.conferencia.enviadoPor}
-            {r.envios > 1 ? ` (${r.envios} envios nesta competência; vale o último)` : ""}.
-          </p>
-        ) : consulta.isSuccess ? (
-          <p className="text-sm text-gray-700">Nenhuma planilha enviada para esta competência.</p>
-        ) : null}
-        {hasPermission("apuracao:editar") ? <EnviarPlanilha anoMes={anoMes} coluna={coluna} /> : null}
-      </div>
+      {/* O envio recolhido num botão, e o resultado em primeiro plano (E12 do levantamento de layout). */}
+      {r?.conferencia ? (
+        <p className="text-sm text-gray-600">
+          Planilha em uso: <span className="font-medium text-gray-900">{r.conferencia.nomeArquivo}</span>, enviada em {dataHora(r.conferencia.enviadoEm)} por{" "}
+          {r.conferencia.enviadoPor}
+          {r.envios > 1 ? ` (${r.envios} envios nesta competência; vale o último)` : ""}.
+        </p>
+      ) : consulta.isSuccess ? (
+        <div className="rounded-sm border border-gray-200 bg-white py-12 text-center">
+          <p className="text-sm font-medium text-gray-900">Nenhuma planilha enviada para esta competência</p>
+          <p className="mt-1 text-sm text-gray-600">Envie o SIG BPM - BASE REALIZADO (RESULTADOS) para comparar com a DRE apurada.</p>
+        </div>
+      ) : null}
+
+      <Dialog open={enviando} onOpenChange={setEnviando}>
+        <DialogContent className="rounded-sm sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{r?.conferencia ? "Enviar outra planilha" : "Enviar planilha"}</DialogTitle>
+            <DialogDescription>
+              A ferramenta lê a coluna {coluna} das abas Resultados. Vale a última planilha enviada nesta competência.
+            </DialogDescription>
+          </DialogHeader>
+          {enviando ? <EnviarPlanilha anoMes={anoMes} coluna={coluna} onEnviada={() => setEnviando(false)} /> : null}
+        </DialogContent>
+      </Dialog>
 
       {consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar a conferência.")}</div>
@@ -220,9 +249,9 @@ export function ConferenciaPlanilhaContent() {
             </div>
             <div className="flex items-end gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="conferencia-limite" className="text-xs font-medium text-gray-700">
+                <label htmlFor="conferencia-limite" className="block text-xs font-medium text-gray-700">
                   Limite de arredondamento
-                </Label>
+                </label>
                 <Input
                   id="conferencia-limite"
                   value={limiteTexto}
