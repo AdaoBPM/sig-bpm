@@ -21,12 +21,17 @@ export const navGrupos: NavGrupo[] = [
     ],
   },
   {
-    titulo: "Cadastros",
+    titulo: "Cadastros contábeis",
     itens: [
       { title: "Centros de custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
       { title: "Contas de resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
       { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros:ver" },
       { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros:ver" },
+    ],
+  },
+  {
+    titulo: "Cadastros da operação",
+    itens: [
       { title: "Preços do contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
       { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
       { title: "Regras de rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
@@ -82,6 +87,26 @@ export const pageTitles: Record<string, string> = {
   "/auditoria": "Auditoria",
   "/divergencias": "Divergências",
 };
+
+/** Uma parte do caminho no topo da tela; sem href, é a tela atual. */
+export type Migalha = { rotulo: string; href?: string };
+
+/**
+ * O caminho no topo (G2 do levantamento de layout): "Competências › 08/2026 ›
+ * Classificação" nas telas do mês; "Grupo do menu › Tela" nas demais.
+ */
+export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string | null): Migalha[] {
+  const mes = pathname.match(/^\/competencias\/(\d{4})-(\d{2})(?:\/([^/]+))?/);
+  if (mes) {
+    const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
+    return [{ rotulo: "Competências", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
+  }
+  for (const g of navGrupos) {
+    const item = g.itens.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
+    if (item) return g.titulo === "Operação" ? [{ rotulo: item.title }] : [{ rotulo: g.titulo }, { rotulo: item.title }];
+  }
+  return [{ rotulo: getPageTitle(pathname) }];
+}
 
 export function getPageTitle(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname];

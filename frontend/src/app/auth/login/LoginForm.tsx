@@ -5,14 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { BpmLogo } from "@/components/layout/BpmLogo";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
@@ -24,8 +16,9 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
-  const [email, setEmail] = useState(isDev ? "admin@bpm.com" : "");
-  const [password, setPassword] = useState(isDev ? "admin123" : "");
+  // Os campos começam vazios, também em desenvolvimento.
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -47,51 +40,38 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm border-black/10 shadow-sm">
-      <CardHeader className="items-center text-center">
+    <div className="w-full max-w-sm rounded-sm border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <BpmLogo className="h-10 w-auto" priority />
-        <CardTitle className="text-2xl">Entrar</CardTitle>
-        <CardDescription>Acesso ao sistema interno BPM</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </div>
-
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        </CardContent>
-        <CardFooter className="flex-col gap-3 border-t-0 bg-transparent pt-0">
-          <Button type="submit" disabled={isSubmitting} className="w-full font-semibold">
-            {isSubmitting ? "Entrando..." : "Entrar"}
-          </Button>
-          {isDev ? (
-            <p className="text-center text-xs text-muted-foreground">
-              Dev: admin@bpm.com / admin123
-            </p>
-          ) : null}
-        </CardFooter>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Entrar</h1>
+          <p className="text-sm text-gray-600">SIG BPM · Fechamento mensal</p>
+        </div>
+      </div>
+      {/* Campos e botão no mesmo espaçamento (space-y-4). */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">E-mail</Label>
+          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required className="rounded-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Senha</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            className="rounded-sm"
+          />
+        </div>
+        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        <Button type="submit" disabled={isSubmitting} className="bg-bpm-primary hover:bg-bpm-primary-hover w-full rounded-sm font-bold text-black">
+          {isSubmitting ? "Entrando…" : "Entrar"}
+        </Button>
+        {isDev ? <p className="text-center text-xs text-gray-500">Desenvolvimento: admin@bpm.com / admin123</p> : null}
       </form>
-    </Card>
+    </div>
   );
 }

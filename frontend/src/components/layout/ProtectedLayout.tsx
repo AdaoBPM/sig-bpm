@@ -7,9 +7,11 @@ import { AlertTriangle, ShieldOff } from "lucide-react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { EtapasDoMes } from "@/components/layout/EtapasDoMes";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
+import { lerRotaDoMes } from "@/lib/etapasDoMes";
 import { permissaoDaTela } from "@/lib/navigation-config";
 
 type ProtectedLayoutProps = {
@@ -36,11 +38,13 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const { hasPermission } = usePermissions();
   const exigida = permissaoDaTela(pathname);
   const bloqueada = !isLoading && exigida !== null && !hasPermission(exigida);
+  // Nas telas de um mês, a barra de etapas fica no topo do conteúdo.
+  const doMes = lerRotaDoMes(pathname);
 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="bg-muted/30">
+      <SidebarInset className="min-w-0 bg-muted/30">
         <AppHeader />
         {user?.divergenciasAbertas && !pathname.startsWith("/divergencias") ? (
           // O aviso ao entrar no sistema quando há divergência aberta (Passo 24).
@@ -50,6 +54,7 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
           </Link>
         ) : null}
         <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+          {doMes && user ? <EtapasDoMes anoMes={doMes.anoMes} chave={doMes.chave} resto={doMes.resto} /> : null}
           {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso /> : children}
         </div>
       </SidebarInset>

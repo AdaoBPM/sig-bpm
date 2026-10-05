@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { KeyRound, LogOut } from "lucide-react";
@@ -30,7 +30,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
-import { getPageTitle } from "@/lib/navigation-config";
+import { usePermissions } from "@/context/PermissionContext";
+import { etapasDoMes } from "@/lib/etapasDoMes";
+import { migalhas } from "@/lib/navigation-config";
 
 import { TrocarSenhaDialog } from "./TrocarSenhaDialog";
 
@@ -47,7 +49,9 @@ export function AppHeader() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [trocandoSenha, setTrocandoSenha] = useState(false);
-  const pageTitle = getPageTitle(pathname);
+  const { hasPermission } = usePermissions();
+  const etapas = etapasDoMes(hasPermission, user?.acesso);
+  const caminho = migalhas(pathname, (chave) => etapas.find((e) => e.chave === chave)?.rotulo ?? null);
 
   async function handleLogout() {
     await logout();
@@ -62,15 +66,20 @@ export function AppHeader() {
 
       <Breadcrumb className="hidden sm:block">
         <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/competencias" />}>
-              Início
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-          </BreadcrumbItem>
+          {caminho.map((m, i) => (
+            <Fragment key={`${i}-${m.rotulo}`}>
+              {i > 0 ? <BreadcrumbSeparator /> : null}
+              <BreadcrumbItem>
+                {i === caminho.length - 1 ? (
+                  <BreadcrumbPage>{m.rotulo}</BreadcrumbPage>
+                ) : m.href ? (
+                  <BreadcrumbLink render={<Link href={m.href} />}>{m.rotulo}</BreadcrumbLink>
+                ) : (
+                  <span className="text-muted-foreground">{m.rotulo}</span>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
+          ))}
         </BreadcrumbList>
       </Breadcrumb>
 

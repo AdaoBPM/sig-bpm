@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
+import { useQuery } from "@tanstack/react-query";
+import { CalendarClock } from "lucide-react";
+
+import { competenciasService } from "@/app/competencias/services/competenciasService";
+import { etapasDoMes, rotuloDoMes } from "@/lib/etapasDoMes";
 import { navGrupos } from "@/lib/navigation-config";
 
 function isActivePath(pathname: string, href: string) {
@@ -32,6 +37,12 @@ export function AppSidebar() {
   // O número de divergências abertas vira o selo do item no menu.
   const selo = (href: string) => (href === "/divergencias" && user?.divergenciasAbertas ? String(user.divergenciasAbertas) : undefined);
   // O menu mostra só o que o perfil do usuário alcança (Passo 22).
+  // O mês em trabalho: o mais recente que não está fechado (ou o mais recente de todos).
+  const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar(), enabled: !!user });
+  const itens = competencias.data?.itens ?? [];
+  const emTrabalho = itens.find((c) => c.status !== "FECHADA") ?? itens[0];
+  const anoMes = emTrabalho ? `${emTrabalho.ano}-${String(emTrabalho.mes).padStart(2, "0")}` : null;
+  const primeiraEtapa = etapasDoMes(hasPermission, user?.acesso)[0];
   const grupos = navGrupos
     .map((g) => ({ ...g, itens: g.itens.filter((i) => !i.permission || hasPermission(i.permission)) }))
     .filter((g) => g.itens.length > 0);
@@ -53,6 +64,27 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {anoMes && primeiraEtapa ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Mês em trabalho</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith(`/competencias/${anoMes}`)}
+                    tooltip={`Mês em trabalho: ${rotuloDoMes(anoMes)}`}
+                    render={<Link href={`/competencias/${anoMes}/${primeiraEtapa.caminho}`} />}
+                  >
+                    <CalendarClock />
+                    <span>
+                      {rotuloDoMes(anoMes)} <span className="text-sidebar-foreground/60">· {emTrabalho!.nomeMes}</span>
+                    </span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
         {grupos.map((g) => (
           <SidebarGroup key={g.titulo}>
             <SidebarGroupLabel>{g.titulo}</SidebarGroupLabel>

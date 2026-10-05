@@ -3,20 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Calculator,
-  CalendarDays,
-  FileBarChart,
-  GitCompareArrows,
-  ListChecks,
-  NotebookPen,
-  Percent,
-  Rows3,
-  Upload,
-  Warehouse,
-} from "lucide-react";
+import { CalendarDays, ChevronDown } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { etapasDoMes } from "@/lib/etapasDoMes";
 import {
   Select,
   SelectContent,
@@ -31,8 +23,6 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { AbrirCompetenciaForm } from "./components/AbrirCompetenciaForm";
 
-/** As listas operacionais de rateio, na ordem da tela de listas. */
-const LISTAS_RATEIO = ["PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO"];
 import { StatusCompetenciaBadge } from "./components/StatusCompetenciaBadge";
 import {
   competenciasService,
@@ -65,24 +55,8 @@ export function CompetenciasContent() {
 
   const itens = data?.itens ?? [];
 
-  // As telas de cada mês que o perfil do usuário alcança (Passo 22). As listas
-  // abrem na primeira lista que ele pode ver (o Alimentador, nas do seu setor).
-  const primeiraLista = user?.acesso.recorteSetor
-    ? LISTAS_RATEIO.find((t) => user.acesso.setores.includes(t))
-    : "PROJETO";
-  const etapas = [
-    { caminho: "importar", rotulo: "Importações", icone: Upload, permissao: "importacao:ver" },
-    { caminho: "classificacao", rotulo: "Classificação", icone: ListChecks, permissao: "classificacao:ver" },
-    { caminho: "lancamentos-manuais", rotulo: "Lançamentos", icone: NotebookPen, permissao: "lancamentos_manuais:ver" },
-    ...(primeiraLista
-      ? [{ caminho: `listas/${primeiraLista.toLowerCase().replace(/_/g, "-")}`, rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
-      : []),
-    { caminho: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ver" },
-    { caminho: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },
-    { caminho: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ver" },
-    { caminho: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ver" },
-    { caminho: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "apuracao:ver" },
-  ].filter((e) => hasPermission(e.permissao));
+  // As telas de cada mês que o perfil do usuário alcança (Passo 22), na ordem do fechamento.
+  const etapas = etapasDoMes(hasPermission, user?.acesso);
 
   return (
     <div className="space-y-6">
@@ -189,17 +163,29 @@ export function CompetenciasContent() {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    {etapas.map((e) => (
-                      <Link
-                        key={e.rotulo}
-                        href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/${e.caminho}`}
-                        className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-                      >
-                        <e.icone className="size-3.5" />
-                        {e.rotulo}
-                      </Link>
-                    ))}
+                  {/* Um botão só por competência, com todas as etapas (G1 do levantamento de layout). */}
+                  <div className="flex justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button type="button" variant="outline" size="sm" className="rounded-sm">
+                            Abrir
+                            <ChevronDown className="size-3.5" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent align="end" className="w-52">
+                        {etapas.map((e) => (
+                          <DropdownMenuItem
+                            key={e.chave}
+                            render={<Link href={`/competencias/${c.ano}-${String(c.mes).padStart(2, "0")}/${e.caminho}`} />}
+                          >
+                            <e.icone />
+                            {e.rotulo}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>
