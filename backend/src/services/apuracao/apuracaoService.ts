@@ -132,6 +132,46 @@ async function congelar(competenciaId: string, congelado: boolean) {
 }
 
 export const apuracaoService = {
+  /**
+   * O andamento de cada competência, para a lista de competências: balancete
+   * importado, lançamentos sem classificação ou com pendência, e se a apuração
+   * ficou para trás das entradas (só nas não fechadas; a fechada não muda).
+   */
+  async andamento(competencias: { id: string; ano: number; mes: number; status: string; apuradaEm: Date | null }[]) {
+    const prisma = getPrismaClient();
+    const ids = competencias.map((c) => c.id);
+    const [balancetes, lancamentos, pendentes, naoClassificados] = await Promise.all([
+      prisma.importacao.findMany({
+        where: { competenciaId: { in: ids }, tipo: "BALANCETE", status: "CONCLUIDA", substituidaEm: null, comparacao: false },
+        select: { competenciaId: true },
+      }),
+      prisma.lancamentoContabil.groupBy({ by: ["competenciaId"], where: { competenciaId: { in: ids } }, _count: true }),
+      prisma.lancamentoContabil.groupBy({ by: ["competenciaId"], where: { competenciaId: { in: ids }, validacao: { in: VALIDACOES_PENDENTES } }, _count: true }),
+      prisma.lancamentoContabil.groupBy({ by: ["competenciaId"], where: { competenciaId: { in: ids }, classificadoEm: null }, _count: true }),
+    ]);
+    const conta = (g: { competenciaId: string; _count: number }[]) => new Map(g.map((x) => [x.competenciaId, x._count]));
+    const [nLanc, nPend, nSem] = [conta(lancamentos), conta(pendentes), conta(naoClassificados)];
+    const comBalancete = new Set(balancetes.map((b) => b.competenciaId));
+    const apuradaEm = new Map(competencias.map((c) => [`${c.ano}-${c.mes}`, c.apuradaEm]));
+
+    const r = new Map<string, { balancete: boolean; lancamentos: number; pendencias: number; semClassificacao: number; desatualizada: boolean }>();
+    for (const c of competencias) {
+      let desatualizada = false;
+      if (c.apuradaEm && c.status !== "FECHADA") {
+        const { entradasApuradas } = await prisma.competencia.findUniqueOrThrow({ where: { id: c.id }, select: { entradasApuradas: true } });
+        desatualizada = mudancas(entradasApuradas as Retrato | null, await retratoEntradas(c.id)).length > 0;
+        // O mês anterior reapurado depois muda o saldo inicial do estoque (como na situação).
+        const a = anterior(c.ano, c.mes);
+        const antes = apuradaEm.has(`${a.ano}-${a.mes}`)
+          ? apuradaEm.get(`${a.ano}-${a.mes}`)
+          : (await prisma.competencia.findUnique({ where: { ano_mes: a }, select: { apuradaEm: true } }))?.apuradaEm;
+        if (antes && antes > c.apuradaEm) desatualizada = true;
+      }
+      r.set(c.id, { balancete: comBalancete.has(c.id), lancamentos: nLanc.get(c.id) ?? 0, pendencias: nPend.get(c.id) ?? 0, semClassificacao: nSem.get(c.id) ?? 0, desatualizada });
+    }
+    return r;
+  },
+
   /** A situação da competência: estado, apuração, o que mudou desde ela e o que falta para fechar. */
   async situacao(ano: number, mes: number) {
     const prisma = getPrismaClient();

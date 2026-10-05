@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import type { AbrirCompetenciaInput } from "../../schemas/competencias/abrirCompetenciaSchema.js";
 import { auditar } from "../auditoriaService.js";
+import { apuracaoService } from "../apuracao/apuracaoService.js";
 
 /** Erro de regra de negócio — vira 409 no controller, não 500. */
 export class RegraCompetenciaError extends Error {}
@@ -11,7 +12,8 @@ const MESES = [
 ];
 
 export const competenciasService = {
-  async listar(ano?: number) {
+  /** Com `andamento`, cada competência traz também o andamento das etapas (tela de competências). */
+  async listar(ano?: number, andamento = false) {
     const prisma = getPrismaClient();
 
     const competencias = await prisma.competencia.findMany({
@@ -39,7 +41,8 @@ export const competenciasService = {
       },
     });
 
-    return competencias.map((c) => ({ ...c, nomeMes: MESES[c.mes - 1] }));
+    const etapas = andamento ? await apuracaoService.andamento(competencias) : null;
+    return competencias.map((c) => ({ ...c, nomeMes: MESES[c.mes - 1], ...(etapas ? { andamento: etapas.get(c.id) } : {}) }));
   },
 
   async anosDisponiveis() {

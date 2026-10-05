@@ -15,7 +15,7 @@ export const competenciasController = {
     }
 
     const [itens, anos] = await Promise.all([
-      competenciasService.listar(ano),
+      competenciasService.listar(ano, request.query.andamento === "1"),
       competenciasService.anosDisponiveis(),
     ]);
 

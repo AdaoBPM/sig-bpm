@@ -20,6 +20,14 @@ export type Competencia = {
     divergencias: number;
     historicoReaberturas: number;
   };
+  /** Só quando pedido (tela de competências): o andamento das etapas do mês. */
+  andamento?: {
+    balancete: boolean;
+    lancamentos: number;
+    pendencias: number;
+    semClassificacao: number;
+    desatualizada: boolean;
+  };
 };
 
 export type ListaCompetencias = {
@@ -28,10 +36,10 @@ export type ListaCompetencias = {
 };
 
 export const competenciasService = {
-  listar: async (ano?: number): Promise<ListaCompetencias> => {
+  listar: async (ano?: number, andamento = false): Promise<ListaCompetencias> => {
     const { data } = await api.get<{ data: ListaCompetencias }>(
       "/proxy/competencias",
-      { params: ano ? { ano } : undefined },
+      { params: { ...(ano ? { ano } : {}), ...(andamento ? { andamento: 1 } : {}) } },
     );
     return data.data;
   },
