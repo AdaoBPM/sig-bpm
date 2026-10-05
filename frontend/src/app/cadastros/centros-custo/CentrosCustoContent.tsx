@@ -90,16 +90,21 @@ export function CentrosCustoContent() {
                 </span>
               )}
             </td>
-            <td className="px-4 py-3 text-sm text-gray-900">{item.nomeRM}</td>
-            <td className="px-4 py-3 text-sm text-gray-600">
-              {item.nomeControladoria ?? "—"}
+            <td className="px-4 py-3 text-sm text-gray-900">
+              <div className="max-w-56 truncate" title={item.nomeRM}>
+                {item.nomeRM}
+              </div>
             </td>
             <td className="px-4 py-3 text-sm text-gray-600">
+              <div className="max-w-48 truncate" title={item.nomeControladoria ?? undefined}>
+                {item.nomeControladoria ?? "—"}
+              </div>
+            </td>
+            <td className="px-4 py-3 text-sm whitespace-nowrap text-gray-600">
               {item.departamento ?? "—"}
-              {item.departamentoSigla ? (
-                <span className="ml-1 text-xs text-gray-400">
-                  ({item.departamentoSigla})
-                </span>
+              {/* A sigla só quando o nome não a traz ("DESPESAS ADMINISTRATIVAS (DA)" já traz). */}
+              {item.departamentoSigla && !item.departamento?.includes(`(${item.departamentoSigla})`) ? (
+                <span className="ml-1 text-xs text-gray-400">({item.departamentoSigla})</span>
               ) : null}
             </td>
             <td className="px-4 py-3 text-sm text-gray-600">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -37,6 +38,7 @@ export function EstruturaDreContent() {
   const [porPagina, setPorPagina] = useState(POR_PAGINA_INICIAL);
   const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("estrutura-dre");
+  const [aberta, setAberta] = useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["cadastros", "linhas-dre", buscaDebounced, pagina, porPagina],
@@ -81,32 +83,37 @@ export function EstruturaDreContent() {
         emptyMessage="Nenhuma linha encontrada"
         emptyHint="Ajuste a busca para ver outras linhas."
         columns={["#", "Linha", "Tipo", "Grupo", "Composição", "Unidades", "Contas", ...edicao.colunaEditar]}
-        renderRow={(item) => (
-          <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+        renderRow={(item) => {
+          const abre = !!item.expressao || !!item.definicao;
+          const aberto = aberta === item.id;
+          return (
+          <Fragment key={item.id}>
+          <tr
+            className={`border-b border-gray-100 hover:bg-gray-50 ${abre ? "cursor-pointer" : ""}`}
+            onClick={abre ? () => setAberta(aberto ? null : item.id) : undefined}
+          >
             <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
               {item.ordem}
             </td>
             <td className={`px-4 py-3 text-sm text-gray-900 ${RECUO_TIPO[item.tipo]}`}>
-              <span
-                className={
-                  item.tipo === "ITEM" ? "font-normal" : "font-bold"
-                }
-                title={item.definicao ?? undefined}
-              >
-                {item.descricao}
-              </span>
-              <span className="ml-2 text-xs text-gray-400">{item.codigo}</span>
+              <div className="flex max-w-sm items-baseline gap-2" title={item.codigo}>
+                {abre ? (
+                  aberto ? <ChevronDown className="size-3.5 shrink-0 self-center text-gray-400" /> : <ChevronRight className="size-3.5 shrink-0 self-center text-gray-400" />
+                ) : null}
+                <span className={`whitespace-nowrap ${item.tipo === "ITEM" ? "font-normal" : "font-bold"}`}>{item.descricao}</span>
+                <span className="truncate text-xs text-gray-400">{item.codigo}</span>
+              </div>
             </td>
             <td className="px-4 py-3 text-xs text-gray-600">
               {ROTULO_TIPO[item.tipo]}
             </td>
-            <td className="px-4 py-3 text-xs text-gray-600">
+            <td className="px-4 py-3 text-xs whitespace-nowrap text-gray-600">
               {item.grupoSigla}
               {item.atribuicaoSigla ? ` · ${item.atribuicaoSigla}` : ""}
             </td>
             <td className="px-4 py-3 text-xs text-gray-600">
               {item.expressao ? (
-                <code className="break-all">{item.expressao}</code>
+                <code className="block max-w-48 truncate">{item.expressao}</code>
               ) : (
                 <span className="text-gray-400">—</span>
               )}
@@ -122,9 +129,35 @@ export function EstruturaDreContent() {
             <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
               {item._count.contas > 0 ? item._count.contas : "—"}
             </td>
-            {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(item.id)}</td> : null}
+            {edicao.pode ? (
+              <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                {edicao.botaoEditar(item.id)}
+              </td>
+            ) : null}
           </tr>
-        )}
+          {aberto ? (
+            <tr className="border-b border-gray-100 bg-gray-50/60">
+              <td />
+              <td colSpan={6 + (edicao.pode ? 1 : 0)} className="space-y-1.5 px-4 py-2.5 text-xs text-gray-700">
+                <p>
+                  <span className="text-gray-500">Código:</span> <code>{item.codigo}</code>
+                </p>
+                {item.expressao ? (
+                  <p>
+                    <span className="text-gray-500">Composição:</span> <code className="break-all">{item.expressao}</code>
+                  </p>
+                ) : null}
+                {item.definicao ? (
+                  <p>
+                    <span className="text-gray-500">Definição:</span> {item.definicao}
+                  </p>
+                ) : null}
+              </td>
+            </tr>
+          ) : null}
+          </Fragment>
+          );
+        }}
       />
       {edicao.dialogo}
     </CadastroShell>

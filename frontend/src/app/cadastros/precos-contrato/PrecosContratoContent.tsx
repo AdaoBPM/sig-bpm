@@ -73,7 +73,7 @@ export function PrecosContratoContent() {
         error={isError ? "Erro ao carregar os preços." : null}
         emptyMessage="Nenhum preço encontrado"
         emptyHint="Importe a DRE do Comercial ou ajuste a busca."
-        columns={["Obra", "Versão", "Etapa · linha", "Conta · atribuição", "Unidade de negócio", "V. unit.", "V. total", "Vigência"]}
+        columns={["Obra", "Versão", "Etapa · linha", "Conta · atribuição", "Unidade", "V. unit.", "V. total", "Vigência"]}
         renderRow={(p) => {
           const antigo = p.substituidoEm !== null;
           return (
@@ -81,26 +81,32 @@ export function PrecosContratoContent() {
               key={p.id}
               className={`border-b border-gray-100 hover:bg-gray-50 ${antigo ? "bg-gray-50 text-gray-400" : ""}`}
             >
-              <td className="px-4 py-3 text-sm">
-                <div className={`font-medium tabular-nums ${antigo ? "" : "text-gray-900"}`}>{p.obra.codigo}</div>
-                {p.obra.nome !== p.obra.codigo ? <div className="text-xs">{p.obra.nome}</div> : null}
-              </td>
-              <td className="px-4 py-3 text-sm tabular-nums">{p.versao}</td>
-              <td className="px-4 py-3 text-sm">
-                {p.etapa ?? "—"} · {p.linhaTexto}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                <div>{p.contaResultado}</div>
-                <div className="text-xs text-gray-500">
-                  {[p.departamento, p.atribuicao].filter(Boolean).join(" · ") || "—"}
+              <td className="px-3 py-3 text-sm">
+                {/* A obra numa coluna só: código e nome na mesma linha, o nome cortado. */}
+                <div className="flex max-w-48 items-baseline gap-1.5" title={p.obra.nome !== p.obra.codigo ? p.obra.nome : undefined}>
+                  <span className={`font-medium whitespace-nowrap tabular-nums ${antigo ? "" : "text-gray-900"}`}>{p.obra.codigo}</span>
+                  {p.obra.nome !== p.obra.codigo ? <span className="truncate text-xs">{p.obra.nome}</span> : null}
                 </div>
               </td>
-              <td className="px-4 py-3 text-sm">{p.unidade ?? "—"}</td>
-              <td className="px-4 py-3 text-right text-sm tabular-nums">{valor(p.valorUnitario)}</td>
-              <td className="px-4 py-3 text-right text-sm tabular-nums">{valor(p.valorTotal)}</td>
-              <td className="px-4 py-3 text-xs">
-                <div>desde {dataHora(p.vigenteDesde)}</div>
-                {antigo ? <div className="text-red-700">substituído em {dataHora(p.substituidoEm!)}</div> : null}
+              <td className="px-3 py-3 text-sm tabular-nums">{p.versao}</td>
+              <td className="px-3 py-3 text-sm whitespace-nowrap">
+                {p.etapa ?? "—"} · {p.linhaTexto}
+              </td>
+              <td className="px-3 py-3 text-sm">
+                {/* A conta e a atribuição numa linha; o departamento e a atribuição completos na dica. */}
+                <div
+                  className="max-w-56 truncate"
+                  title={[p.contaResultado, p.departamento, p.atribuicao].filter(Boolean).join(" · ")}
+                >
+                  {p.contaResultado}
+                </div>
+              </td>
+              <td className="px-3 py-3 text-sm">{p.unidade ?? "—"}</td>
+              <td className="px-3 py-3 text-right text-sm tabular-nums">{valor(p.valorUnitario)}</td>
+              <td className="px-3 py-3 text-right text-sm tabular-nums">{valor(p.valorTotal)}</td>
+              <td className="px-3 py-3 text-xs whitespace-nowrap">
+                <div title={dataHora(p.vigenteDesde)}>{new Date(p.vigenteDesde).toLocaleDateString("pt-BR")}</div>
+                {antigo ? <div className="text-red-700" title={dataHora(p.substituidoEm!)}>substituído em {new Date(p.substituidoEm!).toLocaleDateString("pt-BR")}</div> : null}
               </td>
             </tr>
           );
