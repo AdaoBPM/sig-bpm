@@ -3,14 +3,16 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Calculator, Info, Search } from "lucide-react";
+import { AlertTriangle, Calculator, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Vazio } from "@/components/shared/Estados";
+import { CampoBusca } from "@/components/shared/Filtros";
+import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
@@ -25,6 +27,8 @@ export function EstoqueContent() {
   const periodo = lerAnoMes(anoMes);
   const queryClient = useQueryClient();
   const [busca, setBusca] = useState("");
+  // Só as obras que se moveram no mês, por padrão (E9 do levantamento de layout).
+  const [soMovimento, setSoMovimento] = useState(true);
   const [avisos, setAvisos] = useState<string[]>([]);
 
   const estoque = useQuery({
@@ -45,8 +49,12 @@ export function EstoqueContent() {
   const dados = estoque.data;
   const saldos = useMemo(() => {
     const t = busca.trim().toLowerCase();
-    return (dados?.saldos ?? []).filter((s) => !t || `${s.obra} ${s.nomeObra} ${s.linha}`.toLowerCase().includes(t));
-  }, [dados, busca]);
+    return (dados?.saldos ?? []).filter(
+      (s) =>
+        (!soMovimento || Number(s.movimentoVolume) !== 0 || Number(s.movimentoValor) !== 0) &&
+        (!t || `${s.obra} ${s.nomeObra} ${s.linha}`.toLowerCase().includes(t)),
+    );
+  }, [dados, busca, soMovimento]);
 
   if (!periodo) {
     return (
@@ -121,15 +129,22 @@ export function EstoqueContent() {
             ))}
           </div>
 
-          <div className="border border-gray-200 bg-white rounded-sm">
-            <div className="flex flex-col gap-2 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-bold text-gray-900">Saldo por obra e linha</h2>
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-                <Input aria-label="Buscar obra ou linha" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Obra ou linha…" className="rounded-sm border-gray-300 pl-9" />
-              </div>
-            </div>
-            <div className="overflow-x-auto">
+          <QuadroTabela
+            barra={
+              <>
+                <div className="flex flex-wrap items-center gap-4">
+                  <CampoBusca rotulo="Buscar obra ou linha" valor={busca} onMudar={setBusca} placeholder="Obra ou linha…" />
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={soMovimento} onChange={(e) => setSoMovimento(e.target.checked)} className="size-4 accent-black" />
+                    Só com movimento no mês
+                  </label>
+                </div>
+                <span className="text-xs text-gray-600">
+                  {saldos.length.toLocaleString("pt-BR")} de {dados.saldos.length.toLocaleString("pt-BR")} saldo(s)
+                </span>
+              </>
+            }
+          >
               <table className="tabela-sig w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold tracking-wide text-gray-600 uppercase">
@@ -148,12 +163,16 @@ export function EstoqueContent() {
                     <tr key={`${s.obra}|${s.linha}`} className="border-b border-gray-100">
                       <td className="px-4 py-2">
                         <div className="font-medium tabular-nums text-gray-900">{s.obra}</div>
-                        {s.nomeObra !== s.obra ? <div className="text-xs text-gray-500">{s.nomeObra}</div> : null}
+                        {s.nomeObra !== s.obra ? (
+                          <div className="max-w-48 truncate text-xs text-gray-500" title={s.nomeObra}>
+                            {s.nomeObra}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-4 py-2 text-gray-700">{s.linha}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{m3(s.movimentoVolume)}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{moeda(s.movimentoValor)}</td>
-                      <td className="px-4 py-2 text-xs text-gray-600">
+                      <td className="px-4 py-2 text-xs whitespace-nowrap text-gray-600">
                         {s.criterio ? ROTULO_CRITERIO_ESTOQUE[s.criterio] ?? s.criterio : "—"}
                         {s.precoMovimento ? <div className="tabular-nums">{moeda(s.precoMovimento)}/m³</div> : null}
                       </td>
@@ -164,8 +183,8 @@ export function EstoqueContent() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
+              {saldos.length === 0 ? <Vazio titulo="Nenhum saldo com esses filtros" dica={soMovimento ? "Desligue Só com movimento no mês para ver todas as obras." : undefined} /> : null}
+          </QuadroTabela>
         </>
       ) : (
         <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">

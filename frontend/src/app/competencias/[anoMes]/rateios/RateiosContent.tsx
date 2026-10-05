@@ -78,10 +78,14 @@ export function RateiosContent() {
         }
       />
 
-      {desatualizado && !bloqueada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4">
-          <AlertTriangle className="size-4 shrink-0 text-yellow-800" />
-          <p className="text-sm text-yellow-800">As listas mudaram depois da apuração. Apure de novo para atualizar os percentuais.</p>
+      {/* A legenda da nota "hoje" (E8 do levantamento de layout). */}
+      {desatualizado ? (
+        <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-800" />
+          <p className="text-sm text-yellow-800">
+            As listas mudaram depois da apuração. Em amarelo, sob o destino, está o volume de hoje, diferente do apurado; os percentuais
+            ainda usam o apurado. {bloqueada ? "Reapure a competência na DRE para usar os volumes de hoje." : "Apure de novo para usá-los."}
+          </p>
         </div>
       ) : null}
 
@@ -102,13 +106,22 @@ export function RateiosContent() {
                 </span>
               </div>
               <table className="tabela-sig w-full border-collapse text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500">
+                    <th className="px-4 text-left font-medium">Destino</th>
+                    <th className="px-4 text-right font-medium">Volume apurado</th>
+                    <th className="px-4 text-right font-medium">%</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {k.destinos.map((d) => (
                     <tr key={d.destino} className="border-t border-gray-100">
                       <td className="px-4 py-2 text-gray-700">
                         {d.rotulo}
                         {d.quantidadeAtual !== null ? (
-                          <div className="text-xs text-yellow-800">hoje: {quant(d.quantidadeAtual)}</div>
+                          <div className="text-xs text-yellow-800" title="Volume de hoje, diferente do apurado: reapure para usar.">
+                            hoje: {quant(d.quantidadeAtual)}
+                          </div>
                         ) : null}
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-gray-600">{quant(d.quantidade)}</td>

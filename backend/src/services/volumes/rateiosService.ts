@@ -108,8 +108,12 @@ export const rateiosService = {
         origem: r.origemDoVolume,
         quantidade: v.quantidade.toFixed(3),
         percentual: v.percentual.toFixed(10),
-        /** Volume de hoje, se as listas mudaram depois da apuração. */
-        quantidadeAtual: atual && !atual.equals(v.quantidade) ? atual.toFixed(3) : null,
+        /**
+         * Volume de hoje, se as listas mudaram depois da apuração. Compara com
+         * as três casas das listas: as somas guardam resíduo de ponto flutuante
+         * (6806.303000000003), que não é mudança.
+         */
+        quantidadeAtual: atual && atual.toFixed(3) !== v.quantidade.toFixed(3) ? atual.toFixed(3) : null,
       });
       chaves.set(r.chave, k);
     }
