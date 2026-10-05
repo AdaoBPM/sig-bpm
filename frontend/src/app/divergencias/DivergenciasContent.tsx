@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { StatusCompetenciaBadge } from "../competencias/components/StatusCompetenciaBadge";
 import { dataHora, inteiro, moeda } from "../competencias/[anoMes]/utils/formatacao";
@@ -103,14 +104,16 @@ export function DivergenciasContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Divergências</h1>
-        <p className="text-sm text-gray-600">
-          Dado recebido depois do fechamento ou da apuração que difere do que está gravado: o balancete de um mês fechado, ou o preço de
-          contrato que valorou a receita de um mês apurado. A competência não muda sozinha — a divergência é justificada, ou resolvida
-          reabrindo a competência (no preço de um mês ainda aberto, reapurando).
-        </p>
-      </div>
+      <CabecalhoDaTela
+        titulo="Divergências"
+        sobre={
+          <p>
+            Dado recebido depois do fechamento ou da apuração que difere do que está gravado: o balancete de um mês fechado, ou o preço de
+            contrato que valorou a receita de um mês apurado. A competência não muda sozinha — a divergência é justificada, ou resolvida
+            reabrindo a competência (no preço de um mês ainda aberto, reapurando).
+          </p>
+        }
+      />
 
       {d && d.competencias.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -20,6 +20,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { AbrirCompetenciaForm } from "./components/AbrirCompetenciaForm";
 
@@ -60,14 +61,7 @@ export function CompetenciasContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-          Competências
-        </h1>
-        <p className="text-sm text-gray-600">
-          Cada mês do fechamento e o estado em que ele se encontra.
-        </p>
-      </div>
+      <CabecalhoDaTela titulo="Competências" sobre={<p>Cada mês do fechamento e o estado em que ele se encontra.</p>} />
 
       <PermissionGuard permission="competencia:editar">
         <AbrirCompetenciaForm />

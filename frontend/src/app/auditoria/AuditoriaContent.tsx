@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { dataHora, inteiro } from "../competencias/[anoMes]/utils/formatacao";
 import { auditoriaService, type FiltroAuditoria, type RegistroAuditoria } from "./services/auditoriaService";
@@ -92,12 +93,10 @@ export function AuditoriaContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Auditoria</h1>
-        <p className="text-sm text-gray-600">
-          Quem fez o quê, quando e em qual registro, com o estado antes e depois. O log é imutável: nenhum perfil altera ou apaga um registro.
-        </p>
-      </div>
+      <CabecalhoDaTela
+        titulo="Auditoria"
+        sobre={<p>Quem fez o quê, quando e em qual registro, com o estado antes e depois. O log é imutável: nenhum perfil altera ou apaga um registro.</p>}
+      />
 
       <div className="grid gap-3 rounded-sm border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6">
         <div className="space-y-1.5">

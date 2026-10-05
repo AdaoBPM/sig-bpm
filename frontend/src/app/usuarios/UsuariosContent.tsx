@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { UsuarioDialog } from "./components/UsuarioDialog";
 import { mensagemDeErro, usuariosService, type Usuario } from "./services/usuariosService";
@@ -61,20 +62,23 @@ export function UsuariosContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Usuários</h1>
-          <p className="text-sm text-gray-600">
-            Quem entra no sistema e com qual perfil. O perfil define o que cada um pode fazer; os setores e os departamentos recortam o que ele alcança.
+      <CabecalhoDaTela
+        titulo="Usuários"
+        sobre={
+          <p>
+            Quem entra no sistema e com qual perfil. O perfil define o que cada um pode fazer; os setores e os departamentos recortam o que ele
+            alcança.
           </p>
-        </div>
-        <PermissionGuard permission="usuarios:editar">
-          <Button type="button" className={botaoPrimario} disabled={!opcoes.data} onClick={() => setEditando("novo")}>
-            <Plus className="size-4" />
-            Novo usuário
-          </Button>
-        </PermissionGuard>
-      </div>
+        }
+        acoes={
+          <PermissionGuard permission="usuarios:editar">
+            <Button type="button" className={botaoPrimario} disabled={!opcoes.data} onClick={() => setEditando("novo")}>
+              <Plus className="size-4" />
+              Novo usuário
+            </Button>
+          </PermissionGuard>
+        }
+      />
 
       <DataTable<Usuario>
         data={usuarios.data ?? []}

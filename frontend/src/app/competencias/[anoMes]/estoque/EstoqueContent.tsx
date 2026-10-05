@@ -1,20 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, Info, Search } from "lucide-react";
+import { AlertTriangle, Calculator, Info, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
+import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { estoqueService, mensagemDeErro, ROTULO_CRITERIO_ESTOQUE } from "./services/estoqueService";
 
 const m3 = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
@@ -60,27 +59,21 @@ export function EstoqueContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Estoque · {rotuloCompetencia(periodo.ano, periodo.mes)}
-              </h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {dados ? <StatusCompetenciaBadge status={dados.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              Saldo do mês anterior mais a produção, menos a expedição, por obra e linha. Serve para conferência e
-              não entra no resultado.{" "}
-              {dados?.inicial ? "Saldo inicial importado." : dados?.apuradoEm ? `Apurado em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurado."}
-            </p>
-          </div>
-          {!bloqueada && dados ? (
+      <CabecalhoDaTela
+        titulo="Estoque"
+        selo={
+          !dados?.inicial && (dados?.congelado || dados?.competencia.status === "FECHADA") ? (
+            <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />
+          ) : null
+        }
+        sobre={
+          <p>
+            Saldo do mês anterior mais a produção, menos a expedição, por obra e linha. Serve para conferência e não entra no resultado.{" "}
+            {dados?.inicial ? "Saldo inicial importado." : dados?.apuradoEm ? `Apurado em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurado."}
+          </p>
+        }
+        acoes={
+          !bloqueada && dados ? (
             <PermissionGuard permission="apuracao:editar">
               <Button
                 type="button"
@@ -92,17 +85,15 @@ export function EstoqueContent() {
                 {apurar.isPending ? "Apurando…" : dados.apuradoEm ? "Apurar de novo" : "Apurar estoque"}
               </Button>
             </PermissionGuard>
-          ) : null}
-        </div>
-      </div>
+          ) : null
+        }
+      />
 
       {dados?.inicial ? (
         <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
           <Info className="size-4 shrink-0 text-gray-500" />
           <p className="text-sm text-gray-600">Saldo inicial, importado da aba Estoque (2025). Os meses seguintes partem dele.</p>
         </div>
-      ) : dados?.congelado || dados?.competencia.status === "FECHADA" ? (
-        <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />
       ) : null}
       {avisos.length > 0 ? (
         <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">

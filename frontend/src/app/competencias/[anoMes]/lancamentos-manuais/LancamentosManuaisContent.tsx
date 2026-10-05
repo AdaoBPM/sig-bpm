@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Copy, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
@@ -13,9 +12,10 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
+import { AvisoCongelado } from "../../components/AvisoCongelado";
+import { lerAnoMes, moeda } from "../utils/formatacao";
 import { LancamentoManualDialog } from "./components/LancamentoManualDialog";
 import {
   lancamentosManuaisService,
@@ -74,26 +74,12 @@ export function LancamentosManuaisContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Lançamentos manuais · {rotuloCompetencia(periodo.ano, periodo.mes)}
-              </h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {dados ? <StatusCompetenciaBadge status={dados.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              O que não vem do balancete do RM — a RN e outros ajustes. É a versão
-              sistêmica da aba Gastos (Lanç. Manuais).
-            </p>
-          </div>
-          {!fechada && dados ? (
+      <CabecalhoDaTela
+        titulo="Lançamentos manuais"
+        selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
+        sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes. É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
+        acoes={
+          !fechada && dados ? (
             <PermissionGuard permission="lancamentos_manuais:editar">
               <div className="flex gap-2">
                 {itens.length === 0 ? (
@@ -118,16 +104,9 @@ export function LancamentosManuaisContent() {
                 </Button>
               </div>
             </PermissionGuard>
-          ) : null}
-        </div>
-      </div>
-
-      {fechada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">Competência fechada: os lançamentos não podem ser alterados.</p>
-        </div>
-      ) : null}
+          ) : null
+        }
+      />
 
       <div className="border border-gray-200 bg-white rounded-sm">
         <div className="overflow-x-auto">

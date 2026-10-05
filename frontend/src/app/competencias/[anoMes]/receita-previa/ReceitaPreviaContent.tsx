@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Calculator, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -12,10 +11,10 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
+import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { LancamentoReceitaDialog } from "./components/LancamentoReceitaDialog";
 import { MemoriaCalculoDialog } from "./components/MemoriaCalculoDialog";
 import { QuadroReceita } from "./components/QuadroReceita";
@@ -88,27 +87,17 @@ export function ReceitaPreviaContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Receita prévia · {rotuloCompetencia(periodo.ano, periodo.mes)}
-              </h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {dados ? <StatusCompetenciaBadge status={dados.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              As listas do mês valoradas pelos preços da DRE do Comercial, mais os lançamentos de receita.
-              É a versão sistêmica da aba Receitas (Prévia).{" "}
-              {dados?.apuradoEm ? `Apurada em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurada."}
-            </p>
-          </div>
-          {!bloqueada && dados ? (
+      <CabecalhoDaTela
+        titulo="Receita prévia"
+        selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da receita prévia" /> : null}
+        sobre={
+          <p>
+            As listas do mês valoradas pelos preços da DRE do Comercial, mais os lançamentos de receita. É a versão sistêmica da aba
+            Receitas (Prévia). {dados?.apuradoEm ? `Apurada em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurada."}
+          </p>
+        }
+        acoes={
+          !bloqueada && dados ? (
             <PermissionGuard permission="apuracao:editar">
               <Button
                 type="button"
@@ -120,13 +109,9 @@ export function ReceitaPreviaContent() {
                 {apurar.isPending ? "Apurando…" : dados.apuradoEm ? "Apurar de novo" : "Apurar receita prévia"}
               </Button>
             </PermissionGuard>
-          ) : null}
-        </div>
-      </div>
-
-      {bloqueada ? (
-        <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da receita prévia" />
-      ) : null}
+          ) : null
+        }
+      />
 
       {avisos.length > 0 || (dados?.observacoes.length ?? 0) > 0 ? (
         <div className="rounded-sm border border-yellow-200 bg-yellow-50 p-4">

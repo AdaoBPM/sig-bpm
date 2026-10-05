@@ -1,10 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,9 +13,9 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { lerNumero } from "@/lib/numero";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
+import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { conferenciaService, mensagemDeErro, type LinhaConferencia, type VisaoConferencia } from "./services/conferenciaService";
 
 const MESES_CURTOS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -171,22 +170,16 @@ export function ConferenciaPlanilhaContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Conferência com a planilha · {rotuloCompetencia(periodo.ano, periodo.mes)}</h1>
-          <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-          {r ? <StatusCompetenciaBadge status={r.competencia.status} /> : null}
-        </div>
-        <p className="text-sm text-gray-600">
-          Compara, linha a linha, a DRE apurada pela ferramenta com as abas Resultados (Consolidado), (Matriz), (Filial), (Serviços), (Desp.+Extra) e (RN) do
-          SIG BPM - BASE REALIZADO (RESULTADOS), na coluna {coluna}. As linhas são ligadas pela descrição, na ordem da estrutura. Diferença = ferramenta −
-          planilha. Uma reapuração aparece aqui sem reenviar o arquivo.
-        </p>
-      </div>
+      <CabecalhoDaTela
+        titulo="Conferência com a planilha"
+        sobre={
+          <p>
+            Compara, linha a linha, a DRE apurada pela ferramenta com as abas Resultados (Consolidado), (Matriz), (Filial), (Serviços),
+            (Desp.+Extra) e (RN) do SIG BPM - BASE REALIZADO (RESULTADOS), na coluna {coluna}. As linhas são ligadas pela descrição, na ordem
+            da estrutura. Diferença = ferramenta − planilha. Uma reapuração aparece aqui sem reenviar o arquivo.
+          </p>
+        }
+      />
 
       <div className="space-y-4 rounded-sm border border-gray-200 bg-white p-4">
         {r?.conferencia ? (

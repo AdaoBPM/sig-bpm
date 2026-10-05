@@ -46,11 +46,16 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
       <AppSidebar />
       <SidebarInset className="min-w-0 bg-muted/30">
         <AppHeader />
-        {user?.divergenciasAbertas && !pathname.startsWith("/divergencias") ? (
-          // O aviso ao entrar no sistema quando há divergência aberta (Passo 24).
-          <Link href="/divergencias" className="flex items-center gap-2 border-b border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 hover:bg-yellow-100 md:px-6">
+        {user?.divergenciasAbertas && (pathname === "/competencias" || pathname.startsWith("/competencias/")) ? (
+          // O aviso de divergência aberta (Passo 24), só nas telas de competência e do mês
+          // (decisão D3 do levantamento de layout); nas demais, o número fica no menu.
+          <Link
+            href="/divergencias"
+            title="Dado recebido depois do fechamento ou da apuração que difere do gravado"
+            className="flex items-center gap-2 border-b border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 hover:bg-yellow-100 md:px-6"
+          >
             <AlertTriangle className="size-4 shrink-0" />
-            {user.divergenciasAbertas} divergência(s) retroativa(s) em aberto: dado recebido depois do fechamento ou da apuração difere do gravado. Ver divergências
+            {user.divergenciasAbertas === 1 ? "1 divergência aberta" : `${user.divergenciasAbertas} divergências abertas`} · Ver divergências
           </Link>
         ) : null}
         <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">

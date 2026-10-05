@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { EnviarArquivoForm } from "./components/EnviarArquivoForm";
 import { ResultadoImportacao } from "./components/ResultadoImportacao";
 import {
@@ -22,8 +21,6 @@ import {
   dataHora,
   inteiro,
   lerAnoMes,
-  MESES,
-  rotuloCompetencia,
   ROTULO_TIPO,
 } from "../utils/formatacao";
 
@@ -89,22 +86,15 @@ export function ImportarContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link
-          href="/competencias"
-          className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-            Importação · {rotuloCompetencia(periodo.ano, periodo.mes)}
-          </h1>
-          <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-          {data ? <StatusCompetenciaBadge status={data.competencia.status} /> : null}
-        </div>
-      </div>
+      <CabecalhoDaTela
+        titulo="Importações"
+        sobre={
+          <p>
+            O balancete, as listas operacionais, a DRE do Comercial e o saldo inicial do estoque entram por aqui. Toda importação fica no
+            histórico, inclusive as recusadas e as substituídas.
+          </p>
+        }
+      />
 
       {isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">

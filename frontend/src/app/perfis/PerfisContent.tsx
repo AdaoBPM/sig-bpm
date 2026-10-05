@@ -9,6 +9,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { mensagemDeErro, usuariosService, type Perfil } from "../usuarios/services/usuariosService";
 import { PerfilDialog } from "./components/PerfilDialog";
@@ -37,14 +38,15 @@ export function PerfisContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Perfis de usuário</h1>
-          <p className="text-sm text-gray-600">
+      <CabecalhoDaTela
+        titulo="Perfis de usuário"
+        sobre={
+          <p>
             Os tipos de usuário e o que cada um pode fazer, por recurso e ação. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser
             editados e inativados, mas não excluídos.
           </p>
-        </div>
+        }
+        acoes={
         <PermissionGuard permission="usuarios:editar">
           <Button
             type="button"
@@ -56,7 +58,8 @@ export function PerfisContent() {
             Novo perfil
           </Button>
         </PermissionGuard>
-      </div>
+        }
+      />
 
       <DataTable<Perfil>
         data={perfis.data ?? []}

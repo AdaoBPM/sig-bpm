@@ -52,7 +52,7 @@ export function AbrirCompetenciaForm() {
       "Não foi possível abrir a competência.");
 
   return (
-    <div className="border border-gray-200 bg-white rounded-sm p-6">
+    <div className="max-w-3xl rounded-sm border border-gray-200 bg-white p-6">
       <h2 className="text-xl font-bold tracking-tight text-gray-900">
         Abrir competência
       </h2>

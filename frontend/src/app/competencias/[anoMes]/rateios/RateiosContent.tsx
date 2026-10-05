@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Calculator } from "lucide-react";
+import { AlertTriangle, Calculator } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, lerAnoMes, MESES, rotuloCompetencia } from "../utils/formatacao";
+import { dataHora, lerAnoMes } from "../utils/formatacao";
 import { MEDIDA_BASE, mensagemDeErro, rateiosService, ROTULO_CHAVE } from "./services/rateiosService";
 
 const quant = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
@@ -52,27 +52,17 @@ export function RateiosContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Rateios · {rotuloCompetencia(periodo.ano, periodo.mes)}
-              </h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {dados ? <StatusCompetenciaBadge status={dados.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              Os percentuais de cada chave de rateio, calculados pelos volumes das listas do mês — a versão
-              sistêmica da aba Rateios.{" "}
-              {dados?.apuradoEm ? `Apurados em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurados."}
-            </p>
-          </div>
-          {!bloqueada && dados ? (
+      <CabecalhoDaTela
+        titulo="Rateios"
+        selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do rateio" /> : null}
+        sobre={
+          <p>
+            Os percentuais de cada chave de rateio, calculados pelos volumes das listas do mês — a versão sistêmica da aba Rateios.{" "}
+            {dados?.apuradoEm ? `Apurados em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurados."}
+          </p>
+        }
+        acoes={
+          !bloqueada && dados ? (
             <PermissionGuard permission="apuracao:editar">
               <Button
                 type="button"
@@ -84,13 +74,10 @@ export function RateiosContent() {
                 {apurar.isPending ? "Apurando…" : dados.apuradoEm ? "Apurar de novo" : "Apurar rateios"}
               </Button>
             </PermissionGuard>
-          ) : null}
-        </div>
-      </div>
+          ) : null
+        }
+      />
 
-      {bloqueada ? (
-        <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do rateio" />
-      ) : null}
       {desatualizado && !bloqueada ? (
         <div className="flex items-center gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4">
           <AlertTriangle className="size-4 shrink-0 text-yellow-800" />

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -15,9 +15,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
-import { StatusCompetenciaBadge } from "../../../components/StatusCompetenciaBadge";
-import { inteiro, lerAnoMes, MESES, rotuloCompetencia } from "../../utils/formatacao";
+import { AvisoCongelado } from "../../../components/AvisoCongelado";
+import { inteiro, lerAnoMes } from "../../utils/formatacao";
 import { RegistroListaDialog } from "../components/RegistroListaDialog";
 import { LISTAS, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
 
@@ -72,26 +73,12 @@ export function ListaContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Listas operacionais · {rotuloCompetencia(periodo.ano, periodo.mes)}
-              </h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {d ? <StatusCompetenciaBadge status={d.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              Os volumes físicos de que saem os rateios. Registros importados se corrigem no
-              arquivo; os digitados, aqui.
-            </p>
-          </div>
-          {!fechada && def ? (
+      <CabecalhoDaTela
+        titulo="Listas operacionais"
+        selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="das listas" /> : null}
+        sobre={<p>Os volumes físicos de que saem os rateios. Registros importados se corrigem no arquivo; os digitados, aqui.</p>}
+        acoes={
+          !fechada && def ? (
             <PermissionGuard permission="listas_operacionais:editar">
               <Button
                 type="button"
@@ -102,9 +89,9 @@ export function ListaContent() {
                 Novo registro
               </Button>
             </PermissionGuard>
-          ) : null}
-        </div>
-      </div>
+          ) : null
+        }
+      />
 
       <nav className="flex flex-wrap gap-2" aria-label="Listas">
         {LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo)).map((l) => (
@@ -120,12 +107,7 @@ export function ListaContent() {
         ))}
       </nav>
 
-      {fechada ? (
-        <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
-          <Lock className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">Competência fechada: as listas não podem ser alteradas.</p>
-        </div>
-      ) : null}
+
 
       {d && d.totais.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

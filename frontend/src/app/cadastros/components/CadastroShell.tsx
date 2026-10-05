@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
 type CadastroShellProps = {
   titulo: string;
@@ -48,29 +49,24 @@ export function CadastroShell({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-            {titulo}
-          </h1>
-          <p className="text-sm text-gray-600">{descricao}</p>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {acoes}
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            aria-label="Buscar"
-            value={busca}
-            onChange={(e) => onBuscaChange(e.target.value)}
-            placeholder={placeholderBusca}
-            className="rounded-sm border-gray-300 pl-9 focus:border-black focus:ring-1 focus:ring-black"
-          />
-        </div>
-        </div>
-      </div>
+      {/* Título e ações numa linha; a explicação recolhida (G10 do levantamento de layout). */}
+      <CabecalhoDaTela titulo={titulo} sobre={<p>{descricao}</p>} acoes={acoes} />
 
       <div className="border border-gray-200 bg-white rounded-sm">
+        {/* A busca no topo da tabela, como nas demais telas de consulta. */}
+        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
+          <div className="relative w-full sm:w-80">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              aria-label="Buscar"
+              value={busca}
+              onChange={(e) => onBuscaChange(e.target.value)}
+              placeholder={placeholderBusca}
+              className="rounded-sm border-gray-300 pl-9 focus:border-black focus:ring-1 focus:ring-black"
+            />
+          </div>
+          <p className="hidden shrink-0 text-xs text-gray-600 sm:block">{carregando ? "" : `${total} registro(s)`}</p>
+        </div>
         <div className="overflow-x-auto">{children}</div>
 
         <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

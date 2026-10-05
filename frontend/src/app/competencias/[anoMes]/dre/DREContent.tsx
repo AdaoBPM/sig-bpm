@@ -1,18 +1,16 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronRight, GitCompareArrows, Search } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
+import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
 import { PainelApuracao } from "./components/PainelApuracao";
@@ -197,7 +195,6 @@ export function DREContent() {
   const periodo = lerAnoMes(anoMes);
   const [visao, setVisao] = useState<Visao>("consolidado");
   const [avisos, setAvisos] = useState<string[]>([]);
-  const { hasPermission } = usePermissions();
 
   // A consolidada também traz o estado da competência e da apuração para o cabeçalho.
   const consolidado = useQuery({
@@ -223,32 +220,16 @@ export function DREContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/competencias" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">DRE · {rotuloCompetencia(periodo.ano, periodo.mes)}</h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {cabecalho ? <StatusCompetenciaBadge status={cabecalho.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da
-              receita prévia e dos lançamentos manuais. Clique numa linha para ver como o valor foi formado e chegar aos lançamentos de origem.{" "}
-              {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
-            </p>
-          </div>
-          {hasPermission("apuracao:ver") ? (
-            <Link href={`/competencias/${anoMes}/conferencia-planilha`} className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900">
-              <GitCompareArrows className="size-4" />
-              Conferir com a planilha
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      <CabecalhoDaTela
+        titulo="DRE"
+        sobre={
+          <p>
+            A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da receita prévia e dos
+            lançamentos manuais. Clique numa linha para ver como o valor foi formado e chegar aos lançamentos de origem.{" "}
+            {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
+          </p>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         {VISOES.map((v) => (

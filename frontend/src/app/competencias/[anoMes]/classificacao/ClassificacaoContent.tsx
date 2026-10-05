@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
@@ -17,10 +17,10 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { apuracaoService } from "../../services/apuracaoService";
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, inteiro, lerAnoMes, MESES, moeda, rotuloCompetencia } from "../utils/formatacao";
+import { dataHora, inteiro, lerAnoMes, moeda } from "../utils/formatacao";
 import { VALIDACOES, ValidacaoBadge } from "./components/ValidacaoBadge";
 import {
   classificacaoService,
@@ -181,29 +181,17 @@ export function ClassificacaoContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link
-          href="/competencias"
-          className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="size-4" />
-          Competências
-        </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Classificação · {rotuloCompetencia(periodo.ano, periodo.mes)}
-              </h1>
-              <span className="text-sm text-gray-400">{MESES[periodo.mes - 1]}</span>
-              {r ? <StatusCompetenciaBadge status={r.competencia.status} /> : null}
-            </div>
-            <p className="text-sm text-gray-600">
-              Destino de cada lançamento do balancete na DRE e a verificação da coluna
-              LANÇ. OK?. A correção é sempre no cadastro — depois dela, reclassifique.
-            </p>
-          </div>
-          {!fechada && !apurada ? (
+      <CabecalhoDaTela
+        titulo="Classificação"
+        selo={fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
+        sobre={
+          <p>
+            Destino de cada lançamento do balancete na DRE e a verificação da coluna LANÇ. OK?. A correção é sempre no cadastro — depois
+            dela, reclassifique.
+          </p>
+        }
+        acoes={
+          !fechada && !apurada ? (
             <PermissionGuard permission="classificacao:editar">
               <Button
                 type="button"
@@ -216,11 +204,9 @@ export function ClassificacaoContent() {
                 {reclassificar.isPending ? "Reclassificando…" : "Reclassificar"}
               </Button>
             </PermissionGuard>
-          ) : null}
-        </div>
-      </div>
-
-      {fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
+          ) : null
+        }
+      />
 
       {r && r.total > 0 ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
