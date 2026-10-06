@@ -12,6 +12,7 @@ import { inteiro, moeda } from "../../utils/formatacao";
 import {
   receitaPreviaService,
   ROTULO_CRITERIO,
+  ROTULO_VENDA,
   ROTULO_NATUREZA,
   ROTULO_ORIGEM,
   ROTULO_UNIDADE,
@@ -32,6 +33,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
   });
   const totalPaginas = data ? Math.max(1, Math.ceil(data.total / data.porPagina)) : 1;
   const mostraVariacao = unidade === 2 && natureza === "PRE_FABRICADO";
+  const mostraVenda = unidade !== 3;
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -52,6 +54,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
               <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
                 <th className="px-3 py-2">Origem</th>
                 <th className="px-3 py-2">Obra · Linha</th>
+                {mostraVenda ? <th className="px-3 py-2">Venda</th> : null}
                 <th className="px-3 py-2">Critério</th>
                 <th className="px-3 py-2 text-right">Quant.</th>
                 <th className="px-3 py-2 text-right">Preço Bruto</th>
@@ -64,7 +67,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
             <tbody>
               {isPending && !data ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <Carregando linhas={4} />
                   </td>
                 </tr>
@@ -77,6 +80,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
                       {i.linha ? <span className="text-gray-500"> · {i.linha}</span> : null}
                       {i.observacao ? <div className="text-xs text-yellow-800">{i.observacao}</div> : null}
                     </td>
+                    {mostraVenda ? <td className="px-3 py-2 text-gray-600">{i.venda ? ROTULO_VENDA[i.venda] : "—"}</td> : null}
                     <td className="px-3 py-2 text-gray-600">{ROTULO_CRITERIO[i.criterio] ?? i.criterio}</td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {i.quantidade === null ? "—" : Number(i.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}

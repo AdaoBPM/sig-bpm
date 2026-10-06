@@ -1,5 +1,5 @@
 import { Prisma } from "../../generated/prisma/client.js";
-import type { ComponenteReceita, CriterioReceita, NaturezaReceita, OrigemReceita } from "../../generated/prisma/enums.js";
+import type { ComponenteReceita, CriterioReceita, NaturezaReceita, OrigemReceita, TipoVenda } from "../../generated/prisma/enums.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -69,6 +69,7 @@ export type LancamentoReceitaCalculo = {
   componente: ComponenteReceita;
   valor: Decimal;
   observacao: string;
+  venda: TipoVenda | null;
 };
 
 export type ItemReceita = {
@@ -88,6 +89,8 @@ export type ItemReceita = {
   receitaLiquida: Decimal;
   variacaoEstoque: Decimal;
   observacao: string | null;
+  /** Global ou mercantil; nulo nas medições de Obras. */
+  venda: TipoVenda | null;
 };
 
 export type DadosCalculo = {
@@ -150,6 +153,13 @@ export function pecaDaEstaca(peca: string | null | undefined) {
   return p.slice(0, 3);
 }
 
+/**
+ * A coluna Venda das abas de receita: "G" quando o código da obra começa com
+ * G, "M" nos demais — inclusive sem obra, como a sucata vendida sem projeto
+ * na aba Receita (Saídas). Obras não se separam.
+ */
+export const vendaDaObra = (obra: string | null | undefined): TipoVenda => (obra?.toUpperCase().startsWith("G") ? "GLOBAL" : "MERCANTIL");
+
 function base(r: Registro, unidade: CodigoUnidade, natureza: NaturezaReceita, origem: OrigemReceita): ItemReceita {
   return {
     unidade,
@@ -168,6 +178,7 @@ function base(r: Registro, unidade: CodigoUnidade, natureza: NaturezaReceita, or
     receitaLiquida: zero(),
     variacaoEstoque: zero(),
     observacao: null,
+    venda: unidade === UNIDADE.OBRAS ? null : vendaDaObra(r.obra),
   };
 }
 
@@ -322,6 +333,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
       quantidade: null,
       criterio: "LANCAMENTO",
       observacao: l.observacao,
+      venda: unidadeDe(l.unidade) === UNIDADE.OBRAS ? null : l.venda,
     };
     if (l.componente === "BRUTA") item.receitaBruta = l.valor;
     else if (l.componente === "LIQUIDA") item.receitaLiquida = l.valor;
@@ -359,4 +371,69 @@ export function totalizar(itens: ItemReceita[]): TotalReceita[] {
     m.set(k, t);
   }
   return [...m.values()].sort((a, b) => a.unidade - b.unidade || a.natureza.localeCompare(b.natureza));
+}
+
+/** Alíquotas de PIS/COFINS da aba Receitas (Prévia): venda global (serviço) e mercantil. */
+export const PIS_COFINS = { GLOBAL: new Decimal("0.0365"), MERCANTIL: new Decimal("0.0925") };
+
+export type ItemVenda = { unidade: number; natureza: NaturezaReceita; venda: TipoVenda | null; receitaBruta: Decimal; receitaLiquida: Decimal };
+type Valores = { receitaBruta: Decimal; receitaLiquida: Decimal };
+
+export type SeparacaoVenda = {
+  /** Por natureza, as receitas da venda global e da mercantil (Matriz e Filial). */
+  porNatureza: Array<{ unidade: number; natureza: NaturezaReceita; global: Valores; mercantil: Valores }>;
+  /**
+   * Os impostos da unidade, abertos como na aba Receitas (Prévia):
+   *  - Matriz e Filial: PIS/COFINS de cada venda pela alíquota sobre a bruta
+   *    dela; ISS é o resto dos impostos da global, ICMS o da mercantil;
+   *  - Obras: PIS/COFINS sobre a ROB e o ISS como resto.
+   */
+  impostos: Array<{ unidade: number; pisCofinsGlobal: Decimal; pisCofinsMercantil: Decimal; iss: Decimal; icms: Decimal }>;
+};
+
+/**
+ * Separa a receita prévia em venda global e mercantil e abre os impostos (aba
+ * Receitas (Prévia) do BASE PRÉVIAS, a partir de 06/10/2026). A separação só
+ * aparece na receita prévia; a DRE continua com os totais.
+ */
+export function separarPorVenda(itens: ItemVenda[]): SeparacaoVenda {
+  const vazio = (): Valores => ({ receitaBruta: zero(), receitaLiquida: zero() });
+  const naturezas = new Map<string, SeparacaoVenda["porNatureza"][number]>();
+  const porUnidade = new Map<number, { global: Valores; mercantil: Valores; total: Valores }>();
+  for (const i of itens) {
+    const u = porUnidade.get(i.unidade) ?? { global: vazio(), mercantil: vazio(), total: vazio() };
+    porUnidade.set(i.unidade, u);
+    for (const alvo of [u.total, ...(i.venda === "GLOBAL" ? [u.global] : i.venda === "MERCANTIL" ? [u.mercantil] : [])]) {
+      alvo.receitaBruta = alvo.receitaBruta.plus(i.receitaBruta);
+      alvo.receitaLiquida = alvo.receitaLiquida.plus(i.receitaLiquida);
+    }
+    if (i.unidade === UNIDADE.OBRAS) continue;
+    const k = `${i.unidade}|${i.natureza}`;
+    const n = naturezas.get(k) ?? { unidade: i.unidade, natureza: i.natureza, global: vazio(), mercantil: vazio() };
+    naturezas.set(k, n);
+    const alvo = i.venda === "GLOBAL" ? n.global : i.venda === "MERCANTIL" ? n.mercantil : null;
+    if (alvo) {
+      alvo.receitaBruta = alvo.receitaBruta.plus(i.receitaBruta);
+      alvo.receitaLiquida = alvo.receitaLiquida.plus(i.receitaLiquida);
+    }
+  }
+  const impostos = [...porUnidade.entries()].map(([unidade, u]) => {
+    if (unidade === UNIDADE.OBRAS) {
+      const pis = u.total.receitaBruta.times(PIS_COFINS.GLOBAL);
+      return { unidade, pisCofinsGlobal: pis, pisCofinsMercantil: zero(), iss: u.total.receitaBruta.minus(u.total.receitaLiquida).minus(pis), icms: zero() };
+    }
+    const pisG = u.global.receitaBruta.times(PIS_COFINS.GLOBAL);
+    const pisM = u.mercantil.receitaBruta.times(PIS_COFINS.MERCANTIL);
+    return {
+      unidade,
+      pisCofinsGlobal: pisG,
+      pisCofinsMercantil: pisM,
+      iss: u.global.receitaBruta.minus(u.global.receitaLiquida).minus(pisG),
+      icms: u.mercantil.receitaBruta.minus(u.mercantil.receitaLiquida).minus(pisM),
+    };
+  });
+  return {
+    porNatureza: [...naturezas.values()].sort((a, b) => a.unidade - b.unidade || a.natureza.localeCompare(b.natureza)),
+    impostos: impostos.sort((a, b) => a.unidade - b.unidade),
+  };
 }

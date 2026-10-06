@@ -2,6 +2,13 @@ import { z } from "zod";
 
 export const NATUREZAS = ["PRE_FABRICADO", "FRETE", "DEVOLUCOES_INVENTARIOS", "MONTAGEM", "COMPLEMENTAR"] as const;
 export const COMPONENTES = ["BRUTA", "LIQUIDA", "VARIACAO_ESTOQUE"] as const;
+export const VENDAS = ["GLOBAL", "MERCANTIL"] as const;
+
+/**
+ * A venda (coluna VENDA da aba) separa as receitas da Matriz e da Filial em
+ * global e mercantil. Obras e a variação do estoque não se separam.
+ */
+export const pedeVenda = (unidade: number, componente: string) => (unidade === 1 || unidade === 2) && componente !== "VARIACAO_ESTOQUE";
 
 /**
  * As linhas da aba Receitas (Prévia) que um lançamento pode ajustar, por
@@ -36,7 +43,10 @@ export const lancamentoReceitaSchema = z
       .transform((v) => String(v).trim().replace(",", "."))
       .refine((v) => /^-?\d+(\.\d{1,2})?$/.test(v), "Valor com no máximo duas casas decimais"),
     observacao: z.string().trim().min(1, "Informe a observação").max(300),
+    venda: z.enum(VENDAS).nullish(),
   })
+  .refine((l) => !pedeVenda(l.unidade, l.componente) || !!l.venda, { message: "Informe se a venda é global ou mercantil.", path: ["venda"] })
+  .transform((l) => ({ ...l, venda: pedeVenda(l.unidade, l.componente) ? l.venda! : null }))
   .refine(
     (l) => LINHAS_POR_UNIDADE[l.unidade]?.some((x) => x.natureza === l.natureza && x.componentes.includes(l.componente)),
     { message: "Essa linha de receita não existe nessa unidade.", path: ["natureza"] },

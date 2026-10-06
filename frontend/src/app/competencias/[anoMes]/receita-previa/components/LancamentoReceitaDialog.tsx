@@ -21,13 +21,16 @@ import { textoParaDecimal } from "@/lib/numero";
 
 import {
   mensagemDeErro,
+  pedeVenda,
   receitaPreviaService,
   rotuloLancamento,
   ROTULO_UNIDADE,
+  ROTULO_VENDA,
   type Componente,
   type LancamentoReceita,
   type Natureza,
   type OpcoesLancamentoReceita,
+  type Venda,
 } from "../services/receitaPreviaService";
 
 type Props = {
@@ -46,6 +49,9 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
   const [linha, setLinha] = useState(editando ? `${editando.natureza}|${editando.componente}` : "PRE_FABRICADO|BRUTA");
   const [valor, setValor] = useState(editando ? editando.valor.replace(".", ",") : "");
   const [observacao, setObservacao] = useState(editando?.observacao ?? "");
+  const [venda, setVenda] = useState<Venda | "">(editando?.venda ?? "");
+  const componenteEscolhido = linha.split("|")[1] as Componente;
+  const comVenda = pedeVenda(Number(unidade), componenteEscolhido);
 
   const linhas = (opcoes?.linhasPorUnidade[unidade] ?? []).flatMap((l) =>
     l.componentes.map((c) => ({ chave: `${l.natureza}|${c}`, rotulo: rotuloLancamento(l.natureza, c) })),
@@ -54,7 +60,14 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
   const salvar = useMutation({
     mutationFn: () => {
       const [natureza, componente] = linha.split("|") as [Natureza, Componente];
-      const entrada = { unidade: Number(unidade), natureza, componente, valor: textoParaDecimal(valor), observacao };
+      const entrada = {
+        unidade: Number(unidade),
+        natureza,
+        componente,
+        valor: textoParaDecimal(valor),
+        observacao,
+        venda: pedeVenda(Number(unidade), componente) && venda ? venda : null,
+      };
       return editando
         ? receitaPreviaService.atualizarLancamento(editando.id, entrada)
         : receitaPreviaService.criarLancamento(anoMes, entrada);
@@ -101,15 +114,30 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
               <Input id="lr-valor" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="-1.234,56" className="rounded-sm border-gray-300 text-right tabular-nums" />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="lr-linha">Linha da receita</Label>
-            <select id="lr-linha" value={linha} onChange={(e) => setLinha(e.target.value)} className={selectClasse}>
-              {linhas.map((l) => (
-                <option key={l.chave} value={l.chave}>
-                  {l.rotulo}
-                </option>
-              ))}
-            </select>
+          <div className={`grid gap-4 ${comVenda ? "sm:grid-cols-[1fr_10rem]" : ""}`}>
+            <div className="space-y-1.5">
+              <Label htmlFor="lr-linha">Linha da receita</Label>
+              <select id="lr-linha" value={linha} onChange={(e) => setLinha(e.target.value)} className={selectClasse}>
+                {linhas.map((l) => (
+                  <option key={l.chave} value={l.chave}>
+                    {l.rotulo}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {comVenda ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="lr-venda">Venda</Label>
+                <select id="lr-venda" value={venda} onChange={(e) => setVenda(e.target.value as Venda | "")} className={selectClasse}>
+                  <option value="">Escolha…</option>
+                  {(["GLOBAL", "MERCANTIL"] as const).map((v) => (
+                    <option key={v} value={v}>
+                      {ROTULO_VENDA[v]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="lr-obs">Observação</Label>
@@ -129,7 +157,7 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
           <Button
             type="button"
             onClick={() => salvar.mutate()}
-            disabled={salvar.isPending || !valor.trim() || !observacao.trim()}
+            disabled={salvar.isPending || !valor.trim() || !observacao.trim() || (comVenda && !venda)}
             className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
           >
             {salvar.isPending ? "Salvando…" : "Salvar"}

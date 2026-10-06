@@ -1,11 +1,14 @@
 "use client";
 
+import { Fragment } from "react";
+
 import { moeda } from "../../utils/formatacao";
 import {
   ROTULO_LINHA,
   ROTULO_UNIDADE,
   type Natureza,
   type ReceitaNatureza,
+  type ReceitaPrevia,
 } from "../services/receitaPreviaService";
 
 /** Naturezas de cada unidade, na ordem da aba Receitas (Prévia). */
@@ -20,6 +23,8 @@ const soma = (xs: string[]) => xs.reduce((a, x) => a + Number(x), 0);
 type Props = {
   unidade: number;
   receitas: ReceitaNatureza[];
+  porVenda: ReceitaPrevia["porVenda"];
+  impostos: ReceitaPrevia["impostos"];
   onAbrir: (unidade: number, natureza: Natureza) => void;
 };
 
@@ -27,19 +32,24 @@ function Linha({
   rotulo,
   valor,
   destaque,
+  detalhe,
   base,
   onClick,
 }: {
   rotulo: string;
   valor: number;
   destaque?: boolean;
+  /** Linha de abertura (venda global ou mercantil, imposto): mais recuada e menor. */
+  detalhe?: boolean;
   base: number;
   onClick?: () => void;
 }) {
   const pct = base === 0 ? null : valor / base;
   return (
     <tr className={destaque ? "border-t border-gray-200 bg-gray-50" : "border-t border-gray-100"}>
-      <td className={`px-4 py-2 text-sm ${destaque ? "font-bold text-gray-900" : "pl-8 text-gray-700"}`}>
+      <td
+        className={`px-4 ${detalhe ? "py-1 pl-14 text-xs text-gray-500" : "py-2 text-sm"} ${destaque ? "font-bold text-gray-900" : detalhe ? "" : "pl-8 text-gray-700"}`}
+      >
         {onClick ? (
           <button type="button" onClick={onClick} className="text-left underline-offset-2 hover:underline">
             {rotulo}
@@ -48,8 +58,8 @@ function Linha({
           rotulo
         )}
       </td>
-      <td className={`px-4 py-2 text-right text-sm tabular-nums ${destaque ? "font-bold" : ""}`}>{moeda(valor)}</td>
-      <td className="px-4 py-2 text-right text-xs tabular-nums text-gray-500">
+      <td className={`px-4 text-right tabular-nums ${detalhe ? "py-1 text-xs text-gray-500" : "py-2 text-sm"} ${destaque ? "font-bold" : ""}`}>{moeda(valor)}</td>
+      <td className={`px-4 text-right text-xs tabular-nums text-gray-500 ${detalhe ? "py-1" : "py-2"}`}>
         {pct === null ? "—" : `${(pct * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}
       </td>
     </tr>
@@ -58,13 +68,39 @@ function Linha({
 
 /**
  * Um bloco da aba Receitas (Prévia): ROB, IRB e ROL da unidade, por natureza.
+ * Na Matriz e na Filial, cada receita se abre em venda global e mercantil, e
+ * os impostos em PIS/COFINS de cada venda, ISS e ICMS; em Obras, em PIS/COFINS
+ * e ISS. As aberturas só existem aqui: a DRE continua com os totais.
  * Os três blocos ficam um embaixo do outro, na largura das demais tabelas,
  * com as mesmas colunas de largura fixa (E7 do levantamento de layout), para
  * os valores se alinharem entre eles.
  */
-export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
+export function QuadroReceita({ unidade, receitas, porVenda, impostos, onAbrir }: Props) {
   const naturezas = NATUREZAS_DA_UNIDADE[unidade];
   const da = (n: Natureza) => receitas.find((r) => r.unidade === unidade && r.natureza === n);
+  const separa = unidade !== 3;
+  const vendaDe = (n: Natureza) => porVenda.find((v) => v.unidade === unidade && v.natureza === n);
+  const imp = impostos.find((i) => i.unidade === unidade);
+  const aberturaImpostos: Array<[string, string]> = separa
+    ? [
+        ["Impostos Operacionais (PIS/COFINS Global)", imp?.pisCofinsGlobal ?? "0"],
+        ["Impostos Operacionais (PIS/COFINS Mercantil)", imp?.pisCofinsMercantil ?? "0"],
+        ["Impostos Operacionais (ISS)", imp?.iss ?? "0"],
+        ["Impostos Operacionais (ICMS)", imp?.icms ?? "0"],
+      ]
+    : [
+        ["Impostos Operacionais (PIS/COFINS)", imp?.pisCofinsGlobal ?? "0"],
+        ["Impostos Operacionais (ISS)", imp?.iss ?? "0"],
+      ];
+  const vendas = (n: Natureza, campo: "receitaBruta" | "receitaLiquida", rotulo: string, base: number) =>
+    separa
+      ? ([
+          ["global", "Global"],
+          ["mercantil", "Mercantil"],
+        ] as const).map(([v, nome]) => (
+          <Linha key={`${campo}-${n}-${v}`} rotulo={`${rotulo} (${nome})`} valor={Number(vendaDe(n)?.[v][campo] ?? 0)} base={base} detalhe />
+        ))
+      : null;
   const rob = soma(naturezas.map((n) => da(n)?.receitaBruta ?? "0"));
   const rol = soma(naturezas.map((n) => da(n)?.receitaLiquida ?? "0"));
   const variacao = Number(da("PRE_FABRICADO")?.variacaoEstoque ?? 0);
@@ -90,12 +126,22 @@ export function QuadroReceita({ unidade, receitas, onAbrir }: Props) {
         <tbody>
           <Linha rotulo="RECEITA OPERACIONAL BRUTA (ROB)" valor={rob} base={rob} destaque />
           {naturezas.map((n) => (
-            <Linha key={`b-${n}`} rotulo={ROTULO_LINHA[n].bruta} valor={Number(da(n)?.receitaBruta ?? 0)} base={rob} onClick={() => onAbrir(unidade, n)} />
+            <Fragment key={`b-${n}`}>
+              <Linha rotulo={ROTULO_LINHA[n].bruta} valor={Number(da(n)?.receitaBruta ?? 0)} base={rob} onClick={() => onAbrir(unidade, n)} />
+              {vendas(n, "receitaBruta", ROTULO_LINHA[n].bruta, rob)}
+            </Fragment>
           ))}
           <Linha rotulo="IMPOSTOS SOBRE A RECEITA BRUTA (IRB)" valor={rob - rol} base={rob} destaque />
+          <Linha rotulo="Impostos Operacionais" valor={rob - rol} base={rob} />
+          {aberturaImpostos.map(([rotulo, valor]) => (
+            <Linha key={rotulo} rotulo={rotulo} valor={Number(valor)} base={rob} detalhe />
+          ))}
           <Linha rotulo="RECEITA OPERACIONAL LÍQUIDA (ROL)" valor={rol} base={rol} destaque />
           {naturezas.map((n) => (
-            <Linha key={`l-${n}`} rotulo={ROTULO_LINHA[n].liquida} valor={Number(da(n)?.receitaLiquida ?? 0)} base={rob} onClick={() => onAbrir(unidade, n)} />
+            <Fragment key={`l-${n}`}>
+              <Linha rotulo={ROTULO_LINHA[n].liquida} valor={Number(da(n)?.receitaLiquida ?? 0)} base={rob} onClick={() => onAbrir(unidade, n)} />
+              {vendas(n, "receitaLiquida", ROTULO_LINHA[n].liquida, rob)}
+            </Fragment>
           ))}
           {unidade === 2 ? (
             <>

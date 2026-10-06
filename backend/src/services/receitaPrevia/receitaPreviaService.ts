@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
-import { calcularReceita, totalizar, type DadosCalculo, type Registro } from "./calculoReceita.js";
+import { calcularReceita, separarPorVenda, totalizar, type DadosCalculo, type Registro } from "./calculoReceita.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraReceitaError extends Error {
@@ -59,7 +59,7 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     prisma.medicao.findMany({ where: daLista, select: { ...comuns, valorMedido: true } }),
     prisma.lancamentoReceita.findMany({
       where: daLista,
-      select: { id: true, natureza: true, componente: true, valor: true, observacao: true, unidadeNegocio: { select: { codigo: true } } },
+      select: { id: true, natureza: true, componente: true, valor: true, observacao: true, venda: true, unidadeNegocio: { select: { codigo: true } } },
     }),
   ]);
 
@@ -88,6 +88,7 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
       componente: l.componente,
       valor: l.valor,
       observacao: l.observacao,
+      venda: l.venda,
     })),
   };
 }
@@ -177,6 +178,22 @@ export const receitaPreviaService = {
         _count: true,
       }),
     ]);
+    // A separação em venda global e mercantil sai dos itens congelados com a
+    // apuração. Somada aqui, não com groupBy: o adaptador do SQLite trunca as
+    // somas (prisma/PORTABILIDADE.md).
+    const paraSeparar = await prisma.receitaPreviaItem.findMany({
+      where: { receitaPrevia: { competenciaId: competencia.id } },
+      select: { venda: true, receitaBruta: true, receitaLiquida: true, receitaPrevia: { select: { natureza: true, unidadeNegocio: { select: { codigo: true } } } } },
+    });
+    const separacao = separarPorVenda(
+      paraSeparar.map((i) => ({
+        unidade: i.receitaPrevia.unidadeNegocio.codigo,
+        natureza: i.receitaPrevia.natureza,
+        venda: i.venda,
+        receitaBruta: i.receitaBruta,
+        receitaLiquida: i.receitaLiquida,
+      })),
+    );
     const observacoes = await prisma.receitaPreviaItem.groupBy({
       by: ["observacao"],
       where: { receitaPrevia: { competenciaId: competencia.id }, origem: { not: "LANCAMENTO" }, observacao: { not: null } },
@@ -199,6 +216,19 @@ export const receitaPreviaService = {
           precos: r._count.precos,
         }))
         .sort((a, b) => a.unidade - b.unidade),
+      porVenda: separacao.porNatureza.map((n) => ({
+        unidade: n.unidade,
+        natureza: n.natureza,
+        global: { receitaBruta: n.global.receitaBruta.toFixed(2), receitaLiquida: n.global.receitaLiquida.toFixed(2) },
+        mercantil: { receitaBruta: n.mercantil.receitaBruta.toFixed(2), receitaLiquida: n.mercantil.receitaLiquida.toFixed(2) },
+      })),
+      impostos: separacao.impostos.map((i) => ({
+        unidade: i.unidade,
+        pisCofinsGlobal: i.pisCofinsGlobal.toFixed(2),
+        pisCofinsMercantil: i.pisCofinsMercantil.toFixed(2),
+        iss: i.iss.toFixed(2),
+        icms: i.icms.toFixed(2),
+      })),
       criterios: porCriterio.map((c) => ({ criterio: c.criterio, origem: c.origem, itens: c._count })),
       observacoes: observacoes.map((o) => ({ observacao: o.observacao!, itens: o._count })),
     };
@@ -233,6 +263,7 @@ export const receitaPreviaService = {
         receitaLiquida: dec(i.receitaLiquida),
         variacaoEstoque: dec(i.variacaoEstoque),
         observacao: i.observacao,
+        venda: i.venda,
       })),
       total,
       pagina,

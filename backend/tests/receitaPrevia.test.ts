@@ -6,7 +6,9 @@ import {
   calcularReceita,
   grupoDaEstaca,
   pecaDaEstaca,
+  separarPorVenda,
   totalizar,
+  vendaDaObra,
   type DadosCalculo,
   type PrecoVigente,
 } from "../src/services/receitaPrevia/calculoReceita.js";
@@ -124,5 +126,36 @@ describe("receita prévia", () => {
     const f = total(d, 2, "PRE_FABRICADO")!;
     assert.equal(f.variacaoEstoque.toFixed(2), "-50.00");
     assert.equal(f.receitaBruta.toFixed(2), "0.00");
+  });
+});
+
+describe("venda global e mercantil (aba Receitas (Prévia), 06/10/2026)", () => {
+  const D = (v: number | string) => new Prisma.Decimal(v);
+
+  it("a venda sai do código da obra; sem obra é mercantil, como a sucata sem projeto", () => {
+    assert.equal(vendaDaObra("G878501"), "GLOBAL");
+    assert.equal(vendaDaObra("L941900"), "MERCANTIL");
+    assert.equal(vendaDaObra(null), "MERCANTIL");
+  });
+
+  it("separa as receitas e abre os impostos em PIS/COFINS, ISS e ICMS", () => {
+    const r = separarPorVenda([
+      { unidade: 2, natureza: "PRE_FABRICADO", venda: "GLOBAL", receitaBruta: D(1000), receitaLiquida: D(900) },
+      { unidade: 2, natureza: "PRE_FABRICADO", venda: "MERCANTIL", receitaBruta: D(2000), receitaLiquida: D(1500) },
+      { unidade: 2, natureza: "FRETE", venda: "GLOBAL", receitaBruta: D(100), receitaLiquida: D(95) },
+      { unidade: 3, natureza: "MONTAGEM", venda: null, receitaBruta: D(1000), receitaLiquida: D(920) },
+    ]);
+    const pre = r.porNatureza.find((n) => n.unidade === 2 && n.natureza === "PRE_FABRICADO")!;
+    assert.equal(pre.global.receitaBruta.toString(), "1000");
+    assert.equal(pre.mercantil.receitaLiquida.toString(), "1500");
+    const filial = r.impostos.find((i) => i.unidade === 2)!;
+    assert.equal(filial.pisCofinsGlobal.toString(), "40.15"); // 1.100 × 3,65%
+    assert.equal(filial.pisCofinsMercantil.toString(), "185"); // 2.000 × 9,25%
+    assert.equal(filial.iss.toString(), "64.85"); // (1.100 − 995) − 40,15
+    assert.equal(filial.icms.toString(), "315"); // (2.000 − 1.500) − 185
+    const obras = r.impostos.find((i) => i.unidade === 3)!;
+    assert.equal(obras.pisCofinsGlobal.toString(), "36.5"); // ROB × 3,65%
+    assert.equal(obras.iss.toString(), "43.5"); // 80 − 36,50
+    assert.equal(r.porNatureza.some((n) => n.unidade === 3), false);
   });
 });

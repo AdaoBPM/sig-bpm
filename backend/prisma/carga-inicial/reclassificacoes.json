@@ -18,7 +18,7 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 159,
+    "LINHA": 160,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000002",
     "C_CUSTO": "DIRETORIA",
@@ -27,7 +27,7 @@
     "CONTA (ALOC.)": "4682"
   },
   {
-    "LINHA": 160,
+    "LINHA": 161,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000002",
     "C_CUSTO": "DIRETORIA",
@@ -36,76 +36,67 @@
     "CONTA (ALOC.)": "4682"
   },
   {
-    "LINHA": 187,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "111403",
-    "CONTA": "13o SALARIO - DIRETO",
-    "CONTA (ALOC.)": "2915"
-  },
-  {
     "LINHA": 188,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "111410",
-    "CONTA": "FERIAS - DIRETO",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "45592",
+    "CONTA": "INSS - INDIRETO",
+    "CONTA (ALOC.)": "3040"
   },
   {
     "LINHA": 189,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "111662",
-    "CONTA": "INSS - DIRETO",
-    "CONTA (ALOC.)": "3040"
+    "REDUZIDO_CONTA": "45586",
+    "CONTA": "FGTS - INDIRETO",
+    "CONTA (ALOC.)": "3079"
   },
   {
     "LINHA": 190,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "111679",
-    "CONTA": "FGTS - DIRETO",
-    "CONTA (ALOC.)": "3079"
+    "REDUZIDO_CONTA": "45570",
+    "CONTA": "FERIAS - INDIRETO",
+    "CONTA (ALOC.)": "2884"
   },
   {
     "LINHA": 191,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "2861",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "45534",
+    "CONTA": "13O. SALARIO - INDIRETO",
+    "CONTA (ALOC.)": "2915"
   },
   {
     "LINHA": 192,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "2891",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "2915"
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
   },
   {
     "LINHA": 193,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "3027",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
   },
   {
     "LINHA": 194,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "3056",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
   },
   {
     "LINHA": 195,
@@ -121,71 +112,71 @@
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "3056",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
   },
   {
     "LINHA": 197,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
+    "REDUZIDO_CONTA": "3027",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
   },
   {
     "LINHA": 198,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
+    "REDUZIDO_CONTA": "2891",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "2915"
   },
   {
     "LINHA": 199,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45534",
-    "CONTA": "13O. SALARIO - INDIRETO",
-    "CONTA (ALOC.)": "2915"
+    "REDUZIDO_CONTA": "2861",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
   },
   {
     "LINHA": 200,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45570",
-    "CONTA": "FERIAS - INDIRETO",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "111679",
+    "CONTA": "FGTS - DIRETO",
+    "CONTA (ALOC.)": "3079"
   },
   {
     "LINHA": 201,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45586",
-    "CONTA": "FGTS - INDIRETO",
-    "CONTA (ALOC.)": "3079"
+    "REDUZIDO_CONTA": "111662",
+    "CONTA": "INSS - DIRETO",
+    "CONTA (ALOC.)": "3040"
   },
   {
     "LINHA": 202,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45592",
-    "CONTA": "INSS - INDIRETO",
-    "CONTA (ALOC.)": "3040"
+    "REDUZIDO_CONTA": "111410",
+    "CONTA": "FERIAS - DIRETO",
+    "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 204,
+    "LINHA": 203,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "113840",
-    "CONTA": "13o SALARIO",
+    "REDUZIDO_CONTA": "111403",
+    "CONTA": "13o SALARIO - DIRETO",
     "CONTA (ALOC.)": "2915"
   },
   {
@@ -193,9 +184,9 @@
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "113879",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "113891",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
   },
   {
     "LINHA": 206,
@@ -211,27 +202,27 @@
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "113891",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
+    "REDUZIDO_CONTA": "113879",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 209,
+    "LINHA": 208,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "2878",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "113840",
+    "CONTA": "13o SALARIO",
+    "CONTA (ALOC.)": "2915"
   },
   {
     "LINHA": 210,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "2909",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "2915"
+    "REDUZIDO_CONTA": "3062",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
   },
   {
     "LINHA": 211,
@@ -247,12 +238,21 @@
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "3062",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
+    "REDUZIDO_CONTA": "2909",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "2915"
   },
   {
-    "LINHA": 276,
+    "LINHA": 213,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "2878",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
+  },
+  {
+    "LINHA": 277,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000005",
     "C_CUSTO": "FATURAMENTO (CRI)",
@@ -261,7 +261,7 @@
     "CONTA (ALOC.)": "4676"
   },
   {
-    "LINHA": 277,
+    "LINHA": 278,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000005",
     "C_CUSTO": "FATURAMENTO (CRI)",
@@ -270,40 +270,31 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 325,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.01.00000007",
-    "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "111165",
-    "CONTA": "UNIFORMES E MATERIAIS DE SEGURANCA",
-    "CONTA (ALOC.)": "4676"
-  },
-  {
     "LINHA": 326,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "45296",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "2298"
+    "REDUZIDO_CONTA": "45422",
+    "CONTA": "REFEITORIO",
+    "CONTA (ALOC.)": "4558"
   },
   {
     "LINHA": 327,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "2855"
+    "REDUZIDO_CONTA": "45416",
+    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
+    "CONTA (ALOC.)": "3197"
   },
   {
     "LINHA": 328,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
   },
   {
     "LINHA": 329,
@@ -319,45 +310,45 @@
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
   },
   {
     "LINHA": 331,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "45416",
-    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
-    "CONTA (ALOC.)": "3197"
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "2855"
   },
   {
     "LINHA": 332,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
-    "REDUZIDO_CONTA": "45422",
-    "CONTA": "REFEITORIO",
-    "CONTA (ALOC.)": "4558"
+    "REDUZIDO_CONTA": "45296",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 369,
+    "LINHA": 333,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.01.00000007",
+    "C_CUSTO": "SEGURANCA (CRI)",
+    "REDUZIDO_CONTA": "111165",
+    "CONTA": "UNIFORMES E MATERIAIS DE SEGURANCA",
+    "CONTA (ALOC.)": "4676"
+  },
+  {
+    "LINHA": 370,
     "FILIAL": "1",
     "COD_CUSTO": "1.01.00000010",
     "C_CUSTO": "CONTABILIDADE",
     "REDUZIDO_CONTA": "3056",
     "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
     "CONTA (ALOC.)": "3079"
-  },
-  {
-    "LINHA": 376,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.02.00000001",
-    "C_CUSTO": "ORCAMENTOS",
-    "REDUZIDO_CONTA": "2951",
-    "CONTA": "AVISO PREVIO INDENIZADO",
-    "CONTA (ALOC.)": "2967"
   },
   {
     "LINHA": 377,
@@ -369,7 +360,16 @@
     "CONTA (ALOC.)": "3821"
   },
   {
-    "LINHA": 403,
+    "LINHA": 378,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.02.00000001",
+    "C_CUSTO": "ORCAMENTOS",
+    "REDUZIDO_CONTA": "2951",
+    "CONTA": "AVISO PREVIO INDENIZADO",
+    "CONTA (ALOC.)": "2967"
+  },
+  {
+    "LINHA": 404,
     "FILIAL": "1",
     "COD_CUSTO": "1.02.00000001",
     "C_CUSTO": "ORCAMENTOS",
@@ -378,7 +378,7 @@
     "CONTA (ALOC.)": "4937"
   },
   {
-    "LINHA": 464,
+    "LINHA": 445,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000001",
     "C_CUSTO": "ESTRUTURA",
@@ -387,7 +387,7 @@
     "CONTA (ALOC.)": "2832"
   },
   {
-    "LINHA": 474,
+    "LINHA": 476,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000001",
     "C_CUSTO": "ESTRUTURA",
@@ -396,7 +396,7 @@
     "CONTA (ALOC.)": "3056"
   },
   {
-    "LINHA": 553,
+    "LINHA": 555,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000005",
     "C_CUSTO": "ACABAMENTO",
@@ -405,7 +405,7 @@
     "CONTA (ALOC.)": "44871"
   },
   {
-    "LINHA": 554,
+    "LINHA": 556,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000005",
     "C_CUSTO": "ACABAMENTO",
@@ -414,61 +414,7 @@
     "CONTA (ALOC.)": "44888"
   },
   {
-    "LINHA": 571,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000006",
-    "C_CUSTO": "LABORATORIO (CRI)",
-    "REDUZIDO_CONTA": "45296",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "50162"
-  },
-  {
-    "LINHA": 572,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000006",
-    "C_CUSTO": "LABORATORIO (CRI)",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "44813"
-  },
-  {
-    "LINHA": 573,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000006",
-    "C_CUSTO": "LABORATORIO (CRI)",
-    "REDUZIDO_CONTA": "45327",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "44836"
-  },
-  {
-    "LINHA": 575,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000006",
-    "C_CUSTO": "LABORATORIO (CRI)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "44871"
-  },
-  {
-    "LINHA": 576,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000006",
-    "C_CUSTO": "LABORATORIO (CRI)",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "44888"
-  },
-  {
-    "LINHA": 577,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000006",
-    "C_CUSTO": "LABORATORIO (CRI)",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "44894"
-  },
-  {
-    "LINHA": 578,
+    "LINHA": 562,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000006",
     "C_CUSTO": "LABORATORIO (CRI)",
@@ -477,16 +423,61 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 621,
+    "LINHA": 563,
     "FILIAL": "1",
-    "COD_CUSTO": "1.11.00000008",
-    "C_CUSTO": "EXPEDICAO (CRI)",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "2832"
+    "COD_CUSTO": "1.11.00000006",
+    "C_CUSTO": "LABORATORIO (CRI)",
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "44894"
   },
   {
-    "LINHA": 623,
+    "LINHA": 564,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.11.00000006",
+    "C_CUSTO": "LABORATORIO (CRI)",
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "44888"
+  },
+  {
+    "LINHA": 565,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.11.00000006",
+    "C_CUSTO": "LABORATORIO (CRI)",
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "44871"
+  },
+  {
+    "LINHA": 567,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.11.00000006",
+    "C_CUSTO": "LABORATORIO (CRI)",
+    "REDUZIDO_CONTA": "45327",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "44836"
+  },
+  {
+    "LINHA": 568,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.11.00000006",
+    "C_CUSTO": "LABORATORIO (CRI)",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "44813"
+  },
+  {
+    "LINHA": 569,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.11.00000006",
+    "C_CUSTO": "LABORATORIO (CRI)",
+    "REDUZIDO_CONTA": "45296",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "50162"
+  },
+  {
+    "LINHA": 615,
     "FILIAL": "1",
     "COD_CUSTO": "1.11.00000008",
     "C_CUSTO": "EXPEDICAO (CRI)",
@@ -495,25 +486,16 @@
     "CONTA (ALOC.)": "3027"
   },
   {
-    "LINHA": 672,
+    "LINHA": 617,
     "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000001",
-    "C_CUSTO": "PCP (CRI)",
-    "REDUZIDO_CONTA": "2832",
+    "COD_CUSTO": "1.11.00000008",
+    "C_CUSTO": "EXPEDICAO (CRI)",
+    "REDUZIDO_CONTA": "45304",
     "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "45304"
+    "CONTA (ALOC.)": "2832"
   },
   {
-    "LINHA": 673,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000001",
-    "C_CUSTO": "PCP (CRI)",
-    "REDUZIDO_CONTA": "2861",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "45356"
-  },
-  {
-    "LINHA": 688,
+    "LINHA": 665,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000001",
     "C_CUSTO": "PCP (CRI)",
@@ -522,7 +504,25 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 692,
+    "LINHA": 681,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000001",
+    "C_CUSTO": "PCP (CRI)",
+    "REDUZIDO_CONTA": "2861",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "45356"
+  },
+  {
+    "LINHA": 682,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000001",
+    "C_CUSTO": "PCP (CRI)",
+    "REDUZIDO_CONTA": "2832",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "45304"
+  },
+  {
+    "LINHA": 695,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000001",
     "C_CUSTO": "PCP (CRI)",
@@ -531,7 +531,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 704,
+    "LINHA": 713,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000002",
     "C_CUSTO": "COMPRAS",
@@ -540,7 +540,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 721,
+    "LINHA": 724,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000002",
     "C_CUSTO": "COMPRAS",
@@ -549,25 +549,7 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 754,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000004",
-    "C_CUSTO": "ALMOXARIFADO (CRI)",
-    "REDUZIDO_CONTA": "2891",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "45327"
-  },
-  {
-    "LINHA": 756,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000004",
-    "C_CUSTO": "ALMOXARIFADO (CRI)",
-    "REDUZIDO_CONTA": "4481",
-    "CONTA": "COMBUSTIVEIS E LUBRIFICANTES",
-    "CONTA (ALOC.)": "111432"
-  },
-  {
-    "LINHA": 769,
+    "LINHA": 752,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000004",
     "C_CUSTO": "ALMOXARIFADO (CRI)",
@@ -576,7 +558,25 @@
     "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 774,
+    "LINHA": 765,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000004",
+    "C_CUSTO": "ALMOXARIFADO (CRI)",
+    "REDUZIDO_CONTA": "4481",
+    "CONTA": "COMBUSTIVEIS E LUBRIFICANTES",
+    "CONTA (ALOC.)": "111432"
+  },
+  {
+    "LINHA": 767,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000004",
+    "C_CUSTO": "ALMOXARIFADO (CRI)",
+    "REDUZIDO_CONTA": "2891",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "45327"
+  },
+  {
+    "LINHA": 778,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000004",
     "C_CUSTO": "ALMOXARIFADO (CRI)",
@@ -585,7 +585,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 792,
+    "LINHA": 796,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000006",
     "C_CUSTO": "GESTAO OPERACIONAL",
@@ -594,16 +594,7 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 805,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000007",
-    "C_CUSTO": "MANUTENCAO (CRI)",
-    "REDUZIDO_CONTA": "2832",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "45304"
-  },
-  {
-    "LINHA": 806,
+    "LINHA": 815,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000007",
     "C_CUSTO": "MANUTENCAO (CRI)",
@@ -612,43 +603,16 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 844,
+    "LINHA": 816,
     "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "111410",
-    "CONTA": "FERIAS - DIRETO",
-    "CONTA (ALOC.)": "113879"
+    "COD_CUSTO": "1.12.00000007",
+    "C_CUSTO": "MANUTENCAO (CRI)",
+    "REDUZIDO_CONTA": "2832",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 845,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "122795",
-    "CONTA": "SERVICOS DE PROJETOS DE TERCEIROS",
-    "CONTA (ALOC.)": "113974"
-  },
-  {
-    "LINHA": 846,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "2951",
-    "CONTA": "AVISO PREVIO INDENIZADO",
-    "CONTA (ALOC.)": "113856"
-  },
-  {
-    "LINHA": 847,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "113891"
-  },
-  {
-    "LINHA": 848,
+    "LINHA": 849,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -657,16 +621,43 @@
     "CONTA (ALOC.)": "114034"
   },
   {
-    "LINHA": 874,
+    "LINHA": 850,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "4676",
-    "CONTA": "UNIFORMES/MATERIAS DE SEGURANCA",
-    "CONTA (ALOC.)": "968256"
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "113891"
   },
   {
-    "LINHA": 875,
+    "LINHA": 851,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "2951",
+    "CONTA": "AVISO PREVIO INDENIZADO",
+    "CONTA (ALOC.)": "113856"
+  },
+  {
+    "LINHA": 852,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "122795",
+    "CONTA": "SERVICOS DE PROJETOS DE TERCEIROS",
+    "CONTA (ALOC.)": "113974"
+  },
+  {
+    "LINHA": 853,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "111410",
+    "CONTA": "FERIAS - DIRETO",
+    "CONTA (ALOC.)": "113879"
+  },
+  {
+    "LINHA": 880,
     "FILIAL": "1",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -675,88 +666,16 @@
     "CONTA (ALOC.)": "114034"
   },
   {
-    "LINHA": 878,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45273",
-    "CONTA": "ADICIONAIS DE INSALUBRIDADE/PERICULOSIDADE",
-    "CONTA (ALOC.)": "968023"
-  },
-  {
-    "LINHA": 879,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45296",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "968025"
-  },
-  {
-    "LINHA": 880,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "968026"
-  },
-  {
     "LINHA": 881,
     "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45327",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "968028"
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "4676",
+    "CONTA": "UNIFORMES/MATERIAS DE SEGURANCA",
+    "CONTA (ALOC.)": "968256"
   },
   {
-    "LINHA": 882,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "968031"
-  },
-  {
-    "LINHA": 883,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "968032"
-  },
-  {
-    "LINHA": 884,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "968033"
-  },
-  {
-    "LINHA": 885,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45400",
-    "CONTA": "VALES TRANSPORTE",
-    "CONTA (ALOC.)": "968039"
-  },
-  {
-    "LINHA": 886,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.13.00000001",
-    "C_CUSTO": "METALURGIA",
-    "REDUZIDO_CONTA": "45416",
-    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
-    "CONTA (ALOC.)": "968035"
-  },
-  {
-    "LINHA": 887,
+    "LINHA": 910,
     "FILIAL": "1",
     "COD_CUSTO": "1.13.00000001",
     "C_CUSTO": "METALURGIA",
@@ -765,25 +684,88 @@
     "CONTA (ALOC.)": "968037"
   },
   {
-    "LINHA": 935,
+    "LINHA": 911,
     "FILIAL": "1",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "111136",
-    "CONTA": "SOFTWARES",
-    "CONTA (ALOC.)": "46829"
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45416",
+    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
+    "CONTA (ALOC.)": "968035"
   },
   {
-    "LINHA": 936,
+    "LINHA": 912,
     "FILIAL": "1",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "111142",
-    "CONTA": "MATERIAL DE EXPEDIENTE",
-    "CONTA (ALOC.)": "4529"
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45400",
+    "CONTA": "VALES TRANSPORTE",
+    "CONTA (ALOC.)": "968039"
   },
   {
-    "LINHA": 937,
+    "LINHA": 913,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "968033"
+  },
+  {
+    "LINHA": 914,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "968032"
+  },
+  {
+    "LINHA": 915,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "968031"
+  },
+  {
+    "LINHA": 916,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45327",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "968028"
+  },
+  {
+    "LINHA": 917,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "968026"
+  },
+  {
+    "LINHA": 918,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45296",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "968025"
+  },
+  {
+    "LINHA": 919,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.13.00000001",
+    "C_CUSTO": "METALURGIA",
+    "REDUZIDO_CONTA": "45273",
+    "CONTA": "ADICIONAIS DE INSALUBRIDADE/PERICULOSIDADE",
+    "CONTA (ALOC.)": "968023"
+  },
+  {
+    "LINHA": 943,
     "FILIAL": "1",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -792,7 +774,25 @@
     "CONTA (ALOC.)": "4363"
   },
   {
-    "LINHA": 974,
+    "LINHA": 944,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "111142",
+    "CONTA": "MATERIAL DE EXPEDIENTE",
+    "CONTA (ALOC.)": "4529"
+  },
+  {
+    "LINHA": 945,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "111136",
+    "CONTA": "SOFTWARES",
+    "CONTA (ALOC.)": "46829"
+  },
+  {
+    "LINHA": 962,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000001",
     "C_CUSTO": "SUPORTE INTERNO",
@@ -801,7 +801,16 @@
     "CONTA (ALOC.)": "968298"
   },
   {
-    "LINHA": 977,
+    "LINHA": 985,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000001",
+    "C_CUSTO": "SUPORTE INTERNO",
+    "REDUZIDO_CONTA": "4943",
+    "CONTA": "DESPESAS DIVERSAS",
+    "CONTA (ALOC.)": "4423"
+  },
+  {
+    "LINHA": 986,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000001",
     "C_CUSTO": "SUPORTE INTERNO",
@@ -810,124 +819,16 @@
     "CONTA (ALOC.)": "45646"
   },
   {
-    "LINHA": 978,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000001",
-    "C_CUSTO": "SUPORTE INTERNO",
-    "REDUZIDO_CONTA": "4943",
-    "CONTA": "DESPESAS DIVERSAS",
-    "CONTA (ALOC.)": "4423"
-  },
-  {
-    "LINHA": 981,
+    "LINHA": 992,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111395",
-    "CONTA": "SALARIOS - DIRETO",
-    "CONTA (ALOC.)": "45511"
-  },
-  {
-    "LINHA": 982,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111403",
-    "CONTA": "13o SALARIO - DIRETO",
-    "CONTA (ALOC.)": "45534"
-  },
-  {
-    "LINHA": 983,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111410",
-    "CONTA": "FERIAS - DIRETO",
-    "CONTA (ALOC.)": "45570"
-  },
-  {
-    "LINHA": 984,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111449",
-    "CONTA": "ASSISTENCIA MEDICA - DIRETO",
-    "CONTA (ALOC.)": "45617"
-  },
-  {
-    "LINHA": 985,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111455",
-    "CONTA": "CESTA BASICA - DIRETO",
-    "CONTA (ALOC.)": "45623"
-  },
-  {
-    "LINHA": 986,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111461",
-    "CONTA": "REFEICOES - DIRETO",
-    "CONTA (ALOC.)": "45557"
-  },
-  {
-    "LINHA": 987,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111640",
-    "CONTA": "TELEFONE/INTERNET - EXTERNO",
-    "CONTA (ALOC.)": "4138"
-  },
-  {
-    "LINHA": 988,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111656",
-    "CONTA": "SEGURO DE VIDA - DIRETO",
-    "CONTA (ALOC.)": "45630"
-  },
-  {
-    "LINHA": 989,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111662",
-    "CONTA": "INSS - DIRETO",
-    "CONTA (ALOC.)": "45592"
-  },
-  {
-    "LINHA": 990,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "111679",
-    "CONTA": "FGTS - DIRETO",
-    "CONTA (ALOC.)": "45586"
-  },
-  {
-    "LINHA": 993,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "3719",
-    "CONTA": "DEPRECIACAO DE VEICULOS",
-    "CONTA (ALOC.)": "45675"
-  },
-  {
-    "LINHA": 996,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000002",
-    "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "45304",
+    "REDUZIDO_CONTA": "968026",
     "CONTA": "SALARIOS",
     "CONTA (ALOC.)": "45511"
   },
   {
-    "LINHA": 1006,
+    "LINHA": 998,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -936,25 +837,115 @@
     "CONTA (ALOC.)": "45630"
   },
   {
-    "LINHA": 1012,
+    "LINHA": 1008,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "968026",
+    "REDUZIDO_CONTA": "45304",
     "CONTA": "SALARIOS",
     "CONTA (ALOC.)": "45511"
+  },
+  {
+    "LINHA": 1011,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "3719",
+    "CONTA": "DEPRECIACAO DE VEICULOS",
+    "CONTA (ALOC.)": "45675"
+  },
+  {
+    "LINHA": 1014,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111679",
+    "CONTA": "FGTS - DIRETO",
+    "CONTA (ALOC.)": "45586"
+  },
+  {
+    "LINHA": 1015,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111662",
+    "CONTA": "INSS - DIRETO",
+    "CONTA (ALOC.)": "45592"
+  },
+  {
+    "LINHA": 1016,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111656",
+    "CONTA": "SEGURO DE VIDA - DIRETO",
+    "CONTA (ALOC.)": "45630"
   },
   {
     "LINHA": 1017,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
-    "REDUZIDO_CONTA": "19063",
-    "CONTA": "OUTRAS MULTAS",
-    "CONTA (ALOC.)": "4423"
+    "REDUZIDO_CONTA": "111640",
+    "CONTA": "TELEFONE/INTERNET - EXTERNO",
+    "CONTA (ALOC.)": "4138"
   },
   {
     "LINHA": 1018,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111461",
+    "CONTA": "REFEICOES - DIRETO",
+    "CONTA (ALOC.)": "45557"
+  },
+  {
+    "LINHA": 1019,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111455",
+    "CONTA": "CESTA BASICA - DIRETO",
+    "CONTA (ALOC.)": "45623"
+  },
+  {
+    "LINHA": 1020,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111449",
+    "CONTA": "ASSISTENCIA MEDICA - DIRETO",
+    "CONTA (ALOC.)": "45617"
+  },
+  {
+    "LINHA": 1021,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111410",
+    "CONTA": "FERIAS - DIRETO",
+    "CONTA (ALOC.)": "45570"
+  },
+  {
+    "LINHA": 1022,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111403",
+    "CONTA": "13o SALARIO - DIRETO",
+    "CONTA (ALOC.)": "45534"
+  },
+  {
+    "LINHA": 1023,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "111395",
+    "CONTA": "SALARIOS - DIRETO",
+    "CONTA (ALOC.)": "45511"
+  },
+  {
+    "LINHA": 1025,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000002",
     "C_CUSTO": "ADM. DE OBRAS",
@@ -963,16 +954,16 @@
     "CONTA (ALOC.)": "45570"
   },
   {
-    "LINHA": 1025,
+    "LINHA": 1026,
     "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000003",
-    "C_CUSTO": "LOGISTICA",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "50067"
+    "COD_CUSTO": "1.16.00000002",
+    "C_CUSTO": "ADM. DE OBRAS",
+    "REDUZIDO_CONTA": "19063",
+    "CONTA": "OUTRAS MULTAS",
+    "CONTA (ALOC.)": "4423"
   },
   {
-    "LINHA": 1042,
+    "LINHA": 1034,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -981,7 +972,16 @@
     "CONTA (ALOC.)": "50067"
   },
   {
-    "LINHA": 1046,
+    "LINHA": 1051,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000003",
+    "C_CUSTO": "LOGISTICA",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "50067"
+  },
+  {
+    "LINHA": 1054,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -990,52 +990,7 @@
     "CONTA (ALOC.)": "50067"
   },
   {
-    "LINHA": 1047,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000003",
-    "C_CUSTO": "LOGISTICA",
-    "REDUZIDO_CONTA": "2884",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "50104"
-  },
-  {
-    "LINHA": 1048,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000003",
-    "C_CUSTO": "LOGISTICA",
-    "REDUZIDO_CONTA": "2915",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "50073"
-  },
-  {
-    "LINHA": 1049,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000003",
-    "C_CUSTO": "LOGISTICA",
-    "REDUZIDO_CONTA": "3040",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "50127"
-  },
-  {
-    "LINHA": 1050,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000003",
-    "C_CUSTO": "LOGISTICA",
-    "REDUZIDO_CONTA": "3079",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "50111"
-  },
-  {
-    "LINHA": 1051,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000003",
-    "C_CUSTO": "LOGISTICA",
-    "REDUZIDO_CONTA": "4558",
-    "CONTA": "REFEITORIO",
-    "CONTA (ALOC.)": "50156"
-  },
-  {
-    "LINHA": 1052,
+    "LINHA": 1055,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -1044,31 +999,67 @@
     "CONTA (ALOC.)": "50274"
   },
   {
+    "LINHA": 1056,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000003",
+    "C_CUSTO": "LOGISTICA",
+    "REDUZIDO_CONTA": "4558",
+    "CONTA": "REFEITORIO",
+    "CONTA (ALOC.)": "50156"
+  },
+  {
+    "LINHA": 1057,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000003",
+    "C_CUSTO": "LOGISTICA",
+    "REDUZIDO_CONTA": "3079",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "50111"
+  },
+  {
+    "LINHA": 1058,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000003",
+    "C_CUSTO": "LOGISTICA",
+    "REDUZIDO_CONTA": "3040",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "50127"
+  },
+  {
+    "LINHA": 1059,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000003",
+    "C_CUSTO": "LOGISTICA",
+    "REDUZIDO_CONTA": "2915",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "50073"
+  },
+  {
+    "LINHA": 1060,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000003",
+    "C_CUSTO": "LOGISTICA",
+    "REDUZIDO_CONTA": "2884",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "50104"
+  },
+  {
+    "LINHA": 1063,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000004",
+    "C_CUSTO": "GUINDASTEIROS",
+    "REDUZIDO_CONTA": "968298",
+    "CONTA": "SERVICOS TERCEIROS INDIRETO - PJ",
+    "CONTA (ALOC.)": "968299"
+  },
+  {
     "LINHA": 1065,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
-    "REDUZIDO_CONTA": "3620",
-    "CONTA": "DEPRECIACAO MOV. MAQ. E EQUIP. INDUSTRIAIS",
-    "CONTA (ALOC.)": "45698"
-  },
-  {
-    "LINHA": 1066,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000004",
-    "C_CUSTO": "GUINDASTEIROS",
-    "REDUZIDO_CONTA": "4015",
-    "CONTA": "VIAGENS/ESTADIAS",
-    "CONTA (ALOC.)": "4015.D"
-  },
-  {
-    "LINHA": 1067,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000004",
-    "C_CUSTO": "GUINDASTEIROS",
-    "REDUZIDO_CONTA": "4423",
-    "CONTA": "OUTROS CUSTOS DIVERSOS",
-    "CONTA (ALOC.)": "4423.D"
+    "REDUZIDO_CONTA": "45787",
+    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
+    "CONTA (ALOC.)": "45787.D"
   },
   {
     "LINHA": 1068,
@@ -1080,25 +1071,34 @@
     "CONTA (ALOC.)": "111395"
   },
   {
+    "LINHA": 1069,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000004",
+    "C_CUSTO": "GUINDASTEIROS",
+    "REDUZIDO_CONTA": "4423",
+    "CONTA": "OUTROS CUSTOS DIVERSOS",
+    "CONTA (ALOC.)": "4423.D"
+  },
+  {
+    "LINHA": 1070,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.16.00000004",
+    "C_CUSTO": "GUINDASTEIROS",
+    "REDUZIDO_CONTA": "4015",
+    "CONTA": "VIAGENS/ESTADIAS",
+    "CONTA (ALOC.)": "4015.D"
+  },
+  {
     "LINHA": 1071,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000004",
     "C_CUSTO": "GUINDASTEIROS",
-    "REDUZIDO_CONTA": "45787",
-    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
-    "CONTA (ALOC.)": "45787.D"
+    "REDUZIDO_CONTA": "3620",
+    "CONTA": "DEPRECIACAO MOV. MAQ. E EQUIP. INDUSTRIAIS",
+    "CONTA (ALOC.)": "45698"
   },
   {
-    "LINHA": 1073,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.16.00000004",
-    "C_CUSTO": "GUINDASTEIROS",
-    "REDUZIDO_CONTA": "968298",
-    "CONTA": "SERVICOS TERCEIROS INDIRETO - PJ",
-    "CONTA (ALOC.)": "968299"
-  },
-  {
-    "LINHA": 1075,
+    "LINHA": 1084,
     "FILIAL": "1",
     "COD_CUSTO": "1.16.00000005",
     "C_CUSTO": "EQUIPE DE OBRAS",
@@ -1107,25 +1107,16 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1078,
+    "LINHA": 1086,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
-    "REDUZIDO_CONTA": "4529",
-    "CONTA": "MATERIAIS DE EXPEDIENTE",
-    "CONTA (ALOC.)": "111142"
+    "REDUZIDO_CONTA": "4943",
+    "CONTA": "DESPESAS DIVERSAS",
+    "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 1079,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.17.00000002",
-    "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
-    "REDUZIDO_CONTA": "4618",
-    "CONTA": "MANUTENCAO DE BENS E EQUIPAMENTOS",
-    "CONTA (ALOC.)": "111120"
-  },
-  {
-    "LINHA": 1080,
+    "LINHA": 1087,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -1134,16 +1125,25 @@
     "CONTA (ALOC.)": "111165"
   },
   {
-    "LINHA": 1081,
+    "LINHA": 1088,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
-    "REDUZIDO_CONTA": "4943",
-    "CONTA": "DESPESAS DIVERSAS",
-    "CONTA (ALOC.)": "111171"
+    "REDUZIDO_CONTA": "4618",
+    "CONTA": "MANUTENCAO DE BENS E EQUIPAMENTOS",
+    "CONTA (ALOC.)": "111120"
   },
   {
-    "LINHA": 1100,
+    "LINHA": 1089,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.17.00000002",
+    "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
+    "REDUZIDO_CONTA": "4529",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "111142"
+  },
+  {
+    "LINHA": 1108,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000026",
     "C_CUSTO": "MAQUINA JATO DE AREIA - MOD. 280",
@@ -1152,7 +1152,7 @@
     "CONTA (ALOC.)": "4831"
   },
   {
-    "LINHA": 1117,
+    "LINHA": 1126,
     "FILIAL": "1",
     "COD_CUSTO": "1.17.00000044",
     "C_CUSTO": "PONTE 5 (SETOR ARMADURA)",
@@ -1161,16 +1161,16 @@
     "CONTA (ALOC.)": "4506"
   },
   {
-    "LINHA": 1143,
+    "LINHA": 1151,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
-    "REDUZIDO_CONTA": "112294",
-    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
-    "CONTA (ALOC.)": "112294.D"
+    "REDUZIDO_CONTA": "45764",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "45764.D"
   },
   {
-    "LINHA": 1144,
+    "LINHA": 1155,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -1179,7 +1179,16 @@
     "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1149,
+    "LINHA": 1156,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000001",
+    "C_CUSTO": "CAMINHAO MUNCK N-103",
+    "REDUZIDO_CONTA": "112294",
+    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
+    "CONTA (ALOC.)": "112294.D"
+  },
+  {
+    "LINHA": 1158,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -1188,16 +1197,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1162,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000030",
-    "C_CUSTO": "GUINDASTE CLARCK 1",
-    "REDUZIDO_CONTA": "111410",
-    "CONTA": "FERIAS - DIRETO",
-    "CONTA (ALOC.)": "2861"
-  },
-  {
-    "LINHA": 1164,
+    "LINHA": 1171,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000030",
     "C_CUSTO": "GUINDASTE CLARCK 1",
@@ -1206,16 +1206,25 @@
     "CONTA (ALOC.)": "3027"
   },
   {
-    "LINHA": 1171,
+    "LINHA": 1173,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000030",
+    "C_CUSTO": "GUINDASTE CLARCK 1",
+    "REDUZIDO_CONTA": "111410",
+    "CONTA": "FERIAS - DIRETO",
+    "CONTA (ALOC.)": "2861"
+  },
+  {
+    "LINHA": 1180,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",
-    "REDUZIDO_CONTA": "112294",
-    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
-    "CONTA (ALOC.)": "112294.D"
+    "REDUZIDO_CONTA": "45787",
+    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
+    "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1175,
+    "LINHA": 1181,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",
@@ -1224,98 +1233,62 @@
     "CONTA (ALOC.)": "45771.D"
   },
   {
-    "LINHA": 1176,
+    "LINHA": 1185,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",
-    "REDUZIDO_CONTA": "45787",
-    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
-    "CONTA (ALOC.)": "45787.D"
-  },
-  {
-    "LINHA": 1178,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000033",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
     "REDUZIDO_CONTA": "112294",
     "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
     "CONTA (ALOC.)": "112294.D"
-  },
-  {
-    "LINHA": 1180,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000033",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "4015",
-    "CONTA": "VIAGENS/ESTADIAS",
-    "CONTA (ALOC.)": "4015.D"
-  },
-  {
-    "LINHA": 1181,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000033",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "4423",
-    "CONTA": "OUTROS CUSTOS DIVERSOS",
-    "CONTA (ALOC.)": "4423.D"
-  },
-  {
-    "LINHA": 1184,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000033",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "45764",
-    "CONTA": "MATERIAIS DE EXPEDIENTE",
-    "CONTA (ALOC.)": "45764.D"
-  },
-  {
-    "LINHA": 1185,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000033",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
-    "REDUZIDO_CONTA": "45787",
-    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
-    "CONTA (ALOC.)": "45787.D"
   },
   {
     "LINHA": 1187,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000034",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
-    "REDUZIDO_CONTA": "112294",
-    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
-    "CONTA (ALOC.)": "112294.D"
+    "COD_CUSTO": "1.19.00000033",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
+    "REDUZIDO_CONTA": "45787",
+    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
+    "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1189,
+    "LINHA": 1188,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000034",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
-    "REDUZIDO_CONTA": "4015",
-    "CONTA": "VIAGENS/ESTADIAS",
-    "CONTA (ALOC.)": "4015.D"
+    "COD_CUSTO": "1.19.00000033",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
+    "REDUZIDO_CONTA": "45764",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "45764.D"
   },
   {
-    "LINHA": 1190,
+    "LINHA": 1191,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000034",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
+    "COD_CUSTO": "1.19.00000033",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
     "REDUZIDO_CONTA": "4423",
     "CONTA": "OUTROS CUSTOS DIVERSOS",
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1193,
+    "LINHA": 1192,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000034",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
-    "REDUZIDO_CONTA": "45764",
-    "CONTA": "MATERIAIS DE EXPEDIENTE",
-    "CONTA (ALOC.)": "45764.D"
+    "COD_CUSTO": "1.19.00000033",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
+    "REDUZIDO_CONTA": "4015",
+    "CONTA": "VIAGENS/ESTADIAS",
+    "CONTA (ALOC.)": "4015.D"
   },
   {
     "LINHA": 1194,
     "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000033",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-105",
+    "REDUZIDO_CONTA": "112294",
+    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
+    "CONTA (ALOC.)": "112294.D"
+  },
+  {
+    "LINHA": 1196,
+    "FILIAL": "1",
     "COD_CUSTO": "1.19.00000034",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
     "REDUZIDO_CONTA": "45787",
@@ -1323,34 +1296,52 @@
     "CONTA (ALOC.)": "45787.D"
   },
   {
-    "LINHA": 1198,
+    "LINHA": 1197,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000035",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
-    "REDUZIDO_CONTA": "112294",
-    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
-    "CONTA (ALOC.)": "112294.D"
+    "COD_CUSTO": "1.19.00000034",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
+    "REDUZIDO_CONTA": "45764",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "45764.D"
   },
   {
     "LINHA": 1200,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000035",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
-    "REDUZIDO_CONTA": "4015",
-    "CONTA": "VIAGENS/ESTADIAS",
-    "CONTA (ALOC.)": "4015.D"
-  },
-  {
-    "LINHA": 1201,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000035",
-    "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
+    "COD_CUSTO": "1.19.00000034",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
     "REDUZIDO_CONTA": "4423",
     "CONTA": "OUTROS CUSTOS DIVERSOS",
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1204,
+    "LINHA": 1201,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000034",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
+    "REDUZIDO_CONTA": "4015",
+    "CONTA": "VIAGENS/ESTADIAS",
+    "CONTA (ALOC.)": "4015.D"
+  },
+  {
+    "LINHA": 1203,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000034",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-106",
+    "REDUZIDO_CONTA": "112294",
+    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
+    "CONTA (ALOC.)": "112294.D"
+  },
+  {
+    "LINHA": 1207,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000035",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
+    "REDUZIDO_CONTA": "45787",
+    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
+    "CONTA (ALOC.)": "45787.D"
+  },
+  {
+    "LINHA": 1208,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
@@ -1359,34 +1350,43 @@
     "CONTA (ALOC.)": "45764.D"
   },
   {
-    "LINHA": 1205,
+    "LINHA": 1211,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000035",
     "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
-    "REDUZIDO_CONTA": "45787",
-    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
-    "CONTA (ALOC.)": "45787.D"
+    "REDUZIDO_CONTA": "4423",
+    "CONTA": "OUTROS CUSTOS DIVERSOS",
+    "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1209,
+    "LINHA": 1212,
     "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000036",
-    "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
-    "REDUZIDO_CONTA": "112294",
-    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
-    "CONTA (ALOC.)": "112294.D"
-  },
-  {
-    "LINHA": 1211,
-    "FILIAL": "1",
-    "COD_CUSTO": "1.19.00000036",
-    "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
+    "COD_CUSTO": "1.19.00000035",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
     "REDUZIDO_CONTA": "4015",
     "CONTA": "VIAGENS/ESTADIAS",
     "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1212,
+    "LINHA": 1214,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000035",
+    "C_CUSTO": "GUINDASTE SANY STC 80 - N-107",
+    "REDUZIDO_CONTA": "112294",
+    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
+    "CONTA (ALOC.)": "112294.D"
+  },
+  {
+    "LINHA": 1218,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.19.00000036",
+    "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
+    "REDUZIDO_CONTA": "45787",
+    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
+    "CONTA (ALOC.)": "45787.D"
+  },
+  {
+    "LINHA": 1221,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000036",
     "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
@@ -1395,25 +1395,25 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 1215,
+    "LINHA": 1222,
     "FILIAL": "1",
     "COD_CUSTO": "1.19.00000036",
     "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
-    "REDUZIDO_CONTA": "45787",
-    "CONTA": "UNIFORMES/MATERIAL SEGURANCA",
-    "CONTA (ALOC.)": "45787.D"
+    "REDUZIDO_CONTA": "4015",
+    "CONTA": "VIAGENS/ESTADIAS",
+    "CONTA (ALOC.)": "4015.D"
   },
   {
-    "LINHA": 1249,
+    "LINHA": 1224,
     "FILIAL": "1",
-    "COD_CUSTO": "1.97.00000054",
-    "C_CUSTO": "FABRICAÇÃO FORMA L - MATRIZ",
-    "REDUZIDO_CONTA": "111142",
-    "CONTA": "MATERIAL DE EXPEDIENTE",
-    "CONTA (ALOC.)": "4506"
+    "COD_CUSTO": "1.19.00000036",
+    "C_CUSTO": "GUINDASTE SANY STC 90 - N-108",
+    "REDUZIDO_CONTA": "112294",
+    "CONTA": "IPVA/LICENCIAMENTO DE VEICULOS",
+    "CONTA (ALOC.)": "112294.D"
   },
   {
-    "LINHA": 1250,
+    "LINHA": 1258,
     "FILIAL": "1",
     "COD_CUSTO": "1.97.00000054",
     "C_CUSTO": "FABRICAÇÃO FORMA L - MATRIZ",
@@ -1422,7 +1422,16 @@
     "CONTA (ALOC.)": "4921"
   },
   {
-    "LINHA": 1254,
+    "LINHA": 1259,
+    "FILIAL": "1",
+    "COD_CUSTO": "1.97.00000054",
+    "C_CUSTO": "FABRICAÇÃO FORMA L - MATRIZ",
+    "REDUZIDO_CONTA": "111142",
+    "CONTA": "MATERIAL DE EXPEDIENTE",
+    "CONTA (ALOC.)": "4506"
+  },
+  {
+    "LINHA": 1263,
     "FILIAL": "1",
     "COD_CUSTO": "1.97.00000059",
     "C_CUSTO": "PISO AREA ESTOCAGEM DE ESTOCAGEM MATRIZ",
@@ -1431,7 +1440,7 @@
     "CONTA (ALOC.)": "3441"
   },
   {
-    "LINHA": 2024,
+    "LINHA": 2058,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000001",
     "C_CUSTO": "FINANCEIRO",
@@ -1440,70 +1449,7 @@
     "CONTA (ALOC.)": "3197"
   },
   {
-    "LINHA": 2041,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "44836",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "2915"
-  },
-  {
-    "LINHA": 2042,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "44871",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
-  },
-  {
-    "LINHA": 2043,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "44888",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
-  },
-  {
-    "LINHA": 2044,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "44894",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
-  },
-  {
-    "LINHA": 2045,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45327",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "2915"
-  },
-  {
-    "LINHA": 2046,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
-  },
-  {
-    "LINHA": 2047,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000003",
-    "C_CUSTO": "GENTE E GESTAO (CRI)",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
-  },
-  {
-    "LINHA": 2048,
+    "LINHA": 2077,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000003",
     "C_CUSTO": "GENTE E GESTAO (CRI)",
@@ -1512,16 +1458,70 @@
     "CONTA (ALOC.)": "3040"
   },
   {
-    "LINHA": 2062,
+    "LINHA": 2078,
     "FILIAL": "2",
-    "COD_CUSTO": "1.01.00000004",
-    "C_CUSTO": "CONTABILIDADE E CONTROLADORIA",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "2855"
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
   },
   {
-    "LINHA": 2063,
+    "LINHA": 2079,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
+  },
+  {
+    "LINHA": 2080,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "45327",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "2915"
+  },
+  {
+    "LINHA": 2081,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "44894",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
+  },
+  {
+    "LINHA": 2082,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "44888",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
+  },
+  {
+    "LINHA": 2083,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "44871",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
+  },
+  {
+    "LINHA": 2084,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000003",
+    "C_CUSTO": "GENTE E GESTAO (CRI)",
+    "REDUZIDO_CONTA": "44836",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "2915"
+  },
+  {
+    "LINHA": 2098,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000004",
     "C_CUSTO": "CONTABILIDADE E CONTROLADORIA",
@@ -1530,7 +1530,16 @@
     "CONTA (ALOC.)": "2884"
   },
   {
-    "LINHA": 2079,
+    "LINHA": 2099,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.01.00000004",
+    "C_CUSTO": "CONTABILIDADE E CONTROLADORIA",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "2855"
+  },
+  {
+    "LINHA": 2115,
     "FILIAL": "2",
     "COD_CUSTO": "1.01.00000007",
     "C_CUSTO": "SEGURANCA (CRI)",
@@ -1539,34 +1548,7 @@
     "CONTA (ALOC.)": "2855"
   },
   {
-    "LINHA": 2113,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "45327",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "113840"
-  },
-  {
-    "LINHA": 2114,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "113879"
-  },
-  {
-    "LINHA": 2115,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.12.00000010",
-    "C_CUSTO": "PLANEJAMENTO E PROJETO",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "113885"
-  },
-  {
-    "LINHA": 2116,
+    "LINHA": 2150,
     "FILIAL": "2",
     "COD_CUSTO": "1.12.00000010",
     "C_CUSTO": "PLANEJAMENTO E PROJETO",
@@ -1575,7 +1557,43 @@
     "CONTA (ALOC.)": "113891"
   },
   {
-    "LINHA": 2144,
+    "LINHA": 2151,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "113885"
+  },
+  {
+    "LINHA": 2152,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "113879"
+  },
+  {
+    "LINHA": 2153,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "45327",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "113840"
+  },
+  {
+    "LINHA": 2154,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.12.00000010",
+    "C_CUSTO": "PLANEJAMENTO E PROJETO",
+    "REDUZIDO_CONTA": "44894",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "113891"
+  },
+  {
+    "LINHA": 2159,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000001",
     "C_CUSTO": "ESTACAS",
@@ -1584,25 +1602,7 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 2185,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000002",
-    "C_CUSTO": "ALVEOLARES",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "44813"
-  },
-  {
-    "LINHA": 2186,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000002",
-    "C_CUSTO": "ALVEOLARES",
-    "REDUZIDO_CONTA": "45416",
-    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
-    "CONTA (ALOC.)": "44919"
-  },
-  {
-    "LINHA": 2187,
+    "LINHA": 2193,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000002",
     "C_CUSTO": "ALVEOLARES",
@@ -1611,43 +1611,25 @@
     "CONTA (ALOC.)": "44865"
   },
   {
-    "LINHA": 2213,
+    "LINHA": 2194,
     "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000003",
-    "C_CUSTO": "EXPEDICAO (FOR)",
-    "REDUZIDO_CONTA": "45296",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "50162"
+    "COD_CUSTO": "1.14.00000002",
+    "C_CUSTO": "ALVEOLARES",
+    "REDUZIDO_CONTA": "45416",
+    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
+    "CONTA (ALOC.)": "44919"
   },
   {
-    "LINHA": 2214,
+    "LINHA": 2195,
     "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000003",
-    "C_CUSTO": "EXPEDICAO (FOR)",
+    "COD_CUSTO": "1.14.00000002",
+    "C_CUSTO": "ALVEOLARES",
     "REDUZIDO_CONTA": "45304",
     "CONTA": "SALARIOS",
     "CONTA (ALOC.)": "44813"
   },
   {
-    "LINHA": 2215,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000003",
-    "C_CUSTO": "EXPEDICAO (FOR)",
-    "REDUZIDO_CONTA": "45340",
-    "CONTA": "ENCARGOS DE FGTS RESCISORIO",
-    "CONTA (ALOC.)": "44865"
-  },
-  {
-    "LINHA": 2216,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000003",
-    "C_CUSTO": "EXPEDICAO (FOR)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "44871"
-  },
-  {
-    "LINHA": 2217,
+    "LINHA": 2235,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1656,7 +1638,43 @@
     "CONTA (ALOC.)": "44888"
   },
   {
-    "LINHA": 2220,
+    "LINHA": 2236,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.14.00000003",
+    "C_CUSTO": "EXPEDICAO (FOR)",
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "44871"
+  },
+  {
+    "LINHA": 2237,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.14.00000003",
+    "C_CUSTO": "EXPEDICAO (FOR)",
+    "REDUZIDO_CONTA": "45340",
+    "CONTA": "ENCARGOS DE FGTS RESCISORIO",
+    "CONTA (ALOC.)": "44865"
+  },
+  {
+    "LINHA": 2238,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.14.00000003",
+    "C_CUSTO": "EXPEDICAO (FOR)",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "44813"
+  },
+  {
+    "LINHA": 2239,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.14.00000003",
+    "C_CUSTO": "EXPEDICAO (FOR)",
+    "REDUZIDO_CONTA": "45296",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "50162"
+  },
+  {
+    "LINHA": 2261,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000003",
     "C_CUSTO": "EXPEDICAO (FOR)",
@@ -1665,7 +1683,7 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 2245,
+    "LINHA": 2265,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000004",
     "C_CUSTO": "CENTRAL DE CONCRETO (FOR)",
@@ -1674,16 +1692,7 @@
     "CONTA (ALOC.)": "44894"
   },
   {
-    "LINHA": 2265,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.14.00000005",
-    "C_CUSTO": "MANUSEIO (FOR)",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "44813"
-  },
-  {
-    "LINHA": 2266,
+    "LINHA": 2291,
     "FILIAL": "2",
     "COD_CUSTO": "1.14.00000005",
     "C_CUSTO": "MANUSEIO (FOR)",
@@ -1692,16 +1701,25 @@
     "CONTA (ALOC.)": "44859"
   },
   {
-    "LINHA": 2287,
+    "LINHA": 2292,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.14.00000005",
+    "C_CUSTO": "MANUSEIO (FOR)",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "44813"
+  },
+  {
+    "LINHA": 2319,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
-    "REDUZIDO_CONTA": "44813",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "45304"
+    "REDUZIDO_CONTA": "50162",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2299,
+    "LINHA": 2320,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1710,16 +1728,16 @@
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2300,
+    "LINHA": 2332,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
-    "REDUZIDO_CONTA": "50162",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "45296"
+    "REDUZIDO_CONTA": "44813",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "45304"
   },
   {
-    "LINHA": 2302,
+    "LINHA": 2344,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1728,7 +1746,7 @@
     "CONTA (ALOC.)": "45340"
   },
   {
-    "LINHA": 2303,
+    "LINHA": 2345,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000003",
     "C_CUSTO": "PCP (FOR)",
@@ -1737,115 +1755,7 @@
     "CONTA (ALOC.)": "111113"
   },
   {
-    "LINHA": 2305,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "111107",
-    "CONTA": "AGUA E SANEAMENTO",
-    "CONTA (ALOC.)": "4009"
-  },
-  {
-    "LINHA": 2306,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "111113",
-    "CONTA": "ENERGIA ELETRICA",
-    "CONTA (ALOC.)": "4067"
-  },
-  {
-    "LINHA": 2307,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "111142",
-    "CONTA": "MATERIAL DE EXPEDIENTE",
-    "CONTA (ALOC.)": "4529"
-  },
-  {
-    "LINHA": 2308,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "44753",
-    "CONTA": "ACESSORIOS DE FABRICACAO",
-    "CONTA (ALOC.)": "4943"
-  },
-  {
-    "LINHA": 2309,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "2855"
-  },
-  {
-    "LINHA": 2310,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45327",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "2915"
-  },
-  {
-    "LINHA": 2311,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
-  },
-  {
-    "LINHA": 2312,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
-  },
-  {
-    "LINHA": 2313,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
-  },
-  {
-    "LINHA": 2314,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45391",
-    "CONTA": "CESTA BASICA",
-    "CONTA (ALOC.)": "3286"
-  },
-  {
-    "LINHA": 2315,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45416",
-    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
-    "CONTA (ALOC.)": "3197"
-  },
-  {
-    "LINHA": 2316,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000004",
-    "C_CUSTO": "FATURAMENTO (FOR)",
-    "REDUZIDO_CONTA": "45422",
-    "CONTA": "REFEITORIO",
-    "CONTA (ALOC.)": "4558"
-  },
-  {
-    "LINHA": 2317,
+    "LINHA": 2347,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000004",
     "C_CUSTO": "FATURAMENTO (FOR)",
@@ -1854,70 +1764,115 @@
     "CONTA (ALOC.)": "3139"
   },
   {
-    "LINHA": 2328,
+    "LINHA": 2348,
     "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
-    "REDUZIDO_CONTA": "111171",
-    "CONTA": "CUSTOS DIVERSOS",
-    "CONTA (ALOC.)": "4943"
-  },
-  {
-    "LINHA": 2329,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
-    "REDUZIDO_CONTA": "45304",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "2855"
-  },
-  {
-    "LINHA": 2330,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
-    "REDUZIDO_CONTA": "45327",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "2915"
-  },
-  {
-    "LINHA": 2331,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
-    "REDUZIDO_CONTA": "45356",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "2884"
-  },
-  {
-    "LINHA": 2332,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
-    "REDUZIDO_CONTA": "45362",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "3079"
-  },
-  {
-    "LINHA": 2333,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
-    "REDUZIDO_CONTA": "45379",
-    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
-    "CONTA (ALOC.)": "3040"
-  },
-  {
-    "LINHA": 2334,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000005",
-    "C_CUSTO": "SEGURANCA (FOR)",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
     "REDUZIDO_CONTA": "45422",
     "CONTA": "REFEITORIO",
     "CONTA (ALOC.)": "4558"
   },
   {
-    "LINHA": 2335,
+    "LINHA": 2349,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45416",
+    "CONTA": "ASSISTENCIA MEDICA E SOCIAL",
+    "CONTA (ALOC.)": "3197"
+  },
+  {
+    "LINHA": 2350,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45391",
+    "CONTA": "CESTA BASICA",
+    "CONTA (ALOC.)": "3286"
+  },
+  {
+    "LINHA": 2351,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
+  },
+  {
+    "LINHA": 2352,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
+  },
+  {
+    "LINHA": 2353,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45356",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "2884"
+  },
+  {
+    "LINHA": 2354,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45327",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "2915"
+  },
+  {
+    "LINHA": 2355,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "2855"
+  },
+  {
+    "LINHA": 2356,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "44753",
+    "CONTA": "ACESSORIOS DE FABRICACAO",
+    "CONTA (ALOC.)": "4943"
+  },
+  {
+    "LINHA": 2357,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "111142",
+    "CONTA": "MATERIAL DE EXPEDIENTE",
+    "CONTA (ALOC.)": "4529"
+  },
+  {
+    "LINHA": 2358,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "111113",
+    "CONTA": "ENERGIA ELETRICA",
+    "CONTA (ALOC.)": "4067"
+  },
+  {
+    "LINHA": 2359,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000004",
+    "C_CUSTO": "FATURAMENTO (FOR)",
+    "REDUZIDO_CONTA": "111107",
+    "CONTA": "AGUA E SANEAMENTO",
+    "CONTA (ALOC.)": "4009"
+  },
+  {
+    "LINHA": 2370,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000005",
     "C_CUSTO": "SEGURANCA (FOR)",
@@ -1926,25 +1881,70 @@
     "CONTA (ALOC.)": "2298"
   },
   {
-    "LINHA": 2364,
+    "LINHA": 2371,
     "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000006",
-    "C_CUSTO": "ALMOXARIFADO (FOR)",
-    "REDUZIDO_CONTA": "44813",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "45304"
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "45422",
+    "CONTA": "REFEITORIO",
+    "CONTA (ALOC.)": "4558"
   },
   {
-    "LINHA": 2365,
+    "LINHA": 2372,
     "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000006",
-    "C_CUSTO": "ALMOXARIFADO (FOR)",
-    "REDUZIDO_CONTA": "44871",
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "45379",
+    "CONTA": "INSS-INSTITUTO NACIONAL DO SEGURO SOCIAL",
+    "CONTA (ALOC.)": "3040"
+  },
+  {
+    "LINHA": 2373,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "45362",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "3079"
+  },
+  {
+    "LINHA": 2374,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "45356",
     "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "45356"
+    "CONTA (ALOC.)": "2884"
+  },
+  {
+    "LINHA": 2375,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "45327",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "2915"
   },
   {
     "LINHA": 2376,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "45304",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "2855"
+  },
+  {
+    "LINHA": 2377,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000005",
+    "C_CUSTO": "SEGURANCA (FOR)",
+    "REDUZIDO_CONTA": "111171",
+    "CONTA": "CUSTOS DIVERSOS",
+    "CONTA (ALOC.)": "4943"
+  },
+  {
+    "LINHA": 2400,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000006",
     "C_CUSTO": "ALMOXARIFADO (FOR)",
@@ -1953,25 +1953,34 @@
     "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2385,
+    "LINHA": 2411,
     "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000007",
-    "C_CUSTO": "MANUTENCAO (FOR)",
-    "REDUZIDO_CONTA": "44813",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "45304"
-  },
-  {
-    "LINHA": 2386,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000007",
-    "C_CUSTO": "MANUTENCAO (FOR)",
+    "COD_CUSTO": "1.15.00000006",
+    "C_CUSTO": "ALMOXARIFADO (FOR)",
     "REDUZIDO_CONTA": "44871",
     "CONTA": "FERIAS",
     "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2387,
+    "LINHA": 2412,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000006",
+    "C_CUSTO": "ALMOXARIFADO (FOR)",
+    "REDUZIDO_CONTA": "44813",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "45304"
+  },
+  {
+    "LINHA": 2422,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000007",
+    "C_CUSTO": "MANUTENCAO (FOR)",
+    "REDUZIDO_CONTA": "50162",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "45296"
+  },
+  {
+    "LINHA": 2436,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1980,16 +1989,25 @@
     "CONTA (ALOC.)": "111113"
   },
   {
-    "LINHA": 2401,
+    "LINHA": 2437,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
-    "REDUZIDO_CONTA": "50162",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "45296"
+    "REDUZIDO_CONTA": "44871",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "45356"
   },
   {
-    "LINHA": 2405,
+    "LINHA": 2438,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000007",
+    "C_CUSTO": "MANUTENCAO (FOR)",
+    "REDUZIDO_CONTA": "44813",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "45304"
+  },
+  {
+    "LINHA": 2447,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000007",
     "C_CUSTO": "MANUTENCAO (FOR)",
@@ -1998,52 +2016,16 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 2411,
+    "LINHA": 2449,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
-    "REDUZIDO_CONTA": "44813",
-    "CONTA": "SALARIOS",
-    "CONTA (ALOC.)": "45304"
+    "REDUZIDO_CONTA": "50162",
+    "CONTA": "HORAS EXTRAS",
+    "CONTA (ALOC.)": "45296"
   },
   {
-    "LINHA": 2412,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000008",
-    "C_CUSTO": "PREDIAL (FOR)",
-    "REDUZIDO_CONTA": "44836",
-    "CONTA": "13O. SALARIO",
-    "CONTA (ALOC.)": "45327"
-  },
-  {
-    "LINHA": 2413,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000008",
-    "C_CUSTO": "PREDIAL (FOR)",
-    "REDUZIDO_CONTA": "44859",
-    "CONTA": "REFEITORIO",
-    "CONTA (ALOC.)": "45422"
-  },
-  {
-    "LINHA": 2414,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000008",
-    "C_CUSTO": "PREDIAL (FOR)",
-    "REDUZIDO_CONTA": "44871",
-    "CONTA": "FERIAS",
-    "CONTA (ALOC.)": "45356"
-  },
-  {
-    "LINHA": 2415,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.15.00000008",
-    "C_CUSTO": "PREDIAL (FOR)",
-    "REDUZIDO_CONTA": "44888",
-    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
-    "CONTA (ALOC.)": "45362"
-  },
-  {
-    "LINHA": 2416,
+    "LINHA": 2460,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
@@ -2052,16 +2034,52 @@
     "CONTA (ALOC.)": "45379"
   },
   {
-    "LINHA": 2427,
+    "LINHA": 2461,
     "FILIAL": "2",
     "COD_CUSTO": "1.15.00000008",
     "C_CUSTO": "PREDIAL (FOR)",
-    "REDUZIDO_CONTA": "50162",
-    "CONTA": "HORAS EXTRAS",
-    "CONTA (ALOC.)": "45296"
+    "REDUZIDO_CONTA": "44888",
+    "CONTA": "FGTS-FUNDO GARANTIA PELO TEMPO SERVICO",
+    "CONTA (ALOC.)": "45362"
   },
   {
-    "LINHA": 2431,
+    "LINHA": 2462,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000008",
+    "C_CUSTO": "PREDIAL (FOR)",
+    "REDUZIDO_CONTA": "44871",
+    "CONTA": "FERIAS",
+    "CONTA (ALOC.)": "45356"
+  },
+  {
+    "LINHA": 2463,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000008",
+    "C_CUSTO": "PREDIAL (FOR)",
+    "REDUZIDO_CONTA": "44859",
+    "CONTA": "REFEITORIO",
+    "CONTA (ALOC.)": "45422"
+  },
+  {
+    "LINHA": 2464,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000008",
+    "C_CUSTO": "PREDIAL (FOR)",
+    "REDUZIDO_CONTA": "44836",
+    "CONTA": "13O. SALARIO",
+    "CONTA (ALOC.)": "45327"
+  },
+  {
+    "LINHA": 2465,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.15.00000008",
+    "C_CUSTO": "PREDIAL (FOR)",
+    "REDUZIDO_CONTA": "44813",
+    "CONTA": "SALARIOS",
+    "CONTA (ALOC.)": "45304"
+  },
+  {
+    "LINHA": 2474,
     "FILIAL": "2",
     "COD_CUSTO": "1.16.00000003",
     "C_CUSTO": "LOGISTICA",
@@ -2070,7 +2088,7 @@
     "CONTA (ALOC.)": "50274"
   },
   {
-    "LINHA": 2433,
+    "LINHA": 2476,
     "FILIAL": "2",
     "COD_CUSTO": "1.16.00000005",
     "C_CUSTO": "EQUIPE DE OBRAS",
@@ -2079,25 +2097,7 @@
     "CONTA (ALOC.)": "4423.D"
   },
   {
-    "LINHA": 2434,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.17.00000002",
-    "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
-    "REDUZIDO_CONTA": "4529",
-    "CONTA": "MATERIAIS DE EXPEDIENTE",
-    "CONTA (ALOC.)": "111142"
-  },
-  {
-    "LINHA": 2435,
-    "FILIAL": "2",
-    "COD_CUSTO": "1.17.00000002",
-    "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
-    "REDUZIDO_CONTA": "4618",
-    "CONTA": "MANUTENCAO DE BENS E EQUIPAMENTOS",
-    "CONTA (ALOC.)": "111120"
-  },
-  {
-    "LINHA": 2436,
+    "LINHA": 2477,
     "FILIAL": "2",
     "COD_CUSTO": "1.17.00000002",
     "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
@@ -2106,7 +2106,25 @@
     "CONTA (ALOC.)": "111171"
   },
   {
-    "LINHA": 2464,
+    "LINHA": 2478,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.17.00000002",
+    "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
+    "REDUZIDO_CONTA": "4618",
+    "CONTA": "MANUTENCAO DE BENS E EQUIPAMENTOS",
+    "CONTA (ALOC.)": "111120"
+  },
+  {
+    "LINHA": 2479,
+    "FILIAL": "2",
+    "COD_CUSTO": "1.17.00000002",
+    "C_CUSTO": "MANUTENCAO PREDIAL MATRIZ (ADMINISTRATIVO / REFEITORIO)",
+    "REDUZIDO_CONTA": "4529",
+    "CONTA": "MATERIAIS DE EXPEDIENTE",
+    "CONTA (ALOC.)": "111142"
+  },
+  {
+    "LINHA": 2507,
     "FILIAL": "2",
     "COD_CUSTO": "1.18.00000025",
     "C_CUSTO": "MAQUINA EXTRUDER EVO2",
@@ -2115,7 +2133,7 @@
     "CONTA (ALOC.)": "45126"
   },
   {
-    "LINHA": 2479,
+    "LINHA": 2522,
     "FILIAL": "2",
     "COD_CUSTO": "1.18.00000050",
     "C_CUSTO": "PORTICO 1 (FILIAL)",
@@ -2124,7 +2142,7 @@
     "CONTA (ALOC.)": "45161"
   },
   {
-    "LINHA": 2489,
+    "LINHA": 2533,
     "FILIAL": "2",
     "COD_CUSTO": "1.18.00000053",
     "C_CUSTO": "PORTICO 6 - BAUMA 2 (FILIAL)",
@@ -2133,7 +2151,7 @@
     "CONTA (ALOC.)": "45178"
   },
   {
-    "LINHA": 2502,
+    "LINHA": 2543,
     "FILIAL": "2",
     "COD_CUSTO": "1.19.00000001",
     "C_CUSTO": "CAMINHAO MUNCK N-103",
@@ -2142,7 +2160,7 @@
     "CONTA (ALOC.)": "45764.D"
   },
   {
-    "LINHA": 2504,
+    "LINHA": 2549,
     "FILIAL": "2",
     "COD_CUSTO": "1.19.00000032",
     "C_CUSTO": "GUINDASTE SANY STC 75 - N-104",

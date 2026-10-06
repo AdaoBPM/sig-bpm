@@ -26,6 +26,7 @@ import {
   receitaPreviaService,
   rotuloLancamento,
   ROTULO_UNIDADE,
+  ROTULO_VENDA,
   type LancamentoReceita,
   type Natureza,
 } from "./services/receitaPreviaService";
@@ -33,6 +34,7 @@ import {
 const COLUNAS: Coluna<LancamentoReceita>[] = [
   { chave: "unidade", rotulo: "Unidade", valor: (l) => ROTULO_UNIDADE[l.unidade] },
   { chave: "linha", rotulo: "Linha da receita", valor: (l) => rotuloLancamento(l.natureza, l.componente) },
+  { chave: "venda", rotulo: "Venda", valor: (l) => (l.venda ? ROTULO_VENDA[l.venda] : null) },
   { chave: "observacao", rotulo: "Observação", valor: (l) => l.observacao },
   { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valor), texto: (l) => moeda(l.valor) },
   { chave: "acoes", rotulo: "", semFiltro: true },
@@ -153,7 +155,7 @@ export function ReceitaPreviaContent() {
       ) : dados && dados.receitas.length > 0 ? (
         <div className="space-y-4">
           {[1, 2, 3].map((u) => (
-            <QuadroReceita key={u} unidade={u} receitas={dados.receitas} onAbrir={(unidade, natureza) => setMemoria({ unidade, natureza })} />
+            <QuadroReceita key={u} unidade={u} receitas={dados.receitas} porVenda={dados.porVenda ?? []} impostos={dados.impostos ?? []} onAbrir={(unidade, natureza) => setMemoria({ unidade, natureza })} />
           ))}
         </div>
       ) : (
@@ -210,6 +212,7 @@ export function ReceitaPreviaContent() {
               <tr key={l.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 text-sm whitespace-nowrap">{ROTULO_UNIDADE[l.unidade]}</td>
                 <td className="px-4 text-sm text-gray-900">{rotuloLancamento(l.natureza, l.componente)}</td>
+                <td className="px-4 text-sm whitespace-nowrap text-gray-700">{l.venda ? ROTULO_VENDA[l.venda] : "—"}</td>
                 <td className="px-4 text-sm text-gray-600">
                   <div className="max-w-md truncate" title={l.observacao}>
                     {l.observacao}

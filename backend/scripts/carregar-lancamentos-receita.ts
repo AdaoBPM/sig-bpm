@@ -5,7 +5,9 @@
  * a receita prévia e a DRE contra a planilha; na operação, os lançamentos são
  * digitados na tela da receita prévia.
  *
- * Substitui os lançamentos de receita das competências encontradas na aba.
+ * Substitui os lançamentos de receita de todas as competências do ano: o mês
+ * que saiu da aba fica sem lançamento. A coluna VENDA (G ou M) separa as
+ * receitas da Matriz e da Filial em global e mercantil.
  *
  * Uso: npx tsx scripts/carregar-lancamentos-receita.ts "<BASE PRÉVIAS.xlsx>" 2026
  */
@@ -15,6 +17,7 @@ import { readFileSync } from "node:fs";
 import { getPrismaClient } from "../src/config/prisma.js";
 import { Prisma } from "../src/generated/prisma/client.js";
 import type { ComponenteReceita, NaturezaReceita } from "../src/generated/prisma/enums.js";
+import { pedeVenda } from "../src/schemas/receitaPrevia/receitaPreviaSchemas.js";
 import { lerAba } from "../src/lib/xlsx.js";
 
 const [arquivo, anoTexto] = process.argv.slice(2);
@@ -47,7 +50,7 @@ const competencias = new Map((await prisma.competencia.findMany({ where: { ano }
 const porMes = new Map<number, Prisma.LancamentoReceitaCreateManyInput[]>();
 const ignorados: string[] = [];
 for (const l of aba.linhas.slice(1)) {
-  const [periodo, unidade, , , conta, valor, observacao] = l.celulas;
+  const [periodo, unidade, , , conta, venda, valor, observacao] = l.celulas;
   if (typeof periodo !== "number" || !conta) continue;
   const d = new Date(Date.UTC(1899, 11, 30) + Math.round(periodo) * 86_400_000);
   if (d.getUTCFullYear() !== ano) continue;
@@ -59,6 +62,12 @@ for (const l of aba.linhas.slice(1)) {
     ignorados.push(`linha ${l.numero}: ${String(conta)} (${mes}/${ano}, unidade ${unidade})`);
     continue;
   }
+  const textoVenda = String(venda ?? "").trim().toUpperCase();
+  const tipoVenda = textoVenda === "G" ? "GLOBAL" : textoVenda === "M" ? "MERCANTIL" : null;
+  if (pedeVenda(codUnidade, linha.componente) && !tipoVenda) {
+    ignorados.push(`linha ${l.numero}: ${String(conta)} sem VENDA (G ou M)`);
+    continue;
+  }
   const lista = porMes.get(mes) ?? [];
   lista.push({
     competenciaId,
@@ -67,11 +76,12 @@ for (const l of aba.linhas.slice(1)) {
     componente: linha.componente,
     valor: new Prisma.Decimal(Number(valor) || 0).toDecimalPlaces(2),
     observacao: String(observacao ?? "Carga da planilha (paralelo)"),
+    venda: pedeVenda(codUnidade, linha.componente) ? tipoVenda : null,
   });
   porMes.set(mes, lista);
 }
-for (const [mes, lista] of [...porMes].sort((a, b) => a[0] - b[0])) {
-  const competenciaId = competencias.get(mes)!;
+for (const [mes, competenciaId] of [...competencias].sort((a, b) => a[0] - b[0])) {
+  const lista = porMes.get(mes) ?? [];
   await prisma.$transaction([
     prisma.lancamentoReceita.deleteMany({ where: { competenciaId } }),
     prisma.lancamentoReceita.createMany({ data: lista }),

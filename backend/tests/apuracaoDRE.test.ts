@@ -38,7 +38,7 @@ describe("apuração da DRE por unidade", () => {
     percentuais: new Map([["PRODUCAO|MATRIZ", D(0.25)], ["PRODUCAO|FILIAL", D(0.75)]]),
   };
 
-  it("custo da unidade: diretos da filial + rateio × percentual; subtotal pela expressão", () => {
+  it("custo da unidade: diretos do balde da unidade e do UNIDADE da filial + rateio × percentual; subtotal pela expressão", () => {
     const { resultados } = apurarUnidades({
       ...base,
       lancamentos: [
@@ -46,16 +46,21 @@ describe("apuração da DRE por unidade", () => {
         { filial: 2, linhaDREId: "CLT", balde: "UNIDADE", alocacao: "DIRETO", valor: D(500) },
         { filial: 1, linhaDREId: "CLT", balde: "PRODUCAO", alocacao: "RATEIO", valor: D(400) },
         { filial: 2, linhaDREId: "DEP", balde: "UNIDADE", alocacao: "DIRETO", valor: D(80) },
+        // Os baldes MATRIZ e FILIAL forçam o gasto para a unidade, de qualquer filial.
+        { filial: 2, linhaDREId: "CLT", balde: "MATRIZ", alocacao: "DIRETO", valor: D(50) },
+        { filial: 1, linhaDREId: "CLT", balde: "FILIAL", alocacao: "DIRETO", valor: D(20) },
+        // DESPESAS não entra nos custos da unidade.
+        { filial: 1, linhaDREId: "CLT", balde: "DESPESAS", alocacao: "DIRETO", valor: D(7) },
       ],
     });
     const v = (u: number, c: string) => resultados.find((r) => r.unidade === u && r.codigo === c)?.valor.toString();
-    assert.equal(v(1, "CLT"), "1100"); // 1.000 + 400 × 25%
-    assert.equal(v(2, "CLT"), "800"); // 500 + 400 × 75%
-    assert.equal(v(2, "CPP"), "880"); // inclui a depreciação
+    assert.equal(v(1, "CLT"), "1150"); // 1.000 + 50 (MATRIZ da filial 2) + 400 × 25%
+    assert.equal(v(2, "CLT"), "820"); // 500 + 20 (FILIAL da filial 1) + 400 × 75%
+    assert.equal(v(2, "CPP"), "900"); // inclui a depreciação
     assert.equal(v(1, "VOL"), "100");
-    // A composição guarda a origem que o detalhamento usa: os diretos da filial e o rateio na linha de base.
+    // A composição guarda a origem que o detalhamento usa: os pares de balde e filial e o rateio na linha de base.
     const c = resultados.find((r) => r.unidade === 2 && r.codigo === "CLT")?.composicao;
-    assert.deepEqual(c?.origem?.contabil, { linhaId: "CLT", filial: 2 });
+    assert.deepEqual(c?.origem?.contabil, { linhaId: "CLT", pares: [{ balde: "FILIAL" }, { balde: "UNIDADE", filial: 2 }] });
     assert.deepEqual(c?.rateios?.map((r) => [r.chave, r.linhaId, r.valor]), [["PRODUCAO", "CLT", "300.00"]]);
   });
 

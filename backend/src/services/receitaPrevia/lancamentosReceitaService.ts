@@ -24,6 +24,7 @@ const SELECAO = {
   componente: true,
   valor: true,
   observacao: true,
+  venda: true,
   criadoEm: true,
   atualizadoEm: true,
   unidadeNegocio: { select: { codigo: true, nome: true } },
@@ -35,6 +36,7 @@ function apresentar(l: {
   componente: string;
   valor: Prisma.Decimal;
   observacao: string;
+  venda: string | null;
   criadoEm: Date;
   atualizadoEm: Date;
   unidadeNegocio: { codigo: number; nome: string };
@@ -83,6 +85,7 @@ export const lancamentosReceitaService = {
         componente: input.componente,
         valor: new Prisma.Decimal(input.valor),
         observacao: input.observacao,
+        venda: input.venda,
         criadoPor: usuarioId,
       },
       select: SELECAO,
@@ -103,6 +106,7 @@ export const lancamentosReceitaService = {
         componente: input.componente,
         valor: new Prisma.Decimal(input.valor),
         observacao: input.observacao,
+        venda: input.venda,
       },
       select: SELECAO,
     });

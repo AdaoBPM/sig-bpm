@@ -53,20 +53,23 @@ export type DadosApuracao = {
   receitas: ReceitaPreviaApuracao[];
 };
 
+/** Um balde de lançamentos diretos, de uma filial ou de todas. */
+export type ParBalde = { balde: string; filial?: number };
 export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string; linhaId?: string };
 export type ParcelaUnidade = { unidade: number; nome: string; valor: string };
 /**
  * De onde o valor saiu, na forma de filtros sobre os dados da competência —
  * é o que o detalhamento usa para chegar aos lançamentos de origem (Passo 20).
  * - contabil: lançamentos contábeis que não são de rateio, da linha, com os
- *   filtros de filial e balde da regra, multiplicados pelo fator.
+ *   filtros de filial e balde da regra, multiplicados pelo fator. Em pares, a
+ *   soma de baldes, cada um de uma filial ou de todas (Matriz e Filial).
  * - rateios: lançamentos de rateio da chave (o balde) na linha de base, ×
  *   percentual (estão em ParcelaRateio, com linhaId).
  * - manual: lançamentos manuais da linha e do balde.
  * - previa: a receita prévia da unidade e da natureza, com o sinal.
  */
 export type OrigemValor = {
-  contabil?: { linhaId: string; filial?: number; baldes?: string[]; excetoBaldes?: string[]; fator?: string };
+  contabil?: { linhaId: string; filial?: number; baldes?: string[]; excetoBaldes?: string[]; pares?: ParBalde[]; fator?: string };
   manual?: { linhaId: string; balde: string };
   previa?: Array<{ unidade: number; natureza: string; componente: "BRUTA" | "LIQUIDA"; sinal: 1 | -1 }>;
 };
@@ -116,6 +119,17 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     }
     return s;
   };
+  const somaPares = (linhaId: string | undefined, pares: ParBalde[]) => {
+    if (!linhaId) return zero();
+    let s = zero();
+    for (const [k, v] of direto) {
+      const [f, id, b] = k.split("|");
+      if (id === linhaId && pares.some((p) => p.balde === b && (p.filial === undefined || p.filial === Number(f)))) s = s.plus(v);
+    }
+    return s;
+  };
+  const descreverPares = (pares: ParBalde[]) =>
+    pares.map((p) => (p.filial === undefined ? `balde ${p.balde}` : `balde ${p.balde} da filial ${p.filial}`)).join(" + ");
   const somaRateio = (chave: string, linhaId: string | undefined) => (linhaId ? (rateio.get(`${chave}|${linhaId}`) ?? zero()) : zero());
   const pct = (chave: string, destino: string) => d.percentuais.get(`${chave}|${destino}`) ?? zero();
   const total = (codigo: string) => d.totais.get(codigo) ?? zero();
@@ -180,10 +194,16 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     d.linhas.find((x) => n(x.descricao) === n(descricao) && x.unidades.includes(u) && (x.tipo === "ITEM" || x.tipo === "TOTAL"));
 
   // --- Matriz e Filial -----------------------------------------------------
+  // Os diretos da unidade são o balde dela (MATRIZ ou FILIAL), de qualquer
+  // filial, e o balde UNIDADE da filial dela; nas receitas e nos impostos,
+  // também o balde DESPESAS da filial (abas Resultados (Matriz) e (Filial),
+  // a partir de 06/10/2026).
   for (const u of [UNIDADE.MATRIZ, UNIDADE.FILIAL]) {
     const destino = DESTINO_DA_UNIDADE[u];
     const semProducao = guarda[u].isZero();
     const receitaFrete = previa(u, "FRETE");
+    const paresCusto: ParBalde[] = [{ balde: destino }, { balde: "UNIDADE", filial: u }];
+    const paresReceita: ParBalde[] = [...paresCusto, { balde: "DESPESAS", filial: u }];
     for (const l of itensDa(u)) {
       if (ehVolume(l)) {
         const cods = VOLUMES[u][n(l.descricao)] ?? [];
@@ -197,12 +217,12 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
         continue;
       }
       if (desc === n("Receita Bruta do Pré-Fabricado")) {
-        const contabil = somaDireto(l.id, { filial: u });
+        const contabil = somaPares(l.id, paresReceita);
         gravar(u, l, receitaFrete.receitaBruta.neg().minus(contabil), {
-          regra: "−(frete da receita prévia) − (receita contábil da filial)",
+          regra: `−(frete da receita prévia) − (receita contábil: ${descreverPares(paresReceita)})`,
           direto: contabil.toFixed(2),
           observacao: `Frete da receita prévia: ${receitaFrete.receitaBruta.toFixed(2)}`,
-          origem: { contabil: { linhaId: l.id, filial: u, fator: "-1" }, previa: [{ unidade: u, natureza: "FRETE", componente: "BRUTA", sinal: -1 }] },
+          origem: { contabil: { linhaId: l.id, pares: paresReceita, fator: "-1" }, previa: [{ unidade: u, natureza: "FRETE", componente: "BRUTA", sinal: -1 }] },
         });
       } else if (desc === n("Receita Bruta de Frete")) {
         gravar(u, l, receitaFrete.receitaBruta, {
@@ -210,8 +230,13 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           origem: { previa: [{ unidade: u, natureza: "FRETE", componente: "BRUTA", sinal: 1 }] },
         });
       } else if (desc === n("Receita Bruta de Devoluções e Inventários")) {
-        const c = somaDireto(l.id, { filial: u });
-        gravar(u, l, c, { regra: "Lançamentos contábeis da filial", direto: c.toFixed(2), origem: { contabil: { linhaId: l.id, filial: u } } });
+        // Negativa, como a receita bruta do pré-fabricado (correção do usuário de 06/10/2026).
+        const c = somaPares(l.id, paresReceita);
+        gravar(u, l, c.neg(), {
+          regra: `−(lançamentos contábeis: ${descreverPares(paresReceita)})`,
+          direto: c.toFixed(2),
+          origem: { contabil: { linhaId: l.id, pares: paresReceita, fator: "-1" } },
+        });
       } else if (desc === n("Receita Líquida de Frete")) {
         gravar(u, l, receitaFrete.receitaLiquida, {
           regra: "Receita líquida de frete da receita prévia",
@@ -220,7 +245,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       } else if (desc === n("Receita Líquida do Pré-Fabricado") || desc === n("Receita Líquida de Devoluções e Inventários")) {
         continue; // depois dos impostos
       } else {
-        const dir = somaDireto(l.id, { filial: u });
+        const dir = somaPares(l.id, paresCusto);
         let v = dir;
         const rateios: ParcelaRateio[] = [];
         for (const chave of RATEIOS_PRODUCAO) {
@@ -230,18 +255,23 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           rateios.push(parcela(chave, destino, l, base, p));
           v = v.plus(base.times(p));
         }
-        gravar(u, l, v, { regra: "Diretos da filial + rateios × percentual da unidade", direto: dir.toFixed(2), rateios, origem: { contabil: { linhaId: l.id, filial: u } } });
+        gravar(u, l, v, {
+          regra: `Diretos (${descreverPares(paresCusto)}) + rateios × percentual da unidade`,
+          direto: dir.toFixed(2),
+          rateios,
+          origem: { contabil: { linhaId: l.id, pares: paresCusto } },
+        });
       }
     }
     // Impostos Operacionais: no Consolidado é ROB − ROL; na unidade, o contábil
-    // da filial fora do balde OBRAS.
+    // dos baldes da receita.
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
-      const v = semProducao ? zero() : somaDireto(io.id, { filial: u, balde: (b) => b !== "OBRAS" });
+      const v = semProducao ? zero() : somaPares(io.id, paresReceita);
       gravar(u, io, v, {
-        regra: "Lançamentos contábeis da filial, fora do balde OBRAS",
+        regra: `Lançamentos contábeis: ${descreverPares(paresReceita)}`,
         direto: v.toFixed(2),
-        origem: semProducao ? undefined : { contabil: { linhaId: io.id, filial: u, excetoBaldes: ["OBRAS"] } },
+        origem: semProducao ? undefined : { contabil: { linhaId: io.id, pares: paresReceita } },
       });
     }
     // Receitas líquidas do pré-fabricado e das devoluções: a bruta menos a
@@ -279,13 +309,13 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       }
       if (ehComissao(l)) continue;
       if (desc === n("Receita Bruta de Montagem")) {
-        const c = somaDireto(l.id, { filial: 1 });
+        const c = somaDireto(l.id);
         gravar(u, l, semMontagem ? zero() : compl.receitaBruta.neg().minus(c), {
-          regra: "−(complementar da receita prévia) − (receita contábil da filial 1)",
+          regra: "−(complementar da receita prévia) − (receita contábil, todas as filiais)",
           direto: c.toFixed(2),
           origem: semMontagem
             ? undefined
-            : { contabil: { linhaId: l.id, filial: 1, fator: "-1" }, previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "BRUTA", sinal: -1 }] },
+            : { contabil: { linhaId: l.id, fator: "-1" }, previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "BRUTA", sinal: -1 }] },
         });
       } else if (desc === n("Receita Bruta Complementar")) {
         gravar(u, l, compl.receitaBruta, {
@@ -334,11 +364,11 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     }
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
-      const v = semMontagem ? zero() : somaDireto(io.id, { filial: 1, balde: (b) => b === "OBRAS" });
+      const v = semMontagem ? zero() : somaDireto(io.id, { balde: (b) => b === "OBRAS" });
       gravar(u, io, v, {
-        regra: "Lançamentos contábeis da filial 1, balde OBRAS",
+        regra: "Lançamentos contábeis do balde OBRAS, todas as filiais",
         direto: v.toFixed(2),
-        origem: semMontagem ? undefined : { contabil: { linhaId: io.id, filial: 1, baldes: ["OBRAS"] } },
+        origem: semMontagem ? undefined : { contabil: { linhaId: io.id, baldes: ["OBRAS"] } },
       });
       const rlm = linhaPorDescricao(u, "Receita Líquida de Montagem");
       if (rlm) {

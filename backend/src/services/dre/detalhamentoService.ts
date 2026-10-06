@@ -103,15 +103,17 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     const filtros: Prisma.LancamentoContabilWhereInput[] = [naoRateio];
     if (f.baldes) filtros.push({ balde: { in: f.baldes as never } });
     if (f.excetoBaldes) filtros.push({ OR: [{ balde: null }, { balde: { notIn: f.excetoBaldes as never } }] });
+    if (f.pares) filtros.push({ OR: f.pares.map((p) => ({ balde: p.balde as never, ...(p.filial !== undefined ? { filial: p.filial } : {}) })) });
     const ls = await prisma.lancamentoContabil.findMany({
       where: { competenciaId, linhaDREId: f.linhaId, ...(f.filial !== undefined ? { filial: f.filial } : {}), AND: filtros },
       select: selecaoContabil,
     });
     const fator = new Decimal(f.fator ?? 1);
     const partes = [
-      f.filial !== undefined ? `filial ${f.filial}` : "todas as filiais",
+      f.pares ? null : f.filial !== undefined ? `filial ${f.filial}` : "todas as filiais",
       f.baldes ? `balde ${f.baldes.join(", ")}` : null,
       f.excetoBaldes ? `fora do balde ${f.excetoBaldes.join(", ")}` : null,
+      f.pares ? f.pares.map((p) => (p.filial === undefined ? `balde ${p.balde}` : `balde ${p.balde} da filial ${p.filial}`)).join(" + ") : null,
     ].filter(Boolean);
     blocos.push({
       tipo: "CONTABIL",

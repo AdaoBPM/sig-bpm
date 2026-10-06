@@ -1635,6 +1635,11 @@ model ReceitaPreviaItem {
   receitaLiquida  Decimal         @default(0) @map("receita_liquida")
   variacaoEstoque Decimal         @default(0) @map("variacao_estoque")
   observacao      String?
+  /// Venda global ou mercantil do item, que separa as receitas e os impostos
+  /// da Matriz e da Filial na receita prévia: pela obra (código começando com
+  /// "G" é global) ou, no lançamento manual, pelo campo dele. Nulo nas
+  /// medições de Obras, que não se separam.
+  venda           TipoVenda?
 
   receitaPrevia ReceitaPrevia @relation(fields: [receitaPreviaId], references: [id], onDelete: Cascade)
 
@@ -1653,6 +1658,9 @@ model LancamentoReceita {
   /// DECIMAL: aritmética sempre em JavaScript.
   valor            Decimal
   observacao       String
+  /// Venda global ou mercantil (coluna VENDA da aba): obrigatória na Matriz e
+  /// na Filial, nula em Obras, que não se separam.
+  venda            TipoVenda?
   criadoPor        String?           @map("criado_por")
   criadoEm         DateTime          @default(now()) @map("criado_em")
   atualizadoEm     DateTime          @updatedAt @map("atualizado_em")

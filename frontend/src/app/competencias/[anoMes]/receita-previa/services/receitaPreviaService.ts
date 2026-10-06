@@ -4,6 +4,7 @@ import type { StatusCompetencia } from "../../../services/competenciasService";
 
 export type Natureza = "PRE_FABRICADO" | "FRETE" | "DEVOLUCOES_INVENTARIOS" | "MONTAGEM" | "COMPLEMENTAR";
 export type Componente = "BRUTA" | "LIQUIDA" | "VARIACAO_ESTOQUE";
+export type Venda = "GLOBAL" | "MERCANTIL";
 
 export type ReceitaNatureza = {
   unidade: number;
@@ -22,6 +23,15 @@ export type ReceitaPrevia = {
   apuradoEm: string | null;
   congelado: boolean;
   receitas: ReceitaNatureza[];
+  /** Matriz e Filial: as receitas de cada natureza separadas em venda global e mercantil. */
+  porVenda: Array<{
+    unidade: number;
+    natureza: Natureza;
+    global: { receitaBruta: string; receitaLiquida: string };
+    mercantil: { receitaBruta: string; receitaLiquida: string };
+  }>;
+  /** Os impostos abertos por unidade (em Obras, só PIS/COFINS e ISS). */
+  impostos: Array<{ unidade: number; pisCofinsGlobal: string; pisCofinsMercantil: string; iss: string; icms: string }>;
   criterios: Array<{ criterio: string; origem: string; itens: number }>;
   observacoes: Array<{ observacao: string; itens: number }>;
   /** Só na resposta da apuração. */
@@ -41,6 +51,7 @@ export type ItemReceita = {
   receitaLiquida: string;
   variacaoEstoque: string;
   observacao: string | null;
+  venda: Venda | null;
 };
 
 export type PaginaItens = { itens: ItemReceita[]; total: number; pagina: number; porPagina: number };
@@ -53,6 +64,7 @@ export type LancamentoReceita = {
   componente: Componente;
   valor: string;
   observacao: string;
+  venda: Venda | null;
   atualizadoEm: string;
 };
 
@@ -62,6 +74,7 @@ export type LancamentoReceitaEntrada = {
   componente: Componente;
   valor: string;
   observacao: string;
+  venda: Venda | null;
 };
 
 export type OpcoesLancamentoReceita = {
@@ -105,6 +118,11 @@ export const receitaPreviaService = {
     await api.delete(`/proxy/lancamentos-receita/${id}`);
   },
 };
+
+export const ROTULO_VENDA: Record<Venda, string> = { GLOBAL: "Global", MERCANTIL: "Mercantil" };
+
+/** Matriz e Filial separam as receitas em venda global e mercantil; Obras e a variação do estoque, não. */
+export const pedeVenda = (unidade: number, componente: Componente) => (unidade === 1 || unidade === 2) && componente !== "VARIACAO_ESTOQUE";
 
 export const ROTULO_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços" };
 

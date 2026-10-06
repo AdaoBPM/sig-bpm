@@ -69,7 +69,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "11699",
@@ -81,7 +81,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "53083",
@@ -93,7 +93,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "60641",
@@ -105,7 +105,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "44629",
@@ -129,7 +129,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "50305",
@@ -141,7 +141,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "2683",
@@ -293,11 +293,11 @@
     "DESCRICAO": "CONTRIBUICAO PREVIDENCIARIA SOBRE FATURAMENTO",
     "TIPO_CONTA": "ANALITICA",
     "DEPARTAMENTO": "DEDUÇÕES DA MARGEM LÍQUIDA (DML)",
-    "DEP.": "DML",
-    "ATRIBUIÇÃO": "Imposto de Renda e Contribuição Social",
-    "ATR.": "IRCS",
-    "CONTA DRE": "Imposto de Renda e Contribuição Social",
-    "RATEIO": "EXTRA"
+    "DEP.": "-",
+    "ATRIBUIÇÃO": "-",
+    "ATR.": "-",
+    "CONTA DRE": "-",
+    "RATEIO": "-"
   },
   {
     "CD_REDUZIDO": "71678",
@@ -525,7 +525,7 @@
     "ATRIBUIÇÃO": "Estoque",
     "ATR.": "E",
     "CONTA DRE": "Variação do Estoque",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44687",
@@ -537,7 +537,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44693",
@@ -549,7 +549,7 @@
     "ATRIBUIÇÃO": "Estoque",
     "ATR.": "E",
     "CONTA DRE": "Variação do Estoque",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44701",
@@ -561,7 +561,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44724",
@@ -585,7 +585,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Aço CA e CP",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44747",
@@ -597,7 +597,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Cimento",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "53077",
@@ -609,7 +609,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Insertos Metálicos e Ferragens",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "46545",
@@ -621,7 +621,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Insertos Metálicos e Ferragens",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44753",
@@ -633,7 +633,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Acessórios e Ferramentas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44760",
@@ -645,7 +645,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Agregados",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "122789",
@@ -657,7 +657,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Materiais Aplicados",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44776",
@@ -705,7 +705,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "50162",
@@ -717,7 +717,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Horas Extras",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44813",
@@ -729,7 +729,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44820",
@@ -753,7 +753,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44842",
@@ -765,7 +765,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Multas Rescisórias",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44865",
@@ -777,7 +777,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Multas Rescisórias",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44871",
@@ -789,7 +789,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44888",
@@ -801,7 +801,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44894",
@@ -813,7 +813,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44902",
@@ -837,7 +837,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44925",
@@ -849,7 +849,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44859",
@@ -861,7 +861,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44931",
@@ -873,7 +873,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44948",
@@ -885,7 +885,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44954",
@@ -921,7 +921,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "968295",
@@ -933,7 +933,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações PJ",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44977",
@@ -957,7 +957,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "120336",
@@ -969,7 +969,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "44983",
@@ -981,7 +981,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "67659",
@@ -993,7 +993,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45008",
@@ -1017,7 +1017,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45021",
@@ -1029,7 +1029,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "53605",
@@ -1041,7 +1041,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45037",
@@ -1065,7 +1065,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45050",
@@ -1077,7 +1077,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "5167",
@@ -1089,7 +1089,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45066",
@@ -1101,7 +1101,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45072",
@@ -1125,7 +1125,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Equipamentos Locados",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45095",
@@ -1137,7 +1137,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45149",
@@ -1149,7 +1149,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45103",
@@ -1161,7 +1161,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45110",
@@ -1173,7 +1173,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "112271",
@@ -1185,7 +1185,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45126",
@@ -1197,7 +1197,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45132",
@@ -1209,7 +1209,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45178",
@@ -1221,7 +1221,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45155",
@@ -1233,7 +1233,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Treinamentos e Capacitações",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45161",
@@ -1245,7 +1245,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45184",
@@ -1257,7 +1257,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Viagens e Estadias",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "968225",
@@ -1269,7 +1269,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "968236",
@@ -1281,7 +1281,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "968461",
@@ -1293,7 +1293,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Licenças de Software",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "FILIAL"
   },
   {
     "CD_REDUZIDO": "45191",
@@ -1329,7 +1329,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "45221",
@@ -1341,7 +1341,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "5026",
@@ -1353,7 +1353,7 @@
     "ATRIBUIÇÃO": "Receita Bruta do Pré-Fabricado",
     "ATR.": "RBPF",
     "CONTA DRE": "Receita Bruta do Pré-Fabricado",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "45215",
@@ -1389,7 +1389,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Aço CA e CP",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "36156",
@@ -1401,7 +1401,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Cimento",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "66431",
@@ -1413,7 +1413,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Insertos Metálicos e Ferragens",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "122810",
@@ -1425,7 +1425,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "36162",
@@ -1437,7 +1437,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Acessórios e Ferramentas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "6988",
@@ -1449,7 +1449,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Agregados",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "122803",
@@ -1461,7 +1461,7 @@
     "ATRIBUIÇÃO": "Matérias Primas",
     "ATR.": "MP",
     "CONTA DRE": "Materiais Aplicados",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968011",
@@ -1473,7 +1473,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Madeiras e Madeirites",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "158",
@@ -1521,7 +1521,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "2921",
@@ -1533,7 +1533,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "36015",
@@ -1545,7 +1545,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Horas Extras",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "2832",
@@ -1557,7 +1557,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "632",
@@ -1581,7 +1581,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "2951",
@@ -1593,7 +1593,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Multas Rescisórias",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3145",
@@ -1605,7 +1605,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Multas Rescisórias",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "2861",
@@ -1617,7 +1617,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3056",
@@ -1629,7 +1629,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3027",
@@ -1641,7 +1641,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "2795",
@@ -1665,7 +1665,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3263",
@@ -1677,7 +1677,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4535",
@@ -1689,7 +1689,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3116",
@@ -1701,7 +1701,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3234",
@@ -1713,7 +1713,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "649",
@@ -1737,7 +1737,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Terceirizada",
     "ATR.": "MOT",
     "CONTA DRE": "Serviços de Corte e Dobra do Aço",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "122826",
@@ -1749,7 +1749,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Terceirizada",
     "ATR.": "MOT",
     "CONTA DRE": "Serviços de Formas e Concretagem",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "122832",
@@ -1773,7 +1773,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968296",
@@ -1785,7 +1785,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Direta",
     "ATR.": "MOD",
     "CONTA DRE": "Remunerações PJ",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "661",
@@ -1809,7 +1809,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "45238",
@@ -1821,7 +1821,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3719",
@@ -1833,7 +1833,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3620",
@@ -1845,7 +1845,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "678",
@@ -1869,7 +1869,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "684",
@@ -1893,7 +1893,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3910",
@@ -1905,7 +1905,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3955",
@@ -1917,7 +1917,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "691",
@@ -1941,7 +1941,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4044",
@@ -1953,7 +1953,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4104",
@@ -1965,7 +1965,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "709",
@@ -1989,7 +1989,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Equipamentos Locados",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4564",
@@ -2001,7 +2001,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4245",
@@ -2013,7 +2013,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "3531",
@@ -2025,7 +2025,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "69240",
@@ -2037,7 +2037,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4475",
@@ -2049,7 +2049,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4593",
@@ -2061,7 +2061,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4417",
@@ -2073,7 +2073,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "112288",
@@ -2085,7 +2085,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4506",
@@ -2097,7 +2097,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4653",
@@ -2109,7 +2109,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4921",
@@ -2121,7 +2121,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4802",
@@ -2133,7 +2133,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Treinamentos e Capacitações",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4831",
@@ -2145,7 +2145,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "4861",
@@ -2157,7 +2157,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Viagens e Estadias",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968226",
@@ -2169,7 +2169,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968237",
@@ -2181,7 +2181,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968362",
@@ -2193,7 +2193,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968462",
@@ -2205,7 +2205,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Diretos",
     "ATR.": "GGD",
     "CONTA DRE": "Licenças de Software",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "MATRIZ"
   },
   {
     "CD_REDUZIDO": "968012",
@@ -3069,7 +3069,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45280",
@@ -3081,7 +3081,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45296",
@@ -3093,7 +3093,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Horas Extras",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45304",
@@ -3105,7 +3105,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Remunerações CLT",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45311",
@@ -3129,7 +3129,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45333",
@@ -3141,7 +3141,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Multas Rescisórias",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45340",
@@ -3153,7 +3153,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Multas Rescisórias",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45356",
@@ -3165,7 +3165,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45362",
@@ -3177,7 +3177,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45379",
@@ -3189,7 +3189,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45385",
@@ -3213,7 +3213,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45391",
@@ -3225,7 +3225,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45422",
@@ -3237,7 +3237,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45439",
@@ -3249,7 +3249,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "45400",
@@ -3261,7 +3261,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Encargos e Benefícios",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "46055",
@@ -3285,7 +3285,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111113",
@@ -3297,7 +3297,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "46048",
@@ -3309,7 +3309,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Água, Energia, Gás, Telefone e Internet",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "51546",
@@ -3333,7 +3333,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111171",
@@ -3345,7 +3345,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111337",
@@ -3357,7 +3357,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111159",
@@ -3369,7 +3369,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111120",
@@ -3381,7 +3381,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111426",
@@ -3393,7 +3393,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111142",
@@ -3405,7 +3405,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "120320",
@@ -3417,7 +3417,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111219",
@@ -3429,7 +3429,7 @@
     "ATRIBUIÇÃO": "Mão de Obra Indireta",
     "ATR.": "MOI",
     "CONTA DRE": "Remunerações PJ",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111136",
@@ -3441,7 +3441,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Licenças de Software",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "111165",
@@ -3453,7 +3453,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "51552",
@@ -3465,7 +3465,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Viagens e Estadias",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "968228",
@@ -3477,7 +3477,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "968239",
@@ -3489,7 +3489,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "968247",
@@ -3501,7 +3501,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Treinamentos e Capacitações",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "968261",
@@ -3513,7 +3513,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Equipamentos Locados",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "968361",
@@ -3525,7 +3525,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "2772",
@@ -4329,7 +4329,7 @@
     "ATRIBUIÇÃO": "Depreciação",
     "ATR.": "D",
     "CONTA DRE": "Depreciação do Maquinário",
-    "RATEIO": "UNIDADE"
+    "RATEIO": "OBRAS"
   },
   {
     "CD_REDUZIDO": "45675",
@@ -5169,7 +5169,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Frete e Descarga",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "50044",
@@ -5205,7 +5205,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Frete e Descarga",
-    "RATEIO": "PRODUÇÃO"
+    "RATEIO": "UNIDADE"
   },
   {
     "CD_REDUZIDO": "49911",
@@ -9141,7 +9141,7 @@
     "ATRIBUIÇÃO": "Despesas Financeiras Correntes",
     "ATR.": "DFC",
     "CONTA DRE": "Despesas da Diretoria",
-    "RATEIO": "-"
+    "RATEIO": "EXTRA"
   },
   {
     "CD_REDUZIDO": "968169",
