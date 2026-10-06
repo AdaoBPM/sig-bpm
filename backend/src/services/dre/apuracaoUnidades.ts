@@ -344,10 +344,14 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           ["METALURGIA", linhaCP(l)],
           ["ARMADURA", linhaCP(l)],
         ];
+        // A depreciação de montagem fica com o acompanhamento inteiro: o bloco
+        // complementar não tem linha de depreciação (aba Resultados (Serviços),
+        // linha 68, correção do usuário de 06/10/2026).
+        const acompanhamentoInteiro = montagem && n(l.descricao) === n("Depreciação do Maquinário");
         for (const [chave, linhaBase] of partes) {
           const baseV = somaRateio(chave, linhaBase?.id);
           if (baseV.isZero()) continue;
-          const p = pct(chave, destino);
+          const p = chave === "ACOMPANHAMENTO" && acompanhamentoInteiro ? zero().plus(1) : pct(chave, destino);
           rateios.push(parcela(chave, destino, linhaBase, baseV, p));
           v = v.plus(baseV.times(p));
         }

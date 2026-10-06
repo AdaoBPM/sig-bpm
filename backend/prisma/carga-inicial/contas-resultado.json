@@ -4905,7 +4905,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Equipamentos Locados",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "153",
@@ -4917,7 +4917,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "154",
@@ -4929,7 +4929,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "155",
@@ -4941,7 +4941,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "156",
@@ -4953,7 +4953,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "157",
@@ -4965,7 +4965,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Seguro Patrimonial",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "165",
@@ -4977,7 +4977,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "159",
@@ -4989,7 +4989,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Variáveis",
     "ATR.": "GGV",
     "CONTA DRE": "Manutenção do Maquinário",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "160",
@@ -5001,7 +5001,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "161",
@@ -5013,7 +5013,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "162",
@@ -5025,7 +5025,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Outros Custos/Despesas",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "163",
@@ -5037,7 +5037,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Materiais de Expediente e EPI",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "166",
@@ -5049,7 +5049,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Viagens e Estadias",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "968230",
@@ -5061,7 +5061,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "968240",
@@ -5073,7 +5073,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Eventos Internos",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "968248",
@@ -5085,7 +5085,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Treinamentos e Capacitações",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "968464",
@@ -5097,7 +5097,7 @@
     "ATRIBUIÇÃO": "Gastos Gerais Indiretos",
     "ATR.": "GGI",
     "CONTA DRE": "Licenças de Software",
-    "RATEIO": "OBRAS"
+    "RATEIO": "COMPLEMENTAR"
   },
   {
     "CD_REDUZIDO": "49881",
