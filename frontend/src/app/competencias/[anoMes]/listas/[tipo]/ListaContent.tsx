@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -32,8 +31,13 @@ const POR_PAGINA_INICIAL = 50;
 /** A lista inteira vem de uma vez: o filtro e a ordem das colunas valem para todos os registros. */
 const TODOS = 10000;
 
-/** As quatro listas de produção ficam numa aba só, com a escolha entre elas logo abaixo (E6 do levantamento de layout). */
-const PRODUCAO: Record<string, string> = { PRODUCAO: "Volume", PRODUCAO_PISTA: "Pistas", PRODUCAO_METALURGIA: "Metalurgia", PRODUCAO_ARMADURA: "Armadura" };
+/** As quatro listas de produção, cada uma na sua aba, com nome curto. */
+const ABA_PRODUCAO: Record<string, string> = {
+  PRODUCAO: "Produção (Volume)",
+  PRODUCAO_PISTA: "Produção (Pistas)",
+  PRODUCAO_METALURGIA: "Metalurgia",
+  PRODUCAO_ARMADURA: "Armadura",
+};
 
 /** Os detalhes numéricos vêm como decimal ("2006.010"); códigos de peça e textos ficam como estão. */
 const ehDecimal = (v: string | null) => v !== null && /^-?\d+\.\d+$/.test(v);
@@ -136,16 +140,11 @@ function Lista() {
   const fechada = d?.competencia.status === "FECHADA";
   const colunasDetalhe = d?.itens[0]?.detalhes.map((x) => x.rotulo) ?? [];
   const visiveis = LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo));
-  const producoes = visiveis.filter((l) => l.tipo in PRODUCAO);
-  const naProducao = lista.tipo in PRODUCAO;
-  // As abas: as listas avulsas e, no lugar da primeira de produção, o grupo.
-  const abas = visiveis.flatMap((l) => {
-    if (!(l.tipo in PRODUCAO)) {
-      return [{ chave: l.slug, rotulo: definicoes.data?.[l.tipo]?.rotulo ?? l.tipo, href: `/competencias/${anoMes}/listas/${l.slug}` }];
-    }
-    if (l !== producoes[0]) return [];
-    return [{ chave: "producao-grupo", rotulo: "Produção", href: `/competencias/${anoMes}/listas/${l.slug}` }];
-  });
+  const abas = visiveis.map((l) => ({
+    chave: l.slug,
+    rotulo: ABA_PRODUCAO[l.tipo] ?? definicoes.data?.[l.tipo]?.rotulo ?? l.tipo,
+    href: `/competencias/${anoMes}/listas/${l.slug}`,
+  }));
 
   return (
     <div className="space-y-6">
@@ -169,23 +168,7 @@ function Lista() {
         }
       />
 
-      <div className="space-y-3">
-        <Abas rotulo="Listas" ativa={naProducao ? "producao-grupo" : slug} abas={abas} />
-        {naProducao && producoes.length > 1 ? (
-          <nav aria-label="Listas de produção" className="inline-flex rounded-sm border border-gray-300 bg-white p-0.5">
-            {producoes.map((l) => (
-              <Link
-                key={l.slug}
-                href={`/competencias/${anoMes}/listas/${l.slug}`}
-                aria-current={l.slug === slug ? "page" : undefined}
-                className={`rounded-sm px-3 py-1 text-sm ${l.slug === slug ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100"}`}
-              >
-                {PRODUCAO[l.tipo]}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-      </div>
+      <Abas rotulo="Listas" ativa={slug} abas={abas} />
 
       {d && d.totais.length > 0 ? (
         <FaixaIndicadores
