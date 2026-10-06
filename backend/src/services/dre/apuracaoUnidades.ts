@@ -407,9 +407,20 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       const c = somaDireto(l.id);
       // Receitas financeiras entram com o sinal trocado (linhas 84, 85 e 87).
       const financeira = l.grupoSigla === "RFC" || l.grupoSigla === "RFNC";
-      gravar(u, l, financeira ? c.neg() : c, {
-        regra: financeira ? "−(lançamentos contábeis diretos)" : "Lançamentos contábeis diretos",
+      // As despesas financeiras somam também o rateio de acompanhamento inteiro
+      // (linhas 91 a 93 e 95, correção do usuário de 06/10/2026): é o centro
+      // ADM. DE OBRAS que transforma em rateio os juros lançados nele.
+      const despesaFinanceira = l.grupoSigla === "DFC" || l.grupoSigla === "DFNC";
+      const acompanhamento = despesaFinanceira ? somaRateio("ACOMPANHAMENTO", l.id) : zero();
+      const rateios = acompanhamento.isZero() ? [] : [parcela("ACOMPANHAMENTO", "DESPESAS", l, acompanhamento, zero().plus(1))];
+      gravar(u, l, financeira ? c.neg() : c.plus(acompanhamento), {
+        regra: financeira
+          ? "−(lançamentos contábeis diretos)"
+          : despesaFinanceira
+            ? "Lançamentos contábeis diretos + rateio de acompanhamento inteiro"
+            : "Lançamentos contábeis diretos",
         direto: c.toFixed(2),
+        ...(rateios.length ? { rateios } : {}),
         origem: { contabil: { linhaId: l.id, ...(financeira ? { fator: "-1" } : {}) } },
       });
     }
