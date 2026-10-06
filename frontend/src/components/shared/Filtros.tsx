@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 /** O valor do seletor que quer dizer "sem filtro" (o Select não aceita valor vazio). */
 const TODOS = "__todos__";
@@ -35,7 +36,7 @@ export function SeletorFiltro({
   const rotuloDe = (v: string | null) => (v === TODOS ? todos : (opcoes.find((o) => o.valor === v)?.rotulo ?? v));
   return (
     <div className="space-y-1">
-      <span className="block text-xs font-medium text-gray-600">{rotulo}</span>
+      <span className="block text-xs font-medium text-gray-600">{iniciaisMaiusculas(rotulo)}</span>
       <Select value={atual} onValueChange={(v) => onMudar(v === TODOS || v === null ? undefined : String(v))}>
         <SelectTrigger className={`${largura} rounded-sm`} aria-label={rotulo}>
           <SelectValue>{(v: string | null) => rotuloDe(v)}</SelectValue>

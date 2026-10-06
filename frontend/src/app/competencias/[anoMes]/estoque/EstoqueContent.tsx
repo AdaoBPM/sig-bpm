@@ -141,7 +141,7 @@ export function EstoqueContent() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {dados.medias.map((m) => (
               <div key={m.linha} className="border border-gray-200 bg-white rounded-sm p-4">
-                <p className="text-xs font-bold tracking-wide text-gray-600 uppercase">{ROTULO_MEDIA[m.linha] ?? m.linha}</p>
+                <p className="text-xs font-bold text-gray-600">{ROTULO_MEDIA[m.linha] ?? m.linha}</p>
                 <p className="mt-1 text-xl font-extrabold tabular-nums text-gray-900">{m3(m.volume)} m³</p>
                 <p className="text-sm tabular-nums text-gray-700">{moeda(m.valor)}</p>
                 <p className="mt-0.5 text-xs text-gray-500">preço médio {moeda(m.precoMedio)}/m³</p>
@@ -156,7 +156,7 @@ export function EstoqueContent() {
                   <CampoBusca rotulo="Buscar obra ou linha" valor={busca} onMudar={setBusca} placeholder="Obra ou linha…" />
                   <label className="flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" checked={soMovimento} onChange={(e) => setSoMovimento(e.target.checked)} className="size-4 accent-black" />
-                    Só com movimento no mês
+                    Só com Movimento no Mês
                   </label>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
@@ -200,7 +200,7 @@ export function EstoqueContent() {
                   ))}
                 </tbody>
               </table>
-              {saldos.length === 0 ? <Vazio titulo="Nenhum saldo com esses filtros" dica={soMovimento ? "Desligue Só com movimento no mês para ver todas as obras." : undefined} /> : null}
+              {saldos.length === 0 ? <Vazio titulo="Nenhum saldo com esses filtros" dica={soMovimento ? "Desligue Só com Movimento no Mês para ver todas as obras." : undefined} /> : null}
           </QuadroTabela>
         </>
       ) : (

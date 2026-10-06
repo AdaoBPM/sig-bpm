@@ -23,6 +23,7 @@ import {
 } from "../../utils/formatacao";
 import { useAuth } from "@/context/AuthContext";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 /** Acima disso a tabela de rejeições corta — o relatório completo fica no banco. */
 const MAX_REJEICOES = 200;
@@ -53,7 +54,7 @@ function Contador({
         : "text-gray-900";
   return (
     <div className="border border-gray-200 rounded-sm p-4">
-      <p className="text-xs font-bold tracking-wide text-gray-600 uppercase">{rotulo}</p>
+      <p className="text-xs font-bold text-gray-600">{iniciaisMaiusculas(rotulo)}</p>
       <p className={`mt-1 text-2xl font-extrabold tabular-nums ${cor}`}>{inteiro(valor)}</p>
       {detalhe ? <p className="mt-0.5 text-xs text-gray-500">{detalhe}</p> : null}
     </div>
@@ -206,11 +207,11 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
             <h3 className="text-sm font-bold text-gray-900">Conferência do Arquivo</h3>
             <dl className="mt-3 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-gray-600">Soma das linhas do mês</dt>
+                <dt className="text-gray-600">Soma das Linhas do Mês</dt>
                 <dd className="font-medium tabular-nums">{moeda(resumo.somaArquivo)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-gray-600">Total Geral do arquivo</dt>
+                <dt className="text-gray-600">Total Geral do Arquivo</dt>
                 <dd className="font-medium tabular-nums">
                   {resumo.totalGeral === null ? "—" : moeda(resumo.totalGeral)}
                 </dd>
@@ -437,7 +438,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
                 ] as const
               ).map(([rotulo, n, cor]) => (
                 <div key={rotulo} className="flex justify-between gap-4">
-                  <dt className="text-gray-600">{rotulo}</dt>
+                  <dt className="text-gray-600">{iniciaisMaiusculas(rotulo)}</dt>
                   <dd className={`font-bold tabular-nums ${cor}`}>{inteiro(n)}</dd>
                 </div>
               ))}

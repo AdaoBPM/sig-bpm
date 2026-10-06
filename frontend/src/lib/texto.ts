@@ -6,14 +6,25 @@ const MINUSCULAS = new Set([
 
 /**
  * "Centro fora do cadastro" → "Centro Fora do Cadastro": iniciais maiúsculas,
- * como nos nomes das telas, das abas, dos títulos e dos rótulos das colunas,
- * menos nos artigos, preposições, conjunções e pronomes do meio. O resto da
- * palavra fica como está (siglas como DRE não mudam), e a palavra que começa
- * por parêntese também ("Peso (kg)").
+ * como nos nomes das telas, das abas, dos títulos, dos rótulos das colunas,
+ * dos indicadores e dos campos, menos nos artigos, preposições, conjunções e
+ * pronomes do meio. O resto da palavra fica como está (siglas como DRE não
+ * mudam), e o que está entre parênteses também ("Peso (kg)", "Centro de
+ * Custo (opcional)").
  */
 export function iniciaisMaiusculas(texto: string) {
+  let parenteses = 0;
   return texto
     .split(" ")
-    .map((p, i) => (i > 0 && MINUSCULAS.has(p.toLowerCase()) ? p.toLowerCase() : p.charAt(0).toLocaleUpperCase("pt-BR") + p.slice(1)))
+    .map((p, i) => {
+      const dentro = parenteses > 0 || p.startsWith("(");
+      for (const c of p) {
+        if (c === "(") parenteses++;
+        else if (c === ")") parenteses = Math.max(0, parenteses - 1);
+      }
+      if (dentro) return p;
+      if (i > 0 && MINUSCULAS.has(p.toLowerCase())) return p.toLowerCase();
+      return p.charAt(0).toLocaleUpperCase("pt-BR") + p.slice(1);
+    })
     .join(" ");
 }

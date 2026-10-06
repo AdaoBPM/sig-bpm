@@ -250,7 +250,7 @@ export function ConferenciaPlanilhaContent() {
             <div className="flex items-end gap-4">
               <div className="space-y-1.5">
                 <label htmlFor="conferencia-limite" className="block text-xs font-medium text-gray-700">
-                  Limite de arredondamento
+                  Limite de Arredondamento
                 </label>
                 <Input
                   id="conferencia-limite"
@@ -262,7 +262,7 @@ export function ConferenciaPlanilhaContent() {
               </div>
               <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" checked={soDiferencas} onChange={(e) => setSoDiferencas(e.target.checked)} className="size-4 accent-black" />
-                Só as diferenças
+                Só as Diferenças
               </label>
             </div>
           </div>

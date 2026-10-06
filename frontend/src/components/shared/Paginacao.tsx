@@ -33,7 +33,7 @@ export function Paginacao({ total, pagina, porPagina, onPagina, onPorPagina, opc
       <div className="flex items-center gap-3">
         {onPorPagina ? (
           <label className="flex items-center gap-1.5 text-xs text-gray-600">
-            Por página
+            Por Página
             <select
               value={porPagina}
               onChange={(e) => {

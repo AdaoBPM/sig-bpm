@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Calculator } from "lucide-react";
@@ -147,37 +146,6 @@ export function RateiosContent() {
           Nenhuma apuração ainda. Importe ou digite as listas do mês e apure.
         </div>
       )}
-
-      {dados ? (
-        <div className="border border-gray-200 bg-white rounded-sm">
-          <div className="border-b border-gray-200 px-4 py-3">
-            <h2 className="text-sm font-bold text-gray-900">Memória de Cálculo: Volumes das Listas (Aba Totais)</h2>
-            <p className="text-xs text-gray-500">
-              Os volumes de hoje, somados das listas da competência. Expedição e montagem aparecem aqui, mas
-              não entram em nenhuma chave de rateio.
-            </p>
-          </div>
-          <table className="tabela-sig w-full border-collapse text-sm">
-            <tbody>
-              {dados.totais.map((t) => (
-                <tr key={t.codigo} className="border-t border-gray-100">
-                  <td className="px-4 py-2 text-gray-700">{t.rotulo}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{quant(t.quantidade)}</td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{t.medida}</td>
-                  <td className="px-4 py-2 text-right">
-                    <Link
-                      href={`/competencias/${anoMes}/listas/${t.tipo.toLowerCase().replace(/_/g, "-")}`}
-                      className="text-xs text-gray-600 underline-offset-2 hover:underline"
-                    >
-                      ver lista
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
     </div>
   );
 }

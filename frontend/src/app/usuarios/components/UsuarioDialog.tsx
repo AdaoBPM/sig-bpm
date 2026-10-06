@@ -84,7 +84,7 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
 
           {perfil?.recorteSetor ? (
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-gray-900">Setores: listas que pode digitar e importar</legend>
+              <legend className="text-sm font-medium text-gray-900">Setores<span className="font-normal text-gray-500">: listas que pode digitar e importar</span></legend>
               <div className="grid gap-1 sm:grid-cols-2">
                 {opcoes.setores.map((s) => (
                   <label key={s.tipo} className="flex items-center gap-2 text-sm text-gray-700">
@@ -97,7 +97,7 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
           ) : null}
           {perfil?.recorteDepartamento ? (
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-gray-900">Departamentos: movimentações e centros de custo que pode consultar</legend>
+              <legend className="text-sm font-medium text-gray-900">Departamentos<span className="font-normal text-gray-500">: movimentações e centros de custo que pode consultar</span></legend>
               <div className="grid gap-1 sm:grid-cols-2">
                 {opcoes.departamentos.map((d) => (
                   <label key={d.departamento} className="flex items-center gap-2 text-sm text-gray-700">

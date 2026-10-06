@@ -99,7 +99,7 @@ export function PrecosContratoContent() {
             }}
             className="size-4 accent-black"
           />
-          Mostrar histórico{data ? ` (${data.substituidos} substituído(s))` : ""}
+          Mostrar Histórico{data ? ` (${data.substituidos} substituído(s))` : ""}
         </label>
       }
     >

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { iniciaisMaiusculas } from "@/lib/texto";
+
 export type Indicador = {
   rotulo: string;
   valor: ReactNode;
@@ -20,7 +22,7 @@ export function FaixaIndicadores({ itens }: { itens: Indicador[] }) {
     <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-sm border border-gray-200 bg-white px-4 py-2.5">
       {itens.map((i) => (
         <div key={i.rotulo} className="flex items-baseline gap-1.5" title={i.dica}>
-          <dt className={`text-xs text-gray-600 ${i.rotuloAntes ? "" : "order-2"}`}>{i.rotulo}</dt>
+          <dt className={`text-xs text-gray-600 ${i.rotuloAntes ? "" : "order-2"}`}>{iniciaisMaiusculas(i.rotulo)}</dt>
           <dd className={`${i.rotuloAntes ? "" : "order-1"} text-base font-extrabold tabular-nums ${i.tom === "atencao" ? "text-red-700" : "text-gray-900"}`}>{i.valor}</dd>
         </div>
       ))}

@@ -1,10 +1,12 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { Children, type ComponentProps } from "react";
 
+import { iniciaisMaiusculas } from "@/lib/texto";
 import { cn } from "@/lib/utils";
 
-function Label({ className, ...props }: ComponentProps<"label">) {
+/** Os nomes dos campos com iniciais maiúsculas (padrão de nomes do SPEC). */
+function Label({ className, children, ...props }: ComponentProps<"label">) {
   return (
     <label
       data-slot="label"
@@ -13,7 +15,9 @@ function Label({ className, ...props }: ComponentProps<"label">) {
         className,
       )}
       {...props}
-    />
+    >
+      {Children.map(children, (c) => (typeof c === "string" ? iniciaisMaiusculas(c) : c))}
+    </label>
   );
 }
 

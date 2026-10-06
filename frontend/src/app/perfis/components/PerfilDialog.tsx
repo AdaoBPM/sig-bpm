@@ -86,11 +86,15 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-900">
               <input type="checkbox" checked={recorteSetor} onChange={(e) => setRecorteSetor(e.target.checked)} className="size-4 accent-black" />
-              Recorta por setor: o usuário só alcança as listas dos setores marcados nele
+              <span>
+                Recorta por Setor<span className="text-gray-500">: o usuário só alcança as listas dos setores marcados nele</span>
+              </span>
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-900">
               <input type="checkbox" checked={recorteDepartamento} onChange={(e) => setRecorteDepartamento(e.target.checked)} className="size-4 accent-black" />
-              Recorta por departamento: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele
+              <span>
+                Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele</span>
+              </span>
             </label>
           </div>
           <table className="tabela-sig w-full border-collapse text-sm">

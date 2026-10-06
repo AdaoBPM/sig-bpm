@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { iniciaisMaiusculas } from "@/lib/texto";
 
 import { edicaoService, mensagemDeErro, textoDoEfeito, type Campo, type DefinicaoCadastro, type Registro } from "../services/edicaoService";
 
@@ -36,7 +37,7 @@ function CampoForm({ c, valor, onMuda, editando }: { c: Campo; valor: unknown; o
     return (
       <label className="flex items-center gap-2 text-sm text-gray-900">
         <input type="checkbox" checked={valor === true} disabled={travado} onChange={(e) => onMuda(e.target.checked)} className="size-4 accent-black" />
-        {c.rotulo}
+        {iniciaisMaiusculas(c.rotulo)}
       </label>
     );
   }

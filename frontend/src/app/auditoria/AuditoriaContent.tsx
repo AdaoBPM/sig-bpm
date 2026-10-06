@@ -115,7 +115,7 @@ export function AuditoriaContent() {
         </div>
         <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={filtro.incluirAcessos} onChange={(e) => muda({ incluirAcessos: e.target.checked })} className="size-4 accent-black" />
-          Incluir acessos às telas
+          Incluir Acessos às Telas
         </label>
       </BarraDeFiltros>
 
