@@ -82,7 +82,7 @@ export function PainelFiltro({ rotulo, tipo, alinhamento, filtrado, ordem, valor
       <Popover.Trigger
         aria-label={`Ordenar e filtrar ${rotulo}`}
         className={`inline-flex size-4 shrink-0 items-center justify-center rounded-sm border ${
-          filtrado || ordem ? "border-black bg-bpm-primary text-black" : "border-gray-300 bg-white text-gray-500 hover:border-gray-500 hover:text-gray-900"
+          filtrado || ordem ? "border-black bg-black text-bpm-primary" : "border-gray-400 bg-white text-gray-600 hover:border-gray-700 hover:text-gray-900"
         }`}
       >
         <Icone className="size-3" strokeWidth={filtrado ? 2.5 : 2} fill={filtrado ? "currentColor" : "none"} />
@@ -234,11 +234,12 @@ export function useTabelaFiltravel<T>(linhas: T[] | undefined, colunas: Coluna<T
   // Nas colunas sem filtro, a tela pode pôr outro conteúdo no rótulo (a caixa de marcar todas, nas divergências).
   const montar = (extras: Record<string, ReactNode> = {}): ReactNode => (
     <thead>
-      <tr className="border-b border-gray-200 bg-gray-50">
+      {/* Rótulos em amarelo-ouro, a cor da logo; o "!" vence o fundo do .tabela-sig th. */}
+      <tr className="border-b border-gray-200">
         {colunas.map((c) => (
           <th
             key={c.chave}
-            className={`px-4 py-3 text-xs font-bold text-gray-600 ${c.alinhamento === "direita" ? "text-right" : "text-left"} ${c.classe ?? ""}`}
+            className={`!bg-bpm-primary px-4 py-3 text-xs font-bold text-gray-900 ${c.alinhamento === "direita" ? "text-right" : "text-left"} ${c.classe ?? ""}`}
           >
             {c.semFiltro ? (
               (extras[c.chave] ?? iniciaisMaiusculas(c.rotulo))

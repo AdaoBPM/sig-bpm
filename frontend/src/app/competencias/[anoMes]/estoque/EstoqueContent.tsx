@@ -146,20 +146,11 @@ export function EstoqueContent() {
 
           <QuadroTabela
             barra={
-              <>
-                <div className="ml-auto flex shrink-0 items-center gap-3">
-                  {tabela.ativos ? (
-                    <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                      Limpar Filtros
-                    </button>
-                  ) : null}
-                  <span className="text-xs text-gray-600">
-                    {tabela.ativos && tabela.total !== tabela.totalGeral
-                      ? `${tabela.total.toLocaleString("pt-BR")} de ${tabela.totalGeral.toLocaleString("pt-BR")} saldo(s)`
-                      : `${tabela.totalGeral.toLocaleString("pt-BR")} saldo(s)`}
-                  </span>
-                </div>
-              </>
+              tabela.ativos ? (
+                <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+                  Limpar Filtros
+                </button>
+              ) : undefined
             }
           >
               <table className="tabela-sig w-full border-collapse text-sm">

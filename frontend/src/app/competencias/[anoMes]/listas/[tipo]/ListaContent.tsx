@@ -190,18 +190,11 @@ function Lista() {
 
       <QuadroTabela
         barra={
-          <>
-            <div className="ml-auto flex shrink-0 items-center gap-3">
-              {tabela.ativos ? (
-                <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar Filtros
-                </button>
-              ) : null}
-              <p className="text-xs text-gray-600">
-                {d ? (tabela.ativos && tabela.total !== tabela.totalGeral ? `${inteiro(tabela.total)} de ${inteiro(tabela.totalGeral)} registro(s)` : `${inteiro(tabela.total)} registro(s)`) : ""}
-              </p>
-            </div>
-          </>
+          tabela.ativos ? (
+            <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+              Limpar Filtros
+            </button>
+          ) : undefined
         }
         rodape={d && tabela.total > 0 ? <Paginacao total={tabela.total} pagina={tabela.pagina} porPagina={tabela.porPagina} onPagina={tabela.setPagina} onPorPagina={tabela.setPorPagina} carregando={dados.isFetching} /> : null}
       >
