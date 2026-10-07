@@ -59,7 +59,7 @@ export function CadastroShell({
             <div className="flex shrink-0 items-center gap-3">
               {filtros?.ativos ? (
                 <button type="button" onClick={filtros.onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar filtros
+                  Limpar Filtros
                 </button>
               ) : null}
               <p className="hidden text-xs text-gray-600 sm:block">{carregando ? "" : contagem}</p>

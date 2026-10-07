@@ -167,7 +167,7 @@ export function ReceitaPreviaContent() {
       <div className="space-y-2">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Lançamentos de Receita</h2>
+            <h2 className="text-lg font-bold text-gray-900">Lançamentos Manuais de Receita</h2>
             <p className="text-sm text-gray-600">Entram na receita na próxima apuração.</p>
           </div>
           {!fechada ? (
@@ -189,7 +189,7 @@ export function ReceitaPreviaContent() {
             tabela.ativos ? (
               <div className="ml-auto flex shrink-0 items-center gap-3">
                 <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar filtros
+                  Limpar Filtros
                 </button>
                 <span className="text-xs text-gray-600">
                   {tabela.total !== tabela.totalGeral ? `${tabela.total} de ${tabela.totalGeral} lançamento(s)` : `${tabela.total} lançamento(s)`}

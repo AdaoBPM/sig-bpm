@@ -63,7 +63,7 @@ export function BarraDeFiltros({ children, ativos, onLimpar, direita }: { childr
         {ativos && onLimpar ? (
           <button type="button" onClick={onLimpar} className="inline-flex h-9 items-center gap-1 rounded-sm px-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900">
             <X className="size-3.5" />
-            Limpar filtros
+            Limpar Filtros
           </button>
         ) : null}
       </div>

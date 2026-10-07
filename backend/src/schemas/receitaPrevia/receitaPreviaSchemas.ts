@@ -58,5 +58,6 @@ export const itensReceitaSchema = z.object({
   unidade: z.coerce.number().int().min(1).max(3),
   natureza: z.enum(NATUREZAS),
   pagina: z.coerce.number().int().min(1).default(1),
-  porPagina: z.coerce.number().int().min(1).max(200).default(50),
+  /** O modal da memória de cálculo pede todos os itens, para filtrar e ordenar pelos rótulos. */
+  porPagina: z.coerce.number().int().min(1).max(20000).default(50),
 });

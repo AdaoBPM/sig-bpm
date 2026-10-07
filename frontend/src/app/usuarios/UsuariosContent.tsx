@@ -114,7 +114,7 @@ export function UsuariosContent() {
           tabela.ativos ? (
             <div className="ml-auto flex shrink-0 items-center gap-3">
               <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                Limpar filtros
+                Limpar Filtros
               </button>
               {tabela.total !== tabela.totalGeral ? (
                 <p className="text-xs text-gray-600">

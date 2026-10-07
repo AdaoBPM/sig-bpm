@@ -1,7 +1,8 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentProps } from "react";
+import { Children, type ComponentProps } from "react";
 
+import { iniciaisMaiusculas } from "@/lib/texto";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -35,13 +36,12 @@ const buttonVariants = cva(
 type ButtonProps = ComponentProps<typeof ButtonPrimitive> &
   VariantProps<typeof buttonVariants>;
 
-function Button({ className, variant = "default", size = "default", ...props }: ButtonProps) {
+/** Os textos dos botões saem com iniciais maiúsculas (padrão de nomes do SPEC). */
+function Button({ className, variant = "default", size = "default", children, ...props }: ButtonProps) {
   return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+    <ButtonPrimitive data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props}>
+      {typeof children === "function" ? children : Children.map(children, (c) => (typeof c === "string" ? iniciaisMaiusculas(c) : c))}
+    </ButtonPrimitive>
   );
 }
 

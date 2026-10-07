@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
+import { iniciaisMaiusculas } from "@/lib/texto"
 import { cn } from "@/lib/utils"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
 
@@ -77,6 +78,7 @@ function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  children,
   ...props
 }: MenuPrimitive.Item.Props & {
   inset?: boolean
@@ -92,7 +94,10 @@ function DropdownMenuItem({
         className
       )}
       {...props}
-    />
+    >
+      {/* Os itens de menu saem com iniciais maiúsculas, como os botões. */}
+      {typeof children === "function" ? children : React.Children.map(children, (c) => (typeof c === "string" ? iniciaisMaiusculas(c) : c))}
+    </MenuPrimitive.Item>
   )
 }
 

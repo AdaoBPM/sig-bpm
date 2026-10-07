@@ -15,6 +15,8 @@ const OBRAS_GENERICAS = new Set(["G11", "M2", "M3", "M9999"]);
  *  - nome da primeira lista que a trouxe. O nome não é sobrescrito depois,
  *    porque cada lista abrevia de um jeito ("ABIMAR" e "ABIMAR | AMPLIAÇÃO
  *    LOJA IÇARA" são a mesma obra) e ele ficaria mudando a cada importação.
+ *    A obra que nasceu sem nome (a DRE do Comercial só traz o código) recebe
+ *    o da primeira lista que o trouxer.
  *
  * A situação diante do contrato (SEM_CONTRATO, INCONSISTENTE) é apurada no
  * Passo 14, com a DRE do Comercial.
@@ -26,9 +28,13 @@ export async function garantirObras(
   const codigos = [...obras.keys()];
   const existentes = await tx.obra.findMany({
     where: { codigo: { in: codigos } },
-    select: { id: true, codigo: true },
+    select: { id: true, codigo: true, nome: true },
   });
   const porCodigo = new Map(existentes.map((o) => [o.codigo, o.id]));
+  for (const o of existentes) {
+    const nome = obras.get(o.codigo)?.trim();
+    if (nome && nome !== o.codigo && (!o.nome || o.nome === o.codigo)) await tx.obra.update({ where: { id: o.id }, data: { nome } });
+  }
 
   const novas = codigos.filter((c) => !porCodigo.has(c));
   if (novas.length > 0) {
@@ -37,7 +43,7 @@ export async function garantirObras(
         const generica = OBRAS_GENERICAS.has(codigo.toUpperCase());
         return {
           codigo,
-          nome: obras.get(codigo) ?? codigo,
+          nome: obras.get(codigo)?.trim() || codigo,
           tipoVenda: codigo.toUpperCase().startsWith("G") ? ("GLOBAL" as const) : ("MERCANTIL" as const),
           generica,
           situacaoCadastro: generica ? ("GENERICA" as const) : ("OK" as const),

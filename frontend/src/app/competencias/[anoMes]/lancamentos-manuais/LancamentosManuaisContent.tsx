@@ -153,7 +153,7 @@ export function LancamentosManuaisContent() {
             <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-2.5 text-sm">
               {tabela.ativos ? (
                 <button type="button" onClick={tabela.limpar} className="mr-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar filtros
+                  Limpar Filtros
                 </button>
               ) : null}
               <span className="text-gray-600">

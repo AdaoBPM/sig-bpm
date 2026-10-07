@@ -105,7 +105,8 @@ export async function prepararGravacao(
 
   const obrasCitadas = new Map<string, string | null>();
   for (const r of registros) {
-    if (r.obra && !obrasCitadas.has(r.obra.codigo)) obrasCitadas.set(r.obra.codigo, r.obra.nome);
+    // O nome da primeira linha que trouxer um (a primeira pode vir sem nome).
+    if (r.obra && !obrasCitadas.get(r.obra.codigo)) obrasCitadas.set(r.obra.codigo, r.obra.nome ?? null);
   }
   const { porCodigo, criadas } = await garantirObras(tx, obrasCitadas);
 

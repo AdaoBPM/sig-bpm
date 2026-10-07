@@ -162,7 +162,7 @@ export function EstoqueContent() {
                 <div className="flex shrink-0 items-center gap-3">
                   {tabela.ativos ? (
                     <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                      Limpar filtros
+                      Limpar Filtros
                     </button>
                   ) : null}
                   <span className="text-xs text-gray-600">
@@ -187,14 +187,14 @@ export function EstoqueContent() {
                         ) : null}
                       </td>
                       <td className="px-4 py-2 text-gray-700">{s.linha}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{m3(s.movimentoVolume)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{moeda(s.movimentoValor)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{m3(s.movimentoVolume)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{moeda(s.movimentoValor)}</td>
                       <td className="px-4 py-2 text-xs whitespace-nowrap text-gray-600">
                         {s.criterio ? ROTULO_CRITERIO_ESTOQUE[s.criterio] ?? s.criterio : "—"}
                         {s.precoMovimento ? <div className="tabular-nums">{moeda(s.precoMovimento)}/m³</div> : null}
                       </td>
-                      <td className="px-4 py-2 text-right font-medium tabular-nums">{m3(s.saldoVolume)}</td>
-                      <td className="px-4 py-2 text-right font-medium tabular-nums">{moeda(s.saldoValor)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{m3(s.saldoVolume)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{moeda(s.saldoValor)}</td>
                       <td className="px-4 py-2 text-right tabular-nums text-gray-600">{moeda(s.precoMedio)}</td>
                     </tr>
                   ))}

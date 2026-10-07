@@ -58,8 +58,8 @@ const ANTES_DOS_DETALHES: Coluna<RegistroLista>[] = [
 ];
 const DEPOIS_DOS_DETALHES: Coluna<RegistroLista>[] = [
   { chave: "quantidade", rotulo: "Quantidade", tipo: "numero", alinhamento: "direita", valor: (r) => Number(r.quantidade), texto: (r) => quantidade(r.quantidade) },
-  { chave: "origem", rotulo: "Origem", valor: (r) => (r.origem === "DIGITADA" ? "digitado" : "importado") },
-  { chave: "acoes", rotulo: "", semFiltro: true },
+  { chave: "origem", rotulo: "Origem", valor: (r) => (r.origem === "DIGITADA" ? "Digitado" : "Importado"), classe: "w-px whitespace-nowrap" },
+  { chave: "acoes", rotulo: "", semFiltro: true, classe: "w-px" },
 ];
 
 /** Uma tela por lista: trocar de lista remonta a tabela, e os filtros dos rótulos recomeçam. */
@@ -199,7 +199,7 @@ function Lista() {
             <div className="flex shrink-0 items-center gap-3">
               {tabela.ativos ? (
                 <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar filtros
+                  Limpar Filtros
                 </button>
               ) : null}
               <p className="text-xs text-gray-600">
@@ -243,10 +243,10 @@ function Lista() {
                 <td className="px-4 py-2 text-right text-sm tabular-nums text-gray-900">{quantidade(r.quantidade)}</td>
                 <td className="px-4 text-xs whitespace-nowrap">
                   {r.origem === "DIGITADA" ? (
-                    <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">digitado</span>
+                    <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">Digitado</span>
                   ) : (
                     <span className="text-gray-400" title={r.linhaArquivo ? `Linha ${r.linhaArquivo} do arquivo importado` : undefined}>
-                      importado
+                      Importado
                     </span>
                   )}
                 </td>

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Calculator, LockKeyhole, LockKeyholeOpen } from "lucide-react";
+import { AlertTriangle, Calculator, History, LockKeyhole, LockKeyholeOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
@@ -32,6 +34,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
   const queryClient = useQueryClient();
   const { refresh } = useAuth();
   const [dialogo, setDialogo] = useState<"fechar" | "reabrir" | null>(null);
+  const [historico, setHistorico] = useState(false);
   const [justificativa, setJustificativa] = useState("");
   const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
 
@@ -107,7 +110,14 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
             </Button>
           </PermissionGuard>
         ) : null}
+        {s.reaberturas.length > 0 ? (
+          <Button type="button" variant="outline" className="rounded-sm" onClick={() => setHistorico(true)}>
+            <History className="size-4" />
+            Reaberturas ({s.reaberturas.length})
+          </Button>
+        ) : null}
       </div>
+      {historico ? <HistoricoReaberturas reaberturas={s.reaberturas} onFechar={() => setHistorico(false)} /> : null}
 
       <Dialog open={dialogo !== null} onOpenChange={(o) => (!o ? setDialogo(null) : undefined)}>
         <DialogContent className="rounded-sm sm:max-w-lg">
@@ -189,18 +199,45 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
           </div>
         </div>
       ) : null}
-      {s.reaberturas.length > 0 ? (
-        <details className="text-xs text-gray-600">
-          <summary className="cursor-pointer">{s.reaberturas.length} reabertura(s)</summary>
-          <ul className="mt-1 space-y-1 pl-4">
-            {s.reaberturas.map((r) => (
-              <li key={r.reabertaEm}>
-                {dataHora(r.reabertaEm)} · {r.reabertaPor}: {r.justificativa}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
     </div>
+  );
+}
+
+type Reabertura = { reabertaEm: string; reabertaPor: string; justificativa: string };
+
+const COLUNAS_REABERTURA: Coluna<Reabertura>[] = [
+  { chave: "quando", rotulo: "Reaberta em", tipo: "data", valor: (r) => new Date(r.reabertaEm).getTime(), texto: (r) => dataHora(r.reabertaEm), classe: "w-44" },
+  { chave: "por", rotulo: "Por", valor: (r) => r.reabertaPor, classe: "w-48" },
+  { chave: "justificativa", rotulo: "Justificativa", valor: (r) => r.justificativa },
+];
+
+/** O histórico das reaberturas da competência, com filtro e ordem nos rótulos. */
+function HistoricoReaberturas({ reaberturas, onFechar }: { reaberturas: Reabertura[]; onFechar: () => void }) {
+  const tabela = useTabelaFiltravel(reaberturas, COLUNAS_REABERTURA);
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Histórico de Reaberturas</DialogTitle>
+          <DialogDescription>{reaberturas.length} reabertura(s) desta competência, com quem reabriu e a justificativa.</DialogDescription>
+        </DialogHeader>
+        <table className="tabela-sig w-full border-collapse text-sm">
+          {tabela.cabecalho}
+          <tbody>
+            {tabela.visiveis.length === 0 ? (
+              <SemResultado colunas={COLUNAS_REABERTURA.length} onLimpar={tabela.limpar} />
+            ) : (
+              tabela.visiveis.map((r) => (
+                <tr key={r.reabertaEm} className="border-b border-gray-100 align-top">
+                  <td className="px-4 py-2 whitespace-nowrap tabular-nums text-gray-700">{dataHora(r.reabertaEm)}</td>
+                  <td className="px-4 py-2 text-gray-700">{r.reabertaPor}</td>
+                  <td className="px-4 py-2 text-gray-900">{r.justificativa}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </DialogContent>
+    </Dialog>
   );
 }

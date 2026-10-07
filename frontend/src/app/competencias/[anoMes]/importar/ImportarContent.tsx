@@ -108,7 +108,7 @@ function contagem(t: { total: number; totalGeral: number }, nome: string) {
 function LimparFiltros({ onLimpar }: { onLimpar: () => void }) {
   return (
     <button type="button" onClick={onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-      Limpar filtros
+      Limpar Filtros
     </button>
   );
 }
@@ -259,7 +259,7 @@ export function ImportarContent() {
                     <td className="px-4">{vigente ? <StatusImportacaoBadge imp={vigente} /> : <Selo classe="border-gray-200 bg-white text-gray-500">Não importado</Selo>}</td>
                     <td className="px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       {podeEnviar(tipo) && TIPOS_DO_MES.includes(tipo) ? (
-                        <Button type="button" variant="ghost" size="sm" className="h-7 rounded-sm text-gray-700 underline-offset-2 hover:underline" onClick={() => setEnvio({ tipo })}>
+                        <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setEnvio({ tipo })}>
                           {fechada ? "Comparar" : vigente ? "Reimportar" : "Importar"}
                         </Button>
                       ) : null}

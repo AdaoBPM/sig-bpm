@@ -90,9 +90,10 @@ export const receitaPreviaService = {
     const { data } = await api.post<{ data: ReceitaPrevia }>(`/proxy/competencias/${anoMes}/receita-previa/apurar`);
     return data.data;
   },
-  itens: async (anoMes: string, unidade: number, natureza: Natureza, pagina: number): Promise<PaginaItens> => {
+  /** Todos os itens da memória de cálculo da linha, para filtrar e ordenar no modal. */
+  itens: async (anoMes: string, unidade: number, natureza: Natureza): Promise<PaginaItens> => {
     const { data } = await api.get<{ data: PaginaItens }>(`/proxy/competencias/${anoMes}/receita-previa/itens`, {
-      params: { unidade, natureza, pagina, porPagina: 50 },
+      params: { unidade, natureza, pagina: 1, porPagina: 20000 },
     });
     return data.data;
   },
@@ -158,6 +159,19 @@ export const ROTULO_CRITERIO: Record<string, string> = {
   MEDICAO: "Medição",
   LANCAMENTO: "Lançamento manual",
 };
+
+/**
+ * Os agrupamentos da memória de cálculo, com os nomes das abas de receita do
+ * BASE PRÉVIAS (RECEITAS E ESTOQUE), na ordem delas.
+ */
+export const GRUPOS_ORIGEM: Array<{ origem: string; rotulo: string }> = [
+  { origem: "PRODUCAO", rotulo: "Produção" },
+  { origem: "EXPEDICAO", rotulo: "Expedição" },
+  { origem: "SAIDA", rotulo: "Saídas" },
+  { origem: "DEVOLUCAO", rotulo: "Devoluções" },
+  { origem: "MEDICAO", rotulo: "Serviços" },
+  { origem: "LANCAMENTO", rotulo: "Lanç. Manuais" },
+];
 
 export const ROTULO_ORIGEM: Record<string, string> = {
   PRODUCAO: "Produção",

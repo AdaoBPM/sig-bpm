@@ -12,8 +12,8 @@ const MAXIMO_NA_LISTA = 500;
 
 const ROTULOS_ORDEM = {
   texto: ["Classificar de A a Z", "Classificar de Z a A", ArrowDownAZ, ArrowDownZA],
-  numero: ["Do menor para o maior", "Do maior para o menor", ArrowDown01, ArrowDown10],
-  data: ["Do mais antigo para o mais recente", "Do mais recente para o mais antigo", ArrowDown01, ArrowDown10],
+  numero: ["Do Menor para o Maior", "Do Maior para o Menor", ArrowDown01, ArrowDown10],
+  data: ["Do Mais Antigo para o Mais Recente", "Do Mais Recente para o Mais Antigo", ArrowDown01, ArrowDown10],
 } as const;
 
 /** Um valor da lista do filtro: a chave que filtra e o texto que aparece. */
@@ -106,7 +106,7 @@ export function PainelFiltro({ rotulo, tipo, alinhamento, filtrado, ordem, valor
               <>
                 <button type="button" className={itemMenu} disabled={!filtrado} onClick={fechaE(() => onAplicar(null))}>
                   <FilterX className="size-4 text-gray-500" />
-                  Limpar filtro de &quot;{rotulo}&quot;
+                  Limpar Filtro de &quot;{rotulo}&quot;
                 </button>
                 <div className="my-1.5 border-t border-gray-200" />
                 <div className="relative px-1">
@@ -283,7 +283,7 @@ export function SemResultado({ colunas, onLimpar }: { colunas: number; onLimpar:
       <td colSpan={colunas} className="px-4 py-10 text-center text-sm text-gray-600">
         Nenhum registro com esses filtros.{" "}
         <button type="button" onClick={onLimpar} className="font-medium text-gray-900 underline underline-offset-2">
-          Limpar filtros
+          Limpar Filtros
         </button>
       </td>
     </tr>
