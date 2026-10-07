@@ -111,7 +111,7 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="lr-valor">Valor (R$)</Label>
-              <Input id="lr-valor" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="-1.234,56" className="rounded-sm border-gray-300 text-right tabular-nums" />
+              <Input id="lr-valor" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="-1.234,56" className="rounded-sm border-gray-300 text-right" />
             </div>
           </div>
           <div className={`grid gap-4 ${comVenda ? "sm:grid-cols-[1fr_10rem]" : ""}`}>
