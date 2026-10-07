@@ -7,8 +7,8 @@ import { apuracaoService } from "../apuracao/apuracaoService.js";
 export class RegraCompetenciaError extends Error {}
 
 const MESES = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
 export const competenciasService = {

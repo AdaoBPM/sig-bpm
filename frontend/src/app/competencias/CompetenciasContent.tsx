@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Check, ChevronDown, Circle } from "lucide-react";
+import { AlertTriangle, Check, Circle } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { etapasDoMes, type Etapa } from "@/lib/etapasDoMes";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { useAuth } from "@/context/AuthContext";
@@ -16,15 +13,12 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
-import { SeletorFiltro } from "@/components/shared/Filtros";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AbrirCompetenciaDialog } from "./components/AbrirCompetenciaDialog";
 import { rotuloStatus, StatusCompetenciaBadge } from "./components/StatusCompetenciaBadge";
 import { competenciasService, type Competencia } from "./services/competenciasService";
-
-const TODOS = "todos";
 
 function dataCurta(iso: string | null) {
   if (!iso) return "—";
@@ -109,7 +103,6 @@ const COLUNAS: Coluna<Competencia>[] = [
     texto: (c) => (c.apuracoes === 0 || !c.apuradaEm ? null : dataCurta(c.apuradaEm)),
   },
   { chave: "fechadaEm", rotulo: "Fechada em", tipo: "data", valor: (c) => instante(c.fechadaEm), texto: (c) => (c.fechadaEm ? dataCurta(c.fechadaEm) : null) },
-  { chave: "abrir", rotulo: "", semFiltro: true },
 ];
 
 function Andamento({ c, etapas }: { c: Competencia; etapas: Etapa[] }) {
@@ -147,11 +140,10 @@ export function CompetenciasContent() {
   const { hasPermission } = usePermissions();
   useRegistrarAcessoTela("/competencias");
 
-  const [ano, setAno] = useState<string>(TODOS);
-
+  // Todos os meses; o recorte é pelos filtros dos rótulos (o ano, pela coluna Competência).
   const { data, isPending, isError } = useQuery({
-    queryKey: ["competencias", ano, "andamento"],
-    queryFn: () => competenciasService.listar(ano === TODOS ? undefined : Number(ano), true),
+    queryKey: ["competencias", "todos", "andamento"],
+    queryFn: () => competenciasService.listar(undefined, true),
   });
   // Todas as competências (a mesma consulta do menu lateral), para sugerir o próximo mês.
   const todas = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar() });
@@ -170,7 +162,7 @@ export function CompetenciasContent() {
         titulo="Competências"
         comoUsar={
           <ul>
-            <li>Escolha o ano em Exercício para ver só os meses dele.</li>
+            <li>Use os filtros nos rótulos das colunas (por exemplo, o ano na coluna Competência).</li>
             <li>Clique na linha para abrir o mês; dentro dele, a barra de etapas leva de Importações até a Conferência.</li>
             <li>Na coluna Andamento, clique num passo (importado, classificado, apurado, fechado) para ir direto à etapa.</li>
             <li>Use “Abrir Competência” para começar um mês novo.</li>
@@ -194,15 +186,7 @@ export function CompetenciasContent() {
       <QuadroTabela
         barra={
           <>
-            <SeletorFiltro
-              rotulo="Exercício"
-              valor={ano === TODOS ? undefined : ano}
-              onMudar={(v) => setAno(v ?? TODOS)}
-              todos="Todos os anos"
-              largura="w-40"
-              opcoes={(data?.anos ?? []).map((a) => ({ valor: String(a), rotulo: String(a) }))}
-            />
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="ml-auto flex shrink-0 items-center gap-3">
               {tabela.ativos ? (
                 <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
                   Limpar Filtros
@@ -224,12 +208,12 @@ export function CompetenciasContent() {
           error={isError ? "Erro ao carregar as competências." : null}
           emptyMessage="Nenhuma competência aberta"
           emptyHint="Use o botão Abrir competência para abrir o primeiro mês."
-          columns={["Competência", "Estado", "Andamento", "Divergências", "Apurada em", "Fechada em", ""]}
+          columns={["Competência", "Estado", "Andamento", "Divergências", "Apurada em", "Fechada em"]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrirMes(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
               <td className="px-4 text-sm whitespace-nowrap">
                 {etapas[0] ? (
-                  <Link href={`/competencias/${anoMesDe(c)}/${etapas[0].caminho}`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900 hover:underline">
+                  <Link href={`/competencias/${anoMesDe(c)}/${etapas[0].caminho}`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
                     {String(c.mes).padStart(2, "0")}/{c.ano}
                   </Link>
                 ) : (
@@ -264,29 +248,6 @@ export function CompetenciasContent() {
                     reaberta {c._count.historicoReaberturas}×
                   </span>
                 ) : null}
-              </td>
-              <td className="px-4" onClick={(e) => e.stopPropagation()}>
-                {/* Um botão só por competência, com todas as etapas (G1 do levantamento de layout). */}
-                <div className="flex justify-end">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button type="button" variant="outline" size="sm" className="rounded-sm">
-                          Abrir
-                          <ChevronDown className="size-3.5" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end" className="w-52">
-                      {etapas.map((e) => (
-                        <DropdownMenuItem key={e.chave} render={<Link href={`/competencias/${anoMesDe(c)}/${e.caminho}`} />}>
-                          <e.icone />
-                          {e.rotulo}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
               </td>
             </tr>
           )}
