@@ -154,8 +154,6 @@ const numerica = (chave: string, rotulo: string, campo: (l: LinhaExtrato) => num
   rotulo,
   tipo: "numero",
   alinhamento: "direita",
-  // O rótulo quebra em duas linhas, para a coluna ficar na largura dos valores.
-  classe: "!whitespace-normal",
   valor: (l) => campo(l),
   texto: (l) => (campo(l) === null ? null : formato(campo(l))),
 });
@@ -228,7 +226,7 @@ function TabelaDoGrupo({ linhas, origem, unidade, variacao }: { linhas: LinhaExt
       cs.push({ chave: "obra", rotulo: "Obra", classe: "w-full min-w-48", valor: (l) => l.obra, texto: (l) => (l.obra ? [l.obra, l.obraNome].filter(Boolean).join(" · ") : null) });
     if (algum((l) => l.linha)) cs.push({ chave: "linha", rotulo: "Linha", valor: (l) => l.linha });
     if (ROTULO_DETALHE[origem] && algum((l) => l.detalhe)) cs.push({ chave: "detalhe", rotulo: ROTULO_DETALHE[origem], valor: (l) => l.detalhe });
-    if (algum((l) => l.detalheDescricao)) cs.push({ chave: "detalheDescricao", rotulo: "Descrição do Movimento", classe: "min-w-56", valor: (l) => l.detalheDescricao });
+    if (algum((l) => l.detalheDescricao)) cs.push({ chave: "detalheDescricao", rotulo: "Descrição do Movimento", classe: "min-w-80", valor: (l) => l.detalheDescricao });
     if (unidade !== 3) cs.push({ chave: "venda", rotulo: "Venda", valor: (l) => (l.venda ? ROTULO_VENDA[l.venda] : null) });
     if (valoradoPorPreco) cs.push({ chave: "criterio", rotulo: "Critério", classe: "w-px", valor: (l) => ROTULO_CRITERIO[l.criterio] ?? l.criterio });
     if (valoradoPorPreco && algum((l) => l.quantidade)) cs.push(numerica("quantidade", "Volume (m³)", (l) => l.quantidade, volume));
