@@ -71,7 +71,8 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
   const abre = (l: LinhaDRE) => !!l.composicao && !detalhavel(l);
   const clica = (l: LinhaDRE) => detalhavel(l) || abre(l);
   return (
-    <div className="border border-gray-200 bg-white rounded-sm">
+    // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       <table className="tabela-sig w-full border-collapse text-sm">
         {/* O cabeçalho fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
         <thead>
@@ -166,7 +167,7 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
   return (
     // A lista dos centros, com busca e o total de cada um, à esquerda da DRE do centro (E11 do levantamento de layout).
     <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
+      <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
         <div className="border-b border-gray-200 p-2">
           <CampoBusca rotulo="Buscar centro de custo" valor={busca} onMudar={setBusca} placeholder="Centro de custo…" largura="w-full" />
         </div>

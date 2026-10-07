@@ -98,7 +98,8 @@ export function RateiosContent() {
       ) : dados && dados.chaves.length > 0 ? (
         <div className="space-y-4">
           {dados.chaves.map((k) => (
-            <div key={k.chave} className="border border-gray-200 bg-white rounded-sm">
+            // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
+            <div key={k.chave} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
               <div className="border-b border-gray-200 px-4 py-3">
                 <h2 className="text-sm font-bold text-gray-900">{iniciaisMaiusculas(ROTULO_CHAVE[k.chave] ?? k.chave)}</h2>
               </div>
