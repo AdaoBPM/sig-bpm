@@ -106,7 +106,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
             {campos.map((c) => (
-              <td key={c.nome} className={`px-4 py-3 text-sm text-gray-900 ${c.tipo === "decimal" || c.tipo === "inteiro" ? "tabular-nums" : ""}`}>
+              <td key={c.nome} className="px-4 py-3 text-sm text-gray-900">
                 {formatar(c, r[c.nome])}
               </td>
             ))}

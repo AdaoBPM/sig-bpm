@@ -95,14 +95,14 @@ function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas
         <tbody>
           {linhas.map((l) => (
             <tr key={`${l.linha}-${l.codigo}`} className={`border-t border-gray-100 ${l.destaque ? "bg-red-50" : destaque(l) ? "bg-gray-50" : ""}`}>
-              <td className="px-3 py-1.5 text-right text-xs text-gray-400 tabular-nums">{l.linha}</td>
+              <td className="px-3 py-1.5 text-right text-xs text-gray-400">{l.linha}</td>
               <td className={`px-3 py-1.5 ${destaque(l) ? "font-bold text-gray-900" : "pl-6 text-gray-700"}`}>
                 {l.descricao}
                 {l.observacao ? <div className="text-xs font-normal text-gray-500">{l.observacao}</div> : null}
               </td>
-              <td className={`px-3 py-1.5 text-right tabular-nums ${destaque(l) ? "font-bold" : ""}`}>{valor(l, l.sistema)}</td>
-              <td className={`px-3 py-1.5 text-right tabular-nums ${destaque(l) ? "font-bold" : ""}`}>{valor(l, l.planilha)}</td>
-              <td className={`px-3 py-1.5 text-right tabular-nums ${l.destaque ? "font-bold text-red-700" : "text-gray-400"}`}>{l.sistema === null && l.planilha === null ? "—" : valor(l, l.diferenca)}</td>
+              <td className={`px-3 py-1.5 text-right ${destaque(l) ? "font-bold" : ""}`}>{valor(l, l.sistema)}</td>
+              <td className={`px-3 py-1.5 text-right ${destaque(l) ? "font-bold" : ""}`}>{valor(l, l.planilha)}</td>
+              <td className={`px-3 py-1.5 text-right ${l.destaque ? "font-bold text-red-700" : "text-gray-400"}`}>{l.sistema === null && l.planilha === null ? "—" : valor(l, l.diferenca)}</td>
             </tr>
           ))}
         </tbody>
@@ -123,7 +123,7 @@ function SemPar({ visao }: { visao: VisaoConferencia }) {
             <span>
               <span className="text-xs text-gray-400">linha {l.linha}</span> {l.descricao}
             </span>
-            <span className="tabular-nums">{l.planilha === null ? "—" : moeda(l.planilha)}</span>
+            <span>{l.planilha === null ? "—" : moeda(l.planilha)}</span>
           </p>
         ))}
       </div>
@@ -133,7 +133,7 @@ function SemPar({ visao }: { visao: VisaoConferencia }) {
         {visao.soNoSistema.map((l) => (
           <p key={l.codigo} className="flex justify-between gap-3 text-sm text-gray-700">
             <span>{l.descricao}</span>
-            <span className="tabular-nums">{l.sistema === null ? "—" : moeda(l.sistema)}</span>
+            <span>{l.sistema === null ? "—" : moeda(l.sistema)}</span>
           </p>
         ))}
       </div>

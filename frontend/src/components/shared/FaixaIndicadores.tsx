@@ -19,11 +19,12 @@ export type Indicador = {
  */
 export function FaixaIndicadores({ itens }: { itens: Indicador[] }) {
   return (
-    <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-sm border border-gray-200 bg-white px-4 py-2.5">
+    // Destaque amarelo-ouro à esquerda, como nos quadros das tabelas.
+    <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2.5">
       {itens.map((i) => (
         <div key={i.rotulo} className="flex items-baseline gap-1.5" title={i.dica}>
           <dt className={`text-xs text-gray-600 ${i.rotuloAntes ? "" : "order-2"}`}>{iniciaisMaiusculas(i.rotulo)}</dt>
-          <dd className={`${i.rotuloAntes ? "" : "order-1"} text-base font-extrabold tabular-nums ${i.tom === "atencao" ? "text-red-700" : "text-gray-900"}`}>{i.valor}</dd>
+          <dd className={`${i.rotuloAntes ? "" : "order-1"} text-base font-extrabold ${i.tom === "atencao" ? "text-red-700" : "text-gray-900"}`}>{i.valor}</dd>
         </div>
       ))}
     </dl>

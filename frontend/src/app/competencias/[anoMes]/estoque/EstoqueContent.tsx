@@ -147,10 +147,10 @@ export function EstoqueContent() {
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {dados.medias.map((m) => (
-              <div key={m.linha} className="border border-gray-200 bg-white rounded-sm p-4">
+              <div key={m.linha} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
                 <p className="text-xs font-bold text-gray-600">{ROTULO_MEDIA[m.linha] ?? m.linha}</p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-gray-900">{m3(m.volume)} m³</p>
-                <p className="text-sm tabular-nums text-gray-700">{moeda(m.valor)}</p>
+                <p className="mt-1 text-xl font-extrabold text-gray-900">{m3(m.volume)} m³</p>
+                <p className="text-sm text-gray-700">{moeda(m.valor)}</p>
                 <p className="mt-0.5 text-xs text-gray-500">preço médio {moeda(m.precoMedio)}/m³</p>
               </div>
             ))}
@@ -186,7 +186,7 @@ export function EstoqueContent() {
                   {tabela.visiveis.map((s) => (
                     <tr key={`${s.obra}|${s.linha}`} className="border-b border-gray-100">
                       <td className="px-4 py-2">
-                        <div className="font-medium tabular-nums text-gray-900">{s.obra}</div>
+                        <div className="font-medium text-gray-900">{s.obra}</div>
                         {s.nomeObra !== s.obra ? (
                           <div className="max-w-32 truncate text-xs text-gray-500" title={s.nomeObra}>
                             {s.nomeObra}
@@ -194,15 +194,15 @@ export function EstoqueContent() {
                         ) : null}
                       </td>
                       <td className="px-4 py-2 text-gray-700">{s.linha}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{m3(s.movimentoVolume)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{moeda(s.movimentoValor)}</td>
+                      <td className="px-4 py-2 text-right text-gray-700">{m3(s.movimentoVolume)}</td>
+                      <td className="px-4 py-2 text-right text-gray-700">{moeda(s.movimentoValor)}</td>
                       <td className="px-4 py-2 text-xs whitespace-nowrap text-gray-600">
                         {s.criterio ? ROTULO_CRITERIO_ESTOQUE[s.criterio] ?? s.criterio : "—"}
-                        {s.precoMovimento ? <div className="tabular-nums">{moeda(s.precoMovimento)}/m³</div> : null}
+                        {s.precoMovimento ? <div>{moeda(s.precoMovimento)}/m³</div> : null}
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{m3(s.saldoVolume)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">{moeda(s.saldoValor)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-600">{moeda(s.precoMedio)}</td>
+                      <td className="px-4 py-2 text-right text-gray-700">{m3(s.saldoVolume)}</td>
+                      <td className="px-4 py-2 text-right text-gray-700">{moeda(s.saldoValor)}</td>
+                      <td className="px-4 py-2 text-right text-gray-600">{moeda(s.precoMedio)}</td>
                     </tr>
                   ))}
                 </tbody>

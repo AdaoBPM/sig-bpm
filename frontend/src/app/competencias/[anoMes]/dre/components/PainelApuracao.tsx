@@ -229,7 +229,7 @@ function HistoricoReaberturas({ reaberturas, onFechar }: { reaberturas: Reabertu
             ) : (
               tabela.visiveis.map((r) => (
                 <tr key={r.reabertaEm} className="border-b border-gray-100 align-top">
-                  <td className="px-4 py-2 whitespace-nowrap tabular-nums text-gray-700">{dataHora(r.reabertaEm)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-gray-700">{dataHora(r.reabertaEm)}</td>
                   <td className="px-4 py-2 text-gray-700">{r.reabertaPor}</td>
                   <td className="px-4 py-2 text-gray-900">{r.justificativa}</td>
                 </tr>

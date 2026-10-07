@@ -11,7 +11,6 @@ import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
-import { Parametros } from "@/components/shared/Parametros";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -41,42 +40,70 @@ const TODOS = 5000;
 
 const textoValidacao = (v: Validacao) => (VALIDACOES[v].codigo === "-" ? VALIDACOES[v].rotulo : `${VALIDACOES[v].codigo} ${VALIDACOES[v].rotulo}`);
 
+const adotada = (l: LancamentoClassificado) => l.contaAdotada ?? l.contaResultado;
+
+/**
+ * Centro de custo, conta e classificação na DRE dividem a largura; as demais
+ * colunas ficam na largura do conteúdo, com os rótulos numa linha só.
+ */
 const COLUNAS: Coluna<LancamentoClassificado>[] = [
-  { chave: "filial", rotulo: "Filial", tipo: "numero", valor: (l) => l.filial, texto: (l) => String(l.filial) },
+  { chave: "filial", rotulo: "Filial", tipo: "numero", classe: "w-px", valor: (l) => l.filial, texto: (l) => String(l.filial) },
   {
     chave: "centro",
     rotulo: "Centro de custo",
+    classe: "w-[26%]",
     valor: (l) => l.codigoCentroCusto,
     texto: (l) => (l.codigoCentroCusto ? [l.codigoCentroCusto, l.nomeCentroCusto].filter(Boolean).join(" · ") : "sem centro de custo"),
   },
   {
     chave: "conta",
     rotulo: "Conta",
-    valor: (l) => (l.contaAdotada ?? l.contaResultado).reduzido,
-    texto: (l) => `${(l.contaAdotada ?? l.contaResultado).reduzido} · ${(l.contaAdotada ?? l.contaResultado).descricao}`,
+    classe: "w-[26%]",
+    valor: (l) => adotada(l).reduzido,
+    texto: (l) => `${adotada(l).reduzido} · ${adotada(l).descricao}`,
   },
-  { chave: "validacao", rotulo: "Verificação", valor: (l) => textoValidacao(l.validacao) },
-  { chave: "balde", rotulo: "Rateio", valor: (l) => l.balde },
-  { chave: "linhaDRE", rotulo: "Linha da DRE", valor: (l) => l.linhaDRE?.descricao, texto: (l) => l.linhaDRE?.descricao ?? "sem destino" },
-  { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valorMovimento), texto: (l) => moeda(l.valorMovimento) },
+  {
+    chave: "linhaDRE",
+    rotulo: "Classificação na DRE",
+    classe: "w-[32%]",
+    valor: (l) => l.linhaDRE?.descricao,
+    texto: (l) => (l.linhaDRE ? [adotada(l).departamento, adotada(l).atribuicao, l.linhaDRE.descricao].filter(Boolean).join(" · ") : "sem destino"),
+  },
+  { chave: "validacao", rotulo: "Verificação", classe: "w-px", valor: (l) => textoValidacao(l.validacao) },
+  { chave: "balde", rotulo: "Rateio", classe: "w-px", valor: (l) => l.balde },
+  { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", classe: "w-px", valor: (l) => Number(l.valorMovimento), texto: (l) => moeda(l.valorMovimento) },
 ];
+
+/**
+ * Uma linha de texto cortada no fim da coluna (o texto inteiro fica no title).
+ * Não alarga a coluna: ocupa a largura que ela tiver.
+ */
+function Cortada({ texto, className, altura = "h-4" }: { texto: string | null | undefined; className: string; altura?: string }) {
+  if (!texto) return null;
+  return (
+    <div className={`relative ${altura}`} title={texto}>
+      <div className={`absolute inset-x-0 truncate ${className}`}>{texto}</div>
+    </div>
+  );
+}
 
 function CelulaCentro({ l }: { l: LancamentoClassificado }) {
   if (!l.codigoCentroCusto) {
     return <span className="text-xs text-gray-400">sem centro de custo</span>;
   }
   const obra = /^1\.9[89](\.|$)/.test(l.codigoCentroCusto);
+  const c = l.centroCusto;
   return (
-    <div className="max-w-48">
-      <div className="font-medium tabular-nums text-gray-900">{l.codigoCentroCusto}</div>
-      <div className="max-w-56 truncate text-xs text-gray-600" title={l.nomeCentroCusto ?? ""}>
-        {l.nomeCentroCusto}
-      </div>
-      {l.centroCusto ? (
-        <Parametros
-          departamento={l.centroCusto.departamento}
-          atribuicao={l.centroCusto.atribuicao}
-        />
+    <div>
+      <div className="font-medium text-gray-900">{l.codigoCentroCusto}</div>
+      <Cortada texto={l.nomeCentroCusto} className="text-xs text-gray-600" />
+      {/* Departamento e atribuição do centro: o que a verificação compara com os da conta. */}
+      {c ? (
+        c.departamento || c.atribuicao ? (
+          <Cortada texto={[c.departamento ?? "-", c.atribuicao ?? "-"].join(" · ")} className="text-xs text-gray-500" />
+        ) : (
+          <span className="text-xs text-gray-400">sem parâmetro</span>
+        )
       ) : (
         <span className="text-xs text-gray-400">{obra ? "obra" : "fora do cadastro"}</span>
       )}
@@ -84,26 +111,32 @@ function CelulaCentro({ l }: { l: LancamentoClassificado }) {
   );
 }
 
+/** Como o centro de custo: o número e, embaixo, a descrição em cinza. A reclassificada mostra a original riscada. */
 function CelulaConta({ l }: { l: LancamentoClassificado }) {
-  const adotada = l.contaAdotada ?? l.contaResultado;
+  const conta = adotada(l);
   return (
-    <div className="max-w-56">
+    <div>
       {l.reclassificado ? (
-        <div className="flex items-center gap-1 text-xs text-gray-400 line-through">
-          <span className="tabular-nums">{l.contaResultado.reduzido}</span>
-          <span className="max-w-48 truncate">{l.contaResultado.descricao}</span>
-        </div>
+        <Cortada texto={`${l.contaResultado.reduzido} ${l.contaResultado.descricao}`} className="text-xs text-gray-400 line-through" />
       ) : null}
-      <div className="flex items-center gap-1 text-gray-900">
-        {l.reclassificado ? (
-          <ArrowRight className="size-3.5 shrink-0 text-yellow-700" aria-label="reclassificada" />
-        ) : null}
-        <span className="tabular-nums">{adotada.reduzido}</span>
-        <span className="min-w-0 truncate" title={adotada.descricao}>
-          {adotada.descricao}
-        </span>
+      <div className="flex items-center gap-1 font-medium text-gray-900">
+        {l.reclassificado ? <ArrowRight className="size-3.5 shrink-0 text-yellow-700" aria-label="reclassificada" /> : null}
+        {conta.reduzido}
       </div>
-      <Parametros departamento={adotada.departamento} atribuicao={adotada.atribuicao} />
+      <Cortada texto={conta.descricao} className="text-xs text-gray-600" />
+    </div>
+  );
+}
+
+/** Para onde a conta leva o lançamento: departamento, atribuição e conta da DRE, uma em cada linha. */
+function CelulaClassificacao({ l }: { l: LancamentoClassificado }) {
+  if (!l.linhaDRE) return <span className="text-red-700">sem destino</span>;
+  const conta = adotada(l);
+  return (
+    <div>
+      <Cortada texto={conta.departamento ?? "-"} className="text-gray-900" altura="h-5" />
+      <Cortada texto={conta.atribuicao ?? "-"} className="text-xs text-gray-600" />
+      <Cortada texto={l.linhaDRE.descricao} className="text-xs text-gray-600" />
     </div>
   );
 }
@@ -315,28 +348,26 @@ export function ClassificacaoContent() {
                 ? "Todos os lançamentos têm destino e passaram na verificação."
                 : "Ajuste a busca ou o filtro."
             }
-            columns={["Filial", "Centro de custo", "Conta", "Verificação", "Rateio", "Linha da DRE", "Valor"]}
+            columns={["Filial", "Centro de custo", "Conta", "Classificação na DRE", "Verificação", "Rateio", "Valor"]}
             renderRow={(l) => (
               <tr key={l.id} className="border-b border-gray-100 align-top hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm tabular-nums text-gray-900">{l.filial}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">{l.filial}</td>
                 <td className="px-4 py-3 text-sm">
                   <CelulaCentro l={l} />
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <CelulaConta l={l} />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-sm">
+                  <CelulaClassificacao l={l} />
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <ValidacaoBadge validacao={l.validacao} />
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-3 text-sm whitespace-nowrap">
                   <BaldeBadge balde={l.balde} />
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  <div className="max-w-40 truncate" title={l.linhaDRE?.descricao}>
-                    {l.linhaDRE?.descricao ?? <span className="text-red-700">sem destino</span>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900">
+                <td className="px-4 py-3 text-right text-sm whitespace-nowrap text-gray-900">
                   {moeda(l.valorMovimento)}
                 </td>
               </tr>

@@ -41,7 +41,7 @@ function ListaMudancas({ titulo, itens, total, tom }: { titulo: string; itens: M
         {itens.map((m) => (
           <li key={m.chave} className="px-3 py-2 text-sm">
             <div className="font-medium text-gray-900">
-              <span className="tabular-nums">{m.chave}</span>
+              <span>{m.chave}</span>
               {m.rotulo !== m.chave ? <span className="ml-2 font-normal text-gray-600">{m.rotulo}</span> : null}
             </div>
             {m.campos.length > 0 ? (

@@ -120,10 +120,10 @@ export function ContasResultadoContent() {
               key={item.id}
               className="border-b border-gray-100 hover:bg-gray-50"
             >
-              <td className="px-4 py-3 text-sm font-medium text-gray-900 tabular-nums">
+              <td className="px-4 py-3 text-sm font-medium text-gray-900">
                 {item.reduzido}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
+              <td className="px-4 py-3 text-sm text-gray-600">
                 {item.conta}
               </td>
               <td className="px-4 py-3 text-sm text-gray-900">

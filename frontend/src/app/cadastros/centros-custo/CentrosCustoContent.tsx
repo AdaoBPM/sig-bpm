@@ -101,7 +101,7 @@ export function CentrosCustoContent() {
         ]}
         renderRow={(item) => (
           <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-            <td className="px-4 py-3 text-sm font-medium text-gray-900 tabular-nums">
+            <td className="px-4 py-3 text-sm font-medium text-gray-900">
               {item.codigoRM ?? (
                 <span
                   className="text-gray-400"

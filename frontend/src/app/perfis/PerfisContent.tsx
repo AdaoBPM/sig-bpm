@@ -119,7 +119,7 @@ export function PerfisContent() {
               <td className="px-4 py-3 text-xs text-gray-600">
                 {recorte(p) || "—"}
               </td>
-              <td className="px-4 py-3 text-sm tabular-nums">{p.usuarios}</td>
+              <td className="px-4 py-3 text-sm">{p.usuarios}</td>
               <td className="px-4 py-3 text-sm">{p.ativo ? "Ativo" : "Inativo"}</td>
               <td className="px-4 py-3 text-right whitespace-nowrap">
                 <PermissionGuard permission="usuarios:editar">

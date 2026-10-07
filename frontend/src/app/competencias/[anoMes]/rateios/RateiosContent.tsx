@@ -130,8 +130,8 @@ export function RateiosContent() {
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-600">{quant(d.quantidade)}</td>
-                      <td className="px-4 py-2 text-right font-bold tabular-nums">{pct(d.percentual)}</td>
+                      <td className="px-4 py-2 text-right text-gray-600">{quant(d.quantidade)}</td>
+                      <td className="px-4 py-2 text-right font-bold">{pct(d.percentual)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -140,8 +140,8 @@ export function RateiosContent() {
                     <td className="px-4 py-2">
                       Total <span className="font-normal text-gray-500">({MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})</span>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">{quant(k.total)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className="px-4 py-2 text-right">{quant(k.total)}</td>
+                    <td className="px-4 py-2 text-right">
                       {pct(String(k.destinos.reduce((s, d) => s + Number(d.percentual), 0)))}
                     </td>
                   </tr>

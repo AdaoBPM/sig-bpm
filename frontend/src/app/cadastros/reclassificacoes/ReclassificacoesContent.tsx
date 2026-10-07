@@ -97,7 +97,7 @@ export function ReclassificacoesContent() {
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
             <td className="px-4 py-3 text-sm">
               <div className="flex max-w-64 items-baseline gap-1.5">
-                <span className="font-medium whitespace-nowrap text-gray-900 tabular-nums">{r.codigoCentroCusto}</span>
+                <span className="font-medium whitespace-nowrap text-gray-900">{r.codigoCentroCusto}</span>
                 <span className="truncate text-xs text-gray-600" title={r.centro?.nomeRM}>
                   {r.centro?.nomeRM ?? <span className="text-yellow-800">fora do cadastro</span>}
                 </span>
@@ -106,7 +106,7 @@ export function ReclassificacoesContent() {
             </td>
             <td className="px-4 py-3 text-sm">
               <div className="max-w-64 truncate text-gray-900" title={`${r.contaOrigem.reduzido} ${r.contaOrigem.descricao}`}>
-                <span className="tabular-nums">{r.contaOrigem.reduzido}</span> {r.contaOrigem.descricao}
+                <span>{r.contaOrigem.reduzido}</span> {r.contaOrigem.descricao}
               </div>
               <Parametros
                 departamento={r.contaOrigem.departamento}
@@ -118,7 +118,7 @@ export function ReclassificacoesContent() {
             </td>
             <td className="px-4 py-3 text-sm">
               <div className="max-w-64 truncate font-medium text-gray-900" title={`${r.contaDestino.reduzido} ${r.contaDestino.descricao}`}>
-                <span className="tabular-nums">{r.contaDestino.reduzido}</span> {r.contaDestino.descricao}
+                <span>{r.contaDestino.reduzido}</span> {r.contaDestino.descricao}
               </div>
               <Parametros
                 departamento={r.contaDestino.departamento}

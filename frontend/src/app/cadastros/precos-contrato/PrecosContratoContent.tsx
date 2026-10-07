@@ -130,11 +130,11 @@ export function PrecosContratoContent() {
               <td className="px-3 py-3 text-sm">
                 {/* A obra numa coluna só: código e nome na mesma linha, o nome cortado. */}
                 <div className="flex max-w-40 items-baseline gap-1.5" title={p.obra.nome !== p.obra.codigo ? p.obra.nome : undefined}>
-                  <span className={`font-medium whitespace-nowrap tabular-nums ${antigo ? "" : "text-gray-900"}`}>{p.obra.codigo}</span>
+                  <span className={`font-medium whitespace-nowrap ${antigo ? "" : "text-gray-900"}`}>{p.obra.codigo}</span>
                   {p.obra.nome !== p.obra.codigo ? <span className="truncate text-xs">{p.obra.nome}</span> : null}
                 </div>
               </td>
-              <td className="px-3 py-3 text-sm tabular-nums">{p.versao}</td>
+              <td className="px-3 py-3 text-sm">{p.versao}</td>
               <td className="px-3 py-3 text-sm whitespace-nowrap">
                 {p.etapa ?? "—"} · {p.linhaTexto}
               </td>
@@ -148,8 +148,8 @@ export function PrecosContratoContent() {
                 </div>
               </td>
               <td className="px-3 py-3 text-sm">{p.unidade ?? "—"}</td>
-              <td className="px-3 py-3 text-right text-sm tabular-nums">{valor(p.valorUnitario)}</td>
-              <td className="px-3 py-3 text-right text-sm tabular-nums">{valor(p.valorTotal)}</td>
+              <td className="px-3 py-3 text-right text-sm">{valor(p.valorUnitario)}</td>
+              <td className="px-3 py-3 text-right text-sm">{valor(p.valorTotal)}</td>
               <td className="px-3 py-3 text-xs whitespace-nowrap">
                 <div title={dataHora(p.vigenteDesde)}>{new Date(p.vigenteDesde).toLocaleDateString("pt-BR")}</div>
                 {antigo ? <div className="text-red-700" title={dataHora(p.substituidoEm!)}>substituído em {new Date(p.substituidoEm!).toLocaleDateString("pt-BR")}</div> : null}

@@ -229,11 +229,11 @@ export function CompetenciasContent() {
             <tr key={c.id} onClick={() => abrirMes(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
               <td className="px-4 text-sm whitespace-nowrap">
                 {etapas[0] ? (
-                  <Link href={`/competencias/${anoMesDe(c)}/${etapas[0].caminho}`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900 tabular-nums hover:underline">
+                  <Link href={`/competencias/${anoMesDe(c)}/${etapas[0].caminho}`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900 hover:underline">
                     {String(c.mes).padStart(2, "0")}/{c.ano}
                   </Link>
                 ) : (
-                  <span className="font-bold text-gray-900 tabular-nums">
+                  <span className="font-bold text-gray-900">
                     {String(c.mes).padStart(2, "0")}/{c.ano}
                   </span>
                 )}
@@ -245,7 +245,7 @@ export function CompetenciasContent() {
               <td className="px-4">
                 <Andamento c={c} etapas={etapas} />
               </td>
-              <td className="px-4 text-sm tabular-nums">
+              <td className="px-4 text-sm">
                 {c._count.divergencias > 0 ? (
                   <span className="font-medium text-yellow-800" title="Divergências abertas">
                     {c._count.divergencias} aberta(s)
@@ -254,10 +254,10 @@ export function CompetenciasContent() {
                   <span className="text-gray-400">—</span>
                 )}
               </td>
-              <td className="px-4 text-sm whitespace-nowrap text-gray-600 tabular-nums" title={c.apuracoes ? `${c.apuracoes} apuração(ões)${c.usuarioApuracao ? ` · a última por ${c.usuarioApuracao.nome}` : ""}` : undefined}>
+              <td className="px-4 text-sm whitespace-nowrap text-gray-600" title={c.apuracoes ? `${c.apuracoes} apuração(ões)${c.usuarioApuracao ? ` · a última por ${c.usuarioApuracao.nome}` : ""}` : undefined}>
                 {c.apuracoes === 0 ? <span className="text-gray-400">—</span> : dataCurta(c.apuradaEm)}
               </td>
-              <td className="px-4 text-sm whitespace-nowrap text-gray-600 tabular-nums">
+              <td className="px-4 text-sm whitespace-nowrap text-gray-600">
                 {dataCurta(c.fechadaEm)}
                 {c._count.historicoReaberturas > 0 ? (
                   <span className="ml-1.5 text-xs text-yellow-800" title="Vezes em que foi reaberta depois de fechada">

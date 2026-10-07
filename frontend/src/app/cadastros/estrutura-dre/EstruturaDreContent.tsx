@@ -124,7 +124,7 @@ export function EstruturaDreContent() {
             className={`border-b border-gray-100 hover:bg-gray-50 ${abre ? "cursor-pointer" : ""}`}
             onClick={abre ? () => setAberta(aberto ? null : item.id) : undefined}
           >
-            <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
+            <td className="px-4 py-3 text-xs text-gray-400">
               {item.ordem}
             </td>
             <td className={`px-4 py-3 text-sm text-gray-900 ${RECUO_TIPO[item.tipo]}`}>
@@ -158,7 +158,7 @@ export function EstruturaDreContent() {
                     .sort()
                     .join(", ")}
             </td>
-            <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
+            <td className="px-4 py-3 text-xs text-gray-600">
               {item._count.contas > 0 ? item._count.contas : "—"}
             </td>
             {edicao.pode ? (

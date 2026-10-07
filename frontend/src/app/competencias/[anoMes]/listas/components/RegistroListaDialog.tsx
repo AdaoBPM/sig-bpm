@@ -101,7 +101,7 @@ export function RegistroListaDialog({ anoMes, slug, rotuloLista, campos, editand
                     onChange={(e) => setValores((v) => ({ ...v, [c.coluna]: e.target.value }))}
                     inputMode={c.tipo === "numero" ? "decimal" : undefined}
                     placeholder={c.tipo === "numero" ? "0,000" : undefined}
-                    className={`rounded-sm border-gray-300 ${c.tipo === "numero" ? "w-48 tabular-nums" : ""}`}
+                    className={`rounded-sm border-gray-300 ${c.tipo === "numero" ? "w-48" : ""}`}
                   />
                 )}
                 {c.ajuda ? <p className="text-xs text-gray-500">{c.ajuda}</p> : null}

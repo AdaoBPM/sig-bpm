@@ -37,7 +37,7 @@ function Bloco({ b, consolidado, onMemoria }: { b: BlocoDetalhe; consolidado: bo
           </p>
         ) : null}
       </div>
-      <p className="text-sm font-bold tabular-nums">{moeda(b.total)}</p>
+      <p className="text-sm font-bold">{moeda(b.total)}</p>
     </div>
   );
   if (b.tipo === "PREVIA") {
@@ -94,11 +94,11 @@ function TabelaLancamentos({ lancamentos, multiplica }: { lancamentos: Lancament
           ) : (
             tabela.visiveis.map((l) => (
               <tr key={l.id} className="border-b border-gray-100 align-top">
-                <td className="px-4 py-1.5 tabular-nums">{l.filial}</td>
+                <td className="px-4 py-1.5">{l.filial}</td>
                 <td className="px-4 py-1.5">
                   {l.centro ? (
                     <>
-                      <span className="tabular-nums">{l.centro.codigoRM ?? "sem código"}</span>
+                      <span>{l.centro.codigoRM ?? "sem código"}</span>
                       <span className="text-gray-500"> · {l.centro.nome}</span>
                     </>
                   ) : (
@@ -106,7 +106,7 @@ function TabelaLancamentos({ lancamentos, multiplica }: { lancamentos: Lancament
                   )}
                 </td>
                 <td className="px-4 py-1.5">
-                  <span className="tabular-nums">{l.conta.reduzido}</span>
+                  <span>{l.conta.reduzido}</span>
                   <span className="text-gray-500"> · {l.conta.descricao}</span>
                   {l.contaAdotada ? (
                     <div className="text-yellow-800">
@@ -116,8 +116,8 @@ function TabelaLancamentos({ lancamentos, multiplica }: { lancamentos: Lancament
                   {l.descricao ? <div className="text-gray-500">{l.descricao}</div> : null}
                 </td>
                 <td className="px-4 py-1.5 text-gray-600">{l.balde ?? "—"}</td>
-                <td className="px-4 py-1.5 text-right tabular-nums">{moeda(l.valor)}</td>
-                {multiplica ? <td className="px-4 py-1.5 text-right tabular-nums">{moeda(l.parcela)}</td> : null}
+                <td className="px-4 py-1.5 text-right">{moeda(l.valor)}</td>
+                {multiplica ? <td className="px-4 py-1.5 text-right">{moeda(l.parcela)}</td> : null}
               </tr>
             ))
           )}
@@ -125,7 +125,7 @@ function TabelaLancamentos({ lancamentos, multiplica }: { lancamentos: Lancament
       </table>
       {tabela.total !== tabela.totalGeral ? (
         <p className="px-4 py-1.5 text-right text-xs text-gray-600">
-          Total filtrado ({tabela.total} de {tabela.totalGeral}): <span className="font-bold tabular-nums">{moeda(tabela.filtradas.reduce((a, l) => a + Number(l.valor), 0))}</span>
+          Total filtrado ({tabela.total} de {tabela.totalGeral}): <span className="font-bold">{moeda(tabela.filtradas.reduce((a, l) => a + Number(l.valor), 0))}</span>
         </p>
       ) : null}
     </div>
@@ -150,7 +150,7 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar }: Props) {
         <DialogHeader>
           <DialogTitle>
             {data ? `${data.visao} · ${data.linha.descricao}` : "Detalhamento"}
-            {data?.valor ? <span className="ml-2 tabular-nums text-gray-600">{moeda(data.valor)}</span> : null}
+            {data?.valor ? <span className="ml-2 text-gray-600">{moeda(data.valor)}</span> : null}
           </DialogTitle>
           <DialogDescription>{data?.regra ?? "Os lançamentos que formaram o valor, como foram apurados."}</DialogDescription>
         </DialogHeader>

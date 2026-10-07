@@ -94,7 +94,7 @@ function BuscaConta({
                 }}
                 className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
               >
-                <span className="font-medium tabular-nums">{c.reduzido}</span> {c.descricao}
+                <span className="font-medium">{c.reduzido}</span> {c.descricao}
                 <span className="block text-xs text-gray-500">
                   {c.departamento ?? "-"} · {c.atribuicao ?? "-"}
                 </span>
@@ -227,7 +227,7 @@ export function LancamentoManualDialog({ anoMes, opcoes, editando, aberto, onFec
               onChange={(e) => setValor(e.target.value)}
               placeholder="0,00"
               inputMode="decimal"
-              className="w-48 rounded-sm border-gray-300 tabular-nums"
+              className="w-48 rounded-sm border-gray-300"
             />
           </div>
 

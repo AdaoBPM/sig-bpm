@@ -259,10 +259,10 @@ export function ImportarContent() {
                         </button>
                       ) : null}
                     </td>
-                    <td className="px-4 text-sm whitespace-nowrap text-gray-600 tabular-nums">{vigente ? dataHora(vigente.importadoEm) : ""}</td>
+                    <td className="px-4 text-sm whitespace-nowrap text-gray-600">{vigente ? dataHora(vigente.importadoEm) : ""}</td>
                     <td className="px-4 text-sm whitespace-nowrap text-gray-600">{vigente?.usuario?.nome ?? ""}</td>
-                    <td className="px-4 text-right text-sm tabular-nums">{vigente ? inteiro(vigente.linhasAceitas) : ""}</td>
-                    <td className="px-4 text-right text-sm tabular-nums">
+                    <td className="px-4 text-right text-sm">{vigente ? inteiro(vigente.linhasAceitas) : ""}</td>
+                    <td className="px-4 text-right text-sm">
                       {vigente ? vigente.linhasRejeitadas > 0 ? <span className="font-medium text-red-700">{inteiro(vigente.linhasRejeitadas)}</span> : <span className="text-gray-400">0</span> : ""}
                     </td>
                     <td className="px-4">{vigente ? <StatusImportacaoBadge imp={vigente} /> : <Selo classe="border-gray-200 bg-white text-gray-500">Não importado</Selo>}</td>
@@ -310,7 +310,7 @@ export function ImportarContent() {
                 {historico.visiveis.length === 0 ? <SemResultado colunas={COLUNAS_HISTORICO.length} onLimpar={historico.limpar} /> : null}
                 {historico.visiveis.map((imp) => (
                   <tr key={imp.id} onClick={() => setAberta(imp.id)} className={`cursor-pointer border-b border-gray-100 hover:bg-gray-50 ${imp.substituidaEm ? "text-gray-500" : ""}`}>
-                    <td className="px-4 text-sm whitespace-nowrap tabular-nums">{dataHora(imp.importadoEm)}</td>
+                    <td className="px-4 text-sm whitespace-nowrap">{dataHora(imp.importadoEm)}</td>
                     <td className="px-4 text-sm whitespace-nowrap">{ROTULO_TIPO[imp.tipo] ?? imp.tipo}</td>
                     <td className="max-w-xs truncate px-4 text-sm" title={imp.nomeArquivo}>
                       {imp.nomeArquivo}
@@ -318,8 +318,8 @@ export function ImportarContent() {
                     <td className="px-4">
                       <StatusImportacaoBadge imp={imp} />
                     </td>
-                    <td className="px-4 text-right text-sm tabular-nums">{inteiro(imp.linhasAceitas)}</td>
-                    <td className="px-4 text-right text-sm tabular-nums">
+                    <td className="px-4 text-right text-sm">{inteiro(imp.linhasAceitas)}</td>
+                    <td className="px-4 text-right text-sm">
                       {imp.linhasRejeitadas > 0 ? <span className="font-medium text-red-700">{inteiro(imp.linhasRejeitadas)}</span> : <span className="text-gray-400">0</span>}
                     </td>
                     <td className="px-4 text-sm whitespace-nowrap">{imp.usuario?.nome ?? "—"}</td>

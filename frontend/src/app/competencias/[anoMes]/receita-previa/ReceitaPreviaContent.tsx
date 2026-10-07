@@ -227,7 +227,7 @@ export function ReceitaPreviaContent() {
                     {l.observacao}
                   </div>
                 </td>
-                <td className="px-4 text-right text-sm tabular-nums whitespace-nowrap">{moeda(l.valor)}</td>
+                <td className="px-4 text-right text-sm whitespace-nowrap">{moeda(l.valor)}</td>
                 <td className="px-4 py-0 text-right whitespace-nowrap">
                   {!fechada ? (
                     <PermissionGuard permission="lancamentos_manuais:editar">

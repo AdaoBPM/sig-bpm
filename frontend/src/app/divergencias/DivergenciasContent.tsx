@@ -153,7 +153,7 @@ export function DivergenciasContent() {
       {d && d.competencias.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {d.competencias.map((c) => (
-            <div key={anoMes(c.ano, c.mes)} className="space-y-2 rounded-sm border border-gray-200 bg-white p-4">
+            <div key={anoMes(c.ano, c.mes)} className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
               <div className="flex items-center justify-between gap-2">
                 <button type="button" className="font-bold text-gray-900 hover:underline" onClick={() => muda({ competencia: anoMes(c.ano, c.mes) })}>
                   {rotulo(c.ano, c.mes)}
@@ -305,9 +305,9 @@ export function DivergenciasContent() {
                       </div>
                       {i.impacto !== null ? <div className="text-xs text-gray-600">Efeito na receita apurada: {moeda(i.impacto)}</div> : null}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{moeda(i.valorGravado)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{moeda(i.valorRecebido)}</td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums whitespace-nowrap">{moeda(i.diferenca)}</td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">{moeda(i.valorGravado)}</td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">{moeda(i.valorRecebido)}</td>
+                    <td className="px-3 py-2 text-right font-medium whitespace-nowrap">{moeda(i.diferenca)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded-sm border px-2 py-0.5 text-xs font-medium ${COR_STATUS[i.status]}`}>{ROTULO_STATUS[i.status]}</span>
                       {i.tratadaEm ? (

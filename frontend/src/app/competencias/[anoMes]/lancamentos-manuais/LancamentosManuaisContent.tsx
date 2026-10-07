@@ -166,7 +166,7 @@ export function LancamentosManuaisContent() {
               <span className="text-gray-600">
                 {filtrado ? `Total filtrado (${tabela.total} de ${tabela.totalGeral})` : "Total"}
               </span>
-              <span className="font-bold tabular-nums text-gray-900">{moeda(totalFiltrado ?? dados?.total ?? "0")}</span>
+              <span className="font-bold text-gray-900">{moeda(totalFiltrado ?? dados?.total ?? "0")}</span>
             </div>
           ) : null
         }
@@ -184,9 +184,9 @@ export function LancamentosManuaisContent() {
             renderRow={(l) => (
               <tr key={l.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 text-sm whitespace-nowrap text-gray-900">{l.motivo}</td>
-                <td className="px-4 text-sm tabular-nums">{l.filial}</td>
+                <td className="px-4 text-sm">{l.filial}</td>
                 <td className="px-4 text-sm">
-                  <div className="font-medium tabular-nums text-gray-900">{l.contaResultado?.reduzido ?? "—"}</div>
+                  <div className="font-medium text-gray-900">{l.contaResultado?.reduzido ?? "—"}</div>
                   {l.centroCusto ? (
                     <div className="max-w-56 truncate text-xs text-gray-500" title={`${l.centroCusto.codigoRM} ${l.centroCusto.nomeRM}`}>
                       centro {l.centroCusto.codigoRM} {l.centroCusto.nomeRM}
@@ -211,7 +211,7 @@ export function LancamentosManuaisContent() {
                 <td className="px-4 text-sm">
                   <BaldeBadge balde={l.balde} />
                 </td>
-                <td className="px-4 text-right text-sm tabular-nums whitespace-nowrap text-gray-900">
+                <td className="px-4 text-right text-sm whitespace-nowrap text-gray-900">
                   {moeda(l.valor)}
                 </td>
                 <td className="px-4 py-0 text-right whitespace-nowrap">

@@ -196,7 +196,7 @@ export function AuditoriaContent() {
                 return (
                   <Fragment key={r.id}>
                     <tr className="cursor-pointer border-b border-gray-100 hover:bg-gray-50" onClick={() => setAberto(ab ? null : r.id)}>
-                      <td className="px-4 py-2 whitespace-nowrap tabular-nums">
+                      <td className="px-4 py-2 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
                           {ab ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />}
                           {dataHora(r.createdAt)}

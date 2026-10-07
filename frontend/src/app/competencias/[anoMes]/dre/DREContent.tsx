@@ -104,7 +104,7 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
                         {l.descricao}
                       </span>
                     </td>
-                    <td className="px-4 py-1.5 text-right tabular-nums">
+                    <td className="px-4 py-1.5 text-right">
                       {l.valor === null ? "—" : ehVolume(l) ? volume(l.valor) : moeda(l.valor)}
                     </td>
                   </tr>
@@ -186,7 +186,7 @@ function VisaoCentros({ anoMes }: { anoMes: string }) {
                   </span>
                   {g.centros > 1 ? <span className={`text-xs ${g.grupo === escolhido ? "text-gray-300" : "text-gray-500"}`}>{g.centros} centros</span> : null}
                 </span>
-                <span className="shrink-0 text-xs tabular-nums">{moeda(g.total)}</span>
+                <span className="shrink-0 text-xs">{moeda(g.total)}</span>
               </button>
             </li>
           ))}

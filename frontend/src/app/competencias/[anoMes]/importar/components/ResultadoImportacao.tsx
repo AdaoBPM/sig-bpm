@@ -55,7 +55,7 @@ function Contador({
   return (
     <div className="border border-gray-200 rounded-sm p-4">
       <p className="text-xs font-bold text-gray-600">{iniciaisMaiusculas(rotulo)}</p>
-      <p className={`mt-1 text-2xl font-extrabold tabular-nums ${cor}`}>{inteiro(valor)}</p>
+      <p className={`mt-1 text-2xl font-extrabold ${cor}`}>{inteiro(valor)}</p>
       {detalhe ? <p className="mt-0.5 text-xs text-gray-500">{detalhe}</p> : null}
     </div>
   );
@@ -101,7 +101,7 @@ function TabelaRejeicoes({
           <tbody>
             {rejeicoes.slice(0, MAX_REJEICOES).map((r) => (
               <tr key={`${r.linha}-${r.codigo}`} className="border-b border-gray-100">
-                <td className="px-4 py-2 text-sm tabular-nums">{r.linha}</td>
+                <td className="px-4 py-2 text-sm">{r.linha}</td>
                 <td className="px-4 py-2 text-sm font-medium text-red-700">
                   {ROTULO_REJEICAO[r.codigo] ?? r.codigo}
                 </td>
@@ -111,7 +111,7 @@ function TabelaRejeicoes({
                     <td className="px-4 py-2 text-sm">{r.filial ?? "—"}</td>
                     <td className="px-4 py-2 text-sm">{r.codigoCentroCusto ?? "—"}</td>
                     <td className="px-4 py-2 text-sm">{r.reduzido ?? "—"}</td>
-                    <td className="px-4 py-2 text-right text-sm tabular-nums">
+                    <td className="px-4 py-2 text-right text-sm">
                       {r.valor ? moeda(r.valor) : "—"}
                     </td>
                   </>
@@ -208,22 +208,22 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
             <dl className="mt-3 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-gray-600">Soma das Linhas do Mês</dt>
-                <dd className="font-medium tabular-nums">{moeda(resumo.somaArquivo)}</dd>
+                <dd className="font-medium">{moeda(resumo.somaArquivo)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-gray-600">Total Geral do Arquivo</dt>
-                <dd className="font-medium tabular-nums">
+                <dd className="font-medium">
                   {resumo.totalGeral === null ? "—" : moeda(resumo.totalGeral)}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-gray-100 pt-1.5">
                 <dt className="text-gray-600">Gravado</dt>
-                <dd className="font-bold tabular-nums">{moeda(resumo.valorAceito)}</dd>
+                <dd className="font-bold">{moeda(resumo.valorAceito)}</dd>
               </div>
               {Number(resumo.valorRejeitado) !== 0 ? (
                 <div className="flex justify-between gap-4">
                   <dt className="text-red-700">Rejeitado</dt>
-                  <dd className="font-bold tabular-nums text-red-700">
+                  <dd className="font-bold text-red-700">
                     {moeda(resumo.valorRejeitado)}
                   </dd>
                 </div>
@@ -251,8 +251,8 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
                 {resumo.porFilial.map((f) => (
                   <tr key={f.filial} className="border-t border-gray-100">
                     <td className="py-1.5">{f.filial}</td>
-                    <td className="py-1.5 text-right tabular-nums">{inteiro(f.linhas)}</td>
-                    <td className="py-1.5 text-right tabular-nums">{moeda(f.valor)}</td>
+                    <td className="py-1.5 text-right">{inteiro(f.linhas)}</td>
+                    <td className="py-1.5 text-right">{moeda(f.valor)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -276,7 +276,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
               </p>
               <ul className="mt-2 space-y-0.5">
                 {foraDoCadastro.map((c) => (
-                  <li key={c.codigo} className="tabular-nums">
+                  <li key={c.codigo}>
                     <span className="font-medium">{c.codigo}</span> {c.nome ?? ""} —{" "}
                     {c.linhas} lançamento(s), {moeda(c.valor)}
                   </li>
@@ -345,7 +345,7 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
                 {resumo.totais.map((t) => (
                   <tr key={t.codigo} className="border-t border-gray-100">
                     <td className="py-1.5 text-gray-700">{t.rotulo}</td>
-                    <td className="py-1.5 text-right font-medium tabular-nums">
+                    <td className="py-1.5 text-right font-medium">
                       {t.medida === "R$"
                         ? moeda(t.quantidade)
                         : Number(t.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
@@ -439,7 +439,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
               ).map(([rotulo, n, cor]) => (
                 <div key={rotulo} className="flex justify-between gap-4">
                   <dt className="text-gray-600">{iniciaisMaiusculas(rotulo)}</dt>
-                  <dd className={`font-bold tabular-nums ${cor}`}>{inteiro(n)}</dd>
+                  <dd className={`font-bold ${cor}`}>{inteiro(n)}</dd>
                 </div>
               ))}
             </dl>
@@ -518,11 +518,11 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
                       {a.etapa ?? "—"} · {a.linha}
                     </td>
                     <td className="px-4 py-2 text-gray-600">{a.conta}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className="px-4 py-2 text-right">
                       <span className="text-red-700 line-through">{valorOuTraco(a.antes.unitario)}</span>{" "}
                       <span className="text-green-700">{valorOuTraco(a.depois.unitario)}</span>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className="px-4 py-2 text-right">
                       <span className="text-red-700 line-through">{valorOuTraco(a.antes.total)}</span>{" "}
                       <span className="text-green-700">{valorOuTraco(a.depois.total)}</span>
                     </td>
@@ -565,8 +565,8 @@ function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
               {resumo.porLinha.map((l) => (
                 <tr key={l.linha} className="border-t border-gray-100">
                   <td className="py-1.5 text-gray-700">{l.linha}</td>
-                  <td className="py-1.5 text-right tabular-nums">{Number(l.volume).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} m³</td>
-                  <td className="py-1.5 text-right tabular-nums">{moeda(l.valor)}</td>
+                  <td className="py-1.5 text-right">{Number(l.volume).toLocaleString("pt-BR", { maximumFractionDigits: 3 })} m³</td>
+                  <td className="py-1.5 text-right">{moeda(l.valor)}</td>
                 </tr>
               ))}
             </tbody>

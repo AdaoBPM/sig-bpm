@@ -234,7 +234,7 @@ function Lista() {
                   {/* O nome só quando o cadastro tem um (a obra criada pela lista nasce com o código no nome). */}
                   {r.obra ? (
                     <div className="flex max-w-60 items-baseline gap-1.5" title={r.obra.nome !== r.obra.codigo ? r.obra.nome : undefined}>
-                      <span className="font-medium tabular-nums">{r.obra.codigo}</span>
+                      <span className="font-medium">{r.obra.codigo}</span>
                       {r.obra.nome !== r.obra.codigo ? <span className="truncate text-xs text-gray-500">{r.obra.nome}</span> : null}
                     </div>
                   ) : (
@@ -244,11 +244,11 @@ function Lista() {
                 <td className="px-4 py-2 text-sm text-gray-600">{r.unidade ?? "—"}</td>
                 <td className="px-4 py-2 text-sm text-gray-600">{r.linha ?? "—"}</td>
                 {r.detalhes.map((x) => (
-                  <td key={x.rotulo} className={`px-4 py-2 text-sm text-gray-600 ${ehDecimal(x.valor) ? "text-right tabular-nums" : ""}`}>
+                  <td key={x.rotulo} className={`px-4 py-2 text-sm text-gray-600 ${ehDecimal(x.valor) ? "text-right" : ""}`}>
                     {ehDecimal(x.valor) ? quantidade(x.valor!) : (x.valor ?? "—")}
                   </td>
                 ))}
-                <td className="px-4 py-2 text-right text-sm tabular-nums text-gray-900">{quantidade(r.quantidade)}</td>
+                <td className="px-4 py-2 text-right text-sm text-gray-900">{quantidade(r.quantidade)}</td>
                 <td className="px-4 text-xs whitespace-nowrap">
                   {r.origem === "DIGITADA" ? (
                     <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">Digitado</span>

@@ -73,8 +73,8 @@ function Linha({
           rotulo
         )}
       </td>
-      <td className={`px-4 text-right tabular-nums ${detalhe ? "py-1 text-xs text-gray-500" : "py-2 text-sm"} ${destaque ? "font-bold" : ""}`}>{moeda(valor)}</td>
-      <td className={`px-4 text-right text-xs tabular-nums text-gray-500 ${detalhe ? "py-1" : "py-2"}`}>
+      <td className={`px-4 text-right ${detalhe ? "py-1 text-xs text-gray-500" : "py-2 text-sm"} ${destaque ? "font-bold" : ""}`}>{moeda(valor)}</td>
+      <td className={`px-4 text-right text-xs text-gray-500 ${detalhe ? "py-1" : "py-2"}`}>
         {pct === null ? "—" : `${(pct * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}
       </td>
     </tr>
