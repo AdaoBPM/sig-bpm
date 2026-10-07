@@ -135,7 +135,8 @@ function CelulaClassificacao({ l }: { l: LancamentoClassificado }) {
   return (
     <div>
       <Cortada texto={conta.departamento ?? "-"} className="text-gray-900" altura="h-5" />
-      <Cortada texto={conta.atribuicao ?? "-"} className="text-xs text-gray-600" />
+      {/* Um tom acima: em minúsculas, o mesmo cinza parece mais claro que os nomes em maiúsculas. */}
+      <Cortada texto={conta.atribuicao ?? "-"} className="text-xs text-gray-700" />
       <Cortada texto={l.linhaDRE.descricao} className="text-xs text-gray-600" />
     </div>
   );
