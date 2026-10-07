@@ -54,9 +54,9 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     prisma.tipoMovimento.findMany({ where: { ativo: true }, select: { codigo: true } }),
     prisma.producao.findMany({ where: daLista, select: { ...comuns, nomePeca: true, secao: true } }),
     prisma.expedicao.findMany({ where: daLista, select: { ...comuns, nomePeca: true } }),
-    prisma.saida.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true } }),
+    prisma.saida.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true, movimento: true } }),
     prisma.devolucao.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true, movimento: true } }),
-    prisma.medicao.findMany({ where: daLista, select: { ...comuns, valorMedido: true } }),
+    prisma.medicao.findMany({ where: daLista, select: { ...comuns, valorMedido: true, tipoFaturamento: true } }),
     prisma.lancamentoReceita.findMany({
       where: daLista,
       select: { id: true, natureza: true, componente: true, valor: true, observacao: true, venda: true, unidadeNegocio: { select: { codigo: true } } },
@@ -78,9 +78,9 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     movimentos: new Set(movimentos.map((m) => m.codigo.trim().toUpperCase())),
     producoes: producoes.map((r) => registro(r, { nomePeca: r.nomePeca, secao: r.secao })),
     expedicoes: expedicoes.map((r) => registro(r, { nomePeca: r.nomePeca })),
-    saidas: saidas.map((r) => registro(r, { valor: r.valor, creditos: r.creditos })),
+    saidas: saidas.map((r) => registro(r, { valor: r.valor, creditos: r.creditos, movimento: r.movimento })),
     devolucoes: devolucoes.map((r) => registro(r, { valor: r.valor, creditos: r.creditos, movimento: r.movimento })),
-    medicoes: medicoes.map((r) => registro(r, { valorMedido: r.valorMedido })),
+    medicoes: medicoes.map((r) => registro(r, { valorMedido: r.valorMedido, tipoFaturamento: r.tipoFaturamento })),
     lancamentos: lancamentos.map((l) => ({
       id: l.id,
       unidade: l.unidadeNegocio.codigo,
@@ -249,13 +249,18 @@ export const receitaPreviaService = {
       prisma.receitaPreviaItem.count({ where }),
     ]);
     const dec = (d: { toFixed: (n: number) => string } | null, n = 2) => (d === null ? null : d.toFixed(n));
+    // O nome da obra, como na coluna Nome da Obra das abas de receita.
+    const codigos = [...new Set(itens.map((i) => i.obraCodigo).filter((c): c is string => !!c))];
+    const nomes = new Map((await prisma.obra.findMany({ where: { codigo: { in: codigos } }, select: { codigo: true, nome: true } })).map((o) => [o.codigo, o.nome]));
     return {
       itens: itens.map((i) => ({
         id: i.id,
         origem: i.origem,
         obra: i.obraCodigo,
+        obraNome: i.obraCodigo && nomes.get(i.obraCodigo) !== i.obraCodigo ? (nomes.get(i.obraCodigo) ?? null) : null,
+        detalhe: i.detalhe,
         linha: i.linha,
-        quantidade: dec(i.quantidade, 3),
+        quantidade: dec(i.quantidade, 6),
         criterio: i.criterio,
         precoBruto: dec(i.precoBruto),
         precoLiquido: dec(i.precoLiquido),

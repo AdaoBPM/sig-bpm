@@ -60,6 +60,7 @@ export type Registro = {
   creditos?: Decimal | null;
   movimento?: string | null;
   valorMedido?: Decimal | null;
+  tipoFaturamento?: string | null;
 };
 
 export type LancamentoReceitaCalculo = {
@@ -91,6 +92,8 @@ export type ItemReceita = {
   observacao: string | null;
   /** Global ou mercantil; nulo nas medições de Obras. */
   venda: TipoVenda | null;
+  /** Peça da estaca, movimento ou tipo de faturamento: o que separa as linhas da obra nas abas de receita. */
+  detalhe: string | null;
 };
 
 export type DadosCalculo = {
@@ -179,6 +182,7 @@ function base(r: Registro, unidade: CodigoUnidade, natureza: NaturezaReceita, or
     variacaoEstoque: zero(),
     observacao: null,
     venda: unidade === UNIDADE.OBRAS ? null : vendaDaObra(r.obra),
+    detalhe: null,
   };
 }
 
@@ -205,6 +209,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
       const preco = estacaPorGrupoSecao.get(`${grupoDaEstaca(r.nomePeca)}|${norm(r.secao)}`);
       if (!preco) semTabela.add(`${grupoDaEstaca(r.nomePeca)} ${r.secao ?? "?"}`);
       item.criterio = "TABELA_ESTACA";
+      item.detalhe = `${grupoDaEstaca(r.nomePeca)} ${r.secao ?? ""}`.trim();
       item.precoLiquido = preco ?? zero();
       // Na aba Receitas (Prévia), a variação do estoque é -Σ P da produção.
       item.variacaoEstoque = (preco ?? zero()).times(r.quantidade).neg();
@@ -249,6 +254,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
       const p = (precoTabela ?? zero()).times(r.quantidade).neg();
       const item = base(r, UNIDADE.FILIAL, "PRE_FABRICADO", "EXPEDICAO");
       item.criterio = contrato ? "CONTRATO" : "TABELA_ESTACA";
+      item.detalhe = pecaDaEstaca(r.nomePeca);
       if (!p.isZero()) {
         if (contrato) {
           const b = precos.unitario(r.obra, linha, "Receita Bruta do Pré-Fabricado");
@@ -270,6 +276,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
 
     const frete = base(r, u, "FRETE", "EXPEDICAO");
     frete.criterio = criterio;
+    if (linha === "ESTACAS") frete.detalhe = pecaDaEstaca(r.nomePeca);
     if (contrato) {
       const b = precos.unitario(r.obra, linha, "Receita Bruta de Frete");
       const l = precos.unitario(r.obra, linha, "Receita Líquida de Frete");
@@ -285,6 +292,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
     const linha = norm(r.linha);
     const item = base(r, linha === "METALÚRGICA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL, "PRE_FABRICADO", "SAIDA");
     item.criterio = "NOTA_FISCAL";
+    item.detalhe = r.movimento ?? null;
     item.receitaBruta = r.valor ?? zero();
     item.receitaLiquida = item.receitaBruta.minus(r.creditos ?? 0);
     itens.push(item);
@@ -296,6 +304,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
     const linha = norm(r.linha);
     const item = base(r, linha === "ESTRUTURA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL, "DEVOLUCOES_INVENTARIOS", "DEVOLUCAO");
     item.criterio = "NOTA_FISCAL";
+    item.detalhe = r.movimento ?? null;
     if (d.movimentos.has(norm(r.movimento))) {
       item.receitaBruta = (r.valor ?? zero()).neg();
       item.receitaLiquida = item.receitaBruta.plus(r.creditos ?? 0);
@@ -312,6 +321,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
     const natureza: NaturezaReceita = linha === "MONTAGEM" || linha === "VEDAÇÃO" ? "MONTAGEM" : "COMPLEMENTAR";
     const item = base(r, UNIDADE.OBRAS, natureza, "MEDICAO");
     item.criterio = "MEDICAO";
+    item.detalhe = r.tipoFaturamento ?? null;
     item.receitaBruta = r.valorMedido ?? zero();
     const rob = precos.total(r.obra, "MONTAGEM", "ROB");
     const irb = precos.total(r.obra, "MONTAGEM", "IRB");

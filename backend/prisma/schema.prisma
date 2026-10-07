@@ -1640,6 +1640,10 @@ model ReceitaPreviaItem {
   /// "G" é global) ou, no lançamento manual, pelo campo dele. Nulo nas
   /// medições de Obras, que não se separam.
   venda           TipoVenda?
+  /// O que separa as linhas da obra nas abas de receita do BASE PRÉVIAS: a
+  /// peça da estaca (produção e expedição), o movimento (saídas e devoluções)
+  /// ou o tipo de faturamento (medições).
+  detalhe         String?
 
   receitaPrevia ReceitaPrevia @relation(fields: [receitaPreviaId], references: [id], onDelete: Cascade)
 

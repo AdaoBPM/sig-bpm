@@ -42,6 +42,9 @@ export type ItemReceita = {
   id: string;
   origem: string;
   obra: string | null;
+  obraNome: string | null;
+  /** Peça da estaca, movimento ou tipo de faturamento. */
+  detalhe: string | null;
   linha: string | null;
   quantidade: string | null;
   criterio: string;
