@@ -9,7 +9,6 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
-import { iniciaisMaiusculas } from "@/lib/texto";
 
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes } from "../utils/formatacao";
@@ -109,7 +108,7 @@ export function RateiosContent() {
             // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
             <div key={k.chave} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
               <div className="border-b border-gray-200 px-4 py-3">
-                <h2 className="text-sm font-bold text-gray-900">{iniciaisMaiusculas(ROTULO_CHAVE[k.chave] ?? k.chave)}</h2>
+                <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{ROTULO_CHAVE[k.chave] ?? k.chave}</h2>
               </div>
               <table className="tabela-sig w-full table-fixed border-collapse text-sm">
                 <thead>

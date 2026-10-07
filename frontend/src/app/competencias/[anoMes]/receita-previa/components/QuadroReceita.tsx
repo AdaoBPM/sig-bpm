@@ -124,7 +124,8 @@ export function QuadroReceita({ unidade, receitas, porVenda, impostos, onAbrir }
     // Destaque amarelo-ouro à esquerda, como o dos cards da BSC (lá, no topo).
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       <div className="border-b border-gray-200 px-4 py-3">
-        <h2 className="text-sm font-bold text-gray-900">{ROTULO_UNIDADE[unidade]}</h2>
+        {/* Título do quadro em caixa alta, como em Rateios e na DRE. */}
+        <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{ROTULO_UNIDADE[unidade]}</h2>
       </div>
       <table className="tabela-sig w-full table-fixed border-collapse">
         <colgroup>

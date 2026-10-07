@@ -10,7 +10,6 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
-import { iniciaisMaiusculas } from "@/lib/texto";
 
 import { lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
@@ -80,15 +79,11 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
   return (
     // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
+      {/* Título como nos quadros da Receita Prévia e de Rateios; fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
+      <div className="sticky top-[var(--topo-tabela,0px)] z-10 border-b border-gray-200 bg-white px-4 py-3">
+        <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{titulo}</h2>
+      </div>
       <table className="tabela-sig w-full border-collapse text-sm">
-        {/* O cabeçalho fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
-        <thead>
-          {/* Rótulos no tamanho e na cor das linhas de totais. */}
-          <tr className="border-b border-gray-200 text-sm font-bold text-gray-900">
-            <th className="px-4 text-left">{iniciaisMaiusculas(titulo)}</th>
-            <th className="w-48 px-4 text-right">Valor</th>
-          </tr>
-        </thead>
         <tbody>
           {linhas
             .filter((l) => l.tipo !== "SECAO")
