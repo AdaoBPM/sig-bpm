@@ -100,11 +100,6 @@ const COLUNAS_HISTORICO: Coluna<Importacao>[] = [
   { chave: "por", rotulo: "Por", valor: (i) => i.usuario?.nome },
 ];
 
-/** "N de M", só quando os filtros dos rótulos escondem linhas. */
-function contagem(t: { total: number; totalGeral: number }, nome: string) {
-  return t.total !== t.totalGeral ? `${inteiro(t.total)} de ${inteiro(t.totalGeral)} ${nome}` : `${inteiro(t.total)} ${nome}`;
-}
-
 function LimparFiltros({ onLimpar }: { onLimpar: () => void }) {
   return (
     <button type="button" onClick={onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
@@ -217,9 +212,8 @@ export function ImportarContent() {
         <QuadroTabela
           barra={
             vigor.ativos ? (
-              <div className="ml-auto flex shrink-0 items-center gap-3">
+              <div className="ml-auto">
                 <LimparFiltros onLimpar={vigor.limpar} />
-                <span className="text-xs text-gray-600">{contagem(vigor, "tipo(s)")}</span>
               </div>
             ) : null
           }
@@ -282,10 +276,11 @@ export function ImportarContent() {
       ) : (
         <QuadroTabela
           barra={
-            <div className="ml-auto flex shrink-0 items-center gap-3">
-              {historico.ativos ? <LimparFiltros onLimpar={historico.limpar} /> : null}
-              <span className="text-xs text-gray-600">{data ? contagem(historico, "importação(ões)") : ""}</span>
-            </div>
+            historico.ativos ? (
+              <div className="ml-auto">
+                <LimparFiltros onLimpar={historico.limpar} />
+              </div>
+            ) : null
           }
           rodape={
             historico.total > 0 ? (

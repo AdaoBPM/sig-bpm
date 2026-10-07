@@ -196,14 +196,9 @@ export function ReceitaPreviaContent() {
         <QuadroTabela
           barra={
             tabela.ativos ? (
-              <div className="ml-auto flex shrink-0 items-center gap-3">
-                <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar Filtros
-                </button>
-                <span className="text-xs text-gray-600">
-                  {tabela.total !== tabela.totalGeral ? `${tabela.total} de ${tabela.totalGeral} lançamento(s)` : `${tabela.total} lançamento(s)`}
-                </span>
-              </div>
+              <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+                Limpar Filtros
+              </button>
             ) : null
           }
         >

@@ -215,18 +215,11 @@ export function DivergenciasContent() {
 
       <QuadroTabela
         barra={
-          <>
-            <div className="ml-auto flex shrink-0 items-center gap-3">
-              {tabela.ativos ? (
-                <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar Filtros
-                </button>
-              ) : null}
-              <span className="text-xs text-gray-600">
-                {d ? (tabela.ativos && tabela.total !== tabela.totalGeral ? `${inteiro(tabela.total)} de ${inteiro(tabela.totalGeral)} divergência(s)` : `${inteiro(tabela.total)} divergência(s)`) : ""}
-              </span>
-            </div>
-          </>
+          tabela.ativos ? (
+            <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+              Limpar Filtros
+            </button>
+          ) : undefined
         }
         rodape={
           d && tabela.total > 0 ? (

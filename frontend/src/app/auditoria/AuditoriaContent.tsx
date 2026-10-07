@@ -127,14 +127,14 @@ export function AuditoriaContent() {
       </BarraDeFiltros>
 
       <QuadroTabela
-        barra={<span className="text-xs text-gray-600">{log.data ? `${inteiro(log.data.total)} registro(s)` : ""}</span>}
         rodape={log.data && log.data.total > 0 ? <Paginacao total={log.data.total} pagina={filtro.pagina} porPagina={log.data.porPagina} onPagina={(p) => muda({ pagina: p })} carregando={log.isFetching} /> : null}
       >
         {log.isError ? <ErroCarga mensagem="Erro ao carregar o log." /> : null}
         <table className="tabela-sig w-full border-collapse text-sm">
           {/* Filtros nos rótulos, como no Excel, aplicados no servidor: o log cresce sem parar e é paginado lá. */}
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
+            {/* Rótulos com filtro em amarelo-ouro, como nas demais tabelas; o "!" vence o fundo do .tabela-sig th. */}
+            <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900 [&>th]:!bg-bpm-primary">
               <th className="px-4 py-2">
                 <span className="inline-flex items-center gap-1">
                   Quando
