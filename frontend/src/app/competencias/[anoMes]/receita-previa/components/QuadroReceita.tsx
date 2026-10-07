@@ -121,7 +121,8 @@ export function QuadroReceita({ unidade, receitas, porVenda, impostos, onAbrir }
   const variacao = Number(da("PRE_FABRICADO")?.variacaoEstoque ?? 0);
 
   return (
-    <div className="border border-gray-200 bg-white rounded-sm">
+    // Destaque amarelo-ouro à esquerda, como o dos cards da BSC (lá, no topo).
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       <div className="border-b border-gray-200 px-4 py-3">
         <h2 className="text-sm font-bold text-gray-900">{ROTULO_UNIDADE[unidade]}</h2>
       </div>
