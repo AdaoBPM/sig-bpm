@@ -1,9 +1,9 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Search, Sigma } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -67,7 +67,105 @@ function Composicao({ l }: { l: LinhaDRE }) {
   );
 }
 
-function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe; titulo: string }) {
+/** Os três níveis de agrupamento da DRE, como os de contorno do BASE REALIZADO (RESULTADOS). */
+type Nivel = 1 | 2 | 3;
+const NIVEIS: Array<{ nivel: Nivel; rotulo: string; dica: string }> = [
+  { nivel: 1, rotulo: "Totais", dica: "Mostrar só os totais" },
+  { nivel: 2, rotulo: "Atribuições", dica: "Mostrar os totais e as atribuições" },
+  { nivel: 3, rotulo: "Contas", dica: "Mostrar todas as contas" },
+];
+const CHAVE_NIVEL = "sig.dre.nivel";
+const nivelGuardado = (): Nivel => {
+  try {
+    const v = Number(window.localStorage.getItem(CHAVE_NIVEL));
+    return v === 1 || v === 2 || v === 3 ? v : 3;
+  } catch {
+    return 3;
+  }
+};
+const guardarNivel = (n: Nivel) => {
+  try {
+    window.localStorage.setItem(CHAVE_NIVEL, String(n));
+  } catch {
+    // Sem armazenamento (janela privada): o nível só não é lembrado.
+  }
+};
+
+/**
+ * O nível de contorno de cada linha, como na planilha: 0 os totais, 1 as
+ * atribuições (e as contas logo abaixo de um total) e 2 as contas dentro de uma
+ * atribuição. Sai do código da linha: um total de duas partes ("CPP.CUSTOS_…")
+ * abre o grupo; um total de três partes do mesmo grupo ("CPP.MOD.MAO_…") é
+ * atribuição; a conta é nível 2 quando há atribuição com o mesmo prefixo.
+ * Conferido com as seis abas Resultados em 07/10/2026: todas as linhas batem.
+ */
+function estrutura(linhas: LinhaDRE[]) {
+  const partes = (c: string) => c.split(".");
+  const totais = new Set(linhas.filter((l) => l.tipo !== "ITEM" && partes(l.codigo).length === 2).map((l) => partes(l.codigo)[0]));
+  const nivel = new Map<string, number>();
+  for (const l of linhas) {
+    if (l.tipo === "ITEM") continue;
+    const p = partes(l.codigo);
+    nivel.set(l.codigo, p.length > 2 && totais.has(p[0]) ? 1 : 0);
+  }
+  const atribuicoes = new Set(linhas.filter((l) => l.tipo !== "ITEM" && nivel.get(l.codigo) === 1).map((l) => partes(l.codigo).slice(0, 2).join(".")));
+  for (const l of linhas) {
+    if (l.tipo !== "ITEM") continue;
+    const p = partes(l.codigo);
+    nivel.set(l.codigo, p.length > 2 && atribuicoes.has(p.slice(0, 2).join(".")) ? 2 : 1);
+  }
+  // Os grupos acima de cada linha, na ordem da DRE.
+  const acima = new Map<string, string[]>();
+  const comFilhos = new Set<string>();
+  let total: string | null = null;
+  let atribuicao: string | null = null;
+  for (const l of linhas) {
+    const n = nivel.get(l.codigo)!;
+    if (n === 0) {
+      acima.set(l.codigo, []);
+      total = l.codigo;
+      atribuicao = null;
+    } else if (n === 1) {
+      acima.set(l.codigo, total ? [total] : []);
+      atribuicao = l.tipo === "ITEM" ? null : l.codigo;
+    } else {
+      acima.set(l.codigo, [total, atribuicao].filter((x): x is string => x !== null));
+    }
+    for (const g of acima.get(l.codigo)!) comFilhos.add(g);
+  }
+  return { nivel, acima, comFilhos };
+}
+
+/** Os grupos fechados para mostrar a DRE até o nível escolhido. */
+function fechadosAte(n: Nivel, nivel: Map<string, number>, comFilhos: Set<string>) {
+  if (n === 3) return new Set<string>();
+  return new Set([...comFilhos].filter((c) => nivel.get(c) === n - 1));
+}
+
+const RECUO = ["pl-4", "pl-9", "pl-14"];
+
+function TabelaDRE({ linhas: todas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe; titulo: string }) {
+  // A seção PRODUÇÃO E SERVIÇOS (PS) abre as linhas de volume; as seções P e S não aparecem, e PS só quando há volumes.
+  const linhas = useMemo(() => {
+    const temVolume = todas.some((l) => l.tipo === "ITEM" && ehVolume(l));
+    return todas.filter((l) => l.tipo !== "SECAO" || (l.grupoSigla === "PS" && temVolume));
+  }, [todas]);
+  const { nivel, acima, comFilhos } = useMemo(() => estrutura(linhas), [linhas]);
+  const [nivelGeral, setNivelGeral] = useState<Nivel>(nivelGuardado);
+  const [fechados, setFechados] = useState<Set<string>>(() => fechadosAte(nivelGuardado(), nivel, comFilhos));
+  const escolherNivel = (n: Nivel) => {
+    setNivelGeral(n);
+    guardarNivel(n);
+    setFechados(fechadosAte(n, nivel, comFilhos));
+  };
+  const alternar = (codigo: string) =>
+    setFechados((f) => {
+      const novo = new Set(f);
+      if (novo.has(codigo)) novo.delete(codigo);
+      else novo.add(codigo);
+      return novo;
+    });
+
   const [aberta, setAberta] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<string | null>(null);
   const [listasDe, setListasDe] = useState<LinhaDRE | null>(null);
@@ -80,16 +178,33 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
     // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       {/* Título como nos quadros da Receita Prévia e de Rateios; fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
-      <div className="sticky top-[var(--topo-tabela,0px)] z-10 border-b border-gray-200 bg-bpm-primary px-4 py-3">
+      <div className="sticky top-[var(--topo-tabela,0px)] z-10 flex items-center gap-4 border-b border-gray-200 bg-bpm-primary px-4 py-3">
+        {/* Os níveis da planilha (1, 2 e 3 do contorno do Excel). */}
+        <div role="group" aria-label="Níveis da DRE" className="inline-flex shrink-0 overflow-hidden rounded-sm border border-black/30 bg-white/70 text-xs font-medium">
+          {NIVEIS.map((n) => (
+            <button
+              key={n.nivel}
+              type="button"
+              title={n.dica}
+              aria-pressed={nivelGeral === n.nivel}
+              onClick={() => escolherNivel(n.nivel)}
+              className={`px-2.5 py-1 ${n.nivel > 1 ? "border-l border-black/30" : ""} ${nivelGeral === n.nivel ? "bg-black text-bpm-primary" : "text-gray-900 hover:bg-white"}`}
+            >
+              {n.rotulo}
+            </button>
+          ))}
+        </div>
         <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{titulo}</h2>
       </div>
       <table className="tabela-sig w-full border-collapse text-sm">
         <tbody>
           {linhas
-            .filter((l) => l.tipo !== "SECAO")
+            .filter((l) => !(acima.get(l.codigo) ?? []).some((g) => fechados.has(g)))
             .map((l) => {
               const destaque = l.tipo !== "ITEM";
               const aberto = aberta === l.codigo;
+              const grupo = comFilhos.has(l.codigo);
+              const fechado = fechados.has(l.codigo);
               return (
                 <Fragment key={l.codigo}>
                   <tr
@@ -97,20 +212,34 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
                     onClick={() =>
                       detalhavel(l) ? setDetalhe(l.codigo) : listavel(l, visao) ? setListasDe(l) : abre(l) ? setAberta(aberto ? null : l.codigo) : undefined
                     }
-                    title={detalhavel(l) ? "Ver os lançamentos de origem" : listavel(l, visao) ? "Ver as listas por obra" : undefined}
+                    title={detalhavel(l) ? "Ver os lançamentos de origem" : listavel(l, visao) ? "Ver as listas por obra" : abre(l) ? "Ver a composição" : undefined}
                   >
-                    <td className={`px-4 py-1.5 ${destaque ? "text-gray-900" : "pl-8 text-gray-700"}`}>
+                    <td className={`py-1.5 pr-4 ${RECUO[nivel.get(l.codigo) ?? 0]} ${destaque ? "text-gray-900" : "text-gray-700"}`}>
                       <span className="inline-flex items-center gap-1">
-                        {comLupa(l) ? (
-                          <Search className="size-3.5 text-gray-400" />
-                        ) : abre(l) ? (
-                          aberto ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />
-                        ) : null}
+                        {/* O agrupador da linha: abre e fecha o que está abaixo dela. */}
+                        {grupo ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alternar(l.codigo);
+                            }}
+                            title={fechado ? "Expandir" : "Recolher"}
+                            aria-expanded={!fechado}
+                            className="-ml-1 rounded-sm p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-900"
+                          >
+                            {fechado ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                          </button>
+                        ) : (
+                          // O lugar da seta, para os nomes do mesmo nível ficarem alinhados.
+                          <span aria-hidden className="-ml-1 inline-block w-[18px] shrink-0" />
+                        )}
+                        {comLupa(l) ? <Search className="size-3.5 text-gray-400" /> : abre(l) ? <Sigma className="size-3.5 text-gray-400" /> : null}
                         {l.descricao}
                       </span>
                     </td>
                     <td className="px-4 py-1.5 text-right">
-                      {l.valor === null ? "—" : ehVolume(l) ? volume(l.valor) : moeda(l.valor)}
+                      {l.tipo === "SECAO" ? "" : l.valor === null ? "—" : ehVolume(l) ? volume(l.valor) : moeda(l.valor)}
                     </td>
                   </tr>
                   {aberto && abre(l) ? (
@@ -270,7 +399,8 @@ export function DREContent() {
         comoUsar={
           <ul>
             <li>Escolha a visão nas abas: Consolidado, cada unidade, RN ou Centros de Custo (com a lista dos centros à esquerda).</li>
-            <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com seta, a composição se abre logo abaixo.</li>
+            <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com Σ, a composição do valor se abre logo abaixo.</li>
+            <li>Use “Totais”, “Atribuições” e “Contas”, na faixa do título, para recolher ou expandir a DRE nos três níveis da planilha; a seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>
