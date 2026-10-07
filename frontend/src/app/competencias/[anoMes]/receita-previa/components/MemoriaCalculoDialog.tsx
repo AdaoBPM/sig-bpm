@@ -182,7 +182,14 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = fal
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-3 overflow-hidden rounded-sm sm:max-w-[98vw] 2xl:max-w-[100rem]">
+      {/*
+        Posição em pixels inteiros: a 2rem do topo, com até 100rem de largura
+        (1rem de folga em cada lado nas telas menores) e centralizado com a
+        sobra arredondada, sem o translate(-50%) do diálogo padrão. Com altura
+        de 90vh e largura ímpar, o modal caía em meio pixel, e a tabela, que
+        rola em camada própria, tremia contra o topo fixo e os rótulos.
+      */}
+      <DialogContent className="top-8 left-[round(down,calc((100%_-_min(100rem,calc(100%_-_2rem)))_/_2),1px)] flex max-h-[calc(100vh-4rem)] w-[min(100rem,calc(100%_-_2rem))] max-w-none translate-x-0 translate-y-0 flex-col gap-3 overflow-hidden rounded-sm sm:max-w-none">
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {ROTULO_UNIDADE[unidade]} · {variacao ? "Variação do Estoque" : ROTULO_NATUREZA[natureza]}
