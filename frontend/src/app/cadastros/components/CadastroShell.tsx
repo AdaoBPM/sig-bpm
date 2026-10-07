@@ -10,6 +10,8 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 type CadastroShellProps = {
   titulo: string;
   descricao: string;
+  /** Orientações de uso, no painel Sobre Esta Tela. */
+  comoUsar?: ReactNode;
   busca: string;
   onBuscaChange: (valor: string) => void;
   placeholderBusca: string;
@@ -35,6 +37,7 @@ type CadastroShellProps = {
 export function CadastroShell({
   titulo,
   descricao,
+  comoUsar,
   busca,
   onBuscaChange,
   placeholderBusca,
@@ -51,7 +54,7 @@ export function CadastroShell({
   const contagem = filtros?.ativos && filtros.totalGeral !== total ? `${total.toLocaleString("pt-BR")} de ${filtros.totalGeral.toLocaleString("pt-BR")} registro(s)` : `${total.toLocaleString("pt-BR")} registro(s)`;
   return (
     <div className="space-y-4">
-      <CabecalhoDaTela titulo={titulo} sobre={<p>{descricao}</p>} acoes={acoes} />
+      <CabecalhoDaTela titulo={titulo} sobre={<p>{descricao}</p>} comoUsar={comoUsar} acoes={acoes} />
       <QuadroTabela
         barra={
           <>

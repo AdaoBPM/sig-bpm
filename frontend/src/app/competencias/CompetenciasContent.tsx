@@ -168,6 +168,14 @@ export function CompetenciasContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Competências"
+        comoUsar={
+          <ul>
+            <li>Escolha o ano em Exercício para ver só os meses dele.</li>
+            <li>Clique na linha para abrir o mês; dentro dele, a barra de etapas leva de Importações até a Conferência.</li>
+            <li>Na coluna Andamento, clique num passo (importado, classificado, apurado, fechado) para ir direto à etapa.</li>
+            <li>Use “Abrir Competência” para começar um mês novo.</li>
+          </ul>
+        }
         sobre={
           <p>
             Cada mês do fechamento, o estado em que ele se encontra e o andamento das etapas. Clique na linha para abrir o mês, ou num passo do

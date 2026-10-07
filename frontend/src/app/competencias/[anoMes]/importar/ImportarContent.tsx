@@ -170,6 +170,15 @@ export function ImportarContent() {
             </span>
           ) : null
         }
+        comoUsar={
+          <ul>
+            <li>Clique em “Importar Arquivo”, escolha o tipo e envie a planilha (.xlsx). Para trocar um arquivo, use “Reimportar” na linha do tipo.</li>
+            <li>Na aba Em Vigor, clique numa linha para abrir o relatório: linhas aceitas, recusadas e avisos.</li>
+            <li>A aba Histórico guarda todas as importações, inclusive as recusadas e as substituídas.</li>
+            <li>Em mês fechado, o balancete só é comparado com o gravado; as diferenças vão para Divergências.</li>
+            <li>Depois de importar o balancete, confira a Classificação.</li>
+          </ul>
+        }
         sobre={
           <>
             <p>

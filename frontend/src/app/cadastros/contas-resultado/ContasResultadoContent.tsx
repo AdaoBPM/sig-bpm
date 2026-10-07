@@ -66,6 +66,14 @@ export function ContasResultadoContent() {
   return (
     <CadastroShell
       titulo="Contas de Resultado"
+      comoUsar={
+        <ul>
+          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
+          <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
+          <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
+        </ul>
+      }
       descricao="Carregadas da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento e a atribuição vêm do destino na DRE."
       acoes={
         <div className="flex items-center gap-2">

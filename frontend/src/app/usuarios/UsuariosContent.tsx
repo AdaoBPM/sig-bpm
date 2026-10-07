@@ -93,6 +93,13 @@ export function UsuariosContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Usuários"
+        comoUsar={
+          <ul>
+            <li>Use “Novo Usuário” para cadastrar; o lápis edita o nome, o perfil, os setores, os departamentos e a situação.</li>
+            <li>Use “Redefinir Senha” para dar uma senha nova (ao menos 8 caracteres).</li>
+            <li>O que cada um pode fazer vem do perfil, na tela Perfis.</li>
+          </ul>
+        }
         sobre={
           <p>
             Quem entra no sistema e com qual perfil. O perfil define o que cada um pode fazer; os setores e os departamentos recortam o que ele

@@ -134,6 +134,13 @@ export function DivergenciasContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Divergências"
+        comoUsar={
+          <ul>
+            <li>Filtre por competência, tipo e situação.</li>
+            <li>Marque as divergências e clique em “Justificar”, com o motivo (ao menos 15 caracteres).</li>
+            <li>Para corrigir em vez de justificar, use “Resolver por Reabertura” no quadro da competência fechada: o mês é reaberto para reimportar e reapurar.</li>
+          </ul>
+        }
         sobre={
           <p>
             Dado recebido depois do fechamento ou da apuração que difere do que está gravado: o balancete de um mês fechado, ou o preço de

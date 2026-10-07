@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -51,10 +51,10 @@ function colunaDoCampo(c: Campo): Coluna<Registro> {
 
 const EDITAR: Coluna<Registro> = { chave: "editar", rotulo: "", semFiltro: true };
 
-type Props = { entidade: string; rota: string; titulo: string; descricao: string };
+type Props = { entidade: string; rota: string; titulo: string; descricao: string; comoUsar?: ReactNode };
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
-export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Props) {
+export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar }: Props) {
   useRegistrarAcessoTela(rota);
   const [busca, setBusca] = useState("");
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
@@ -77,6 +77,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao }: Prop
     <CadastroShell
       titulo={titulo}
       descricao={descricao}
+      comoUsar={comoUsar}
       acoes={edicao.botaoNovo}
       busca={busca}
       onBuscaChange={(v) => {

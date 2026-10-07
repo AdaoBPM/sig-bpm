@@ -114,6 +114,13 @@ export function LancamentosManuaisContent() {
       <CabecalhoDaTela
         titulo="Lançamentos Manuais"
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
+        comoUsar={
+          <ul>
+            <li>Use “Novo Lançamento” para incluir a RN e outros ajustes; o lápis e a lixeira editam e excluem.</li>
+            <li>Num mês ainda sem lançamentos, “Copiar do Mês Anterior” traz os do mês anterior para revisar.</li>
+            <li>Os lançamentos entram na DRE na próxima apuração.</li>
+          </ul>
+        }
         sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes. É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
         acoes={
           !fechada && dados ? (

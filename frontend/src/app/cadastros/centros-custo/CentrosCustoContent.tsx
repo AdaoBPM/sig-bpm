@@ -55,6 +55,14 @@ export function CentrosCustoContent() {
   return (
     <CadastroShell
       titulo="Centros de Custo"
+      comoUsar={
+        <ul>
+          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
+          <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
+          <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
+        </ul>
+      }
       descricao="Carregados da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento é o do cadastro; a sigla vem dele."
       acoes={
         <div className="flex items-center gap-2">

@@ -79,6 +79,14 @@ export function EstruturaDreContent() {
   return (
     <CadastroShell
       titulo="Estrutura da DRE"
+      comoUsar={
+        <ul>
+          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
+          <li>A composição das linhas de total é validada antes de gravar.</li>
+          <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
+        </ul>
+      }
       descricao="A DRE é cadastro, não código. Carregada da aba Realizado (Consolidado) e editável aqui; a composição é validada antes de gravar."
       acoes={
         <div className="flex items-center gap-2">

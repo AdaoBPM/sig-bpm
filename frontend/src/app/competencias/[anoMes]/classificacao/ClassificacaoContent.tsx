@@ -183,6 +183,14 @@ export function ClassificacaoContent() {
       <CabecalhoDaTela
         titulo="Classificação"
         selo={fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
+        comoUsar={
+          <ul>
+            <li>Comece pela aba Pendências; as abas seguintes separam cada tipo de pendência.</li>
+            <li>Use a busca (centro ou conta) e os filtros nos rótulos das colunas para achar os lançamentos.</li>
+            <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>
+            <li>Sem pendências, siga para a DRE e apure a competência.</li>
+          </ul>
+        }
         sobre={
           <p>
             Destino de cada lançamento do balancete na DRE e a verificação da coluna LANÇ. OK?. A correção é sempre no cadastro — depois

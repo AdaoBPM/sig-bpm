@@ -55,6 +55,13 @@ export function PerfisContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Perfis de Usuário"
+        comoUsar={
+          <ul>
+            <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis de sistema só se inativam).</li>
+            <li>No perfil, marque por recurso o que ele pode: Ver, Ler ou Editar.</li>
+            <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam.</li>
+          </ul>
+        }
         sobre={
           <p>
             Os tipos de usuário e o que cada um pode fazer, por recurso e ação. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser

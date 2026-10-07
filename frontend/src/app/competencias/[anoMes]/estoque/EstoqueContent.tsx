@@ -94,6 +94,13 @@ export function EstoqueContent() {
             <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />
           ) : null
         }
+        comoUsar={
+          <ul>
+            <li>Use a busca por obra ou linha e os filtros nos rótulos das colunas.</li>
+            <li>Marque “Só com Movimento no Mês” para esconder os saldos parados.</li>
+            <li>Use “Apurar Estoque” para calcular o saldo; o mês seguinte parte dele.</li>
+          </ul>
+        }
         sobre={
           <p>
             Saldo do mês anterior mais a produção, menos a expedição, por obra e linha. Serve para conferência e não entra no resultado.{" "}

@@ -97,6 +97,13 @@ export function AuditoriaContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Auditoria"
+        comoUsar={
+          <ul>
+            <li>Informe o período em De e Até e use os filtros nos rótulos das colunas.</li>
+            <li>Marque “Incluir Acessos às Telas” para ver também as visitas às telas.</li>
+            <li>Clique numa linha para ver cada campo alterado, com o antes e o depois.</li>
+          </ul>
+        }
         sobre={<p>Quem fez o quê, quando e em qual registro, com o estado antes e depois. O log é imutável: nenhum perfil altera ou apaga um registro.</p>}
       />
 

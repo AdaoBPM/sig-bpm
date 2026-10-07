@@ -60,6 +60,13 @@ export function ReclassificacoesContent() {
   return (
     <CadastroShell
       titulo="Reclassificações de Conta"
+      comoUsar={
+        <ul>
+          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use “Novo” para indicar a conta de destino de uma conta de origem num centro de custo; o lápis edita, e a exclusão fica dentro da edição.</li>
+          <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
+        </ul>
+      }
       descricao="Para o centro de custo, a conta de origem vale como a de destino. Corrige lançamentos feitos em conta de outro departamento ou atribuição."
       acoes={edicao.botaoNovo}
       busca={busca}

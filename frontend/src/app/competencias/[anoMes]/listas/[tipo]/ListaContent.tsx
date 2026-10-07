@@ -151,6 +151,14 @@ function Lista() {
       <CabecalhoDaTela
         titulo="Listas Operacionais"
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="das listas" /> : null}
+        comoUsar={
+          <ul>
+            <li>Escolha a lista nas abas e use a busca por obra e os filtros nos rótulos das colunas.</li>
+            <li>Registros importados se corrigem no arquivo, reimportado em Importações.</li>
+            <li>Use “Novo Registro” para incluir um registro digitado; o lápis e a lixeira editam e excluem os digitados.</li>
+            <li>As listas formam os rateios, a receita prévia e o estoque: depois de alterá-las, reapure a competência na DRE.</li>
+          </ul>
+        }
         sobre={<p>Os volumes físicos de que saem os rateios. Registros importados se corrigem no arquivo; os digitados, aqui.</p>}
         acoes={
           !fechada && def ? (

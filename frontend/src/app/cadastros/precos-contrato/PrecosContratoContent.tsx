@@ -74,6 +74,13 @@ export function PrecosContratoContent() {
   return (
     <CadastroShell
       titulo="Preços do Contrato"
+      comoUsar={
+        <ul>
+          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Marque “Mostrar Histórico” para ver também os preços substituídos por reimportações.</li>
+          <li>Os preços não se editam aqui: para mudá-los, reimporte a DRE do Comercial em Importações.</li>
+        </ul>
+      }
       descricao="Da DRE de venda do Comercial, importada em Importações. Um preço alterado numa reimportação substitui o anterior, que fica no histórico. Somente leitura."
       busca={busca}
       onBuscaChange={(v) => {

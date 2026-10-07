@@ -176,6 +176,13 @@ export function ConferenciaPlanilhaContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Conferência com a Planilha"
+        comoUsar={
+          <ul>
+            <li>Clique em “Enviar Planilha” e envie o BASE REALIZADO (RESULTADOS) atualizado.</li>
+            <li>Escolha a visão nas abas; marque “Só as Diferenças” e ajuste o “Limite de Arredondamento” para ver só o que importa.</li>
+            <li>Diferença positiva: a ferramenta está acima da planilha. Corrija a origem e reapure; a conferência se atualiza sem reenviar o arquivo.</li>
+          </ul>
+        }
         sobre={
           <p>
             Compara, linha a linha, a DRE apurada pela ferramenta com as abas Resultados (Consolidado), (Matriz), (Filial), (Serviços),

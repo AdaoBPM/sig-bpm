@@ -252,6 +252,15 @@ export function DREContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="DRE"
+        comoUsar={
+          <ul>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN ou Centros de Custo (com a lista dos centros à esquerda).</li>
+            <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas com seta, a composição se abre logo abaixo.</li>
+            <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
+            <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
+            <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>
+          </ul>
+        }
         sobre={
           <p>
             A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da receita prévia e dos

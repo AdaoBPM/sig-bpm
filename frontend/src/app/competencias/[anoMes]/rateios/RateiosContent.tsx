@@ -55,6 +55,14 @@ export function RateiosContent() {
       <CabecalhoDaTela
         titulo="Rateios"
         selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do rateio" /> : null}
+        comoUsar={
+          <ul>
+            <li>Cada quadro é uma chave de rateio, com o valor apurado de cada destino e o percentual.</li>
+            <li>Um valor com aviso mudou depois da apuração: reapure para usá-lo.</li>
+            <li>Para conferir os volumes de origem, veja as Listas Operacionais.</li>
+            <li>Depois da apuração da DRE, a tela fica congelada: o que mudar só entra ao reapurar a competência na DRE.</li>
+          </ul>
+        }
         sobre={
           <p>
             Os percentuais de cada chave de rateio, calculados pelos volumes das listas do mês — a versão sistêmica da aba Rateios.{" "}
