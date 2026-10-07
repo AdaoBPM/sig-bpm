@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 /**
  * O selo das telas de cálculo (classificação, rateios, receita, estoque) numa
- * competência apurada ou fechada, ao lado do título (G4 do levantamento de
- * layout): os valores estão congelados, e o recálculo é a reapuração da
+ * competência apurada ou fechada, à direita do cabeçalho, com a cara dos
+ * botões da DRE (para onde leva): os valores estão congelados, e o recálculo é a reapuração da
  * competência inteira, na tela da DRE. `oQue` vem com a preposição: "da
  * classificação", "do rateio"…
  */
@@ -16,10 +19,10 @@ export function AvisoCongelado({ anoMes, fechada, oQue }: { anoMes: string; fech
     <Link
       href={`/competencias/${anoMes}/dre`}
       title={explicacao}
-      className="inline-flex items-center gap-1.5 rounded-sm border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+      className={cn(buttonVariants({ variant: "outline" }), "rounded-sm")}
     >
-      <Lock className="size-3" />
-      {fechada ? "Fechada · reabrir na DRE" : "Congelada pela apuração · reapurar na DRE"}
+      <Lock className="size-4" />
+      {fechada ? "Fechada · Reabrir na DRE" : "Congelada pela Apuração · Reapurar na DRE"}
     </Link>
   );
 }

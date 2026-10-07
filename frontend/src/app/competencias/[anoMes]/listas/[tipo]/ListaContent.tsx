@@ -11,14 +11,12 @@ import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
-import { CampoBusca } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
@@ -76,15 +74,13 @@ function Lista() {
   const lista = LISTAS.find((l) => l.slug === slug);
   const queryClient = useQueryClient();
 
-  const [busca, setBusca] = useState("");
-  const buscaDebounced = useDebounce(busca, 300);
   // undefined: diálogo fechado; null: novo; registro: edição.
   const [editando, setEditando] = useState<RegistroLista | null | undefined>(undefined);
 
   const definicoes = useQuery({ queryKey: ["listas", "campos"], queryFn: listasService.campos, staleTime: 30 * 60_000 });
   const dados = useQuery({
-    queryKey: ["listas", anoMes, slug, buscaDebounced, TODOS],
-    queryFn: () => listasService.listar(anoMes, slug, { busca: buscaDebounced || undefined, pagina: 1, porPagina: TODOS }),
+    queryKey: ["listas", anoMes, slug, TODOS],
+    queryFn: () => listasService.listar(anoMes, slug, { pagina: 1, porPagina: TODOS }),
     enabled: periodo !== null && lista !== undefined,
     placeholderData: keepPreviousData,
   });
@@ -153,7 +149,7 @@ function Lista() {
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="das listas" /> : null}
         comoUsar={
           <ul>
-            <li>Escolha a lista nas abas e use a busca por obra e os filtros nos rótulos das colunas.</li>
+            <li>Escolha a lista nas abas e use os filtros nos rótulos das colunas.</li>
             <li>Registros importados se corrigem no arquivo, reimportado em Importações.</li>
             <li>Use “Novo Registro” para incluir um registro digitado; o lápis e a lixeira editam e excluem os digitados.</li>
             <li>As listas formam os rateios, a receita prévia e o estoque: depois de alterá-las, reapure a competência na DRE.</li>
@@ -195,16 +191,7 @@ function Lista() {
       <QuadroTabela
         barra={
           <>
-            <CampoBusca
-              rotulo="Buscar registros"
-              valor={busca}
-              onMudar={(v) => {
-                setBusca(v);
-                tabela.setPagina(1);
-              }}
-              placeholder="Obra (sigla ou nome)…"
-            />
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="ml-auto flex shrink-0 items-center gap-3">
               {tabela.ativos ? (
                 <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
                   Limpar Filtros

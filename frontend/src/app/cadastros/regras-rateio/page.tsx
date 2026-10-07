@@ -14,7 +14,7 @@ export default function RegrasRateioPage() {
           titulo="Regras de Rateio"
           comoUsar={
             <ul>
-              <li>Use a busca e os filtros nos rótulos das colunas.</li>
+              <li>Use os filtros nos rótulos das colunas.</li>
               <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>A chave e o destino não mudam depois de criada a regra: para trocá-los, exclua e crie outra.</li>
             </ul>

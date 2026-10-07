@@ -5,7 +5,6 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -53,16 +52,13 @@ const EDITAR: Coluna<LinhaDRE> = { chave: "editar", rotulo: "", semFiltro: true 
 export function EstruturaDreContent() {
   useRegistrarAcessoTela("/cadastros/estrutura-dre");
 
-  const [busca, setBusca] = useState("");
-  const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("estrutura-dre");
   const [aberta, setAberta] = useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "linhas-dre", buscaDebounced, TODOS],
+    queryKey: ["cadastros", "linhas-dre", TODOS],
     queryFn: () =>
       cadastrosService.linhasDRE({
-        busca: buscaDebounced || undefined,
         pagina: 1,
         porPagina: TODOS,
       }),
@@ -71,17 +67,12 @@ export function EstruturaDreContent() {
   const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
   const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
-  function aoBuscar(valor: string) {
-    setBusca(valor);
-    tabela.setPagina(1);
-  }
-
   return (
     <CadastroShell
       titulo="Estrutura da DRE"
       comoUsar={
         <ul>
-          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>A composição das linhas de total é validada antes de gravar.</li>
           <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
@@ -94,9 +85,6 @@ export function EstruturaDreContent() {
           {edicao.botaoNovo}
         </div>
       }
-      busca={busca}
-      onBuscaChange={aoBuscar}
-      placeholderBusca="Código, descrição ou grupo…"
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}
@@ -113,7 +101,7 @@ export function EstruturaDreContent() {
         isLoading={isPending}
         error={isError ? "Erro ao carregar a estrutura da DRE." : null}
         emptyMessage="Nenhuma linha encontrada"
-        emptyHint="Ajuste a busca para ver outras linhas."
+        emptyHint="Ajuste os filtros para ver outras linhas."
         columns={["#", "Linha", "Tipo", "Grupo", "Composição", "Unidades", "Contas", ...edicao.colunaEditar]}
         renderRow={(item) => {
           const abre = !!item.expressao || !!item.definicao;

@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -35,29 +34,22 @@ const EDITAR: Coluna<CentroCusto> = { chave: "editar", rotulo: "", semFiltro: tr
 export function CentrosCustoContent() {
   useRegistrarAcessoTela("/cadastros/centros-custo");
 
-  const [busca, setBusca] = useState("");
-  const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("centros-custo");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "centros-custo", buscaDebounced, TODOS],
-    queryFn: () => cadastrosService.centrosCusto({ busca: buscaDebounced || undefined, pagina: 1, porPagina: TODOS }),
+    queryKey: ["cadastros", "centros-custo", TODOS],
+    queryFn: () => cadastrosService.centrosCusto({ pagina: 1, porPagina: TODOS }),
     placeholderData: keepPreviousData,
   });
   const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
   const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
-
-  function aoBuscar(valor: string) {
-    setBusca(valor);
-    tabela.setPagina(1);
-  }
 
   return (
     <CadastroShell
       titulo="Centros de Custo"
       comoUsar={
         <ul>
-          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
           <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
@@ -70,9 +62,6 @@ export function CentrosCustoContent() {
           {edicao.botaoNovo}
         </div>
       }
-      busca={busca}
-      onBuscaChange={aoBuscar}
-      placeholderBusca="Código, nome ou departamento…"
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}
@@ -89,7 +78,7 @@ export function CentrosCustoContent() {
         isLoading={isPending}
         error={isError ? "Erro ao carregar os centros de custo." : null}
         emptyMessage="Nenhum centro de custo encontrado"
-        emptyHint="Ajuste a busca para ver outros registros."
+        emptyHint="Ajuste os filtros para ver outros registros."
         columns={[
           "Código RM",
           "Nome",

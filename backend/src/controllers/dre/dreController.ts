@@ -5,6 +5,7 @@ import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { detalhamentoService } from "../../services/dre/detalhamentoService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
 import { exportacaoService, type VisaoExportacao } from "../../services/dre/exportacaoService.js";
+import { volumesDaLinha } from "../../services/dre/volumesDaLinhaService.js";
 import { auditar } from "../../services/auditoriaService.js";
 
 const unidadeSchema = z.coerce.number().int().min(1).max(5);
@@ -68,6 +69,21 @@ export const dreController = {
       visao = { unidade: u.data };
     }
     return responder(response, () => detalhamentoService.detalhar(c.ano, c.mes, linha.data, visao, request.user!.acesso));
+  },
+
+  /** As listas que formam uma linha de volume, por obra: ?linha=código e ?unidade=1..3 (sem ela, o consolidado). */
+  async volumes(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    const linha = z.string().trim().min(1).max(200).safeParse(request.query.linha);
+    if (!linha.success) return response.status(400).json({ error: "Linha da DRE inválida" });
+    let unidade: number | null = null;
+    if (request.query.unidade !== undefined) {
+      const u = unidadeSchema.safeParse(request.query.unidade);
+      if (!u.success) return response.status(400).json({ error: "Unidade inválida" });
+      unidade = u.data;
+    }
+    return responder(response, () => volumesDaLinha(c.ano, c.mes, linha.data, unidade, request.user!.acesso));
   },
 
   async apurar(request: Request, response: Response) {

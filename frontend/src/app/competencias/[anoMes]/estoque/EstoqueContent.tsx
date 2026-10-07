@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Vazio } from "@/components/shared/Estados";
-import { CampoBusca } from "@/components/shared/Filtros";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -44,9 +43,6 @@ export function EstoqueContent() {
   useRegistrarAcessoTela(`/competencias/${anoMes}/estoque`);
   const periodo = lerAnoMes(anoMes);
   const queryClient = useQueryClient();
-  const [busca, setBusca] = useState("");
-  // Só as obras que se moveram no mês, por padrão (E9 do levantamento de layout).
-  const [soMovimento, setSoMovimento] = useState(true);
   const [avisos, setAvisos] = useState<string[]>([]);
 
   const estoque = useQuery({
@@ -65,15 +61,8 @@ export function EstoqueContent() {
   });
 
   const dados = estoque.data;
-  const saldos = useMemo(() => {
-    const t = busca.trim().toLowerCase();
-    return (dados?.saldos ?? []).filter(
-      (s) =>
-        (!soMovimento || Number(s.movimentoVolume) !== 0 || Number(s.movimentoValor) !== 0) &&
-        (!t || `${s.obra} ${s.nomeObra} ${s.linha}`.toLowerCase().includes(t)),
-    );
-  }, [dados, busca, soMovimento]);
-  // A busca e o "só com movimento" vêm antes; os filtros dos rótulos atuam sobre o que sobra.
+  const saldos = useMemo(() => dados?.saldos ?? [], [dados]);
+  // Todos os saldos; o recorte é pelos filtros dos rótulos.
   const tabela = useTabelaFiltravel(saldos, COLUNAS);
 
   if (!periodo) {
@@ -96,8 +85,7 @@ export function EstoqueContent() {
         }
         comoUsar={
           <ul>
-            <li>Use a busca por obra ou linha e os filtros nos rótulos das colunas.</li>
-            <li>Marque “Só com Movimento no Mês” para esconder os saldos parados.</li>
+            <li>Use os filtros nos rótulos das colunas; nas colunas de Movimento, por exemplo, para ver só as obras que se moveram no mês.</li>
             <li>Use “Apurar Estoque” para calcular o saldo; o mês seguinte parte dele.</li>
           </ul>
         }
@@ -159,21 +147,16 @@ export function EstoqueContent() {
           <QuadroTabela
             barra={
               <>
-                <div className="flex flex-wrap items-center gap-4">
-                  <CampoBusca rotulo="Buscar obra ou linha" valor={busca} onMudar={setBusca} placeholder="Obra ou linha…" />
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                    <input type="checkbox" checked={soMovimento} onChange={(e) => setSoMovimento(e.target.checked)} className="size-4 accent-black" />
-                    Só com Movimento no Mês
-                  </label>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="ml-auto flex shrink-0 items-center gap-3">
                   {tabela.ativos ? (
                     <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
                       Limpar Filtros
                     </button>
                   ) : null}
                   <span className="text-xs text-gray-600">
-                    {tabela.total.toLocaleString("pt-BR")} de {dados.saldos.length.toLocaleString("pt-BR")} saldo(s)
+                    {tabela.ativos && tabela.total !== tabela.totalGeral
+                      ? `${tabela.total.toLocaleString("pt-BR")} de ${tabela.totalGeral.toLocaleString("pt-BR")} saldo(s)`
+                      : `${tabela.totalGeral.toLocaleString("pt-BR")} saldo(s)`}
                   </span>
                 </div>
               </>
@@ -207,7 +190,6 @@ export function EstoqueContent() {
                   ))}
                 </tbody>
               </table>
-              {saldos.length === 0 ? <Vazio titulo="Nenhum saldo com esses filtros" dica={soMovimento ? "Desligue Só com Movimento no Mês para ver todas as obras." : undefined} /> : null}
           </QuadroTabela>
         </>
       ) : (

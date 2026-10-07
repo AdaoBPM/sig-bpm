@@ -12,10 +12,11 @@ import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { iniciaisMaiusculas } from "@/lib/texto";
 
-import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
+import { lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
-import { AcoesApuracao, SituacaoApuracao } from "./components/PainelApuracao";
+import { AcoesApuracao, SituacaoApuracao, TextoApuracao } from "./components/PainelApuracao";
+import { VolumesDialog } from "./components/VolumesDialog";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
@@ -35,6 +36,9 @@ const VISOES: Array<{ visao: Visao; nome: string }> = [
  * do Gestor por departamento, Passo 22, que o backend informa em podeDetalhar).
  */
 const detalhavel = (l: LinhaDRE) => !ehVolume(l) && (l.tipo === "ITEM" || l.descricao === "Impostos Operacionais") && l.podeDetalhar !== false;
+
+/** Linhas de volume (Produção, Expedição, Montagem, Acompanhamento): abrem as listas por obra, no consolidado e nas unidades. */
+const listavel = (l: LinhaDRE, visao: VisaoDetalhe) => ehVolume(l) && l.tipo === "ITEM" && !("grupo" in visao);
 
 function Composicao({ l }: { l: LinhaDRE }) {
   const c = l.composicao;
@@ -67,16 +71,20 @@ function Composicao({ l }: { l: LinhaDRE }) {
 function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoMes: string; visao: VisaoDetalhe; titulo: string }) {
   const [aberta, setAberta] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<string | null>(null);
-  // As linhas que chegam aos lançamentos abrem o detalhamento direto; as demais (totais, volumes) abrem a composição.
-  const abre = (l: LinhaDRE) => !!l.composicao && !detalhavel(l);
-  const clica = (l: LinhaDRE) => detalhavel(l) || abre(l);
+  const [listasDe, setListasDe] = useState<LinhaDRE | null>(null);
+  // As linhas que chegam aos lançamentos abrem o detalhamento; as de volume, as listas; as demais (totais) abrem a composição.
+  const comLupa = (l: LinhaDRE) => detalhavel(l) || listavel(l, visao);
+  const abre = (l: LinhaDRE) => !!l.composicao && !comLupa(l);
+  const clica = (l: LinhaDRE) => comLupa(l) || abre(l);
+  const nomeVisao = titulo.replace(/^DRE · /, "");
   return (
     // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       <table className="tabela-sig w-full border-collapse text-sm">
         {/* O cabeçalho fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
         <thead>
-          <tr className="border-b border-gray-200 text-xs font-bold text-gray-600">
+          {/* Rótulos no tamanho e na cor das linhas de totais. */}
+          <tr className="border-b border-gray-200 text-sm font-bold text-gray-900">
             <th className="px-4 text-left">{iniciaisMaiusculas(titulo)}</th>
             <th className="w-48 px-4 text-right">Valor</th>
           </tr>
@@ -91,12 +99,14 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
                 <Fragment key={l.codigo}>
                   <tr
                     className={`border-t border-gray-100 ${destaque ? "bg-gray-50 font-bold" : ""} ${clica(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
-                    onClick={() => (detalhavel(l) ? setDetalhe(l.codigo) : abre(l) ? setAberta(aberto ? null : l.codigo) : undefined)}
-                    title={detalhavel(l) ? "Ver os lançamentos de origem" : undefined}
+                    onClick={() =>
+                      detalhavel(l) ? setDetalhe(l.codigo) : listavel(l, visao) ? setListasDe(l) : abre(l) ? setAberta(aberto ? null : l.codigo) : undefined
+                    }
+                    title={detalhavel(l) ? "Ver os lançamentos de origem" : listavel(l, visao) ? "Ver as listas por obra" : undefined}
                   >
                     <td className={`px-4 py-1.5 ${destaque ? "text-gray-900" : "pl-8 text-gray-700"}`}>
                       <span className="inline-flex items-center gap-1">
-                        {detalhavel(l) ? (
+                        {comLupa(l) ? (
                           <Search className="size-3.5 text-gray-400" />
                         ) : abre(l) ? (
                           aberto ? <ChevronDown className="size-3.5 text-gray-400" /> : <ChevronRight className="size-3.5 text-gray-400" />
@@ -121,6 +131,16 @@ function TabelaDRE({ linhas, anoMes, visao, titulo }: { linhas: LinhaDRE[]; anoM
         </tbody>
       </table>
       {detalhe ? <DetalheDialog anoMes={anoMes} linha={detalhe} visao={visao} onFechar={() => setDetalhe(null)} /> : null}
+      {listasDe ? (
+        <VolumesDialog
+          anoMes={anoMes}
+          linha={listasDe.codigo}
+          unidade={"unidade" in visao ? visao.unidade : undefined}
+          nomeVisao={nomeVisao}
+          valorApurado={listasDe.valor}
+          onFechar={() => setListasDe(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -255,18 +275,22 @@ export function DREContent() {
         comoUsar={
           <ul>
             <li>Escolha a visão nas abas: Consolidado, cada unidade, RN ou Centros de Custo (com a lista dos centros à esquerda).</li>
-            <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas com seta, a composição se abre logo abaixo.</li>
+            <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com seta, a composição se abre logo abaixo.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>
           </ul>
         }
         sobre={
-          <p>
-            A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da receita prévia e dos
-            lançamentos manuais. Clique numa linha para ver como o valor foi formado e chegar aos lançamentos de origem.{" "}
-            {cabecalho?.apuradoEm ? `Apurada em ${dataHora(cabecalho.apuradoEm)}.` : "Ainda não apurada."}
-          </p>
+          <>
+            <p>
+              A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da receita prévia e dos
+              lançamentos manuais. Clique numa linha para ver como o valor foi formado e chegar aos lançamentos de origem.
+            </p>
+            <p>
+              <TextoApuracao anoMes={anoMes} />
+            </p>
+          </>
         }
         acoes={<AcoesApuracao anoMes={anoMes} onAvisos={setAvisos} />}
       />

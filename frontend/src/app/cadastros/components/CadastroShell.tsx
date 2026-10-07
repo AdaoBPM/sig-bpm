@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
-import { CampoBusca } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
@@ -12,9 +11,6 @@ type CadastroShellProps = {
   descricao: string;
   /** Orientações de uso, no painel Sobre Esta Tela. */
   comoUsar?: ReactNode;
-  busca: string;
-  onBuscaChange: (valor: string) => void;
-  placeholderBusca: string;
   total: number;
   pagina: number;
   porPagina: number;
@@ -30,17 +26,14 @@ type CadastroShellProps = {
 };
 
 /**
- * Moldura comum das telas de cadastro: o cabeçalho único, a busca no topo da
- * tabela e a paginação no rodapé (G6, G7 e G10 do levantamento de layout).
+ * Moldura comum das telas de cadastro: o cabeçalho único, a contagem no topo da
+ * tabela (os filtros ficam nos rótulos) e a paginação no rodapé (G6, G7 e G10 do levantamento de layout).
  * Cada tela cuida só das colunas.
  */
 export function CadastroShell({
   titulo,
   descricao,
   comoUsar,
-  busca,
-  onBuscaChange,
-  placeholderBusca,
   total,
   pagina,
   porPagina,
@@ -58,8 +51,7 @@ export function CadastroShell({
       <QuadroTabela
         barra={
           <>
-            <CampoBusca valor={busca} onMudar={onBuscaChange} placeholder={placeholderBusca} />
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="ml-auto flex shrink-0 items-center gap-3">
               {filtros?.ativos ? (
                 <button type="button" onClick={filtros.onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
                   Limpar Filtros

@@ -14,7 +14,7 @@ export default function TiposMovimentoPage() {
           titulo="Tipos de Movimento"
           comoUsar={
             <ul>
-              <li>Use a busca e os filtros nos rótulos das colunas.</li>
+              <li>Use os filtros nos rótulos das colunas.</li>
               <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>Uma devolução só vira receita quando o tipo de movimento dela está aqui.</li>
             </ul>

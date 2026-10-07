@@ -12,7 +12,6 @@ import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -20,7 +19,6 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
-import { CampoBusca } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { AvisoCongelado } from "../../components/AvisoCongelado";
@@ -149,8 +147,6 @@ export function ClassificacaoContent() {
   const queryClient = useQueryClient();
 
   const [situacao, setSituacao] = useState<Situacao>("PENDENCIAS");
-  const [busca, setBusca] = useState("");
-  const buscaDebounced = useDebounce(busca, 300);
 
   const apuracao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
   const resumo = useQuery({
@@ -160,11 +156,10 @@ export function ClassificacaoContent() {
   });
 
   const lista = useQuery({
-    queryKey: ["classificacao", anoMes, "lancamentos", situacao, buscaDebounced, TODOS],
+    queryKey: ["classificacao", anoMes, "lancamentos", situacao, TODOS],
     queryFn: () =>
       classificacaoService.lancamentos(anoMes, {
         situacao,
-        busca: buscaDebounced || undefined,
         pagina: 1,
         porPagina: TODOS,
       }),
@@ -220,7 +215,7 @@ export function ClassificacaoContent() {
         comoUsar={
           <ul>
             <li>Comece pela aba Pendências; as abas seguintes separam cada tipo de pendência.</li>
-            <li>Use a busca (centro ou conta) e os filtros nos rótulos das colunas para achar os lançamentos.</li>
+            <li>Use os filtros nos rótulos das colunas (centro de custo, conta, classificação…) para achar os lançamentos.</li>
             <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>
             <li>Sem pendências, siga para a DRE e apure a competência.</li>
           </ul>
@@ -304,29 +299,18 @@ export function ClassificacaoContent() {
           />
           <QuadroTabela
             barra={
-              <>
-                <CampoBusca
-                  rotulo="Buscar lançamentos"
-                  valor={busca}
-                  onMudar={(v) => {
-                    setBusca(v);
-                    tabela.setPagina(1);
-                  }}
-                  placeholder="Centro ou conta…"
-                />
-                {tabela.ativos ? (
-                  <div className="flex shrink-0 items-center gap-3">
-                    <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-                      Limpar Filtros
-                    </button>
-                    {tabela.total !== tabela.totalGeral ? (
-                      <p className="hidden text-xs text-gray-600 sm:block">
-                        {inteiro(tabela.total)} de {inteiro(tabela.totalGeral)} lançamento(s)
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
+              tabela.ativos ? (
+                <div className="ml-auto flex shrink-0 items-center gap-3">
+                  <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                    Limpar Filtros
+                  </button>
+                  {tabela.total !== tabela.totalGeral ? (
+                    <p className="hidden text-xs text-gray-600 sm:block">
+                      {inteiro(tabela.total)} de {inteiro(tabela.totalGeral)} lançamento(s)
+                    </p>
+                  ) : null}
+                </div>
+              ) : undefined
             }
             rodape={
               lista.data && tabela.total > 0 ? (

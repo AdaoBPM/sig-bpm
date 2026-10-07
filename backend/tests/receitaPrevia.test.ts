@@ -99,7 +99,10 @@ describe("receita prévia", () => {
     const dev = total(d, 2, "DEVOLUCOES_INVENTARIOS")!;
     assert.equal(dev.receitaBruta.toFixed(2), "-1000.00");
     assert.equal(dev.receitaLiquida.toFixed(2), "-840.00");
-    assert.match(calcularReceita(d).avisos.join(" "), /1\.2\.33/);
+    // Movimento fora da tabela é normal: não conta, sem aviso nem observação.
+    const r = calcularReceita(d);
+    assert.doesNotMatch(r.avisos.join(" "), /1\.2\.33/);
+    assert.equal(r.itens.find((i) => i.detalhe === "1.2.33")?.observacao ?? null, null);
   });
 
   it("serviços: montagem e vedação à parte; líquida pela proporção IRB/ROB da MONTAGEM da DRE", () => {

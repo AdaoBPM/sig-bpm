@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -41,15 +40,12 @@ const EDITAR: Coluna<ContaResultado> = { chave: "editar", rotulo: "", semFiltro:
 export function ContasResultadoContent() {
   useRegistrarAcessoTela("/cadastros/contas-resultado");
 
-  const [busca, setBusca] = useState("");
-  const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("contas-resultado");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "contas-resultado", buscaDebounced, TODOS],
+    queryKey: ["cadastros", "contas-resultado", TODOS],
     queryFn: () =>
       cadastrosService.contasResultado({
-        busca: buscaDebounced || undefined,
         pagina: 1,
         porPagina: TODOS,
       }),
@@ -58,17 +54,12 @@ export function ContasResultadoContent() {
   const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
   const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
-  function aoBuscar(valor: string) {
-    setBusca(valor);
-    tabela.setPagina(1);
-  }
-
   return (
     <CadastroShell
       titulo="Contas de Resultado"
       comoUsar={
         <ul>
-          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
           <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
@@ -81,9 +72,6 @@ export function ContasResultadoContent() {
           {edicao.botaoNovo}
         </div>
       }
-      busca={busca}
-      onBuscaChange={aoBuscar}
-      placeholderBusca="Reduzido, conta ou descrição…"
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}
@@ -100,7 +88,7 @@ export function ContasResultadoContent() {
         isLoading={isPending}
         error={isError ? "Erro ao carregar as contas de resultado." : null}
         emptyMessage="Nenhuma conta encontrada"
-        emptyHint="Ajuste a busca para ver outros registros."
+        emptyHint="Ajuste os filtros para ver outros registros."
         columns={[
           "Reduzido",
           "Conta",

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -54,15 +53,12 @@ const COLUNAS: Coluna<PrecoContrato>[] = [
 export function PrecosContratoContent() {
   useRegistrarAcessoTela("/cadastros/precos-contrato");
 
-  const [busca, setBusca] = useState("");
   const [historico, setHistorico] = useState(false);
-  const buscaDebounced = useDebounce(busca, 300);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "precos-contrato", buscaDebounced, TODOS, historico],
+    queryKey: ["cadastros", "precos-contrato", TODOS, historico],
     queryFn: () =>
       cadastrosService.precosContrato({
-        busca: buscaDebounced || undefined,
         pagina: 1,
         porPagina: TODOS,
         historico,
@@ -76,18 +72,12 @@ export function PrecosContratoContent() {
       titulo="Preços do Contrato"
       comoUsar={
         <ul>
-          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use os filtros nos rótulos das colunas.</li>
           <li>Marque “Mostrar Histórico” para ver também os preços substituídos por reimportações.</li>
           <li>Os preços não se editam aqui: para mudá-los, reimporte a DRE do Comercial em Importações.</li>
         </ul>
       }
       descricao="Da DRE de venda do Comercial, importada em Importações. Um preço alterado numa reimportação substitui o anterior, que fica no histórico. Somente leitura."
-      busca={busca}
-      onBuscaChange={(v) => {
-        setBusca(v);
-        tabela.setPagina(1);
-      }}
-      placeholderBusca="Obra, conta ou linha…"
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}
@@ -118,7 +108,7 @@ export function PrecosContratoContent() {
         isLoading={isPending}
         error={isError ? "Erro ao carregar os preços." : null}
         emptyMessage="Nenhum preço encontrado"
-        emptyHint="Importe a DRE do Comercial ou ajuste a busca."
+        emptyHint="Importe a DRE do Comercial ou ajuste os filtros."
         columns={["Obra", "Versão", "Etapa · linha", "Conta · atribuição", "Unidade", "V. unit.", "V. total", "Vigência"]}
         renderRow={(p) => {
           const antigo = p.substituidoEm !== null;

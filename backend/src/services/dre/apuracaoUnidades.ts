@@ -1,5 +1,6 @@
 import { Prisma } from "../../generated/prisma/client.js";
 import { avaliarExpressao, codigosDaExpressao } from "./expressao.js";
+import type { CodigoTotais } from "../volumes/totaisOperacao.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -86,6 +87,26 @@ export type ResultadoLinha = { unidade: number; linhaId: string; codigo: string;
 const zero = () => new Decimal(0);
 const n = (s: string | null | undefined) => (s ?? "").trim().toUpperCase();
 
+/**
+ * As linhas de volume (P e S) de cada unidade, pela descrição em maiúsculas, e
+ * as linhas da aba Totais que as somam. Também usado pelo extrato das listas
+ * de uma linha de volume da DRE.
+ */
+export const VOLUMES_DA_DRE: Record<number, Record<string, CodigoTotais[]>> = {
+  1: { "PRODUÇÃO DO PRÉ-FABRICADO (M³)": ["PREFABRICADO_MATRIZ"], "PRODUÇÃO DA METALURGIA (KG)": ["METALURGIA_MATRIZ"], "EXPEDIÇÃO DO PRÉ-FABRICADO (M³)": ["EXPEDICAO_MATRIZ"] },
+  2: {
+    "PRODUÇÃO DO PRÉ-FABRICADO (M³)": ["PREFABRICADO_FILIAL"],
+    "PRODUÇÃO DO PRÉ-FABRICADO (PISTAS)": ["PREFABRICADO_PISTAS"],
+    "PRODUÇÃO DA METALURGIA (KG)": ["METALURGIA_FILIAL"],
+    "EXPEDIÇÃO DO PRÉ-FABRICADO (M³)": ["EXPEDICAO_FILIAL"],
+  },
+  3: {
+    "PRODUÇÃO DA METALURGIA (KG)": ["METALURGIA_MONTAGEM", "METALURGIA_COMPLEMENTAR"],
+    "MONTAGEM DO PRÉ-FABRICADO (M³)": ["MONTAGEM"],
+    "ACOMPANHAMENTO DE OBRA (D)": ["ACOMPANHAMENTO_MONTAGEM", "ACOMPANHAMENTO_COMPLEMENTAR"],
+  },
+};
+
 /** Chaves de rateio que cada unidade de produção recebe, e o destino dela. */
 const RATEIOS_PRODUCAO = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA"] as const;
 const DESTINO_DA_UNIDADE: Record<number, string> = { 1: "MATRIZ", 2: "FILIAL" };
@@ -162,20 +183,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   };
 
   // --- Volumes (linhas P e S), da aba Totais -------------------------------
-  const VOLUMES: Record<number, Record<string, string[]>> = {
-    1: { "PRODUÇÃO DO PRÉ-FABRICADO (M³)": ["PREFABRICADO_MATRIZ"], "PRODUÇÃO DA METALURGIA (KG)": ["METALURGIA_MATRIZ"], "EXPEDIÇÃO DO PRÉ-FABRICADO (M³)": ["EXPEDICAO_MATRIZ"] },
-    2: {
-      "PRODUÇÃO DO PRÉ-FABRICADO (M³)": ["PREFABRICADO_FILIAL"],
-      "PRODUÇÃO DO PRÉ-FABRICADO (PISTAS)": ["PREFABRICADO_PISTAS"],
-      "PRODUÇÃO DA METALURGIA (KG)": ["METALURGIA_FILIAL"],
-      "EXPEDIÇÃO DO PRÉ-FABRICADO (M³)": ["EXPEDICAO_FILIAL"],
-    },
-    3: {
-      "PRODUÇÃO DA METALURGIA (KG)": ["METALURGIA_MONTAGEM", "METALURGIA_COMPLEMENTAR"],
-      "MONTAGEM DO PRÉ-FABRICADO (M³)": ["MONTAGEM"],
-      "ACOMPANHAMENTO DE OBRA (D)": ["ACOMPANHAMENTO_MONTAGEM", "ACOMPANHAMENTO_COMPLEMENTAR"],
-    },
-  };
+  const VOLUMES = VOLUMES_DA_DRE;
 
   // Guardas das fórmulas: IF(B$4=0,0,…) e, em Serviços, IF(B$6=0,0,…) — a montagem
   // do mês — nos custos, na receita de montagem, nos impostos e nas comissões

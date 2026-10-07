@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -56,22 +56,16 @@ type Props = { entidade: string; rota: string; titulo: string; descricao: string
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
 export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar }: Props) {
   useRegistrarAcessoTela(rota);
-  const [busca, setBusca] = useState("");
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
   const edicao = useEdicaoCadastro(entidade, { criar: def.data?.criar ?? false });
 
   const campos = useMemo(() => (def.data?.campos ?? []).filter((c) => c.tipo !== "multipla"), [def.data]);
-  const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    const todos = lista.data ?? [];
-    return termo ? todos.filter((r) => campos.some((c) => String(r[c.nome] ?? "").toLowerCase().includes(termo))) : todos;
-  }, [lista.data, busca, campos]);
   const colunas = useMemo(() => {
     const doCadastro = campos.map(colunaDoCampo);
     return edicao.pode ? [...doCadastro, EDITAR] : doCadastro;
   }, [campos, edicao.pode]);
-  const tabela = useTabelaFiltravel(filtrados, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
+  const tabela = useTabelaFiltravel(lista.data, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   return (
     <CadastroShell
@@ -79,12 +73,6 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
       descricao={descricao}
       comoUsar={comoUsar}
       acoes={edicao.botaoNovo}
-      busca={busca}
-      onBuscaChange={(v) => {
-        setBusca(v);
-        tabela.setPagina(1);
-      }}
-      placeholderBusca="Buscar…"
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}
@@ -101,7 +89,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
         isLoading={def.isPending || lista.isPending}
         error={def.isError || lista.isError ? "Erro ao carregar o cadastro." : null}
         emptyMessage="Nenhum registro encontrado"
-        emptyHint="Ajuste a busca para ver outros registros."
+        emptyHint="Ajuste os filtros para ver outros registros."
         columns={[...campos.map((c) => c.rotuloColuna ?? c.rotulo), ...edicao.colunaEditar]}
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">

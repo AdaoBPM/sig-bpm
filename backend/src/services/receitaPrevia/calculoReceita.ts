@@ -304,7 +304,8 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
   }
 
   // Receita (Devoluções) ----------------------------------------------------
-  const foraDaTabela = new Set<string>();
+  // Movimento fora dos Tipos de Movimento não conta como receita (ROB zero).
+  // É normal, e por isso não gera aviso nem observação.
   for (const r of d.devolucoes) {
     const linha = norm(r.linha);
     const item = base(r, linha === "ESTRUTURA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL, "DEVOLUCOES_INVENTARIOS", "DEVOLUCAO");
@@ -314,9 +315,6 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
     if (d.movimentos.has(norm(r.movimento))) {
       item.receitaBruta = (r.valor ?? zero()).neg();
       item.receitaLiquida = item.receitaBruta.plus(r.creditos ?? 0);
-    } else {
-      foraDaTabela.add(r.movimento ?? "(sem movimento)");
-      item.observacao = "Movimento fora dos Tipos de Movimento: não conta como receita.";
     }
     itens.push(item);
   }
@@ -358,7 +356,6 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
   }
 
   if (semTabela.size) avisos.push(`Estaca sem preço na tabela de estacas (valor zero): ${[...semTabela].sort().join(", ")}.`);
-  if (foraDaTabela.size) avisos.push(`Devolução com movimento fora dos Tipos de Movimento (não conta): ${[...foraDaTabela].sort().join(", ")}.`);
   if (semMontagem.size) {
     avisos.push(`Medição de obra sem ROB na linha MONTAGEM da DRE (receita líquida zero): ${[...semMontagem].sort().join(", ")}.`);
   }

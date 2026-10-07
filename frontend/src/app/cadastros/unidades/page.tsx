@@ -14,7 +14,7 @@ export default function UnidadesPage() {
           titulo="Unidades de Negócio"
           comoUsar={
             <ul>
-              <li>Use a busca e os filtros nos rótulos das colunas.</li>
+              <li>Use os filtros nos rótulos das colunas.</li>
               <li>O lápis edita o nome, a ordem e a situação; unidades novas não se criam aqui.</li>
             </ul>
           }

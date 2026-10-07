@@ -166,6 +166,17 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
 }
 
 /** A situação da apuração numa linha, e o que pede atenção (entradas alteradas, motivos para não fechar). */
+/** Quando e por quem a competência foi apurada; fica no painel Sobre Esta Tela da DRE. */
+export function TextoApuracao({ anoMes }: { anoMes: string }) {
+  const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
+  const s = situacao.data;
+  if (!s) return null;
+  return s.apurada
+    ? `Apurada em ${dataHora(s.apuradaEm!)}${s.apuradaPor ? ` por ${s.apuradaPor}` : ""} · ${s.apuracoes} apuração(ões). Valores congelados: cadastros alterados depois só valem se a competência for reapurada.`
+    : "Ainda não apurada. Apurar refaz, em ordem, a classificação, o estoque, a receita prévia, os rateios e a DRE, e congela os valores.";
+}
+
+/** Na tela da DRE: o que impede de fechar e as entradas alteradas depois da apuração. */
 export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
   const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
   const s = situacao.data;
@@ -179,18 +190,19 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
   if (!s) return <div className="h-5 w-96 animate-pulse rounded-sm bg-gray-100" />;
   const fechada = s.competencia.status === "FECHADA";
 
+  const motivos = !fechada && !s.podeFechar && s.motivosNaoFechar.length > 0;
+  const mudancas = s.apurada && s.mudancas.length > 0;
+  if (!fechada && !motivos && !mudancas) return null;
+
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-600">
-        <span>
-          {s.apurada
-            ? `Apurada em ${dataHora(s.apuradaEm!)}${s.apuradaPor ? ` por ${s.apuradaPor}` : ""} · ${s.apuracoes} apuração(ões). Valores congelados: cadastros alterados depois só valem se a competência for reapurada.`
-            : "Ainda não apurada. Apurar refaz, em ordem, a classificação, o estoque, a receita prévia, os rateios e a DRE, e congela os valores."}
-        </span>
-        {fechada ? <span>Fechada em {dataHora(s.fechadaEm!)}{s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.</span> : null}
-        {!fechada && !s.podeFechar && s.motivosNaoFechar.length > 0 ? <span className="text-xs text-gray-500">Para fechar: {s.motivosNaoFechar.join(" ")}</span> : null}
-      </div>
-      {s.apurada && s.mudancas.length > 0 ? (
+      {fechada || motivos ? (
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-600">
+          {fechada ? <span>Fechada em {dataHora(s.fechadaEm!)}{s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.</span> : null}
+          {motivos ? <span className="text-xs text-gray-500">Para fechar: {s.motivosNaoFechar.join(" ")}</span> : null}
+        </div>
+      ) : null}
+      {mudancas ? (
         <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <div>

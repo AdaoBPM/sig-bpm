@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -40,15 +39,12 @@ const EDITAR: Coluna<Reclassificacao> = { chave: "editar", rotulo: "", semFiltro
 export function ReclassificacoesContent() {
   useRegistrarAcessoTela("/cadastros/reclassificacoes");
 
-  const [busca, setBusca] = useState("");
-  const buscaDebounced = useDebounce(busca, 300);
   const edicao = useEdicaoCadastro("reclassificacoes");
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["cadastros", "reclassificacoes", buscaDebounced, TODOS],
+    queryKey: ["cadastros", "reclassificacoes", TODOS],
     queryFn: () =>
       cadastrosService.reclassificacoes({
-        busca: buscaDebounced || undefined,
         pagina: 1,
         porPagina: TODOS,
       }),
@@ -62,19 +58,13 @@ export function ReclassificacoesContent() {
       titulo="Reclassificações de Conta"
       comoUsar={
         <ul>
-          <li>Use a busca e os filtros nos rótulos das colunas.</li>
+          <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para indicar a conta de destino de uma conta de origem num centro de custo; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
         </ul>
       }
       descricao="Para o centro de custo, a conta de origem vale como a de destino. Corrige lançamentos feitos em conta de outro departamento ou atribuição."
       acoes={edicao.botaoNovo}
-      busca={busca}
-      onBuscaChange={(v) => {
-        setBusca(v);
-        tabela.setPagina(1);
-      }}
-      placeholderBusca="Centro ou conta…"
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}
@@ -91,7 +81,7 @@ export function ReclassificacoesContent() {
         isLoading={isPending}
         error={isError ? "Erro ao carregar as reclassificações." : null}
         emptyMessage="Nenhuma reclassificação encontrada"
-        emptyHint="Ajuste a busca para ver outros registros."
+        emptyHint="Ajuste os filtros para ver outros registros."
         columns={["Centro de custo", "Conta de origem", "", "Conta adotada", "Origem do registro", ...edicao.colunaEditar]}
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">

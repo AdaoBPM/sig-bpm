@@ -14,7 +14,7 @@ export default function TabelaEstacasPage() {
           titulo="Tabela de Estacas"
           comoUsar={
             <ul>
-              <li>Use a busca e os filtros nos rótulos das colunas.</li>
+              <li>Use os filtros nos rótulos das colunas.</li>
               <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>Para mudar um preço a partir de uma data, inclua um registro com a nova vigência.</li>
             </ul>

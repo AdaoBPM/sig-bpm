@@ -11,7 +11,7 @@ type Props = {
   sobre?: ReactNode;
   /** Orientações breves de uso, no mesmo painel, abaixo do "sobre". */
   comoUsar?: ReactNode;
-  /** Selos ao lado do título, como o de valores congelados. */
+  /** Selos à direita, antes das ações, como o de valores congelados. */
   selo?: ReactNode;
   /** Botões à direita do título. */
   acoes?: ReactNode;
@@ -75,9 +75,13 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
               </button>
             ) : null}
           </div>
-          {selo}
         </div>
-        {acoes ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acoes}</div> : null}
+        {selo || acoes ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {selo}
+            {acoes}
+          </div>
+        ) : null}
       </div>
       {/* Painel lateral, da direita para a esquerda, como o relatório das importações em vigor. */}
       <Sheet open={sobreAberto} onOpenChange={setSobreAberto}>
