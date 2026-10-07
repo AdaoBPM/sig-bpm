@@ -21,7 +21,23 @@ import {
   type Natureza,
 } from "../services/receitaPreviaService";
 
-type Props = { anoMes: string; unidade: number; natureza: Natureza; onFechar: () => void };
+type Props = {
+  anoMes: string;
+  unidade: number;
+  natureza: Natureza;
+  /**
+   * Aberto pela linha Variação do Estoque: só os itens que a movimentam (as
+   * estacas produzidas e expedidas), com a variação e sem as receitas. Sem ele,
+   * o extrato das receitas, sem a variação e sem os itens que só movem o estoque.
+   */
+  variacao?: boolean;
+  onFechar: () => void;
+};
+
+const zero = (v: string | null) => v === null || Number(v) === 0;
+/** O item entra no extrato aberto: o da variação só com variação; o das receitas sem os que só movem o estoque. */
+const doExtrato = (i: ItemReceita, variacao: boolean) =>
+  variacao ? !zero(i.variacaoEstoque) : !(zero(i.receitaBruta) && zero(i.receitaLiquida) && !zero(i.variacaoEstoque));
 
 /**
  * Uma linha do extrato: os itens da mesma obra somados, com a chave da aba de
@@ -33,6 +49,7 @@ type LinhaExtrato = {
   obraNome: string | null;
   linha: string | null;
   detalhe: string | null;
+  detalheDescricao: string | null;
   venda: ItemReceita["venda"];
   criterio: string;
   observacao: string | null;
@@ -77,6 +94,7 @@ function agrupar(itens: ItemReceita[], origem: string): LinhaExtrato[] {
         obraNome: i.obraNome,
         linha: i.linha,
         detalhe: i.detalhe,
+        detalheDescricao: i.detalheDescricao,
         venda: i.venda,
         criterio: i.criterio,
         observacao: i.observacao,
@@ -143,17 +161,18 @@ const numerica = (chave: string, rotulo: string, campo: (l: LinhaExtrato) => num
  * Serviços e Lanç. Manuais) e, em cada uma, os itens somados por obra, com
  * filtro e ordem nos rótulos das colunas.
  */
-export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Props) {
+export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = false, onFechar }: Props) {
   const { data, isPending, isError } = useQuery({
     queryKey: ["receita-previa", anoMes, "itens", unidade, natureza],
     queryFn: () => receitaPreviaService.itens(anoMes, unidade, natureza),
   });
   const grupos = useMemo(
     () =>
-      GRUPOS_ORIGEM.map((g) => ({ ...g, linhas: agrupar((data?.itens ?? []).filter((i) => i.origem === g.origem), g.origem) })).filter(
-        (g) => g.linhas.length > 0,
-      ),
-    [data],
+      GRUPOS_ORIGEM.map((g) => ({
+        ...g,
+        linhas: agrupar((data?.itens ?? []).filter((i) => i.origem === g.origem && doExtrato(i, variacao)), g.origem),
+      })).filter((g) => g.linhas.length > 0),
+    [data, variacao],
   );
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const ativo = grupos.find((g) => g.origem === escolhido) ?? grupos[0];
@@ -163,10 +182,10 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
       <DialogContent className="flex max-h-[90vh] flex-col gap-3 overflow-hidden rounded-sm sm:max-w-[98vw] 2xl:max-w-[100rem]">
         <DialogHeader className="shrink-0">
           <DialogTitle>
-            {ROTULO_UNIDADE[unidade]} · {ROTULO_NATUREZA[natureza]}
+            {ROTULO_UNIDADE[unidade]} · {variacao ? "Variação do Estoque" : ROTULO_NATUREZA[natureza]}
           </DialogTitle>
           <DialogDescription>
-            Memória de cálculo: {data ? inteiro(data.total) : "…"} registro(s), somados por obra como nas abas de receita do BASE PRÉVIAS. Os
+            Memória de cálculo: {data ? inteiro(grupos.reduce((t, g) => t + g.linhas.reduce((n, l) => n + l.registros, 0), 0)) : "…"} registro(s), somados por obra como nas abas de receita do BASE PRÉVIAS. Os
             valores ficam como foram apurados, com o preço vigente na apuração.
           </DialogDescription>
         </DialogHeader>
@@ -183,7 +202,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
                 abas={grupos.map((g) => ({ chave: g.origem, rotulo: g.rotulo, contagem: g.linhas.length }))}
               />
             </div>
-            <TabelaDoGrupo key={ativo.origem} linhas={ativo.linhas} origem={ativo.origem} unidade={unidade} natureza={natureza} />
+            <TabelaDoGrupo key={ativo.origem} linhas={ativo.linhas} origem={ativo.origem} unidade={unidade} variacao={variacao} />
           </div>
         ) : (
           <p className="text-sm text-gray-600">Nenhum item nesta linha.</p>
@@ -194,7 +213,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, onFechar }: Pr
 }
 
 /** A tabela de uma origem; trocar de aba remonta a tabela, e os filtros recomeçam. */
-function TabelaDoGrupo({ linhas, origem, unidade, natureza }: { linhas: LinhaExtrato[]; origem: string; unidade: number; natureza: Natureza }) {
+function TabelaDoGrupo({ linhas, origem, unidade, variacao }: { linhas: LinhaExtrato[]; origem: string; unidade: number; variacao: boolean }) {
   const colunas = useMemo(() => {
     const algum = (f: (l: LinhaExtrato) => unknown) => linhas.some((l) => f(l) !== null && f(l) !== undefined && f(l) !== "");
     const valoradoPorPreco = origem === "PRODUCAO" || origem === "EXPEDICAO";
@@ -203,23 +222,26 @@ function TabelaDoGrupo({ linhas, origem, unidade, natureza }: { linhas: LinhaExt
       cs.push({ chave: "obra", rotulo: "Obra", classe: "min-w-60", valor: (l) => l.obra, texto: (l) => (l.obra ? [l.obra, l.obraNome].filter(Boolean).join(" · ") : null) });
     if (algum((l) => l.linha)) cs.push({ chave: "linha", rotulo: "Linha", valor: (l) => l.linha });
     if (ROTULO_DETALHE[origem] && algum((l) => l.detalhe)) cs.push({ chave: "detalhe", rotulo: ROTULO_DETALHE[origem], valor: (l) => l.detalhe });
+    if (algum((l) => l.detalheDescricao)) cs.push({ chave: "detalheDescricao", rotulo: "Descrição do Movimento", valor: (l) => l.detalheDescricao });
     if (unidade !== 3) cs.push({ chave: "venda", rotulo: "Venda", valor: (l) => (l.venda ? ROTULO_VENDA[l.venda] : null) });
     if (valoradoPorPreco) cs.push({ chave: "criterio", rotulo: "Critério", classe: "w-px", valor: (l) => ROTULO_CRITERIO[l.criterio] ?? l.criterio });
     if (valoradoPorPreco && algum((l) => l.quantidade)) cs.push(numerica("quantidade", "Volume (m³)", (l) => l.quantidade, volume));
     if (origem === "MEDICAO") cs.push(numerica("quantidade", "Andamento", (l) => l.quantidade, andamento));
     if (valoradoPorPreco && algum((l) => l.precoBruto))
-      cs.push(numerica("precoBruto", "Preço Bruto (R$)", (l) => l.precoBruto, reais));
+      cs.push(numerica("precoBruto", "Preço Bruto (R$/m³)", (l) => l.precoBruto, reais));
     if (valoradoPorPreco && algum((l) => l.precoLiquido))
-      cs.push(numerica("precoLiquido", "Preço Líq. (R$)", (l) => l.precoLiquido, reais));
+      cs.push(numerica("precoLiquido", "Preço Líq. (R$/m³)", (l) => l.precoLiquido, reais));
     if (ROTULO_REGISTROS[origem]) cs.push(numerica("registros", ROTULO_REGISTROS[origem], (l) => l.registros, (v) => inteiro(v ?? 0)));
-    cs.push(numerica("receitaBruta", "ROB (R$)", (l) => l.receitaBruta, reais));
-    cs.push(numerica("receitaLiquida", "ROL (R$)", (l) => l.receitaLiquida, reais));
-    if (unidade === 2 && natureza === "PRE_FABRICADO") cs.push(numerica("variacaoEstoque", "Var. Estoque (R$)", (l) => l.variacaoEstoque, reais));
+    if (variacao) cs.push(numerica("variacaoEstoque", "Var. Estoque (R$)", (l) => l.variacaoEstoque, reais));
+    else {
+      cs.push(numerica("receitaBruta", "ROB (R$)", (l) => l.receitaBruta, reais));
+      cs.push(numerica("receitaLiquida", "ROL (R$)", (l) => l.receitaLiquida, reais));
+    }
     if (algum((l) => l.observacao)) cs.push({ chave: "observacao", rotulo: "Observação", valor: (l) => l.observacao });
     return cs;
-  }, [linhas, origem, unidade, natureza]);
+  }, [linhas, origem, unidade, variacao]);
   const tabela = useTabelaFiltravel(linhas, colunas);
-  const primeiraSomada = colunas.findIndex((c) => c.chave === "receitaBruta");
+  const primeiraSomada = colunas.findIndex((c) => c.chave === (variacao ? "variacaoEstoque" : "receitaBruta"));
 
   const celula = (c: Coluna<LinhaExtrato>, l: LinhaExtrato) => {
     switch (c.chave) {
@@ -230,6 +252,8 @@ function TabelaDoGrupo({ linhas, origem, unidade, natureza }: { linhas: LinhaExt
             {l.obraNome ? <div className="truncate text-xs text-gray-500">{l.obraNome}</div> : null}
           </div>
         );
+      case "detalheDescricao":
+        return <span className="text-gray-700">{l.detalheDescricao ?? "—"}</span>;
       case "linha":
       case "detalhe":
       case "venda":

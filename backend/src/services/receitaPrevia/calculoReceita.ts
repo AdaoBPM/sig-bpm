@@ -59,6 +59,7 @@ export type Registro = {
   valor?: Decimal | null;
   creditos?: Decimal | null;
   movimento?: string | null;
+  nomeMovimento?: string | null;
   valorMedido?: Decimal | null;
   tipoFaturamento?: string | null;
 };
@@ -94,6 +95,8 @@ export type ItemReceita = {
   venda: TipoVenda | null;
   /** Peça da estaca, movimento ou tipo de faturamento: o que separa as linhas da obra nas abas de receita. */
   detalhe: string | null;
+  /** Descrição do movimento das saídas e devoluções. */
+  detalheDescricao: string | null;
 };
 
 export type DadosCalculo = {
@@ -183,6 +186,7 @@ function base(r: Registro, unidade: CodigoUnidade, natureza: NaturezaReceita, or
     observacao: null,
     venda: unidade === UNIDADE.OBRAS ? null : vendaDaObra(r.obra),
     detalhe: null,
+    detalheDescricao: null,
   };
 }
 
@@ -293,6 +297,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
     const item = base(r, linha === "METALÚRGICA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL, "PRE_FABRICADO", "SAIDA");
     item.criterio = "NOTA_FISCAL";
     item.detalhe = r.movimento ?? null;
+    item.detalheDescricao = r.nomeMovimento ?? null;
     item.receitaBruta = r.valor ?? zero();
     item.receitaLiquida = item.receitaBruta.minus(r.creditos ?? 0);
     itens.push(item);
@@ -305,6 +310,7 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
     const item = base(r, linha === "ESTRUTURA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL, "DEVOLUCOES_INVENTARIOS", "DEVOLUCAO");
     item.criterio = "NOTA_FISCAL";
     item.detalhe = r.movimento ?? null;
+    item.detalheDescricao = r.nomeMovimento ?? null;
     if (d.movimentos.has(norm(r.movimento))) {
       item.receitaBruta = (r.valor ?? zero()).neg();
       item.receitaLiquida = item.receitaBruta.plus(r.creditos ?? 0);

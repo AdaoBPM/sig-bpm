@@ -45,6 +45,8 @@ export type ItemReceita = {
   obraNome: string | null;
   /** Peça da estaca, movimento ou tipo de faturamento. */
   detalhe: string | null;
+  /** Descrição do movimento das saídas e devoluções. */
+  detalheDescricao: string | null;
   linha: string | null;
   quantidade: string | null;
   criterio: string;

@@ -103,7 +103,7 @@ const devolucoes: DefinicaoListaReceita = {
     const cab = localizarCabecalho(
       linhas,
       ["DATA EMISSÃO", "NOTA FISCAL", "PROJETO", "FILIAL", "DESCRIÇÃO", "QUANTIDADE", "VLR. TOTAL", "MOVIMENTO", "VLR. ICMS", "VLR. PIS", "VLR. COFINS"],
-      ["CÓD. PRODUTO", "CLIENTE"],
+      ["CÓD. PRODUTO", "CLIENTE", "TIPO MOVIMENTO"],
     );
     if ("erro" in cab) return { ok: false, motivo: cab.erro };
     const k = cab.col;
@@ -136,6 +136,7 @@ const devolucoes: DefinicaoListaReceita = {
             codigoProduto: texto(c(k["CÓD. PRODUTO"])),
             descricao,
             movimento: texto(c(k.MOVIMENTO)),
+            nomeMovimento: texto(c(k["TIPO MOVIMENTO"])),
             valor: total,
             // Créditos (R$): em obra de venda global, zero.
             creditos: ehGlobal(projeto) ? new Decimal(0) : soma(icms, pis, cofins),
@@ -156,7 +157,7 @@ const saidas: DefinicaoListaReceita = {
     const cab = localizarCabecalho(
       linhas,
       ["DATA_EMISSAO", "NF", "PROJETO", "FILIAL", "DESCRICAO_ITEM", "QTD", "VLR_TOTAL", "MOVIMENTO", "ICMS_VLR", "PIS_VLR", "COFINS_VLR"],
-      ["CD_PRODUTO"],
+      ["CD_PRODUTO", "NM_TIPO_MOV"],
     );
     if ("erro" in cab) return { ok: false, motivo: cab.erro };
     const k = cab.col;
@@ -191,6 +192,7 @@ const saidas: DefinicaoListaReceita = {
             codigoProduto: texto(c(k.CD_PRODUTO)),
             descricao,
             movimento: texto(c(k.MOVIMENTO)),
+            nomeMovimento: texto(c(k.NM_TIPO_MOV)),
             valor: total,
             // Créditos (R$): zero em obra global e sem projeto.
             creditos: !projeto || ehGlobal(projeto) ? new Decimal(0) : soma(icms, pis, cofins),

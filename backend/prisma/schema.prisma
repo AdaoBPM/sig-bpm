@@ -1371,6 +1371,8 @@ model Devolucao {
   descricao        String?
   /// Código do tipo de movimento (ex.: 1.2.18); tipoMovimentoId quando cadastrado.
   movimento        String?
+  /// Descrição do movimento (NM_TIPO_MOV nas saídas, Tipo movimento nas devoluções).
+  nomeMovimento    String?       @map("nome_movimento")
   /// DECIMAL: ICMS + PIS + COFINS, zero em obra de venda global — as deduções da receita.
   creditos         Decimal?
   linhaArquivo     Int?          @map("linha_arquivo")
@@ -1408,6 +1410,8 @@ model Saida {
   descricao        String?
   /// Código do tipo de movimento (ex.: 1.2.18); tipoMovimentoId quando cadastrado.
   movimento        String?
+  /// Descrição do movimento (NM_TIPO_MOV nas saídas, Tipo movimento nas devoluções).
+  nomeMovimento    String?       @map("nome_movimento")
   /// DECIMAL: ICMS + PIS + COFINS, zero em obra de venda global — as deduções da receita.
   creditos         Decimal?
   linhaArquivo     Int?          @map("linha_arquivo")
@@ -1644,6 +1648,8 @@ model ReceitaPreviaItem {
   /// peça da estaca (produção e expedição), o movimento (saídas e devoluções)
   /// ou o tipo de faturamento (medições).
   detalhe         String?
+  /// Descrição do movimento das saídas e devoluções, ao lado do código em detalhe.
+  detalheDescricao String?      @map("detalhe_descricao")
 
   receitaPrevia ReceitaPrevia @relation(fields: [receitaPreviaId], references: [id], onDelete: Cascade)
 

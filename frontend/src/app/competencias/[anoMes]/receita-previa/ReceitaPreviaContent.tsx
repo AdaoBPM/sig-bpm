@@ -45,7 +45,7 @@ export function ReceitaPreviaContent() {
   useRegistrarAcessoTela(`/competencias/${anoMes}/receita-previa`);
   const periodo = lerAnoMes(anoMes);
   const queryClient = useQueryClient();
-  const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza } | null>(null);
+  const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza; variacao?: boolean } | null>(null);
   // undefined: diálogo fechado; null: novo; lançamento: edição.
   const [editando, setEditando] = useState<LancamentoReceita | null | undefined>(undefined);
   const [avisos, setAvisos] = useState<string[]>([]);
@@ -155,7 +155,7 @@ export function ReceitaPreviaContent() {
       ) : dados && dados.receitas.length > 0 ? (
         <div className="space-y-4">
           {[1, 2, 3].map((u) => (
-            <QuadroReceita key={u} unidade={u} receitas={dados.receitas} porVenda={dados.porVenda ?? []} impostos={dados.impostos ?? []} onAbrir={(unidade, natureza) => setMemoria({ unidade, natureza })} />
+            <QuadroReceita key={u} unidade={u} receitas={dados.receitas} porVenda={dados.porVenda ?? []} impostos={dados.impostos ?? []} onAbrir={(unidade, natureza, variacao) => setMemoria({ unidade, natureza, variacao })} />
           ))}
         </div>
       ) : (

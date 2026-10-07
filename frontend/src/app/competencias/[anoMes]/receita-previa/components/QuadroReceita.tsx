@@ -25,7 +25,8 @@ type Props = {
   receitas: ReceitaNatureza[];
   porVenda: ReceitaPrevia["porVenda"];
   impostos: ReceitaPrevia["impostos"];
-  onAbrir: (unidade: number, natureza: Natureza) => void;
+  /** Abre a memória de cálculo; com variacao, só o que movimenta a variação do estoque. */
+  onAbrir: (unidade: number, natureza: Natureza, variacao?: boolean) => void;
 };
 
 function Linha({
@@ -146,7 +147,7 @@ export function QuadroReceita({ unidade, receitas, porVenda, impostos, onAbrir }
           {unidade === 2 ? (
             <>
               <Linha rotulo="CUSTOS DE PRODUÇÃO: PRÉ-FABRICADOS (CPP)" valor={variacao} base={variacao} destaque />
-              <Linha rotulo="Variação do Estoque" valor={variacao} base={rob - rol} onClick={() => onAbrir(2, "PRE_FABRICADO")} />
+              <Linha rotulo="Variação do Estoque" valor={variacao} base={rob - rol} onClick={() => onAbrir(2, "PRE_FABRICADO", true)} />
             </>
           ) : null}
         </tbody>
