@@ -154,11 +154,12 @@ export function rotuloLancamento(natureza: Natureza, componente: Componente) {
   return componente === "BRUTA" ? ROTULO_LINHA[natureza].bruta : ROTULO_LINHA[natureza].liquida;
 }
 
+/** Como o volume foi valorado: o preço do contrato ou o preço padrão (obra genérica, sem contrato ou linha × unidade). */
 export const ROTULO_CRITERIO: Record<string, string> = {
-  CONTRATO: "Preço do contrato",
-  SEM_CONTRATO: "Sem contrato — preço padrão",
-  GENERICA: "Obra genérica — preço padrão",
-  LINHA_INCONSISTENTE: "Linha × unidade — preço padrão",
+  CONTRATO: "Contrato",
+  SEM_CONTRATO: "Padrão",
+  GENERICA: "Padrão",
+  LINHA_INCONSISTENTE: "Padrão",
   TABELA_ESTACA: "Tabela de estacas",
   NOTA_FISCAL: "Nota fiscal",
   MEDICAO: "Medição",

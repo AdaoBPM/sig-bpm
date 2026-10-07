@@ -35,9 +35,14 @@ type Props = {
 };
 
 const zero = (v: string | null) => v === null || Number(v) === 0;
-/** O item entra no extrato aberto: o da variação só com variação; o das receitas sem os que só movem o estoque. */
+/**
+ * O item entra no extrato aberto: o da variação só com variação; o das
+ * receitas sem os que só movem o estoque e sem as devoluções de ROB zerada.
+ */
 const doExtrato = (i: ItemReceita, variacao: boolean) =>
-  variacao ? !zero(i.variacaoEstoque) : !(zero(i.receitaBruta) && zero(i.receitaLiquida) && !zero(i.variacaoEstoque));
+  variacao
+    ? !zero(i.variacaoEstoque)
+    : !(zero(i.receitaBruta) && zero(i.receitaLiquida) && !zero(i.variacaoEstoque)) && !(i.origem === "DEVOLUCAO" && zero(i.receitaBruta));
 
 /**
  * Uma linha do extrato: os itens da mesma obra somados, com a chave da aba de
@@ -84,7 +89,7 @@ function agrupar(itens: ItemReceita[], origem: string): LinhaExtrato[] {
       origem === "LANCAMENTO" || origem === "MEDICAO"
         ? i.id
         : origem === "PRODUCAO" || origem === "EXPEDICAO"
-          ? [i.obra, i.linha, i.venda, i.criterio, i.observacao].map((x) => x ?? "").join("|")
+          ? [i.obra, i.linha, i.venda, ROTULO_CRITERIO[i.criterio] ?? i.criterio, i.observacao].map((x) => x ?? "").join("|")
           : [i.obra, i.linha, i.detalhe, i.venda, i.observacao].map((x) => x ?? "").join("|");
     const l =
       m.get(chave) ??
@@ -218,11 +223,12 @@ function TabelaDoGrupo({ linhas, origem, unidade, variacao }: { linhas: LinhaExt
     const algum = (f: (l: LinhaExtrato) => unknown) => linhas.some((l) => f(l) !== null && f(l) !== undefined && f(l) !== "");
     const valoradoPorPreco = origem === "PRODUCAO" || origem === "EXPEDICAO";
     const cs: Coluna<LinhaExtrato>[] = [];
+    // A obra fica com a largura que sobra; as demais colunas, na largura do conteúdo.
     if (algum((l) => l.obra))
-      cs.push({ chave: "obra", rotulo: "Obra", classe: "min-w-60", valor: (l) => l.obra, texto: (l) => (l.obra ? [l.obra, l.obraNome].filter(Boolean).join(" · ") : null) });
+      cs.push({ chave: "obra", rotulo: "Obra", classe: "w-full min-w-48", valor: (l) => l.obra, texto: (l) => (l.obra ? [l.obra, l.obraNome].filter(Boolean).join(" · ") : null) });
     if (algum((l) => l.linha)) cs.push({ chave: "linha", rotulo: "Linha", valor: (l) => l.linha });
     if (ROTULO_DETALHE[origem] && algum((l) => l.detalhe)) cs.push({ chave: "detalhe", rotulo: ROTULO_DETALHE[origem], valor: (l) => l.detalhe });
-    if (algum((l) => l.detalheDescricao)) cs.push({ chave: "detalheDescricao", rotulo: "Descrição do Movimento", valor: (l) => l.detalheDescricao });
+    if (algum((l) => l.detalheDescricao)) cs.push({ chave: "detalheDescricao", rotulo: "Descrição do Movimento", classe: "min-w-56", valor: (l) => l.detalheDescricao });
     if (unidade !== 3) cs.push({ chave: "venda", rotulo: "Venda", valor: (l) => (l.venda ? ROTULO_VENDA[l.venda] : null) });
     if (valoradoPorPreco) cs.push({ chave: "criterio", rotulo: "Critério", classe: "w-px", valor: (l) => ROTULO_CRITERIO[l.criterio] ?? l.criterio });
     if (valoradoPorPreco && algum((l) => l.quantidade)) cs.push(numerica("quantidade", "Volume (m³)", (l) => l.quantidade, volume));
@@ -237,7 +243,7 @@ function TabelaDoGrupo({ linhas, origem, unidade, variacao }: { linhas: LinhaExt
       cs.push(numerica("receitaBruta", "ROB (R$)", (l) => l.receitaBruta, reais));
       cs.push(numerica("receitaLiquida", "ROL (R$)", (l) => l.receitaLiquida, reais));
     }
-    if (algum((l) => l.observacao)) cs.push({ chave: "observacao", rotulo: "Observação", valor: (l) => l.observacao });
+    if (origem !== "DEVOLUCAO" && algum((l) => l.observacao)) cs.push({ chave: "observacao", rotulo: "Observação", valor: (l) => l.observacao });
     return cs;
   }, [linhas, origem, unidade, variacao]);
   const tabela = useTabelaFiltravel(linhas, colunas);
@@ -247,17 +253,23 @@ function TabelaDoGrupo({ linhas, origem, unidade, variacao }: { linhas: LinhaExt
     switch (c.chave) {
       case "obra":
         return (
-          <div className="max-w-64" title={l.obraNome ?? undefined}>
+          <div title={l.obraNome ?? undefined}>
             <span className="font-medium text-gray-900">{l.obra ?? "—"}</span>
-            {l.obraNome ? <div className="truncate text-xs text-gray-500">{l.obraNome}</div> : null}
+            {/* O nome não alarga a coluna: ocupa a largura que ela tiver e corta o resto. */}
+            {l.obraNome ? (
+              <div className="relative h-4">
+                <div className="absolute inset-x-0 truncate text-xs text-gray-500">{l.obraNome}</div>
+              </div>
+            ) : null}
           </div>
         );
+      case "criterio":
+        return <span className="text-gray-700">{c.valor?.(l) ?? "—"}</span>;
       case "detalheDescricao":
         return <span className="text-gray-700">{l.detalheDescricao ?? "—"}</span>;
       case "linha":
       case "detalhe":
       case "venda":
-      case "criterio":
         return <span className="whitespace-nowrap text-gray-700">{c.valor?.(l) ?? "—"}</span>;
       case "observacao":
         return (
