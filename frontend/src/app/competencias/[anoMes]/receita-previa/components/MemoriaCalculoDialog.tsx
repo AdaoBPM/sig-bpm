@@ -282,8 +282,10 @@ function TabelaDoGrupo({ linhas, origem, unidade, variacao }: { linhas: LinhaExt
   const soma = (c: Coluna<LinhaExtrato>) => tabela.filtradas.reduce((a, l) => a + (Number(c.valor?.(l)) || 0), 0);
 
   return (
-    // Só esta área rola; os rótulos da tabela ficam presos no topo dela.
-    <div className="min-h-0 flex-1 overflow-auto">
+    // Só esta área rola; os rótulos da tabela ficam presos no topo dela. A área
+    // ganha camada própria (will-change): com os rótulos fixos, sem ela o
+    // navegador redesenha a tabela inteira a cada passo, e a tela pisca.
+    <div className="min-h-0 flex-1 overflow-auto will-change-transform">
       <table className="tabela-sig w-full border-collapse text-sm">
         {tabela.cabecalho}
         <tbody>
