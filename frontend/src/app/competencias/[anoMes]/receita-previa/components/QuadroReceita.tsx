@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { Search } from "lucide-react";
 
 import { moeda } from "../../utils/formatacao";
 import {
@@ -47,12 +48,25 @@ function Linha({
 }) {
   const pct = base === 0 ? null : valor / base;
   return (
-    <tr className={destaque ? "border-t border-gray-200 bg-gray-50" : "border-t border-gray-100"}>
+    // Como na DRE: a linha que abre a memória de cálculo leva a lupa e se clica inteira.
+    <tr
+      className={`${destaque ? "border-t border-gray-200 bg-gray-50" : "border-t border-gray-100"} ${onClick ? "cursor-pointer hover:bg-gray-50" : ""}`}
+      onClick={onClick}
+      title={onClick ? "Ver a memória de cálculo" : undefined}
+    >
       <td
         className={`px-4 ${detalhe ? "py-1 pl-14 text-xs text-gray-500" : "py-2 text-sm"} ${destaque ? "font-bold text-gray-900" : detalhe ? "" : "pl-8 text-gray-700"}`}
       >
         {onClick ? (
-          <button type="button" onClick={onClick} className="text-left underline-offset-2 hover:underline">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="inline-flex items-center gap-1 text-left"
+          >
+            <Search className="size-3.5 text-gray-400" />
             {rotulo}
           </button>
         ) : (
