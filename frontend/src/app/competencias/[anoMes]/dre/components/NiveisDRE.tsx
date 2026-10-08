@@ -1,0 +1,204 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+/**
+ * Os níveis e os agrupadores das tabelas com as linhas da DRE (a DRE e a
+ * Conferência com a Planilha), como o contorno do BASE REALIZADO (RESULTADOS).
+ */
+
+/** Os três níveis: totais, atribuições e contas. */
+export type Nivel = 1 | 2 | 3;
+const NIVEIS: Array<{ nivel: Nivel; rotulo: string; dica: string }> = [
+  { nivel: 1, rotulo: "Totais", dica: "Só os totais" },
+  { nivel: 2, rotulo: "Atribuições", dica: "Os totais e as atribuições" },
+  { nivel: 3, rotulo: "Contas", dica: "Todas as contas" },
+];
+
+const nivelGuardado = (chave: string): Nivel => {
+  try {
+    const v = Number(window.localStorage.getItem(chave));
+    return v === 1 || v === 2 || v === 3 ? v : 3;
+  } catch {
+    return 3;
+  }
+};
+const guardarNivel = (chave: string, n: Nivel) => {
+  try {
+    window.localStorage.setItem(chave, String(n));
+  } catch {
+    // Sem armazenamento (janela privada): o nível só não é lembrado.
+  }
+};
+
+type Linha = { codigo: string; tipo: string };
+
+/**
+ * O nível de contorno de cada linha, como na planilha: 0 os totais, 1 as
+ * atribuições (e as contas logo abaixo de um total) e 2 as contas dentro de uma
+ * atribuição. Sai do código da linha: um total de duas partes ("CPP.CUSTOS_…")
+ * abre o grupo; um total de três partes do mesmo grupo ("CPP.MOD.MAO_…") é
+ * atribuição; a conta é nível 2 quando há atribuição com o mesmo prefixo.
+ * Conferido com as seis abas Resultados em 07/10/2026: todas as linhas batem.
+ */
+function estrutura(linhas: Linha[]) {
+  const partes = (c: string) => c.split(".");
+  const totais = new Set(linhas.filter((l) => l.tipo !== "ITEM" && partes(l.codigo).length === 2).map((l) => partes(l.codigo)[0]));
+  const nivel = new Map<string, number>();
+  for (const l of linhas) {
+    if (l.tipo === "ITEM") continue;
+    const p = partes(l.codigo);
+    nivel.set(l.codigo, p.length > 2 && totais.has(p[0]) ? 1 : 0);
+  }
+  const atribuicoes = new Set(linhas.filter((l) => l.tipo !== "ITEM" && nivel.get(l.codigo) === 1).map((l) => partes(l.codigo).slice(0, 2).join(".")));
+  for (const l of linhas) {
+    if (l.tipo !== "ITEM") continue;
+    const p = partes(l.codigo);
+    nivel.set(l.codigo, p.length > 2 && atribuicoes.has(p.slice(0, 2).join(".")) ? 2 : 1);
+  }
+  // Os grupos acima de cada linha, na ordem da DRE.
+  const acima = new Map<string, string[]>();
+  const comFilhos = new Set<string>();
+  let total: string | null = null;
+  let atribuicao: string | null = null;
+  for (const l of linhas) {
+    const n = nivel.get(l.codigo)!;
+    if (n === 0) {
+      acima.set(l.codigo, []);
+      total = l.codigo;
+      atribuicao = null;
+    } else if (n === 1) {
+      acima.set(l.codigo, total ? [total] : []);
+      atribuicao = l.tipo === "ITEM" ? null : l.codigo;
+    } else {
+      acima.set(l.codigo, [total, atribuicao].filter((x): x is string => x !== null));
+    }
+    for (const g of acima.get(l.codigo)!) comFilhos.add(g);
+  }
+  // Totais sem atribuição embaixo (só contas, como a ROB): no nível Atribuições, ficam fechados.
+  const comAtribuicao = new Set(linhas.filter((l) => l.tipo !== "ITEM" && nivel.get(l.codigo) === 1).map((l) => acima.get(l.codigo)![0]));
+  const soContas = new Set([...comFilhos].filter((c) => nivel.get(c) === 0 && !comAtribuicao.has(c)));
+  return { nivel, acima, comFilhos, soContas };
+}
+
+/**
+ * Os grupos fechados para mostrar a DRE até o nível escolhido. As contas (as
+ * linhas sem negrito) só aparecem em Contas: em Atribuições, ficam fechados
+ * também os totais que só têm contas embaixo.
+ */
+function fechadosAte(n: Nivel, nivel: Map<string, number>, comFilhos: Set<string>, soContas: Set<string>) {
+  if (n === 3) return new Set<string>();
+  if (n === 1) return new Set([...comFilhos].filter((c) => nivel.get(c) === 0));
+  return new Set([...comFilhos].filter((c) => nivel.get(c) === 1 || soContas.has(c)));
+}
+
+/** O recuo da descrição em cada nível. */
+export const RECUO = ["pl-4", "pl-9", "pl-14"];
+
+/**
+ * O estado dos níveis de uma tabela de linhas da DRE. As seções P e S não
+ * aparecem; PRODUÇÃO E SERVIÇOS (PS) só quando há volumes, e (com eles) só em
+ * Contas. `chave` guarda o nível escolhido no navegador.
+ */
+export function useNiveisDRE<L extends Linha>(todas: L[], chave: string) {
+  const linhas = useMemo(() => {
+    const temVolume = todas.some((l) => l.tipo === "ITEM" && /^(P|S)\./.test(l.codigo));
+    return todas.filter((l) => l.tipo !== "SECAO" || (l.codigo.startsWith("PS.") && temVolume));
+  }, [todas]);
+  const { nivel, acima, comFilhos, soContas } = useMemo(() => estrutura(linhas), [linhas]);
+  const [nivelGeral, setNivelGeral] = useState<Nivel>(() => nivelGuardado(chave));
+  const [fechados, setFechados] = useState<Set<string>>(() => fechadosAte(nivelGuardado(chave), nivel, comFilhos, soContas));
+  const escolherNivel = (n: Nivel) => {
+    setNivelGeral(n);
+    guardarNivel(chave, n);
+    setFechados(fechadosAte(n, nivel, comFilhos, soContas));
+  };
+  const alternar = (codigo: string) =>
+    setFechados((f) => {
+      const novo = new Set(f);
+      if (novo.has(codigo)) novo.delete(codigo);
+      else novo.add(codigo);
+      return novo;
+    });
+  const ps = linhas.find((l) => l.tipo === "SECAO")?.codigo;
+  const visivel = (l: L) =>
+    !(acima.get(l.codigo) ?? []).some((g) => fechados.has(g)) && !(ps && nivelGeral !== 3 && (l.codigo === ps || (acima.get(l.codigo) ?? []).includes(ps)));
+  return {
+    linhas,
+    nivelGeral,
+    escolherNivel,
+    visivel,
+    /** O recuo da descrição da linha. */
+    recuo: (l: L) => RECUO[nivel.get(l.codigo) ?? 0],
+    grupo: (l: L) => comFilhos.has(l.codigo),
+    fechado: (l: L) => fechados.has(l.codigo),
+    alternar,
+  };
+}
+
+/** O botão de níveis (só a seta), na faixa amarela do título. */
+export function SeletorNivel({ nivel, onEscolher }: { nivel: Nivel; onEscolher: (n: Nivel) => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            aria-label="Níveis da DRE"
+            title={`Níveis da DRE: ${NIVEIS.find((n) => n.nivel === nivel)?.rotulo}`}
+            className="size-8 shrink-0 rounded-sm border-black/30 bg-white p-0"
+          >
+            <ChevronDown className="size-4" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-xs text-gray-500">Mostrar a DRE até</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={String(nivel)} onValueChange={(v) => onEscolher(Number(v) as Nivel)}>
+            {NIVEIS.map((n) => (
+              <DropdownMenuRadioItem key={n.nivel} value={String(n.nivel)} closeOnClick>
+                <span className="flex flex-col">
+                  <span>{n.rotulo}</span>
+                  <span className="text-xs text-gray-500">{n.dica}</span>
+                </span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** A seta que abre e fecha o grupo da linha; sem grupo, o lugar dela, para os nomes do mesmo nível ficarem alinhados. */
+export function Agrupador({ grupo, fechado, onAlternar }: { grupo: boolean; fechado: boolean; onAlternar: () => void }) {
+  if (!grupo) return <span aria-hidden className="-ml-1 inline-block w-[18px] shrink-0" />;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onAlternar();
+      }}
+      title={fechado ? "Expandir" : "Recolher"}
+      aria-expanded={!fechado}
+      className="-ml-1 rounded-sm p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-900"
+    >
+      {fechado ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+    </button>
+  );
+}

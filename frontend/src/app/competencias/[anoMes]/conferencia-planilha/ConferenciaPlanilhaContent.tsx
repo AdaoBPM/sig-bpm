@@ -18,6 +18,7 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
+import { Agrupador, SeletorNivel, useNiveisDRE } from "../dre/components/NiveisDRE";
 import { conferenciaService, mensagemDeErro, type LinhaConferencia, type VisaoConferencia } from "./services/conferenciaService";
 
 const MESES_CURTOS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -28,6 +29,23 @@ const valor = (l: { grupo: string }, v: string | number | null) => (v === null ?
 const lerLimite = (t: string) => {
   const n = lerNumero(t);
   return n !== null && n >= 0 ? n : null;
+};
+/** A variação máxima digitada fica guardada no navegador e volta ao recarregar. */
+const CHAVE_VARIACAO = "sig.conferencia.variacaoMaxima";
+const variacaoGuardada = () => {
+  try {
+    const v = window.localStorage.getItem(CHAVE_VARIACAO);
+    return v !== null && lerLimite(v) !== null ? v : "0,05";
+  } catch {
+    return "0,05";
+  }
+};
+const guardarVariacao = (t: string) => {
+  try {
+    if (lerLimite(t) !== null) window.localStorage.setItem(CHAVE_VARIACAO, t);
+  } catch {
+    // Sem armazenamento (janela privada): o valor só não é lembrado.
+  }
 };
 
 function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna: string; onEnviada: () => void }) {
@@ -74,37 +92,63 @@ function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna:
   );
 }
 
+/**
+ * A tabela no formato da DRE: rótulos em amarelo-ouro, presos no topo ao
+ * rolar; totais e atribuições em negrito, com as linhas mais escuras; os
+ * agrupadores e os níveis (Totais, Atribuições, Contas) da planilha.
+ */
 function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas: boolean }) {
-  const linhas = soDiferencas ? visao.linhas.filter((l) => l.destaque) : visao.linhas;
-  if (linhas.length === 0) {
-    return <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma diferença acima do limite nesta visão.</div>;
-  }
+  const niveis = useNiveisDRE(visao.linhas, "sig.conferencia.nivel");
+  // Com "Só as Diferenças", todas as linhas com diferença aparecem, sem os grupos fechados escondê-las.
+  const linhas = soDiferencas ? niveis.linhas.filter((l) => l.destaque) : niveis.linhas.filter(niveis.visivel);
   const destaque = (l: LinhaConferencia) => l.tipo !== "ITEM";
+  const rotulo = "px-3 py-3 text-base font-bold tracking-wide text-gray-900 uppercase";
   return (
-    <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
+    // Destaque amarelo-ouro à esquerda, como na DRE. Sem rolagem própria: os rótulos ficam presos no topo da página.
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       <table className="tabela-sig w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold text-gray-600">
-            <th className="px-3 py-2 text-right">Linha</th>
-            <th className="px-3 py-2">Descrição</th>
-            <th className="px-3 py-2 text-right">Ferramenta</th>
-            <th className="px-3 py-2 text-right">Planilha</th>
-            <th className="px-3 py-2 text-right">Diferença</th>
+          <tr className="border-b border-gray-200 [&>th]:!bg-bpm-primary">
+            <th className="w-px px-3 py-2">
+              <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
+            </th>
+            <th className={`${rotulo} text-left`}>{visao.nome}</th>
+            <th className={`${rotulo} text-right`}>Ferramenta</th>
+            <th className={`${rotulo} text-right`}>Planilha</th>
+            <th className={`${rotulo} text-right`}>Diferença</th>
           </tr>
         </thead>
         <tbody>
-          {linhas.map((l) => (
-            <tr key={`${l.linha}-${l.codigo}`} className={`border-t border-gray-100 ${l.destaque ? "bg-red-50" : destaque(l) ? "bg-gray-50" : ""}`}>
-              <td className="px-3 py-1.5 text-right text-xs text-gray-400">{l.linha}</td>
-              <td className={`px-3 py-1.5 ${destaque(l) ? "font-bold text-gray-900" : "pl-6 text-gray-700"}`}>
-                {l.descricao}
-                {l.observacao ? <div className="text-xs font-normal text-gray-500">{l.observacao}</div> : null}
+          {linhas.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="px-4 py-6 text-sm text-gray-600">
+                Nenhuma diferença acima da variação máxima nesta visão.
               </td>
-              <td className={`px-3 py-1.5 text-right ${destaque(l) ? "font-bold" : ""}`}>{valor(l, l.sistema)}</td>
-              <td className={`px-3 py-1.5 text-right ${destaque(l) ? "font-bold" : ""}`}>{valor(l, l.planilha)}</td>
-              <td className={`px-3 py-1.5 text-right ${l.destaque ? "font-bold text-red-700" : "text-gray-400"}`}>{l.sistema === null && l.planilha === null ? "—" : valor(l, l.diferenca)}</td>
             </tr>
-          ))}
+          ) : (
+            linhas.map((l) => (
+              <tr
+                key={`${l.linha}-${l.codigo}`}
+                className={`${destaque(l) ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"} ${l.destaque ? "bg-red-50" : destaque(l) ? "bg-gray-50" : ""}`}
+              >
+                <td className="px-3 py-1.5 text-right text-xs font-normal text-gray-400" title="Linha da planilha">
+                  {l.linha}
+                </td>
+                <td className={`py-1.5 pr-3 ${niveis.recuo(l)} ${destaque(l) ? "text-gray-900" : "text-gray-700"}`}>
+                  <span className="inline-flex items-center gap-1">
+                    {soDiferencas ? null : <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />}
+                    {l.descricao}
+                  </span>
+                  {l.observacao ? <div className="text-xs font-normal text-gray-500">{l.observacao}</div> : null}
+                </td>
+                <td className="px-3 py-1.5 text-right">{l.tipo === "SECAO" ? "" : valor(l, l.sistema)}</td>
+                <td className="px-3 py-1.5 text-right">{l.tipo === "SECAO" ? "" : valor(l, l.planilha)}</td>
+                <td className={`px-3 py-1.5 text-right ${l.destaque ? "font-bold text-red-700" : "font-normal text-gray-400"}`}>
+                  {l.tipo === "SECAO" ? "" : l.sistema === null && l.planilha === null ? "—" : valor(l, l.diferenca)}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -147,7 +191,7 @@ export function ConferenciaPlanilhaContent() {
   useRegistrarAcessoTela(`/competencias/${anoMes}/conferencia-planilha`);
   const periodo = lerAnoMes(anoMes);
   const { hasPermission } = usePermissions();
-  const [limiteTexto, setLimiteTexto] = useState("0,05");
+  const [limiteTexto, setLimiteTexto] = useState(variacaoGuardada);
   const limiteDebounced = useDebounce(limiteTexto, 400);
   const limite = lerLimite(limiteDebounced) ?? 0.05;
   const [unidade, setUnidade] = useState(0);
@@ -179,7 +223,7 @@ export function ConferenciaPlanilhaContent() {
         comoUsar={
           <ul>
             <li>Clique em “Enviar Planilha” e envie o BASE REALIZADO (RESULTADOS) atualizado.</li>
-            <li>Escolha a visão nas abas; marque “Só as Diferenças” e ajuste o “Limite de Arredondamento” para ver só o que importa.</li>
+            <li>Escolha a visão nas abas; marque “Só as Diferenças” e ajuste a “Variação Máx.” (fica guardada neste navegador) para ver só o que importa. Use a seta antes do nome da visão para mostrar só os totais, as atribuições ou todas as contas.</li>
             <li>Diferença positiva: a ferramenta está acima da planilha. Corrija a origem e reapure; a conferência se atualiza sem reenviar o arquivo.</li>
           </ul>
         }
@@ -257,13 +301,16 @@ export function ConferenciaPlanilhaContent() {
             <div className="flex items-end gap-4">
               <div className="space-y-1.5">
                 <label htmlFor="conferencia-limite" className="block text-xs font-medium text-gray-700">
-                  Limite de Arredondamento
+                  Variação Máx.
                 </label>
                 <Input
                   id="conferencia-limite"
                   value={limiteTexto}
                   inputMode="decimal"
-                  onChange={(e) => setLimiteTexto(e.target.value)}
+                  onChange={(e) => {
+                    setLimiteTexto(e.target.value);
+                    guardarVariacao(e.target.value);
+                  }}
                   className={`h-9 w-28 rounded-sm text-right ${lerLimite(limiteTexto) === null ? "border-red-400" : ""}`}
                 />
               </div>
@@ -290,7 +337,7 @@ export function ConferenciaPlanilhaContent() {
               : ""}
           </p>
 
-          <Tabela visao={visao} soDiferencas={soDiferencas} />
+          <Tabela key={visao.unidade} visao={visao} soDiferencas={soDiferencas} />
           {visao.totaisDaPlanilha.length > 0 ? (
             <p className="text-xs text-gray-500">
               Não comparado:{" "}
