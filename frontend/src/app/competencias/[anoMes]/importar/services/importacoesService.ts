@@ -101,6 +101,8 @@ export type ResumoDreComercial = {
   obrasComAditivo: string[];
   obrasRepetidas: Array<{ obra: string; linhas: number }>;
   obrasSemContrato: number;
+  /** Preços alterados que valoraram receita de meses já apurados: viram divergências. */
+  divergencias?: Array<{ competencia: string; obra: string; impacto: string }>;
   /** foraDoFiltro: linhas da DRE que a receita prévia não usa (custos, quantidades…). */
   ignoradas?: { vazias: number; repetidas: number; foraDoFiltro: number };
 };
@@ -112,6 +114,22 @@ export type ResumoEstoqueInicial = {
   obrasCriadas: number;
   porLinha: Array<{ linha: string; saldos: number; volume: string; valor: string }>;
 };
+
+/** Uma aba do arquivo do lote: o tipo que ela é e o que a ferramenta fez com ela. */
+export type AbaLote = {
+  aba: string;
+  tipo: string;
+  rotulo: string;
+  /** PRONTA: estrutura conferida; INVALIDA: estrutura errada; IGNORADA: não se importa (mês fechado, fora do setor…). */
+  situacao: "PRONTA" | "INVALIDA" | "IGNORADA";
+  mensagem?: string;
+  registros?: number;
+  avisos: string[];
+  /** Das prontas: na fila (com a importação), sem mudança (arquivo já importado) ou erro ao enfileirar. */
+  envio?: "NA_FILA" | "SEM_MUDANCA" | "ERRO";
+  importacaoId?: string;
+};
+export type ResultadoLote = { nomeArquivo: string; abas: AbaLote[]; outras: string[] };
 
 export type ImportacaoDetalhe = Importacao & {
   hashArquivo: string;
@@ -141,6 +159,21 @@ export const importacoesService = {
     const { data } = await api.get<{ data: ImportacaoDetalhe }>(
       `/proxy/importacoes/${id}`,
     );
+    return data.data;
+  },
+
+  /**
+   * Importação em lote: o arquivo inteiro, uma vez. O servidor associa as abas
+   * aos tipos, confere a estrutura e põe as prontas na fila, uma por vez.
+   */
+  enviarLote: async (anoMes: string, arquivo: File, onProgresso?: (percentual: number) => void): Promise<ResultadoLote> => {
+    const { data } = await api.post<{ data: ResultadoLote }>(`/proxy/competencias/${anoMes}/importacoes/lote`, arquivo, {
+      params: { nomeArquivo: arquivo.name },
+      headers: { "Content-Type": "application/octet-stream" },
+      onUploadProgress: (e) => {
+        if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
+      },
+    });
     return data.data;
   },
 

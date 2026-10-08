@@ -12,6 +12,8 @@ import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
 import { auditar } from "../auditoriaService.js";
+import { ArquivoInvalidoError } from "../../lib/xlsx.js";
+import { analisarArquivo, type AbaAnalisada } from "./analiseArquivo.js";
 
 /**
  * Erro de regra da importação, com o status HTTP que o controller devolve.
@@ -217,6 +219,44 @@ export const importacoesService = {
     });
 
     return importacao;
+  },
+
+  /**
+   * Importação em lote: lê o arquivo inteiro, associa cada aba a um tipo e
+   * confere a estrutura (analisarArquivo); as abas prontas entram na fila, uma
+   * por vez, como importações separadas. Uma aba com erro não impede as
+   * outras. Arquivo idêntico ao já importado de um tipo não é reimportado.
+   */
+  async receberLote(input: Omit<ReceberImportacaoInput, "tipo" | "forcar"> & { alcanca: (tipo: TipoImportacao) => boolean }) {
+    if (input.conteudo.length === 0) throw new RegraImportacaoError(400, "O arquivo enviado está vazio.");
+    const competencia = await competenciaPorAnoMes(input.ano, input.mes);
+    let analise: ReturnType<typeof analisarArquivo>;
+    try {
+      analise = analisarArquivo(input.conteudo, { ano: input.ano, mes: input.mes, fechada: competencia.status === "FECHADA" }, input.alcanca);
+    } catch (error) {
+      if (error instanceof ArquivoInvalidoError) throw new RegraImportacaoError(400, error.message);
+      throw error;
+    }
+    type Resultado = AbaAnalisada & { importacaoId?: string; envio?: "NA_FILA" | "SEM_MUDANCA" | "ERRO" };
+    const abas: Resultado[] = [];
+    for (const a of analise.abas) {
+      if (a.situacao !== "PRONTA") {
+        abas.push(a);
+        continue;
+      }
+      try {
+        const imp = await this.receber({ ...input, tipo: a.tipo, forcar: false });
+        abas.push({ ...a, envio: "NA_FILA", importacaoId: imp.id });
+      } catch (error) {
+        if (!(error instanceof RegraImportacaoError)) throw error;
+        abas.push({
+          ...a,
+          envio: error.codigo === "ARQUIVO_JA_IMPORTADO" ? "SEM_MUDANCA" : "ERRO",
+          mensagem: error.codigo === "ARQUIVO_JA_IMPORTADO" ? "Este arquivo já foi importado para este tipo; nada muda." : error.message,
+        });
+      }
+    }
+    return { nomeArquivo: input.nomeArquivo, abas, outras: analise.outras };
   },
 
   async listar(ano: number, mes: number) {

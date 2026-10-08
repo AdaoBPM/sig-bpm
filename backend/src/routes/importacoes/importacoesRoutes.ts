@@ -25,6 +25,14 @@ importacoesDaCompetenciaRoutes.post(
   asyncHandler(importacoesController.receber),
 );
 
+importacoesDaCompetenciaRoutes.post(
+  "/lote",
+  autenticacao,
+  verificarPermissao("importacao:editar"),
+  express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }),
+  asyncHandler(importacoesController.receberLote),
+);
+
 /** Uma importação pelo id: montado em /importacoes. */
 export const importacoesRoutes = Router();
 

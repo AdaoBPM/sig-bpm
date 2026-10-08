@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 
 import { alcancaLista } from "../../services/acesso/acesso.js";
 import {
@@ -52,6 +53,26 @@ export const importacoesController = {
         usuarioId: request.user!.sub,
       });
       // 202: o arquivo foi aceito para processamento, que segue em segundo plano.
+      return response.status(202).json({ data });
+    } catch (error) {
+      return responderRegra(response, error);
+    }
+  },
+
+  /** Um arquivo com várias abas: cada aba reconhecida vira uma importação, na fila. */
+  async receberLote(request: Request, response: Response) {
+    const competencia = anoMesSchema.safeParse(request.params.anoMes);
+    const nome = z.string().trim().min(1).max(255).safeParse(request.query.nomeArquivo);
+    if (!competencia.success || !nome.success) return response.status(400).json({ error: "Informe a competência e o nome do arquivo." });
+    if (!Buffer.isBuffer(request.body)) return response.status(400).json({ error: "Envie o arquivo no corpo da requisição." });
+    try {
+      const data = await importacoesService.receberLote({
+        ...competencia.data,
+        nomeArquivo: nome.data,
+        conteudo: request.body,
+        usuarioId: request.user!.sub,
+        alcanca: (tipo) => alcancaLista(request.user!.acesso, tipo),
+      });
       return response.status(202).json({ data });
     } catch (error) {
       return responderRegra(response, error);

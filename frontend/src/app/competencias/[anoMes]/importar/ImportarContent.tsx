@@ -20,6 +20,7 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { EnviarArquivoForm } from "./components/EnviarArquivoForm";
+import { ImportarLoteDialog } from "./components/ImportarLoteDialog";
 import { ResultadoImportacao } from "./components/ResultadoImportacao";
 import { importacoesService, type Importacao, type StatusImportacao } from "./services/importacoesService";
 import { dataHora, inteiro, lerAnoMes, ROTULO_TIPO } from "../utils/formatacao";
@@ -117,7 +118,10 @@ export function ImportarContent() {
   const periodo = lerAnoMes(anoMes);
   const [aba, setAba] = useState<"vigor" | "historico">("vigor");
   const [aberta, setAberta] = useState<string | null>(null);
+  // Reimportar um tipo (da linha da tabela): o formulário de um tipo só.
   const [envio, setEnvio] = useState<{ tipo?: string } | null>(null);
+  // "Importar Arquivo": o arquivo inteiro, aba por aba.
+  const [lote, setLote] = useState(false);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["importacoes", anoMes],
@@ -167,7 +171,9 @@ export function ImportarContent() {
         }
         comoUsar={
           <ul>
-            <li>Clique em “Importar Arquivo”, escolha o tipo e envie a planilha (.xlsx). Para trocar um arquivo, use “Reimportar” na linha do tipo.</li>
+            <li>Clique em “Importar Arquivo” e escolha a planilha (.xlsx): a ferramenta reconhece as abas pelo nome, confere a estrutura de cada uma e importa as certas, uma por vez, sem pedir mais nada. Uma aba com erro é avisada, e a próxima segue.</li>
+            <li>A lista do arquivo avisa quando a importação muda competências fechadas (o balancete do ano inteiro, os preços da DRE do Comercial); as diferenças vão para Divergências.</li>
+            <li>Para trocar só um tipo, use “Reimportar” na linha dele.</li>
             <li>Na aba Em Vigor, clique numa linha para abrir o relatório: linhas aceitas, recusadas e avisos.</li>
             <li>A aba Histórico guarda todas as importações, inclusive as recusadas e as substituídas.</li>
             <li>Em mês fechado, o balancete só é comparado com o gravado; as diferenças vão para Divergências.</li>
@@ -188,7 +194,7 @@ export function ImportarContent() {
         }
         acoes={
           data && podeImportar ? (
-            <Button type="button" className={botaoPrimario} onClick={() => setEnvio({})}>
+            <Button type="button" className={botaoPrimario} onClick={() => setLote(true)}>
               <Upload className="size-4" />
               {fechada ? "Comparar balancete" : "Importar arquivo"}
             </Button>
@@ -326,7 +332,18 @@ export function ImportarContent() {
         </QuadroTabela>
       )}
 
-      {/* O envio, num diálogo; enviado o arquivo, o relatório abre no painel e acompanha o processamento. */}
+      <ImportarLoteDialog
+        anoMes={anoMes}
+        aberto={lote}
+        fechada={fechada}
+        onFechar={() => setLote(false)}
+        onAbrirRelatorio={(id) => {
+          setLote(false);
+          setAberta(id);
+        }}
+      />
+
+      {/* Reimportar um tipo, num diálogo; enviado o arquivo, o relatório abre no painel e acompanha o processamento. */}
       <Dialog open={envio !== null} onOpenChange={(o) => (!o ? setEnvio(null) : undefined)}>
         <DialogContent className="rounded-sm sm:max-w-xl">
           <DialogHeader>
