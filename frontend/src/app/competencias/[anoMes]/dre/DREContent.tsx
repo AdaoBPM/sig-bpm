@@ -365,7 +365,9 @@ export function DREContent() {
     enabled: periodo !== null,
   });
   const unidade = useQuery({
-    queryKey: ["dre", anoMes, visao],
+    // Chave própria ("unidade"): com a aba Consolidado aberta, ["dre", anoMes, visao] seria a mesma chave da consulta
+    // consolidada, e a recarga depois da reapuração usava esta função, pedindo a "unidade consolidado" ao servidor.
+    queryKey: ["dre", anoMes, "unidade", visao],
     queryFn: () => dreService.consultar(anoMes, visao as number),
     enabled: periodo !== null && typeof visao === "number",
   });
