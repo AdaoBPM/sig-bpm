@@ -317,6 +317,7 @@ model Linha {
   obras             Obra[]
   precosContrato    PrecoContrato[]
   estoqueSaldos     EstoqueSaldo[]
+  estoqueIniciais   EstoqueSaldoInicial[]
   projetos          Projeto[]
   producoes         Producao[]
   producoesPista    ProducaoPista[]
@@ -660,6 +661,7 @@ model Competencia {
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
   estoqueSaldos        EstoqueSaldo[]
+  estoqueIniciais      EstoqueSaldoInicial[]
 
   projetos            Projeto[]
   producoes           Producao[]
@@ -746,6 +748,8 @@ model Importacao {
 
   divergencias         Divergencia[]
   lancamentosContabeis LancamentoContabil[]
+
+  estoqueIniciais EstoqueSaldoInicial[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -875,6 +879,7 @@ model Obra {
 
   precos        PrecoContrato[]
   estoques      EstoqueSaldo[]
+  estoqueIniciais EstoqueSaldoInicial[]
   divergencias  Divergencia[]
 
   projetos            Projeto[]
@@ -1048,8 +1053,6 @@ model EstoqueSaldo {
   saldoVolume   Decimal  @map("saldo_volume")
   saldoValor    Decimal  @map("saldo_valor")
   precoMedio    Decimal  @map("preco_medio")
-  /// Saldo carregado por importação (o saldo inicial), em vez de apurado.
-  importacaoId  String?  @map("importacao_id")
   apuradoEm     DateTime @default(now()) @map("apurado_em")
   congelado     Boolean  @default(false)
 
@@ -1058,6 +1061,30 @@ model EstoqueSaldo {
 
   @@unique([competenciaId, obraId, linhaTexto])
   @@map("estoque_saldos")
+}
+
+/// Saldo inicial do estoque por obra e linha: a aba Estoque (2025), o saldo
+/// no fim de 2025. Fica no primeiro mês da ferramenta (01/2026), que parte
+/// dele em vez do saldo de um mês anterior — não há competência de 12/2025.
+model EstoqueSaldoInicial {
+  id            String  @id @default(uuid())
+  competenciaId String  @map("competencia_id")
+  importacaoId  String  @map("importacao_id")
+  obraId        String  @map("obra_id")
+  linhaId       String? @map("linha_id")
+  /// Linha como texto (ESTRUTURA, ALVEOLARES, ESTACAS), como no saldo apurado.
+  linhaTexto    String  @map("linha_texto")
+  /// DECIMAL: volume (m³) e valor fiscal do saldo.
+  saldoVolume   Decimal @map("saldo_volume")
+  saldoValor    Decimal @map("saldo_valor")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+  obra        Obra        @relation(fields: [obraId], references: [id])
+  linha       Linha?      @relation(fields: [linhaId], references: [id])
+
+  @@unique([competenciaId, obraId, linhaTexto])
+  @@map("estoque_saldos_iniciais")
 }
 
 // -----------------------------------------------------------------------------

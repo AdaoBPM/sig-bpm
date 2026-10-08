@@ -12,8 +12,8 @@ import { escolherAba, recusarImportacao, registrarProgresso } from "../statusImp
 /**
  * Saldo inicial do estoque — a aba Estoque (2025) do SIG BPM 2026 - LISTAS
  * REALIZADO (OPERAÇÃO): o saldo de cada obra e linha no fim de 2025, em m³ e
- * em valor fiscal. Importado na competência de dezembro de 2025, vale como o
- * saldo final daquele mês, de onde parte a apuração de janeiro.
+ * em valor fiscal. Importado no primeiro mês da ferramenta (01/2026): a
+ * apuração do estoque daquele mês parte dele, já que não há mês anterior.
  *
  * Linhas repetidas da mesma obra e linha são somadas, como na planilha.
  */
@@ -63,26 +63,29 @@ export async function processarEstoqueInicial(importacaoId: string): Promise<voi
       async (tx) => {
         const { porCodigo, criadas } = await garantirObras(tx, new Map([...saldos.values()].map((s) => [s.obra, s.nome])));
         const linhas = new Map((await tx.linha.findMany({ where: { tipo: "PRODUTO" }, select: { id: true, codigo: true } })).map((l) => [l.codigo, l.id]));
-        // Conferido dentro da transação: o saldo inicial não apaga o saldo apurado
-        // (e congelado) de um mês, nem entra numa competência fechada.
-        const competencia = await tx.competencia.findUniqueOrThrow({ where: { id: importacao.competenciaId }, select: { status: true } });
+        // Conferido dentro da transação: o saldo inicial só entra no primeiro mês
+        // da ferramenta (os outros partem do saldo do mês anterior) e não entra
+        // numa competência fechada. O saldo já apurado do mês fica como está:
+        // a importação nova aparece como mudança, e reapurar o recalcula.
+        const competencia = await tx.competencia.findUniqueOrThrow({ where: { id: importacao.competenciaId }, select: { ano: true, mes: true, status: true } });
         if (competencia.status === "FECHADA") throw new ArquivoRecusado("A competência está fechada: o saldo inicial não pode ser importado nela.");
-        if (await tx.estoqueSaldo.count({ where: { competenciaId: importacao.competenciaId, importacaoId: null } })) {
-          throw new ArquivoRecusado("Esta competência já tem saldo de estoque apurado. O saldo inicial vai na competência anterior ao primeiro mês apurado (12/2025).");
+        const a = competencia.mes === 1 ? { ano: competencia.ano - 1, mes: 12 } : { ano: competencia.ano, mes: competencia.mes - 1 };
+        if (await tx.competencia.findUnique({ where: { ano_mes: a }, select: { id: true } })) {
+          const primeira = await tx.competencia.findFirstOrThrow({ orderBy: [{ ano: "asc" }, { mes: "asc" }], select: { ano: true, mes: true } });
+          throw new ArquivoRecusado(
+            `O saldo inicial só é importado no primeiro mês da ferramenta (${String(primeira.mes).padStart(2, "0")}/${primeira.ano}); os demais partem do saldo do mês anterior.`,
+          );
         }
-        await tx.estoqueSaldo.deleteMany({ where: { competenciaId: importacao.competenciaId } });
-        await tx.estoqueSaldo.createMany({
+        await tx.estoqueSaldoInicial.deleteMany({ where: { competenciaId: importacao.competenciaId } });
+        await tx.estoqueSaldoInicial.createMany({
           data: [...saldos.values()].map((s) => ({
             competenciaId: importacao.competenciaId,
+            importacaoId,
             obraId: porCodigo.get(s.obra)!,
             linhaId: linhas.get(s.linha) ?? null,
             linhaTexto: s.linha,
-            movimentoVolume: s.volume,
-            movimentoValor: s.valor,
             saldoVolume: s.volume,
             saldoValor: s.valor,
-            precoMedio: s.volume.isZero() ? new Prisma.Decimal(0) : s.valor.div(s.volume),
-            importacaoId,
           })),
         });
         const porLinha = new Map<string, { saldos: number; volume: Prisma.Decimal; valor: Prisma.Decimal }>();

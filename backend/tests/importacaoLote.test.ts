@@ -22,7 +22,10 @@ const arquivo = gerarXlsx([
     [46235, "G1", "OBRA 1", "MONTAGEM", 3],
   ]),
   aba("Medições", [["SEM", "AS", "COLUNAS"]]),
-  aba("Estoque (2025)", [["OBRA", "LINHA", "VOLUME (M³)", "TOTAL FISCAL (R$)"]]),
+  aba("Estoque (2025)", [
+    ["OBRA", "LINHA", "VOLUME (M³)", "TOTAL FISCAL (R$)"],
+    ["OBRA 1", "ESTRUTURA", 10, 15000],
+  ]),
 ]);
 const linhasDoArquivo = lerAba(arquivo, () => "Acompanhamentos").linhas;
 
@@ -31,7 +34,7 @@ const meses: Competencia[] = Array.from({ length: 8 }, (_, i) => ({ id: `c${i + 
 const agosto = meses[7];
 const fontes: FontesAnalise = {
   doAno: async (o) => meses.filter((c) => c.mes <= o.mes),
-  dezembro2025: async () => null,
+  primeira: async () => meses[0],
   // Em vigor: abril igual ao arquivo; os demais meses, outro conteúdo (ou nada).
   assinaturaEmVigor: async (_tipo, c, ler) => (c.mes === 4 ? (ler(linhasDoArquivo, c.ano, c.mes)?.assinatura ?? null) : "outro"),
 };
@@ -53,8 +56,13 @@ describe("importação em lote: prévia das abas, mês a mês", () => {
     assert.equal(acomp.meses.find((m) => m.anoMes === "2026-08")?.atual, true);
     // Aba com o nome certo e as colunas erradas: inválida, com o motivo.
     assert.equal(r.abas.find((a) => a.aba === "Medições")?.situacao, "INVALIDA");
-    // O saldo inicial só entra em 12/2025.
-    assert.equal(r.abas.find((a) => a.aba === "Estoque (2025)")?.situacao, "IGNORADA");
+    // O saldo inicial vai sempre para o primeiro mês da ferramenta, de qualquer mês do envio.
+    const inicial = r.abas.find((a) => a.aba === "Estoque (2025)")!;
+    assert.equal(inicial.tipo, "ESTOQUE_INICIAL");
+    assert.deepEqual(
+      inicial.meses.map((m) => [m.anoMes, m.acao, m.atual]),
+      [["2026-01", "IMPORTAR", false]],
+    );
     assert.deepEqual(r.outras, ["Resumo"]);
   });
 

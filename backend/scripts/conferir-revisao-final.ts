@@ -160,8 +160,8 @@ try {
     status = (await a.get(`/importacoes/${imp.body.data.id}`)).body.data.status;
   }
   const det = imp.body.data?.id ? (await a.get(`/importacoes/${imp.body.data.id}`)).body.data : null;
-  ok(status === "REJEITADA" && /saldo de estoque apurado/.test(det?.motivoRejeicao ?? ""), `no mês com saldo apurado, a importação é recusada (${status}: ${det?.motivoRejeicao ?? imp.body.error})`);
-  ok((await prisma.estoqueSaldo.count({ where: { competenciaId: competencia.id, importacaoId: null } })) > 0, "e o saldo apurado continua lá");
+  ok(status === "REJEITADA" && /primeiro mês da ferramenta/.test(det?.motivoRejeicao ?? ""), `fora do primeiro mês, a importação é recusada (${status}: ${det?.motivoRejeicao ?? imp.body.error})`);
+  ok((await prisma.estoqueSaldoInicial.count({ where: { competenciaId: competencia.id } })) === 0, "e nenhum saldo inicial entra no mês");
 } finally {
   // --- Limpeza ---------------------------------------------------------------------
   if (criados.pista) await prisma.producaoPista.delete({ where: { id: criados.pista } }).catch(() => undefined);

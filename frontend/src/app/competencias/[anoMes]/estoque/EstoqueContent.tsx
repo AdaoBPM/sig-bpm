@@ -72,14 +72,14 @@ export function EstoqueContent() {
       </div>
     );
   }
-  const bloqueada = dados?.competencia.status === "FECHADA" || dados?.congelado || dados?.inicial;
+  const bloqueada = dados?.competencia.status === "FECHADA" || dados?.congelado;
 
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Estoque"
         selo={
-          !dados?.inicial && (dados?.congelado || dados?.competencia.status === "FECHADA") ? (
+          dados?.congelado || dados?.competencia.status === "FECHADA" ? (
             <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />
           ) : null
         }
@@ -91,8 +91,9 @@ export function EstoqueContent() {
         }
         sobre={
           <p>
-            Saldo do mês anterior mais a produção, menos a expedição, por obra e linha. Serve para conferência e não entra no resultado.{" "}
-            {dados?.inicial ? "Saldo inicial importado." : dados?.apuradoEm ? `Apurado em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurado."}
+            Saldo do mês anterior mais a produção, menos a expedição, por obra e linha. Serve para conferência e não entra no resultado. O
+            primeiro mês da ferramenta parte do saldo inicial, importado da aba Estoque (2025).{" "}
+            {dados?.apuradoEm ? `Apurado em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurado."}
           </p>
         }
         acoes={
@@ -115,7 +116,7 @@ export function EstoqueContent() {
       {dados?.inicial ? (
         <div className="flex items-center gap-2 rounded-sm border border-gray-200 bg-gray-50 p-4">
           <Info className="size-4 shrink-0 text-gray-500" />
-          <p className="text-sm text-gray-600">Saldo inicial, importado da aba Estoque (2025). Os meses seguintes partem dele.</p>
+          <p className="text-sm text-gray-600">Primeiro mês da ferramenta: parte do saldo inicial, importado da aba Estoque (2025), em vez do saldo do mês anterior.</p>
         </div>
       ) : null}
       {avisos.length > 0 ? (
@@ -185,8 +186,8 @@ export function EstoqueContent() {
         </>
       ) : (
         <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">
-          Nenhum saldo ainda. Apure o estoque (o mês anterior precisa ter saldo) ou, na competência de 12/2025, importe o
-          saldo inicial.
+          Nenhum saldo ainda. Apure o estoque: o mês anterior precisa ter saldo — ou, no primeiro mês da ferramenta, o saldo
+          inicial (aba Estoque (2025)) precisa estar importado.
         </div>
       )}
     </div>

@@ -53,9 +53,10 @@ type Tipo = {
   /**
    * POR_MES: o arquivo traz o ano, e cada mês vai para a sua competência;
    * GLOBAL: um conteúdo só (os preços), importado na competência do envio;
-   * DEZEMBRO_2025: o saldo inicial do estoque, só em 12/2025.
+   * PRIMEIRO_MES: o saldo inicial do estoque, sempre no primeiro mês da
+   * ferramenta (01/2026), de qualquer mês do envio.
    */
-  alcance: "POR_MES" | "GLOBAL" | "DEZEMBRO_2025";
+  alcance: "POR_MES" | "GLOBAL" | "PRIMEIRO_MES";
   /** Lê o mês; null quando não há nada dele. Lança AbaInvalida com o motivo. */
   ler: (linhas: LinhaPlanilha[], ano: number, mes: number) => Leitura;
 };
@@ -124,11 +125,12 @@ const TIPOS: Tipo[] = [
     tipo: "ESTOQUE_INICIAL",
     rotulo: "Saldo inicial do estoque",
     abas: ["Estoque (2025)"],
-    alcance: "DEZEMBRO_2025",
+    alcance: "PRIMEIRO_MES",
     ler(linhas) {
       const cab = localizarCabecalho(linhas, ["OBRA", "LINHA", "VOLUME (M³)", "TOTAL FISCAL (R$)"], ["NOME DA OBRA"]);
       if ("erro" in cab) throw new AbaInvalida(cab.erro);
       const dados = linhas.filter((l) => l.numero > cab.numero);
+      if (dados.length === 0) throw new AbaInvalida("A aba não tem nenhum saldo.");
       return { registros: dados.length, assinatura: assinar(dados.map((l) => l.celulas)), avisos: [] };
     },
   },
@@ -176,7 +178,8 @@ async function assinaturaEmVigor(t: Tipo, c: Competencia, cache: Map<string, Lin
 export type FontesAnalise = {
   /** As competências do ano até o mês do envio, em ordem. */
   doAno: (origem: Competencia) => Promise<Competencia[]>;
-  dezembro2025: () => Promise<Competencia | null>;
+  /** O primeiro mês da ferramenta, que guarda o saldo inicial do estoque. */
+  primeira: () => Promise<Competencia | null>;
   /** A assinatura do conteúdo em vigor do tipo no mês, ou null. */
   assinaturaEmVigor: (tipo: TipoImportacao, c: Competencia, ler: (linhas: LinhaPlanilha[], ano: number, mes: number) => Leitura, abas: string[], global: boolean) => Promise<string | null>;
 };
@@ -190,7 +193,7 @@ const fontesDoBanco = (): FontesAnalise => {
         select: { id: true, ano: true, mes: true, status: true },
         orderBy: { mes: "asc" },
       }),
-    dezembro2025: () => getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano: 2025, mes: 12 } }, select: { id: true, ano: true, mes: true, status: true } }),
+    primeira: () => getPrismaClient().competencia.findFirst({ orderBy: [{ ano: "asc" }, { mes: "asc" }], select: { id: true, ano: true, mes: true, status: true } }),
     assinaturaEmVigor: (tipo, c, ler, abas, global) =>
       assinaturaEmVigor({ tipo, rotulo: "", abas, alcance: global ? "GLOBAL" : "POR_MES", ler }, c, cache),
   };
@@ -215,7 +218,7 @@ export async function analisarArquivo(
   }
   // O mês do envio e os anteriores do ano, que o arquivo também traz.
   const doAno = await fontes.doAno(origem);
-  const dezembro = await fontes.dezembro2025();
+  const primeira = await fontes.primeira();
   const fechada = origem.status === "FECHADA";
 
   const abas: AbaAnalisada[] = [];
@@ -227,10 +230,6 @@ export async function analisarArquivo(
     const base = { aba, tipo: t.tipo, rotulo: t.rotulo, meses: [] as MesDaAba[] };
     if (!alcanca(t.tipo)) {
       abas.push({ ...base, situacao: "IGNORADA", mensagem: "Tipo de arquivo fora dos seus setores." });
-      continue;
-    }
-    if (t.alcance === "DEZEMBRO_2025" && !(origem.ano === 2025 && origem.mes === 12)) {
-      abas.push({ ...base, situacao: "IGNORADA", mensagem: "O saldo inicial do estoque só é importado na competência 12/2025." });
       continue;
     }
     if (fechada && t.tipo !== "BALANCETE") {
@@ -251,7 +250,7 @@ export async function analisarArquivo(
 
     // Em mês fechado, só o balancete do próprio mês, para comparar.
     const alvos: Competencia[] =
-      t.alcance === "POR_MES" && !fechada ? doAno : t.alcance === "DEZEMBRO_2025" && dezembro ? [dezembro] : [origem];
+      t.alcance === "POR_MES" && !fechada ? doAno : t.alcance === "PRIMEIRO_MES" && primeira ? [primeira] : [origem];
     let invalidaNoMes: string | null = null;
     for (const c of alvos) {
       const atual = c.id === origem.id;

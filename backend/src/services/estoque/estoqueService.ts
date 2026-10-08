@@ -27,31 +27,28 @@ async function exigirCompetencia(ano: number, mes: number) {
 
 export const estoqueService = {
   /**
-   * Apura o saldo da competência: o saldo do mês anterior (apurado, ou o
-   * inicial importado) mais o movimento do mês. Não reapura um saldo congelado
-   * nem o saldo importado.
+   * Apura o saldo da competência: o saldo do mês anterior mais o movimento do
+   * mês. O primeiro mês da ferramenta (01/2026) parte do saldo inicial
+   * importado (aba Estoque (2025)). Não reapura um saldo congelado.
    */
   async apurar(ano: number, mes: number) {
     const c = await exigirCompetencia(ano, mes);
     if (c.status === "FECHADA") throw new RegraEstoqueError(409, `A competência ${rotulo(ano, mes)} está fechada. Reapurar exige reabri-la.`);
     const prisma = getPrismaClient();
-    const atuais = await prisma.estoqueSaldo.findFirst({ where: { competenciaId: c.id, OR: [{ congelado: true }, { importacaoId: { not: null } }] }, select: { importacaoId: true } });
-    if (atuais) {
-      throw new RegraEstoqueError(
-        409,
-        atuais.importacaoId
-          ? `O saldo de ${rotulo(ano, mes)} é o saldo inicial importado; não é apurado.`
-          : `O saldo de ${rotulo(ano, mes)} está congelado pela apuração da competência. Para recalcular, reapure a competência (tela da DRE).`,
-      );
+    if (await prisma.estoqueSaldo.count({ where: { competenciaId: c.id, congelado: true } })) {
+      throw new RegraEstoqueError(409, `O saldo de ${rotulo(ano, mes)} está congelado pela apuração da competência. Para recalcular, reapure a competência (tela da DRE).`);
     }
-    const a = anterior(ano, mes);
-    const ca = await competencia(a.ano, a.mes);
-    const saldosAnteriores = ca ? await prisma.estoqueSaldo.findMany({ where: { competenciaId: ca.id }, select: { saldoVolume: true, saldoValor: true, linhaTexto: true, obra: { select: { codigo: true } } } }) : [];
-    if (!ca || saldosAnteriores.length === 0) {
-      throw new RegraEstoqueError(
-        409,
-        `O saldo de ${rotulo(a.ano, a.mes)} não existe. Apure o mês anterior — ou, no início, importe o saldo inicial (aba Estoque (2025)) na competência de ${rotulo(a.ano, a.mes)}.`,
-      );
+    // O primeiro mês parte do saldo inicial importado; os demais, do saldo do mês anterior.
+    const doSaldo = { saldoVolume: true, saldoValor: true, linhaTexto: true, obra: { select: { codigo: true } } } as const;
+    let saldosAnteriores = await prisma.estoqueSaldoInicial.findMany({ where: { competenciaId: c.id }, select: doSaldo });
+    if (saldosAnteriores.length === 0) {
+      const a = anterior(ano, mes);
+      const ca = await competencia(a.ano, a.mes);
+      if (!ca) {
+        throw new RegraEstoqueError(409, `${rotulo(ano, mes)} é o primeiro mês da ferramenta e não tem o saldo inicial do estoque. Importe-o (aba Estoque (2025)) nesta competência.`);
+      }
+      saldosAnteriores = await prisma.estoqueSaldo.findMany({ where: { competenciaId: ca.id }, select: doSaldo });
+      if (saldosAnteriores.length === 0) throw new RegraEstoqueError(409, `O saldo de ${rotulo(a.ano, a.mes)} não existe. Apure o mês anterior.`);
     }
 
     const daLista = { competenciaId: c.id };
@@ -110,6 +107,7 @@ export const estoqueService = {
   /** O saldo da competência por obra e linha, e os preços médios da aba Estoque (Médias). */
   async consultar(ano: number, mes: number) {
     const c = await exigirCompetencia(ano, mes);
+    const iniciais = await getPrismaClient().estoqueSaldoInicial.count({ where: { competenciaId: c.id } });
     const saldos = await getPrismaClient().estoqueSaldo.findMany({
       where: { competenciaId: c.id },
       orderBy: [{ linhaTexto: "asc" }, { obra: { codigo: "asc" } }],
@@ -124,7 +122,6 @@ export const estoqueService = {
         precoMedio: true,
         apuradoEm: true,
         congelado: true,
-        importacaoId: true,
         obra: { select: { codigo: true, nome: true } },
       },
     });
@@ -134,7 +131,8 @@ export const estoqueService = {
       competencia: { ano, mes, status: c.status },
       apuradoEm: saldos[0]?.apuradoEm ?? null,
       congelado: saldos.some((s) => s.congelado),
-      inicial: saldos.some((s) => s.importacaoId !== null),
+      /** O mês parte do saldo inicial importado (o primeiro mês da ferramenta), não do mês anterior. */
+      inicial: iniciais > 0,
       medias: Object.entries(medias).map(([linha, m]) => ({ linha, volume: m.volume.toFixed(3), valor: m.valor.toFixed(2), precoMedio: m.precoMedio.toFixed(2) })),
       saldos: saldos.map((s) => ({
         obra: s.obra.codigo,

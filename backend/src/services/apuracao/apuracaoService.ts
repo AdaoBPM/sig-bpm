@@ -127,7 +127,7 @@ async function congelar(competenciaId: string, congelado: boolean) {
     prisma.resultadoApurado.updateMany({ where, data: { congelado } }),
     prisma.receitaPrevia.updateMany({ where, data: { congelado } }),
     prisma.volumeOperacional.updateMany({ where, data: { congelado } }),
-    prisma.estoqueSaldo.updateMany({ where: { ...where, importacaoId: null }, data: { congelado } }),
+    prisma.estoqueSaldo.updateMany({ where, data: { congelado } }),
   ]);
 }
 
@@ -253,12 +253,9 @@ export const apuracaoService = {
     try {
       etapas.push({ etapa, resumo: await classificacaoService.classificarCompetencia(c.id) });
       etapa = "saldo de estoque";
-      const inicial = await prisma.estoqueSaldo.count({ where: { competenciaId: c.id, importacaoId: { not: null } } });
-      if (!inicial) {
-        const e = await estoqueService.apurar(ano, mes);
-        etapas.push({ etapa, resumo: e });
-        avisos.push(...((e as { avisos?: string[] }).avisos ?? []));
-      }
+      const e = await estoqueService.apurar(ano, mes);
+      etapas.push({ etapa, resumo: e });
+      avisos.push(...((e as { avisos?: string[] }).avisos ?? []));
       etapa = "receita prévia";
       const r = await receitaPreviaService.apurar(ano, mes);
       etapas.push({ etapa, resumo: r });

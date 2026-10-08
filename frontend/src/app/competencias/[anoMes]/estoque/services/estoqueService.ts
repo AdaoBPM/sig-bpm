@@ -20,7 +20,7 @@ export type Estoque = {
   competencia: { ano: number; mes: number; status: StatusCompetencia };
   apuradoEm: string | null;
   congelado: boolean;
-  /** Saldo inicial importado, não apurado. */
+  /** O mês parte do saldo inicial importado (o primeiro mês da ferramenta), não do mês anterior. */
   inicial: boolean;
   medias: Array<{ linha: string; volume: string; valor: string; precoMedio: string }>;
   saldos: SaldoEstoque[];
