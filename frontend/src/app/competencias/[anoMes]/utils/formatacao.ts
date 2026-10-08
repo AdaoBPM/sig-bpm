@@ -26,6 +26,11 @@ export function moeda(valor: string | number) {
   }).format(Number(valor));
 }
 
+/** Valor em reais sem os centavos (as tabelas da DRE e de Resultados). */
+export function moedaInteira(valor: string | number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(valor));
+}
+
 export function inteiro(valor: number) {
   return new Intl.NumberFormat("pt-BR").format(valor);
 }

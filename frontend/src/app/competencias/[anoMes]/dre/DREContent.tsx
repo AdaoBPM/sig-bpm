@@ -12,7 +12,7 @@ import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { PainelInformacao, SecaoPainel, TextoPainel } from "@/components/shared/PainelInformacao";
 
-import { lerAnoMes, moeda } from "../utils/formatacao";
+import { lerAnoMes, moeda, moedaInteira } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
 import { AcoesApuracao, SituacaoApuracao, TextoApuracao } from "./components/PainelApuracao";
@@ -132,7 +132,8 @@ function TabelaDRE({
                       </span>
                     </td>
                     <td className="px-4 py-1.5 text-right">
-                      {l.tipo === "SECAO" ? "" : l.valor === null ? "—" : ehVolume(l) ? volume(l.valor) : moeda(l.valor)}
+                      {/* Os valores sem os centavos; os volumes com as casas da lista. */}
+                      {l.tipo === "SECAO" ? "" : l.valor === null ? "—" : ehVolume(l) ? volume(l.valor) : moedaInteira(l.valor)}
                     </td>
                   </tr>
                   {aberto && abre(l) ? (

@@ -94,7 +94,6 @@ export function IndicadoresContent() {
                 onAte={setAte}
               />
               <ExportarRelatorio
-                noTitulo
                 caminho="indicadores"
                 padrao={`Indicadores ${ano}`}
                 opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]}

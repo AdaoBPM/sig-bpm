@@ -76,7 +76,7 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="rounded-sm" disabled={gerando}>
+          <Button type="button" className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm" disabled={gerando}>
             <Download className="size-4" />
             {gerando ? "Gerando…" : "Exportar"}
           </Button>

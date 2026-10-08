@@ -35,7 +35,8 @@ const Erro = ({ erro, padrao }: { erro: unknown; padrao: string }) => (
   </div>
 );
 
-const valorDa = (l: LinhaResultado, c: Celula) => (l.tipo === "SECAO" ? "" : c.valor === null ? "—" : formato.valor(c.valor));
+/** Os valores sem casas decimais; os volumes (m³, kg, pistas, dias) com duas. */
+const valorDa = (l: LinhaResultado, c: Celula) => (l.tipo === "SECAO" ? "" : c.valor === null ? "—" : l.volume ? formato.valor(c.valor) : formato.inteiro(c.valor));
 /** Sem base (linhas de volume, contas sem R$/m³): em branco; base zerada: traço. */
 const fracao = (l: LinhaResultado, v: number | null, temBase: boolean) => (l.tipo === "SECAO" || l.volume || !temBase ? "" : v === null ? "—" : formato.pct(v));
 const unitario = (l: LinhaResultado, v: number | null) => (l.tipo === "SECAO" || l.volume || v === null ? "" : formato.valor(v));
