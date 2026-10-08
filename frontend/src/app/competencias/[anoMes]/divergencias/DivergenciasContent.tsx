@@ -20,8 +20,7 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
-import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
-import { dataHora, inteiro, moeda } from "../utils/formatacao";
+import { dataHora, moeda } from "../utils/formatacao";
 import {
   divergenciasService,
   mensagemDeErro,
@@ -32,7 +31,6 @@ import {
 } from "./services/divergenciasService";
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
-const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 const POR_PAGINA = 100;
 /** Todas as do filtro da barra vêm de uma vez: o filtro e a ordem das colunas valem para todas. */
 const TODOS = 5000;
@@ -130,8 +128,9 @@ export function DivergenciasContent() {
 
   const d = lista.data;
   const abertasNaPagina = tabela.visiveis.filter((i) => i.status === "ABERTA");
-  // O resumo só da competência da tela, com o "Resolver por Reabertura" quando ela está fechada.
-  const doResumo = (d?.competencias ?? []).filter((c) => `${c.ano}-${String(c.mes).padStart(2, "0")}` === doMes);
+  // Competência fechada com divergência aberta: "Resolver por Reabertura", ao lado do "Justificar".
+  const doMesResumo = (d?.competencias ?? []).find((c) => `${c.ano}-${String(c.mes).padStart(2, "0")}` === doMes);
+  const podeResolver = podeTratar && doMesResumo?.status === "FECHADA" && doMesResumo.abertas > 0;
 
   return (
     <div className="space-y-6">
@@ -141,7 +140,7 @@ export function DivergenciasContent() {
           <ul>
             <li>Troque de mês na barra de etapas, no início da tela; filtre o tipo e a situação nos rótulos da tabela (as abertas vêm primeiro).</li>
             <li>Marque as divergências e clique em “Justificar”, com o motivo (ao menos 15 caracteres).</li>
-            <li>Para corrigir em vez de justificar, use “Resolver por Reabertura” no quadro da competência fechada: o mês é reaberto para reimportar e reapurar.</li>
+            <li>Para corrigir em vez de justificar, use “Resolver por Reabertura”, ao lado do título, na competência fechada: o mês é reaberto para reimportar e reapurar.</li>
           </ul>
         }
         sobre={
@@ -153,37 +152,23 @@ export function DivergenciasContent() {
         }
         acoes={
           podeTratar ? (
-            <Button type="button" className={botaoPrimario} disabled={escolhidas.length === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
-              <MessageSquareText className="size-4" />
-              Justificar {escolhidas.length > 0 ? `(${escolhidas.length})` : "Selecionadas"}
-            </Button>
-          ) : null
-        }
-      />
-
-      {doResumo.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {doResumo.map((c) => (
-            <div key={rotulo(c.ano, c.mes)} className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-gray-900">{rotulo(c.ano, c.mes)}</span>
-                <StatusCompetenciaBadge status={c.status} />
-              </div>
-              <p className="text-sm text-gray-600">
-                {inteiro(c.abertas)} aberta(s) de {inteiro(c.total)}
-              </p>
-              {c.status === "FECHADA" && c.abertas > 0 && podeTratar ? (
+            <>
+              {podeResolver ? (
                 <PermissionGuard permission="competencia:editar">
-                  <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setDialogo({ tipo: "resolver", competencia: doMes })}>
-                    <LockKeyholeOpen className="size-3.5" />
-                    Resolver por reabertura
+                  <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "resolver", competencia: doMes })}>
+                    <LockKeyholeOpen className="size-4" />
+                    Resolver por Reabertura
                   </Button>
                 </PermissionGuard>
               ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
+              <Button type="button" className={botaoPrimario} disabled={escolhidas.length === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
+                <MessageSquareText className="size-4" />
+                Justificar {escolhidas.length > 0 ? `(${escolhidas.length})` : "Selecionadas"}
+              </Button>
+            </>
+          ) : null
+        }
+      />
 
       <QuadroTabela
         barra={
