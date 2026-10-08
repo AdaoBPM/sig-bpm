@@ -611,7 +611,7 @@ function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-gray-500">Aba lida: {resumo.aba}. Os valores vão para a tela Indicadores (Relatórios); não entram na apuração.</p>
+          <p className="mt-2 text-xs text-gray-500">Aba lida: {resumo.aba}. Os valores vão para a tela Indicadores (Resultados e Indicadores); não entram na apuração.</p>
         </div>
       ) : null}
       <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />

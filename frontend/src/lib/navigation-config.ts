@@ -42,7 +42,7 @@ export const navGrupos: NavGrupo[] = [
     titulo: "Apuração dos Resultados",
     itens: [
       {
-        title: "Relatórios",
+        title: "Resultados e Indicadores",
         href: "/relatorios/resultados",
         icon: FileBarChart,
         telas: [
