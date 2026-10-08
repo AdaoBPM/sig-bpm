@@ -3,13 +3,23 @@
 import { Fragment, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronDown, ChevronRight, Search, Sigma } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, ListTree, Search, Sigma } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { lerAnoMes, moeda } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
@@ -70,9 +80,9 @@ function Composicao({ l }: { l: LinhaDRE }) {
 /** Os três níveis de agrupamento da DRE, como os de contorno do BASE REALIZADO (RESULTADOS). */
 type Nivel = 1 | 2 | 3;
 const NIVEIS: Array<{ nivel: Nivel; rotulo: string; dica: string }> = [
-  { nivel: 1, rotulo: "Totais", dica: "Mostrar só os totais" },
-  { nivel: 2, rotulo: "Atribuições", dica: "Mostrar os totais e as atribuições" },
-  { nivel: 3, rotulo: "Contas", dica: "Mostrar todas as contas" },
+  { nivel: 1, rotulo: "Totais", dica: "Só os totais" },
+  { nivel: 2, rotulo: "Atribuições", dica: "Os totais e as atribuições" },
+  { nivel: 3, rotulo: "Contas", dica: "Todas as contas" },
 ];
 const CHAVE_NIVEL = "sig.dre.nivel";
 const nivelGuardado = (): Nivel => {
@@ -179,21 +189,33 @@ function TabelaDRE({ linhas: todas, anoMes, visao, titulo }: { linhas: LinhaDRE[
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       {/* Título como nos quadros da Receita Prévia e de Rateios; fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
       <div className="sticky top-[var(--topo-tabela,0px)] z-10 flex items-center gap-4 border-b border-gray-200 bg-bpm-primary px-4 py-3">
-        {/* Os níveis da planilha (1, 2 e 3 do contorno do Excel). */}
-        <div role="group" aria-label="Níveis da DRE" className="inline-flex shrink-0 overflow-hidden rounded-sm border border-black/30 bg-white/70 text-xs font-medium">
-          {NIVEIS.map((n) => (
-            <button
-              key={n.nivel}
-              type="button"
-              title={n.dica}
-              aria-pressed={nivelGeral === n.nivel}
-              onClick={() => escolherNivel(n.nivel)}
-              className={`px-2.5 py-1 ${n.nivel > 1 ? "border-l border-black/30" : ""} ${nivelGeral === n.nivel ? "bg-black text-bpm-primary" : "text-gray-900 hover:bg-white"}`}
-            >
-              {n.rotulo}
-            </button>
-          ))}
-        </div>
+        {/* Os níveis da planilha (1, 2 e 3 do contorno do Excel), num menu. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" variant="outline" size="sm" aria-label="Níveis da DRE" className="shrink-0 rounded-sm border-black/30 bg-white">
+                <ListTree className="size-4" />
+                {NIVEIS.find((n) => n.nivel === nivelGeral)?.rotulo}
+                <ChevronDown className="size-3.5" />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-gray-500">Mostrar a DRE até</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={String(nivelGeral)} onValueChange={(v) => escolherNivel(Number(v) as Nivel)}>
+                {NIVEIS.map((n) => (
+                  <DropdownMenuRadioItem key={n.nivel} value={String(n.nivel)} closeOnClick>
+                    <span className="flex flex-col">
+                      <span>{n.rotulo}</span>
+                      <span className="text-xs text-gray-500">{n.dica}</span>
+                    </span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{titulo}</h2>
       </div>
       <table className="tabela-sig w-full border-collapse text-sm">
@@ -400,7 +422,7 @@ export function DREContent() {
           <ul>
             <li>Escolha a visão nas abas: Consolidado, cada unidade, RN ou Centros de Custo (com a lista dos centros à esquerda).</li>
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com Σ, a composição do valor se abre logo abaixo.</li>
-            <li>Use “Totais”, “Atribuições” e “Contas”, na faixa do título, para recolher ou expandir a DRE nos três níveis da planilha; a seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
+            <li>No menu de níveis, na faixa do título, escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; a seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>
