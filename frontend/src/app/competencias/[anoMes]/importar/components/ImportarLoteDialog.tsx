@@ -158,6 +158,7 @@ export function ImportarLoteDialog({
   onAbrirRelatorio: (id: string) => void;
 }) {
   const campo = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const [envio, setEnvio] = useState(0);
   const [resultado, setResultado] = useState<ResultadoLote | null>(null);
   const enviar = useMutation({
@@ -166,7 +167,12 @@ export function ImportarLoteDialog({
       setResultado(null);
       return importacoesService.enviarLote(anoMes, arquivo, setEnvio);
     },
-    onSuccess: setResultado,
+    onSuccess: (r) => {
+      setResultado(r);
+      // As importações novas (na fila) já entram no Histórico e no Em Vigor da tela.
+      queryClient.invalidateQueries({ queryKey: ["importacoes", anoMes] });
+      queryClient.invalidateQueries({ queryKey: ["competencias"] });
+    },
   });
   const recomecar = () => {
     enviar.reset();

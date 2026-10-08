@@ -127,6 +127,8 @@ export function ImportarContent() {
     queryKey: ["importacoes", anoMes],
     queryFn: () => importacoesService.listar(anoMes),
     enabled: periodo !== null,
+    // Enquanto houver importação em andamento (a fila do lote segue com o diálogo fechado), a lista se atualiza sozinha.
+    refetchInterval: (q) => (q.state.data?.itens.some((i) => i.status === "PROCESSANDO") ? 2000 : false),
   });
 
   // Memorizadas porque entram no filtro dos rótulos, que recalcula quando a lista muda.
@@ -238,9 +240,10 @@ export function ImportarContent() {
                     className={`border-b border-gray-100 ${vigente ? "cursor-pointer hover:bg-gray-50" : ""}`}
                   >
                     <td className="px-4 text-sm font-medium whitespace-nowrap text-gray-900">{ROTULO_TIPO[tipo] ?? tipo}</td>
-                    <td className="max-w-xs px-4 text-sm text-gray-900">
-                      <div className="truncate" title={vigente?.nomeArquivo}>
-                        {vigente ? vigente.nomeArquivo : <span className="text-gray-400">—</span>}
+                    {/* O nome do arquivo ocupa a largura que sobra e corta o resto, sem alargar a tabela. */}
+                    <td className="w-full px-4 text-sm text-gray-900">
+                      <div className="relative h-5" title={vigente?.nomeArquivo}>
+                        <div className="absolute inset-x-0 truncate">{vigente ? vigente.nomeArquivo : <span className="text-gray-400">—</span>}</div>
                       </div>
                       {ultimaTentativa ? (
                         <button
@@ -313,8 +316,10 @@ export function ImportarContent() {
                   <tr key={imp.id} onClick={() => setAberta(imp.id)} className={`cursor-pointer border-b border-gray-100 hover:bg-gray-50 ${imp.substituidaEm ? "text-gray-500" : ""}`}>
                     <td className="px-4 text-sm whitespace-nowrap">{dataHora(imp.importadoEm)}</td>
                     <td className="px-4 text-sm whitespace-nowrap">{ROTULO_TIPO[imp.tipo] ?? imp.tipo}</td>
-                    <td className="max-w-xs truncate px-4 text-sm" title={imp.nomeArquivo}>
-                      {imp.nomeArquivo}
+                    <td className="w-full px-4 text-sm" title={imp.nomeArquivo}>
+                      <div className="relative h-5">
+                        <div className="absolute inset-x-0 truncate">{imp.nomeArquivo}</div>
+                      </div>
                     </td>
                     <td className="px-4">
                       <StatusImportacaoBadge imp={imp} />
