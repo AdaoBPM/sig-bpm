@@ -1,0 +1,65 @@
+import { api } from "@/lib/api";
+
+export type MesRelatorio = { mes: number; rotulo: string; apurado: boolean };
+/** Valor, participação (fração: 0,25 = 25%) e valor unitário (R$/m³); null quando não se aplica ou o mês não foi apurado. */
+export type Celula = { valor: number | null; pct: number | null; unitario: number | null };
+
+export type LinhaResultado = {
+  codigo: string;
+  tipo: "SECAO" | "ITEM" | "SUBTOTAL" | "TOTAL";
+  grupo: string;
+  grupoSigla: string;
+  descricao: string;
+  /** Linha de volume (m³, kg, pistas, dias): sem % nem R$/m³. */
+  volume: boolean;
+  meses: Celula[];
+  total: Celula;
+};
+
+export type Resultados = { ano: number; ate: number; meses: MesRelatorio[]; linhas: LinhaResultado[]; grupo?: string };
+export type CentrosResultados = { ano: number; ate: number; grupos: Array<{ grupo: string; departamentos: string[]; total: string }> };
+
+export type Indicador = {
+  grupo: string;
+  numero: string;
+  nome: string;
+  sentido: string;
+  unidade: string;
+  metodologia: string;
+  acumulado: "ACUM" | "ATUAL";
+  /** Calculado pela ferramenta; sem fonte (quadro de lotação, vendas…), fica listado sem valor. */
+  comFonte: boolean;
+  meses: Array<number | null>;
+  total: number | null;
+};
+export type Indicadores = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: Indicador[] };
+
+const periodo = (ano: number, ate?: number) => ({ ano, ...(ate ? { ate } : {}) });
+
+export const relatoriosService = {
+  resultados: async (ano: number, ate: number | undefined, visao: number) =>
+    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao } })).data.data,
+  centros: async (ano: number, ate: number | undefined) =>
+    (await api.get<{ data: CentrosResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros" } })).data.data,
+  centro: async (ano: number, ate: number | undefined, grupo: string) =>
+    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros", grupo } })).data.data,
+  indicadores: async (ano: number, ate: number | undefined) =>
+    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: periodo(ano, ate) })).data.data,
+};
+
+export function mensagemDeErro(error: unknown, padrao: string) {
+  return (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? padrao;
+}
+
+const numero = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+const n0 = numero(0);
+const n1 = numero(1);
+const n2 = numero(2);
+
+/** Os formatos dos relatórios, como nas planilhas: valores com duas casas, sem o símbolo da moeda (a tabela é larga). */
+export const formato = {
+  valor: (v: number) => n2.format(v),
+  pct: (v: number) => `${n1.format(v * 100)}%`,
+  inteiro: (v: number) => n0.format(v),
+  umaCasa: (v: number) => n1.format(v),
+};

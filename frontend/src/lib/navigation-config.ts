@@ -7,9 +7,12 @@ import {
   ClipboardList,
   Columns3,
   Database,
+  FileBarChart,
+  Gauge,
   History,
   KeyRound,
   Landmark,
+  ListOrdered,
   ListTree,
   Percent,
   Shuffle,
@@ -38,6 +41,15 @@ export const navGrupos: NavGrupo[] = [
   {
     titulo: "Apuração dos Resultados",
     itens: [
+      {
+        title: "Relatórios",
+        href: "/relatorios/resultados",
+        icon: FileBarChart,
+        telas: [
+          { title: "Resultados", href: "/relatorios/resultados", icon: ListOrdered, permission: "dre:ver" },
+          { title: "Indicadores", href: "/relatorios/indicadores", icon: Gauge, permission: "dre:ver" },
+        ],
+      },
       { title: "Competências", href: "/competencias", icon: CalendarDays },
       {
         title: "Cadastros da Apuração",
@@ -119,6 +131,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/(usuarios|perfis)(\/|$)/, "usuarios:ver"],
   [/^\/auditoria(\/|$)/, "auditoria:ver"],
   [/^\/divergencias(\/|$)/, "divergencia:ver"],
+  [/^\/relatorios(\/|$)/, "dre:ver"],
   [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ver"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ver"],
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
@@ -147,6 +160,8 @@ export const pageTitles: Record<string, string> = {
   "/perfis": "Perfis de Usuário",
   "/auditoria": "Auditoria",
   "/divergencias": "Divergências",
+  "/relatorios/resultados": "Resultados",
+  "/relatorios/indicadores": "Indicadores",
 };
 
 /** Uma parte do caminho no topo da tela; sem href, é a tela atual. */
