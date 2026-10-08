@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-import type { StatusCompetencia } from "../../competencias/services/competenciasService";
+import type { StatusCompetencia } from "../../../services/competenciasService";
 
 export type StatusDivergencia = "ABERTA" | "JUSTIFICADA" | "RESOLVIDA_POR_REABERTURA" | "RESOLVIDA_POR_REAPURACAO";
 export type TipoDivergencia = "BALANCETE" | "PRECO_CONTRATO";

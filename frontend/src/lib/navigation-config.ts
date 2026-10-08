@@ -1,5 +1,22 @@
 import type { LucideIcon } from "lucide-react";
-import { ArrowLeftRight, BadgeDollarSign, Building2, CalendarDays, Columns3, GitCompareArrows, History, KeyRound, Landmark, ListTree, Percent, Shuffle, Table2, Users } from "lucide-react";
+import {
+  ArrowLeftRight,
+  BadgeDollarSign,
+  Building2,
+  CalendarDays,
+  ClipboardList,
+  Columns3,
+  Database,
+  History,
+  KeyRound,
+  Landmark,
+  ListTree,
+  Percent,
+  Shuffle,
+  Table2,
+  UserCog,
+  Users,
+} from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -8,46 +25,89 @@ export type NavItem = {
   badge?: string;
   /** Permissão para o item aparecer no menu (e para a tela abrir). */
   permission?: string;
+  /**
+   * Um grupo de telas da mesma finalidade: o menu mostra só o grupo, que abre
+   * na primeira tela que o perfil alcança, e a barra no topo troca de tela.
+   */
+  telas?: NavItem[];
 };
 
 export type NavGrupo = { titulo: string; itens: NavItem[] };
 
 export const navGrupos: NavGrupo[] = [
   {
-    titulo: "Operação",
+    titulo: "Apuração dos Resultados",
     itens: [
       { title: "Competências", href: "/competencias", icon: CalendarDays },
-      { title: "Divergências", href: "/divergencias", icon: GitCompareArrows, permission: "divergencia:ver" },
+      {
+        title: "Cadastros da Apuração",
+        href: "/cadastros/reclassificacoes",
+        icon: ClipboardList,
+        telas: [
+          { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros:ver" },
+          { title: "Preços do Contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
+          { title: "Tipos de Movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros:ver" },
+          { title: "Tabela de Estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros:ver" },
+        ],
+      },
     ],
   },
   {
-    titulo: "Cadastros Contábeis",
+    titulo: "Controladoria",
     itens: [
-      { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
-      { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
-      { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros:ver" },
-      { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros:ver" },
-    ],
-  },
-  {
-    titulo: "Cadastros da Operação",
-    itens: [
-      { title: "Preços do Contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
-      { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
-      { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
-      { title: "Tipos de Movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros:ver" },
-      { title: "Tabela de Estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros:ver" },
-    ],
-  },
-  {
-    titulo: "Administração",
-    itens: [
-      { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ver" },
-      { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "usuarios:ver" },
-      { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ver" },
+      {
+        title: "Cadastros da Controladoria",
+        href: "/cadastros/unidades",
+        icon: Database,
+        telas: [
+          { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
+          { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
+          { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
+          { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
+          { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros:ver" },
+        ],
+      },
+      {
+        title: "Controle de Usuários",
+        href: "/usuarios",
+        icon: UserCog,
+        telas: [
+          { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ver" },
+          { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "usuarios:ver" },
+          { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ver" },
+        ],
+      },
     ],
   },
 ];
+
+const naTela = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+/**
+ * O item do menu com as telas que o perfil alcança: um grupo de telas abre na
+ * primeira delas e some quando nenhuma é alcançada. Null: o item não aparece.
+ */
+export function itemPermitido(item: NavItem, pode: (p: string) => boolean): NavItem | null {
+  if (!item.telas) return !item.permission || pode(item.permission) ? item : null;
+  const telas = item.telas.filter((t) => !t.permission || pode(t.permission));
+  return telas.length > 0 ? { ...item, href: telas[0].href, telas } : null;
+}
+
+/** O grupo de telas da tela aberta, com a tela: a barra no topo e o caminho usam os dois. */
+export function grupoDaTela(pathname: string): { grupo: NavItem; tela: NavItem } | null {
+  for (const g of navGrupos) {
+    for (const item of g.itens) {
+      const tela = item.telas?.find((t) => naTela(pathname, t.href));
+      if (tela) return { grupo: item, tela };
+    }
+  }
+  return null;
+}
+
+/** O item do menu aceso: o da tela, ou o grupo de telas que a contém. */
+export function itemAtivo(pathname: string, item: NavItem): boolean {
+  return item.telas ? item.telas.some((t) => naTela(pathname, t.href)) : naTela(pathname, item.href);
+}
 
 /**
  * Permissão de cada tela (Passo 22). O menu esconde o que o usuário não
@@ -59,6 +119,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/(usuarios|perfis)(\/|$)/, "usuarios:ver"],
   [/^\/auditoria(\/|$)/, "auditoria:ver"],
   [/^\/divergencias(\/|$)/, "divergencia:ver"],
+  [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ver"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ver"],
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
   [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ver"],
@@ -93,7 +154,7 @@ export type Migalha = { rotulo: string; href?: string };
 
 /**
  * O caminho no topo (G2 do levantamento de layout): "Competências › 08/2026 ›
- * Classificação" nas telas do mês; "Grupo do menu › Tela" nas demais.
+ * Classificação" nas telas do mês; "Grupo de telas › Tela" nas demais.
  */
 export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string | null): Migalha[] {
   const mes = pathname.match(/^\/competencias\/(\d{4})-(\d{2})(?:\/([^/]+))?/);
@@ -101,10 +162,8 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
     const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
     return [{ rotulo: "Competências", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
   }
-  for (const g of navGrupos) {
-    const item = g.itens.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
-    if (item) return g.titulo === "Operação" ? [{ rotulo: item.title }] : [{ rotulo: g.titulo }, { rotulo: item.title }];
-  }
+  const doGrupo = grupoDaTela(pathname);
+  if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];
   return [{ rotulo: getPageTitle(pathname) }];
 }
 

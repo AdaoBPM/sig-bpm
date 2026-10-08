@@ -7,12 +7,13 @@ import { AlertTriangle, ShieldOff } from "lucide-react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { BarraDeTelas } from "@/components/layout/BarraDeTelas";
 import { EtapasDoMes } from "@/components/layout/EtapasDoMes";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { lerRotaDoMes } from "@/lib/etapasDoMes";
-import { permissaoDaTela } from "@/lib/navigation-config";
+import { grupoDaTela, permissaoDaTela } from "@/lib/navigation-config";
 
 type ProtectedLayoutProps = {
   children: ReactNode;
@@ -40,6 +41,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const bloqueada = !isLoading && exigida !== null && !hasPermission(exigida);
   // Nas telas de um mês, a barra de etapas fica no topo do conteúdo.
   const doMes = lerRotaDoMes(pathname);
+  // Nas telas de um grupo (cadastros, usuários), a barra do grupo.
+  const doGrupo = grupoDaTela(pathname);
 
   return (
     <SidebarProvider>
@@ -49,7 +52,7 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
         <AppHeader />
         {user?.divergenciasAbertas && (pathname === "/competencias" || pathname.startsWith("/competencias/")) ? (
           // O aviso de divergência aberta (Passo 24), só nas telas de competência e do mês
-          // (decisão D3 do levantamento de layout); nas demais, o número fica no menu.
+          // (decisão D3 do levantamento de layout); leva ao mês com divergências abertas.
           <Link
             href="/divergencias"
             title="Dado recebido depois do fechamento ou da apuração que difere do gravado"
@@ -61,6 +64,7 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
         ) : null}
         <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
           {doMes && user ? <EtapasDoMes anoMes={doMes.anoMes} chave={doMes.chave} resto={doMes.resto} /> : null}
+          {doGrupo && user ? <BarraDeTelas grupo={doGrupo.grupo} atual={doGrupo.tela.href} /> : null}
           {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso /> : children}
         </div>
       </SidebarInset>

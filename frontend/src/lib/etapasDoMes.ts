@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Calculator, FileBarChart, GitCompareArrows, ListChecks, NotebookPen, Percent, Rows3, Upload, Warehouse } from "lucide-react";
+import { Calculator, FileBarChart, GitCompareArrows, ListChecks, NotebookPen, Percent, Rows3, TriangleAlert, Upload, Warehouse } from "lucide-react";
 
 /** Uma etapa do fechamento do mês: a tela, na ordem em que o Contábil trabalha. */
 export type Etapa = {
@@ -37,6 +37,7 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
     { caminho: "estoque", chave: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ver" },
     { caminho: "dre", chave: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ver" },
     { caminho: "conferencia-planilha", chave: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "apuracao:ver" },
+    { caminho: "divergencias", chave: "divergencias", rotulo: "Divergências", icone: TriangleAlert, permissao: "divergencia:ver" },
   ];
   return todas.filter((e) => hasPermission(e.permissao));
 }

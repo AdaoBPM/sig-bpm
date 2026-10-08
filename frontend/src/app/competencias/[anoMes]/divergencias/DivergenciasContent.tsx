@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LockKeyholeOpen, MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
@@ -20,8 +21,8 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
-import { StatusCompetenciaBadge } from "../competencias/components/StatusCompetenciaBadge";
-import { dataHora, inteiro, moeda } from "../competencias/[anoMes]/utils/formatacao";
+import { StatusCompetenciaBadge } from "../../components/StatusCompetenciaBadge";
+import { dataHora, inteiro, moeda } from "../utils/formatacao";
 import {
   divergenciasService,
   mensagemDeErro,
@@ -35,7 +36,6 @@ import {
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
-const anoMes = (ano: number, mes: number) => `${ano}-${String(mes).padStart(2, "0")}`;
 const POR_PAGINA = 100;
 /** Todas as do filtro da barra vêm de uma vez: o filtro e a ordem das colunas valem para todas. */
 const TODOS = 5000;
@@ -48,7 +48,7 @@ const COR_STATUS: Record<StatusDivergencia, string> = {
 
 // As células desta tabela têm px-3; o cabeçalho acompanha.
 const COLUNAS: Coluna<Divergencia>[] = [
-  { chave: "competencia", rotulo: "Competência", tipo: "data", valor: (i) => i.competencia.ano * 100 + i.competencia.mes, texto: (i) => rotulo(i.competencia.ano, i.competencia.mes), classe: "px-3!" },
+  { chave: "tipo", rotulo: "Tipo", valor: (i) => ROTULO_TIPO[i.tipo], classe: "px-3!" },
   { chave: "descricao", rotulo: "O que diverge", valor: (i) => i.descricao, classe: "px-3!" },
   { chave: "gravado", rotulo: "Gravado", tipo: "numero", alinhamento: "direita", valor: (i) => Number(i.valorGravado), texto: (i) => moeda(i.valorGravado), classe: "px-3!" },
   { chave: "recebido", rotulo: "Recebido", tipo: "numero", alinhamento: "direita", valor: (i) => Number(i.valorRecebido), texto: (i) => moeda(i.valorRecebido), classe: "px-3!" },
@@ -81,13 +81,19 @@ function DialogoTexto({ titulo, descricao, acao, onConfirmar, onFechar, pendente
   );
 }
 
+/**
+ * As divergências da competência, uma etapa do mês (depois da Conferência):
+ * o mês vem da barra de etapas, e os filtros são só o tipo e a situação.
+ */
 export function DivergenciasContent() {
   useRegistrarAcessoTela("/divergencias");
+  const { anoMes: doMes } = useParams<{ anoMes: string }>();
   const queryClient = useQueryClient();
   const { refresh } = useAuth();
   const { hasPermission } = usePermissions();
   const podeTratar = hasPermission("divergencia:editar");
-  const [filtro, setFiltro] = useState<FiltroDivergencias>({ status: "ABERTA" });
+  const [filtroLivre, setFiltro] = useState<FiltroDivergencias>({ status: "ABERTA" });
+  const filtro = useMemo(() => ({ ...filtroLivre, competencia: doMes }), [filtroLivre, doMes]);
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [dialogo, setDialogo] = useState<{ tipo: "justificar" } | { tipo: "resolver"; competencia: string } | null>(null);
   const lista = useQuery({
@@ -129,6 +135,8 @@ export function DivergenciasContent() {
 
   const d = lista.data;
   const abertasNaPagina = tabela.visiveis.filter((i) => i.status === "ABERTA");
+  // O resumo só da competência da tela, com o "Resolver por Reabertura" quando ela está fechada.
+  const doResumo = (d?.competencias ?? []).filter((c) => `${c.ano}-${String(c.mes).padStart(2, "0")}` === doMes);
 
   return (
     <div className="space-y-6">
@@ -136,28 +144,26 @@ export function DivergenciasContent() {
         titulo="Divergências"
         comoUsar={
           <ul>
-            <li>Filtre por competência, tipo e situação.</li>
+            <li>Troque de mês na barra de etapas, no início da tela; filtre por tipo e situação.</li>
             <li>Marque as divergências e clique em “Justificar”, com o motivo (ao menos 15 caracteres).</li>
             <li>Para corrigir em vez de justificar, use “Resolver por Reabertura” no quadro da competência fechada: o mês é reaberto para reimportar e reapurar.</li>
           </ul>
         }
         sobre={
           <p>
-            Dado recebido depois do fechamento ou da apuração que difere do que está gravado: o balancete de um mês fechado, ou o preço de
-            contrato que valorou a receita de um mês apurado. A competência não muda sozinha — a divergência é justificada, ou resolvida
+            Dado recebido depois do fechamento ou da apuração que difere do que está gravado nesta competência: o balancete de um mês
+            fechado, ou o preço de contrato que valorou a receita de um mês apurado. A competência não muda sozinha — a divergência é justificada, ou resolvida
             reabrindo a competência (no preço de um mês ainda aberto, reapurando).
           </p>
         }
       />
 
-      {d && d.competencias.length > 0 ? (
+      {doResumo.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {d.competencias.map((c) => (
-            <div key={anoMes(c.ano, c.mes)} className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
+          {doResumo.map((c) => (
+            <div key={rotulo(c.ano, c.mes)} className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
               <div className="flex items-center justify-between gap-2">
-                <button type="button" className="font-bold text-gray-900 hover:underline" onClick={() => muda({ competencia: anoMes(c.ano, c.mes) })}>
-                  {rotulo(c.ano, c.mes)}
-                </button>
+                <span className="font-bold text-gray-900">{rotulo(c.ano, c.mes)}</span>
                 <StatusCompetenciaBadge status={c.status} />
               </div>
               <p className="text-sm text-gray-600">
@@ -165,7 +171,7 @@ export function DivergenciasContent() {
               </p>
               {c.status === "FECHADA" && c.abertas > 0 && podeTratar ? (
                 <PermissionGuard permission="competencia:editar">
-                  <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setDialogo({ tipo: "resolver", competencia: anoMes(c.ano, c.mes) })}>
+                  <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setDialogo({ tipo: "resolver", competencia: doMes })}>
                     <LockKeyholeOpen className="size-3.5" />
                     Resolver por reabertura
                   </Button>
@@ -178,8 +184,8 @@ export function DivergenciasContent() {
 
       {/* Filtros no padrão (G8 do levantamento de layout); a situação padrão é "Aberta". */}
       <BarraDeFiltros
-        ativos={!!filtro.competencia || !!filtro.tipo || filtro.status !== "ABERTA"}
-        onLimpar={() => muda({ competencia: undefined, tipo: undefined, status: "ABERTA" })}
+        ativos={!!filtro.tipo || filtro.status !== "ABERTA"}
+        onLimpar={() => muda({ tipo: undefined, status: "ABERTA" })}
         direita={
           podeTratar ? (
             <Button type="button" className={botaoPrimario} disabled={escolhidas.length === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
@@ -189,14 +195,6 @@ export function DivergenciasContent() {
           ) : null
         }
       >
-        <SeletorFiltro
-          rotulo="Competência"
-          valor={filtro.competencia}
-          onMudar={(v) => muda({ competencia: v })}
-          todos="Todas"
-          largura="w-36"
-          opcoes={(d?.competencias ?? []).map((c) => ({ valor: anoMes(c.ano, c.mes), rotulo: rotulo(c.ano, c.mes) }))}
-        />
         <SeletorFiltro
           rotulo="Tipo"
           valor={filtro.tipo}
@@ -260,7 +258,7 @@ export function DivergenciasContent() {
               ) : d?.itens.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                    Nenhuma divergência com esses filtros.
+                    Nenhuma divergência nesta competência com esses filtros.
                   </td>
                 </tr>
               ) : d && tabela.visiveis.length === 0 ? (
@@ -286,10 +284,7 @@ export function DivergenciasContent() {
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <span className="font-medium">{rotulo(i.competencia.ano, i.competencia.mes)}</span>
-                      <div className="text-xs text-gray-500">{ROTULO_TIPO[i.tipo]}</div>
-                    </td>
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">{ROTULO_TIPO[i.tipo]}</td>
                     <td className="px-3 py-2">
                       <div className="text-gray-900">{i.descricao}</div>
                       <div className="text-xs text-gray-500">

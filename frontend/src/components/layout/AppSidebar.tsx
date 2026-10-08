@@ -25,18 +25,12 @@ import { CalendarClock } from "lucide-react";
 import { competenciasService } from "@/app/competencias/services/competenciasService";
 import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 import { etapasDoMes, rotuloDoMes } from "@/lib/etapasDoMes";
-import { navGrupos } from "@/lib/navigation-config";
-
-function isActivePath(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { itemAtivo, itemPermitido, navGrupos } from "@/lib/navigation-config";
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { hasPermission } = usePermissions();
   const { user } = useAuth();
-  // O número de divergências abertas vira o selo do item no menu.
-  const selo = (href: string) => (href === "/divergencias" && user?.divergenciasAbertas ? String(user.divergenciasAbertas) : undefined);
   // O menu mostra só o que o perfil do usuário alcança (Passo 22).
   // O mês em trabalho: o mais recente que não está fechado (ou o mais recente de todos).
   const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar(), enabled: !!user });
@@ -46,8 +40,9 @@ export function AppSidebar() {
   const algumComDadosNovos = itens.some((c) => c.dadosNovos);
   const anoMes = emTrabalho ? `${emTrabalho.ano}-${String(emTrabalho.mes).padStart(2, "0")}` : null;
   const primeiraEtapa = etapasDoMes(hasPermission, user?.acesso)[0];
+  // Os grupos de telas aparecem como um item só, que abre na primeira tela alcançada.
   const grupos = navGrupos
-    .map((g) => ({ ...g, itens: g.itens.filter((i) => !i.permission || hasPermission(i.permission)) }))
+    .map((g) => ({ ...g, itens: g.itens.map((i) => itemPermitido(i, hasPermission)).filter((i) => i !== null) }))
     .filter((g) => g.itens.length > 0);
 
   return (
@@ -59,7 +54,7 @@ export function AppSidebar() {
               <BpmLogo className="h-7 w-auto" priority />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">BPM Pré-Moldados</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">SIG · Fechamento Mensal</span>
+                <span className="truncate text-xs text-sidebar-foreground/70">SIG · Controladoria</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -98,12 +93,12 @@ export function AppSidebar() {
               <SidebarMenu>
                 {g.itens.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton isActive={isActivePath(pathname, item.href)} tooltip={item.title} render={<Link href={item.href} />}>
+                    <SidebarMenuButton isActive={itemAtivo(pathname, item)} tooltip={item.title} render={<Link href={item.href} />}>
                       <item.icon />
                       <span>{item.title}</span>
                       {item.href === "/competencias" && algumComDadosNovos ? <SinalDadosNovos titulo="Há meses com dados importados de outro mês: reapure" /> : null}
                     </SidebarMenuButton>
-                    {(item.badge ?? selo(item.href)) ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge ?? selo(item.href)}</SidebarMenuBadge> : null}
+                    {item.badge ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge}</SidebarMenuBadge> : null}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
