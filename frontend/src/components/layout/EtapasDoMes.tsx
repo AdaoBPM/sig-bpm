@@ -13,6 +13,7 @@ import { etapasDoMes, rotuloDoMes } from "@/lib/etapasDoMes";
 import { apuracaoService } from "@/app/competencias/services/apuracaoService";
 import { competenciasService } from "@/app/competencias/services/competenciasService";
 import { StatusCompetenciaBadge } from "@/app/competencias/components/StatusCompetenciaBadge";
+import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 
 type Props = { anoMes: string; chave: string | null; resto: string };
 
@@ -58,6 +59,7 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
               <button type="button" className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-sm font-bold text-gray-900 hover:bg-gray-100">
                 {rotuloDoMes(anoMes)}
                 <span className="font-normal text-gray-500">{atual?.nomeMes}</span>
+                {atual?.dadosNovos ? <SinalDadosNovos /> : null}
                 <ChevronDown className="size-3.5 text-gray-500" />
               </button>
             }
@@ -70,8 +72,9 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
               const am = `${c.ano}-${String(c.mes).padStart(2, "0")}`;
               return (
                 <DropdownMenuItem key={c.id} onClick={() => irPara(am)} className={am === anoMes ? "font-bold" : ""}>
-                  <span className="w-16 tabular-nums">{rotuloDoMes(am)}</span>
+                  <span className="w-16">{rotuloDoMes(am)}</span>
                   <span className="text-xs text-gray-500">{c.nomeMes}</span>
+                  {c.dadosNovos ? <SinalDadosNovos /> : null}
                 </DropdownMenuItem>
               );
             })}

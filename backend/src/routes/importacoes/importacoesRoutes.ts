@@ -25,12 +25,20 @@ importacoesDaCompetenciaRoutes.post(
   asyncHandler(importacoesController.receber),
 );
 
+// Importação em lote: a prévia (o arquivo cru) e, confirmada, a importação (o hash do arquivo analisado).
 importacoesDaCompetenciaRoutes.post(
-  "/lote",
+  "/lote/analise",
   autenticacao,
   verificarPermissao("importacao:editar"),
   express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }),
-  asyncHandler(importacoesController.receberLote),
+  asyncHandler(importacoesController.analisarLote),
+);
+importacoesDaCompetenciaRoutes.post(
+  "/lote/importar",
+  autenticacao,
+  verificarPermissao("importacao:editar"),
+  express.json(),
+  asyncHandler(importacoesController.importarLote),
 );
 
 /** Uma importação pelo id: montado em /importacoes. */

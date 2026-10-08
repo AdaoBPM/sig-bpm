@@ -11,6 +11,8 @@ export type Competencia = {
   abertaEm: string;
   apuradaEm: string | null;
   apuracoes: number;
+  /** Recebeu dados importados a partir de outro mês (lote) e ainda não foi apurado depois: bola verde. */
+  dadosNovos: boolean;
   fechadaEm: string | null;
   usuarioAbertura: { nome: string } | null;
   usuarioApuracao: { nome: string } | null;

@@ -1,53 +1,89 @@
-import type { TipoImportacao } from "../../generated/prisma/enums.js";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
+import { getPrismaClient } from "../../config/prisma.js";
+import type { StatusCompetencia, TipoImportacao } from "../../generated/prisma/enums.js";
 import { ArquivoInvalidoError, lerAba, listarAbas, type LinhaPlanilha } from "../../lib/xlsx.js";
+import { caminhoDoArquivo } from "./arquivosImportados.js";
 import { ABA_BALANCETE, conferirTotal, interpretarBalancete } from "./balancete/leiauteBalancete.js";
 import { ABA_DRE_COMERCIAL, interpretarDreComercial } from "./dreComercial/leiauteDreComercial.js";
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { localizarCabecalho } from "./listas/leituraListas.js";
+import { escolherAba } from "./statusImportacao.js";
 
 /**
- * A leitura prévia de um arquivo com várias abas (Passo da importação em
- * lote): associa cada aba ao tipo de arquivo que a ferramenta importa, pelo
- * nome da aba, e confere a estrutura dela com as mesmas regras do
- * processamento — sem gravar nada. As abas prontas seguem para a fila, uma
- * por vez.
+ * A leitura prévia de um arquivo com várias abas (importação em lote): associa
+ * cada aba ao tipo de arquivo pelo nome, confere a estrutura com as mesmas
+ * regras do processamento e compara, mês a mês, o que o arquivo traz com o
+ * que está importado — o mês da competência e os meses anteriores do ano. Nada
+ * é gravado: o usuário vê a prévia e decide importar.
+ *
+ * A comparação é pelo conteúdo do mês (os registros lidos, sem o número da
+ * linha na planilha), relendo o arquivo da importação em vigor: um arquivo
+ * salvo de novo, com o mesmo conteúdo no mês, não é reimportado.
  */
 
-export type SituacaoAba = "PRONTA" | "INVALIDA" | "IGNORADA";
+/** O que fazer com o mês da aba. */
+export type AcaoMes =
+  | "IMPORTAR"
+  /** Competência fechada: o balancete só é comparado com o gravado (divergências). */
+  | "COMPARAR"
+  | "SEM_MUDANCA"
+  /** Mês anterior já fechado com dados diferentes no arquivo: não é importado, só avisado. */
+  | "FECHADA"
+  | "INVALIDA";
+export type MesDaAba = { anoMes: string; atual: boolean; acao: AcaoMes; registros?: number; mensagem?: string; avisos: string[] };
 export type AbaAnalisada = {
   aba: string;
   tipo: TipoImportacao;
   rotulo: string;
-  situacao: SituacaoAba;
-  /** Por que a aba é inválida ou fica de fora. */
+  /** IGNORADA: a aba não se importa (fora do setor, mês fechado…); o motivo vai em mensagem. */
+  situacao: "ANALISADA" | "IGNORADA" | "INVALIDA";
   mensagem?: string;
-  /** Registros do mês (ou lançamentos, ou preços) que a aba traz. */
-  registros?: number;
-  avisos: string[];
+  meses: MesDaAba[];
 };
 
-type Conferencia = { registros: number; avisos: string[] };
+export type Competencia = { id: string; ano: number; mes: number; status: StatusCompetencia };
+export type Leitura = { registros: number; assinatura: string; avisos: string[] } | null;
 type Tipo = {
   tipo: TipoImportacao;
   rotulo: string;
   abas: string[];
-  /** Confere a estrutura; lança AbaInvalida com o motivo. */
-  conferir: (linhas: LinhaPlanilha[], ano: number, mes: number) => Conferencia;
+  /**
+   * POR_MES: o arquivo traz o ano, e cada mês vai para a sua competência;
+   * GLOBAL: um conteúdo só (os preços), importado na competência do envio;
+   * DEZEMBRO_2025: o saldo inicial do estoque, só em 12/2025.
+   */
+  alcance: "POR_MES" | "GLOBAL" | "DEZEMBRO_2025";
+  /** Lê o mês; null quando não há nada dele. Lança AbaInvalida com o motivo. */
+  ler: (linhas: LinhaPlanilha[], ano: number, mes: number) => Leitura;
 };
 
 class AbaInvalida extends Error {}
+const anoMesDe = (c: { ano: number; mes: number }) => `${c.ano}-${String(c.mes).padStart(2, "0")}`;
 const rotuloMes = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
+
+/** A assinatura do conteúdo: os itens sem o número da linha, em ordem estável. */
+function assinar(itens: unknown[]): string {
+  const textos = itens.map((i) => JSON.stringify(i, (k, v) => (k === "linhaArquivo" || k === "linha_arquivo" ? undefined : v))).sort();
+  return createHash("sha256").update(textos.join("\n")).digest("hex");
+}
 
 const listas: Tipo[] = [...Object.values(DEFINICOES_LISTAS), ...Object.values(DEFINICOES_LISTAS_RECEITA)].map((def) => ({
   tipo: def.tipo as TipoImportacao,
   rotulo: def.rotulo,
   abas: def.abas,
-  conferir(linhas, ano, mes) {
+  alcance: "POR_MES",
+  ler(linhas, ano, mes) {
     const l = def.interpretar(linhas, ano, mes);
     if (!l.ok) throw new AbaInvalida(l.motivo);
-    if (l.registros.length === 0 && l.rejeicoes.length === 0) throw new AbaInvalida(`A aba não tem registros de ${rotuloMes(ano, mes)}.`);
-    return { registros: l.registros.length, avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [] };
+    if (l.registros.length === 0 && l.rejeicoes.length === 0) return null;
+    return {
+      registros: l.registros.length,
+      assinatura: assinar([...l.registros, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+    };
   },
 }));
 
@@ -57,13 +93,18 @@ const TIPOS: Tipo[] = [
     tipo: "BALANCETE",
     rotulo: "Balancete (TOTVS RM)",
     abas: [ABA_BALANCETE],
-    conferir(linhas, ano, mes) {
+    alcance: "POR_MES",
+    ler(linhas, ano, mes) {
       const l = interpretarBalancete(linhas, ano, mes);
       if (!l.ok) throw new AbaInvalida(l.motivo);
+      if (l.lancamentos.length === 0 && l.rejeicoes.length === 0) return null;
       const total = conferirTotal(l.somaArquivo, l.totalGeral);
       if (total) throw new AbaInvalida(total);
-      if (l.lancamentos.length === 0 && l.rejeicoes.length === 0) throw new AbaInvalida(`A aba não tem lançamentos de ${rotuloMes(ano, mes)}.`);
-      return { registros: l.lancamentos.length, avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [] };
+      return {
+        registros: l.lancamentos.length,
+        assinatura: assinar([...l.lancamentos, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+        avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+      };
     },
   },
   ...listas,
@@ -71,21 +112,24 @@ const TIPOS: Tipo[] = [
     tipo: "DRE_COMERCIAL",
     rotulo: "DRE do Comercial",
     abas: [ABA_DRE_COMERCIAL],
-    conferir(linhas) {
+    alcance: "GLOBAL",
+    ler(linhas) {
       const l = interpretarDreComercial(linhas);
       if (!l.ok) throw new AbaInvalida(l.motivo);
       if (l.precos.length === 0) throw new AbaInvalida("A aba não tem nenhuma linha de preço.");
-      return { registros: l.precos.length, avisos: [] };
+      return { registros: l.precos.length, assinatura: assinar(l.precos), avisos: [] };
     },
   },
   {
     tipo: "ESTOQUE_INICIAL",
     rotulo: "Saldo inicial do estoque",
     abas: ["Estoque (2025)"],
-    conferir(linhas) {
+    alcance: "DEZEMBRO_2025",
+    ler(linhas) {
       const cab = localizarCabecalho(linhas, ["OBRA", "LINHA", "VOLUME (M³)", "TOTAL FISCAL (R$)"], ["NOME DA OBRA"]);
       if ("erro" in cab) throw new AbaInvalida(cab.erro);
-      return { registros: linhas.filter((l) => l.numero > cab.numero).length, avisos: [] };
+      const dados = linhas.filter((l) => l.numero > cab.numero);
+      return { registros: dados.length, assinatura: assinar(dados.map((l) => l.celulas)), avisos: [] };
     },
   },
 ];
@@ -93,35 +137,99 @@ const TIPOS: Tipo[] = [
 const mesmaAba = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 /**
- * Lê o arquivo e devolve as abas reconhecidas, com a situação de cada uma, e
- * os nomes das demais. `alcanca` diz se o usuário importa o tipo (recorte por
- * setor); `fechada`, se a competência está fechada.
+ * A assinatura do que está em vigor: relê o arquivo da importação vigente do
+ * tipo na competência (ou, nos preços, a última de qualquer competência).
+ * null quando não há importação em vigor (ou o arquivo dela não existe mais).
  */
-export function analisarArquivo(
+async function assinaturaEmVigor(t: Tipo, c: Competencia, cache: Map<string, LinhaPlanilha[] | null>): Promise<string | null> {
+  const prisma = getPrismaClient();
+  const vigente = await prisma.importacao.findFirst({
+    where: {
+      tipo: t.tipo,
+      status: "CONCLUIDA",
+      comparacao: false,
+      substituidaEm: null,
+      ...(t.alcance === "GLOBAL" ? {} : { competenciaId: c.id }),
+    },
+    orderBy: { importadoEm: "desc" },
+    select: { hashArquivo: true },
+  });
+  if (!vigente) return null;
+  const chave = `${vigente.hashArquivo}|${t.tipo}`;
+  if (!cache.has(chave)) {
+    try {
+      cache.set(chave, lerAba(await readFile(caminhoDoArquivo(vigente.hashArquivo)), escolherAba(t.abas)).linhas);
+    } catch {
+      cache.set(chave, null);
+    }
+  }
+  const linhas = cache.get(chave);
+  if (!linhas) return null;
+  try {
+    return t.ler(linhas, c.ano, c.mes)?.assinatura ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** De onde a análise tira as competências e o que está em vigor (o banco; nos testes, dados fixos). */
+export type FontesAnalise = {
+  /** As competências do ano até o mês do envio, em ordem. */
+  doAno: (origem: Competencia) => Promise<Competencia[]>;
+  dezembro2025: () => Promise<Competencia | null>;
+  /** A assinatura do conteúdo em vigor do tipo no mês, ou null. */
+  assinaturaEmVigor: (tipo: TipoImportacao, c: Competencia, ler: (linhas: LinhaPlanilha[], ano: number, mes: number) => Leitura, abas: string[], global: boolean) => Promise<string | null>;
+};
+
+const fontesDoBanco = (): FontesAnalise => {
+  const cache = new Map<string, LinhaPlanilha[] | null>();
+  return {
+    doAno: (origem) =>
+      getPrismaClient().competencia.findMany({
+        where: { ano: origem.ano, mes: { lte: origem.mes } },
+        select: { id: true, ano: true, mes: true, status: true },
+        orderBy: { mes: "asc" },
+      }),
+    dezembro2025: () => getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano: 2025, mes: 12 } }, select: { id: true, ano: true, mes: true, status: true } }),
+    assinaturaEmVigor: (tipo, c, ler, abas, global) =>
+      assinaturaEmVigor({ tipo, rotulo: "", abas, alcance: global ? "GLOBAL" : "POR_MES", ler }, c, cache),
+  };
+};
+
+/**
+ * Lê o arquivo e devolve, por aba reconhecida, o que fazer em cada mês: o da
+ * competência do envio e os anteriores do mesmo ano. `alcanca` diz se o
+ * usuário importa o tipo (recorte por setor).
+ */
+export async function analisarArquivo(
   conteudo: Uint8Array,
-  competencia: { ano: number; mes: number; fechada: boolean },
+  origem: Competencia,
   alcanca: (tipo: TipoImportacao) => boolean,
-): { abas: AbaAnalisada[]; outras: string[] } {
+  fontes: FontesAnalise = fontesDoBanco(),
+) {
   let nomes: string[];
   try {
     nomes = listarAbas(conteudo);
   } catch (error) {
     throw new ArquivoInvalidoError(error instanceof Error ? error.message : "O arquivo não é uma planilha .xlsx válida.");
   }
-  const { ano, mes, fechada } = competencia;
+  // O mês do envio e os anteriores do ano, que o arquivo também traz.
+  const doAno = await fontes.doAno(origem);
+  const dezembro = await fontes.dezembro2025();
+  const fechada = origem.status === "FECHADA";
+
   const abas: AbaAnalisada[] = [];
   const reconhecidas = new Set<string>();
   for (const t of TIPOS) {
     const aba = nomes.find((n) => t.abas.some((a) => mesmaAba(n, a)));
     if (!aba) continue;
     reconhecidas.add(aba);
-    const base = { aba, tipo: t.tipo, rotulo: t.rotulo, avisos: [] as string[] };
+    const base = { aba, tipo: t.tipo, rotulo: t.rotulo, meses: [] as MesDaAba[] };
     if (!alcanca(t.tipo)) {
       abas.push({ ...base, situacao: "IGNORADA", mensagem: "Tipo de arquivo fora dos seus setores." });
       continue;
     }
-    // O saldo inicial é o de 31/12/2025: só entra na competência 12/2025.
-    if (t.tipo === "ESTOQUE_INICIAL" && !(ano === 2025 && mes === 12)) {
+    if (t.alcance === "DEZEMBRO_2025" && !(origem.ano === 2025 && origem.mes === 12)) {
       abas.push({ ...base, situacao: "IGNORADA", mensagem: "O saldo inicial do estoque só é importado na competência 12/2025." });
       continue;
     }
@@ -129,16 +237,55 @@ export function analisarArquivo(
       abas.push({ ...base, situacao: "IGNORADA", mensagem: "A competência está fechada: importar exige reabri-la." });
       continue;
     }
+
+    let linhas: LinhaPlanilha[];
     try {
-      const { linhas } = lerAba(conteudo, () => aba);
-      const c = t.conferir(linhas, ano, mes);
-      const avisos = [...c.avisos];
-      if (fechada) avisos.unshift("Competência fechada: o balancete só é comparado com o gravado; as diferenças viram divergências.");
-      abas.push({ ...base, situacao: "PRONTA", registros: c.registros, avisos });
+      linhas = lerAba(conteudo, () => aba).linhas;
     } catch (error) {
-      if (error instanceof AbaInvalida || error instanceof ArquivoInvalidoError) abas.push({ ...base, situacao: "INVALIDA", mensagem: error.message });
-      else throw error;
+      if (error instanceof ArquivoInvalidoError) {
+        abas.push({ ...base, situacao: "INVALIDA", mensagem: error.message });
+        continue;
+      }
+      throw error;
     }
+
+    // Em mês fechado, só o balancete do próprio mês, para comparar.
+    const alvos: Competencia[] =
+      t.alcance === "POR_MES" && !fechada ? doAno : t.alcance === "DEZEMBRO_2025" && dezembro ? [dezembro] : [origem];
+    let invalidaNoMes: string | null = null;
+    for (const c of alvos) {
+      const atual = c.id === origem.id;
+      let leitura: Leitura;
+      try {
+        leitura = t.ler(linhas, c.ano, c.mes);
+      } catch (error) {
+        if (!(error instanceof AbaInvalida)) throw error;
+        if (atual) invalidaNoMes = error.message;
+        else base.meses.push({ anoMes: anoMesDe(c), atual, acao: "INVALIDA", mensagem: error.message, avisos: [] });
+        continue;
+      }
+      if (!leitura) continue; // nada deste mês no arquivo
+      const mes: MesDaAba = { anoMes: anoMesDe(c), atual, acao: "IMPORTAR", registros: leitura.registros, avisos: leitura.avisos };
+      if (atual && fechada) mes.acao = "COMPARAR";
+      else if ((await fontes.assinaturaEmVigor(t.tipo, c, t.ler, t.abas, t.alcance === "GLOBAL")) === leitura.assinatura) mes.acao = "SEM_MUDANCA";
+      else if (c.status === "FECHADA") {
+        mes.acao = "FECHADA";
+        mes.mensagem =
+          t.tipo === "BALANCETE"
+            ? "Competência fechada: as diferenças viram divergências ao importar o balancete do mês atual."
+            : "Competência fechada: os dados diferentes do arquivo não são importados.";
+      }
+      base.meses.push(mes);
+    }
+    if (invalidaNoMes && !base.meses.some((m) => m.acao === "IMPORTAR")) {
+      abas.push({ ...base, situacao: "INVALIDA", mensagem: invalidaNoMes });
+      continue;
+    }
+    abas.push({
+      ...base,
+      situacao: "ANALISADA",
+      mensagem: base.meses.length === 0 ? `A aba não tem registros de ${rotuloMes(origem.ano, origem.mes)} nem de meses anteriores.` : undefined,
+    });
   }
   return { abas, outras: nomes.filter((n) => !reconhecidas.has(n)) };
 }

@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -215,6 +216,11 @@ export function CompetenciasContent() {
                   </span>
                 )}
                 <span className="ml-2 text-xs text-gray-500">{c.nomeMes}</span>
+                {c.dadosNovos ? (
+                  <span className="ml-2 inline-flex align-middle">
+                    <SinalDadosNovos />
+                  </span>
+                ) : null}
               </td>
               <td className="px-4">
                 <StatusCompetenciaBadge status={c.status} />

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile, access, readFile } from "node:fs/promises";
 
 import { getPrismaClient } from "../../config/prisma.js";
 import type { TipoImportacao } from "../../generated/prisma/enums.js";
@@ -13,7 +13,7 @@ import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
 import { auditar } from "../auditoriaService.js";
 import { ArquivoInvalidoError } from "../../lib/xlsx.js";
-import { analisarArquivo, type AbaAnalisada } from "./analiseArquivo.js";
+import { analisarArquivo } from "./analiseArquivo.js";
 
 /**
  * Erro de regra da importação, com o status HTTP que o controller devolve.
@@ -71,6 +71,8 @@ export type ReceberImportacaoInput = {
   usuarioId: string;
   /** Confirma a importação de um arquivo idêntico a um já importado. */
   forcar: boolean;
+  /** Importação em lote: a competência (aaaa-mm) em que o arquivo foi enviado, quando é outra. */
+  enviadaDe?: string;
 };
 
 const CAMPOS_RESUMO = {
@@ -89,6 +91,9 @@ const CAMPOS_RESUMO = {
   comparacao: true,
   usuario: { select: { nome: true } },
 } as const;
+
+/** As prévias do lote, por competência e hash do arquivo, para o "Importar" não refazer a leitura. */
+const previas = new Map<string, { em: number; analise: Awaited<ReturnType<typeof analisarArquivo>> }>();
 
 export const importacoesService = {
   async receber(input: ReceberImportacaoInput) {
@@ -182,6 +187,7 @@ export const importacoesService = {
         hashArquivo: hash,
         importadoPor: input.usuarioId,
         comparacao,
+        enviadaDe: input.enviadaDe ?? null,
       },
       select: CAMPOS_RESUMO,
     });
@@ -222,41 +228,82 @@ export const importacoesService = {
   },
 
   /**
-   * Importação em lote: lê o arquivo inteiro, associa cada aba a um tipo e
-   * confere a estrutura (analisarArquivo); as abas prontas entram na fila, uma
-   * por vez, como importações separadas. Uma aba com erro não impede as
-   * outras. Arquivo idêntico ao já importado de um tipo não é reimportado.
+   * Importação em lote, passo 1: guarda o arquivo (pelo hash) e devolve a
+   * prévia — as abas reconhecidas e, em cada uma, o que fazer no mês do envio
+   * e nos meses anteriores do ano (analisarArquivo). Nada é importado.
    */
-  async receberLote(input: Omit<ReceberImportacaoInput, "tipo" | "forcar"> & { alcanca: (tipo: TipoImportacao) => boolean }) {
+  async analisarLote(input: { ano: number; mes: number; nomeArquivo: string; conteudo: Buffer; alcanca: (tipo: TipoImportacao) => boolean }) {
     if (input.conteudo.length === 0) throw new RegraImportacaoError(400, "O arquivo enviado está vazio.");
     const competencia = await competenciaPorAnoMes(input.ano, input.mes);
-    let analise: ReturnType<typeof analisarArquivo>;
+    let analise: Awaited<ReturnType<typeof analisarArquivo>>;
     try {
-      analise = analisarArquivo(input.conteudo, { ano: input.ano, mes: input.mes, fechada: competencia.status === "FECHADA" }, input.alcanca);
+      analise = await analisarArquivo(input.conteudo, competencia, input.alcanca);
     } catch (error) {
       if (error instanceof ArquivoInvalidoError) throw new RegraImportacaoError(400, error.message);
       throw error;
     }
-    type Resultado = AbaAnalisada & { importacaoId?: string; envio?: "NA_FILA" | "SEM_MUDANCA" | "ERRO" };
-    const abas: Resultado[] = [];
-    for (const a of analise.abas) {
-      if (a.situacao !== "PRONTA") {
-        abas.push(a);
-        continue;
-      }
-      try {
-        const imp = await this.receber({ ...input, tipo: a.tipo, forcar: false });
-        abas.push({ ...a, envio: "NA_FILA", importacaoId: imp.id });
-      } catch (error) {
-        if (!(error instanceof RegraImportacaoError)) throw error;
-        abas.push({
-          ...a,
-          envio: error.codigo === "ARQUIVO_JA_IMPORTADO" ? "SEM_MUDANCA" : "ERRO",
-          mensagem: error.codigo === "ARQUIVO_JA_IMPORTADO" ? "Este arquivo já foi importado para este tipo; nada muda." : error.message,
-        });
-      }
+    const hash = createHash("sha256").update(input.conteudo).digest("hex");
+    await mkdir(diretorioUploads(), { recursive: true });
+    const caminho = caminhoDoArquivo(hash);
+    try {
+      await access(caminho);
+    } catch {
+      await writeFile(caminho, input.conteudo);
     }
-    return { nomeArquivo: input.nomeArquivo, abas, outras: analise.outras };
+    previas.set(`${competencia.id}|${hash}`, { em: Date.now(), analise });
+    return { hash, nomeArquivo: input.nomeArquivo, ...analise };
+  },
+
+  /**
+   * Importação em lote, passo 2 (o usuário confirmou): relê o arquivo guardado,
+   * refaz a prévia e põe na fila, uma por vez, cada mês a importar (ou, em mês
+   * fechado, a comparar). Os meses anteriores ficam marcados com a competência
+   * do envio (enviadaDe), para a sinalização. Um mês com erro não impede os outros.
+   */
+  async importarLote(input: { ano: number; mes: number; hash: string; nomeArquivo: string; usuarioId: string; alcanca: (tipo: TipoImportacao) => boolean }) {
+    const origem = await competenciaPorAnoMes(input.ano, input.mes);
+    let conteudo: Buffer;
+    try {
+      conteudo = await readFile(caminhoDoArquivo(input.hash));
+    } catch {
+      throw new RegraImportacaoError(404, "O arquivo analisado não foi encontrado. Escolha o arquivo de novo.");
+    }
+    // A prévia que o usuário acabou de ver (até 10 minutos); senão, refeita.
+    const guardada = previas.get(`${origem.id}|${input.hash}`);
+    previas.delete(`${origem.id}|${input.hash}`);
+    const analise = guardada && Date.now() - guardada.em < 10 * 60_000 ? guardada.analise : await analisarArquivo(conteudo, origem, input.alcanca);
+    const anoMesOrigem = `${input.ano}-${String(input.mes).padStart(2, "0")}`;
+    type MesImportado = (typeof analise.abas)[number]["meses"][number] & { importacaoId?: string; erro?: string };
+    const abas = [];
+    for (const a of analise.abas) {
+      const meses: MesImportado[] = [];
+      for (const m of a.meses) {
+        if (m.acao !== "IMPORTAR" && m.acao !== "COMPARAR") {
+          meses.push(m);
+          continue;
+        }
+        const [ano, mes] = m.anoMes.split("-").map(Number);
+        try {
+          const imp = await this.receber({
+            ano,
+            mes,
+            tipo: a.tipo,
+            nomeArquivo: input.nomeArquivo,
+            conteudo,
+            usuarioId: input.usuarioId,
+            // A prévia já decidiu pelo conteúdo do mês: o hash repetido não bloqueia.
+            forcar: true,
+            enviadaDe: m.atual ? undefined : anoMesOrigem,
+          });
+          meses.push({ ...m, importacaoId: imp.id });
+        } catch (error) {
+          if (!(error instanceof RegraImportacaoError)) throw error;
+          meses.push({ ...m, erro: error.message });
+        }
+      }
+      abas.push({ ...a, meses });
+    }
+    return { hash: input.hash, nomeArquivo: input.nomeArquivo, abas, outras: analise.outras };
   },
 
   async listar(ano: number, mes: number) {

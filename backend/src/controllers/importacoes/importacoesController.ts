@@ -59,17 +59,34 @@ export const importacoesController = {
     }
   },
 
-  /** Um arquivo com várias abas: cada aba reconhecida vira uma importação, na fila. */
-  async receberLote(request: Request, response: Response) {
+  /** Importação em lote, passo 1: a prévia das abas do arquivo, sem importar. */
+  async analisarLote(request: Request, response: Response) {
     const competencia = anoMesSchema.safeParse(request.params.anoMes);
     const nome = z.string().trim().min(1).max(255).safeParse(request.query.nomeArquivo);
     if (!competencia.success || !nome.success) return response.status(400).json({ error: "Informe a competência e o nome do arquivo." });
     if (!Buffer.isBuffer(request.body)) return response.status(400).json({ error: "Envie o arquivo no corpo da requisição." });
     try {
-      const data = await importacoesService.receberLote({
+      const data = await importacoesService.analisarLote({
         ...competencia.data,
         nomeArquivo: nome.data,
         conteudo: request.body,
+        alcanca: (tipo) => alcancaLista(request.user!.acesso, tipo),
+      });
+      return response.json({ data });
+    } catch (error) {
+      return responderRegra(response, error);
+    }
+  },
+
+  /** Importação em lote, passo 2: importa, mês a mês, o que a prévia indicou. */
+  async importarLote(request: Request, response: Response) {
+    const competencia = anoMesSchema.safeParse(request.params.anoMes);
+    const corpo = z.object({ hash: z.string().regex(/^[0-9a-f]{64}$/), nomeArquivo: z.string().trim().min(1).max(255) }).safeParse(request.body);
+    if (!competencia.success || !corpo.success) return response.status(400).json({ error: "Dados inválidos." });
+    try {
+      const data = await importacoesService.importarLote({
+        ...competencia.data,
+        ...corpo.data,
         usuarioId: request.user!.sub,
         alcanca: (tipo) => alcancaLista(request.user!.acesso, tipo),
       });

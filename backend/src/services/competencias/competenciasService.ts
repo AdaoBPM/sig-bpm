@@ -42,7 +42,23 @@ export const competenciasService = {
     });
 
     const etapas = andamento ? await apuracaoService.andamento(competencias) : null;
-    return competencias.map((c) => ({ ...c, nomeMes: MESES[c.mes - 1], ...(etapas ? { andamento: etapas.get(c.id) } : {}) }));
+    // Bola verde: o mês recebeu dados importados a partir de outro mês (lote) e ainda não foi apurado depois disso.
+    const recebidas = await prisma.importacao.groupBy({
+      by: ["competenciaId"],
+      where: { competenciaId: { in: competencias.map((c) => c.id) }, enviadaDe: { not: null }, status: "CONCLUIDA", substituidaEm: null },
+      _max: { importadoEm: true },
+    });
+    const ultimaRecebida = new Map(recebidas.map((r) => [r.competenciaId, r._max.importadoEm]));
+    const dadosNovos = (c: (typeof competencias)[number]) => {
+      const em = ultimaRecebida.get(c.id);
+      return !!em && (!c.apuradaEm || em > c.apuradaEm);
+    };
+    return competencias.map((c) => ({
+      ...c,
+      nomeMes: MESES[c.mes - 1],
+      dadosNovos: dadosNovos(c),
+      ...(etapas ? { andamento: etapas.get(c.id) } : {}),
+    }));
   },
 
   async anosDisponiveis() {

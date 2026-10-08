@@ -115,21 +115,35 @@ export type ResumoEstoqueInicial = {
   porLinha: Array<{ linha: string; saldos: number; volume: string; valor: string }>;
 };
 
-/** Uma aba do arquivo do lote: o tipo que ela é e o que a ferramenta fez com ela. */
+/**
+ * O que a importação em lote faz com um mês da aba: importar, comparar (balancete de mês fechado),
+ * nada (sem mudança), só avisar (mês anterior já fechado) ou recusar (estrutura inválida no mês).
+ */
+export type AcaoMes = "IMPORTAR" | "COMPARAR" | "SEM_MUDANCA" | "FECHADA" | "INVALIDA";
+export type MesDaAba = {
+  /** aaaa-mm */
+  anoMes: string;
+  /** O mês da competência em que o arquivo foi enviado. */
+  atual: boolean;
+  acao: AcaoMes;
+  registros?: number;
+  mensagem?: string;
+  avisos: string[];
+  /** Depois de importar: a importação na fila, ou o erro ao pôr na fila. */
+  importacaoId?: string;
+  erro?: string;
+};
+/** Uma aba do arquivo do lote: o tipo e, mês a mês, o que fazer com ela. */
 export type AbaLote = {
   aba: string;
   tipo: string;
   rotulo: string;
-  /** PRONTA: estrutura conferida; INVALIDA: estrutura errada; IGNORADA: não se importa (mês fechado, fora do setor…). */
-  situacao: "PRONTA" | "INVALIDA" | "IGNORADA";
+  /** IGNORADA: não se importa (fora do setor, mês fechado…); INVALIDA: estrutura errada. O motivo vai em mensagem. */
+  situacao: "ANALISADA" | "IGNORADA" | "INVALIDA";
   mensagem?: string;
-  registros?: number;
-  avisos: string[];
-  /** Das prontas: na fila (com a importação), sem mudança (arquivo já importado) ou erro ao enfileirar. */
-  envio?: "NA_FILA" | "SEM_MUDANCA" | "ERRO";
-  importacaoId?: string;
+  meses: MesDaAba[];
 };
-export type ResultadoLote = { nomeArquivo: string; abas: AbaLote[]; outras: string[] };
+export type PreviaLote = { hash: string; nomeArquivo: string; abas: AbaLote[]; outras: string[] };
 
 export type ImportacaoDetalhe = Importacao & {
   hashArquivo: string;
@@ -162,17 +176,23 @@ export const importacoesService = {
     return data.data;
   },
 
-  /**
-   * Importação em lote: o arquivo inteiro, uma vez. O servidor associa as abas
-   * aos tipos, confere a estrutura e põe as prontas na fila, uma por vez.
-   */
-  enviarLote: async (anoMes: string, arquivo: File, onProgresso?: (percentual: number) => void): Promise<ResultadoLote> => {
-    const { data } = await api.post<{ data: ResultadoLote }>(`/proxy/competencias/${anoMes}/importacoes/lote`, arquivo, {
+  /** Importação em lote, passo 1: envia o arquivo e recebe a prévia (nada é importado). */
+  analisarLote: async (anoMes: string, arquivo: File, onProgresso?: (percentual: number) => void): Promise<PreviaLote> => {
+    const { data } = await api.post<{ data: PreviaLote }>(`/proxy/competencias/${anoMes}/importacoes/lote/analise`, arquivo, {
       params: { nomeArquivo: arquivo.name },
       headers: { "Content-Type": "application/octet-stream" },
       onUploadProgress: (e) => {
         if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
       },
+    });
+    return data.data;
+  },
+
+  /** Importação em lote, passo 2: importa o que a prévia indicou; devolve as importações na fila. */
+  importarLote: async (anoMes: string, previa: PreviaLote): Promise<PreviaLote> => {
+    const { data } = await api.post<{ data: PreviaLote }>(`/proxy/competencias/${anoMes}/importacoes/lote/importar`, {
+      hash: previa.hash,
+      nomeArquivo: previa.nomeArquivo,
     });
     return data.data;
   },

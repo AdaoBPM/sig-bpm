@@ -709,6 +709,11 @@ model Importacao {
   /// Balancete recebido para competência fechada (Passo 24): só é comparado com
   /// o gravado, e as diferenças viram divergências — nada é substituído.
   comparacao      Boolean          @default(false)
+  /// Importação em lote: a competência (aaaa-mm) em que o arquivo foi enviado,
+  /// quando o lote importou os dados do mês desta outra competência (um mês
+  /// anterior ainda aberto, com dados diferentes no arquivo). Sinaliza a
+  /// competência (bola verde) até a próxima apuração.
+  enviadaDe       String?          @map("enviada_de")
   competenciaId   String           @map("competencia_id")
   tipo            TipoImportacao
   nomeArquivo     String           @map("nome_arquivo")

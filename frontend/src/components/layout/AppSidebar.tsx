@@ -23,6 +23,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarClock } from "lucide-react";
 
 import { competenciasService } from "@/app/competencias/services/competenciasService";
+import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 import { etapasDoMes, rotuloDoMes } from "@/lib/etapasDoMes";
 import { navGrupos } from "@/lib/navigation-config";
 
@@ -41,6 +42,8 @@ export function AppSidebar() {
   const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar(), enabled: !!user });
   const itens = competencias.data?.itens ?? [];
   const emTrabalho = itens.find((c) => c.status !== "FECHADA") ?? itens[0];
+  // Bola verde em "Competências" quando algum mês recebeu dados importados de outro mês e ainda não foi reapurado.
+  const algumComDadosNovos = itens.some((c) => c.dadosNovos);
   const anoMes = emTrabalho ? `${emTrabalho.ano}-${String(emTrabalho.mes).padStart(2, "0")}` : null;
   const primeiraEtapa = etapasDoMes(hasPermission, user?.acesso)[0];
   const grupos = navGrupos
@@ -81,6 +84,7 @@ export function AppSidebar() {
                     <span>
                       {rotuloDoMes(anoMes)} <span className="font-medium text-black/70">· {emTrabalho!.nomeMes}</span>
                     </span>
+                    {emTrabalho!.dadosNovos ? <SinalDadosNovos /> : null}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -97,6 +101,7 @@ export function AppSidebar() {
                     <SidebarMenuButton isActive={isActivePath(pathname, item.href)} tooltip={item.title} render={<Link href={item.href} />}>
                       <item.icon />
                       <span>{item.title}</span>
+                      {item.href === "/competencias" && algumComDadosNovos ? <SinalDadosNovos titulo="Há meses com dados importados de outro mês: reapure" /> : null}
                     </SidebarMenuButton>
                     {(item.badge ?? selo(item.href)) ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge ?? selo(item.href)}</SidebarMenuBadge> : null}
                   </SidebarMenuItem>
