@@ -4,7 +4,10 @@ export const MESES = [
 ];
 
 /** "2026-08" → { ano: 2026, mes: 8 }, ou null se a URL não for uma competência. */
-export function lerAnoMes(anoMes: string): { ano: number; mes: number } | null {
+export function lerAnoMes(anoMes: string | undefined): { ano: number; mes: number } | null {
+  // Sem a competência: ao sair de uma tela do mês para outra rota, o Next.js ainda
+  // desenha a tela que sai com os parâmetros da nova (sem anoMes) antes de desmontá-la.
+  if (typeof anoMes !== "string") return null;
   const m = anoMes.match(/^(\d{4})-(\d{2})$/);
   if (!m) return null;
   const mes = Number(m[2]);
