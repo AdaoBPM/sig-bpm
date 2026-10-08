@@ -339,32 +339,51 @@ const SemApuracao = () => (
 /**
  * Na DRE de um centro de custo, só os custos de produção e de serviços e as
  * despesas de logística, técnicas, comerciais e administrativas, nas
- * atribuições de mão de obra (direta e indireta) e de gastos gerais (diretos,
- * indiretos e comerciais) que têm valor.
+ * atribuições de mão de obra (direta e indireta), de gastos gerais (variáveis,
+ * diretos, indiretos e comerciais) e de depreciação que têm valor. Cada total
+ * soma só as atribuições que aparecem.
  */
 const TOTAIS_DO_CENTRO = new Set(["CPP", "CSM", "CSC", "DL", "DT", "DC", "DA"]);
-const ATRIBUICOES_DO_CENTRO = new Set(["MÃO DE OBRA DIRETA", "MÃO DE OBRA INDIRETA", "GASTOS GERAIS DIRETOS", "GASTOS GERAIS INDIRETOS", "GASTOS GERAIS COMERCIAIS"]);
+const ATRIBUICOES_DO_CENTRO = new Set([
+  "MÃO DE OBRA DIRETA",
+  "MÃO DE OBRA INDIRETA",
+  "GASTOS GERAIS VARIÁVEIS",
+  "GASTOS GERAIS DIRETOS",
+  "GASTOS GERAIS INDIRETOS",
+  "GASTOS GERAIS COMERCIAIS",
+  "DEPRECIAÇÃO",
+]);
 function linhasDoCentro(linhas: LinhaDRE[]) {
   const partes = (c: string) => c.split(".");
   const prefixo = (c: string) => partes(c).slice(0, 2).join(".");
-  const atribuicoes = new Set(
-    linhas
-      .filter(
-        (l) =>
-          l.tipo !== "ITEM" &&
-          partes(l.codigo).length === 3 &&
-          TOTAIS_DO_CENTRO.has(partes(l.codigo)[0]) &&
-          ATRIBUICOES_DO_CENTRO.has(l.descricao.trim().toUpperCase()) &&
-          Number(l.valor ?? 0) !== 0,
-      )
-      .map((l) => prefixo(l.codigo)),
+  const mostradas = linhas.filter(
+    (l) =>
+      l.tipo !== "ITEM" &&
+      partes(l.codigo).length === 3 &&
+      TOTAIS_DO_CENTRO.has(partes(l.codigo)[0]) &&
+      ATRIBUICOES_DO_CENTRO.has(l.descricao.trim().toUpperCase()) &&
+      Number(l.valor ?? 0) !== 0,
   );
-  const totais = new Set([...atribuicoes].map((a) => a.split(".")[0]));
-  return linhas.filter((l) => {
-    if (l.tipo === "SECAO") return false;
-    const p = partes(l.codigo);
-    return p.length === 2 ? l.tipo !== "ITEM" && totais.has(p[0]) : atribuicoes.has(prefixo(l.codigo));
-  });
+  const atribuicoes = new Set(mostradas.map((l) => prefixo(l.codigo)));
+  // O total de cada grupo passa a ser a soma das atribuições mostradas, em centavos para não acumular erro.
+  const soma = new Map<string, number>();
+  const nomes = new Map<string, string[]>();
+  for (const a of mostradas) {
+    const g = partes(a.codigo)[0];
+    soma.set(g, (soma.get(g) ?? 0) + Math.round(Number(a.valor) * 100));
+    nomes.set(g, [...(nomes.get(g) ?? []), a.descricao]);
+  }
+  return linhas
+    .filter((l) => {
+      if (l.tipo === "SECAO") return false;
+      const p = partes(l.codigo);
+      return p.length === 2 ? l.tipo !== "ITEM" && soma.has(p[0]) : atribuicoes.has(prefixo(l.codigo));
+    })
+    .map((l) => {
+      const p = partes(l.codigo);
+      if (p.length !== 2) return l;
+      return { ...l, valor: (soma.get(p[0])! / 100).toFixed(2), composicao: { regra: `Soma das atribuições mostradas: ${nomes.get(p[0])!.join(" + ")}.` } };
+    });
 }
 
 /** O agrupamento do centro de custo, num painel à direita, como o "Sobre Esta Tela". */
@@ -390,7 +409,8 @@ function InfoAgrupamento({ grupo, centros }: { grupo: string; centros: Array<{ c
           </p>
           <p>
             Ficam na tabela os custos de produção e de serviços e as despesas de logística, técnicas, comerciais e administrativas, nas
-            atribuições de mão de obra (direta e indireta) e de gastos gerais (diretos, indiretos e comerciais) que têm valor.
+            atribuições de mão de obra (direta e indireta), de gastos gerais (variáveis, diretos, indiretos e comerciais) e de depreciação que
+            têm valor. Cada total soma só as atribuições que aparecem.
           </p>
         </TextoPainel>
         <SecaoPainel titulo="Centros de Custo Agrupados">
