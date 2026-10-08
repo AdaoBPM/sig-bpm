@@ -104,6 +104,27 @@ function fechadosAte(n: Nivel, nivel: Map<string, number>, comFilhos: Set<string
   return new Set([...comFilhos].filter((c) => nivel.get(c) === 1 || soContas.has(c)));
 }
 
+/**
+ * As linhas de resultado da DRE (a primeira ROL, CPV, MB, MC, DFO, EBITDA,
+ * EBIT, NOPAT, RF, DF e RL): um pouco mais escuras que os demais totais, e
+ * mais claras que os rótulos (pedido de 08/10/2026), na DRE e em Resultados.
+ */
+export const LINHAS_DE_RESULTADO = new Set([
+  "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL",
+  "CPV.CUSTO_DE_PRODUTO_VENDIDO_CPV",
+  "MB.MARGEM_BRUTA_MB",
+  "MC.MARGEM_DE_CONTRIBUICAO_MC",
+  "DFO.DESPESA_FIXA_OPERACIONAL_DFO",
+  "EBITDA.LUCRO_OPERACIONAL_EBITDA",
+  "EBIT.MARGEM_LIQUIDA_EBIT",
+  "NOPAT.LUCRO_OPERACIONAL_LIQUIDO_NOPAT",
+  "NOPAT.RECEITAS_FINANCEIRAS_RF",
+  "NOPAT.DESPESAS_FINANCEIRAS_DF",
+  "RL.RESULTADO_LIQUIDO_RL",
+]);
+/** O fundo da linha: as de resultado em gray-100, os demais totais e atribuições em gray-50, as contas em branco. */
+export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-gray-100" : l.tipo !== "ITEM" ? "bg-gray-50" : "bg-white");
+
 /** O recuo da descrição em cada nível. */
 export const RECUO = ["pl-4", "pl-9", "pl-14"];
 

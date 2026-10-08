@@ -8,6 +8,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
+import { TabelaLarga } from "../components/TabelaLarga";
 import { formato, mensagemDeErro, relatoriosService, type Indicador } from "../services/relatoriosService";
 
 /** Os grupos, na ordem e com os nomes das abas da planilha (Produção, Serviços…). */
@@ -117,12 +118,12 @@ export function IndicadoresContent() {
           ) : !dados ? (
             <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
           ) : (
-            // Rolagem própria nos dois sentidos: o nome do indicador e os rótulos ficam presos.
-            <div className="max-h-[calc(100vh-14rem)] overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white [--topo-tabela:0px]">
-              <table className="tabela-sig w-max min-w-full border-collapse text-sm">
-                <thead>
+            // Os rótulos presos no topo da página, abaixo do título; o corpo rola para os lados (TabelaLarga).
+            <TabelaLarga
+              larguras={[400, 56, 84, ...dados.meses.map(() => 104), 120]}
+              cabecalho={
                   <tr className="border-b border-gray-300">
-                    <th className="left-0 !z-20 min-w-96 px-3 py-2 text-left text-xs font-bold text-gray-900">Indicador</th>
+                    <th className="left-0 !z-20 px-3 py-2 text-left text-xs font-bold text-gray-900">Indicador</th>
                     <th className="px-2 py-2 text-center text-xs font-bold text-gray-900" title="Sentido">
                       Sent.
                     </th>
@@ -134,9 +135,8 @@ export function IndicadoresContent() {
                     ))}
                     <th className={`${th} border-l border-gray-300`}>Acumulado</th>
                   </tr>
-                </thead>
-                <tbody>
-                  {grupos.map((g) => (
+              }
+              corpo={grupos.map((g) => (
                     <Fragment key={g}>
                       <tr className="border-y border-gray-300">
                         <td colSpan={colunas} className="bg-gray-50 px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
@@ -150,7 +150,7 @@ export function IndicadoresContent() {
                           const tom = principal ? "text-gray-900" : "text-gray-700";
                           return (
                             <tr key={i.nome} className={`border-t border-gray-100 ${principal ? "font-bold" : ""}`}>
-                              <td className={`sticky left-0 z-10 min-w-96 bg-white py-1.5 pr-3 ${principal ? "pl-4" : "pl-9"} ${tom}`}>
+                              <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 ${principal ? "pl-4" : "pl-9"} ${tom}`}>
                                 <div className="flex items-baseline gap-2">
                                   {i.numero ? <span className="w-10 shrink-0 text-xs font-normal text-gray-400">{i.numero}</span> : null}
                                   <span>{i.nome}</span>
@@ -175,9 +175,7 @@ export function IndicadoresContent() {
                         })}
                     </Fragment>
                   ))}
-                </tbody>
-              </table>
-            </div>
+            />
           )}
         </>
       )}

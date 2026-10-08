@@ -10,11 +10,12 @@ import { CampoBusca } from "@/components/shared/Filtros";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { DetalheDialog } from "../../competencias/[anoMes]/dre/components/DetalheDialog";
-import { Agrupador, SeletorNivel, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
+import { Agrupador, fundoDaLinha, SeletorNivel, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
 import { VolumesDialog } from "../../competencias/[anoMes]/dre/components/VolumesDialog";
 import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreService";
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
+import { TabelaLarga } from "../components/TabelaLarga";
 import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type MesRelatorio, type Resultados } from "../services/relatoriosService";
 
 /** As visões da DRE, como as abas Resultados (…) da planilha, e os centros de custo. */
@@ -68,13 +69,15 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
   const abre = (l: LinhaResultado) => detalhavel(l) || listavel(l, visao);
   const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
+  // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
+  const larguras = [360, ...dados.meses.flatMap((_, i) => (i === referencia ? [112, 64, 84] : [112, 64])), 124, 64, 84];
   return (
-    // Destaque amarelo-ouro à esquerda, como na DRE. O --topo-tabela zerado prende os rótulos no topo da própria rolagem.
-    <div className="max-h-[calc(100vh-14rem)] overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white [--topo-tabela:0px]">
-      <table className="tabela-sig w-max min-w-full border-collapse text-sm">
-        <thead>
+    <div>
+      <TabelaLarga
+        larguras={larguras}
+        cabecalho={
           <tr className="border-b border-gray-300">
-            <th className="left-0 !z-20 min-w-80 px-3 py-2 text-left">
+            <th className="left-0 !z-20 px-3 py-2 text-left">
               <span className="flex items-center gap-3">
                 <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
                 <span className="text-sm font-bold tracking-wide text-gray-900 uppercase">{titulo}</span>
@@ -91,11 +94,10 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
             <th className={th}>%</th>
             <th className={th}>R$/m³</th>
           </tr>
-        </thead>
-        <tbody>
-          {niveis.linhas.filter(niveis.visivel).map((l) => {
+        }
+        corpo={niveis.linhas.filter(niveis.visivel).map((l) => {
             const destaque = l.tipo !== "ITEM";
-            const fundo = destaque ? "bg-gray-50" : "bg-white";
+            const fundo = fundoDaLinha(l);
             const td = "px-2 py-1.5 text-right whitespace-nowrap";
             const pct = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
             const clicavel = abre(l);
@@ -103,7 +105,7 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
             return (
               <tr key={l.codigo} className={destaque ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"}>
                 <td
-                  className={`sticky left-0 z-10 min-w-80 py-1.5 pr-3 ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
+                  className={`sticky left-0 z-10 py-1.5 pr-3 ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
                   onClick={clicavel && ultimoApurado ? () => setConsulta({ linha: l, mes: ultimoApurado }) : undefined}
                   title={clicavel && ultimoApurado ? dica(ultimoApurado) : undefined}
                 >
@@ -136,8 +138,7 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
               </tr>
             );
           })}
-        </tbody>
-      </table>
+      />
       {consulta && detalhavel(consulta.linha) ? (
         <DetalheDialog anoMes={anoMes(consulta.mes)} linha={consulta.linha.codigo} visao={visao} rotuloMes={consulta.mes.rotulo} onFechar={() => setConsulta(null)} />
       ) : null}

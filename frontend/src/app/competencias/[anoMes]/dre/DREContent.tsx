@@ -17,7 +17,7 @@ import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
 import { AcoesApuracao, SituacaoApuracao, TextoApuracao } from "./components/PainelApuracao";
 import { VolumesDialog } from "./components/VolumesDialog";
-import { Agrupador, SeletorNivel, useNiveisDRE } from "./components/NiveisDRE";
+import { Agrupador, fundoDaLinha, SeletorNivel, useNiveisDRE } from "./components/NiveisDRE";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
@@ -117,7 +117,7 @@ function TabelaDRE({
               return (
                 <Fragment key={l.codigo}>
                   <tr
-                    className={`${destaque ? "border-y border-gray-300 bg-gray-50 font-bold" : "border-t border-gray-100"} ${clica(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                    className={`${destaque ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"} ${fundoDaLinha(l)} ${clica(l) ? "cursor-pointer hover:bg-gray-100" : ""}`}
                     onClick={() =>
                       detalhavel(l) ? setDetalhe(l.codigo) : listavel(l, visao) ? setListasDe(l) : abre(l) ? setAberta(aberto ? null : l.codigo) : undefined
                     }
