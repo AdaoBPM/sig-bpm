@@ -7,7 +7,7 @@ import { mesesDoExercicio } from "./resultadosService.js";
  * rateios (só no mês apurado; senão NaN, e o indicador fica sem valor) e os
  * indicadores importados (com ou sem apuração).
  */
-async function dadosDoMes(competenciaId: string, apurado: boolean): Promise<DadosDoMes> {
+export async function dadosDoMes(competenciaId: string, apurado: boolean): Promise<DadosDoMes> {
   const prisma = getPrismaClient();
   const [dre, volumes, importados] = await Promise.all([
     apurado

@@ -12,6 +12,7 @@ import {
   History,
   KeyRound,
   Landmark,
+  LayoutDashboard,
   ListOrdered,
   ListTree,
   Percent,
@@ -48,6 +49,7 @@ export const navGrupos: NavGrupo[] = [
         telas: [
           { title: "Resultados", href: "/relatorios/resultados", icon: ListOrdered, permission: "dre:ver" },
           { title: "Indicadores", href: "/relatorios/indicadores", icon: Gauge, permission: "dre:ver" },
+          { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "dre:ver" },
         ],
       },
       { title: "Fechamento Mensal", href: "/competencias", icon: CalendarDays },
@@ -146,7 +148,7 @@ export function permissaoDaTela(pathname: string): string | null {
 }
 
 export const pageTitles: Record<string, string> = {
-  "/competencias": "Competências",
+  "/competencias": "Fechamento Mensal",
   "/cadastros/centros-custo": "Centros de Custo",
   "/cadastros/contas-resultado": "Contas de Resultado",
   "/cadastros/estrutura-dre": "Estrutura da DRE",
@@ -162,20 +164,21 @@ export const pageTitles: Record<string, string> = {
   "/divergencias": "Divergências",
   "/relatorios/resultados": "Resultados",
   "/relatorios/indicadores": "Indicadores",
+  "/relatorios/painel": "Painel de Bordo",
 };
 
 /** Uma parte do caminho no topo da tela; sem href, é a tela atual. */
 export type Migalha = { rotulo: string; href?: string };
 
 /**
- * O caminho no topo (G2 do levantamento de layout): "Competências › 08/2026 ›
+ * O caminho no topo (G2 do levantamento de layout): "Fechamento Mensal › 08/2026 ›
  * Classificação" nas telas do mês; "Grupo de telas › Tela" nas demais.
  */
 export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string | null): Migalha[] {
   const mes = pathname.match(/^\/competencias\/(\d{4})-(\d{2})(?:\/([^/]+))?/);
   if (mes) {
     const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
-    return [{ rotulo: "Competências", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
+    return [{ rotulo: "Fechamento Mensal", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
   }
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];

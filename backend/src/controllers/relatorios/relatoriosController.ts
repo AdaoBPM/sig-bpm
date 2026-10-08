@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auditar } from "../../services/auditoriaService.js";
 import { exportacaoRelatoriosService, type EscopoResultados } from "../../services/relatorios/exportacaoRelatoriosService.js";
 import { indicadoresService } from "../../services/relatorios/indicadoresService.js";
+import { painelService } from "../../services/relatorios/painelService.js";
 import { RelatorioError, resultadosService } from "../../services/relatorios/resultadosService.js";
 
 const anoSchema = z.coerce.number().int().min(2025).max(2100);
@@ -105,5 +106,12 @@ export const relatoriosController = {
     const p = periodo(request, response);
     if (!p) return;
     return responder(response, () => indicadoresService.listar(p.ano, p.ate));
+  },
+
+  /** O Painel de Bordo do mês ?ate= (sem ele, o último apurado). */
+  async painel(request: Request, response: Response) {
+    const p = periodo(request, response);
+    if (!p) return;
+    return responder(response, () => painelService.painel(p.ano, p.ate));
   },
 };

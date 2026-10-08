@@ -606,6 +606,8 @@ enum TipoImportacao {
   INDICADORES_ADMIN
   /// Indicadores gerenciais do mês: aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL.
   INDICADORES_COMERCIAL
+  /// Metas do orçamento do mês: aba Metas (Orçamento) do INDICADORES DE RESULTADO.
+  METAS_ORCAMENTO
 }
 
 /// ENUM: estado do processamento de uma importação.
@@ -667,6 +669,7 @@ model Competencia {
   estoqueSaldos        EstoqueSaldo[]
   estoqueIniciais      EstoqueSaldoInicial[]
   indicadoresImportados IndicadorImportado[]
+  metasImportadas       MetaImportada[]
 
   projetos            Projeto[]
   producoes           Producao[]
@@ -756,6 +759,7 @@ model Importacao {
 
   estoqueIniciais EstoqueSaldoInicial[]
   indicadores     IndicadorImportado[]
+  metas           MetaImportada[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -1112,6 +1116,26 @@ model IndicadorImportado {
   @@unique([competenciaId, nome])
   @@index([importacaoId])
   @@map("indicadores_importados")
+}
+
+/// Meta do orçamento: o valor orçado do mês de um indicador do catálogo, da
+/// aba Metas (Orçamento) do INDICADORES DE RESULTADO. É a base do "vs. Orçado"
+/// do Painel de Bordo.
+model MetaImportada {
+  id            String  @id @default(uuid())
+  competenciaId String  @map("competencia_id")
+  importacaoId  String  @map("importacao_id")
+  nome          String
+  /// DECIMAL: o valor orçado do mês, na unidade do indicador (percentuais como fração).
+  valor         Decimal
+  linhaArquivo  Int     @map("linha_arquivo")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+
+  @@unique([competenciaId, nome])
+  @@index([importacaoId])
+  @@map("metas_importadas")
 }
 
 // -----------------------------------------------------------------------------

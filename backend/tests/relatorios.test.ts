@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import { baseDoPercentual, baseDoUnitario, COD } from "../src/services/relatorios/basesResultados.js";
 import { lerIndicadores } from "../src/services/importacoes/indicadores/leituraIndicadores.js";
 import { acumular, INDICADORES } from "../src/services/relatorios/indicadores.js";
+import { acumularMeta } from "../src/services/relatorios/metasOrcamento.js";
+import { sinal, vsOrcado } from "../src/services/relatorios/painelDeBordo.js";
 
 const linha = (codigo: string) => ({ codigo, grupoSigla: codigo.split(".")[0] });
 
@@ -87,5 +89,40 @@ describe("indicadores importados (abas Indicadores (Admin.) e (Comercial))", () 
     assert.ok(fev.ok);
     assert.equal(fev.vazias, 1); // o turnover vazio em fevereiro
     assert.equal(lerIndicadores("INDICADORES_ADMIN", linhas, 2026, 3).ok, false); // sem a coluna de março
+  });
+});
+
+describe("metas do orçamento (aba Metas (Orçamento)) e Painel de Bordo", () => {
+  it("lê a coluna INDICADOR depois de GRUPO, aceita o apelido e ignora as linhas fora do catálogo", () => {
+    const linhas = [
+      { numero: 1, celulas: ["GRUPO", "INDICADOR", "TIPO", "JAN/2026", "FEV/2026"] },
+      { numero: 2, celulas: ["Produção", "Produção (Vol.): Matriz", "↑", 1065.718, 1110.197] },
+      { numero: 3, celulas: ["4", "Quadro de Lotação", "=", 297, 297] },
+      { numero: 4, celulas: ["GME", "Média Móvel da Demanda Gerada", "↑", 1.1, 1.1] },
+    ];
+    const l = lerIndicadores("METAS_ORCAMENTO", linhas, 2026, 2);
+    assert.ok(l.ok);
+    assert.deepEqual(l.valores.map((v) => [v.nome, v.valor]), [["Produção (Vol.): Matriz", 1110.197], ["Quadro de Lotação Total", 297]]);
+    assert.equal(l.rejeicoes.length, 0);
+  });
+
+  it("acumula a meta como a coluna Y da aba Metas: soma, média ponderada pela base e último mês", () => {
+    const mes = (o: Record<string, number>) => new Map(Object.entries(o));
+    const meses = [
+      mes({ "Produção (Vol.): Matriz": 1000, "Mão de Obra: Matriz": 900, "Quadro de Lotação Total": 290 }),
+      mes({ "Produção (Vol.): Matriz": 3000, "Mão de Obra: Matriz": 1000, "Quadro de Lotação Total": 297 }),
+    ];
+    assert.equal(acumularMeta("Produção (Vol.): Matriz", meses), 4000);
+    assert.equal(acumularMeta("Mão de Obra: Matriz", meses), (900 * 1000 + 1000 * 3000) / 4000);
+    assert.equal(acumularMeta("Quadro de Lotação Total", meses), 297);
+  });
+
+  it("desvio contra o orçado (com o orçado negativo, o sinal se inverte) e o sinal com a faixa de 5%", () => {
+    assert.equal(vsOrcado(110, 100), 0.10000000000000009);
+    assert.equal(vsOrcado(-450, -600), 0.25);
+    assert.equal(sinal({ sentido: "↑" }, 104, 100), 0);
+    assert.equal(sinal({ sentido: "↑" }, 90, 100), -1);
+    assert.equal(sinal({ sentido: "↓" }, 90, 100), 1);
+    assert.equal(sinal({ sentido: "↓" }, 120, null), null);
   });
 });

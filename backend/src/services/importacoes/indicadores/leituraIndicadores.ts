@@ -1,4 +1,5 @@
 import type { LinhaPlanilha, ValorCelula } from "../../../lib/xlsx.js";
+import { INDICADORES } from "../../relatorios/indicadores.js";
 
 /**
  * Indicadores gerenciais que não saem da DRE, importados mês a mês:
@@ -10,18 +11,36 @@ import type { LinhaPlanilha, ValorCelula } from "../../../lib/xlsx.js";
  *   a receita líquida vendida, a margem de contribuição das vendas, a demanda
  *   e o mix ampliado.
  *
- * As duas abas têm o mesmo leiaute: INDICADOR, TIPO, UNIDADE, METODOLOGIA e
- * uma coluna por mês (a data do dia 1º). Cada linha é um indicador, pelo nome
- * da aba Realizado (SIG) do INDICADORES DE RESULTADO; o valor é o da coluna do
- * mês da competência.
+ * E as metas do orçamento, da aba Metas (Orçamento) do INDICADORES DE
+ * RESULTADO: o valor orçado de cada um dos indicadores do catálogo, a base do
+ * "vs. Orçado" do Painel de Bordo.
+ *
+ * As abas têm o mesmo leiaute: a coluna INDICADOR (a primeira nas abas dos
+ * indicadores; a segunda, depois de GRUPO, na das metas) e uma coluna por mês
+ * (a data do dia 1º, ou JAN/2026). Cada linha é um indicador, pelo nome da aba
+ * Realizado (SIG) do INDICADORES DE RESULTADO; o valor é o da coluna do mês da
+ * competência.
  */
 
-export type TipoIndicadores = "INDICADORES_ADMIN" | "INDICADORES_COMERCIAL";
+export type TipoIndicadores = "INDICADORES_ADMIN" | "INDICADORES_COMERCIAL" | "METAS_ORCAMENTO";
 
-export const DEFINICOES_INDICADORES: Record<TipoIndicadores, { aba: string; rotulo: string; nomes: string[] }> = {
+type Definicao = {
+  aba: string;
+  rotulo: string;
+  nomes: string[];
+  /** Onde o valor é gravado: os indicadores realizados ou as metas do orçamento. */
+  destino: "INDICADOR" | "META";
+  /** Outros nomes de um indicador na aba (o nome da aba → o do catálogo). */
+  apelidos?: Record<string, string>;
+  /** Linhas com nome fora do catálogo são ignoradas, e não rejeitadas (a aba das metas tem indicadores que a ferramenta não calcula). */
+  ignorarOutros?: boolean;
+};
+
+export const DEFINICOES_INDICADORES: Record<TipoIndicadores, Definicao> = {
   INDICADORES_ADMIN: {
     aba: "Indicadores (Admin.)",
     rotulo: "Indicadores do Administrativo",
+    destino: "INDICADOR",
     nomes: [
       "Quadro de Lotação: MO Direta Matriz",
       "Quadro de Lotação: MO Direta Filial",
@@ -46,6 +65,7 @@ export const DEFINICOES_INDICADORES: Record<TipoIndicadores, { aba: string; rotu
   INDICADORES_COMERCIAL: {
     aba: "Indicadores (Comercial)",
     rotulo: "Indicadores do Comercial",
+    destino: "INDICADOR",
     nomes: [
       "Venda: Global",
       "Venda: Mercantil",
@@ -63,6 +83,14 @@ export const DEFINICOES_INDICADORES: Record<TipoIndicadores, { aba: string; rotu
       "Demanda (Pistas.): Filial",
       "Repres. do Mix Ampliado nas Vendas",
     ],
+  },
+  METAS_ORCAMENTO: {
+    aba: "Metas (Orçamento)",
+    rotulo: "Metas do Orçamento",
+    destino: "META",
+    nomes: INDICADORES.map((i) => i.nome),
+    apelidos: { "Quadro de Lotação": "Quadro de Lotação Total" },
+    ignorarOutros: true,
   },
 };
 
@@ -112,21 +140,22 @@ const numero = (v: ValorCelula): number | null => {
  */
 export function lerIndicadores(tipo: TipoIndicadores, linhas: LinhaPlanilha[], ano: number, mes: number): LeituraIndicadores {
   const def = DEFINICOES_INDICADORES[tipo];
-  const cabecalho = linhas.find((l) => normalizar(l.celulas[0]) === "INDICADOR");
+  const cabecalho = linhas.find((l) => l.celulas.slice(0, 3).some((v) => normalizar(v) === "INDICADOR"));
   if (!cabecalho) return { ok: false, motivo: `A aba não tem o cabeçalho (coluna INDICADOR). Envie a aba ${def.aba}.` };
-  const coluna = cabecalho.celulas.findIndex((v, i) => i > 0 && (() => {
+  const colunaNome = cabecalho.celulas.findIndex((v) => normalizar(v) === "INDICADOR");
+  const coluna = cabecalho.celulas.findIndex((v, i) => i > colunaNome && (() => {
     const m = mesDaColuna(v);
     return m !== null && m.ano === ano && m.mes === mes;
   })());
   if (coluna < 0) return { ok: false, motivo: `A aba não tem a coluna de ${String(mes).padStart(2, "0")}/${ano}.` };
-  const catalogo = new Map(def.nomes.map((n) => [normalizar(n), n]));
+  const catalogo = new Map([...def.nomes.map((n) => [normalizar(n), n] as const), ...Object.entries(def.apelidos ?? {}).map(([a, n]) => [normalizar(a), n] as const)]);
   const valores: ValorIndicador[] = [];
   const rejeicoes: Rejeicao[] = [];
   let lidas = 0;
   let vazias = 0;
   for (const l of linhas) {
     if (l.numero <= cabecalho.numero) continue;
-    const nome = normalizar(l.celulas[0]);
+    const nome = normalizar(l.celulas[colunaNome]);
     if (!nome) continue;
     lidas++;
     const bruto = l.celulas[coluna];
@@ -135,8 +164,12 @@ export function lerIndicadores(tipo: TipoIndicadores, linhas: LinhaPlanilha[], a
       continue;
     }
     const doCatalogo = catalogo.get(nome);
+    if (!doCatalogo && def.ignorarOutros) {
+      vazias++;
+      continue;
+    }
     if (!doCatalogo) {
-      rejeicoes.push({ linha: l.numero, codigo: "INDICADOR_DESCONHECIDO", mensagem: `"${String(l.celulas[0]).trim()}" não é um indicador do catálogo.` });
+      rejeicoes.push({ linha: l.numero, codigo: "INDICADOR_DESCONHECIDO", mensagem: `"${String(l.celulas[colunaNome]).trim()}" não é um indicador do catálogo.` });
       continue;
     }
     const v = numero(bruto);

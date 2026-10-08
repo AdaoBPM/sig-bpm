@@ -42,6 +42,32 @@ export type Indicador = {
 };
 export type Indicadores = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: Indicador[] };
 
+/** Os formatos das células do Painel de Bordo, como na planilha. */
+export type FormatoPainel = "MILHOES" | "MILHARES" | "M3" | "PISTAS" | "PCT" | "PCT_RL" | "RS_M3";
+/** O item num período: realizado, orçado, o percentual sob o realizado, o desvio (fração) e o sinal (1 melhor, 0 dentro de 5%, −1 pior). */
+export type BlocoPainel = { realizado: number | null; orcado: number | null; base: number | null; vsOrcado: number | null; sinal: -1 | 0 | 1 | null };
+export type ItemPainel = {
+  titulo: string;
+  sigla: string;
+  sentido: "↑" | "↓";
+  formato: FormatoPainel;
+  formatoAcumulado: FormatoPainel;
+  base: { rotulo: string; casas: 1 | 2 } | null;
+  separar: boolean;
+  mes: BlocoPainel;
+  acumulado: BlocoPainel;
+};
+export type QuadroPainel = { titulo: string; itens: ItemPainel[] };
+export type Painel = {
+  ano: number;
+  ate: number;
+  rotuloMes: string;
+  rotuloAcumulado: string;
+  mesApurado: boolean;
+  mesesSemMeta: string[];
+  abas: Array<{ chave: string; titulo: string; quadros: QuadroPainel[] }>;
+};
+
 const periodo = (ano: number, ate?: number) => ({ ano, ...(ate ? { ate } : {}) });
 
 export const relatoriosService = {
@@ -53,6 +79,8 @@ export const relatoriosService = {
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros", grupo } })).data.data,
   indicadores: async (ano: number, ate: number | undefined) =>
     (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: periodo(ano, ate) })).data.data,
+  painel: async (ano: number, ate: number | undefined) =>
+    (await api.get<{ data: Painel }>("/proxy/relatorios/painel", { params: periodo(ano, ate) })).data.data,
 };
 
 export function mensagemDeErro(error: unknown, padrao: string) {

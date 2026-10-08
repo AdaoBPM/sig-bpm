@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
@@ -96,15 +96,14 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
       </div>
       {/* Quebra em duas linhas quando falta largura, sem rolar a página. */}
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1">
-        {etapas.map((e, i) => {
+        {etapas.map((e) => {
           const ativa = e.chave === chave;
           return (
             <li key={e.chave} className="flex shrink-0 items-center">
-              {i > 0 ? <ChevronRight className="size-2.5 text-gray-300" aria-hidden /> : null}
               <Link
                 href={`/competencias/${anoMes}/${e.caminho}`}
                 aria-current={ativa ? "page" : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
+                className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
               >
                 {e.rotulo}
                 {sinalDe(e.chave)}

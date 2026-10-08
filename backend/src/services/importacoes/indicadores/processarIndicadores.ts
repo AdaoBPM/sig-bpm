@@ -10,10 +10,10 @@ import { DEFINICOES_INDICADORES, lerIndicadores, type TipoIndicadores } from "./
 class ArquivoRecusado extends Error {}
 
 /**
- * Importa os indicadores do mês (aba Indicadores (Admin.) ou (Comercial)): o
- * valor de cada indicador na coluna do mês. Substitui a importação anterior do
- * mesmo tipo na competência. Os indicadores não entram na apuração: importá-los
- * não pede reapuração.
+ * Importa os indicadores do mês (aba Indicadores (Admin.) ou (Comercial)) ou
+ * as metas do orçamento (aba Metas (Orçamento)): o valor de cada indicador na
+ * coluna do mês. Substitui a importação anterior do mesmo tipo na competência.
+ * Nada disso entra na apuração: importar não pede reapuração.
  */
 export async function processarIndicadores(importacaoId: string): Promise<void> {
   const prisma = getPrismaClient();
@@ -38,13 +38,15 @@ export async function processarIndicadores(importacaoId: string): Promise<void> 
         select: { id: true },
       });
       const ids = anteriores.map((a) => a.id);
-      if (ids.length > 0) {
-        await tx.indicadorImportado.deleteMany({ where: { importacaoId: { in: ids } } });
-        await tx.importacao.updateMany({ where: { id: { in: ids } }, data: { substituidaEm: new Date() } });
+      const dados = leitura.valores.map((v) => ({ competenciaId: importacao.competenciaId, importacaoId, nome: v.nome, valor: v.valor, linhaArquivo: v.linhaArquivo }));
+      if (def.destino === "META") {
+        if (ids.length > 0) await tx.metaImportada.deleteMany({ where: { importacaoId: { in: ids } } });
+        await tx.metaImportada.createMany({ data: dados });
+      } else {
+        if (ids.length > 0) await tx.indicadorImportado.deleteMany({ where: { importacaoId: { in: ids } } });
+        await tx.indicadorImportado.createMany({ data: dados });
       }
-      await tx.indicadorImportado.createMany({
-        data: leitura.valores.map((v) => ({ competenciaId: importacao.competenciaId, importacaoId, nome: v.nome, valor: v.valor, linhaArquivo: v.linhaArquivo })),
-      });
+      if (ids.length > 0) await tx.importacao.updateMany({ where: { id: { in: ids } }, data: { substituidaEm: new Date() } });
       await tx.importacao.update({
         where: { id: importacaoId },
         data: {

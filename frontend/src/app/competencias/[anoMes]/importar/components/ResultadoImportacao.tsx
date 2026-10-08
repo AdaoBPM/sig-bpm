@@ -590,17 +590,18 @@ const valorIndicador = (nome: string, v: number) =>
 
 function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
   const resumo = imp.resumo as ResumoIndicadores | null;
+  const metas = imp.tipo === "METAS_ORCAMENTO";
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />
-        <Contador rotulo="Indicadores" valor={imp.linhasAceitas} destaque="ok" detalhe="com valor no mês" />
+        <Contador rotulo={metas ? "Metas" : "Indicadores"} valor={imp.linhasAceitas} destaque="ok" detalhe="com valor no mês" />
         <Contador rotulo="Rejeitadas" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
         <Contador rotulo="Sem valor no mês" valor={imp.linhasIgnoradas} />
       </div>
       {resumo ? (
         <div className="rounded-sm border border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-900">Indicadores do Mês</h3>
+          <h3 className="text-sm font-bold text-gray-900">{metas ? "Metas do Mês" : "Indicadores do Mês"}</h3>
           <table className="tabela-sig mt-2 w-full text-sm">
             <tbody>
               {resumo.indicadores.map((i) => (
@@ -611,7 +612,12 @@ function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-gray-500">Aba lida: {resumo.aba}. Os valores vão para a tela Indicadores (Resultados e Indicadores); não entram na apuração.</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Aba lida: {resumo.aba}.{" "}
+            {metas
+              ? "Os valores são o orçado do Painel de Bordo (Resultados e Indicadores); não entram na apuração."
+              : "Os valores vão para a tela Indicadores (Resultados e Indicadores); não entram na apuração."}
+          </p>
         </div>
       ) : null}
       <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />
@@ -691,7 +697,7 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
           <ConcluidaDreComercial imp={imp} />
         ) : imp.tipo === "ESTOQUE_INICIAL" ? (
           <ConcluidaEstoqueInicial imp={imp} />
-        ) : imp.tipo === "INDICADORES_ADMIN" || imp.tipo === "INDICADORES_COMERCIAL" ? (
+        ) : imp.tipo === "INDICADORES_ADMIN" || imp.tipo === "INDICADORES_COMERCIAL" || imp.tipo === "METAS_ORCAMENTO" ? (
           <ConcluidaIndicadores imp={imp} />
         ) : (
           <ConcluidaLista imp={imp} />

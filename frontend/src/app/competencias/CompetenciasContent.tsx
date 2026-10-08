@@ -160,7 +160,7 @@ export function CompetenciasContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Competências"
+        titulo="Fechamento Mensal"
         comoUsar={
           <ul>
             <li>Use os filtros nos rótulos das colunas (por exemplo, o ano na coluna Competência).</li>

@@ -316,7 +316,7 @@ export function ImportarLoteDialog({
             {anteriores.length ? (
               <p className="flex items-center gap-2 text-xs text-gray-600">
                 <SinalDadosNovos titulo="Bola verde" />
-                Os meses anteriores importados ficam marcados com a bola verde (Competências, seletor de mês e menu lateral) até serem reapurados.
+                Os meses anteriores importados ficam marcados com a bola verde (Fechamento Mensal, seletor de mês e menu lateral) até serem reapurados.
               </p>
             ) : null}
             {exibida.abas.length > 0 ? (
