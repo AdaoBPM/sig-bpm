@@ -338,13 +338,6 @@ export function ConferenciaPlanilhaContent() {
           </p>
 
           <Tabela key={visao.unidade} visao={visao} soDiferencas={soDiferencas} />
-          {visao.totaisDaPlanilha.length > 0 ? (
-            <p className="text-xs text-gray-500">
-              Não comparado:{" "}
-              {visao.totaisDaPlanilha.map((t) => `${t.descricao} (linha ${t.linha}, ${t.planilha === null ? "—" : moeda(t.planilha)})`).join("; ")}, total que só a
-              aba {visao.aba} mostra, para somar os gastos; a DRE da ferramenta não o tem.
-            </p>
-          ) : null}
           <SemPar visao={visao} />
         </>
       ) : consulta.isPending ? (
