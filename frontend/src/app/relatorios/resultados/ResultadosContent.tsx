@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 
@@ -10,6 +10,7 @@ import { CampoBusca } from "@/components/shared/Filtros";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { DetalheDialog } from "../../competencias/[anoMes]/dre/components/DetalheDialog";
+import { InfoAgrupamento } from "../../competencias/[anoMes]/dre/components/InfoAgrupamento";
 import { Agrupador, fundoDaLinha, SeletorNivel, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
 import { VolumesDialog } from "../../competencias/[anoMes]/dre/components/VolumesDialog";
 import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreService";
@@ -58,7 +59,20 @@ const listavel = (l: LinhaResultado, visao: VisaoDetalhe) => l.volume && l.tipo 
  * consulta daquele mês (os lançamentos ou as listas, como na DRE); clicar na
  * descrição, a do mês de referência.
  */
-function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultados; titulo: string; visao: VisaoDetalhe; nomeVisao: string }) {
+function TabelaResultados({
+  dados,
+  titulo,
+  visao,
+  nomeVisao,
+  aoLadoDoTitulo,
+}: {
+  dados: Resultados;
+  titulo: string;
+  visao: VisaoDetalhe;
+  nomeVisao: string;
+  /** Conteúdo logo depois do título (o botão de informação do centro de custo), como na DRE. */
+  aoLadoDoTitulo?: ReactNode;
+}) {
   const niveis = useNiveisDRE(dados.linhas, "sig.resultados.nivel");
   const [consulta, setConsulta] = useState<{ linha: LinhaResultado; mes: MesRelatorio } | null>(null);
   const temPct = (l: LinhaResultado) => !l.volume && (l.meses.some((c) => c.pct !== null) || l.total.pct !== null);
@@ -84,6 +98,7 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
                 <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>
                   {titulo}
                 </span>
+                {aoLadoDoTitulo}
               </span>
             </th>
             {dados.meses.map((m, i) => (
@@ -217,7 +232,14 @@ function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: n
         ) : centro.isPending ? (
           <Carregando />
         ) : (
-          <TabelaResultados key={grupo ?? ""} dados={centro.data} titulo={grupo ?? ""} visao={{ grupo: grupo! }} nomeVisao={grupo ?? ""} />
+          <TabelaResultados
+            key={grupo ?? ""}
+            dados={centro.data}
+            titulo={grupo ?? ""}
+            visao={{ grupo: grupo! }}
+            nomeVisao={grupo ?? ""}
+            aoLadoDoTitulo={<InfoAgrupamento grupo={grupo ?? ""} centros={centro.data.centros ?? []} periodo="no período" />}
+          />
         )}
       </div>
     </div>

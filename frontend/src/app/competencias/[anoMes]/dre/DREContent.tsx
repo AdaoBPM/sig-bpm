@@ -3,19 +3,19 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Info, Search, Sigma } from "lucide-react";
+import { AlertTriangle, Search, Sigma } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
-import { PainelInformacao, SecaoPainel, TextoPainel } from "@/components/shared/PainelInformacao";
 
 import { lerAnoMes, moeda, moedaInteira } from "../utils/formatacao";
 import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
 import { AcoesApuracao, SituacaoApuracao, TextoApuracao } from "./components/PainelApuracao";
+import { InfoAgrupamento } from "./components/InfoAgrupamento";
 import { VolumesDialog } from "./components/VolumesDialog";
 import { Agrupador, fundoDaLinha, SeletorNivel, useNiveisDRE } from "./components/NiveisDRE";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
@@ -221,52 +221,6 @@ function linhasDoCentro(linhas: LinhaDRE[]) {
       const p = partes(l.codigo);
       return p.length === 2 ? { ...l, valor: (soma.get(p[0])! / 100).toFixed(2), composicao: null } : { ...l, composicao: null };
     });
-}
-
-/** O agrupamento do centro de custo, num painel à direita, como o "Sobre Esta Tela". */
-function InfoAgrupamento({ grupo, centros }: { grupo: string; centros: Array<{ codigoRM: string | null; nome: string }> }) {
-  const [aberto, setAberto] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setAberto(true)}
-        title="Agrupamento do centro de custo"
-        aria-label="Agrupamento do centro de custo"
-        className="shrink-0 rounded-sm p-1 text-gray-800 hover:bg-black/10 hover:text-black"
-      >
-        <Info className="size-4" />
-      </button>
-      <PainelInformacao aberto={aberto} onMudar={setAberto} titulo="Agrupamento Contábil">
-        <TextoPainel>
-          <p>
-            {grupo} reúne os centros de custo que têm este nome na coluna CENTRO DE CUSTO (CONTROLADORIA) do cadastro. A tabela mostra os
-            lançamentos contábeis desses centros, diretos e de rateio, em todas as filiais, pela linha da DRE em que foram classificados — antes do
-            rateio.
-          </p>
-          <p>
-            Ficam na tabela os custos de produção e de serviços e as despesas de logística, técnicas, comerciais e administrativas, nas
-            atribuições de mão de obra (direta e indireta), de gastos gerais (variáveis, diretos, indiretos e comerciais) e de depreciação que
-            têm valor. Cada total soma só as atribuições que aparecem.
-          </p>
-        </TextoPainel>
-        <SecaoPainel titulo="Centros de Custo Agrupados">
-          {centros.length > 0 ? (
-            <ul className="!list-none !pl-0">
-              {centros.map((c) => (
-                <li key={`${c.codigoRM}|${c.nome}`} className="flex gap-4 border-b border-gray-100 pb-1.5">
-                  <span className="w-32 shrink-0 font-medium text-gray-900">{c.codigoRM ?? "sem código"}</span>
-                  <span>{c.nome}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">Nenhum centro com lançamento neste mês.</p>
-          )}
-        </SecaoPainel>
-      </PainelInformacao>
-    </>
-  );
 }
 
 function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escolhido: string | null; onEscolher: (grupo: string) => void }) {

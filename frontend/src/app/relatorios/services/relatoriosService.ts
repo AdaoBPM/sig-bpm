@@ -18,7 +18,15 @@ export type LinhaResultado = {
   total: Celula;
 };
 
-export type Resultados = { ano: number; ate: number; meses: MesRelatorio[]; linhas: LinhaResultado[]; grupo?: string };
+export type Resultados = {
+  ano: number;
+  ate: number;
+  meses: MesRelatorio[];
+  linhas: LinhaResultado[];
+  grupo?: string;
+  /** Nos centros de custo: os centros do agrupamento com lançamento no período. */
+  centros?: Array<{ codigoRM: string | null; nome: string }>;
+};
 export type CentrosResultados = { ano: number; ate: number; grupos: Array<{ grupo: string; departamentos: string[]; total: string }> };
 
 export type Indicador = {

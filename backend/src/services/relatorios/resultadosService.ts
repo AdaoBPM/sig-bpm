@@ -162,6 +162,8 @@ export const resultadosService = {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate);
     const competencias = meses.map((m) => m.competenciaId);
     const [linhas, consolidado] = await Promise.all([estrutura(), valoresDaVisao(competencias, 0)]);
+    // Os centros do agrupamento com lançamento em algum mês (o painel explicativo, como na DRE).
+    const centros = new Map<string, { codigoRM: string | null; nome: string }>();
     const valores = await Promise.all(
       meses.map(async (m) => {
         const mapa = new Map<string, number>();
@@ -169,6 +171,7 @@ export const resultadosService = {
         try {
           const dre = await dreService.consultarCentros(ano, m.mes, grupo, acesso);
           for (const l of linhasDoCentro(dre.linhas)) if (l.valor !== null) mapa.set(l.codigo, Number(l.valor));
+          for (const cc of dre.centros) centros.set(`${cc.codigoRM}|${cc.nome}`, cc);
         } catch (error) {
           if (!(error instanceof RegraDREError && error.status === 404)) throw error; // sem valor no mês
         }
@@ -181,6 +184,7 @@ export const resultadosService = {
       ano,
       ate: ultimo,
       grupo,
+      centros: [...centros.values()].sort((a, b) => (a.codigoRM ?? "").localeCompare(b.codigoRM ?? "")),
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       linhas: montar(linhas, "centros", apurado, valores, consolidado, acesso).filter((l) => l.tipo !== "SECAO"),
     };

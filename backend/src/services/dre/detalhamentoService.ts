@@ -255,8 +255,12 @@ export const detalhamentoService = {
 
       if ("unidade" in visao) {
         if (comp?.origem || comp?.rateios?.length) blocos.push(...(await blocosDaUnidade(c.id, visao.unidade, comp)));
-      } else if (comp?.unidades?.length) {
-        // Consolidado: a origem de cada unidade que compôs o item.
+      } else if (comp?.unidades?.length || linha.tipo !== "ITEM") {
+        // Consolidado: a origem de cada unidade que compôs o item. Também num
+        // total cuja origem está nas unidades: os Impostos Operacionais são, no
+        // Consolidado, ROB − ROL, que é a soma dos lançamentos da linha em cada
+        // unidade. Os demais totais não têm origem nas unidades (são somas de
+        // linhas) e continuam com a observação de subtotal.
         const porUnidade = await prisma.resultadoApurado.findMany({
           where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: null, unidadeNegocioId: { not: null } },
           select: { composicao: true, unidadeNegocio: { select: { codigo: true } } },
