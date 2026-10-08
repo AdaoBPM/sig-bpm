@@ -123,7 +123,7 @@ function TabelaDRE({
                     }
                     title={detalhavel(l) ? "Ver os lançamentos de origem" : listavel(l, visao) ? "Ver as listas por obra" : abre(l) ? "Ver a composição" : undefined}
                   >
-                    <td className={`py-1.5 pr-4 ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"}`}>
+                    <td className={`py-1.5 pr-4 whitespace-nowrap ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"}`}>
                       <span className="inline-flex items-center gap-1">
                         {/* O agrupador da linha: abre e fecha o que está abaixo dela. */}
                         <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />

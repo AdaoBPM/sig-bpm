@@ -70,7 +70,8 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
   const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
-  const larguras = [360, ...dados.meses.flatMap((_, i) => (i === referencia ? [112, 64, 84] : [112, 64])), 124, 64, 84];
+  // A descrição sem quebra de linha: a mais longa (RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+)) ocupa 412 px.
+  const larguras = [440, ...dados.meses.flatMap((_, i) => (i === referencia ? [112, 64, 84] : [112, 64])), 124, 64, 84];
   return (
     <div>
       <TabelaLarga
@@ -80,7 +81,9 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
             <th className="left-0 !z-20 px-3 py-2 text-left">
               <span className="flex items-center gap-3">
                 <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
-                <span className="text-sm font-bold tracking-wide text-gray-900 uppercase">{titulo}</span>
+                <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>
+                  {titulo}
+                </span>
               </span>
             </th>
             {dados.meses.map((m, i) => (
@@ -105,7 +108,7 @@ function TabelaResultados({ dados, titulo, visao, nomeVisao }: { dados: Resultad
             return (
               <tr key={l.codigo} className={destaque ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"}>
                 <td
-                  className={`sticky left-0 z-10 py-1.5 pr-3 ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
+                  className={`sticky left-0 z-10 py-1.5 pr-3 whitespace-nowrap ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
                   onClick={clicavel && ultimoApurado ? () => setConsulta({ linha: l, mes: ultimoApurado }) : undefined}
                   title={clicavel && ultimoApurado ? dica(ultimoApurado) : undefined}
                 >
