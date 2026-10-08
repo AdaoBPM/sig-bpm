@@ -119,12 +119,12 @@ const venda = (tipo: string) => (m: DadosDoMes) => m.importado(`Venda: ${tipo}`)
 
 const CALCULOS: Record<string, Calculo> = {
   "Custos de Produção: Matriz (CPP)": razao(1, [L.CPP], COD.RLPF),
-  // Na Filial, sobre a ROL inteira, como na aba Resultados (Filial); o acumulado pondera pela receita do pré-fabricado (célula Q3 da aba Realizado).
-  "Custos de Produção: Filial (CPP)": (m) => ({ ...razao(2, [L.CPP], COD.RO)(m), peso: m.dre(2, COD.RLPF) }),
+  // Sobre a Receita Líquida do Pré-Fabricado, como na Matriz (aba Resultados (Filial) corrigida em 08/10/2026).
+  "Custos de Produção: Filial (CPP)": razao(2, [L.CPP], COD.RLPF),
   // O mês é o do Consolidado; o acumulado pondera os acumulados da Matriz e da Filial pela receita do pré-fabricado (célula Q4 da aba Realizado).
   "Custos de Produção: Total (CPP)": (m) => ({
     valor: divide(m.dre(0, L.CPP), m.dre(0, COD.RLPF)),
-    componentes: [razao(1, [L.CPP], COD.RLPF)(m), { ...razao(2, [L.CPP], COD.RO)(m), peso: m.dre(2, COD.RLPF) }].map((p) => ({ valor: p.valor, peso: p.peso ?? 0 })),
+    componentes: [razao(1, [L.CPP], COD.RLPF)(m), razao(2, [L.CPP], COD.RLPF)(m)].map((p) => ({ valor: p.valor, peso: p.peso ?? 0 })),
   }),
   "Produção (Vol.): Matriz": v(1, COD.PRODUCAO),
   "Produção (Vol.): Filial": v(2, COD.PRODUCAO),

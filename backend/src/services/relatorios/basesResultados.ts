@@ -5,7 +5,8 @@
  *
  * - %: a receita bruta, os impostos e as receitas líquidas por natureza sobre
  *   a ROB; os custos de produção (CPP) sobre a Receita Líquida do
- *   Pré-Fabricado (na Filial, sobre a ROL); os de montagem (CSM) sobre a
+ *   Pré-Fabricado (também na Filial: corrigido na planilha em 08/10/2026,
+ *   antes era sobre a ROL); os de montagem (CSM) sobre a
  *   Receita Líquida de Montagem; os complementares (CSC) sobre a Receita
  *   Líquida Complementar; Frete e Descarga sobre a Receita Líquida de Frete; o
  *   resto sobre a ROL. As linhas de volume (PS) não têm %.
@@ -45,7 +46,7 @@ export function baseDoPercentual(visao: VisaoResultados, l: Linha): string | nul
   if (GRUPOS_DE_VOLUME.has(l.grupoSigla)) return null;
   if (l.codigo === COD.RO || l.codigo === COD.ROL) return l.codigo;
   if (l.grupoSigla === "ROB" || l.grupoSigla === "IRB" || l.grupoSigla === "ROL") return COD.ROB;
-  if (l.grupoSigla === "CPP") return visao === 2 ? COD.ROL : COD.RLPF;
+  if (l.grupoSigla === "CPP") return COD.RLPF;
   if (l.grupoSigla === "CSM") return COD.RLM;
   if (l.grupoSigla === "CSC") return COD.RLC;
   if (l.codigo === COD.FRETE) return COD.RLF;

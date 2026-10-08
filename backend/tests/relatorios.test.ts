@@ -13,7 +13,7 @@ describe("relatório de Resultados: bases do % e do R$/m³ (abas Resultados (…
     assert.equal(baseDoPercentual(0, linha(COD.RLM)), COD.ROB);
     assert.equal(baseDoPercentual(0, linha("IRB.IO.IMPOSTOS_OPERACIONAIS")), COD.ROB);
     assert.equal(baseDoPercentual(0, linha("CPP.MOD.REMUNERACOES_CLT")), COD.RLPF);
-    assert.equal(baseDoPercentual(2, linha("CPP.MOD.REMUNERACOES_CLT")), COD.ROL); // Filial: sobre a ROL
+    assert.equal(baseDoPercentual(2, linha("CPP.MOD.REMUNERACOES_CLT")), COD.RLPF); // Filial também (planilha corrigida em 08/10/2026)
     assert.equal(baseDoPercentual(3, linha("CSM.CUSTOS_DE_SERVICOS_MONTAGEM_CSM")), COD.RLM);
     assert.equal(baseDoPercentual(3, linha("CSC.MOD.HORAS_EXTRAS")), COD.RLC);
     assert.equal(baseDoPercentual(0, linha(COD.FRETE)), COD.RLF);
