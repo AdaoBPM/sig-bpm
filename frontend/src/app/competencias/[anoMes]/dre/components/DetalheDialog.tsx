@@ -14,7 +14,14 @@ import type { Natureza } from "../../receita-previa/services/receitaPreviaServic
 import { moeda } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, UNIDADES, type BlocoDetalhe, type LancamentoDetalhe, type VisaoDetalhe } from "../services/dreService";
 
-type Props = { anoMes: string; linha: string; visao: VisaoDetalhe; onFechar: () => void };
+type Props = {
+  anoMes: string;
+  linha: string;
+  visao: VisaoDetalhe;
+  onFechar: () => void;
+  /** O mês no título ("AGO/26"), quando a tela mostra vários meses (Resultados). */
+  rotuloMes?: string;
+};
 
 const nomeUnidade = (u?: number) => UNIDADES.find((x) => x.codigo === u)?.nome;
 const percentual = (p: string) => `${(Number(p) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`;
@@ -133,7 +140,7 @@ function TabelaLancamentos({ lancamentos, multiplica }: { lancamentos: Lancament
 }
 
 /** Detalhamento de um valor da DRE até os lançamentos de origem. */
-export function DetalheDialog({ anoMes, linha, visao, onFechar }: Props) {
+export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Props) {
   const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza } | null>(null);
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["dre", anoMes, "detalhe", linha, visao],
@@ -149,7 +156,7 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar }: Props) {
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>
-            {data ? `${data.visao} · ${data.linha.descricao}` : "Detalhamento"}
+            {data ? `${data.visao} · ${data.linha.descricao}${rotuloMes ? ` · ${rotuloMes}` : ""}` : "Detalhamento"}
             {data?.valor ? <span className="ml-2 text-gray-600">{moeda(data.valor)}</span> : null}
           </DialogTitle>
           <DialogDescription>{data?.regra ?? "Os lançamentos que formaram o valor, como foram apurados."}</DialogDescription>

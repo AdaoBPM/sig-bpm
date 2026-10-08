@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
+import { podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
 import { linhasDoCentro } from "../dre/recorteCentros.js";
 import { baseDoPercentual, baseDoUnitario, basesDoConsolidado, COD, GRUPOS_DE_VOLUME, type VisaoResultados } from "./basesResultados.js";
@@ -82,6 +83,7 @@ function montar(
   apurado: boolean[],
   valores: Array<Map<string, number>>,
   bases: Array<Map<string, number>>,
+  acesso: Acesso,
 ) {
   const temValor = new Set(valores.flatMap((m) => [...m.keys()]));
   return linhas
@@ -104,6 +106,8 @@ function montar(
         grupoSigla: l.grupoSigla,
         descricao: l.descricao,
         volume,
+        /** O usuário alcança os lançamentos da linha (o recorte do Gestor por departamento), como na DRE. */
+        podeDetalhar: visao === "centros" || podeVerMovimentos(acesso, l),
         meses,
         total: {
           valor: total,
@@ -116,7 +120,7 @@ function montar(
 
 export const resultadosService = {
   /** Uma visão da DRE (0 Consolidado, 1..5 as unidades) mês a mês, até o mês `ate`. */
-  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number) {
+  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate);
     const competencias = meses.map((m) => m.competenciaId);
     const [linhas, valores] = await Promise.all([estrutura(), valoresDaVisao(competencias, visao)]);
@@ -124,7 +128,7 @@ export const resultadosService = {
     // Em Despesas e Extra e no RN, a ROL do Consolidado abre a tabela, como nas abas da planilha.
     if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
     const apurado = meses.map((m) => m.competenciaId !== null);
-    return { ano, ate: ultimo, meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })), linhas: montar(linhas, visao, apurado, valores, consolidado) };
+    return { ano, ate: ultimo, meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })), linhas: montar(linhas, visao, apurado, valores, consolidado, acesso) };
   },
 
   /** Os agrupamentos de centros de custo com valor em algum mês, com o total do exercício (o da tabela de cada um). */
@@ -178,7 +182,7 @@ export const resultadosService = {
       ate: ultimo,
       grupo,
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
-      linhas: montar(linhas, "centros", apurado, valores, consolidado).filter((l) => l.tipo !== "SECAO"),
+      linhas: montar(linhas, "centros", apurado, valores, consolidado, acesso).filter((l) => l.tipo !== "SECAO"),
     };
   },
 };

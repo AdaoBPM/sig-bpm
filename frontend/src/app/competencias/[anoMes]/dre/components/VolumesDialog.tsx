@@ -19,6 +19,8 @@ type Props = {
   unidade?: number;
   /** "Consolidado", "Matriz"… para o título. */
   nomeVisao: string;
+  /** O mês no título ("AGO/26"), quando a tela mostra vários meses (Resultados). */
+  rotuloMes?: string;
   /** O valor apurado da linha, para avisar quando as listas mudaram depois da apuração. */
   valorApurado: string | null;
   onFechar: () => void;
@@ -34,7 +36,7 @@ const quantidade = (v: number | null, medida: string | null) =>
  * Pistas, Metalurgia, Expedição, Montagem, Acompanhamento), somadas por obra,
  * pela mesma regra da aba Totais que a apuração usa.
  */
-export function VolumesDialog({ anoMes, linha, unidade, nomeVisao, valorApurado, onFechar }: Props) {
+export function VolumesDialog({ anoMes, linha, unidade, nomeVisao, valorApurado, onFechar, rotuloMes }: Props) {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["dre", anoMes, "volumes", linha, unidade ?? "consolidado"],
     queryFn: () => dreService.volumes(anoMes, linha, unidade),
@@ -49,6 +51,7 @@ export function VolumesDialog({ anoMes, linha, unidade, nomeVisao, valorApurado,
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {nomeVisao} · {data?.linha ?? "Volume"}
+            {rotuloMes ? ` · ${rotuloMes}` : ""}
           </DialogTitle>
           <DialogDescription>
             {data ? `${inteiro(data.linhas.reduce((n, l) => n + l.registros, 0))} registro(s) das listas, ` : ""}somados por obra, pela regra da aba Totais

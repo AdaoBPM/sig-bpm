@@ -67,7 +67,7 @@ export const relatoriosController = {
       return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso) : resultadosService.listarCentros(p.ano, p.ate, acesso)));
     }
     const visao = v.data as 0 | 1 | 2 | 3 | 4 | 5;
-    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate));
+    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso));
   },
 
   /**

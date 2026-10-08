@@ -12,6 +12,8 @@ export type LinhaResultado = {
   descricao: string;
   /** Linha de volume (m³, kg, pistas, dias): sem % nem R$/m³. */
   volume: boolean;
+  /** O usuário alcança os lançamentos da linha (o recorte do Gestor por departamento). */
+  podeDetalhar: boolean;
   meses: Celula[];
   total: Celula;
 };

@@ -18,7 +18,7 @@ export type OpcaoExportar = { chave: string; excel: string; pdf: string; params:
  * O menu Exportar dos relatórios, como o da DRE: Excel e PDF, cada um com as
  * opções da tela (a visão atual, todas as unidades, todos os centros).
  */
-export function ExportarRelatorio({ caminho, opcoes, padrao }: { caminho: string; opcoes: OpcaoExportar[]; padrao: string }) {
+export function ExportarRelatorio({ caminho, opcoes, padrao, noTitulo }: { caminho: string; opcoes: OpcaoExportar[]; padrao: string; /** Na altura do título: em amarelo-ouro, como os demais botões dali. */ noTitulo?: boolean }) {
   const [gerando, setGerando] = useState(false);
 
   async function baixar(formato: Formato, o: OpcaoExportar) {
@@ -44,7 +44,12 @@ export function ExportarRelatorio({ caminho, opcoes, padrao }: { caminho: string
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="rounded-sm" disabled={gerando}>
+          <Button
+            type="button"
+            variant={noTitulo ? "default" : "outline"}
+            className={noTitulo ? "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm" : "rounded-sm"}
+            disabled={gerando}
+          >
             <Download className="size-4" />
             {gerando ? "Gerando…" : "Exportar"}
           </Button>

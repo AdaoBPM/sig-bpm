@@ -79,6 +79,29 @@ export function IndicadoresContent() {
             <p>Um indicador importado fica sem valor no mês em que a aba não foi importada.</p>
           </>
         }
+        acoes={
+          ano && ate ? (
+            <div className="flex flex-wrap items-center gap-4">
+              <SeletorPeriodo
+                ano={ano}
+                ate={ate}
+                anos={exercicios.anos}
+                meses={meses}
+                onAno={(a) => {
+                  setAno(a);
+                  setAte(null);
+                }}
+                onAte={setAte}
+              />
+              <ExportarRelatorio
+                noTitulo
+                caminho="indicadores"
+                padrao={`Indicadores ${ano}`}
+                opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]}
+              />
+            </div>
+          ) : null
+        }
       />
 
       {exercicios.carregando ? (
@@ -87,22 +110,6 @@ export function IndicadoresContent() {
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>
       ) : (
         <>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <SeletorPeriodo
-              ano={ano}
-              ate={ate}
-              anos={exercicios.anos}
-              meses={meses}
-              onAno={(a) => {
-                setAno(a);
-                setAte(null);
-              }}
-              onAte={setAte}
-            />
-            <div className="flex items-center gap-4">
-              <ExportarRelatorio caminho="indicadores" padrao={`Indicadores ${ano}`} opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]} />
-            </div>
-          </div>
 
           {consulta.isError ? (
             <div className="rounded-sm border border-red-200 bg-red-50 p-4">

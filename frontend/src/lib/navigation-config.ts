@@ -50,7 +50,7 @@ export const navGrupos: NavGrupo[] = [
           { title: "Indicadores", href: "/relatorios/indicadores", icon: Gauge, permission: "dre:ver" },
         ],
       },
-      { title: "Competências", href: "/competencias", icon: CalendarDays },
+      { title: "Fechamento Mensal", href: "/competencias", icon: CalendarDays },
       {
         title: "Cadastros da Apuração",
         href: "/cadastros/reclassificacoes",

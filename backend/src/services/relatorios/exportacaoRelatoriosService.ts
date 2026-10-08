@@ -10,8 +10,8 @@ import { RelatorioError, resultadosService } from "./resultadosService.js";
  * visão, todas as unidades ou todos os centros de custo, uma por aba ou por
  * página) e os Indicadores. No Excel vão todas as colunas da tela; no PDF
  * (A4 deitada), cada mês traz o valor e, embaixo, a participação, e o fim da
- * linha o total do exercício com o % e o R$/m³ (o mês escolhido já é a última
- * coluna dos meses).
+ * linha o total do exercício com o % e o R$/m³. O R$/m³ só aparece no mês de
+ * referência (o último) e no total.
  */
 
 export type EscopoResultados = { tipo: "visao"; visao: 0 | 1 | 2 | 3 | 4 | 5 } | { tipo: "centro"; grupo: string } | { tipo: "unidades" } | { tipo: "centros" };
@@ -66,7 +66,6 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
 
 function abaResultados(b: Bloco, id: Identificacao): AbaEscrita {
   const { dados } = b;
-  const ultimo = dados.meses[dados.meses.length - 1];
   const linhas: Celula[][] = [
     [{ valor: `Resultados · ${b.titulo}`, estilo: ESTILO.titulo }],
     [{ valor: id.periodo, estilo: ESTILO.informacao }],
@@ -77,10 +76,8 @@ function abaResultados(b: Bloco, id: Identificacao): AbaEscrita {
   const cab = (t: string) => ({ valor: t, estilo: ESTILO.cabecalhoDireita });
   linhas.push([
     { valor: "Linha", estilo: ESTILO.cabecalho },
-    ...dados.meses.flatMap((m) => [cab(m.rotulo), cab("%")]),
-    cab(ultimo.rotulo),
-    cab("%"),
-    cab("R$/m³"),
+    // Cada mês com o valor e o %; o mês de referência (o último) também com o R$/m³.
+    ...dados.meses.flatMap((m, i) => [cab(m.rotulo), cab("%"), ...(i === dados.meses.length - 1 ? [cab("R$/m³")] : [])]),
     cab(`TOTAL/${String(dados.ano).slice(2)}`),
     cab("%"),
     cab("R$/m³"),
@@ -90,13 +87,9 @@ function abaResultados(b: Bloco, id: Identificacao): AbaEscrita {
     const d = l.tipo !== "ITEM";
     const num = (v: number | null): Celula => (v === null ? { valor: null, estilo: d ? ESTILO.destaqueDireita : ESTILO.itemDireita } : { valor: v, estilo: d ? ESTILO.destaqueNumero : ESTILO.itemNumero });
     const per = (v: number | null): Celula => (v === null || l.volume ? { valor: null, estilo: d ? ESTILO.destaqueDireita : ESTILO.itemDireita } : { valor: v, estilo: d ? ESTILO.destaquePercentual : ESTILO.itemPercentual });
-    const u = l.meses[l.meses.length - 1];
     linhas.push([
       { valor: l.descricao, estilo: d ? ESTILO.destaque : ESTILO.item },
-      ...l.meses.flatMap((c) => [num(c.valor), per(c.pct)]),
-      num(u.valor),
-      per(u.pct),
-      num(l.volume ? null : u.unitario),
+      ...l.meses.flatMap((c, i) => [num(c.valor), per(c.pct), ...(i === l.meses.length - 1 ? [num(l.volume ? null : c.unitario)] : [])]),
       num(l.total.valor),
       per(l.total.pct),
       num(l.volume ? null : l.total.unitario),
@@ -104,7 +97,7 @@ function abaResultados(b: Bloco, id: Identificacao): AbaEscrita {
   }
   return {
     nome: b.nome,
-    larguras: [48, ...dados.meses.flatMap(() => [15, 8]), 15, 8, 10, 16, 8, 10],
+    larguras: [48, ...dados.meses.flatMap((_, i) => (i === dados.meses.length - 1 ? [15, 8, 10] : [15, 8])), 16, 8, 10],
     linhas,
     linhaCabecalho: cabecalho,
     rodape: `Resultados ${dados.ano} · ${b.titulo}`,
@@ -189,7 +182,8 @@ function topo(doc: DocumentoPDF, titulo: string, id: Identificacao, primeira: bo
 function paginasResultados(doc: DocumentoPDF, b: Bloco, id: Identificacao) {
   const { dados } = b;
   const larguraDescricao = 190;
-  const colunas = [...dados.meses.map((m) => m.rotulo), `TOTAL/${String(dados.ano).slice(2)}`, "%", "R$/m³"];
+  // O R$/m³ do mês de referência (o último) fica logo depois dele, antes do total.
+  const colunas = [...dados.meses.map((m) => m.rotulo), "R$/m³", `TOTAL/${String(dados.ano).slice(2)}`, "%", "R$/m³"];
   const w = (DIREITA - M - larguraDescricao) / colunas.length;
   const x = (i: number) => M + larguraDescricao + w * (i + 1) - 3; // borda direita da coluna
   const ALTURA = 15;
@@ -220,7 +214,9 @@ function paginasResultados(doc: DocumentoPDF, b: Bloco, id: Identificacao) {
       doc.texto(x(i), l.volume ? y - 2 : y, valor(c.valor), { fonte, tamanho: CORPO, alinhar: "direita" });
       if (!l.volume && c.pct !== null) doc.texto(x(i), y - 7, pct(c.pct), { tamanho: 5.5, cor: CLARO, alinhar: "direita" });
     });
-    const k = dados.meses.length;
+    const ultimo = l.meses[l.meses.length - 1];
+    if (!l.volume && ultimo.unitario !== null) doc.texto(x(l.meses.length), y - 2, n2.format(ultimo.unitario), { tamanho: CORPO, alinhar: "direita" });
+    const k = dados.meses.length + 1;
     doc.texto(x(k), y - 2, valor(l.total.valor), { fonte, tamanho: CORPO, alinhar: "direita" });
     if (!l.volume && l.total.pct !== null) doc.texto(x(k + 1), y - 2, pct(l.total.pct), { tamanho: CORPO, alinhar: "direita" });
     if (!l.volume && l.total.unitario !== null) doc.texto(x(k + 2), y - 2, n2.format(l.total.unitario), { tamanho: CORPO, alinhar: "direita" });
