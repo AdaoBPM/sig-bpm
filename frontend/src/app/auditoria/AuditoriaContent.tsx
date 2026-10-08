@@ -133,8 +133,8 @@ export function AuditoriaContent() {
         <table className="tabela-sig w-full border-collapse text-sm">
           {/* Filtros nos rótulos, como no Excel, aplicados no servidor: o log cresce sem parar e é paginado lá. */}
           <thead>
-            {/* Rótulos com filtro em amarelo-ouro, como nas demais tabelas; o "!" vence o fundo do .tabela-sig th. */}
-            <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900 [&>th]:!bg-bpm-primary">
+            {/* Rótulos com filtro no cinza do .tabela-sig th, como nas demais tabelas. */}
+            <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900">
               <th className="px-4 py-2">
                 <span className="inline-flex items-center gap-1">
                   Quando

@@ -322,7 +322,7 @@ export function ImportarLoteDialog({
             {exibida.abas.length > 0 ? (
               <table className="tabela-sig w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900 [&>th]:!static [&>th]:!bg-bpm-primary">
+                  <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900 [&>th]:!static">
                     <th className="w-56 px-3 py-2">Aba</th>
                     <th className="px-3 py-2">Meses e Situação</th>
                   </tr>

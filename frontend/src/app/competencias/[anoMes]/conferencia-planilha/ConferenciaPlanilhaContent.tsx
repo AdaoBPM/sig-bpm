@@ -93,7 +93,7 @@ function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna:
 }
 
 /**
- * A tabela no formato da DRE: rótulos em amarelo-ouro, presos no topo ao
+ * A tabela no formato da DRE: rótulos em cinza, presos no topo ao
  * rolar; totais e atribuições em negrito, com as linhas mais escuras; os
  * agrupadores e os níveis (Totais, Atribuições, Contas) da planilha.
  */
@@ -108,7 +108,7 @@ function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       <table className="tabela-sig w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-gray-200 [&>th]:!bg-bpm-primary">
+          <tr className="border-b border-gray-200">
             <th className="w-px px-3 py-2">
               <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
             </th>

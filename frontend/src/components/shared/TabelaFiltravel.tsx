@@ -234,12 +234,12 @@ export function useTabelaFiltravel<T>(linhas: T[] | undefined, colunas: Coluna<T
   // Nas colunas sem filtro, a tela pode pôr outro conteúdo no rótulo (a caixa de marcar todas, nas divergências).
   const montar = (extras: Record<string, ReactNode> = {}): ReactNode => (
     <thead>
-      {/* Rótulos em amarelo-ouro, a cor da logo; o "!" vence o fundo do .tabela-sig th. */}
+      {/* Rótulos no cinza do .tabela-sig th, mais escuro que as linhas. */}
       <tr className="border-b border-gray-200">
         {colunas.map((c) => (
           <th
             key={c.chave}
-            className={`!bg-bpm-primary px-4 py-3 text-xs font-bold text-gray-900 ${c.alinhamento === "direita" ? "text-right" : "text-left"} ${c.classe ?? ""}`}
+            className={`px-4 py-3 text-xs font-bold text-gray-900 ${c.alinhamento === "direita" ? "text-right" : "text-left"} ${c.classe ?? ""}`}
           >
             {c.semFiltro ? (
               (extras[c.chave] ?? iniciaisMaiusculas(c.rotulo))
