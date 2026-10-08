@@ -27,8 +27,6 @@ export type Indicador = {
   unidade: string;
   metodologia: string;
   acumulado: "ACUM" | "ATUAL";
-  /** Calculado pela ferramenta; sem fonte (quadro de lotação, vendas…), fica listado sem valor. */
-  comFonte: boolean;
   meses: Array<number | null>;
   total: number | null;
 };

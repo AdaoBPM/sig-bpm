@@ -45,7 +45,7 @@ export const indicadoresService = {
       ate: ultimo,
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       indicadores: INDICADORES.map((i) => {
-        const partes = dados.map((d) => (d && i.calculo ? i.calculo(d) : null));
+        const partes = dados.map((d) => (d ? i.calculo(d) : null));
         return {
           grupo: i.grupo,
           numero: i.numero,
@@ -54,9 +54,8 @@ export const indicadoresService = {
           unidade: i.unidade,
           metodologia: i.metodologia,
           acumulado: i.acumulado,
-          comFonte: !!i.calculo,
           meses: partes.map((p) => p?.valor ?? null),
-          total: i.calculo ? acumular(i, partes) : null,
+          total: acumular(i, partes),
         };
       }),
     };

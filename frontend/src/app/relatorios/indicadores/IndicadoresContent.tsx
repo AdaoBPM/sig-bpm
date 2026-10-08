@@ -38,7 +38,6 @@ export function IndicadoresContent() {
   const exercicios = useExercicios();
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
-  const [soComFonte, setSoComFonte] = useState(false);
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
@@ -48,7 +47,7 @@ export function IndicadoresContent() {
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
-  const lista = (dados?.indicadores ?? []).filter((i) => !soComFonte || i.comFonte);
+  const lista = dados?.indicadores ?? [];
   const grupos = [...new Set(lista.map((i) => i.grupo))];
   const colunas = 5 + (dados?.meses.length ?? 0);
   const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
@@ -61,7 +60,6 @@ export function IndicadoresContent() {
           <ul>
             <li>Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
-            <li>Marque “Só com Fonte na Ferramenta” para esconder os indicadores que ainda não têm dados.</li>
             <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
           </ul>
         }
@@ -102,10 +100,6 @@ export function IndicadoresContent() {
               onAte={setAte}
             />
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={soComFonte} onChange={(e) => setSoComFonte(e.target.checked)} className="size-4 accent-black" />
-                Só com Fonte na Ferramenta
-              </label>
               <ExportarRelatorio caminho="indicadores" padrao={`Indicadores ${ano}`} opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]} />
             </div>
           </div>
@@ -147,7 +141,7 @@ export function IndicadoresContent() {
                         .filter((i) => i.grupo === g)
                         .map((i) => {
                           const principal = i.numero === "";
-                          const tom = i.comFonte ? (principal ? "text-gray-900" : "text-gray-700") : "text-gray-400";
+                          const tom = principal ? "text-gray-900" : "text-gray-700";
                           return (
                             <tr key={i.nome} className={`border-t border-gray-100 ${principal ? "font-bold" : ""}`}>
                               <td className={`sticky left-0 z-10 min-w-96 bg-white py-1.5 pr-3 ${principal ? "pl-4" : "pl-9"} ${tom}`}>
@@ -158,7 +152,6 @@ export function IndicadoresContent() {
                                 <div className={`text-xs font-normal text-gray-500 ${i.numero ? "pl-12" : ""}`}>
                                   {i.metodologia}
                                   {i.acumulado === "ATUAL" ? " · acumulado: o último mês" : ""}
-                                  {i.comFonte ? "" : " · sem fonte na ferramenta"}
                                 </div>
                               </td>
                               <td className="px-2 py-1.5 text-center font-normal text-gray-600" title={SENTIDO[i.sentido]}>
@@ -167,10 +160,10 @@ export function IndicadoresContent() {
                               <td className="px-2 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600">{i.unidade}</td>
                               {i.meses.map((v, k) => (
                                 <td key={k} className={`px-2 py-1.5 text-right whitespace-nowrap ${tom}`}>
-                                  {i.comFonte ? valor(i, v) : ""}
+                                  {valor(i, v)}
                                 </td>
                               ))}
-                              <td className={`border-l border-gray-300 px-2 py-1.5 text-right whitespace-nowrap ${tom}`}>{i.comFonte ? valor(i, i.total) : ""}</td>
+                              <td className={`border-l border-gray-300 px-2 py-1.5 text-right whitespace-nowrap ${tom}`}>{valor(i, i.total)}</td>
                             </tr>
                           );
                         })}

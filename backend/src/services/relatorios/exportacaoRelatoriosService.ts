@@ -134,13 +134,13 @@ function abaIndicadores(dados: Indicadores, id: Identificacao): AbaEscrita {
       linhas.push([{ valor: (NOME_DO_GRUPO[grupo] ?? grupo).toUpperCase(), estilo: ESTILO.destaque }]);
     }
     const valor = (v: number | null): Celula =>
-      !i.comFonte || v === null ? { valor: null, estilo: ESTILO.itemDireita } : { valor: v, estilo: i.unidade === "%" ? ESTILO.itemPercentual : ESTILO.itemNumero };
+      v === null ? { valor: null, estilo: ESTILO.itemDireita } : { valor: v, estilo: i.unidade === "%" ? ESTILO.itemPercentual : ESTILO.itemNumero };
     linhas.push([
       { valor: i.nome, estilo: ESTILO.item },
       { valor: i.numero || null },
       { valor: i.sentido },
       { valor: i.unidade },
-      { valor: i.comFonte ? i.metodologia : `${i.metodologia} (sem fonte na ferramenta)`, estilo: ESTILO.informacao },
+      { valor: i.metodologia, estilo: ESTILO.informacao },
       ...i.meses.map(valor),
       valor(i.total),
     ]);
@@ -275,16 +275,13 @@ function paginasIndicadores(doc: DocumentoPDF, dados: Indicadores, id: Identific
     }
     const principal = i.numero === "";
     const fonte: Fonte = principal ? "negrito" : "normal";
-    const cor: Cor = i.comFonte ? [17, 24, 39] : TRACO;
     const xt = principal ? M + 3 : M + 11;
-    doc.texto(xt, y, caber(`${i.numero ? `${i.numero}  ` : ""}${i.nome}`, fonte, CORPO, larguraNome - (xt - M) - 4), { fonte, tamanho: CORPO, cor });
-    doc.texto(xt, y - 7, caber(i.comFonte ? i.metodologia : `${i.metodologia} · sem fonte na ferramenta`, "normal", 5.5, larguraNome - (xt - M) - 4), { tamanho: 5.5, cor: CLARO });
+    doc.texto(xt, y, caber(`${i.numero ? `${i.numero}  ` : ""}${i.nome}`, fonte, CORPO, larguraNome - (xt - M) - 4), { fonte, tamanho: CORPO });
+    doc.texto(xt, y - 7, caber(i.metodologia, "normal", 5.5, larguraNome - (xt - M) - 4), { tamanho: 5.5, cor: CLARO });
     doc.texto(M + larguraNome, y, SENTIDO_PDF[i.sentido] ?? i.sentido, { tamanho: CORPO, cor: CINZA });
     doc.texto(M + larguraNome + fixas[0].w, y, i.unidade, { tamanho: CORPO, cor: CINZA });
-    if (i.comFonte) {
-      i.meses.forEach((v, k) => doc.texto(x(k), y, valorIndicador(i.unidade, v), { fonte, tamanho: CORPO, alinhar: "direita" }));
-      doc.texto(x(i.meses.length), y, valorIndicador(i.unidade, i.total), { fonte: "negrito", tamanho: CORPO, alinhar: "direita" });
-    }
+    i.meses.forEach((v, k) => doc.texto(x(k), y, valorIndicador(i.unidade, v), { fonte, tamanho: CORPO, alinhar: "direita" }));
+    doc.texto(x(i.meses.length), y, valorIndicador(i.unidade, i.total), { fonte: "negrito", tamanho: CORPO, alinhar: "direita" });
     y -= 16;
   }
 }

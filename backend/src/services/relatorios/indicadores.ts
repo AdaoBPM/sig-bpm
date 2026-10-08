@@ -44,7 +44,7 @@ export type Indicador = {
   unidade: string;
   metodologia: string;
   acumulado: "ACUM" | "ATUAL";
-  calculo?: Calculo;
+  calculo: Calculo;
 };
 
 const L = {
