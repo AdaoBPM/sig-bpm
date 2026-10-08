@@ -263,7 +263,7 @@ function TabelaDRE({
               return (
                 <Fragment key={l.codigo}>
                   <tr
-                    className={`border-t border-gray-100 ${destaque ? "bg-gray-50 font-bold" : ""} ${clica(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                    className={`${destaque ? "border-y border-gray-300 bg-gray-50 font-bold" : "border-t border-gray-100"} ${clica(l) ? "cursor-pointer hover:bg-gray-50" : ""}`}
                     onClick={() =>
                       detalhavel(l) ? setDetalhe(l.codigo) : listavel(l, visao) ? setListasDe(l) : abre(l) ? setAberta(aberto ? null : l.codigo) : undefined
                     }
