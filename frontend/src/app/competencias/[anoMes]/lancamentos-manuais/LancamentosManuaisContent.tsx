@@ -129,10 +129,9 @@ export function LancamentosManuaisContent() {
                 {itens.length === 0 ? (
                   <Button
                     type="button"
-                    variant="outline"
                     onClick={() => copiar.mutate()}
                     disabled={copiar.isPending}
-                    className="rounded-sm border border-black text-black hover:bg-gray-100"
+                    className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
                   >
                     <Copy className="size-4" />
                     Copiar do mês anterior

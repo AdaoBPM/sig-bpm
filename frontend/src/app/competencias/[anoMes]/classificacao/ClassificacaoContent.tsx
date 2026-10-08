@@ -231,10 +231,9 @@ export function ClassificacaoContent() {
             <PermissionGuard permission="classificacao:editar">
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => reclassificar.mutate()}
                 disabled={reclassificar.isPending || !r || r.total === 0}
-                className="rounded-sm border border-black text-black hover:bg-gray-100"
+                className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
               >
                 <RefreshCw className={`size-4 ${reclassificar.isPending ? "animate-spin" : ""}`} />
                 {reclassificar.isPending ? "Reclassificando…" : "Reclassificar"}

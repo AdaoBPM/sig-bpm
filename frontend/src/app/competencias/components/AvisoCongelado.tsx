@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * O selo das telas de cálculo (classificação, rateios, receita, estoque) numa
- * competência apurada ou fechada, à direita do cabeçalho, com a cara dos
- * botões da DRE (para onde leva): os valores estão congelados, e o recálculo é a reapuração da
+ * competência apurada ou fechada, à direita do cabeçalho, em amarelo-ouro como
+ * os demais botões da altura do título (leva à DRE): os valores estão congelados, e o recálculo é a reapuração da
  * competência inteira, na tela da DRE. `oQue` vem com a preposição: "da
  * classificação", "do rateio"…
  */
@@ -19,7 +19,7 @@ export function AvisoCongelado({ anoMes, fechada, oQue }: { anoMes: string; fech
     <Link
       href={`/competencias/${anoMes}/dre`}
       title={explicacao}
-      className={cn(buttonVariants({ variant: "outline" }), "rounded-sm")}
+      className={cn(buttonVariants(), "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm")}
     >
       <Lock className="size-4" />
       {fechada ? "Fechada · Reabrir na DRE" : "Congelada pela Apuração · Reapurar na DRE"}

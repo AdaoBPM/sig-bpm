@@ -91,8 +91,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
           <PermissionGuard permission="competencia:editar">
             <Button
               type="button"
-              variant="outline"
-              className="rounded-sm"
+              className={botaoPrimario}
               disabled={!s.podeFechar || apurar.isPending}
               title={s.podeFechar ? undefined : `Para fechar: ${s.motivosNaoFechar.join(" ")}`}
               onClick={() => setDialogo("fechar")}
@@ -104,14 +103,14 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
         ) : null}
         {s.podeReabrir ? (
           <PermissionGuard permission="competencia:editar">
-            <Button type="button" variant="outline" className="rounded-sm" onClick={() => setDialogo("reabrir")}>
+            <Button type="button" className={botaoPrimario} onClick={() => setDialogo("reabrir")}>
               <LockKeyholeOpen className="size-4" />
               Reabrir competência
             </Button>
           </PermissionGuard>
         ) : null}
         {s.reaberturas.length > 0 ? (
-          <Button type="button" variant="outline" className="rounded-sm" onClick={() => setHistorico(true)}>
+          <Button type="button" className={botaoPrimario} onClick={() => setHistorico(true)}>
             <History className="size-4" />
             Reaberturas ({s.reaberturas.length})
           </Button>

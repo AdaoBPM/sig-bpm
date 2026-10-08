@@ -15,7 +15,6 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Carregando, ErroCarga } from "@/components/shared/Estados";
-import { BarraDeFiltros, SeletorFiltro } from "@/components/shared/Filtros";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -29,9 +28,7 @@ import {
   ROTULO_STATUS,
   ROTULO_TIPO,
   type Divergencia,
-  type FiltroDivergencias,
   type StatusDivergencia,
-  type TipoDivergencia,
 } from "./services/divergenciasService";
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
@@ -83,7 +80,7 @@ function DialogoTexto({ titulo, descricao, acao, onConfirmar, onFechar, pendente
 
 /**
  * As divergências da competência, uma etapa do mês (depois da Conferência):
- * o mês vem da barra de etapas, e os filtros são só o tipo e a situação.
+ * o mês vem da barra de etapas; o tipo e a situação se filtram nos rótulos da tabela.
  */
 export function DivergenciasContent() {
   useRegistrarAcessoTela("/divergencias");
@@ -92,24 +89,22 @@ export function DivergenciasContent() {
   const { refresh } = useAuth();
   const { hasPermission } = usePermissions();
   const podeTratar = hasPermission("divergencia:editar");
-  const [filtroLivre, setFiltro] = useState<FiltroDivergencias>({ status: "ABERTA" });
-  const filtro = useMemo(() => ({ ...filtroLivre, competencia: doMes }), [filtroLivre, doMes]);
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [dialogo, setDialogo] = useState<{ tipo: "justificar" } | { tipo: "resolver"; competencia: string } | null>(null);
   const lista = useQuery({
-    queryKey: ["divergencias", filtro, TODOS],
-    queryFn: () => divergenciasService.listar({ ...filtro, pagina: 1, porPagina: TODOS }),
+    queryKey: ["divergencias", doMes, TODOS],
+    queryFn: () => divergenciasService.listar({ competencia: doMes, pagina: 1, porPagina: TODOS }),
     placeholderData: keepPreviousData,
   });
   const colunas = useMemo(() => (podeTratar ? [MARCAR, ...COLUNAS] : COLUNAS), [podeTratar]);
-  const tabela = useTabelaFiltravel(lista.data?.itens, colunas, { porPaginaInicial: POR_PAGINA });
+  // Todas as situações do mês, as abertas primeiro; o tipo e a situação se filtram nos rótulos.
+  const itens = useMemo(
+    () => (lista.data?.itens ?? []).slice().sort((a, b) => Number(b.status === "ABERTA") - Number(a.status === "ABERTA")),
+    [lista.data],
+  );
+  const tabela = useTabelaFiltravel(lista.data ? itens : undefined, colunas, { porPaginaInicial: POR_PAGINA });
   // Só se justifica o que está à vista: a marcada que o filtro ou a ordem tiram da página sai da conta.
   const escolhidas = tabela.visiveis.filter((i) => marcadas.has(i.id)).map((i) => i.id);
-  const muda = (p: Partial<FiltroDivergencias>) => {
-    setMarcadas(new Set());
-    setFiltro((f) => ({ ...f, ...p }));
-    tabela.setPagina(1);
-  };
   const atualizar = () => {
     setMarcadas(new Set());
     setDialogo(null);
@@ -144,7 +139,7 @@ export function DivergenciasContent() {
         titulo="Divergências"
         comoUsar={
           <ul>
-            <li>Troque de mês na barra de etapas, no início da tela; filtre por tipo e situação.</li>
+            <li>Troque de mês na barra de etapas, no início da tela; filtre o tipo e a situação nos rótulos da tabela (as abertas vêm primeiro).</li>
             <li>Marque as divergências e clique em “Justificar”, com o motivo (ao menos 15 caracteres).</li>
             <li>Para corrigir em vez de justificar, use “Resolver por Reabertura” no quadro da competência fechada: o mês é reaberto para reimportar e reapurar.</li>
           </ul>
@@ -155,6 +150,14 @@ export function DivergenciasContent() {
             fechado, ou o preço de contrato que valorou a receita de um mês apurado. A competência não muda sozinha — a divergência é justificada, ou resolvida
             reabrindo a competência (no preço de um mês ainda aberto, reapurando).
           </p>
+        }
+        acoes={
+          podeTratar ? (
+            <Button type="button" className={botaoPrimario} disabled={escolhidas.length === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
+              <MessageSquareText className="size-4" />
+              Justificar {escolhidas.length > 0 ? `(${escolhidas.length})` : "Selecionadas"}
+            </Button>
+          ) : null
         }
       />
 
@@ -181,35 +184,6 @@ export function DivergenciasContent() {
           ))}
         </div>
       ) : null}
-
-      {/* Filtros no padrão (G8 do levantamento de layout); a situação padrão é "Aberta". */}
-      <BarraDeFiltros
-        ativos={!!filtro.tipo || filtro.status !== "ABERTA"}
-        onLimpar={() => muda({ tipo: undefined, status: "ABERTA" })}
-        direita={
-          podeTratar ? (
-            <Button type="button" className={botaoPrimario} disabled={escolhidas.length === 0} onClick={() => setDialogo({ tipo: "justificar" })}>
-              <MessageSquareText className="size-4" />
-              Justificar {escolhidas.length > 0 ? `(${escolhidas.length})` : "selecionadas"}
-            </Button>
-          ) : null
-        }
-      >
-        <SeletorFiltro
-          rotulo="Tipo"
-          valor={filtro.tipo}
-          onMudar={(v) => muda({ tipo: v as TipoDivergencia | undefined })}
-          opcoes={Object.entries(ROTULO_TIPO).map(([valor, r]) => ({ valor, rotulo: r }))}
-        />
-        <SeletorFiltro
-          rotulo="Situação"
-          valor={filtro.status}
-          onMudar={(v) => muda({ status: v as StatusDivergencia | undefined })}
-          todos="Todas"
-          largura="w-56"
-          opcoes={Object.entries(ROTULO_STATUS).map(([valor, r]) => ({ valor, rotulo: r }))}
-        />
-      </BarraDeFiltros>
 
       <QuadroTabela
         barra={
@@ -258,7 +232,7 @@ export function DivergenciasContent() {
               ) : d?.itens.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                    Nenhuma divergência nesta competência com esses filtros.
+                    Nenhuma divergência nesta competência.
                   </td>
                 </tr>
               ) : d && tabela.visiveis.length === 0 ? (

@@ -239,8 +239,7 @@ export function ConferenciaPlanilhaContent() {
             <Button
               type="button"
               onClick={() => setEnviando(true)}
-              className={r?.conferencia ? "rounded-sm" : "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"}
-              variant={r?.conferencia ? "outline" : "default"}
+              className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
             >
               <Upload className="size-4" />
               {r?.conferencia ? "Enviar outra planilha" : "Enviar planilha"}

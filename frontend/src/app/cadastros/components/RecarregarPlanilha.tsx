@@ -132,9 +132,8 @@ export function RecarregarPlanilha() {
     <PermissionGuard permission="cadastros:editar">
       <Button
         type="button"
-        variant="outline"
         onClick={() => setAberto(true)}
-        className="rounded-sm border border-black text-black hover:bg-gray-100"
+        className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
       >
         <FileSpreadsheet className="size-4" />
         Recarregar da planilha
