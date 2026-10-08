@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Info } from "lucide-react";
 
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { PainelInformacao, SecaoPainel, TextoPainel } from "@/components/shared/PainelInformacao";
 
 type Props = {
   titulo: ReactNode;
@@ -84,18 +84,10 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
         ) : null}
       </div>
       {/* Painel lateral, da direita para a esquerda, como o relatório das importações em vigor. */}
-      <Sheet open={sobreAberto} onOpenChange={setSobreAberto}>
-        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-6 data-[side=right]:sm:max-w-2xl">
-          <SheetTitle className="pr-8 text-lg font-extrabold text-gray-900">Sobre Esta Tela</SheetTitle>
-          {sobre ? <div className="mt-3 space-y-2 text-sm leading-relaxed text-gray-700">{sobre}</div> : null}
-          {comoUsar ? (
-            <>
-              <h2 className="mt-6 text-base font-bold text-gray-900">Como Usar Esta Tela</h2>
-              <div className="mt-2 text-sm leading-relaxed text-gray-700 [&_li]:mt-1.5 [&_ul]:list-disc [&_ul]:space-y-0 [&_ul]:pl-5">{comoUsar}</div>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <PainelInformacao aberto={sobreAberto} onMudar={setSobreAberto} titulo="Sobre Esta Tela">
+        {sobre ? <TextoPainel>{sobre}</TextoPainel> : null}
+        {comoUsar ? <SecaoPainel titulo="Como Usar Esta Tela">{comoUsar}</SecaoPainel> : null}
+      </PainelInformacao>
     </>
   );
 }
