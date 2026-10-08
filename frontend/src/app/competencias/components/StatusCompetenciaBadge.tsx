@@ -11,7 +11,7 @@ const ESTILO: Record<StatusCompetencia, { classe: string; rotulo: string }> = {
   },
   EM_CONFERENCIA: {
     classe: "border-yellow-200 bg-yellow-50 text-yellow-800",
-    rotulo: "Em conferência",
+    rotulo: "Em Conferência",
   },
   FECHADA: {
     classe: "border-green-200 bg-green-50 text-green-700",

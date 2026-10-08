@@ -51,7 +51,7 @@ const COLUNAS: Coluna<LancamentoClassificado>[] = [
     rotulo: "Centro de custo",
     classe: "w-[26%]",
     valor: (l) => l.codigoCentroCusto,
-    texto: (l) => (l.codigoCentroCusto ? [l.codigoCentroCusto, l.nomeCentroCusto].filter(Boolean).join(" · ") : "sem centro de custo"),
+    texto: (l) => (l.codigoCentroCusto ? [l.codigoCentroCusto, l.nomeCentroCusto].filter(Boolean).join(" · ") : "Sem Centro de Custo"),
   },
   {
     chave: "conta",
@@ -87,7 +87,7 @@ function Cortada({ texto, className, altura = "h-4" }: { texto: string | null | 
 
 function CelulaCentro({ l }: { l: LancamentoClassificado }) {
   if (!l.codigoCentroCusto) {
-    return <span className="text-xs text-gray-400">sem centro de custo</span>;
+    return <span className="text-xs text-gray-400">Sem Centro de Custo</span>;
   }
   const obra = /^1\.9[89](\.|$)/.test(l.codigoCentroCusto);
   const c = l.centroCusto;
