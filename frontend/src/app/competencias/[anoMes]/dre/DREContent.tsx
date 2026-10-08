@@ -367,11 +367,9 @@ function linhasDoCentro(linhas: LinhaDRE[]) {
   const atribuicoes = new Set(mostradas.map((l) => prefixo(l.codigo)));
   // O total de cada grupo passa a ser a soma das atribuições mostradas, em centavos para não acumular erro.
   const soma = new Map<string, number>();
-  const nomes = new Map<string, string[]>();
   for (const a of mostradas) {
     const g = partes(a.codigo)[0];
     soma.set(g, (soma.get(g) ?? 0) + Math.round(Number(a.valor) * 100));
-    nomes.set(g, [...(nomes.get(g) ?? []), a.descricao]);
   }
   return linhas
     .filter((l) => {
@@ -379,10 +377,10 @@ function linhasDoCentro(linhas: LinhaDRE[]) {
       const p = partes(l.codigo);
       return p.length === 2 ? l.tipo !== "ITEM" && soma.has(p[0]) : atribuicoes.has(prefixo(l.codigo));
     })
+    // Sem a composição (Σ): nos centros, os totais são a soma do que a tabela mostra.
     .map((l) => {
       const p = partes(l.codigo);
-      if (p.length !== 2) return l;
-      return { ...l, valor: (soma.get(p[0])! / 100).toFixed(2), composicao: { regra: `Soma das atribuições mostradas: ${nomes.get(p[0])!.join(" + ")}.` } };
+      return p.length === 2 ? { ...l, valor: (soma.get(p[0])! / 100).toFixed(2), composicao: null } : { ...l, composicao: null };
     });
 }
 
