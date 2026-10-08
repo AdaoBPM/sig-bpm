@@ -4,6 +4,7 @@ import { A4, caber, DocumentoPDF, type Cor } from "../../lib/pdfEscrita.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { apuracaoService } from "../apuracao/apuracaoService.js";
 import { dreService, RegraDREError } from "./dreService.js";
+import { linhasDoCentro } from "./recorteCentros.js";
 
 /**
  * Exportação da DRE apurada em Excel e PDF (Passo 26, RF012). O arquivo
@@ -28,48 +29,6 @@ export type VisaoExportacao =
 export type Formato = "xlsx" | "pdf";
 
 type LinhaTela = { codigo: string; tipo: string; grupo: string; descricao: string; valor: string | null };
-
-/**
- * A DRE de um centro como a tela mostra (frontend: linhasDoCentro em
- * DREContent.tsx): só os totais CPP, CSM, CSC, DL, DT, DC e DA, e neles só as
- * atribuições de mão de obra, gastos gerais e depreciação com valor (e as
- * contas delas); cada total soma só as atribuições que aparecem.
- */
-const TOTAIS_DO_CENTRO = new Set(["CPP", "CSM", "CSC", "DL", "DT", "DC", "DA"]);
-const ATRIBUICOES_DO_CENTRO = new Set([
-  "MÃO DE OBRA DIRETA",
-  "MÃO DE OBRA INDIRETA",
-  "GASTOS GERAIS VARIÁVEIS",
-  "GASTOS GERAIS DIRETOS",
-  "GASTOS GERAIS INDIRETOS",
-  "GASTOS GERAIS COMERCIAIS",
-  "DEPRECIAÇÃO",
-]);
-export function linhasDoCentro<L extends LinhaTela>(linhas: L[]): L[] {
-  const partes = (c: string) => c.split(".");
-  const prefixo = (c: string) => partes(c).slice(0, 2).join(".");
-  const mostradas = linhas.filter(
-    (l) =>
-      l.tipo !== "ITEM" &&
-      partes(l.codigo).length === 3 &&
-      TOTAIS_DO_CENTRO.has(partes(l.codigo)[0]) &&
-      ATRIBUICOES_DO_CENTRO.has(l.descricao.trim().toUpperCase()) &&
-      Number(l.valor ?? 0) !== 0,
-  );
-  const atribuicoes = new Set(mostradas.map((l) => prefixo(l.codigo)));
-  const soma = new Map<string, number>();
-  for (const a of mostradas) {
-    const g = partes(a.codigo)[0];
-    soma.set(g, (soma.get(g) ?? 0) + Math.round(Number(a.valor) * 100));
-  }
-  return linhas
-    .filter((l) => {
-      if (l.tipo === "SECAO") return false;
-      const p = partes(l.codigo);
-      return p.length === 2 ? l.tipo !== "ITEM" && soma.has(p[0]) : atribuicoes.has(prefixo(l.codigo));
-    })
-    .map((l) => (partes(l.codigo).length === 2 ? { ...l, valor: (soma.get(partes(l.codigo)[0])! / 100).toFixed(2) } : l));
-}
 type Bloco = { nome: string; titulo: string; complemento?: string; linhas: LinhaTela[] };
 
 const ROTULO_STATUS: Record<string, string> = { ABERTA: "Aberta", EM_CONFERENCIA: "Em conferência", FECHADA: "Fechada" };

@@ -4,6 +4,7 @@ import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { apurarUnidades, type LinhaEstrutura } from "./apuracaoUnidades.js";
+import { atribuicoesDoCentro, prefixoDaAtribuicao } from "./recorteCentros.js";
 import { apurarCentros, consolidar } from "./consolidacao.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
@@ -169,32 +170,53 @@ export const dreService = {
   },
 
   /**
-   * Os agrupamentos de centros de custo com lançamento apurado no mês, com o
-   * total dos lançamentos de cada um.
+   * Os agrupamentos de centros de custo com lançamento apurado no mês. O total
+   * de cada um é o da DRE do centro na tela: só as contas das atribuições que
+   * ela mostra (recorteCentros), somadas pelas atribuições com valor. Os
+   * agrupamentos sem nada a mostrar ficam de fora.
    */
   async listarCentros(ano: number, mes: number, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
-    const valores = await getPrismaClient().resultadoApurado.findMany({
-      where: { competenciaId: c.id, centroCustoId: { not: null }, linhaDRE: { tipo: "ITEM" } },
-      select: { valor: true, apuradoEm: true, centroCusto: { select: { id: true, nomeRM: true, nomeControladoria: true, departamento: true } } },
-    });
-    const grupos = new Map<string, { departamentos: Set<string>; centros: Set<string>; total: Prisma.Decimal }>();
+    const [valores, linhas] = await Promise.all([
+      getPrismaClient().resultadoApurado.findMany({
+        where: { competenciaId: c.id, centroCustoId: { not: null }, linhaDRE: { tipo: "ITEM" } },
+        select: {
+          valor: true,
+          apuradoEm: true,
+          linhaDRE: { select: { codigo: true } },
+          centroCusto: { select: { id: true, nomeRM: true, nomeControladoria: true, departamento: true } },
+        },
+      }),
+      estrutura(),
+    ]);
+    const permitidas = atribuicoesDoCentro(linhas);
+    type Grupo = { departamentos: Set<string>; centros: Set<string>; atribuicoes: Map<string, Prisma.Decimal> };
+    const grupos = new Map<string, Grupo>();
     for (const v of valores) {
       const cc = v.centroCusto!;
       if (!podeVerCentro(acesso, cc.departamento)) continue; // recorte do Gestor
       const g = grupoDoCentro(cc);
-      const x = grupos.get(g) ?? { departamentos: new Set<string>(), centros: new Set<string>(), total: new Prisma.Decimal(0) };
+      const x = grupos.get(g) ?? { departamentos: new Set<string>(), centros: new Set<string>(), atribuicoes: new Map<string, Prisma.Decimal>() };
       if (cc.departamento) x.departamentos.add(cc.departamento);
       x.centros.add(cc.id);
-      x.total = x.total.plus(v.valor);
+      const a = prefixoDaAtribuicao(v.linhaDRE.codigo);
+      if (permitidas.has(a)) x.atribuicoes.set(a, (x.atribuicoes.get(a) ?? new Prisma.Decimal(0)).plus(v.valor));
       grupos.set(g, x);
     }
+    // Como na tela: a atribuição só conta se tiver valor (em centavos, como lá).
+    const total = (g: Grupo) => [...g.atribuicoes.values()].map((v) => v.toDecimalPlaces(2)).filter((v) => !v.isZero());
     return {
       competencia: { ano, mes, status: c.status },
       apuradoEm: valores[0]?.apuradoEm ?? null,
       grupos: [...grupos]
+        .filter(([, g]) => total(g).length > 0)
         .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
-        .map(([grupo, g]) => ({ grupo, departamentos: [...g.departamentos].sort(), centros: g.centros.size, total: g.total.toFixed(2) })),
+        .map(([grupo, g]) => ({
+          grupo,
+          departamentos: [...g.departamentos].sort(),
+          centros: g.centros.size,
+          total: total(g).reduce((s, v) => s.plus(v), new Prisma.Decimal(0)).toFixed(2),
+        })),
     };
   },
 
