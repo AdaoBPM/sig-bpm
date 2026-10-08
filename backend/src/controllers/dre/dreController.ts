@@ -111,9 +111,10 @@ export const dreController = {
     const v = String(request.query.visao ?? "consolidado");
     if (g.data) visao = { tipo: "centros", grupo: g.data };
     else if (v === "consolidado" || v === "todas") visao = { tipo: v };
+    else if (v === "centros") visao = { tipo: "todosCentros" };
     else {
       const u = unidadeSchema.safeParse(v);
-      if (!u.success) return response.status(400).json({ error: "Visão inválida: use consolidado, todas ou a unidade (1 a 5)." });
+      if (!u.success) return response.status(400).json({ error: "Visão inválida: use consolidado, todas, centros ou a unidade (1 a 5)." });
       visao = { tipo: "unidade", unidade: u.data };
     }
     try {

@@ -13,13 +13,63 @@ import { dreService, RegraDREError } from "./dreService.js";
  *
  * O recorte é o da consulta: a DRE das unidades e a consolidada são inteiras
  * para todos; a visão por centro de custo só sai com os centros e as linhas
- * que o usuário alcança.
+ * que o usuário alcança. Nos centros, como na tela, só os custos e despesas
+ * de mão de obra, gastos gerais e depreciação, com os totais somando só o que
+ * aparece (linhasDoCentro).
  */
 
-export type VisaoExportacao = { tipo: "consolidado" } | { tipo: "unidade"; unidade: number } | { tipo: "todas" } | { tipo: "centros"; grupo: string };
+export type VisaoExportacao =
+  | { tipo: "consolidado" }
+  | { tipo: "unidade"; unidade: number }
+  | { tipo: "todas" }
+  | { tipo: "centros"; grupo: string }
+  /** Todos os centros de custo (agrupamentos) que o usuário alcança, um por aba. */
+  | { tipo: "todosCentros" };
 export type Formato = "xlsx" | "pdf";
 
-type LinhaTela = { tipo: string; grupo: string; descricao: string; valor: string | null };
+type LinhaTela = { codigo: string; tipo: string; grupo: string; descricao: string; valor: string | null };
+
+/**
+ * A DRE de um centro como a tela mostra (frontend: linhasDoCentro em
+ * DREContent.tsx): só os totais CPP, CSM, CSC, DL, DT, DC e DA, e neles só as
+ * atribuições de mão de obra, gastos gerais e depreciação com valor (e as
+ * contas delas); cada total soma só as atribuições que aparecem.
+ */
+const TOTAIS_DO_CENTRO = new Set(["CPP", "CSM", "CSC", "DL", "DT", "DC", "DA"]);
+const ATRIBUICOES_DO_CENTRO = new Set([
+  "MÃO DE OBRA DIRETA",
+  "MÃO DE OBRA INDIRETA",
+  "GASTOS GERAIS VARIÁVEIS",
+  "GASTOS GERAIS DIRETOS",
+  "GASTOS GERAIS INDIRETOS",
+  "GASTOS GERAIS COMERCIAIS",
+  "DEPRECIAÇÃO",
+]);
+export function linhasDoCentro<L extends LinhaTela>(linhas: L[]): L[] {
+  const partes = (c: string) => c.split(".");
+  const prefixo = (c: string) => partes(c).slice(0, 2).join(".");
+  const mostradas = linhas.filter(
+    (l) =>
+      l.tipo !== "ITEM" &&
+      partes(l.codigo).length === 3 &&
+      TOTAIS_DO_CENTRO.has(partes(l.codigo)[0]) &&
+      ATRIBUICOES_DO_CENTRO.has(l.descricao.trim().toUpperCase()) &&
+      Number(l.valor ?? 0) !== 0,
+  );
+  const atribuicoes = new Set(mostradas.map((l) => prefixo(l.codigo)));
+  const soma = new Map<string, number>();
+  for (const a of mostradas) {
+    const g = partes(a.codigo)[0];
+    soma.set(g, (soma.get(g) ?? 0) + Math.round(Number(a.valor) * 100));
+  }
+  return linhas
+    .filter((l) => {
+      if (l.tipo === "SECAO") return false;
+      const p = partes(l.codigo);
+      return p.length === 2 ? l.tipo !== "ITEM" && soma.has(p[0]) : atribuicoes.has(prefixo(l.codigo));
+    })
+    .map((l) => (partes(l.codigo).length === 2 ? { ...l, valor: (soma.get(partes(l.codigo)[0])! / 100).toFixed(2) } : l));
+}
 type Bloco = { nome: string; titulo: string; complemento?: string; linhas: LinhaTela[] };
 
 const ROTULO_STATUS: Record<string, string> = { ABERTA: "Aberta", EM_CONFERENCIA: "Em conferência", FECHADA: "Fechada" };
@@ -49,15 +99,20 @@ async function blocos(ano: number, mes: number, visao: VisaoExportacao, acesso: 
     return [await unidade(visao.unidade)];
   }
   if (visao.tipo === "todas") return [await consolidado(), ...(await Promise.all(unidades.map((u) => unidade(u.codigo))))];
-  const c = await dreService.consultarCentros(ano, mes, visao.grupo, acesso);
-  return [
-    {
-      nome: visao.grupo,
-      titulo: `Centro de custo: ${visao.grupo}`,
+  const centro = async (grupo: string): Promise<Bloco> => {
+    const c = await dreService.consultarCentros(ano, mes, grupo, acesso);
+    return {
+      nome: grupo,
+      titulo: `Centro de custo: ${grupo}`,
       complemento: c.centros.map((x) => `${x.codigoRM ?? "sem código"} · ${x.nome}`).join("  |  "),
-      linhas: c.linhas,
-    },
-  ];
+      linhas: linhasDoCentro(c.linhas),
+    };
+  };
+  if (visao.tipo === "centros") return [await centro(visao.grupo)];
+  // Todos os agrupamentos que o usuário alcança; os sem custo nem despesa na tela ficam de fora.
+  const { grupos } = await dreService.listarCentros(ano, mes, acesso);
+  const todos = await Promise.all(grupos.map((g) => centro(g.grupo)));
+  return todos.filter((b) => b.linhas.length > 0);
 }
 
 /** O cabeçalho comum: competência, estado, apuração e geração. */
@@ -167,12 +222,13 @@ function rodapes(doc: DocumentoPDF, id: Identificacao) {
   }
 }
 
-const nomeDaVisao = (v: VisaoExportacao, b: Bloco[]) => (v.tipo === "todas" ? "todas as visões" : b[0].nome);
+const nomeDaVisao = (v: VisaoExportacao, b: Bloco[]) => (v.tipo === "todas" ? "todas as unidades" : v.tipo === "todosCentros" ? "todos os centros de custo" : b[0].nome);
 
 export const exportacaoService = {
   async exportar(ano: number, mes: number, visao: VisaoExportacao, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
     const id = await identificar(ano, mes, usuarioNome);
     const bs = await blocos(ano, mes, visao, acesso);
+    if (bs.length === 0) throw new RegraDREError(404, "Nenhum centro de custo com custos ou despesas para exportar.");
     const titulo = `DRE ${id.competencia} - ${nomeDaVisao(visao, bs)}`;
     const nomeArquivo = `DRE ${ano}-${String(mes).padStart(2, "0")} - ${nomeDaVisao(visao, bs)}.${formato}`.replace(/[\\/:*?"<>|]/g, " ");
     if (formato === "xlsx") {
