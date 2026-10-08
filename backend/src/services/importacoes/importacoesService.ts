@@ -8,6 +8,8 @@ import { caminhoDoArquivo, diretorioUploads } from "./arquivosImportados.js";
 import { processarBalancete } from "./balancete/processarBalancete.js";
 import { processarDreComercial } from "./dreComercial/processarDreComercial.js";
 import { processarEstoqueInicial } from "./estoqueInicial/processarEstoqueInicial.js";
+import { DEFINICOES_INDICADORES, ehTipoIndicadores } from "./indicadores/leituraIndicadores.js";
+import { processarIndicadores } from "./indicadores/processarIndicadores.js";
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
@@ -33,13 +35,14 @@ export class RegraImportacaoError extends Error {
 
 /**
  * Tipos com processamento implementado: o balancete, as listas que alimentam
- * os rateios, as que alimentam só a receita prévia, a DRE do Comercial e o
- * saldo inicial do estoque.
+ * os rateios, as que alimentam só a receita prévia, a DRE do Comercial, o
+ * saldo inicial do estoque e os indicadores do Administrativo e do Comercial.
  */
 const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   "BALANCETE",
   "DRE_COMERCIAL",
   "ESTOQUE_INICIAL",
+  ...(Object.keys(DEFINICOES_INDICADORES) as TipoImportacao[]),
   ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
   ...(Object.keys(DEFINICOES_LISTAS_RECEITA) as TipoImportacao[]),
 ];
@@ -200,7 +203,9 @@ export const importacoesService = {
             ? processarDreComercial(importacao.id)
             : importacao.tipo === "ESTOQUE_INICIAL"
               ? processarEstoqueInicial(importacao.id)
-              : processarBalancete(importacao.id));
+              : ehTipoIndicadores(importacao.tipo)
+                ? processarIndicadores(importacao.id)
+                : processarBalancete(importacao.id));
       } finally {
         // Auditoria (Passo 23): o arquivo, o que ele substituiu e o resultado do processamento.
         const fim = await getPrismaClient().importacao.findUnique({

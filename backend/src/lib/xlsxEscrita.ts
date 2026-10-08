@@ -22,6 +22,12 @@ export const ESTILO = {
   destaqueDireita: 11,
   cabecalhoDireita: 12,
   aviso: 13,
+  /** Número com duas casas, sem o símbolo da moeda (relatórios largos: Resultados, Indicadores). */
+  itemNumero: 14,
+  destaqueNumero: 15,
+  /** Participação: 0,256 sai 25,6%. */
+  itemPercentual: 16,
+  destaquePercentual: 17,
 } as const;
 export type Estilo = (typeof ESTILO)[keyof typeof ESTILO];
 
@@ -35,6 +41,10 @@ export type AbaEscrita = {
   linhaCabecalho?: number;
   /** Rodapé da impressão, à esquerda; à direita vai "Página x de y". */
   rodape?: string;
+  /** Impressão em paisagem (tabelas largas). */
+  paisagem?: boolean;
+  /** A primeira coluna fica presa ao rolar para os lados. */
+  congelarPrimeiraColuna?: boolean;
 };
 
 const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
@@ -64,7 +74,7 @@ function nomesDasAbas(nomes: string[]) {
 }
 
 const ESTILOS = `${XML}<styleSheet xmlns="${NS}">
-<numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;R$ &quot;#,##0.00;-&quot;R$ &quot;#,##0.00"/><numFmt numFmtId="165" formatCode="#,##0.000;-#,##0.000"/></numFmts>
+<numFmts count="4"><numFmt numFmtId="164" formatCode="&quot;R$ &quot;#,##0.00;-&quot;R$ &quot;#,##0.00"/><numFmt numFmtId="165" formatCode="#,##0.000;-#,##0.000"/><numFmt numFmtId="166" formatCode="#,##0.00;-#,##0.00"/><numFmt numFmtId="167" formatCode="0.0%;-0.0%"/></numFmts>
 <fonts count="5">
 <font><sz val="10"/><name val="Arial"/><family val="2"/></font>
 <font><b/><sz val="10"/><name val="Arial"/><family val="2"/></font>
@@ -75,7 +85,7 @@ const ESTILOS = `${XML}<styleSheet xmlns="${NS}">
 <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F4F6"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FF9CA3AF"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="14">
+<cellXfs count="18">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>
@@ -90,6 +100,10 @@ const ESTILOS = `${XML}<styleSheet xmlns="${NS}">
 <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="right"/></xf>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>
 <xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="166" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="167" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
@@ -109,9 +123,12 @@ function planilha(aba: AbaEscrita) {
       return `<row r="${i + 1}">${celulas}</row>`;
     })
     .join("");
-  const congela = aba.linhaCabecalho
-    ? `<pane ySplit="${aba.linhaCabecalho}" topLeftCell="A${aba.linhaCabecalho + 1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A${aba.linhaCabecalho + 1}" sqref="A${aba.linhaCabecalho + 1}"/>`
-    : "";
+  const congela =
+    aba.linhaCabecalho && aba.congelarPrimeiraColuna
+      ? `<pane xSplit="1" ySplit="${aba.linhaCabecalho}" topLeftCell="B${aba.linhaCabecalho + 1}" activePane="bottomRight" state="frozen"/><selection pane="bottomRight" activeCell="B${aba.linhaCabecalho + 1}" sqref="B${aba.linhaCabecalho + 1}"/>`
+      : aba.linhaCabecalho
+        ? `<pane ySplit="${aba.linhaCabecalho}" topLeftCell="A${aba.linhaCabecalho + 1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A${aba.linhaCabecalho + 1}" sqref="A${aba.linhaCabecalho + 1}"/>`
+        : "";
   const cols = aba.larguras.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("");
   const rodape = `&amp;L&amp;8${escapar(aba.rodape ?? "")}&amp;R&amp;8Página &amp;P de &amp;N`;
   return (
@@ -119,7 +136,7 @@ function planilha(aba: AbaEscrita) {
     `<sheetViews><sheetView showGridLines="0" workbookViewId="0">${congela}</sheetView></sheetViews>` +
     `<sheetFormatPr defaultRowHeight="13"/><cols>${cols}</cols><sheetData>${linhas}</sheetData>` +
     `<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>` +
-    `<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>` +
+    `<pageSetup paperSize="9" orientation="${aba.paisagem ? "landscape" : "portrait"}" fitToWidth="1" fitToHeight="0"/>` +
     `<headerFooter><oddFooter>${rodape}</oddFooter></headerFooter></worksheet>`
   );
 }

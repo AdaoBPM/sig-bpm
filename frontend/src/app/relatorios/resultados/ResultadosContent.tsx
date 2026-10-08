@@ -9,6 +9,7 @@ import { CampoBusca } from "@/components/shared/Filtros";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { Agrupador, SeletorNivel, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
+import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type Resultados } from "../services/relatoriosService";
 
@@ -110,12 +111,18 @@ function TabelaResultados({ dados, titulo }: { dados: Resultados; titulo: string
 }
 
 /** Os centros de custo: a lista dos agrupamentos à esquerda, como na DRE, e a tabela do escolhido. */
-function VisaoCentros({ ano, ate }: { ano: number; ate: number }) {
-  const [busca, setBusca] = useState("");
-  const [escolhido, setEscolhido] = useState<string | null>(null);
-  const grupos = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "centros"], queryFn: () => relatoriosService.centros(ano, ate) });
+const chaveCentros = (ano: number, ate: number) => ["relatorios", "resultados", ano, ate, "centros"];
+
+/** O centro escolhido vale enquanto existir no período; senão, o primeiro da lista. */
+function useCentroEscolhido(ano: number, ate: number, ativo: boolean, escolhido: string | null) {
+  const grupos = useQuery({ queryKey: chaveCentros(ano, ate), queryFn: () => relatoriosService.centros(ano, ate), enabled: ativo });
   const lista = grupos.data?.grupos ?? [];
-  const grupo = (escolhido && lista.some((g) => g.grupo === escolhido) ? escolhido : lista[0]?.grupo) ?? null;
+  return { grupos, lista, grupo: (escolhido && lista.some((g) => g.grupo === escolhido) ? escolhido : lista[0]?.grupo) ?? null };
+}
+
+function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: number; escolhido: string | null; onEscolher: (g: string) => void }) {
+  const [busca, setBusca] = useState("");
+  const { grupos, lista, grupo } = useCentroEscolhido(ano, ate, true, escolhido);
   const centro = useQuery({
     queryKey: ["relatorios", "resultados", ano, ate, "centros", grupo],
     queryFn: () => relatoriosService.centro(ano, ate, grupo!),
@@ -137,7 +144,7 @@ function VisaoCentros({ ano, ate }: { ano: number; ate: number }) {
             <li key={g.grupo}>
               <button
                 type="button"
-                onClick={() => setEscolhido(g.grupo)}
+                onClick={() => onEscolher(g.grupo)}
                 aria-current={g.grupo === grupo ? "true" : undefined}
                 className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${g.grupo === grupo ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
               >
@@ -177,10 +184,24 @@ export function ResultadosContent() {
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [visao, setVisao] = useState("0");
+  // O centro escolhido fica aqui: o Exportar dele vai para a linha das abas, como nas demais visões.
+  const [escolhido, setEscolhido] = useState<string | null>(null);
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   // O mês escolhido vale se foi apurado no exercício; senão, o último apurado.
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
+  const { grupo } = useCentroEscolhido(ano ?? 0, ate ?? 0, visao === "centros" && !!ano && !!ate, escolhido);
+  const periodo = { ano, ate };
+  const opcoesExportar = [
+    {
+      chave: "atual",
+      excel: "Visão Atual",
+      pdf: "Visão Atual",
+      params: visao === "centros" ? { ...periodo, grupo: grupo ?? "" } : { ...periodo, visao },
+    },
+    { chave: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)", params: { ...periodo, escopo: "unidades" } },
+    { chave: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: "Todos os Centros de Custo (um por página)", params: { ...periodo, escopo: "centros" } },
+  ];
 
   return (
     <div className="space-y-6">
@@ -192,6 +213,7 @@ export function ResultadosContent() {
             <li>Escolha a visão nas abas: Consolidado, cada unidade ou Centros de Custo (com a lista dos centros à esquerda).</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. No fim, o mês escolhido e o total do exercício, com o valor por m³.</li>
+            <li>Use “Exportar” para baixar em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o % e o R$/m³): a visão atual, todas as unidades ou todos os centros de custo.</li>
           </ul>
         }
         sobre={
@@ -229,9 +251,14 @@ export function ResultadosContent() {
             }}
             onAte={setAte}
           />
-          <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
+          <div className="flex items-end gap-3">
+            <div className="min-w-0 flex-1">
+              <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
+            </div>
+            {visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
+          </div>
           {visao === "centros" ? (
-            <VisaoCentros ano={ano} ate={ate} />
+            <VisaoCentros ano={ano} ate={ate} escolhido={escolhido} onEscolher={setEscolhido} />
           ) : (
             <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} />
           )}

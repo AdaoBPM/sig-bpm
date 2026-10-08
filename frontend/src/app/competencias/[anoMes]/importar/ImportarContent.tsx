@@ -28,7 +28,7 @@ import { dataHora, inteiro, lerAnoMes, ROTULO_TIPO } from "../utils/formatacao";
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 
 /** Os arquivos de todo mês, na ordem do fechamento. A DRE do Comercial e o saldo inicial só aparecem quando importados no mês. */
-const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA"];
+const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL"];
 const TIPOS_EVENTUAIS = ["DRE_COMERCIAL", "ESTOQUE_INICIAL"];
 
 const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }> = {

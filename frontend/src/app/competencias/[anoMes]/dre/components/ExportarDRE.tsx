@@ -21,14 +21,14 @@ const OPCOES: Array<{ alcance: Alcance; excel: string; pdf: string }> = [
 ];
 
 /** O nome do arquivo que o backend mandou (filename*, em UTF-8), ou um padrão. */
-function nomeDoArquivo(disposicao: string | undefined, padrao: string) {
+export function nomeDoArquivo(disposicao: string | undefined, padrao: string) {
   const utf8 = disposicao?.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
   if (utf8) return decodeURIComponent(utf8);
   return disposicao?.match(/filename="([^"]+)"/i)?.[1] ?? padrao;
 }
 
 /** O erro vem como blob, porque a resposta esperada era o arquivo. */
-async function mensagemDoErro(error: unknown) {
+export async function mensagemDoErro(error: unknown) {
   const dados = (error as { response?: { data?: unknown } }).response?.data;
   if (dados instanceof Blob) {
     try {

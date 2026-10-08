@@ -602,6 +602,10 @@ enum TipoImportacao {
   MEDICAO
   DEVOLUCAO
   SAIDA
+  /// Indicadores gerenciais do mês: aba Indicadores (Admin.) do LISTAS REALIZADO (OPERAÇÃO).
+  INDICADORES_ADMIN
+  /// Indicadores gerenciais do mês: aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL.
+  INDICADORES_COMERCIAL
 }
 
 /// ENUM: estado do processamento de uma importação.
@@ -662,6 +666,7 @@ model Competencia {
   lancamentosManuais   LancamentoManual[]
   estoqueSaldos        EstoqueSaldo[]
   estoqueIniciais      EstoqueSaldoInicial[]
+  indicadoresImportados IndicadorImportado[]
 
   projetos            Projeto[]
   producoes           Producao[]
@@ -750,6 +755,7 @@ model Importacao {
   lancamentosContabeis LancamentoContabil[]
 
   estoqueIniciais EstoqueSaldoInicial[]
+  indicadores     IndicadorImportado[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -1085,6 +1091,27 @@ model EstoqueSaldoInicial {
 
   @@unique([competenciaId, obraId, linhaTexto])
   @@map("estoque_saldos_iniciais")
+}
+
+/// Indicador gerencial importado: o valor do mês de um indicador que não sai
+/// da DRE (quadro de lotação, fluxo de caixa, vendas, demanda…), das abas
+/// Indicadores (Admin.) e Indicadores (Comercial). O nome é o do catálogo dos
+/// indicadores (aba Realizado (SIG) do INDICADORES DE RESULTADO).
+model IndicadorImportado {
+  id            String  @id @default(uuid())
+  competenciaId String  @map("competencia_id")
+  importacaoId  String  @map("importacao_id")
+  nome          String
+  /// DECIMAL: o valor do mês, na unidade do indicador (percentuais como fração: 0,05 = 5%).
+  valor         Decimal
+  linhaArquivo  Int     @map("linha_arquivo")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+
+  @@unique([competenciaId, nome])
+  @@index([importacaoId])
+  @@map("indicadores_importados")
 }
 
 // -----------------------------------------------------------------------------

@@ -1,0 +1,150 @@
+import type { LinhaPlanilha, ValorCelula } from "../../../lib/xlsx.js";
+
+/**
+ * Indicadores gerenciais que não saem da DRE, importados mês a mês:
+ *
+ * - aba Indicadores (Admin.) do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO):
+ *   o quadro de lotação, o fluxo de caixa, a inadimplência, o turnover, as
+ *   vagas e os acidentes;
+ * - aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL: as vendas,
+ *   a receita líquida vendida, a margem de contribuição das vendas, a demanda
+ *   e o mix ampliado.
+ *
+ * As duas abas têm o mesmo leiaute: INDICADOR, TIPO, UNIDADE, METODOLOGIA e
+ * uma coluna por mês (a data do dia 1º). Cada linha é um indicador, pelo nome
+ * da aba Realizado (SIG) do INDICADORES DE RESULTADO; o valor é o da coluna do
+ * mês da competência.
+ */
+
+export type TipoIndicadores = "INDICADORES_ADMIN" | "INDICADORES_COMERCIAL";
+
+export const DEFINICOES_INDICADORES: Record<TipoIndicadores, { aba: string; rotulo: string; nomes: string[] }> = {
+  INDICADORES_ADMIN: {
+    aba: "Indicadores (Admin.)",
+    rotulo: "Indicadores do Administrativo",
+    nomes: [
+      "Quadro de Lotação: MO Direta Matriz",
+      "Quadro de Lotação: MO Direta Filial",
+      "Quadro de Lotação: MO Direta Total",
+      "Quadro de Lotação: MO Indireta Matriz",
+      "Quadro de Lotação: MO Indireta Filial",
+      "Quadro de Lotação: MO Indireta Total",
+      "Quadro de Lotação: MO Geral Matriz",
+      "Quadro de Lotação: MO Geral Filial",
+      "Quadro de Lotação: MO Geral Total",
+      "Quadro de Lotação: MO Direta Montagem",
+      "Quadro de Lotação: MO Indireta Montagem",
+      "Quadro de Lotação: MO Geral Montagem",
+      "Fluxo de Caixa Operacional Líquido",
+      "Inadimplência",
+      "Quadro de Lotação Total",
+      "Turnover",
+      "Abertura de Vagas x Contratações",
+      "Acidentes c/ Afastamento",
+    ],
+  },
+  INDICADORES_COMERCIAL: {
+    aba: "Indicadores (Comercial)",
+    rotulo: "Indicadores do Comercial",
+    nomes: [
+      "Venda: Global",
+      "Venda: Mercantil",
+      "Venda: Total",
+      "Receita Líquida Vendida: Global",
+      "Receita Líquida Vendida: Mercantil",
+      "Receita Líquida Vendida: Total",
+      "Margem de Contribuição: Global",
+      "Margem de Contribuição: Mercantil",
+      "Margem de Contribuição: Total",
+      "Demanda (Vol.): Matriz",
+      "Demanda (Vol.): Filial",
+      "Demanda (Vol.): Total (Fabricação)",
+      "Demanda (Vol.): Montagem",
+      "Demanda (Pistas.): Filial",
+      "Repres. do Mix Ampliado nas Vendas",
+    ],
+  },
+};
+
+export const ehTipoIndicadores = (tipo: string): tipo is TipoIndicadores => tipo in DEFINICOES_INDICADORES;
+
+/**
+ * Os tipos que não entram na apuração: importá-los depois de apurar não muda
+ * nenhum valor apurado, então não pede reapuração (nem acende a bola verde).
+ */
+export const TIPOS_FORA_DA_APURACAO = Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[];
+
+export type ValorIndicador = { nome: string; valor: number; linhaArquivo: number };
+export type Rejeicao = { linha: number; codigo: string; mensagem: string };
+export type LeituraIndicadores =
+  | { ok: true; valores: ValorIndicador[]; rejeicoes: Rejeicao[]; lidas: number; vazias: number }
+  | { ok: false; motivo: string };
+
+const normalizar = (v: ValorCelula) => String(v ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+
+/** O ano e o mês do rótulo de uma coluna: a data (serial do Excel ou texto dd/mm/aaaa) ou "AGO/2026". */
+function mesDaColuna(v: ValorCelula): { ano: number; mes: number } | null {
+  if (typeof v === "number" && v > 20000 && v < 80000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86_400_000);
+    return { ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1 };
+  }
+  const t = String(v ?? "").trim().toUpperCase();
+  const data = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (data) return { ano: Number(data[3]), mes: Number(data[2]) };
+  const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+  const nome = t.match(/^([A-Z]{3})\/(\d{2}|\d{4})$/);
+  if (nome && MESES.includes(nome[1])) return { ano: Number(nome[2].length === 2 ? `20${nome[2]}` : nome[2]), mes: MESES.indexOf(nome[1]) + 1 };
+  return null;
+}
+
+const numero = (v: ValorCelula): number | null => {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const t = String(v ?? "").trim();
+  if (!t) return null;
+  const n = Number(t.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
+
+/**
+ * Lê o mês da aba: o valor de cada indicador do catálogo do tipo. Recusa a aba
+ * sem o cabeçalho ou sem a coluna do mês; uma linha de indicador fora do
+ * catálogo ou com valor que não é número é rejeitada (e relatada).
+ */
+export function lerIndicadores(tipo: TipoIndicadores, linhas: LinhaPlanilha[], ano: number, mes: number): LeituraIndicadores {
+  const def = DEFINICOES_INDICADORES[tipo];
+  const cabecalho = linhas.find((l) => normalizar(l.celulas[0]) === "INDICADOR");
+  if (!cabecalho) return { ok: false, motivo: `A aba não tem o cabeçalho (coluna INDICADOR). Envie a aba ${def.aba}.` };
+  const coluna = cabecalho.celulas.findIndex((v, i) => i > 0 && (() => {
+    const m = mesDaColuna(v);
+    return m !== null && m.ano === ano && m.mes === mes;
+  })());
+  if (coluna < 0) return { ok: false, motivo: `A aba não tem a coluna de ${String(mes).padStart(2, "0")}/${ano}.` };
+  const catalogo = new Map(def.nomes.map((n) => [normalizar(n), n]));
+  const valores: ValorIndicador[] = [];
+  const rejeicoes: Rejeicao[] = [];
+  let lidas = 0;
+  let vazias = 0;
+  for (const l of linhas) {
+    if (l.numero <= cabecalho.numero) continue;
+    const nome = normalizar(l.celulas[0]);
+    if (!nome) continue;
+    lidas++;
+    const bruto = l.celulas[coluna];
+    if (bruto === null || String(bruto).trim() === "") {
+      vazias++;
+      continue;
+    }
+    const doCatalogo = catalogo.get(nome);
+    if (!doCatalogo) {
+      rejeicoes.push({ linha: l.numero, codigo: "INDICADOR_DESCONHECIDO", mensagem: `"${String(l.celulas[0]).trim()}" não é um indicador do catálogo.` });
+      continue;
+    }
+    const v = numero(bruto);
+    if (v === null) {
+      rejeicoes.push({ linha: l.numero, codigo: "VALOR_INVALIDO", mensagem: `O valor de "${doCatalogo}" não é um número.` });
+      continue;
+    }
+    valores.push({ nome: doCatalogo, valor: v, linhaArquivo: l.numero });
+  }
+  return { ok: true, valores, rejeicoes, lidas, vazias };
+}

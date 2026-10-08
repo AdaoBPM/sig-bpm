@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
+import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { formato, mensagemDeErro, relatoriosService, type Indicador } from "../services/relatoriosService";
 
@@ -60,7 +61,8 @@ export function IndicadoresContent() {
           <ul>
             <li>Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
-            <li>Marque “Só com Fonte na Ferramenta” para esconder os indicadores que ainda dependem de dados de fora (quadro de lotação, vendas, fluxo de caixa…).</li>
+            <li>Marque “Só com Fonte na Ferramenta” para esconder os indicadores que ainda não têm dados.</li>
+            <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
           </ul>
         }
         sobre={
@@ -70,14 +72,13 @@ export function IndicadoresContent() {
               Realizado (SIG)); a metodologia, o sentido e a forma do acumulado vêm da aba Metas.
             </p>
             <p>
-              Os valores saem da DRE apurada (congelada) de cada competência e dos volumes da apuração (projetos liberados). O acumulado soma os
-              meses; nos indicadores de razão (%, R$/m³), é a soma dos numeradores sobre a dos denominadores — a média ponderada da planilha.
-              Os de posição (quadro de lotação, inadimplência) valem o último mês.
+              Os valores saem da DRE apurada (congelada) de cada competência, dos volumes da apuração (projetos liberados) e dos indicadores
+              importados no fechamento: a aba Indicadores (Admin.) do LISTAS REALIZADO (OPERAÇÃO) — quadro de lotação, fluxo de caixa,
+              inadimplência, turnover, vagas e acidentes — e a aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL — vendas, receita
+              vendida, margem, demanda e mix. O acumulado soma os meses ou, nos indicadores de razão (%, R$/m³, eficiências, margem das vendas,
+              turnover), é a média ponderada da planilha. Os de posição (quadro de lotação, inadimplência, vagas) valem o último mês.
             </p>
-            <p>
-              Os indicadores que dependem de dados que a ferramenta ainda não recebe (quadro de lotação e eficiências por colaborador, vendas e
-              demanda do Comercial, fluxo de caixa, inadimplência, turnover, vagas e acidentes) ficam listados, sem valor.
-            </p>
+            <p>Um indicador importado fica sem valor no mês em que a aba não foi importada.</p>
           </>
         }
       />
@@ -100,10 +101,13 @@ export function IndicadoresContent() {
               }}
               onAte={setAte}
             />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" checked={soComFonte} onChange={(e) => setSoComFonte(e.target.checked)} className="size-4 accent-black" />
-              Só com Fonte na Ferramenta
-            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={soComFonte} onChange={(e) => setSoComFonte(e.target.checked)} className="size-4 accent-black" />
+                Só com Fonte na Ferramenta
+              </label>
+              <ExportarRelatorio caminho="indicadores" padrao={`Indicadores ${ano}`} opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]} />
+            </div>
           </div>
 
           {consulta.isError ? (

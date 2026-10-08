@@ -5,22 +5,33 @@ import { COD } from "./basesResultados.js";
  * do SIG BPM 2026 - INDICADORES DE RESULTADO; o sentido, a unidade, a
  * metodologia e o acumulado vêm da aba Metas.
  *
- * O cálculo de cada mês sai da DRE apurada (por unidade) e dos volumes
- * congelados da apuração. Conferido contra a aba Realizado (SIG) em
- * 08/10/2026: igual em todos os meses cujos dados não mudaram desde a cópia
- * para a planilha. Os indicadores sem fonte na ferramenta (quadro de lotação,
- * vendas, demanda, fluxo de caixa, inadimplência, turnover, vagas, acidentes)
- * ficam listados, sem valor.
+ * O cálculo de cada mês sai da DRE apurada (por unidade), dos volumes
+ * congelados da apuração e dos indicadores importados das abas Indicadores
+ * (Admin.) e Indicadores (Comercial): o quadro de lotação, o fluxo de caixa,
+ * as vendas, a demanda… Conferido contra a aba Realizado (SIG) em 08/10/2026:
+ * igual em todos os meses cujos dados não mudaram desde a cópia para a
+ * planilha.
  *
- * Acumulado: ACUM soma os meses — nos indicadores de razão (%, R$/m³), a soma
- * dos numeradores sobre a soma dos denominadores, que é a média ponderada da
- * planilha (SUMPRODUCT); ATUAL é o valor do último mês.
+ * Acumulado, como a aba Realizado: ACUM soma os meses ou, quando o indicador
+ * tem peso, é a média dos meses ponderada por ele (SUMPRODUCT) — nas razões
+ * (%, R$/m³), o peso é o denominador, e a média é a soma dos numeradores sobre
+ * a dos denominadores; nas eficiências, o volume ou a receita; na margem das
+ * vendas, a venda. ATUAL é o valor do último mês.
  */
 
-/** Os valores de um mês: a DRE apurada de uma visão (0 Consolidado, 1..5 as unidades) e os volumes congelados. */
-export type DadosDoMes = { dre: (unidade: number, codigo: string) => number; volume: (origem: string) => number };
-/** O indicador do mês: o numerador e, nas razões, o denominador. */
-export type Parte = { num: number; den?: number };
+/**
+ * Os valores de um mês: a DRE apurada de uma visão (0 Consolidado, 1..5 as
+ * unidades), os volumes congelados e os indicadores importados. No mês sem
+ * apuração, a DRE e os volumes valem NaN, e o indicador que depende deles fica
+ * sem valor; sem o indicador importado, null.
+ */
+export type DadosDoMes = {
+  dre: (unidade: number, codigo: string) => number;
+  volume: (origem: string) => number;
+  importado: (nome: string) => number | null;
+};
+/** O valor do mês e o peso dele no acumulado; `componentes`, quando o acumulado pondera partes (Matriz e Filial) em vez do total. */
+export type Parte = { valor: number | null; peso?: number; componentes?: Array<{ valor: number | null; peso: number }> };
 type Calculo = (m: DadosDoMes) => Parte;
 
 export type Indicador = {
@@ -65,18 +76,56 @@ const L = {
   RL: "RL.RESULTADO_LIQUIDO_RL",
 };
 
+/** a ÷ b; sem divisor (zero ou sem dado), sem valor. */
+const divide = (a: number, b: number) => (Number.isFinite(a) && Number.isFinite(b) && b !== 0 ? a / b : null);
+const finito = (x: number) => (Number.isFinite(x) ? x : null);
+
 // Matriz é a unidade 1, Filial a 2, Serviços a 3; o Consolidado (Total) é a 0.
-const v = (u: number, c: string): Calculo => (m) => ({ num: m.dre(u, c) });
-const razao = (u: number, num: string[], den: string): Calculo => (m) => ({ num: num.reduce((s, c) => s + m.dre(u, c), 0), den: m.dre(u, den) });
+const v = (u: number, c: string): Calculo => (m) => ({ valor: finito(m.dre(u, c)) });
+/** Razão da DRE: o peso no acumulado é o denominador (a soma dos numeradores sobre a dos denominadores). */
+const razao = (u: number, num: string[], den: string): Calculo => (m) => {
+  const d = m.dre(u, den);
+  return { valor: divide(num.reduce((s, c) => s + m.dre(u, c), 0), d), peso: d };
+};
 const maoDeObra = (u: number) => razao(u, [L.CPP_MOD, L.CPP_MOI, L.FORMAS], COD.PRODUCAO);
 const gastosGerais = (u: number) => razao(u, [L.CPP_GGV, L.CPP_GGD, L.CPP_GGI], COD.PRODUCAO);
-const projetos = (...origens: string[]): Calculo => (m) => ({ num: origens.reduce((s, o) => s + m.volume(o), 0) });
+const projetos = (...origens: string[]): Calculo => (m) => ({ valor: finito(origens.reduce((s, o) => s + m.volume(o), 0)) });
+
+/** Indicador importado (abas Indicadores (Admin.) e (Comercial)), com o peso do acumulado, quando houver. */
+const importado = (nome: string, peso?: (m: DadosDoMes) => number | null): Calculo => (m) => ({ valor: m.importado(nome), peso: peso ? (peso(m) ?? undefined) : undefined });
+const lotacao = (m: DadosDoMes, quadro: string) => m.importado(`Quadro de Lotação: ${quadro}`) ?? NaN;
+
+/** Volume (ou receita) por colaborador do quadro; o acumulado pondera pelo volume (ou pela receita), como a planilha. */
+const porColaborador =
+  (numerador: (m: DadosDoMes) => number, quadro: (m: DadosDoMes) => number, escala = 1): Calculo =>
+  (m) => {
+    const n = numerador(m);
+    const q = divide(n, quadro(m));
+    return { valor: q === null ? null : q / escala, peso: n };
+  };
+const producao = (u: number) => (m: DadosDoMes) => m.dre(u, COD.PRODUCAO);
+const rendimento = (m: DadosDoMes) => m.dre(3, COD.MONTAGEM);
+const receitaProducao = (u: number) => (m: DadosDoMes) => m.dre(u, COD.RLPF);
+/** Eficiência da operação da Matriz e da Filial juntas: o acumulado pondera os acumulados de cada uma pela receita (célula Q100 da aba Realizado). */
+const operacaoTotal =
+  (quadro: string): Calculo =>
+  (m) => {
+    const matriz = porColaborador(receitaProducao(1), (x) => lotacao(x, `${quadro} Matriz`), 1000)(m);
+    const filial = porColaborador(receitaProducao(2), (x) => lotacao(x, `${quadro} Filial`), 1000)(m);
+    const total = porColaborador((x) => x.dre(1, COD.RLPF) + x.dre(2, COD.RLPF), (x) => lotacao(x, `${quadro} Total`), 1000)(m);
+    return { valor: total.valor, componentes: [matriz, filial].map((p) => ({ valor: p.valor, peso: p.peso ?? 0 })) };
+  };
+const venda = (tipo: string) => (m: DadosDoMes) => m.importado(`Venda: ${tipo}`);
 
 const CALCULOS: Record<string, Calculo> = {
   "Custos de Produção: Matriz (CPP)": razao(1, [L.CPP], COD.RLPF),
-  // Na Filial, sobre a ROL inteira, como na aba Resultados (Filial).
-  "Custos de Produção: Filial (CPP)": razao(2, [L.CPP], COD.RO),
-  "Custos de Produção: Total (CPP)": razao(0, [L.CPP], COD.RLPF),
+  // Na Filial, sobre a ROL inteira, como na aba Resultados (Filial); o acumulado pondera pela receita do pré-fabricado (célula Q3 da aba Realizado).
+  "Custos de Produção: Filial (CPP)": (m) => ({ ...razao(2, [L.CPP], COD.RO)(m), peso: m.dre(2, COD.RLPF) }),
+  // O mês é o do Consolidado; o acumulado pondera os acumulados da Matriz e da Filial pela receita do pré-fabricado (célula Q4 da aba Realizado).
+  "Custos de Produção: Total (CPP)": (m) => ({
+    valor: divide(m.dre(0, L.CPP), m.dre(0, COD.RLPF)),
+    componentes: [razao(1, [L.CPP], COD.RLPF)(m), { ...razao(2, [L.CPP], COD.RO)(m), peso: m.dre(2, COD.RLPF) }].map((p) => ({ valor: p.valor, peso: p.peso ?? 0 })),
+  }),
   "Produção (Vol.): Matriz": v(1, COD.PRODUCAO),
   "Produção (Vol.): Filial": v(2, COD.PRODUCAO),
   "Produção (Vol.): Total": v(0, COD.PRODUCAO),
@@ -90,6 +139,23 @@ const CALCULOS: Record<string, Calculo> = {
   "Gastos Gerais: Matriz": gastosGerais(1),
   "Gastos Gerais: Filial": gastosGerais(2),
   "Gastos Gerais: Total": gastosGerais(0),
+  ...Object.fromEntries(
+    ["MO Direta", "MO Indireta", "MO Geral"].flatMap((q) => [
+      [`Quadro de Lotação: ${q} Matriz`, importado(`Quadro de Lotação: ${q} Matriz`)],
+      [`Quadro de Lotação: ${q} Filial`, importado(`Quadro de Lotação: ${q} Filial`)],
+      [`Quadro de Lotação: ${q} Total`, importado(`Quadro de Lotação: ${q} Total`)],
+      [`Eficiência da Produção: ${q} Matriz`, porColaborador(producao(1), (m) => lotacao(m, `${q} Matriz`))],
+      [`Eficiência da Produção: ${q} Filial`, porColaborador(producao(2), (m) => lotacao(m, `${q} Filial`))],
+      [`Eficiência da Produção: ${q} Total`, porColaborador(producao(0), (m) => lotacao(m, `${q} Total`))],
+      [`Quadro de Lotação: ${q} Montagem`, importado(`Quadro de Lotação: ${q} Montagem`)],
+      [`Eficiência da Montagem: ${q}`, porColaborador(rendimento, (m) => lotacao(m, `${q} Montagem`))],
+      [`Eficiência da Operação: ${q} Matriz`, porColaborador(receitaProducao(1), (m) => lotacao(m, `${q} Matriz`), 1000)],
+      [`Eficiência da Operação: ${q} Filial`, porColaborador(receitaProducao(2), (m) => lotacao(m, `${q} Filial`), 1000)],
+      [`Eficiência da Operação: ${q} Total`, operacaoTotal(q)],
+      [`Eficiência da Operação: ${q} Montagem`, porColaborador((m) => m.dre(0, COD.RLM), (m) => lotacao(m, `${q} Montagem`), 1000)],
+    ]),
+  ),
+  "Eficiência da Operação: Total": porColaborador((m) => m.dre(0, COD.RO), (m) => m.importado("Quadro de Lotação Total") ?? NaN, 1000),
   "Custos de Serviços: Montagem (CSM)": razao(3, [L.CSM], COD.RLM),
   "Rendimento: Montagem": v(3, COD.MONTAGEM),
   "Mão de Obra Direta: Montagem": razao(3, [L.CSM_MOD, L.CSM_MOT], COD.MONTAGEM),
@@ -107,7 +173,27 @@ const CALCULOS: Record<string, Calculo> = {
   "Liberação de Projetos: Total": projetos("PROJETOS_MATRIZ", "PROJETOS_FILIAL"),
   "Comissões de Representantes e 3os (DVV)": v(0, L.COMISSOES),
   "Despesas Comerciais (DC)": razao(0, [L.DC], COD.RO),
+  ...Object.fromEntries(
+    ["Global", "Mercantil", "Total"].flatMap((t) => [
+      [`Venda: ${t}`, importado(`Venda: ${t}`)],
+      [`Receita Líquida Vendida: ${t}`, importado(`Receita Líquida Vendida: ${t}`)],
+      // A margem das vendas acumula ponderada pela venda (células Q65 a Q67 da aba Realizado).
+      [`Margem de Contribuição: ${t}`, importado(`Margem de Contribuição: ${t}`, venda(t))],
+    ]),
+  ),
+  "Demanda (Vol.): Matriz": importado("Demanda (Vol.): Matriz"),
+  "Demanda (Vol.): Filial": importado("Demanda (Vol.): Filial"),
+  "Demanda (Vol.): Total (Fabricação)": importado("Demanda (Vol.): Total (Fabricação)"),
+  "Demanda (Vol.): Montagem": importado("Demanda (Vol.): Montagem"),
+  "Demanda (Pistas.): Filial": importado("Demanda (Pistas.): Filial"),
   "Despesas Administrativas (DA)": razao(0, [L.DA], COD.RO),
+  "Fluxo de Caixa Operacional Líquido": importado("Fluxo de Caixa Operacional Líquido"),
+  "Inadimplência": importado("Inadimplência"),
+  "Quadro de Lotação Total": importado("Quadro de Lotação Total"),
+  // O turnover acumula ponderado pelo quadro de lotação (célula Q77 da aba Realizado).
+  "Turnover": importado("Turnover", (m) => m.importado("Quadro de Lotação Total")),
+  "Abertura de Vagas x Contratações": importado("Abertura de Vagas x Contratações"),
+  "Acidentes c/ Afastamento": importado("Acidentes c/ Afastamento"),
   "Receita Líquida: Produção Matriz": v(1, COD.RLPF),
   "Receita Líquida: Produção Filial": v(2, COD.RLPF),
   "Receita Líquida: Frete Matriz": v(1, COD.RLF),
@@ -115,7 +201,7 @@ const CALCULOS: Record<string, Calculo> = {
   "Receita Líquida: Devoluções e Inventários": v(0, COD.RLDI),
   "Receita Líquida: Montagem": v(0, COD.RLM),
   "Receita Líquida: Complementares": v(0, COD.RLC),
-  "Receita Líquida: Produção": (m) => ({ num: m.dre(1, COD.RO) + m.dre(2, COD.RO) }),
+  "Receita Líquida: Produção": (m) => ({ valor: finito(m.dre(1, COD.RO) + m.dre(2, COD.RO)) }),
   "Receita Líquida: Serviços": v(3, COD.RO),
   "Receita Líquida: Total": v(0, COD.RO),
   "Margem Bruta (MB): Matriz": v(1, L.MB),
@@ -124,8 +210,10 @@ const CALCULOS: Record<string, Calculo> = {
   "Margem Bruta (MB): Total": v(0, L.MB),
   "Margem de Contribuição (MC): Total": v(0, L.MC),
   "Lucro Operacional (EBITDA)": v(0, L.EBITDA),
-  "Resultado Financeiro (RF)": (m) => ({ num: m.dre(0, L.RF) - m.dre(0, L.DF) }),
+  "Resultado Financeiro (RF)": (m) => ({ valor: finito(m.dre(0, L.RF) - m.dre(0, L.DF)) }),
   "Resultado Líquido (RL)": v(0, L.RL),
+  // O mix acumula ponderado pela venda total (célula Q111 da aba Realizado).
+  "Repres. do Mix Ampliado nas Vendas": importado("Repres. do Mix Ampliado nas Vendas", venda("Total")),
 };
 
 type Tupla = [grupo: string, numero: string, nome: string, sentido: string, unidade: string, metodologia: string, acumulado: "ACUM" | "ATUAL"];
@@ -254,15 +342,14 @@ export const INDICADORES: Indicador[] = LISTA.map(([grupo, numero, nome, sentido
   calculo: CALCULOS[nome],
 }));
 
-/** O valor de um mês: a razão, ou o próprio valor; null sem denominador. */
-export const valorDaParte = (p: Parte) => (p.den === undefined ? p.num : p.den === 0 ? null : p.num / p.den);
-
-/** O acumulado dos meses (as partes de cada mês com dado, em ordem). */
-export function acumular(i: Pick<Indicador, "acumulado">, partes: Parte[]): number | null {
-  if (partes.length === 0) return null;
-  if (i.acumulado === "ATUAL") return valorDaParte(partes[partes.length - 1]);
-  const num = partes.reduce((s, p) => s + p.num, 0);
-  if (partes.every((p) => p.den === undefined)) return num;
-  const den = partes.reduce((s, p) => s + (p.den ?? 0), 0);
-  return den === 0 ? null : num / den;
+/** O acumulado dos meses (as partes de cada mês, em ordem; null no mês sem dado). */
+export function acumular(i: Pick<Indicador, "acumulado">, partes: Array<Parte | null>): number | null {
+  const comDado = partes.filter((p): p is Parte => p !== null && (p.valor !== null || !!p.componentes));
+  if (comDado.length === 0) return null;
+  if (i.acumulado === "ATUAL") return comDado[comDado.length - 1].valor;
+  const itens = comDado.flatMap((p): Array<{ valor: number | null; peso?: number }> => p.componentes ?? [p]).filter((p) => p.valor !== null);
+  if (itens.every((p) => p.peso === undefined)) return itens.reduce((s, p) => s + p.valor!, 0);
+  const pesados = itens.filter((p) => p.peso !== undefined && Number.isFinite(p.peso));
+  const soma = pesados.reduce((s, p) => s + p.peso!, 0);
+  return soma === 0 ? null : pesados.reduce((s, p) => s + p.valor! * p.peso!, 0) / soma;
 }

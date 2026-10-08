@@ -7,6 +7,7 @@ import { receitaPreviaService } from "../receitaPrevia/receitaPreviaService.js";
 import { rateiosService } from "../volumes/rateiosService.js";
 import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
+import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
 
 /**
  * Apuração congelada, fechamento e reabertura da competência (Passo 21).
@@ -59,7 +60,12 @@ async function retratoEntradas(competenciaId: string): Promise<Retrato> {
     prisma.lancamentoContabil.aggregate({ where, _count: true, _sum: { valorMovimento: true }, _max: { criadoEm: true } }),
     prisma.lancamentoManual.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
     prisma.lancamentoReceita.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
-    prisma.importacao.findMany({ where: { ...where, status: "CONCLUIDA", substituidaEm: null, comparacao: false }, select: { id: true }, orderBy: { id: "asc" } }),
+    // Os indicadores importados não entram na apuração: não contam como mudança.
+    prisma.importacao.findMany({
+      where: { ...where, status: "CONCLUIDA", substituidaEm: null, comparacao: false, tipo: { notIn: TIPOS_FORA_DA_APURACAO } },
+      select: { id: true },
+      orderBy: { id: "asc" },
+    }),
     prisma.projeto.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
     prisma.producao.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
     prisma.producaoPista.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),

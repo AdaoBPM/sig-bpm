@@ -10,6 +10,7 @@ import { ABA_DRE_COMERCIAL, interpretarDreComercial } from "./dreComercial/leiau
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { localizarCabecalho } from "./listas/leituraListas.js";
+import { DEFINICOES_INDICADORES, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
 import { escolherAba } from "./statusImportacao.js";
 
 /**
@@ -88,6 +89,27 @@ const listas: Tipo[] = [...Object.values(DEFINICOES_LISTAS), ...Object.values(DE
   },
 }));
 
+/** Os indicadores do mês (abas Indicadores (Admin.) e (Comercial)): sem a coluna do mês, nada do mês. */
+const indicadores: Tipo[] = (Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[]).map((tipo) => ({
+  tipo,
+  rotulo: DEFINICOES_INDICADORES[tipo].rotulo,
+  abas: [DEFINICOES_INDICADORES[tipo].aba],
+  alcance: "POR_MES",
+  ler(linhas, ano, mes) {
+    const l = lerIndicadores(tipo, linhas, ano, mes);
+    if (!l.ok) {
+      if (l.motivo.includes("não tem a coluna")) return null;
+      throw new AbaInvalida(l.motivo);
+    }
+    if (l.valores.length === 0) return null;
+    return {
+      registros: l.valores.length,
+      assinatura: assinar([...l.valores, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+    };
+  },
+}));
+
 /** Os tipos que a importação em lote reconhece, na ordem em que entram na fila. */
 const TIPOS: Tipo[] = [
   {
@@ -109,6 +131,7 @@ const TIPOS: Tipo[] = [
     },
   },
   ...listas,
+  ...indicadores,
   {
     tipo: "DRE_COMERCIAL",
     rotulo: "DRE do Comercial",

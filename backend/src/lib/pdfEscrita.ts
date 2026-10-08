@@ -12,6 +12,8 @@ export type Fonte = "normal" | "negrito";
 export type Cor = [number, number, number];
 
 export const A4 = { largura: 595.28, altura: 841.89 };
+/** A4 deitada, para as tabelas largas (Resultados, Indicadores). */
+export const A4_PAISAGEM = { largura: A4.altura, altura: A4.largura };
 
 // Larguras da Helvetica e da Helvetica-Bold (AFM da Adobe), em milésimos do
 // corpo, dos caracteres 32 a 126. Letras acentuadas usam a largura da letra base.
@@ -92,6 +94,8 @@ const cor = ([r, g, b]: Cor) => `${num(r / 255)} ${num(g / 255)} ${num(b / 255)}
 export class DocumentoPDF {
   private paginas: string[][] = [];
 
+  constructor(readonly pagina: { largura: number; altura: number } = A4) {}
+
   get total() {
     return this.paginas.length;
   }
@@ -139,7 +143,7 @@ export class DocumentoPDF {
     this.paginas.forEach((comandos, i) => {
       const conteudo = comandos.join("\n");
       objetos[idPagina(i)] =
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4.largura} ${A4.altura}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${idPagina(i) + 1} 0 R >>`;
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.pagina.largura} ${this.pagina.altura}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${idPagina(i) + 1} 0 R >>`;
       objetos[idPagina(i) + 1] = `<< /Length ${conteudo.length} >>\nstream\n${conteudo}\nendstream`;
     });
 

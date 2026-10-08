@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { baseDoPercentual, baseDoUnitario, COD } from "../src/services/relatorios/basesResultados.js";
-import { acumular, INDICADORES, valorDaParte } from "../src/services/relatorios/indicadores.js";
+import { lerIndicadores } from "../src/services/importacoes/indicadores/leituraIndicadores.js";
+import { acumular, INDICADORES } from "../src/services/relatorios/indicadores.js";
 
 const linha = (codigo: string) => ({ codigo, grupoSigla: codigo.split(".")[0] });
 
@@ -37,23 +38,54 @@ describe("indicadores (aba Realizado (SIG) e Metas, 08/10/2026)", () => {
     assert.equal(INDICADORES.at(-1)!.nome, "Repres. do Mix Ampliado nas Vendas");
   });
 
-  it("acumula as razões pela soma dos numeradores sobre a dos denominadores (a média ponderada da planilha)", () => {
-    const partes = [
-      { num: 70, den: 100 },
-      { num: 90, den: 300 },
+  it("acumula como a aba Realizado: soma, média ponderada pelo peso ou o último mês", () => {
+    // Razão: o peso é o denominador — a soma dos numeradores sobre a dos denominadores.
+    const razoes = [
+      { valor: 0.7, peso: 100 },
+      { valor: 0.3, peso: 300 },
     ];
-    assert.equal(valorDaParte(partes[0]), 0.7);
-    assert.equal(acumular({ acumulado: "ACUM" }, partes), 160 / 400);
-    assert.equal(acumular({ acumulado: "ACUM" }, [{ num: 10 }, { num: 5 }]), 15);
-    assert.equal(acumular({ acumulado: "ATUAL" }, [{ num: 10 }, { num: 5 }]), 5);
-    assert.equal(acumular({ acumulado: "ACUM" }, []), null);
+    assert.equal(acumular({ acumulado: "ACUM" }, razoes), (0.7 * 100 + 0.3 * 300) / 400);
+    assert.equal(acumular({ acumulado: "ACUM" }, [{ valor: 10 }, null, { valor: 5 }]), 15);
+    assert.equal(acumular({ acumulado: "ATUAL" }, [{ valor: 10 }, { valor: 5 }, { valor: null }]), 5);
+    assert.equal(acumular({ acumulado: "ACUM" }, [null, { valor: null }]), null);
+    // Componentes (Matriz e Filial): pondera cada um pelo próprio peso.
+    const comp = acumular({ acumulado: "ACUM" }, [{ valor: 0.5, componentes: [{ valor: 0.4, peso: 1 }, { valor: 0.8, peso: 3 }] }])!;
+    assert.ok(Math.abs(comp - 0.7) < 1e-12);
   });
 
-  it("calcula da DRE: Custos de Produção da Matriz sobre a Receita Líquida do Pré-Fabricado", () => {
-    const cpp = INDICADORES.find((i) => i.nome === "Custos de Produção: Matriz (CPP)")!;
-    const dre = (u: number, c: string) => (u === 1 && c === "CPP.CUSTOS_DE_PRODUCAO_PRE_FABRICADOS_CPP" ? 72 : u === 1 && c === COD.RLPF ? 100 : 0);
-    assert.deepEqual(cpp.calculo!({ dre, volume: () => 0 }), { num: 72, den: 100 });
-    // Sem fonte na ferramenta: listado, sem cálculo.
-    assert.equal(INDICADORES.find((i) => i.nome === "Turnover")!.calculo, undefined);
+  it("calcula da DRE e dos importados: Custos de Produção da Matriz, eficiência da produção, turnover", () => {
+    const porNome = (n: string) => INDICADORES.find((i) => i.nome === n)!;
+    const dre = (u: number, c: string) =>
+      u === 1 && c === "CPP.CUSTOS_DE_PRODUCAO_PRE_FABRICADOS_CPP" ? 72 : u === 1 && c === COD.RLPF ? 100 : u === 1 && c === COD.PRODUCAO ? 1065.72 : 0;
+    const importados: Record<string, number> = { "Quadro de Lotação: MO Direta Matriz": 90, Turnover: 0.05, "Quadro de Lotação Total": 274 };
+    const m = { dre, volume: () => 0, importado: (n: string) => importados[n] ?? null };
+    assert.deepEqual(porNome("Custos de Produção: Matriz (CPP)").calculo!(m), { valor: 0.72, peso: 100 });
+    const ef = porNome("Eficiência da Produção: MO Direta Matriz").calculo!(m);
+    assert.equal(ef.valor!.toFixed(2), "11.84"); // 1.065,72 m³ ÷ 90 colaboradores, como na planilha
+    assert.equal(ef.peso, 1065.72);
+    assert.deepEqual(porNome("Turnover").calculo!(m), { valor: 0.05, peso: 274 });
+    // No mês sem apuração (DRE em NaN), o indicador da DRE fica sem valor.
+    assert.equal(porNome("Custos de Produção: Matriz (CPP)").calculo!({ ...m, dre: () => NaN }).valor, null);
+    // Sem o indicador importado, sem valor.
+    assert.equal(porNome("Venda: Global").calculo!(m).valor, null);
+  });
+});
+
+describe("indicadores importados (abas Indicadores (Admin.) e (Comercial))", () => {
+  const linhas = [
+    { numero: 1, celulas: ["INDICADOR", "TIPO", "UNIDADE", "METODOLOGIA", 46023, 46054] },
+    { numero: 2, celulas: ["Quadro de Lotação: MO Direta Matriz", "=", "colab.", "Total", 90, 90] },
+    { numero: 3, celulas: ["Turnover", "↓", "%", "Rescisões", 0.05, null] },
+    { numero: 4, celulas: ["Indicador Novo", "↑", "R$", "?", 1, 2] },
+  ];
+  it("lê a coluna do mês (data do dia 1º) e rejeita o indicador fora do catálogo", () => {
+    const l = lerIndicadores("INDICADORES_ADMIN", linhas, 2026, 1);
+    assert.ok(l.ok);
+    assert.deepEqual(l.valores.map((v) => [v.nome, v.valor]), [["Quadro de Lotação: MO Direta Matriz", 90], ["Turnover", 0.05]]);
+    assert.equal(l.rejeicoes[0].codigo, "INDICADOR_DESCONHECIDO");
+    const fev = lerIndicadores("INDICADORES_ADMIN", linhas, 2026, 2);
+    assert.ok(fev.ok);
+    assert.equal(fev.vazias, 1); // o turnover vazio em fevereiro
+    assert.equal(lerIndicadores("INDICADORES_ADMIN", linhas, 2026, 3).ok, false); // sem a coluna de março
   });
 });

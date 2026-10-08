@@ -107,6 +107,9 @@ export type ResumoDreComercial = {
   ignoradas?: { vazias: number; repetidas: number; foraDoFiltro: number };
 };
 
+/** Resumo dos indicadores do mês (abas Indicadores (Admin.) e (Comercial)). */
+export type ResumoIndicadores = { aba: string; indicadores: Array<{ nome: string; valor: number }> };
+
 /** Resumo do saldo inicial do estoque. */
 export type ResumoEstoqueInicial = {
   aba: string;
@@ -149,7 +152,7 @@ export type ImportacaoDetalhe = Importacao & {
   hashArquivo: string;
   relatorioErros: Rejeicao[] | null;
   /** ResumoBalancete quando tipo é BALANCETE; ResumoLista nas listas. */
-  resumo: ResumoBalancete | ResumoLista | ResumoDreComercial | ResumoEstoqueInicial | null;
+  resumo: ResumoBalancete | ResumoLista | ResumoDreComercial | ResumoEstoqueInicial | ResumoIndicadores | null;
   competencia: { ano: number; mes: number; status: StatusCompetencia };
 };
 

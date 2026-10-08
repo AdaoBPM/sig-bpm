@@ -12,6 +12,7 @@ import {
   type ResumoBalancete,
   type ResumoDreComercial,
   type ResumoEstoqueInicial,
+  type ResumoIndicadores,
   type ResumoLista,
 } from "../services/importacoesService";
 import {
@@ -581,6 +582,43 @@ function ConcluidaEstoqueInicial({ imp }: { imp: ImportacaoDetalhe }) {
   );
 }
 
+/** O valor do indicador como na aba: percentuais (fração) em %, os demais com até duas casas. */
+const valorIndicador = (nome: string, v: number) =>
+  /Inadimplência|Turnover|Margem de Contribuição|Mix/.test(nome)
+    ? `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+    : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+
+function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as ResumoIndicadores | null;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Linhas lidas" valor={imp.linhasLidas} />
+        <Contador rotulo="Indicadores" valor={imp.linhasAceitas} destaque="ok" detalhe="com valor no mês" />
+        <Contador rotulo="Rejeitadas" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
+        <Contador rotulo="Sem valor no mês" valor={imp.linhasIgnoradas} />
+      </div>
+      {resumo ? (
+        <div className="rounded-sm border border-gray-200 p-4">
+          <h3 className="text-sm font-bold text-gray-900">Indicadores do Mês</h3>
+          <table className="tabela-sig mt-2 w-full text-sm">
+            <tbody>
+              {resumo.indicadores.map((i) => (
+                <tr key={i.nome} className="border-t border-gray-100">
+                  <td className="py-1.5 text-gray-700">{i.nome}</td>
+                  <td className="py-1.5 text-right">{valorIndicador(i.nome, i.valor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-gray-500">Aba lida: {resumo.aba}. Os valores vão para a tela Indicadores (Relatórios); não entram na apuração.</p>
+        </div>
+      ) : null}
+      <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />
+    </div>
+  );
+}
+
 export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportacaoProps) {
   const queryClient = useQueryClient();
   const { refresh } = useAuth();
@@ -653,6 +691,8 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
           <ConcluidaDreComercial imp={imp} />
         ) : imp.tipo === "ESTOQUE_INICIAL" ? (
           <ConcluidaEstoqueInicial imp={imp} />
+        ) : imp.tipo === "INDICADORES_ADMIN" || imp.tipo === "INDICADORES_COMERCIAL" ? (
+          <ConcluidaIndicadores imp={imp} />
         ) : (
           <ConcluidaLista imp={imp} />
         )

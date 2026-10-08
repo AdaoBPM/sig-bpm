@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import type { AbrirCompetenciaInput } from "../../schemas/competencias/abrirCompetenciaSchema.js";
 import { auditar } from "../auditoriaService.js";
 import { apuracaoService } from "../apuracao/apuracaoService.js";
+import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
 
 /** Erro de regra de negócio — vira 409 no controller, não 500. */
 export class RegraCompetenciaError extends Error {}
@@ -45,7 +46,13 @@ export const competenciasService = {
     // Bola verde: o mês recebeu dados importados a partir de outro mês (lote) e ainda não foi apurado depois disso.
     const recebidas = await prisma.importacao.groupBy({
       by: ["competenciaId"],
-      where: { competenciaId: { in: competencias.map((c) => c.id) }, enviadaDe: { not: null }, status: "CONCLUIDA", substituidaEm: null },
+      where: {
+        competenciaId: { in: competencias.map((c) => c.id) },
+        enviadaDe: { not: null },
+        status: "CONCLUIDA",
+        substituidaEm: null,
+        tipo: { notIn: TIPOS_FORA_DA_APURACAO },
+      },
       _max: { importadoEm: true },
     });
     const ultimaRecebida = new Map(recebidas.map((r) => [r.competenciaId, r._max.importadoEm]));

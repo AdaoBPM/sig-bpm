@@ -66,8 +66,10 @@ async function valoresDaVisao(competencias: Array<string | null>, unidade: numbe
   return porMes;
 }
 
-const divide = (a: number, b: number | undefined) => (b === undefined || b === 0 ? null : a / b);
-const soma = (xs: Array<number | null | undefined>) => xs.reduce<number>((s, x) => s + (x ?? 0), 0);
+// Valores com quatro casas (os volumes têm três) e razões com oito: sem o resíduo das somas em ponto flutuante.
+const arredonda = (x: number, casas: number) => Math.round(x * 10 ** casas) / 10 ** casas;
+const divide = (a: number, b: number | undefined) => (b === undefined || b === 0 ? null : arredonda(a / b, 8));
+const soma = (xs: Array<number | null | undefined>) => arredonda(xs.reduce<number>((s, x) => s + (x ?? 0), 0), 4);
 
 /**
  * Monta as linhas: os valores de cada mês, a participação e o valor unitário,
@@ -90,7 +92,7 @@ function montar(
       const bu = baseDoUnitario(l);
       const meses: Celula[] = valores.map((m, i) => {
         if (l.tipo === "SECAO" || !apurado[i]) return { valor: null, pct: null, unitario: null };
-        const v = m.get(l.codigo) ?? 0;
+        const v = arredonda(m.get(l.codigo) ?? 0, 4);
         return { valor: v, pct: bp ? divide(v, bases[i].get(bp)) : null, unitario: bu ? divide(v, bases[i].get(bu)) : null };
       });
       const total = l.tipo === "SECAO" ? null : soma(meses.map((c) => c.valor));

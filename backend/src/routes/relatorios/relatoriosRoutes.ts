@@ -8,4 +8,6 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 /** Relatórios do exercício (Resultados e Indicadores): montado em /relatorios. */
 export const relatoriosRoutes = Router();
 relatoriosRoutes.get("/resultados", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.resultados));
+relatoriosRoutes.get("/resultados/exportar", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.exportarResultados));
+relatoriosRoutes.get("/indicadores/exportar", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.exportarIndicadores));
 relatoriosRoutes.get("/indicadores", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.indicadores));

@@ -1,0 +1,71 @@
+import { readFile } from "node:fs/promises";
+
+import { getPrismaClient } from "../../../config/prisma.js";
+import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
+import { logger } from "../../../utils/logger.js";
+import { caminhoDoArquivo } from "../arquivosImportados.js";
+import { escolherAba, recusarImportacao, registrarProgresso } from "../statusImportacao.js";
+import { DEFINICOES_INDICADORES, lerIndicadores, type TipoIndicadores } from "./leituraIndicadores.js";
+
+class ArquivoRecusado extends Error {}
+
+/**
+ * Importa os indicadores do mês (aba Indicadores (Admin.) ou (Comercial)): o
+ * valor de cada indicador na coluna do mês. Substitui a importação anterior do
+ * mesmo tipo na competência. Os indicadores não entram na apuração: importá-los
+ * não pede reapuração.
+ */
+export async function processarIndicadores(importacaoId: string): Promise<void> {
+  const prisma = getPrismaClient();
+  try {
+    const importacao = await prisma.importacao.findUniqueOrThrow({
+      where: { id: importacaoId },
+      select: { tipo: true, hashArquivo: true, competenciaId: true, competencia: { select: { ano: true, mes: true } } },
+    });
+    const tipo = importacao.tipo as TipoIndicadores;
+    const def = DEFINICOES_INDICADORES[tipo];
+    const aba = lerAba(await readFile(caminhoDoArquivo(importacao.hashArquivo)), escolherAba([def.aba]));
+    await registrarProgresso(importacaoId, 40);
+    const leitura = lerIndicadores(tipo, aba.linhas, importacao.competencia.ano, importacao.competencia.mes);
+    if (!leitura.ok) throw new ArquivoRecusado(leitura.motivo);
+    if (leitura.valores.length === 0) throw new ArquivoRecusado(`A aba "${aba.nome}" não tem nenhum indicador com valor no mês.`);
+
+    await prisma.$transaction(async (tx) => {
+      const competencia = await tx.competencia.findUniqueOrThrow({ where: { id: importacao.competenciaId }, select: { status: true } });
+      if (competencia.status === "FECHADA") throw new ArquivoRecusado("A competência foi fechada enquanto o arquivo era processado. Nada foi gravado.");
+      const anteriores = await tx.importacao.findMany({
+        where: { competenciaId: importacao.competenciaId, tipo, status: "CONCLUIDA", substituidaEm: null, id: { not: importacaoId } },
+        select: { id: true },
+      });
+      const ids = anteriores.map((a) => a.id);
+      if (ids.length > 0) {
+        await tx.indicadorImportado.deleteMany({ where: { importacaoId: { in: ids } } });
+        await tx.importacao.updateMany({ where: { id: { in: ids } }, data: { substituidaEm: new Date() } });
+      }
+      await tx.indicadorImportado.createMany({
+        data: leitura.valores.map((v) => ({ competenciaId: importacao.competenciaId, importacaoId, nome: v.nome, valor: v.valor, linhaArquivo: v.linhaArquivo })),
+      });
+      await tx.importacao.update({
+        where: { id: importacaoId },
+        data: {
+          status: "CONCLUIDA",
+          progresso: 100,
+          linhasLidas: leitura.lidas,
+          linhasAceitas: leitura.valores.length,
+          linhasRejeitadas: leitura.rejeicoes.length,
+          linhasIgnoradas: leitura.vazias,
+          relatorioErros: leitura.rejeicoes,
+          resumo: { aba: aba.nome, indicadores: leitura.valores.map((v) => ({ nome: v.nome, valor: v.valor })) },
+        },
+      });
+    });
+    logger("info", "Indicadores importados", { importacaoId, tipo, indicadores: leitura.valores.length });
+  } catch (error) {
+    if (error instanceof ArquivoRecusado || error instanceof ArquivoInvalidoError) {
+      await recusarImportacao(importacaoId, error.message);
+      return;
+    }
+    logger("error", "Falha ao processar os indicadores", { importacaoId, error: error instanceof Error ? error.message : String(error) });
+    await recusarImportacao(importacaoId, "Erro inesperado no processamento. Nada foi gravado. Se persistir, encaminhe o arquivo ao responsável pelo sistema.");
+  }
+}
