@@ -297,7 +297,8 @@ export function ImportarLoteDialog({
         }
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-4xl">
+      {/* O topo (título, descrição, resumo do arquivo e rótulos da tabela) e os botões ficam fixos; só as linhas da tabela rolam. */}
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-sm sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{fechada ? "Comparar Balancete" : "Importar Arquivo"}</DialogTitle>
           <DialogDescription>
@@ -308,7 +309,7 @@ export function ImportarLoteDialog({
         </DialogHeader>
 
         {!exibida ? (
-          <div className="space-y-3">
+          <div className="min-h-0 space-y-3 overflow-y-auto">
             <CampoArquivo
               ref={campo}
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -339,7 +340,7 @@ export function ImportarLoteDialog({
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
             <p className="text-sm text-gray-700">
               <span className="font-medium text-gray-900">{exibida.nomeArquivo}</span>:{" "}
               {exibida.abas.length === 0
@@ -356,10 +357,13 @@ export function ImportarLoteDialog({
                 Os meses anteriores importados ficam marcados com a bola verde (Fechamento Mensal, seletor de mês e menu lateral) até serem reapurados.
               </p>
             ) : null}
+            {exibida.abas.length > 0 || exibida.outras.length > 0 ? (
+              // A área que rola: os rótulos presos no alto dela (--topo-tabela zerado), as abas e, no fim, as abas ignoradas.
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-sm border border-gray-200 [--topo-tabela:0px]">
             {exibida.abas.length > 0 ? (
               <table className="tabela-sig w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900 [&>th]:!static">
+                  <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900">
                     <th className="w-56 px-3 py-2">Aba</th>
                     <th className="px-3 py-2">Meses e Situação</th>
                   </tr>
@@ -371,7 +375,9 @@ export function ImportarLoteDialog({
                 </tbody>
               </table>
             ) : null}
-            {exibida.outras.length > 0 ? <p className="text-xs text-gray-500">Abas sem importação (ignoradas): {exibida.outras.join(", ")}.</p> : null}
+            {exibida.outras.length > 0 ? <p className="px-3 py-2 text-xs text-gray-500">Abas sem importação (ignoradas): {exibida.outras.join(", ")}.</p> : null}
+              </div>
+            ) : null}
             {importar.isError ? <p className="text-sm text-red-700">{mensagemDoErro(importar.error, "Não foi possível importar.")}</p> : null}
             <div className="flex justify-end gap-2 pt-1">
               {importado ? (
