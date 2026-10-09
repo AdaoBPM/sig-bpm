@@ -216,7 +216,7 @@ function Lista() {
                     {ehDecimal(x.valor) ? quantidade(x.valor!) : (x.valor ?? "—")}
                   </td>
                 ))}
-                <td className="px-4 py-2 text-right text-sm text-gray-900">{quantidade(r.quantidade)}</td>
+                <td className="px-4 py-2 text-right text-sm text-gray-600">{quantidade(r.quantidade)}</td>
                 <td className="px-4 text-xs whitespace-nowrap">
                   {r.origem === "DIGITADA" ? (
                     <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">Digitado</span>

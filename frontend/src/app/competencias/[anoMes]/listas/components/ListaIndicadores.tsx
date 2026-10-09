@@ -144,11 +144,11 @@ export function ListaIndicadores() {
             return (
             // Uma linha mais forte entre os números (1, 2, 3…), como na aba Realizado (SIG).
             <tr key={i.nome} className={`border-b ${proxima && proxima.numero !== i.numero ? "border-gray-300" : "border-gray-100"} hover:bg-gray-50`}>
-              <td className="px-4 py-2 text-sm text-gray-500">{i.numero}</td>
+              <td className="px-4 py-2 text-sm text-gray-600">{i.numero}</td>
               <td className="px-4 py-2 text-sm font-medium text-gray-900">{i.nome}</td>
               <td className="px-4 py-2 text-sm text-gray-600">{i.metodologia}</td>
               <td className="px-4 py-2 text-sm text-gray-600">{i.unidade}</td>
-              <td className="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-900">{valor(i)}</td>
+              <td className="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-600">{valor(i)}</td>
               <td className="px-4 text-xs whitespace-nowrap">
                 {i.origem === "DIGITADA" ? (
                   <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">Digitado</span>
