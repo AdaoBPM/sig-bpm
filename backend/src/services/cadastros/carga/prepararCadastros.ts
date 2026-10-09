@@ -3,7 +3,6 @@ import type {
   BaldeAlocacao,
   TipoConta,
   TipoLinhaDRE,
-  TipoUnidade,
 } from "../../../generated/prisma/enums.js";
 import {
   AJUSTES_CONTA,
@@ -198,7 +197,8 @@ export type LinhaDREAlvo = {
     expressao: string | null;
     definicao: string | null;
   };
-  unidades: TipoUnidade[];
+  /** Os nomes das unidades (cadastro Unidades de Negócio) em que a linha aparece. */
+  unidades: string[];
 };
 
 function slug(s: string): string {
@@ -211,11 +211,12 @@ function slug(s: string): string {
     .slice(0, 40);
 }
 
-const ABA_PARA_UNIDADE: Record<string, TipoUnidade> = {
-  "Realizado (Matriz)": "MATRIZ",
-  "Realizado (Filial)": "FILIAL",
-  "Realizado (Serviços)": "SERVICOS",
-  "Realizado (Desp.+Extra)": "DESPESAS",
+/** A aba Realizado (…) de cada unidade → o nome da unidade no cadastro (pelo nome, desde que o Tipo saiu, 10/10/2026). */
+const ABA_PARA_UNIDADE: Record<string, string> = {
+  "Realizado (Matriz)": "Matriz",
+  "Realizado (Filial)": "Filial",
+  "Realizado (Serviços)": "Serviços",
+  "Realizado (Desp.+Extra)": "Despesas e Extra",
   "Realizado (RN)": "RN",
 };
 const REF_UNIDADE = /'(Realizado \([^)]*\))'!B(\d+)/g;
@@ -225,7 +226,7 @@ const REF_LOCAL = /\bB(\d+)\b/g;
 type Classificada = LinhaBrutaDRE & {
   tipo: TipoLinhaDRE;
   codigo: string;
-  unidades: Set<TipoUnidade>;
+  unidades: Set<string>;
   intervalo: [number, number] | null;
   referencias: number[];
 };
@@ -236,7 +237,7 @@ function prepararDre(brutas: LinhaBrutaDRE[], avisos: Aviso[]) {
     .filter((l) => l.linhaPlanilha > 1 && texto(l.descricao))
     .map((l) => {
       const f = l.formula?.trim() ?? null;
-      const unidades = new Set<TipoUnidade>();
+      const unidades = new Set<string>();
       let tipo: TipoLinhaDRE = "SECAO";
       let intervalo: [number, number] | null = null;
       const referencias: number[] = [];
@@ -332,7 +333,7 @@ function prepararDre(brutas: LinhaBrutaDRE[], avisos: Aviso[]) {
       expressao: expressoes.get(c.linhaPlanilha) ?? null,
       definicao: texto(c.definicao),
     },
-    unidades: [...c.unidades].sort(),
+    unidades: [...c.unidades].sort((a, b) => a.localeCompare(b, "pt-BR")),
   }));
 
   // A conta aponta para a linha pela tripla (departamento, atribuição, conta

@@ -95,7 +95,7 @@ export async function compararComBanco(p: CadastrosPreparados) {
     prisma.contaResultado.findMany({ include: { linhaDRE: { select: { codigo: true } } } }),
     prisma.linhaDRE.findMany({
       include: {
-        unidades: { include: { unidadeNegocio: { select: { tipo: true } } } },
+        unidades: { include: { unidadeNegocio: { select: { nome: true } } } },
         _count: { select: { contas: true, lancamentosContabeis: true, lancamentosManuais: true, resultadosApurados: true } },
       },
     }),
@@ -129,7 +129,7 @@ export async function compararComBanco(p: CadastrosPreparados) {
     new Map(p.dre.linhas.map((l) => [l.codigo, { rotulo: l.dados.descricao, valores: { ...l.dados, unidades: l.unidades.join(", ") } }])),
     new Map(linhas.map((l) => [codigoNovo.get(l.codigo) ?? l.codigo, {
       rotulo: l.descricao,
-      valores: { ...l, unidades: l.unidades.map((u) => u.unidadeNegocio.tipo).sort().join(", ") },
+      valores: { ...l, unidades: l.unidades.map((u) => u.unidadeNegocio.nome).sort((a, b) => a.localeCompare(b, "pt-BR")).join(", ") },
     }])),
     [["descricao", "Descrição"], ["grupo", "Grupo"], ["atribuicao", "Atribuição"], ["tipo", "Tipo"], ["expressao", "Fórmula"], ["definicao", "Definição"], ["unidades", "Unidades"], ["ordem", "Posição"]],
     true,
@@ -187,8 +187,10 @@ export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
     await tx.contaResultado.upsert({ where: { reduzido: c.reduzido }, create: { reduzido: c.reduzido, ...c.dados }, update: c.dados });
   }
 
-  const unidades = await tx.unidadeNegocio.findMany({ select: { id: true, tipo: true } });
-  const unidadePorTipo = new Map(unidades.map((u) => [u.tipo, u.id]));
+  // A unidade de cada linha pelo nome (o Tipo saiu do cadastro em 10/10/2026), sem diferença de maiúsculas e acentos.
+  const chaveNome = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+  const unidades = await tx.unidadeNegocio.findMany({ select: { id: true, nome: true } });
+  const unidadePorNome = new Map(unidades.map((u) => [chaveNome(u.nome), u.id]));
   const idPorCodigo = new Map<string, string>();
   const noBanco = await tx.linhaDRE.findMany({ select: { id: true, codigo: true, tipo: true, grupo: true, ordem: true } });
   for (const [novo, antiga] of renomeacoesDaDre(p, noBanco)) {
@@ -198,8 +200,8 @@ export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
     const linha = await tx.linhaDRE.upsert({ where: { codigo: l.codigo }, create: { codigo: l.codigo, ...l.dados }, update: l.dados });
     idPorCodigo.set(l.codigo, linha.id);
     await tx.linhaDREUnidade.deleteMany({ where: { linhaDREId: linha.id } });
-    for (const tipo of l.unidades) {
-      const unidadeNegocioId = unidadePorTipo.get(tipo);
+    for (const nome of l.unidades) {
+      const unidadeNegocioId = unidadePorNome.get(chaveNome(nome));
       if (unidadeNegocioId) await tx.linhaDREUnidade.create({ data: { linhaDREId: linha.id, unidadeNegocioId } });
     }
   }
