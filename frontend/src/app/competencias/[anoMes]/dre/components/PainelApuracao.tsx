@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Calculator, History, LockKeyhole, LockKeyholeOpen } from "lucide-react";
 import { toast } from "sonner";
@@ -81,7 +82,13 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
       <div className="flex flex-wrap gap-2">
         {s.podeApurar ? (
           <PermissionGuard permission="apuracao:editar">
-            <Button type="button" onClick={() => apurar.mutate()} disabled={apurar.isPending} className={botaoPrimario}>
+            <Button
+              type="button"
+              onClick={() => apurar.mutate()}
+              disabled={apurar.isPending || s.bloqueioApuracao !== null}
+              title={s.bloqueioApuracao ?? undefined}
+              className={botaoPrimario}
+            >
               <Calculator className="size-4" />
               {apurar.isPending ? "Apurando…" : s.apurada ? "Reapurar competência" : "Apurar competência"}
             </Button>
@@ -191,10 +198,31 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
 
   const motivos = !fechada && !s.podeFechar && s.motivosNaoFechar.length > 0;
   const mudancas = s.apurada && s.mudancas.length > 0;
-  if (!fechada && !motivos && !mudancas) return null;
+  const bloqueio = !fechada ? s.bloqueioApuracao : null;
+  if (!fechada && !motivos && !mudancas && !bloqueio) return null;
 
   return (
     <div className="space-y-2">
+      {/* O bloqueio da apuração: competências anteriores com entradas alteradas depois da apuração. */}
+      {bloqueio ? (
+        <div className="flex items-start gap-2 rounded-sm border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <LockKeyhole className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-medium">Apuração bloqueada.</p>
+            <p>{bloqueio}</p>
+            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              {s.anterioresDesatualizadas.map((m) => {
+                const [mm, aaaa] = m.split("/");
+                return (
+                  <Link key={m} href={`/competencias/${aaaa}-${mm}/dre`} className="font-medium underline underline-offset-2">
+                    Ir para {m}
+                  </Link>
+                );
+              })}
+            </p>
+          </div>
+        </div>
+      ) : null}
       {fechada || motivos ? (
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-600">
           {fechada ? <span>Fechada em {dataHora(s.fechadaEm!)}{s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.</span> : null}

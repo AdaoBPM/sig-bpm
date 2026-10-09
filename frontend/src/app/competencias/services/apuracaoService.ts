@@ -14,6 +14,10 @@ export type SituacaoCompetencia = {
   mudancas: string[];
   pendenciasClassificacao: number;
   podeApurar: boolean;
+  /** As competências anteriores com entradas alteradas depois da apuração ("MM/AAAA"): enquanto houver, esta não se apura. */
+  anterioresDesatualizadas: string[];
+  /** A mensagem do bloqueio da apuração, ou null. */
+  bloqueioApuracao: string | null;
   podeFechar: boolean;
   motivosNaoFechar: string[];
   podeReabrir: boolean;

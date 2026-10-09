@@ -125,6 +125,44 @@ function mudancas(apurado: Retrato | null, atual: Retrato): string[] {
   return m;
 }
 
+/**
+ * As competências anteriores a esta (de qualquer exercício) que estão
+ * apuradas, não fechadas, e com as entradas alteradas depois da apuração — a
+ * bola da etapa DRE —, ou com o mês anterior reapurado depois delas (o saldo
+ * inicial do estoque). Em ordem, como "MM/AAAA".
+ *
+ * Apurar uma competência com uma anterior assim usaria o estoque e os saldos
+ * de um mês que não reflete as próprias entradas (pedido de 09/10/2026): a
+ * apuração é recusada até as anteriores serem reapuradas, em ordem. A fechada
+ * fica de fora — não se reapura sem reabrir, e as entradas dela não mudam a
+ * apuração.
+ */
+async function anterioresDesatualizadas(ano: number, mes: number): Promise<string[]> {
+  const prisma = getPrismaClient();
+  const todas = await prisma.competencia.findMany({
+    where: { OR: [{ ano: { lt: ano } }, { ano, mes: { lt: mes } }] },
+    select: { id: true, ano: true, mes: true, status: true, apuradaEm: true, entradasApuradas: true },
+    orderBy: [{ ano: "asc" }, { mes: "asc" }],
+  });
+  const apuradaEm = new Map(todas.map((c) => [`${c.ano}-${c.mes}`, c.apuradaEm]));
+  const desatualizadas: string[] = [];
+  for (const c of todas) {
+    if (!c.apuradaEm || c.status === "FECHADA") continue;
+    const a = anterior(c.ano, c.mes);
+    const antes = apuradaEm.get(`${a.ano}-${a.mes}`);
+    const mudou = (antes && antes > c.apuradaEm) || mudancas(c.entradasApuradas as Retrato | null, await retratoEntradas(c.id)).length > 0;
+    if (mudou) desatualizadas.push(rotulo(c.ano, c.mes));
+  }
+  return desatualizadas;
+}
+
+/** A mensagem do bloqueio da apuração, ou null quando as anteriores estão em dia. */
+function bloqueioDaApuracao(ano: number, mes: number, anteriores: string[]): string | null {
+  if (anteriores.length === 0) return null;
+  const lista = anteriores.length === 1 ? `a competência ${anteriores[0]}` : `as competências ${anteriores.slice(0, -1).join(", ")} e ${anteriores[anteriores.length - 1]}`;
+  return `Não é possível apurar ${rotulo(ano, mes)}: ${lista} ${anteriores.length === 1 ? "tem" : "têm"} entradas alteradas depois da apuração. Reapure ${anteriores.length === 1 ? "essa competência" : "essas competências, em ordem,"} antes.`;
+}
+
 /** Os quatro retratos da apuração: congela (ou descongela, para reapurar) todos de uma vez. */
 async function congelar(competenciaId: string, congelado: boolean) {
   const prisma = getPrismaClient();
@@ -183,7 +221,7 @@ export const apuracaoService = {
     const prisma = getPrismaClient();
     const c = await competenciaPorAnoMes(ano, mes);
     const a = anterior(ano, mes);
-    const [detalhe, atual, pendentes, naoClassificados, reaberturas, mesAnterior] = await Promise.all([
+    const [detalhe, atual, pendentes, naoClassificados, reaberturas, mesAnterior, anteriores] = await Promise.all([
       prisma.competencia.findUniqueOrThrow({
         where: { id: c.id },
         select: { usuarioApuracao: { select: { nome: true } }, usuarioFechamento: { select: { nome: true } } },
@@ -197,8 +235,10 @@ export const apuracaoService = {
         select: { justificativa: true, reabertaEm: true, fechamentoAnteriorEm: true, usuario: { select: { nome: true } } },
       }),
       prisma.competencia.findUnique({ where: { ano_mes: a }, select: { apuradaEm: true } }),
+      c.status === "FECHADA" ? Promise.resolve([] as string[]) : anterioresDesatualizadas(ano, mes),
     ]);
     const apurada = c.apuradaEm !== null;
+    const bloqueio = bloqueioDaApuracao(ano, mes, anteriores);
     const mudou = apurada ? mudancas(c.entradasApuradas as Retrato | null, atual) : [];
     if (apurada && mesAnterior?.apuradaEm && mesAnterior.apuradaEm > c.apuradaEm!) {
       mudou.push(`A competência ${rotulo(a.ano, a.mes)} foi reapurada depois; o saldo inicial do estoque pode ter mudado.`);
@@ -220,6 +260,9 @@ export const apuracaoService = {
       mudancas: mudou,
       pendenciasClassificacao: pendentes,
       podeApurar: c.status !== "FECHADA",
+      /** As competências anteriores com entradas alteradas depois da apuração: enquanto houver, esta não se apura. */
+      anterioresDesatualizadas: anteriores,
+      bloqueioApuracao: bloqueio,
       podeFechar: motivosNaoFechar.length === 0,
       motivosNaoFechar,
       podeReabrir: c.status === "FECHADA",
@@ -236,6 +279,8 @@ export const apuracaoService = {
     const prisma = getPrismaClient();
     const c = await competenciaPorAnoMes(ano, mes);
     if (c.status === "FECHADA") throw new RegraApuracaoError(409, `A competência ${rotulo(ano, mes)} está fechada. Reapurar exige reabri-la.`);
+    const bloqueio = bloqueioDaApuracao(ano, mes, await anterioresDesatualizadas(ano, mes));
+    if (bloqueio) throw new RegraApuracaoError(409, bloqueio);
     exigirLivre(ano, mes);
     emApuracao.add(`${ano}-${mes}`);
     try {
