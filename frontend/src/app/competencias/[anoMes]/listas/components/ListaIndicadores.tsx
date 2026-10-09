@@ -6,11 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { DataTable } from "@/components/shared/DataTable";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
+import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AvisoCongelado } from "../../../components/AvisoCongelado";
-import { dataHora, lerAnoMes } from "../../utils/formatacao";
+import { lerAnoMes } from "../../utils/formatacao";
 import { LISTAS_INDICADORES, listasService, mensagemDeErro, type IndicadoresDaLista } from "../services/listasService";
 import { useAbasDasListas } from "./useAbasDasListas";
 
@@ -34,6 +37,15 @@ function valor(i: Indicador) {
   }
 }
 
+/** As colunas, com os filtros e a ordem nos rótulos, como nas demais listas. */
+const COLUNAS: Coluna<Indicador>[] = [
+  { chave: "numero", rotulo: "Nº", tipo: "numero", valor: (i) => Number(i.numero), texto: (i) => i.numero, classe: "w-20" },
+  { chave: "nome", rotulo: "Indicador", valor: (i) => i.nome },
+  { chave: "metodologia", rotulo: "Metodologia", valor: (i) => i.metodologia },
+  { chave: "unidade", rotulo: "Unidade", valor: (i) => i.unidade, classe: "w-28" },
+  { chave: "valor", rotulo: "Valor do Mês", tipo: "numero", alinhamento: "direita", valor: (i) => i.valor, texto: (i) => valor(i), classe: "w-44" },
+];
+
 /**
  * As abas Comercial e Administrativo das Listas: os indicadores numerados do
  * setor (aba Realizado (SIG) do INDICADORES DE RESULTADO) com o valor do mês
@@ -52,6 +64,7 @@ export function ListaIndicadores() {
     enabled: periodo !== null,
   });
   const d = dados.data;
+  const tabela = useTabelaFiltravel(d?.indicadores, COLUNAS);
   const fechada = d?.competencia.status === "FECHADA";
   const aba = lista.tipo === "INDICADORES_COMERCIAL" ? "Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL" : "Indicadores (Admin.) do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)";
 
@@ -76,50 +89,47 @@ export function ListaIndicadores() {
 
       <Abas rotulo="Listas" ativa={slug} abas={abas} />
 
-      {d ? (
-        d.importacao ? (
-          <p className="text-xs text-gray-600">
-            Importado de <span className="font-medium text-gray-900">{d.importacao.nomeArquivo}</span> em {dataHora(d.importacao.importadoEm)}.
-          </p>
-        ) : (
-          <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-            A aba {aba} ainda não foi importada neste mês.{" "}
-            <Link href={`/competencias/${anoMes}/importar`} className="font-medium underline underline-offset-2">
-              Ir para Importações
-            </Link>
-          </div>
-        )
+      {d && !d.importacao ? (
+        <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+          A aba {aba} ainda não foi importada neste mês.{" "}
+          <Link href={`/competencias/${anoMes}/importar`} className="font-medium underline underline-offset-2">
+            Ir para Importações
+          </Link>
+        </div>
       ) : null}
 
-      <QuadroTabela>
-        {dados.isError ? (
-          <p className="p-4 text-sm text-red-700">{mensagemDeErro(dados.error, "Erro ao carregar a lista.")}</p>
-        ) : !d ? (
-          <div className="h-48 animate-pulse bg-gray-50" />
-        ) : (
-          <table className="tabela-sig w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-gray-300">
-                <th className="w-16 px-4 text-left text-xs font-bold text-gray-900">Nº</th>
-                <th className="px-4 text-left text-xs font-bold text-gray-900">Indicador</th>
-                <th className="px-4 text-left text-xs font-bold text-gray-900">Metodologia</th>
-                <th className="w-24 px-4 text-left text-xs font-bold text-gray-900">Unidade</th>
-                <th className="w-40 px-4 text-right text-xs font-bold text-gray-900">Valor do Mês</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.indicadores.map((i, k) => (
-                <tr key={i.nome} className={k > 0 && d.indicadores[k - 1].numero !== i.numero ? "border-t border-gray-300" : "border-t border-gray-100"}>
-                  <td className="px-4 py-2 text-gray-500">{i.numero}</td>
-                  <td className="px-4 py-2 font-medium text-gray-900">{i.nome}</td>
-                  <td className="px-4 py-2 text-gray-600">{i.metodologia}</td>
-                  <td className="px-4 py-2 text-gray-600">{i.unidade}</td>
-                  <td className="px-4 py-2 text-right whitespace-nowrap text-gray-900 tabular-nums">{valor(i)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <QuadroTabela
+        barra={
+          tabela.ativos ? (
+            <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+              Limpar Filtros
+            </button>
+          ) : undefined
+        }
+      >
+        <DataTable<Indicador>
+          data={tabela.visiveis}
+          cabecalho={tabela.cabecalho}
+          filtrosAtivos={tabela.ativos}
+          onLimparFiltros={tabela.limpar}
+          isLoading={dados.isPending}
+          error={dados.isError ? mensagemDeErro(dados.error, "Erro ao carregar a lista.") : null}
+          emptyMessage="Nenhum indicador nesta lista"
+          columns={COLUNAS.map((c) => c.rotulo)}
+          renderRow={(i) => {
+            const proxima = tabela.visiveis[tabela.visiveis.indexOf(i) + 1];
+            return (
+            // Uma linha mais forte entre os números (1, 2, 3…), como na aba Realizado (SIG).
+            <tr key={i.nome} className={`border-b ${proxima && proxima.numero !== i.numero ? "border-gray-300" : "border-gray-100"} hover:bg-gray-50`}>
+              <td className="px-4 py-2 text-sm text-gray-500">{i.numero}</td>
+              <td className="px-4 py-2 text-sm font-medium text-gray-900">{i.nome}</td>
+              <td className="px-4 py-2 text-sm text-gray-600">{i.metodologia}</td>
+              <td className="px-4 py-2 text-sm text-gray-600">{i.unidade}</td>
+              <td className="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-900 tabular-nums">{valor(i)}</td>
+            </tr>
+            );
+          }}
+        />
       </QuadroTabela>
     </div>
   );
