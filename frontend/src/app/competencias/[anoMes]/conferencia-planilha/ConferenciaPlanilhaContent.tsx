@@ -17,6 +17,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { lerNumero } from "@/lib/numero";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
+import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { Agrupador, SeletorNivel, useNiveisDRE } from "../dre/components/NiveisDRE";
@@ -244,11 +245,17 @@ export function ConferenciaPlanilhaContent() {
 
       {/* O envio recolhido num botão, e o resultado em primeiro plano (E12 do levantamento de layout). */}
       {r?.conferencia ? (
-        <p className="text-sm text-gray-600">
-          Planilha em uso: <span className="font-medium text-gray-900">{r.conferencia.nomeArquivo}</span>, enviada em {dataHora(r.conferencia.enviadoEm)} por{" "}
-          {r.conferencia.enviadoPor}
-          {r.envios > 1 ? ` (${r.envios} envios nesta competência; vale o último)` : ""}.
-        </p>
+        // Em destaque, como os totalizadores das Listas: a planilha em uso, quando e por quem foi enviada.
+        <FaixaIndicadores
+          itens={[
+            { rotulo: "Planilha em Uso", rotuloAntes: true, valor: <span className="text-sm font-bold">{r.conferencia.nomeArquivo}</span> },
+            { rotulo: "Enviada em", rotuloAntes: true, valor: <span className="text-sm font-bold">{dataHora(r.conferencia.enviadoEm)}</span> },
+            { rotulo: "Por", rotuloAntes: true, valor: <span className="text-sm font-bold">{r.conferencia.enviadoPor}</span> },
+            ...(r.envios > 1
+              ? [{ rotulo: "envios nesta competência", dica: "Vale a última planilha enviada.", valor: <span className="text-sm font-bold">{r.envios}</span> }]
+              : []),
+          ]}
+        />
       ) : consulta.isSuccess ? (
         <div className="rounded-sm border border-gray-200 bg-white py-12 text-center">
           <p className="text-sm font-medium text-gray-900">Nenhuma planilha enviada para esta competência</p>
@@ -314,21 +321,29 @@ export function ConferenciaPlanilhaContent() {
             </div>
           </div>
 
-          <p className="text-sm text-gray-700">
-            {r.resumo.diferencas === 0 ? (
-              <span className="font-medium text-green-700">
-                Nenhuma diferença acima de {moeda(r.limite)} nas {r.resumo.comparadas} linhas comparadas.
-              </span>
-            ) : (
-              <span className="font-medium text-red-700">
-                {r.resumo.diferencas} diferença(s) acima de {moeda(r.limite)} em {r.resumo.comparadas} linhas comparadas.
-              </span>
-            )}{" "}
-            {visao.nome} (aba {visao.aba}): {visao.comparadas} linhas, {visao.diferencas} diferença(s).
-            {r.resumo.soNaPlanilha + r.resumo.soNoSistema > 0
-              ? ` Sem par: ${r.resumo.soNaPlanilha} linha(s) só na planilha e ${r.resumo.soNoSistema} só na ferramenta.`
-              : ""}
-          </p>
+          {/* O resumo das diferenças em destaque, como os totalizadores das Listas: o geral, a visão aberta e as linhas sem par. */}
+          <FaixaIndicadores
+            itens={[
+              {
+                rotulo: `diferença(s) acima de ${moeda(r.limite)}`,
+                valor: r.resumo.diferencas === 0 ? <span className="text-green-700">0</span> : r.resumo.diferencas,
+                tom: r.resumo.diferencas > 0 ? "atencao" : undefined,
+              },
+              { rotulo: "linhas comparadas", valor: r.resumo.comparadas },
+              {
+                rotulo: `em ${visao.nome}, de ${visao.comparadas} linhas`,
+                dica: `Aba ${visao.aba} da planilha.`,
+                valor: visao.diferencas,
+                tom: visao.diferencas > 0 ? "atencao" : undefined,
+              },
+              ...(r.resumo.soNaPlanilha + r.resumo.soNoSistema > 0
+                ? [
+                    { rotulo: "linha(s) só na planilha", valor: r.resumo.soNaPlanilha, tom: "atencao" as const },
+                    { rotulo: "linha(s) só na ferramenta", valor: r.resumo.soNoSistema, tom: "atencao" as const },
+                  ]
+                : []),
+            ]}
+          />
 
           <Tabela key={visao.unidade} visao={visao} soDiferencas={soDiferencas} />
           <SemPar visao={visao} />
