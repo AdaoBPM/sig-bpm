@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CampoArquivo } from "@/components/shared/CampoArquivo";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/context/PermissionContext";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -70,14 +71,7 @@ function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna:
         <Label htmlFor="conferencia-arquivo" className="text-sm font-medium text-gray-900">
           SIG BPM - BASE REALIZADO (RESULTADOS) (.xlsx)
         </Label>
-        <Input
-          id="conferencia-arquivo"
-          ref={campo}
-          type="file"
-          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          className="rounded-sm border-gray-300 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
-          onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
-        />
+        <CampoArquivo id="conferencia-arquivo" ref={campo} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" arquivo={arquivo} onEscolher={setArquivo} />
       </div>
       <Button
         type="button"

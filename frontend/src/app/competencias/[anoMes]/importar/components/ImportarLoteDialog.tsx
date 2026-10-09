@@ -7,7 +7,7 @@ import { AlertTriangle, ArrowDownToLine, CheckCircle2, Circle, Loader2, MinusCir
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { CampoArquivo } from "@/components/shared/CampoArquivo";
 import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 import { rotuloDoMes } from "@/lib/etapasDoMes";
 
@@ -253,6 +253,7 @@ export function ImportarLoteDialog({
   const campo = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [envio, setEnvio] = useState(0);
+  const [escolhido, setEscolhido] = useState<File | null>(null);
   const [previa, setPrevia] = useState<PreviaLote | null>(null);
   const [importado, setImportado] = useState<PreviaLote | null>(null);
   const analisar = useMutation({
@@ -278,6 +279,7 @@ export function ImportarLoteDialog({
     importar.reset();
     setPrevia(null);
     setImportado(null);
+    setEscolhido(null);
     if (campo.current) campo.current.value = "";
   };
 
@@ -307,14 +309,13 @@ export function ImportarLoteDialog({
 
         {!exibida ? (
           <div className="space-y-3">
-            <Input
+            <CampoArquivo
               ref={campo}
-              type="file"
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               disabled={analisar.isPending}
-              className="rounded-sm border-gray-300 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
+              arquivo={escolhido}
+              onEscolher={(f) => {
+                setEscolhido(f);
                 if (f) analisar.mutate(f);
               }}
             />

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { Input } from "@/components/ui/input";
+import { CampoArquivo } from "@/components/shared/CampoArquivo";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -136,14 +136,13 @@ export function EnviarArquivoForm({ anoMes, somenteBalancete, tipoInicial, onEnv
           <Label htmlFor="importacao-arquivo" className="text-sm font-medium text-gray-900">
             Planilha (.xlsx)
           </Label>
-          <Input
+          <CampoArquivo
             id="importacao-arquivo"
             ref={campoArquivo}
-            type="file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="rounded-sm border-gray-300 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
-            onChange={(e) => {
-              setArquivo(e.target.files?.[0] ?? null);
+            arquivo={arquivo}
+            onEscolher={(f) => {
+              setArquivo(f);
               enviar.reset();
             }}
           />

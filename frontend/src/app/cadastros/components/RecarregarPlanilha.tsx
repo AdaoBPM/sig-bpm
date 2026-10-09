@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { CampoArquivo } from "@/components/shared/CampoArquivo";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import {
@@ -154,15 +154,14 @@ export function RecarregarPlanilha() {
 
           {!previa ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Input
+              <CampoArquivo
                 aria-label="Planilha UNIDADES E CENTROS DE CUSTO (.xlsx)"
-                type="file"
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                onChange={(e) => {
-                  setArquivo(e.target.files?.[0] ?? null);
+                arquivo={arquivo}
+                onEscolher={(f) => {
+                  setArquivo(f);
                   verPrevia.reset();
                 }}
-                className="rounded-sm border-gray-300 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
               />
               <Button
                 type="button"
