@@ -164,8 +164,9 @@ export function CompetenciasContent() {
         comoUsar={
           <ul>
             <li>Use os filtros nos rótulos das colunas (por exemplo, o ano na coluna Competência).</li>
-            <li>Clique na linha para abrir o mês; dentro dele, a barra de etapas leva de Importações até a Conferência.</li>
+            <li>Clique na linha para abrir o mês; dentro dele, a barra de etapas leva de Importações até a Conferência e as Divergências.</li>
             <li>Na coluna Andamento, clique num passo (importado, classificado, apurado, fechado) para ir direto à etapa.</li>
+            <li>A bola verde ao lado do mês pede reapuração: as entradas mudaram depois da apuração, o mês anterior foi reapurado depois dele, ou ele recebeu dados importados a partir de outro mês. Reapure os meses em ordem, na DRE de cada um.</li>
             <li>Use “Abrir Competência” para começar um mês novo.</li>
           </ul>
         }

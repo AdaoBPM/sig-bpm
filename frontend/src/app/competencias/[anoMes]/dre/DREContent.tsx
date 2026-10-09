@@ -420,9 +420,10 @@ export function DREContent() {
             <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo ou Obras (com a lista dos centros ou das obras à esquerda).</li>
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com Σ, a composição do valor se abre logo abaixo.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
-            <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados.</li>
-            <li>Em Obras, escolha a obra na lista à esquerda (busque pelo nome ou pelo código do centro de custo): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros.</li>
+            <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados. A DRE do centro traz só os custos e as despesas de mão de obra, gastos gerais e depreciação.</li>
+            <li>Em Obras, escolha a obra na lista à esquerda (o código do centro de custo da obra fica acima do nome; a busca aceita os dois): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, sem as margens e os resultados calculados.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
+            <li>O aviso amarelo “Entradas alteradas depois da apuração” lista o que mudou: reapure para usar. O aviso vermelho “Apuração bloqueada” aparece quando uma competência anterior tem entradas alteradas: reapure as anteriores, em ordem, pelos botões “Ir para MM/AAAA”.</li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>
           </ul>
@@ -431,7 +432,8 @@ export function DREContent() {
           <>
             <p>
               A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da receita prévia e dos
-              lançamentos manuais. Clique numa linha para ver como o valor foi formado e chegar aos lançamentos de origem.
+              lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99). Clique numa
+              linha para ver como o valor foi formado e chegar aos lançamentos de origem.
             </p>
             <p>
               <TextoApuracao anoMes={anoMes} />

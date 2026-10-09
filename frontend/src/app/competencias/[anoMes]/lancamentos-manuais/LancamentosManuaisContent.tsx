@@ -99,6 +99,7 @@ export function LancamentosManuaisContent() {
           <ul>
             <li>Use “Novo Lançamento” para incluir a RN e outros ajustes; o lápis e a lixeira editam e excluem.</li>
             <li>Num mês ainda sem lançamentos, “Copiar do Mês Anterior” traz os do mês anterior para revisar.</li>
+            <li>Use os filtros nos rótulos das colunas; o total no rodapé da tabela acompanha o filtro.</li>
             <li>Os lançamentos entram na DRE na próxima apuração.</li>
           </ul>
         }

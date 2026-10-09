@@ -173,7 +173,8 @@ export function ImportarContent() {
         }
         comoUsar={
           <ul>
-            <li>Clique em “Importar Arquivo” e escolha a planilha (.xlsx): a ferramenta reconhece as abas pelo nome, confere a estrutura de cada uma e importa as certas, uma por vez, sem pedir mais nada. Uma aba com erro é avisada, e a próxima segue.</li>
+            <li>Clique em “Importar Arquivo” e escolha a planilha (.xlsx); o diálogo lista os arquivos e as abas que servem. A ferramenta reconhece as abas pelo nome, confere a estrutura de cada uma e importa as certas, uma por vez, sem pedir mais nada. Uma aba com erro é avisada, e a próxima segue.</li>
+            <li>Uma aba sem diferença em relação à importação em vigor fica “Sem mudança” e não se importa de novo. Um arquivo com vários meses atualiza todos eles; os meses já apurados que mudarem ganham a bola verde e pedem reapuração.</li>
             <li>A lista do arquivo avisa quando a importação muda competências fechadas (o balancete do ano inteiro, os preços da DRE do Comercial); as diferenças vão para Divergências.</li>
             <li>Para trocar só um tipo, use “Reimportar” na linha dele.</li>
             <li>Na aba Em Vigor, clique numa linha para abrir o relatório: linhas aceitas, recusadas e avisos.</li>
@@ -185,7 +186,9 @@ export function ImportarContent() {
         sobre={
           <>
             <p>
-              O balancete, as listas operacionais, a DRE do Comercial e o saldo inicial do estoque entram por aqui. Reimportar um tipo substitui o
+              O balancete (LISTAS REALIZADO (RESULTADOS)), as listas operacionais — as abas (Resumo), Produção (Armaduras), Produção
+              (Metalúrgica) e as demais do LISTAS REALIZADO (OPERAÇÃO) —, os indicadores do Administrativo e do Comercial, a DRE do Comercial,
+              as metas do orçamento (INDICADORES DE RESULTADO) e o saldo inicial do estoque entram por aqui. Reimportar um tipo substitui o
               lote anterior por inteiro.
             </p>
             <p>

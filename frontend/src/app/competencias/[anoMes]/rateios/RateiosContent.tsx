@@ -60,8 +60,8 @@ export function RateiosContent() {
         selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do rateio" /> : null}
         comoUsar={
           <ul>
-            <li>Cada quadro é uma chave de rateio, com o valor apurado de cada destino e o percentual.</li>
-            <li>Um valor com aviso mudou depois da apuração: reapure para usá-lo.</li>
+            <li>Cada seção é uma chave de rateio, com o volume total no título e um card por destino: o percentual em destaque e o volume apurado.</li>
+            <li>Um “Hoje:” em amarelo, sob o volume, é o volume atual das listas, diferente do apurado: reapure para usá-lo.</li>
             <li>Para conferir os volumes de origem, veja as Listas Operacionais.</li>
             <li>Depois da apuração da DRE, a tela fica congelada: o que mudar só entra ao reapurar a competência na DRE.</li>
           </ul>

@@ -158,7 +158,11 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               vendida, margem, demanda e mix. O acumulado soma os meses ou, nos indicadores de razão (%, R$/m³, eficiências, margem das vendas,
               turnover), é a média ponderada da planilha. Os de posição (quadro de lotação, inadimplência, vagas) valem o último mês.
             </p>
-            <p>Um indicador importado fica sem valor no mês em que a aba não foi importada.</p>
+            <p>
+              Os indicadores numerados do Comercial e do Administrativo também podem ser digitados nas Listas Operacionais (abas Comercial e
+              Administrativo): o valor digitado substitui o importado até uma nova importação da aba. Um indicador importado fica sem valor no
+              mês em que a aba não foi importada nem o valor digitado.
+            </p>
           </>
         }
         acoes={

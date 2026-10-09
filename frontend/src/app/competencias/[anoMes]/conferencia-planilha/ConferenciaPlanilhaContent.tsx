@@ -217,7 +217,7 @@ export function ConferenciaPlanilhaContent() {
         titulo="Conferência com a Planilha"
         comoUsar={
           <ul>
-            <li>Clique em “Enviar Planilha” e envie o BASE REALIZADO (RESULTADOS) atualizado.</li>
+            <li>Clique em “Enviar Planilha” e envie o BASE REALIZADO (RESULTADOS) atualizado. A faixa “Planilha em Uso” mostra o arquivo comparado, quando e por quem foi enviado; a faixa seguinte resume as diferenças.</li>
             <li>Escolha a visão nas abas; marque “Só as Diferenças” e ajuste a “Variação Máx.” (fica guardada neste navegador) para ver só o que importa. Use a seta antes do nome da visão para mostrar só os totais, as atribuições ou todas as contas.</li>
             <li>Diferença positiva: a ferramenta está acima da planilha. Corrija a origem e reapure; a conferência se atualiza sem reenviar o arquivo.</li>
           </ul>

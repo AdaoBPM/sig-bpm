@@ -184,7 +184,8 @@ export function PainelContent() {
               BPM 2026 - INDICADORES DE RESULTADO.
             </p>
             <p>
-              O realizado sai dos mesmos valores da tela Indicadores: a DRE apurada, os volumes da apuração e os indicadores importados. O
+              O realizado sai dos mesmos valores da tela Indicadores: a DRE apurada, os volumes da apuração e os indicadores importados (ou
+              digitados nas Listas Operacionais). O
               orçado sai da aba Metas (Orçamento) do mesmo arquivo, importada mês a mês; o acumulado do orçado segue a aba Metas (soma dos
               meses ou, nas razões, a média ponderada pela base).
             </p>

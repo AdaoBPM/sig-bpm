@@ -30,9 +30,15 @@ export function PainelInformacao({
   );
 }
 
+/**
+ * O destaque dos textos do painel (09/10/2026): amarelo-ouro à esquerda, como a faixa dos totais das Listas
+ * (FaixaIndicadores).
+ */
+const DESTAQUE = "rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3";
+
 /** O texto logo abaixo do título do painel. */
 export function TextoPainel({ children }: { children: ReactNode }) {
-  return <div className="mt-3 space-y-2 text-sm leading-relaxed text-gray-700">{children}</div>;
+  return <div className={`mt-3 space-y-2 text-sm leading-relaxed text-gray-700 ${DESTAQUE}`}>{children}</div>;
 }
 
 /** Uma seção seguinte do painel, com título próprio (ex.: "Como Usar Esta Tela"). */
@@ -40,7 +46,7 @@ export function SecaoPainel({ titulo, children }: { titulo: string; children: Re
   return (
     <>
       <h2 className="mt-6 text-base font-bold text-gray-900">{titulo}</h2>
-      <div className="mt-2 text-sm leading-relaxed text-gray-700 [&_li]:mt-1.5 [&_ul]:list-disc [&_ul]:space-y-0 [&_ul]:pl-5">{children}</div>
+      <div className={`mt-2 text-sm leading-relaxed text-gray-700 [&_li]:mt-1.5 [&_li:first-child]:mt-0 [&_ul]:list-disc [&_ul]:space-y-0 [&_ul]:pl-5 ${DESTAQUE}`}>{children}</div>
     </>
   );
 }
