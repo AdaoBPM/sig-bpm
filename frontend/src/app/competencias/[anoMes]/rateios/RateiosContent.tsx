@@ -103,50 +103,41 @@ export function RateiosContent() {
       ) : rateios.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : dados && dados.chaves.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {dados.chaves.map((k) => (
-            // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
-            <div key={k.chave} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
-              <div className="border-b border-gray-200 bg-bpm-primary px-4 py-3">
-                <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{ROTULO_CHAVE[k.chave] ?? k.chave}</h2>
+            // Cada chave em cards, como os totais do Estoque: um por destino, com o percentual em destaque, e o do total.
+            <section key={k.chave}>
+              <h2 className="mb-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
+                {ROTULO_CHAVE[k.chave] ?? k.chave}{" "}
+                <span className="font-normal tracking-normal text-gray-500 normal-case">({MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})</span>
+              </h2>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                {k.destinos.map((d) => (
+                  <div key={d.destino} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
+                    <p className="text-xs font-bold text-gray-600" title={d.rotulo}>
+                      {/* Só o destino ("Matriz"): a chave já está no título da seção. */}
+                      {d.rotulo.replace(/^([PS])s*/, "").replace(/^.*:s*/, "")}
+                    </p>
+                    <p className="mt-1 text-xl font-extrabold text-gray-900">{pct(d.percentual)}</p>
+                    <p className="text-sm text-gray-700">
+                      {quant(d.quantidade)} <span className="text-xs text-gray-500">{MEDIDA_BASE[k.baseFisica] ?? ""}</span>
+                    </p>
+                    {d.quantidadeAtual !== null ? (
+                      <p className="mt-0.5 text-xs text-yellow-800" title="Volume de hoje, diferente do apurado: reapure para usar.">
+                        Hoje: {quant(d.quantidadeAtual)}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+                <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-yellow-50 p-4">
+                  <p className="text-xs font-bold text-gray-600">Total</p>
+                  <p className="mt-1 text-xl font-extrabold text-gray-900">
+                    {quant(k.total)} <span className="text-sm font-bold text-gray-500">{MEDIDA_BASE[k.baseFisica] ?? ""}</span>
+                  </p>
+                  <p className="text-sm text-gray-700">{pct(String(k.destinos.reduce((s, d) => s + Number(d.percentual), 0)))}</p>
+                </div>
               </div>
-              <table className="tabela-sig w-full table-fixed border-collapse text-sm">
-                <thead>
-                  <tr className="text-xs font-bold text-gray-600">
-                    <th className="px-4 text-left">Destino</th>
-                    <th className="w-48 px-4 text-right">Valor Apurado</th>
-                    <th className="w-32 px-4 text-right">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {k.destinos.map((d) => (
-                    <tr key={d.destino} className="border-t border-gray-100">
-                      <td className="px-4 py-2 text-gray-700">
-                        {d.rotulo}
-                        {d.quantidadeAtual !== null ? (
-                          <div className="text-xs text-yellow-800" title="Volume de hoje, diferente do apurado: reapure para usar.">
-                            hoje: {quant(d.quantidadeAtual)}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-2 text-right text-gray-600">{quant(d.quantidade)}</td>
-                      <td className="px-4 py-2 text-right font-bold">{pct(d.percentual)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-gray-300 bg-gray-50 font-bold text-gray-900">
-                    <td className="px-4 py-2">
-                      Total <span className="font-normal text-gray-500">({MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})</span>
-                    </td>
-                    <td className="px-4 py-2 text-right">{quant(k.total)}</td>
-                    <td className="px-4 py-2 text-right">
-                      {pct(String(k.destinos.reduce((s, d) => s + Number(d.percentual), 0)))}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+            </section>
           ))}
         </div>
       ) : (

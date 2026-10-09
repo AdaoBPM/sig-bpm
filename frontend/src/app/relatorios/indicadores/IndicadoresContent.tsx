@@ -216,7 +216,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
           {/* Uma tabela só (rótulos e valores alinhados), com rolagem própria: os rótulos presos no alto da área e as três primeiras colunas à esquerda. */}
           <div
             ref={area}
-            className="max-h-[calc(100vh-14rem)] overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white [--largura-indicador:400px] [--topo-tabela:0px]"
+            className="max-h-[calc(100vh-14rem)] overflow-auto rounded-sm border border-gray-200 bg-white [--largura-indicador:400px] [--topo-tabela:0px]"
           >
             <table className="tabela-sig table-fixed border-collapse text-sm" style={{ width: total, minWidth: "100%" }}>
               <colgroup>

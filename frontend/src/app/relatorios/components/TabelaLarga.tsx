@@ -23,8 +23,7 @@ export function TabelaLarga({ larguras, cabecalho, corpo }: { larguras: number[]
   );
   const tabela = "tabela-sig table-fixed border-collapse text-sm";
   return (
-    // Destaque amarelo-ouro à esquerda, como na DRE.
-    <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
+    <div className="rounded-sm border border-gray-200 bg-white">
       {/* Acima da coluna presa do corpo (z-10), que passa por baixo dos rótulos ao rolar. */}
       <div ref={topo} className="sticky top-[var(--topo-tabela,0px)] z-30 overflow-hidden">
         {/* Dentro da faixa presa, os rótulos ficam no alto dela (--topo-tabela zerado). */}

@@ -203,7 +203,7 @@ function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: n
   const filtrados = lista.filter((g) => !t || g.grupo.toLowerCase().includes(t));
   return (
     <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-      <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
+      <div className="rounded-sm border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-2">
           <CampoBusca rotulo="Buscar centro de custo" valor={busca} onMudar={setBusca} placeholder="Centro de Custo…" largura="w-full" />
         </div>

@@ -97,7 +97,7 @@ function TabelaDRE({
   const nomeVisao = titulo.replace(/^DRE · /, "");
   return (
     // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
-    <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
+    <div className="rounded-sm border border-gray-200 bg-white">
       {/* Título como nos quadros da Receita Prévia e de Rateios; fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
       <div className="sticky top-[var(--topo-tabela,0px)] z-10 flex items-center gap-4 border-b border-gray-200 bg-bpm-primary px-4 py-3">
         {/* Os níveis da planilha (1, 2 e 3 do contorno do Excel), num menu. */}
@@ -251,7 +251,7 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
   return (
     // A lista dos centros, com busca e o total de cada um, à esquerda da DRE do centro (E11 do levantamento de layout).
     <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-      <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
+      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
         <div className="border-b border-gray-200 p-2">
           <CampoBusca rotulo="Buscar centro de custo" valor={busca} onMudar={setBusca} placeholder="Centro de Custo…" largura="w-full" />
         </div>
