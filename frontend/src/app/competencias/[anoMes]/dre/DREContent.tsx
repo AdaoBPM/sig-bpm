@@ -250,7 +250,7 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
   const t = busca.trim().toLowerCase();
   const filtrados = lista.filter((g) => !t || g.grupo.toLowerCase().includes(t));
   return (
-    // A lista dos centros, com busca e o total de cada um, à esquerda da DRE do centro (E11 do levantamento de layout).
+    // A lista dos centros, com busca, à esquerda da DRE do centro (E11 do levantamento de layout); sem o total de cada um (09/10/2026).
     <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
       <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
         <div className="border-b border-gray-200 p-2">
@@ -268,7 +268,6 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
                 <span className="min-w-0 truncate" title={g.grupo}>
                   {g.grupo}
                 </span>
-                <span className="shrink-0 text-xs">{moedaInteira(g.total)}</span>
               </button>
             </li>
           ))}
@@ -303,7 +302,7 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
 
 /**
  * A visão por obra (09/10/2026): a lista das obras do mês — os centros de obra do RM (1.98 e 1.99) com lançamento —
- * com busca e o resultado de cada uma, à esquerda da DRE da obra, como em Centros de Custo. A DRE da obra tem todos os
+ * com busca (sem o resultado de cada uma, pedido de 09/10/2026), à esquerda da DRE da obra, como em Centros de Custo. A DRE da obra tem todos os
  * movimentos: receita operacional, impostos, custos, despesas e receitas e despesas financeiras.
  */
 function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhida: string | null; onEscolher: (obra: string) => void }) {
@@ -337,11 +336,10 @@ function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhi
                 type="button"
                 onClick={() => onEscolher(o.codigo)}
                 aria-current={o.codigo === escolhida ? "true" : undefined}
-                title={`${o.nome} (${o.codigo}): resultado do mês`}
+                title={`${o.nome} (${o.codigo})`}
                 className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${o.codigo === escolhida ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
               >
                 <span className="min-w-0 truncate">{o.nome}</span>
-                <span className="shrink-0 text-xs">{moedaInteira(o.total)}</span>
               </button>
             </li>
           ))}
@@ -421,7 +419,7 @@ export function DREContent() {
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com Σ, a composição do valor se abre logo abaixo.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados.</li>
-            <li>Em Obras, escolha a obra na lista à esquerda (busque pelo nome ou pelo código do centro de custo): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, e o valor na lista é o resultado da obra no mês.</li>
+            <li>Em Obras, escolha a obra na lista à esquerda (busque pelo nome ou pelo código do centro de custo): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>

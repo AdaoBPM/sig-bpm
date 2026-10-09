@@ -219,7 +219,6 @@ function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: n
                 <span className="min-w-0 truncate" title={g.grupo}>
                   {g.grupo}
                 </span>
-                <span className="shrink-0 text-xs">{formato.inteiro(Number(g.total))}</span>
               </button>
             </li>
           ))}
