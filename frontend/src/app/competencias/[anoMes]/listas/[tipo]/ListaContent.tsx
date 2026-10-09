@@ -45,6 +45,22 @@ const duasCasas = (v: string) => Number(v).toLocaleString("pt-BR", { minimumFrac
 const quantidadeDe = (tipo: string, v: string) => (EM_MATRIZ.has(tipo) ? duasCasas(v) : quantidade(v));
 const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
+type TotalDaLista = { codigo: string; rotulo: string; medida: string; quantidade: string };
+
+/**
+ * Os totalizadores da lista: a soma Total primeiro ("Projetos Liberados:
+ * Total"), depois as somas por unidade ou linha, como na aba Totais. Só
+ * quando há mais de uma soma, na mesma medida.
+ */
+function comTotal(totais: TotalDaLista[]): TotalDaLista[] {
+  const itens = totais.map((t) => ({ ...t, rotulo: t.rotulo.replace(/^\([PS]\) /, "") }));
+  if (itens.length < 2 || new Set(itens.map((t) => t.medida)).size > 1) return itens;
+  const prefixos = new Set(itens.map((t) => t.rotulo.split(":")[0].trim()));
+  const nome = prefixos.size === 1 ? [...prefixos][0] : null;
+  const soma = itens.reduce((s, t) => s + Number(t.quantidade), 0);
+  return [{ codigo: "TOTAL", rotulo: nome ? `${nome}: Total` : "Total", medida: itens[0].medida, quantidade: soma.toFixed(3) }, ...itens];
+}
+
 /**
  * As colunas antes dos detalhes: a obra (a coluna que fica com a largura que
  * sobra), ou a data nas pistas, ou nenhuma nas listas em matriz; depois a
@@ -200,8 +216,8 @@ function Lista() {
 
       {d && d.totais.length > 0 ? (
         <FaixaIndicadores
-          itens={d.totais.map((t) => ({
-            rotulo: t.rotulo.replace(/^\([PS]\) /, ""),
+          itens={comTotal(d.totais).map((t) => ({
+            rotulo: t.rotulo,
             rotuloAntes: true,
             valor: (
               <>
