@@ -101,7 +101,8 @@ export async function prepararGravacao(
   const movimentoPorCodigo = new Map(movimentos.map((m) => [m.codigo, m.id]));
   const unidadePorCodigo = new Map(unidades.map((u) => [u.codigo, u.id]));
   const linhaPorChave = new Map(linhas.map((l) => [`${l.tipo}|${l.codigo}`, l.id]));
-  const temLinha = tipo !== "PRODUCAO_METALURGIA";
+  // Todas as listas têm a linha (a metalurgia desde 09/10/2026).
+  const temLinha = true;
 
   const obrasCitadas = new Map<string, string | null>();
   for (const r of registros) {

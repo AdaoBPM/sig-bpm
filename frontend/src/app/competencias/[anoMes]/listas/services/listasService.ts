@@ -52,6 +52,10 @@ export type RegistroLista = {
   unidade: string | null;
   linha: string | null;
   quantidade: string;
+  /** O dia do registro (aaaa-mm-dd); as pistas mostram a data no lugar da obra. */
+  data: string | null;
+  /** A unidade de medida (KG, M3, PISTA…), para a coluna Und. */
+  medida: string | null;
   detalhes: Array<{ rotulo: string; valor: string | null }>;
   /** Valores do formulário; só nos registros digitados. */
   valores: Record<string, string | null> | null;

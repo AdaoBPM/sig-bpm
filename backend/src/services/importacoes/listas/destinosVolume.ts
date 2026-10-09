@@ -34,6 +34,10 @@ const FINALIDADES: Record<string, Destino | null> = {
   "MANUTENCAO: OBRAS": "MONTAGEM",
   "ESTRUTURA METALICA": "COMPLEMENTAR",
   INVESTIMENTO: null,
+  // A Produção Mensal separa o investimento por unidade desde 09/10/2026; continua fora do rateio.
+  "INVESTIMENTO: MATRIZ": null,
+  "INVESTIMENTO: FILIAL": null,
+  "INVESTIMENTO: OBRAS": null,
 };
 
 /** undefined: finalidade desconhecida; null: conhecida e fora do rateio. */
@@ -41,7 +45,11 @@ export function destinoDaFinalidade(finalidade: string): Destino | null | undefi
   return FINALIDADES[semAcento(finalidade)];
 }
 
-/** Linhas da Produção (Lista Arm.). */
+/**
+ * Linhas da Produção (Lista Arm.). Até 08/10/2026, uma coluna só
+ * (UNIDADE/LINHA: "Matriz (kg)", "Ferragem (kg)"…); desde 09/10/2026, as
+ * colunas Unidade, Linha e Und., e a categoria guardada é a Linha.
+ */
 const CATEGORIAS_ARMADURA: Record<string, Destino> = {
   "MATRIZ (KG)": "MATRIZ",
   "FILIAL (KG)": "FILIAL",
@@ -50,6 +58,13 @@ const CATEGORIAS_ARMADURA: Record<string, Destino> = {
   "CAPEAM. (KG)": "COMPLEMENTAR",
   "METALICA (KG)": "COMPLEMENTAR",
   "TURN KEY (KG)": "COMPLEMENTAR",
+  ESTRUTURA: "MATRIZ",
+  ALVEOLARES: "FILIAL",
+  MONTAGEM: "MONTAGEM",
+  FUNDACAO: "COMPLEMENTAR",
+  CAPEAMENTO: "COMPLEMENTAR",
+  METALICA: "COMPLEMENTAR",
+  "TURN-KEY": "COMPLEMENTAR",
 };
 
 export function destinoDaArmadura(categoria: string): Destino | undefined {

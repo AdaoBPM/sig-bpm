@@ -37,21 +37,56 @@ const quantidade = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFra
 
 const detalhe = (r: RegistroLista, rotulo: string) => r.detalhes.find((x) => x.rotulo === rotulo)?.valor ?? null;
 
-const ANTES_DOS_DETALHES: Coluna<RegistroLista>[] = [
-  {
-    chave: "obra",
-    rotulo: "Obra",
-    valor: (r) => r.obra?.codigo,
-    texto: (r) => (r.obra ? (r.obra.nome !== r.obra.codigo ? `${r.obra.codigo} · ${r.obra.nome}` : r.obra.codigo) : null),
-  },
-  { chave: "unidade", rotulo: "Unidade", valor: (r) => r.unidade },
-  { chave: "linha", rotulo: "Linha", valor: (r) => r.linha },
-];
-const DEPOIS_DOS_DETALHES: Coluna<RegistroLista>[] = [
-  { chave: "quantidade", rotulo: "Quantidade", tipo: "numero", alinhamento: "direita", valor: (r) => Number(r.quantidade), texto: (r) => quantidade(r.quantidade) },
-  { chave: "origem", rotulo: "Origem", valor: (r) => (r.origem === "DIGITADA" ? "Digitado" : "Importado"), classe: "w-px whitespace-nowrap" },
-  { chave: "acoes", rotulo: "", semFiltro: true, classe: "w-px" },
-];
+/** As listas em matriz (armadura e metalurgia): sem obra, com a unidade de medida e o peso com duas casas. */
+const EM_MATRIZ = new Set(["PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA"]);
+const MEDIDAS: Record<string, string> = { KG: "kg", M3: "m³", PISTA: "pistas", DIA: "dias" };
+const medida = (r: RegistroLista) => (r.medida ? (MEDIDAS[r.medida] ?? r.medida.toLowerCase()) : null);
+const duasCasas = (v: string) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const quantidadeDe = (tipo: string, v: string) => (EM_MATRIZ.has(tipo) ? duasCasas(v) : quantidade(v));
+const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+
+/**
+ * As colunas antes dos detalhes: a obra (a coluna que fica com a largura que
+ * sobra), ou a data nas pistas, ou nenhuma nas listas em matriz; depois a
+ * unidade e a linha.
+ */
+function colunasAntes(tipo: string): Coluna<RegistroLista>[] {
+  const unidadeELinha: Coluna<RegistroLista>[] = [
+    { chave: "unidade", rotulo: "Unidade", valor: (r) => r.unidade, classe: "w-px" },
+    { chave: "linha", rotulo: "Linha", valor: (r) => r.linha, classe: "w-px" },
+  ];
+  if (tipo === "PRODUCAO_PISTA") {
+    return [{ chave: "data", rotulo: "Data", tipo: "data", valor: (r) => r.data, texto: (r) => (r.data ? dataBR(r.data) : null), classe: "w-px" }, ...unidadeELinha];
+  }
+  if (EM_MATRIZ.has(tipo)) return unidadeELinha;
+  return [
+    {
+      chave: "obra",
+      rotulo: "Obra",
+      valor: (r) => r.obra?.codigo,
+      texto: (r) => (r.obra ? (r.obra.nome !== r.obra.codigo ? `${r.obra.codigo} · ${r.obra.nome}` : r.obra.codigo) : null),
+      classe: "w-full",
+    },
+    ...unidadeELinha,
+  ];
+}
+
+function colunasDepois(tipo: string): Coluna<RegistroLista>[] {
+  return [
+    ...(EM_MATRIZ.has(tipo) ? [{ chave: "medida", rotulo: "Und.", valor: medida, classe: "w-px" } as Coluna<RegistroLista>] : []),
+    {
+      chave: "quantidade",
+      rotulo: "Quantidade",
+      tipo: "numero",
+      alinhamento: "direita",
+      valor: (r) => Number(r.quantidade),
+      texto: (r) => quantidadeDe(tipo, r.quantidade),
+      classe: "w-px",
+    },
+    { chave: "origem", rotulo: "Origem", valor: (r) => (r.origem === "DIGITADA" ? "Digitado" : "Importado"), classe: "w-px whitespace-nowrap" },
+    { chave: "acoes", rotulo: "", semFiltro: true, classe: "w-px" },
+  ];
+}
 
 /** Uma tela por lista: trocar de lista remonta a tabela, e os filtros dos rótulos recomeçam. */
 export function ListaContent() {
@@ -65,6 +100,7 @@ function Lista() {
   useRegistrarAcessoTela(`/competencias/${anoMes}/listas/${slug}`);
   const periodo = lerAnoMes(anoMes);
   const lista = LISTAS.find((l) => l.slug === slug);
+  const tipoLista: string = lista?.tipo ?? "";
   const queryClient = useQueryClient();
   const abas = useAbasDasListas(anoMes);
 
@@ -102,10 +138,10 @@ function Lista() {
               return ehDecimal(v) ? quantidade(v!) : v;
             },
           }
-        : { chave: `detalhe:${rotulo}`, rotulo, valor: (r) => detalhe(r, rotulo) },
+        : { chave: `detalhe:${rotulo}`, rotulo, valor: (r) => detalhe(r, rotulo), classe: "w-px" },
     );
-    return [...ANTES_DOS_DETALHES, ...detalhes, ...DEPOIS_DOS_DETALHES];
-  }, [assinaturaDetalhes]);
+    return [...colunasAntes(tipoLista), ...detalhes, ...colunasDepois(tipoLista)];
+  }, [assinaturaDetalhes, tipoLista]);
   const tabela = useTabelaFiltravel(dados.data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   const excluir = useMutation({
@@ -169,7 +205,7 @@ function Lista() {
             rotuloAntes: true,
             valor: (
               <>
-                {quantidade(t.quantidade)} <span className="text-xs font-medium text-gray-500">{t.medida}</span>
+                {quantidadeDe(tipoLista, t.quantidade)} <span className="text-xs font-medium text-gray-500">{t.medida}</span>
               </>
             ),
           }))}
@@ -195,28 +231,34 @@ function Lista() {
             error={dados.isError ? mensagemDeErro(dados.error, "Erro ao carregar a lista.") : null}
             emptyMessage="Nenhum registro nesta competência"
             emptyHint="Importe a lista em Importações ou inclua um registro."
-            columns={["Obra", "Unidade", "Linha", ...colunasDetalhe, "Quantidade", "Origem", ""]}
+            columns={colunas.map((c) => c.rotulo)}
             renderRow={(r) => (
               <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-4 text-sm">
-                  {/* O nome só quando o cadastro tem um (a obra criada pela lista nasce com o código no nome). */}
-                  {r.obra ? (
-                    <div className="flex max-w-60 items-baseline gap-1.5" title={r.obra.nome !== r.obra.codigo ? r.obra.nome : undefined}>
-                      <span className="font-medium">{r.obra.codigo}</span>
-                      {r.obra.nome !== r.obra.codigo ? <span className="truncate text-xs text-gray-500">{r.obra.nome}</span> : null}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-sm text-gray-600">{r.unidade ?? "—"}</td>
-                <td className="px-4 py-2 text-sm text-gray-600">{r.linha ?? "—"}</td>
+                {tipoLista === "PRODUCAO_PISTA" ? (
+                  <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-600">{r.data ? dataBR(r.data) : "—"}</td>
+                ) : EM_MATRIZ.has(tipoLista) ? null : (
+                  // A obra fica com a largura que sobra das outras colunas (max-w-0 + w-full); o nome só se corta quando não cabe.
+                  <td className="w-full max-w-0 px-4 text-sm">
+                    {/* O nome só quando o cadastro tem um (a obra criada pela lista nasce com o código no nome). */}
+                    {r.obra ? (
+                      <div className="flex min-w-0 items-baseline gap-1.5" title={r.obra.nome !== r.obra.codigo ? r.obra.nome : undefined}>
+                        <span className="shrink-0 font-medium">{r.obra.codigo}</span>
+                        {r.obra.nome !== r.obra.codigo ? <span className="min-w-0 truncate text-xs text-gray-500">{r.obra.nome}</span> : null}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                )}
+                <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-600">{r.unidade ?? "—"}</td>
+                <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-600">{r.linha ?? "—"}</td>
                 {r.detalhes.map((x) => (
-                  <td key={x.rotulo} className={`px-4 py-2 text-sm text-gray-600 ${ehDecimal(x.valor) ? "text-right" : ""}`}>
+                  <td key={x.rotulo} className={`px-4 py-2 text-sm whitespace-nowrap text-gray-600 ${ehDecimal(x.valor) ? "text-right" : ""}`}>
                     {ehDecimal(x.valor) ? quantidade(x.valor!) : (x.valor ?? "—")}
                   </td>
                 ))}
-                <td className="px-4 py-2 text-right text-sm text-gray-600">{quantidade(r.quantidade)}</td>
+                {EM_MATRIZ.has(tipoLista) ? <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-600">{medida(r) ?? "—"}</td> : null}
+                <td className="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-600">{quantidadeDe(tipoLista, r.quantidade)}</td>
                 <td className="px-4 text-xs whitespace-nowrap">
                   {r.origem === "DIGITADA" ? (
                     <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">Digitado</span>

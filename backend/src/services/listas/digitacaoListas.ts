@@ -60,18 +60,26 @@ export const CAMPOS_DIGITACAO: Record<TipoListaRateio, CampoDigitacao[]> = {
     { coluna: "Linha", rotulo: "Pista de", tipo: "opcoes", obrigatorio: true, opcoes: [{ valor: "ALVEOLARES", rotulo: "Alveolares" }, { valor: "ESTACAS", rotulo: "Estacas" }] },
     numero("Pistas", "Pistas produzidas"),
   ],
+  // Como a Produção (Lista Arm.) desde 09/10/2026: Unidade, Linha e o peso do mês.
   PRODUCAO_ARMADURA: [
+    { coluna: "Unidade", rotulo: "Unidade", tipo: "opcoes", obrigatorio: true, opcoes: opcoes(["MATRIZ", "FILIAL", "SERVIÇOS"]) },
     {
-      coluna: "Unidade/Linha", rotulo: "Linha", tipo: "opcoes", obrigatorio: true,
-      opcoes: opcoes(["Matriz (kg)", "Filial (kg)", "Ferragem (kg)", "Fundação (kg)", "Capeam. (kg)", "Metálica (kg)", "Turn Key (kg)"]),
+      coluna: "Linha", rotulo: "Linha", tipo: "opcoes", obrigatorio: true,
+      opcoes: opcoes(["ESTRUTURA", "ALVEOLARES", "MONTAGEM", "FUNDAÇÃO", "CAPEAMENTO", "METÁLICA", "TURN-KEY"]),
+      ajuda: "Estrutura vai para a Matriz, alveolares para a Filial, montagem para a Montagem; as demais, para o Complementar.",
     },
     numero("Peso", "Peso (kg)"),
   ],
+  // Como a Produção Mensal desde 09/10/2026: FINALIDADE, LINHA e o peso do mês.
   PRODUCAO_METALURGIA: [
     {
       coluna: "FINALIDADE", rotulo: "Finalidade", tipo: "opcoes", obrigatorio: true,
-      opcoes: opcoes(["INSERTO METÁLICO", "ANEL E LUVA", "FERRAGEM", "ESTRUTURA METÁLICA", "MANUTENÇÃO: MATRIZ", "MANUTENÇÃO: FILIAL", "MANUTENÇÃO: OBRAS", "INVESTIMENTO"]),
+      opcoes: opcoes([
+        "INSERTO METÁLICO", "ANEL E LUVA", "FERRAGEM", "ESTRUTURA METÁLICA", "MANUTENÇÃO: MATRIZ", "MANUTENÇÃO: FILIAL", "MANUTENÇÃO: OBRAS",
+        "INVESTIMENTO: MATRIZ", "INVESTIMENTO: FILIAL", "INVESTIMENTO: OBRAS",
+      ]),
     },
+    { coluna: "LINHA", rotulo: "Linha", tipo: "opcoes", obrigatorio: true, opcoes: opcoes(["ESTRUTURA", "ESTACAS", "ALVEOLARES", "MONTAGEM", "METÁLICA"]) },
     numero("Peso", "Peso (kg)"),
   ],
   EXPEDICAO: [
@@ -123,13 +131,13 @@ function montarPlanilha(tipo: TipoListaRateio, v: Record<string, ValorCelula>, a
       );
     case "PRODUCAO_ARMADURA":
       return [
-        { numero: 1, celulas: ["Unidade/Linha", dia1] },
-        { numero: 2, celulas: [v["Unidade/Linha"], v.Peso] },
+        { numero: 1, celulas: ["Unidade", "Linha", "Und.", dia1] },
+        { numero: 2, celulas: [v.Unidade, v.Linha, "kg", v.Peso] },
       ];
     case "PRODUCAO_METALURGIA":
       return [
-        { numero: 1, celulas: ["FINALIDADE", dia1] },
-        { numero: 2, celulas: [v.FINALIDADE, v.Peso] },
+        { numero: 1, celulas: ["FINALIDADE", "LINHA", dia1] },
+        { numero: 2, celulas: [v.FINALIDADE, v.LINHA ?? null, v.Peso] },
       ];
     case "ACOMPANHAMENTO":
       return planilha(["Período", ...campos], [dia1, ...campos.map((c) => v[c] ?? null)]);

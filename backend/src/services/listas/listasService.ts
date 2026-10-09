@@ -35,7 +35,8 @@ const DETALHES: Record<TipoListaRateio, Array<[string, string]>> = {
   PROJETO: [["produto", "Produto"], ["nomePeca", "Peça"]],
   PRODUCAO: [["produto", "Produto"], ["nomePeca", "Peça"]],
   PRODUCAO_PISTA: [],
-  PRODUCAO_ARMADURA: [["categoria", "Linha"]],
+  // A linha da armadura é a do cadastro (coluna Linha da tabela), desde 09/10/2026.
+  PRODUCAO_ARMADURA: [],
   PRODUCAO_METALURGIA: [["finalidade", "Finalidade"]],
   EXPEDICAO: [["nomePeca", "Peça"], ["pesoKg", "Peso (kg)"], ["volumeInformado", "Volume informado"]],
   MONTAGEM: [["grupo", "Grupo"]],
@@ -60,9 +61,9 @@ function valoresDoFormulario(tipo: TipoListaRateio, r: RegistroBruto): Record<st
     case "PRODUCAO_PISTA":
       return { Linha: r.linha?.codigo ?? null, Pistas: q };
     case "PRODUCAO_ARMADURA":
-      return { "Unidade/Linha": texto(r.categoria), Peso: q };
+      return { Unidade: ["MATRIZ", "FILIAL", "SERVIÇOS"][(r.unidadeNegocio?.codigo ?? 0) - 1] ?? null, Linha: r.linha?.codigo ?? null, Peso: q };
     case "PRODUCAO_METALURGIA":
-      return { FINALIDADE: texto(r.finalidade), Peso: q };
+      return { FINALIDADE: texto(r.finalidade), LINHA: r.linha?.codigo ?? null, Peso: q };
     case "EXPEDICAO":
       return { Obra: r.obra?.codigo ?? null, "Nome da Obra": r.obra?.nome ?? null, "Nome da Peça": texto(r.nomePeca), "Peso (kg)": String(r.pesoKg ?? "0"), "Volume (m³)": String(r.volumeInformado ?? "0") };
     case "MONTAGEM":
@@ -81,6 +82,10 @@ function apresentar(tipo: TipoListaRateio, r: RegistroBruto) {
     unidade: r.unidadeNegocio?.nome ?? null,
     linha: r.linha?.nome ?? null,
     quantidade: r.quantidade.toFixed(3),
+    /** O dia do registro (as pistas mostram a data no lugar da obra). */
+    data: r.data instanceof Date ? r.data.toISOString().slice(0, 10) : null,
+    /** A unidade de medida (KG, M3, PISTA…), para a coluna Und. */
+    medida: typeof r.unidadeMedida === "string" ? r.unidadeMedida : null,
     detalhes: DETALHES[tipo].map(([campo, rot]) => ({ rotulo: rot, valor: texto(r[campo]) })),
     valores: r.importacaoId ? null : valoresDoFormulario(tipo, r),
   };

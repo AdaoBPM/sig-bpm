@@ -84,6 +84,27 @@ export function linhaDoGrupo(grupo: string | null) {
   return "ESTRUTURA";
 }
 
+/**
+ * Linha das listas em matriz (armadura e metalurgia), pelo texto da coluna
+ * Linha: os produtos (estrutura, alveolares, estacas) e as linhas de obra
+ * (montagem, fundação, capeamento, metálica, turn-key), como no cadastro.
+ */
+const LINHAS_DO_TEXTO: Record<string, { tipo: "PRODUTO" | "OBRA"; codigo: string }> = {
+  ESTRUTURA: { tipo: "PRODUTO", codigo: "ESTRUTURA" },
+  ALVEOLARES: { tipo: "PRODUTO", codigo: "ALVEOLARES" },
+  ESTACAS: { tipo: "PRODUTO", codigo: "ESTACAS" },
+  MONTAGEM: { tipo: "OBRA", codigo: "MONTAGEM" },
+  FUNDACAO: { tipo: "OBRA", codigo: "FUNDAÇÃO" },
+  CAPEAMENTO: { tipo: "OBRA", codigo: "CAPEAMENTO" },
+  METALICA: { tipo: "OBRA", codigo: "METÁLICA" },
+  "TURN-KEY": { tipo: "OBRA", codigo: "TURN-KEY" },
+};
+const semAcento = (v: ValorCelula | undefined) => normalizar(v).normalize("NFD").replace(/[̀-ͯ]/g, "");
+export const linhaDoTexto = (v: ValorCelula | undefined) => LINHAS_DO_TEXTO[semAcento(v)] ?? null;
+
+/** Unidade das listas em matriz: MATRIZ, FILIAL ou SERVIÇOS. */
+const UNIDADES_DO_TEXTO: Record<string, CodigoUnidade> = { MATRIZ: 1, FILIAL: 2, SERVICOS: 3 };
+
 /** Texto que o Excel converteria em número ("26", "8,5"); senão undefined. */
 function numeroDeTexto(s: string): Decimal | undefined {
   const t = s.trim().replace(",", ".");
@@ -229,8 +250,11 @@ const armadura: DefinicaoLista = {
   rotulo: "Produção de armadura (kg)",
   abas: ["Produção (Lista Arm.)"],
   interpretar(linhas, ano, mes) {
+    // Desde 09/10/2026: Unidade, Linha e Und. Antes: uma coluna só, UNIDADE/LINHA.
+    const novo = localizarCabecalho(linhas, ["UNIDADE", "LINHA"], ["UND."]);
+    if (!("erro" in novo)) return armaduraPorLinha(linhas, novo, ano, mes);
     const cab = localizarCabecalho(linhas, ["UNIDADE/LINHA"]);
-    if ("erro" in cab) return { ok: false, motivo: cab.erro };
+    if ("erro" in cab) return { ok: false, motivo: novo.erro };
     const linhaCab = linhas.find((l) => l.numero === cab.numero)!;
     const colMes = colunaDoMes(linhaCab.celulas, ano, mes);
     if (typeof colMes !== "number") return { ok: false, motivo: colMes.erro };
@@ -251,12 +275,34 @@ const armadura: DefinicaoLista = {
   },
 };
 
+/** Armadura no leiaute com Unidade, Linha e Und.: a categoria é a Linha, que diz o destino do rateio. */
+function armaduraPorLinha(linhas: LinhaPlanilha[], cab: { numero: number; col: Record<string, number> }, ano: number, mes: number): LeituraLista {
+  const k = cab.col;
+  const linhaCab = linhas.find((l) => l.numero === cab.numero)!;
+  const colMes = colunaDoMes(linhaCab.celulas, ano, mes);
+  if (typeof colMes !== "number") return { ok: false, motivo: colMes.erro };
+  const avisos: string[] = [];
+  return percorrer(linhas, cab.numero, (l, c) => {
+    const categoria = texto(c(k.LINHA));
+    if (!categoria) return { tipo: "vazia" };
+    const q = numero(c(colMes));
+    if (!q) return rejeitar(l.numero, "QUANTIDADE_INVALIDA", `Peso de "${categoria}" não é número.`);
+    const unidade = UNIDADES_DO_TEXTO[semAcento(c(k.UNIDADE))] ?? null;
+    if (!unidade) return rejeitar(l.numero, "UNIDADE_INVALIDA", `Unidade "${c(k.UNIDADE) ?? ""}" não é MATRIZ, FILIAL nem SERVIÇOS.`);
+    const linha = linhaDoTexto(categoria);
+    if (!linha) avisos.push(`Linha ${l.numero}: a linha "${categoria}" não está no cadastro de linhas.`);
+    if (!destinoDaArmadura(categoria)) avisos.push(`Linha ${l.numero}: "${categoria}" não tem destino de rateio conhecido.`);
+    return { tipo: "registros", registros: [{ linhaArquivo: l.numero, obra: null, unidade, linha, quantidade: q, campos: { categoria } }] };
+  }, avisos);
+}
+
 const metalurgia: DefinicaoLista = {
   tipo: "PRODUCAO_METALURGIA",
   rotulo: "Produção da metalurgia (kg)",
   abas: ["Produção Mensal"],
   interpretar(linhas, ano, mes) {
-    const cab = localizarCabecalho(linhas, ["FINALIDADE"]);
+    // A coluna LINHA entrou na Produção Mensal em 09/10/2026 (opcional, para os arquivos antigos).
+    const cab = localizarCabecalho(linhas, ["FINALIDADE"], ["LINHA"]);
     if ("erro" in cab) return { ok: false, motivo: cab.erro };
     const linhaCab = linhas.find((l) => l.numero === cab.numero)!;
     const colMes = colunaDoMes(linhaCab.celulas, ano, mes);
@@ -277,9 +323,12 @@ const metalurgia: DefinicaoLista = {
       }
       const destino = destinoDaFinalidade(finalidade);
       if (destino === undefined) avisos.push(`Linha ${l.numero}: finalidade "${finalidade}" desconhecida; entra sem destino de rateio.`);
+      const textoLinha = cab.col.LINHA >= 0 ? texto(c(cab.col.LINHA)) : null;
+      const linha = textoLinha && textoLinha !== "-" ? linhaDoTexto(textoLinha) : null;
+      if (textoLinha && textoLinha !== "-" && !linha) avisos.push(`Linha ${l.numero}: a linha "${textoLinha}" não está no cadastro de linhas.`);
       return {
         tipo: "registros",
-        registros: [{ linhaArquivo: l.numero, obra: null, unidade: destino ? UNIDADE_DO_DESTINO[destino] : null, linha: null, quantidade: q, campos: { finalidade } }],
+        registros: [{ linhaArquivo: l.numero, obra: null, unidade: destino ? UNIDADE_DO_DESTINO[destino] : null, linha, quantidade: q, campos: { finalidade } }],
       };
     }, avisos);
     if (!leitura.ok) return leitura;

@@ -60,7 +60,7 @@ export async function listarRegistros(tipo: TipoListaRateio, f: Filtro, skip: nu
       [itens, total] = await Promise.all([p.producaoArmadura.findMany({ ...args, include: INCLUIR_COM_LINHA }), p.producaoArmadura.count({ where: args.where })]);
       break;
     case "PRODUCAO_METALURGIA":
-      [itens, total] = await Promise.all([p.producaoMetalurgia.findMany({ ...args, include: INCLUIR }), p.producaoMetalurgia.count({ where: args.where })]);
+      [itens, total] = await Promise.all([p.producaoMetalurgia.findMany({ ...args, include: INCLUIR_COM_LINHA }), p.producaoMetalurgia.count({ where: args.where })]);
       break;
     case "EXPEDICAO":
       [itens, total] = await Promise.all([p.expedicao.findMany({ ...args, include: INCLUIR_COM_LINHA }), p.expedicao.count({ where: args.where })]);

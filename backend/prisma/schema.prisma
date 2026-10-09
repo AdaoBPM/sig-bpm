@@ -322,6 +322,7 @@ model Linha {
   producoes         Producao[]
   producoesPista    ProducaoPista[]
   producoesArmadura ProducaoArmadura[]
+  producoesMetalurgia ProducaoMetalurgia[]
   expedicoes        Expedicao[]
   montagens         Montagem[]
   acompanhamentos   Acompanhamento[]
@@ -1306,6 +1307,9 @@ model ProducaoMetalurgia {
   /// Finalidade do item metálico: INSERTO METÁLICO, FERRAGEM, MANUTENÇÃO etc.
   /// É ela que direciona o rateio da metalurgia entre as unidades.
   finalidade       String?
+  /// A linha da coluna LINHA da Produção Mensal (incluída em 09/10/2026).
+  linhaId          String?       @map("linha_id")
+  linha            Linha?        @relation(fields: [linhaId], references: [id])
   quantidade       Decimal
   /// Linha da planilha de origem, para o relatório e a conferência.
   linhaArquivo     Int?          @map("linha_arquivo")

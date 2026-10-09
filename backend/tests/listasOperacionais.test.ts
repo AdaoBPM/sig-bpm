@@ -105,3 +105,50 @@ describe("leitura das listas", () => {
     assert.match(!semMes.ok ? semMes.motivo : "", /jan\/2026.*fev\/2026/);
   });
 });
+
+describe("armadura e metalurgia com as colunas Linha e Und. (09/10/2026)", () => {
+  it("armadura: Unidade, Linha e Und.; a linha diz o destino do rateio, como as categorias antigas", () => {
+    const l = DEFINICOES_LISTAS.PRODUCAO_ARMADURA.interpretar(
+      planilha(
+        ["Unidade", "Linha", "Und.", JAN, FEV],
+        ["MATRIZ", "ESTRUTURA", "kg", 1, 2],
+        ["SERVIÇOS", "MONTAGEM", "kg", 3, 4],
+        ["SERVIÇOS", "TURN-KEY", "kg", 5, 6],
+      ),
+      2026,
+      2,
+    );
+    assert.ok(l.ok);
+    assert.deepEqual(
+      l.registros.map((r) => [r.unidade, r.linha?.codigo, String(r.campos.categoria), r.quantidade.toNumber()]),
+      [[1, "ESTRUTURA", "ESTRUTURA", 2], [3, "MONTAGEM", "MONTAGEM", 4], [3, "TURN-KEY", "TURN-KEY", 6]],
+    );
+    const totais = somarTotais(l.registros.map((r) => itemDoRegistro("PRODUCAO_ARMADURA", r)), ["PRODUCAO_ARMADURA"]);
+    assert.deepEqual(
+      totais.map((t) => [t.codigo, t.quantidade.toNumber()]),
+      [["ARMADURA_MATRIZ", 2], ["ARMADURA_FILIAL", 0], ["ARMADURA_MONTAGEM", 4], ["ARMADURA_COMPLEMENTAR", 6]],
+    );
+  });
+
+  it("metalurgia: a coluna LINHA vira a linha do registro; os investimentos por unidade ficam fora do rateio", () => {
+    const l = DEFINICOES_LISTAS.PRODUCAO_METALURGIA.interpretar(
+      planilha(
+        ["FINALIDADE", "LINHA", JAN],
+        ["TOTAL: GERAL", "-", 10],
+        ["INSERTO METÁLICO", "ESTRUTURA", 7],
+        ["ESTRUTURA METÁLICA", "METÁLICA", 1],
+        ["INVESTIMENTO: MATRIZ", "ESTRUTURA", 2],
+      ),
+      2026,
+      1,
+    );
+    assert.ok(l.ok);
+    assert.deepEqual(l.registros.map((r) => [String(r.campos.finalidade), r.linha?.codigo ?? null, r.unidade]), [
+      ["INSERTO METÁLICO", "ESTRUTURA", 1],
+      ["ESTRUTURA METÁLICA", "METÁLICA", 3],
+      ["INVESTIMENTO: MATRIZ", "ESTRUTURA", null],
+    ]);
+    assert.equal(destinoDaFinalidade("INVESTIMENTO: MATRIZ"), null);
+    assert.deepEqual(l.avisos ?? [], []);
+  });
+});
