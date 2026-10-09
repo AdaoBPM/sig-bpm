@@ -10,7 +10,6 @@ import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -22,20 +21,14 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { AvisoCongelado } from "../../../components/AvisoCongelado";
 import { inteiro, lerAnoMes } from "../../utils/formatacao";
+import { ListaIndicadores } from "../components/ListaIndicadores";
+import { useAbasDasListas } from "../components/useAbasDasListas";
 import { RegistroListaDialog } from "../components/RegistroListaDialog";
-import { LISTAS, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
+import { LISTAS, LISTAS_INDICADORES, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
 
 const POR_PAGINA_INICIAL = 50;
 /** A lista inteira vem de uma vez: o filtro e a ordem das colunas valem para todos os registros. */
 const TODOS = 10000;
-
-/** As quatro listas de produção, cada uma na sua aba, com nome curto. */
-const ABA_PRODUCAO: Record<string, string> = {
-  PRODUCAO: "Produção (Volume)",
-  PRODUCAO_PISTA: "Produção (Pistas)",
-  PRODUCAO_METALURGIA: "Metalurgia",
-  PRODUCAO_ARMADURA: "Armadura",
-};
 
 /** Os detalhes numéricos vêm como decimal ("2006.010"); códigos de peça e textos ficam como estão. */
 const ehDecimal = (v: string | null) => v !== null && /^-?\d+\.\d+$/.test(v);
@@ -63,16 +56,17 @@ const DEPOIS_DOS_DETALHES: Coluna<RegistroLista>[] = [
 /** Uma tela por lista: trocar de lista remonta a tabela, e os filtros dos rótulos recomeçam. */
 export function ListaContent() {
   const { tipo } = useParams<{ tipo: string }>();
+  if (LISTAS_INDICADORES.some((l) => l.slug === tipo)) return <ListaIndicadores key={tipo} />;
   return <Lista key={tipo} />;
 }
 
 function Lista() {
-  const { user } = useAuth();
   const { anoMes, tipo: slug } = useParams<{ anoMes: string; tipo: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/listas/${slug}`);
   const periodo = lerAnoMes(anoMes);
   const lista = LISTAS.find((l) => l.slug === slug);
   const queryClient = useQueryClient();
+  const abas = useAbasDasListas(anoMes);
 
   // undefined: diálogo fechado; null: novo; registro: edição.
   const [editando, setEditando] = useState<RegistroLista | null | undefined>(undefined);
@@ -135,12 +129,6 @@ function Lista() {
   const d = dados.data;
   const fechada = d?.competencia.status === "FECHADA";
   const colunasDetalhe = d?.itens[0]?.detalhes.map((x) => x.rotulo) ?? [];
-  const visiveis = LISTAS.filter((l) => !user?.acesso.recorteSetor || user.acesso.setores.includes(l.tipo));
-  const abas = visiveis.map((l) => ({
-    chave: l.slug,
-    rotulo: ABA_PRODUCAO[l.tipo] ?? definicoes.data?.[l.tipo]?.rotulo ?? l.tipo,
-    href: `/competencias/${anoMes}/listas/${l.slug}`,
-  }));
 
   return (
     <div className="space-y-6">

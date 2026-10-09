@@ -4,6 +4,7 @@ import { z } from "zod";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { alcancaLista } from "../../services/acesso/acesso.js";
 import { ehListaRateio, type TipoListaRateio } from "../../services/importacoes/listas/definicoesListas.js";
+import { ehSetorIndicadores, indicadoresDaLista, SETORES_INDICADORES } from "../../services/listas/indicadoresDasListas.js";
 import { listasService, RegraListaError } from "../../services/listas/listasService.js";
 
 const filtroSchema = z.object({
@@ -49,6 +50,20 @@ function responderRegra(response: Response, error: unknown) {
 export const listasController = {
   async campos(_request: Request, response: Response) {
     return response.json({ data: listasService.campos() });
+  },
+
+  /** Abas Comercial e Administrativo: os indicadores numerados do setor, com o valor importado no mês. */
+  async indicadores(request: Request, response: Response) {
+    const setor = String(request.params.setor ?? "");
+    if (!ehSetorIndicadores(setor)) return response.status(404).json({ error: "Lista desconhecida" });
+    if (!alcancaLista(request.user!.acesso, SETORES_INDICADORES[setor].tipo)) return response.status(403).json({ error: "Esta lista não é de um setor seu." });
+    const c = competencia(request, response);
+    if (!c) return;
+    try {
+      return response.json({ data: await indicadoresDaLista(setor, c.ano, c.mes) });
+    } catch (error) {
+      return responderRegra(response, error);
+    }
   },
 
   async listar(request: Request, response: Response) {

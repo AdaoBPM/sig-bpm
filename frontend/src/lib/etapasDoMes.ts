@@ -16,6 +16,8 @@ export type Etapa = {
 export const LISTAS_RATEIO = ["PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO"];
 
 const slugDaLista = (tipo: string) => tipo.toLowerCase().replace(/_/g, "-");
+/** As abas dos indicadores do Comercial e do Administrativo, depois das listas de rateio: o tipo da importação e a aba. */
+const LISTAS_INDICADORES: Array<[string, string]> = [["INDICADORES_COMERCIAL", "comercial"], ["INDICADORES_ADMIN", "administrativo"]];
 
 type Acesso = { recorteSetor: boolean; setores: string[] } | undefined;
 
@@ -24,13 +26,14 @@ type Acesso = { recorteSetor: boolean; setores: string[] } | undefined;
  * abrem na primeira lista que o usuário pode ver (o Alimentador, nas do setor).
  */
 export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acesso): Etapa[] {
-  const primeiraLista = acesso?.recorteSetor ? LISTAS_RATEIO.find((t) => acesso.setores.includes(t)) : "PROJETO";
+  const rateio = acesso?.recorteSetor ? LISTAS_RATEIO.find((t) => acesso.setores.includes(t)) : "PROJETO";
+  const primeiraLista = rateio ? slugDaLista(rateio) : LISTAS_INDICADORES.find(([t]) => acesso?.setores.includes(t))?.[1];
   const todas: Etapa[] = [
     { caminho: "importar", chave: "importar", rotulo: "Importações", icone: Upload, permissao: "importacao:ver" },
     { caminho: "classificacao", chave: "classificacao", rotulo: "Classificação", icone: ListChecks, permissao: "classificacao:ver" },
     { caminho: "lancamentos-manuais", chave: "lancamentos-manuais", rotulo: "Lançamentos", icone: NotebookPen, permissao: "lancamentos_manuais:ver" },
     ...(primeiraLista
-      ? [{ caminho: `listas/${slugDaLista(primeiraLista)}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
+      ? [{ caminho: `listas/${primeiraLista}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
       : []),
     { caminho: "receita-previa", chave: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ver" },
     { caminho: "rateios", chave: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },

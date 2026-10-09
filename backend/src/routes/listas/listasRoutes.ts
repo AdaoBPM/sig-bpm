@@ -10,6 +10,7 @@ const editar = verificarPermissao("listas_operacionais:editar");
 
 /** Listas de uma competência: montado em /competencias/:anoMes/listas. */
 export const listasDaCompetenciaRoutes = Router({ mergeParams: true });
+listasDaCompetenciaRoutes.get("/indicadores/:setor", autenticacao, ler, asyncHandler(c.indicadores));
 listasDaCompetenciaRoutes.get("/:tipo", autenticacao, ler, asyncHandler(c.listar));
 listasDaCompetenciaRoutes.post("/:tipo", autenticacao, editar, asyncHandler(c.criar));
 listasDaCompetenciaRoutes.put("/:tipo/:id", autenticacao, editar, asyncHandler(c.atualizar));
