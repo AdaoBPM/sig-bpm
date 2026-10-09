@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
-import { FaixaIndicadores, type Indicador } from "@/components/shared/FaixaIndicadores";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
@@ -26,13 +25,6 @@ import {
   mensagemDeErro,
   type LancamentoManual,
 } from "./services/lancamentosManuaisService";
-
-/** Soma os valores em centavos, para não acumular erro de ponto flutuante. */
-function somaPor(itens: LancamentoManual[], chave: (l: LancamentoManual) => string) {
-  const m = new Map<string, number>();
-  for (const l of itens) m.set(chave(l), (m.get(chave(l)) ?? 0) + Math.round(Number(l.valor) * 100));
-  return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, c]) => ({ chave: k, valor: (c / 100).toFixed(2) }));
-}
 
 const COLUNAS: Coluna<LancamentoManual>[] = [
   { chave: "motivo", rotulo: "Motivo", valor: (l) => l.motivo },
@@ -94,18 +86,7 @@ export function LancamentosManuaisContent() {
   const dados = lista.data;
   const fechada = dados?.competencia.status === "FECHADA";
   const itens = dados?.itens ?? [];
-  // Os totais por motivo e por filial (E5 do levantamento de layout); com um só, ele é o próprio total.
-  const porMotivo = somaPor(itens, (l) => l.motivo);
-  const porFilial = somaPor(itens, (l) => String(l.filial));
-  const indicadores: Indicador[] = [
-    { rotulo: itens.length === 1 ? "lançamento" : "lançamentos", valor: itens.length },
-    { rotulo: "total", rotuloAntes: true, valor: moeda(dados?.total ?? "0") },
-    ...(porMotivo.length > 1 ? porMotivo.map((m) => ({ rotulo: m.chave, rotuloAntes: true, valor: moeda(m.valor) })) : []),
-    ...(porFilial.length > 1 ? porFilial.map((p) => ({ rotulo: `filial ${p.chave}`, rotuloAntes: true, valor: moeda(p.valor) })) : []),
-  ];
-  if (porMotivo.length === 1) indicadores.push({ rotulo: "motivo", rotuloAntes: true, valor: <span className="text-sm font-bold">{porMotivo[0].chave}</span> });
-  if (porFilial.length === 1) indicadores.push({ rotulo: "filial", rotuloAntes: true, valor: porFilial[0].chave });
-  // A faixa fica no mês inteiro; o rodapé soma o que os filtros dos rótulos deixam à vista.
+  // O rodapé da tabela soma o mês inteiro, ou o que os filtros dos rótulos deixam à vista. (O quadro dos totais saiu em 09/10/2026.)
   const filtrado = tabela.total !== tabela.totalGeral;
   const totalFiltrado = filtrado ? (tabela.filtradas.reduce((s, l) => s + Math.round(Number(l.valor) * 100), 0) / 100).toFixed(2) : null;
 
@@ -150,8 +131,6 @@ export function LancamentosManuaisContent() {
           ) : null
         }
       />
-
-      {itens.length > 0 ? <FaixaIndicadores itens={indicadores} /> : null}
 
       <QuadroTabela
         rodape={
