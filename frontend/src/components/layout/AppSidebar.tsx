@@ -96,7 +96,7 @@ export function AppSidebar() {
                     <SidebarMenuButton isActive={itemAtivo(pathname, item)} tooltip={item.title} render={<Link href={item.href} />}>
                       <item.icon />
                       <span>{item.title}</span>
-                      {item.href === "/competencias" && algumComDadosNovos ? <SinalDadosNovos titulo="Há meses com dados importados de outro mês: reapure" /> : null}
+                      {item.href === "/competencias" && algumComDadosNovos ? <SinalDadosNovos titulo="Há meses com entradas alteradas depois da apuração: reapure" /> : null}
                     </SidebarMenuButton>
                     {item.badge ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge}</SidebarMenuBadge> : null}
                   </SidebarMenuItem>

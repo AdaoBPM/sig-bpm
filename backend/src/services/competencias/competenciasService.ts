@@ -43,7 +43,10 @@ export const competenciasService = {
     });
 
     const etapas = andamento ? await apuracaoService.andamento(competencias) : null;
-    // Bola verde: o mês recebeu dados importados a partir de outro mês (lote) e ainda não foi apurado depois disso.
+    // Bola verde: o mês pede reapuração — entradas alteradas depois da apuração (a bola da etapa DRE), ou o mês
+    // anterior reapurado depois dele —, ou recebeu dados importados a partir de outro mês (lote) e ainda não foi
+    // apurado depois disso (também o que nunca foi apurado).
+    const atrasadas = await apuracaoService.desatualizadas(competencias);
     const recebidas = await prisma.importacao.groupBy({
       by: ["competenciaId"],
       where: {
@@ -58,7 +61,7 @@ export const competenciasService = {
     const ultimaRecebida = new Map(recebidas.map((r) => [r.competenciaId, r._max.importadoEm]));
     const dadosNovos = (c: (typeof competencias)[number]) => {
       const em = ultimaRecebida.get(c.id);
-      return !!em && (!c.apuradaEm || em > c.apuradaEm);
+      return atrasadas.has(c.id) || (!!em && (!c.apuradaEm || em > c.apuradaEm));
     };
     return competencias.map((c) => ({
       ...c,
