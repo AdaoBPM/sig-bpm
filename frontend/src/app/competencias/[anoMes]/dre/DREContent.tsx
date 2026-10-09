@@ -23,12 +23,13 @@ import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
 const volume = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
-/** Consolidado, uma das unidades (1 a 5) ou a visão por centro de custo. */
-type Visao = "consolidado" | "centros" | number;
+/** Consolidado, uma das unidades (1 a 5), a visão por centro de custo ou a por obra. */
+type Visao = "consolidado" | "centros" | "obras" | number;
 const VISOES: Array<{ visao: Visao; nome: string }> = [
   { visao: "consolidado", nome: "Consolidado" },
   ...UNIDADES.map((u) => ({ visao: u.codigo as Visao, nome: u.nome })),
-  { visao: "centros", nome: "Centros de custo" },
+  { visao: "centros", nome: "Centros de Custo" },
+  { visao: "obras", nome: "Obras" },
 ];
 
 /**
@@ -39,7 +40,7 @@ const VISOES: Array<{ visao: Visao; nome: string }> = [
 const detalhavel = (l: LinhaDRE) => !ehVolume(l) && (l.tipo === "ITEM" || l.descricao === "Impostos Operacionais") && l.podeDetalhar !== false;
 
 /** Linhas de volume (Produção, Expedição, Montagem, Acompanhamento): abrem as listas por obra, no consolidado e nas unidades. */
-const listavel = (l: LinhaDRE, visao: VisaoDetalhe) => ehVolume(l) && l.tipo === "ITEM" && !("grupo" in visao);
+const listavel = (l: LinhaDRE, visao: VisaoDetalhe) => ehVolume(l) && l.tipo === "ITEM" && ("unidade" in visao || "consolidado" in visao);
 
 function Composicao({ l }: { l: LinhaDRE }) {
   const c = l.composicao;
@@ -300,6 +301,74 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
   );
 }
 
+/**
+ * A visão por obra (09/10/2026): a lista das obras do mês — os centros de obra do RM (1.98 e 1.99) com lançamento —
+ * com busca e o resultado de cada uma, à esquerda da DRE da obra, como em Centros de Custo. A DRE da obra tem todos os
+ * movimentos: receita operacional, impostos, custos, despesas e receitas e despesas financeiras.
+ */
+function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhida: string | null; onEscolher: (obra: string) => void }) {
+  const [busca, setBusca] = useState("");
+  const obras = useQuery({ queryKey: ["dre", anoMes, "obras"], queryFn: () => dreService.obras(anoMes) });
+  const lista = obras.data?.obras ?? [];
+  const obra = useQuery({
+    queryKey: ["dre", anoMes, "obra", escolhida],
+    queryFn: () => dreService.obra(anoMes, escolhida!),
+    enabled: escolhida !== null,
+  });
+
+  if (obras.isError) return <Erro erro={obras.error} padrao="Erro ao carregar as obras." />;
+  if (obras.isPending) return <Carregando />;
+  if (!obras.data.apuradoEm) return <SemApuracao />;
+  if (lista.length === 0) {
+    return <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma obra tem lançamento neste mês.</div>;
+  }
+  const t = busca.trim().toLowerCase();
+  const filtradas = lista.filter((o) => !t || o.nome.toLowerCase().includes(t) || o.codigo.includes(t));
+  return (
+    <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
+      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
+        <div className="border-b border-gray-200 p-2">
+          <CampoBusca rotulo="Buscar obra" valor={busca} onMudar={setBusca} placeholder="Obra ou Código…" largura="w-full" />
+        </div>
+        <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Obras">
+          {filtradas.map((o) => (
+            <li key={o.codigo}>
+              <button
+                type="button"
+                onClick={() => onEscolher(o.codigo)}
+                aria-current={o.codigo === escolhida ? "true" : undefined}
+                title={`${o.nome} (${o.codigo}): resultado do mês`}
+                className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${o.codigo === escolhida ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+              >
+                <span className="min-w-0 truncate">{o.nome}</span>
+                <span className="shrink-0 text-xs">{moeda(o.total)}</span>
+              </button>
+            </li>
+          ))}
+          {filtradas.length === 0 ? <li className="px-3 py-2 text-sm text-gray-500">Nenhuma obra com esse nome ou código.</li> : null}
+        </ul>
+      </div>
+
+      <div className="min-w-0">
+        {obra.isError ? (
+          <Erro erro={obra.error} padrao="Erro ao carregar a obra." />
+        ) : obra.isPending ? (
+          <Carregando />
+        ) : (
+          <TabelaDRE
+            key={escolhida ?? ""}
+            linhas={obra.data.linhas}
+            anoMes={anoMes}
+            visao={{ obra: escolhida! }}
+            titulo={obra.data.obra.nome}
+            aoLadoDoTitulo={<span className="text-sm whitespace-nowrap text-gray-800">{obra.data.obra.codigo}</span>}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DREContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/dre`);
@@ -312,6 +381,11 @@ export function DREContent() {
   // O escolhido vale enquanto existir no mês; senão, o primeiro da lista.
   const listaGrupos = grupos.data?.grupos ?? [];
   const grupoEscolhido = (grupo && listaGrupos.some((g) => g.grupo === grupo) ? grupo : listaGrupos[0]?.grupo) ?? null;
+  // A obra escolhida, do mesmo jeito: vale enquanto tiver lançamento no mês; senão, a primeira da lista.
+  const [obra, setObra] = useState<string | null>(null);
+  const obras = useQuery({ queryKey: ["dre", anoMes, "obras"], queryFn: () => dreService.obras(anoMes), enabled: periodo !== null && visao === "obras" });
+  const listaObras = obras.data?.obras ?? [];
+  const obraEscolhida = (obra && listaObras.some((o) => o.codigo === obra) ? obra : listaObras[0]?.codigo) ?? null;
 
   // A consolidada também traz o estado da competência e da apuração para o cabeçalho.
   const consolidado = useQuery({
@@ -343,10 +417,11 @@ export function DREContent() {
         titulo="DRE"
         comoUsar={
           <ul>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN ou Centros de Custo (com a lista dos centros à esquerda).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo ou Obras (com a lista dos centros ou das obras à esquerda).</li>
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra. Nas linhas com Σ, a composição do valor se abre logo abaixo.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados.</li>
+            <li>Em Obras, escolha a obra na lista à esquerda (busque pelo nome ou pelo código do centro de custo): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, e o valor na lista é o resultado da obra no mês.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF.</li>
@@ -385,6 +460,8 @@ export function DREContent() {
         </div>
         {visao === "centros" ? (
           grupoEscolhido && grupos.data?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={{ grupo: grupoEscolhido }} /> : null
+        ) : visao === "obras" ? (
+          obraEscolhida && obras.data?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={{ obra: obraEscolhida }} /> : null
         ) : cabecalho?.apuradoEm ? (
           <ExportarDRE anoMes={anoMes} visao={visao} />
         ) : null}
@@ -392,6 +469,8 @@ export function DREContent() {
 
       {visao === "centros" ? (
         <VisaoCentros key={anoMes} anoMes={anoMes} escolhido={grupoEscolhido} onEscolher={setGrupo} />
+      ) : visao === "obras" ? (
+        <VisaoObras key={anoMes} anoMes={anoMes} escolhida={obraEscolhida} onEscolher={setObra} />
       ) : consulta.isError ? (
         <Erro erro={consulta.error} padrao="Erro ao carregar a DRE." />
       ) : consulta.isPending ? (

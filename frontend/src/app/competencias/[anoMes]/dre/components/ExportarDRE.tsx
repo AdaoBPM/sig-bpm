@@ -8,16 +8,17 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 
-/** A visão na tela: o consolidado, uma unidade (1 a 5) ou um agrupamento de centros. */
-export type VisaoExportar = "consolidado" | number | { grupo: string };
+/** A visão na tela: o consolidado, uma unidade (1 a 5), um agrupamento de centros ou uma obra. */
+export type VisaoExportar = "consolidado" | number | { grupo: string } | { obra: string };
 
 type Formato = "xlsx" | "pdf";
-/** O que entra no arquivo: a visão na tela, o consolidado e todas as unidades, ou todos os centros de custo. */
-type Alcance = "atual" | "unidades" | "centros";
+/** O que entra no arquivo: a visão na tela, o consolidado e todas as unidades, todos os centros de custo ou todas as obras. */
+type Alcance = "atual" | "unidades" | "centros" | "obras";
 const OPCOES: Array<{ alcance: Alcance; excel: string; pdf: string }> = [
   { alcance: "atual", excel: "Visão Atual", pdf: "Visão Atual" },
   { alcance: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)" },
   { alcance: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: "Todos os Centros de Custo (um por página)" },
+  { alcance: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)" },
 ];
 
 /** O nome do arquivo que o backend mandou (filename*, em UTF-8), ou um padrão. */
@@ -43,7 +44,6 @@ export async function mensagemDoErro(error: unknown) {
 /** Exportação da DRE apurada em Excel e PDF (Passo 26). */
 export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExportar }) {
   const [gerando, setGerando] = useState(false);
-  const centros = typeof visao === "object";
 
   async function baixar(formato: Formato, alcance: Alcance) {
     setGerando(true);
@@ -53,9 +53,13 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
           ? { formato, visao: "todas" }
           : alcance === "centros"
             ? { formato, visao: "centros" }
-            : centros
-              ? { formato, grupo: visao.grupo }
-              : { formato, visao: String(visao) };
+            : alcance === "obras"
+              ? { formato, visao: "obras" }
+              : typeof visao === "object"
+                ? "obra" in visao
+                  ? { formato, obra: visao.obra }
+                  : { formato, grupo: visao.grupo }
+                : { formato, visao: String(visao) };
       const r = await api.get<Blob>(`/proxy/competencias/${anoMes}/dre/exportar`, { params, responseType: "blob" });
       const url = URL.createObjectURL(r.data);
       const a = document.createElement("a");

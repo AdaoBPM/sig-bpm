@@ -42,6 +42,14 @@ export type GruposCentros = {
   grupos: Array<{ grupo: string; departamentos: string[]; centros: number; total: string }>;
 };
 
+/** As obras com lançamento no mês (os centros de obra do RM, 1.98 e 1.99), com o resultado de cada uma. */
+export type ObrasDaDRE = {
+  competencia: { ano: number; mes: number; status: StatusCompetencia };
+  apuradoEm: string | null;
+  obras: Array<{ codigo: string; nome: string; total: string }>;
+};
+export type DREObra = DREUnidade & { obra: { codigo: string; nome: string } };
+
 export type LancamentoDetalhe = {
   id: string;
   filial: number;
@@ -79,8 +87,8 @@ export type DetalheDRE = {
   blocos: BlocoDetalhe[];
 };
 
-/** Em que visão o detalhamento é pedido: uma unidade, o consolidado ou um agrupamento de centros. */
-export type VisaoDetalhe = { unidade: number } | { consolidado: true } | { grupo: string };
+/** Em que visão o detalhamento é pedido: uma unidade, o consolidado, um agrupamento de centros ou uma obra. */
+export type VisaoDetalhe = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string };
 
 /** Uma linha do extrato das listas de uma linha de volume: os registros da obra somados. */
 export type LinhaVolume = {
@@ -96,7 +104,10 @@ export type VolumesDaLinha = { linha: string; medida: string | null; destinos: s
 
 export const dreService = {
   detalhe: async (anoMes: string, linha: string, visao: VisaoDetalhe): Promise<DetalheDRE> => {
-    const params = { linha, ...("unidade" in visao ? { unidade: visao.unidade } : "grupo" in visao ? { grupo: visao.grupo } : {}) };
+    const params = {
+      linha,
+      ...("unidade" in visao ? { unidade: visao.unidade } : "grupo" in visao ? { grupo: visao.grupo } : "obra" in visao ? { obra: visao.obra } : {}),
+    };
     const { data } = await api.get<{ data: DetalheDRE }>(`/proxy/competencias/${anoMes}/dre/detalhe`, { params });
     return data.data;
   },
@@ -115,6 +126,14 @@ export const dreService = {
   },
   centros: async (anoMes: string, grupo: string): Promise<DRECentros> => {
     const { data } = await api.get<{ data: DRECentros }>(`/proxy/competencias/${anoMes}/dre/centros`, { params: { grupo } });
+    return data.data;
+  },
+  obras: async (anoMes: string): Promise<ObrasDaDRE> => {
+    const { data } = await api.get<{ data: ObrasDaDRE }>(`/proxy/competencias/${anoMes}/dre/obras`);
+    return data.data;
+  },
+  obra: async (anoMes: string, obra: string): Promise<DREObra> => {
+    const { data } = await api.get<{ data: DREObra }>(`/proxy/competencias/${anoMes}/dre/obras`, { params: { obra } });
     return data.data;
   },
   consultar: async (anoMes: string, unidade: number): Promise<DREUnidade> => {

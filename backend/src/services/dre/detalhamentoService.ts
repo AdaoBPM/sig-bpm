@@ -5,6 +5,7 @@ import type { Composicao, OrigemValor, ParcelaRateio } from "./apuracaoUnidades.
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
+import { CENTRO_DE_OBRA, sinalDaLinha } from "./obrasService.js";
 
 /**
  * Detalhamento de um valor da DRE até os lançamentos de origem (Passo 20).
@@ -28,7 +29,7 @@ const ROTULO_NATUREZA: Record<string, string> = {
   COMPLEMENTAR: "complementar",
 };
 
-export type Visao = { unidade: number } | { consolidado: true } | { grupo: string };
+export type Visao = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string };
 
 type LancamentoDetalhe = {
   id: string;
@@ -219,7 +220,27 @@ export const detalhamentoService = {
     const blocos: Bloco[] = [];
     let titulo: string;
 
-    if ("grupo" in visao) {
+    if ("obra" in visao) {
+      // A obra (aba Obras): os lançamentos do centro de obra na linha, com o sinal da DRE (receitas trocadas).
+      if (!CENTRO_DE_OBRA.test(visao.obra)) throw new RegraDREError(400, `${visao.obra} não é um centro de custo de obra (1.98 ou 1.99).`);
+      const ls = await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, codigoCentroCusto: visao.obra }, select: selecaoContabil });
+      titulo = `Obra ${ls[0]?.nomeCentroCusto ?? visao.obra} (${visao.obra})`;
+      regra = "Lançamentos contábeis do centro de obra, diretos e de rateio, antes do rateio";
+      if (ls.length > 0) {
+        const fator = new Decimal(sinalDaLinha(linha.codigo));
+        valor = somar(ls.map((l) => l.valorMovimento)).times(fator);
+        blocos.push({
+          tipo: "CONTABIL",
+          titulo: "Lançamentos contábeis",
+          filtro: "todas as filiais, diretos e de rateio",
+          ...(fator.isNegative() ? { fator: "-1" } : {}),
+          total: valor.toFixed(2),
+          lancamentos: ls.map((l) => paraDetalhe(l, fator)).sort(porValor),
+        });
+      } else {
+        observacao = "Linha que soma outras linhas da obra: veja o detalhamento de cada uma.";
+      }
+    } else if ("grupo" in visao) {
       titulo = `Centro de custo ${visao.grupo}`;
       const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true, departamento: true } });
       const ids = centros.filter((x) => grupoDoCentro(x) === visao.grupo && podeVerCentro(acesso, x.departamento)).map((x) => x.id);

@@ -25,7 +25,7 @@ async function competenciaPorAnoMes(ano: number, mes: number) {
   return c;
 }
 
-async function estrutura(): Promise<LinhaEstrutura[]> {
+export async function estrutura(): Promise<LinhaEstrutura[]> {
   const linhas = await getPrismaClient().linhaDRE.findMany({
     where: { ativo: true },
     orderBy: { ordem: "asc" },

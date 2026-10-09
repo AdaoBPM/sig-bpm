@@ -32,7 +32,7 @@ export type LancamentoDoCentro = { centroCustoId: string | null; linhaDREId: str
 const NOME_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços", 4: "Despesas e Extra", 5: "RN" };
 
 /** Avalia os subtotais e totais da estrutura a partir dos valores dados (itens e, se houver, totais já com valor). */
-function avaliarEstrutura(linhas: LinhaEstrutura[], valores: Map<string, Decimal>, incluir: (l: LinhaEstrutura) => boolean) {
+export function avaliarEstrutura(linhas: LinhaEstrutura[], valores: Map<string, Decimal>, incluir: (l: LinhaEstrutura) => boolean) {
   const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
   const calculados = new Map<string, Decimal>();
   const avaliar = (codigo: string, pilha = new Set<string>()): Decimal => {
@@ -91,7 +91,7 @@ export function consolidar(linhas: LinhaEstrutura[], porUnidade: ResultadoLinha[
  * sentido no recorte de um centro — departamento, atribuição, CPV, DFO. As
  * margens e resultados (ROL − CPV, MC − DFO…) não entram.
  */
-const soSoma = (l: LinhaEstrutura) => !!l.expressao && !l.expressao.includes("-");
+export const soSoma = (l: LinhaEstrutura) => !!l.expressao && !l.expressao.includes("-");
 
 /** Visão por centro de custo: os lançamentos de cada centro pela linha da DRE, e os agregadores que só somam. */
 export function apurarCentros(linhas: LinhaEstrutura[], lancamentos: LancamentoDoCentro[]): ResultadoCentro[] {

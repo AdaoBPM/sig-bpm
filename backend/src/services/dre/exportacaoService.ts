@@ -5,6 +5,7 @@ import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { apuracaoService } from "../apuracao/apuracaoService.js";
 import { dreService, RegraDREError } from "./dreService.js";
 import { linhasDoCentro } from "./recorteCentros.js";
+import { obrasService } from "./obrasService.js";
 
 /**
  * Exportação da DRE apurada em Excel e PDF (Passo 26, RF012). O arquivo
@@ -16,7 +17,8 @@ import { linhasDoCentro } from "./recorteCentros.js";
  * para todos; a visão por centro de custo só sai com os centros e as linhas
  * que o usuário alcança. Nos centros, como na tela, só os custos e despesas
  * de mão de obra, gastos gerais e depreciação, com os totais somando só o que
- * aparece (linhasDoCentro).
+ * aparece (linhasDoCentro). Nas obras, a DRE da obra inteira, como na aba
+ * Obras (obrasService).
  */
 
 export type VisaoExportacao =
@@ -25,7 +27,10 @@ export type VisaoExportacao =
   | { tipo: "todas" }
   | { tipo: "centros"; grupo: string }
   /** Todos os centros de custo (agrupamentos) que o usuário alcança, um por aba. */
-  | { tipo: "todosCentros" };
+  | { tipo: "todosCentros" }
+  | { tipo: "obra"; obra: string }
+  /** Todas as obras com lançamento no mês, uma por aba. */
+  | { tipo: "todasObras" };
 export type Formato = "xlsx" | "pdf";
 
 type LinhaTela = { codigo: string; tipo: string; grupo: string; descricao: string; valor: string | null };
@@ -67,6 +72,15 @@ async function blocos(ano: number, mes: number, visao: VisaoExportacao, acesso: 
       linhas: linhasDoCentro(c.linhas),
     };
   };
+  const obra = async (codigo: string): Promise<Bloco> => {
+    const o = await obrasService.consultar(ano, mes, codigo, acesso);
+    return { nome: o.obra.nome, titulo: `Obra: ${o.obra.nome}`, complemento: `Centro de custo ${o.obra.codigo}`, linhas: o.linhas };
+  };
+  if (visao.tipo === "obra") return [await obra(visao.obra)];
+  if (visao.tipo === "todasObras") {
+    const { obras } = await obrasService.listar(ano, mes, acesso);
+    return Promise.all(obras.map((o) => obra(o.codigo)));
+  }
   if (visao.tipo === "centros") return [await centro(visao.grupo)];
   // Todos os agrupamentos que o usuário alcança; os sem custo nem despesa na tela ficam de fora.
   const { grupos } = await dreService.listarCentros(ano, mes, acesso);
@@ -181,13 +195,16 @@ function rodapes(doc: DocumentoPDF, id: Identificacao) {
   }
 }
 
-const nomeDaVisao = (v: VisaoExportacao, b: Bloco[]) => (v.tipo === "todas" ? "todas as unidades" : v.tipo === "todosCentros" ? "todos os centros de custo" : b[0].nome);
+const nomeDaVisao = (v: VisaoExportacao, b: Bloco[]) =>
+  v.tipo === "todas" ? "todas as unidades" : v.tipo === "todosCentros" ? "todos os centros de custo" : v.tipo === "todasObras" ? "todas as obras" : b[0].nome;
 
 export const exportacaoService = {
   async exportar(ano: number, mes: number, visao: VisaoExportacao, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
     const id = await identificar(ano, mes, usuarioNome);
     const bs = await blocos(ano, mes, visao, acesso);
-    if (bs.length === 0) throw new RegraDREError(404, "Nenhum centro de custo com custos ou despesas para exportar.");
+    if (bs.length === 0) {
+      throw new RegraDREError(404, visao.tipo === "todasObras" ? "Nenhuma obra com lançamento para exportar." : "Nenhum centro de custo com custos ou despesas para exportar.");
+    }
     const titulo = `DRE ${id.competencia} - ${nomeDaVisao(visao, bs)}`;
     const nomeArquivo = `DRE ${ano}-${String(mes).padStart(2, "0")} - ${nomeDaVisao(visao, bs)}.${formato}`.replace(/[\\/:*?"<>|]/g, " ");
     if (formato === "xlsx") {

@@ -5,11 +5,14 @@ import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { detalhamentoService } from "../../services/dre/detalhamentoService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
 import { exportacaoService, type VisaoExportacao } from "../../services/dre/exportacaoService.js";
+import { obrasService } from "../../services/dre/obrasService.js";
 import { volumesDaLinha } from "../../services/dre/volumesDaLinhaService.js";
 import { auditar } from "../../services/auditoriaService.js";
 
 const unidadeSchema = z.coerce.number().int().min(1).max(5);
 const grupoSchema = z.string().trim().min(1).max(200).optional();
+/** A obra: o código do centro de custo de obra no RM (1.98.… ou 1.99.…). */
+const obraSchema = z.string().trim().regex(/^1.9[89].[0-9.]+$/).optional();
 
 function competencia(request: Request, response: Response) {
   const c = anoMesSchema.safeParse(request.params.anoMes);
@@ -53,6 +56,15 @@ export const dreController = {
     return responder(response, () => (g.data ? dreService.consultarCentros(c.ano, c.mes, g.data, request.user!.acesso) : dreService.listarCentros(c.ano, c.mes, request.user!.acesso)));
   },
 
+  /** Sem ?obra, a lista das obras (centros de obra com lançamento no mês); com ela, a DRE da obra. */
+  async obras(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    const o = obraSchema.safeParse(request.query.obra);
+    if (!o.success) return response.status(400).json({ error: "Obra inválida" });
+    return responder(response, () => (o.data ? obrasService.consultar(c.ano, c.mes, o.data, request.user!.acesso) : obrasService.listar(c.ano, c.mes, request.user!.acesso)));
+  },
+
   /** Detalhamento de uma linha: ?linha=código e ?unidade=1..5, ?grupo=centro, ou nenhum dos dois (consolidado). */
   async detalhe(request: Request, response: Response) {
     const c = competencia(request, response);
@@ -61,8 +73,11 @@ export const dreController = {
     if (!linha.success) return response.status(400).json({ error: "Linha da DRE inválida" });
     const g = grupoSchema.safeParse(request.query.grupo);
     if (!g.success) return response.status(400).json({ error: "Centro de custo inválido" });
+    const o = obraSchema.safeParse(request.query.obra);
+    if (!o.success) return response.status(400).json({ error: "Obra inválida" });
     let visao: Parameters<typeof detalhamentoService.detalhar>[3] = { consolidado: true };
-    if (g.data) visao = { grupo: g.data };
+    if (o.data) visao = { obra: o.data };
+    else if (g.data) visao = { grupo: g.data };
     else if (request.query.unidade !== undefined) {
       const u = unidadeSchema.safeParse(request.query.unidade);
       if (!u.success) return response.status(400).json({ error: "Unidade inválida" });
@@ -98,7 +113,8 @@ export const dreController = {
 
   /**
    * A DRE apurada em Excel ou PDF (Passo 26): ?formato=xlsx|pdf e ?visao=
-   * consolidado, todas ou 1..5, ou ?grupo= para um agrupamento de centros.
+   * consolidado, todas, centros, obras ou 1..5, ?grupo= para um agrupamento de
+   * centros ou ?obra= para uma obra.
    */
   async exportar(request: Request, response: Response) {
     const c = competencia(request, response);
@@ -107,14 +123,18 @@ export const dreController = {
     if (!formato.success) return response.status(400).json({ error: "Formato inválido: use xlsx ou pdf." });
     const g = grupoSchema.safeParse(request.query.grupo);
     if (!g.success) return response.status(400).json({ error: "Centro de custo inválido" });
+    const o = obraSchema.safeParse(request.query.obra);
+    if (!o.success) return response.status(400).json({ error: "Obra inválida" });
     let visao: VisaoExportacao;
     const v = String(request.query.visao ?? "consolidado");
-    if (g.data) visao = { tipo: "centros", grupo: g.data };
+    if (o.data) visao = { tipo: "obra", obra: o.data };
+    else if (g.data) visao = { tipo: "centros", grupo: g.data };
     else if (v === "consolidado" || v === "todas") visao = { tipo: v };
     else if (v === "centros") visao = { tipo: "todosCentros" };
+    else if (v === "obras") visao = { tipo: "todasObras" };
     else {
       const u = unidadeSchema.safeParse(v);
-      if (!u.success) return response.status(400).json({ error: "Visão inválida: use consolidado, todas, centros ou a unidade (1 a 5)." });
+      if (!u.success) return response.status(400).json({ error: "Visão inválida: use consolidado, todas, centros, obras ou a unidade (1 a 5)." });
       visao = { tipo: "unidade", unidade: u.data };
     }
     try {
