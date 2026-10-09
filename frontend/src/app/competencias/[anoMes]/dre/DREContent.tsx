@@ -268,7 +268,7 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
                 <span className="min-w-0 truncate" title={g.grupo}>
                   {g.grupo}
                 </span>
-                <span className="shrink-0 text-xs">{moeda(g.total)}</span>
+                <span className="shrink-0 text-xs">{moedaInteira(g.total)}</span>
               </button>
             </li>
           ))}
@@ -341,7 +341,7 @@ function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhi
                 className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${o.codigo === escolhida ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
               >
                 <span className="min-w-0 truncate">{o.nome}</span>
-                <span className="shrink-0 text-xs">{moeda(o.total)}</span>
+                <span className="shrink-0 text-xs">{moedaInteira(o.total)}</span>
               </button>
             </li>
           ))}
