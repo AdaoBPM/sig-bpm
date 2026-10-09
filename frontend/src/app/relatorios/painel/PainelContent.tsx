@@ -120,11 +120,16 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
         </div>
         <SeloDesvio b={b} />
       </header>
-      <div className="mt-2 flex items-baseline justify-between gap-2">
-        <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
-        <p className="text-right text-xs whitespace-nowrap text-gray-600">
-          Orçado <span className="font-bold text-gray-900">{formatar(b.orcado, formato)}</span>
-        </p>
+      {/* "Realizado" e "Orçado" no mesmo tamanho, cada um acima do valor (10/10/2026). */}
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs text-gray-600">Realizado</p>
+          <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
+        </div>
+        <div className="pb-1 text-right text-xs whitespace-nowrap text-gray-600">
+          <p>Orçado</p>
+          <p className="font-bold text-gray-900">{formatar(b.orcado, formato)}</p>
+        </div>
       </div>
       <p className="h-4 text-xs text-gray-500">{base}</p>
     </div>
@@ -132,8 +137,8 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
 }
 
 /**
- * Um indicador num card da largura da tela (teste de 09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git), em três grupos de um terço cada: o Atual (o mês de referência), o Acumulado e o
+ * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
+ * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,4, pedido de 10/10/2026): o Atual (o mês de referência), o Acumulado e o
  * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
  */
 function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
@@ -143,10 +148,10 @@ function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
     </span>
   );
   return (
-    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
+    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
       <GrupoPeriodo
         titulo={
-          <h3 className="truncate text-sm font-bold text-gray-900" title={i.titulo}>
+          <h3 className="truncate text-base font-bold text-gray-900" title={i.titulo}>
             {i.titulo}
           </h3>
         }
@@ -160,7 +165,7 @@ function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
         base={percentualDaBase(i, i.mes)}
       />
       <GrupoPeriodo
-        titulo={<h3 className="text-sm font-bold text-gray-900">Acumulado</h3>}
+        titulo={<h3 className="text-base font-bold text-gray-900">Acumulado</h3>}
         subtitulo={rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`}
         b={i.acumulado}
         formato={i.formatoAcumulado}
