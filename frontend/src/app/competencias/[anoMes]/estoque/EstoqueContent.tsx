@@ -77,7 +77,7 @@ export function EstoqueContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Estoque"
+        titulo="Estoque Prévio"
         selo={
           dados?.congelado || dados?.competencia.status === "FECHADA" ? (
             <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />
