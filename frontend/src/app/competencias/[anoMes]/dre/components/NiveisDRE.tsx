@@ -122,8 +122,11 @@ export const LINHAS_DE_RESULTADO = new Set([
   "NOPAT.DESPESAS_FINANCEIRAS_DF",
   "RL.RESULTADO_LIQUIDO_RL",
 ]);
-/** O fundo da linha: as de resultado em gray-100, os demais totais e atribuições em gray-50, as contas em branco. */
-export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-gray-100" : l.tipo !== "ITEM" ? "bg-gray-50" : "bg-white");
+/**
+ * O fundo da linha (09/10/2026): os totais no amarelo da etiqueta "Em Conferência" (yellow-50); as linhas de
+ * resultado um tom acima (yellow-100), mais claras que os rótulos (amarelo-ouro); as contas em branco.
+ */
+export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-yellow-100" : l.tipo !== "ITEM" ? "bg-yellow-50" : "bg-white");
 
 /** O recuo da descrição em cada nível. */
 export const RECUO = ["pl-4", "pl-9", "pl-14"];

@@ -108,9 +108,9 @@
      CabecalhoDaTela). Nos diálogos, fora da área da tela, vale 0. */
   top: var(--topo-tabela, 0px);
   z-index: 1;
-  /* Cinza um pouco mais escuro que as linhas e que os totais da DRE (gray-50):
-     o gray-200 do Tailwind. As faixas de título dos quadros usam o mesmo. */
-  background-color: #e5e7eb;
+  /* Amarelo-ouro da marca (pedido de 09/10/2026; antes, o gray-200). As faixas
+     de título dos quadros (DRE, Receita Prévia, Rateios) usam o mesmo. */
+  background-color: #ffcc00;
 }
 .tabela-sig td {
   padding-top: 0.375rem;

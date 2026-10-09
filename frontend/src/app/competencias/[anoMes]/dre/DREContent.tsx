@@ -99,7 +99,7 @@ function TabelaDRE({
     // Destaque amarelo-ouro à esquerda, como nos quadros da Receita Prévia.
     <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white">
       {/* Título como nos quadros da Receita Prévia e de Rateios; fica preso no topo ao rolar a DRE (E10 do levantamento de layout). */}
-      <div className="sticky top-[var(--topo-tabela,0px)] z-10 flex items-center gap-4 border-b border-gray-200 bg-gray-200 px-4 py-3">
+      <div className="sticky top-[var(--topo-tabela,0px)] z-10 flex items-center gap-4 border-b border-gray-200 bg-bpm-primary px-4 py-3">
         {/* Os níveis da planilha (1, 2 e 3 do contorno do Excel), num menu. */}
         <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
         <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">{titulo}</h2>
