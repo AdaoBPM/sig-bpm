@@ -58,16 +58,16 @@ function Periodo({ item, b, formato, primeiro }: { item: ItemPainel; b: BlocoPai
   return (
     <>
       <td className={`px-3 py-2 text-right align-top whitespace-nowrap ${primeiro ? "" : "border-l border-gray-200"}`}>
-        <div className="font-bold text-gray-900 tabular-nums">{formatar(b.realizado, formato)}</div>
+        <div className="font-bold text-gray-900">{formatar(b.realizado, formato)}</div>
         {item.base ? (
-          <div className="text-xs text-gray-500 tabular-nums">
+          <div className="text-xs text-gray-500">
             ▪ {b.base === null ? "—" : `${(item.base.casas === 2 ? n2 : n1).format(b.base * 100)}%`} {item.base.rotulo}
           </div>
         ) : null}
       </td>
-      <td className="px-3 py-2 text-right align-top whitespace-nowrap text-gray-700 tabular-nums">{formatar(b.orcado, formato)}</td>
+      <td className="px-3 py-2 text-right align-top whitespace-nowrap text-gray-700">{formatar(b.orcado, formato)}</td>
       <td className="px-3 py-2 text-right align-top whitespace-nowrap">
-        <span className="inline-flex items-center gap-2 tabular-nums text-gray-900">
+        <span className="inline-flex items-center gap-2 text-gray-900">
           {desvio(b.vsOrcado)}
           <Sinal s={b.sinal} />
         </span>

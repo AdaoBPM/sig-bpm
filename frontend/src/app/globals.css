@@ -116,3 +116,11 @@
   padding-top: 0.375rem;
   padding-bottom: 0.375rem;
 }
+/* Padrão (09/10/2026): os números das tabelas na mesma fonte dos textos — os
+   algarismos comuns do Inter, sem os de largura fixa (tabular-nums), que
+   mudam o desenho de alguns dígitos. Vale também para o que vier dentro das
+   células. */
+.tabela-sig,
+.tabela-sig * {
+  font-variant-numeric: normal;
+}
