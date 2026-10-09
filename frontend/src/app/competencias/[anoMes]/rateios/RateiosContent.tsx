@@ -14,8 +14,11 @@ import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes } from "../utils/formatacao";
 import { MEDIDA_BASE, mensagemDeErro, rateiosService, ROTULO_CHAVE } from "./services/rateiosService";
 
-// Volumes com duas casas (pedido de 09/10/2026), como os percentuais.
-const quant = (v: string) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Volumes com duas casas (pedido de 09/10/2026), como os percentuais; os dias de acompanhamento, sem casas.
+const quant = (v: string, base?: string) => {
+  const casas = base === "DIA" ? 0 : 2;
+  return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+};
 const pct = (v: string) => `${(Number(v) * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
 export function RateiosContent() {
@@ -104,31 +107,34 @@ export function RateiosContent() {
       ) : rateios.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : dados && dados.chaves.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-3">
           {dados.chaves.map((k) => (
             // Cada chave em cards, como os totais do Estoque: um por destino, com o percentual em destaque, e o do total.
             <section key={k.chave}>
-              <h2 className="mb-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
+              <h2 className="mb-1 text-sm font-bold tracking-wide text-gray-900 uppercase">
                 {/* O total da chave junto do título (o card do total saiu em 09/10/2026). */}
                 {ROTULO_CHAVE[k.chave] ?? k.chave}{" "}
-                <span className="tracking-normal normal-case">
-                  ({quant(k.total)} {MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})
+                <span className="font-normal tracking-normal text-gray-500 normal-case">
+                  ({quant(k.total, k.baseFisica)} {MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})
                 </span>
               </h2>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                 {k.destinos.map((d) => (
-                  <div key={d.destino} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
+                  <div key={d.destino} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2">
                     <p className="text-xs font-bold text-gray-600" title={d.rotulo}>
                       {/* Só o destino ("Matriz"): a chave já está no título da seção. */}
-                      {d.rotulo.replace(/^([PS])s*/, "").replace(/^.*:s*/, "")}
+                      {d.rotulo.replace(/^\([PS]\)\s*/, "").replace(/^.*:\s*/, "")}
                     </p>
-                    <p className="mt-1 text-xl font-extrabold text-gray-900">{pct(d.percentual)}</p>
-                    <p className="text-sm text-gray-700">
-                      {quant(d.quantidade)} <span className="text-xs text-gray-500">{MEDIDA_BASE[k.baseFisica] ?? ""}</span>
-                    </p>
+                    {/* O percentual e o volume na mesma linha, para todas as chaves caberem na tela. */}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-xl font-extrabold text-gray-900">{pct(d.percentual)}</p>
+                      <p className="text-sm whitespace-nowrap text-gray-700">
+                        {quant(d.quantidade, k.baseFisica)} <span className="text-xs text-gray-500">{MEDIDA_BASE[k.baseFisica] ?? ""}</span>
+                      </p>
+                    </div>
                     {d.quantidadeAtual !== null ? (
                       <p className="mt-0.5 text-xs text-yellow-800" title="Volume de hoje, diferente do apurado: reapure para usar.">
-                        Hoje: {quant(d.quantidadeAtual)}
+                        Hoje: {quant(d.quantidadeAtual, k.baseFisica)}
                       </p>
                     ) : null}
                   </div>
