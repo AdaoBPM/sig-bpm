@@ -211,6 +211,31 @@ function Aba({ anoMes, a, onAbrirRelatorio }: { anoMes: string; a: AbaLote; onAb
  * "Importar", os meses que mudaram entram na fila, um por vez; um erro é
  * avisado e o próximo segue.
  */
+/** Os arquivos que a importação lê, com as abas de cada um (o reconhecimento é pelo nome da aba). */
+const ARQUIVOS_DE_IMPORTACAO = [
+  {
+    arquivo: "SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)",
+    abas: [
+      "Projetos (Resumo)",
+      "Produção (Resumo)",
+      "Produção (Lista pst)",
+      "Produção (Armaduras)",
+      "Produção (Metalúrgica)",
+      "Expedição (Resumo)",
+      "Montagem (Resumo)",
+      "Acompanhamentos",
+      "Medições",
+      "Devoluções (Resumo)",
+      "Saídas (Resumo)",
+      "Indicadores (Admin.)",
+      "Estoque (2025)",
+    ],
+  },
+  { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)"] },
+  { arquivo: "CONTROLE DAS VENDAS - COMERCIAL", abas: ["DRE", "Indicadores (Comercial)"] },
+  { arquivo: "SIG BPM 2026 - INDICADORES DE RESULTADO", abas: ["Metas (Orçamento)"] },
+];
+
 export function ImportarLoteDialog({
   anoMes,
   aberto,
@@ -300,6 +325,17 @@ export function ImportarLoteDialog({
               </p>
             ) : null}
             {analisar.isError ? <p className="text-sm text-red-700">{mensagemDoErro(analisar.error, "Não foi possível ler o arquivo.")}</p> : null}
+            {/* Os arquivos que servem para a importação, com as abas que a ferramenta lê de cada um. */}
+            <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs font-bold text-gray-900">Arquivos que Servem para a Importação</p>
+              <ul className="mt-1.5 space-y-1 text-xs text-gray-700">
+                {ARQUIVOS_DE_IMPORTACAO.map((a) => (
+                  <li key={a.arquivo}>
+                    <span className="font-medium text-gray-900">{a.arquivo}</span>: {a.abas.join(", ")}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

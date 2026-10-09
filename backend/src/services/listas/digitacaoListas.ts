@@ -60,7 +60,7 @@ export const CAMPOS_DIGITACAO: Record<TipoListaRateio, CampoDigitacao[]> = {
     { coluna: "Linha", rotulo: "Pista de", tipo: "opcoes", obrigatorio: true, opcoes: [{ valor: "ALVEOLARES", rotulo: "Alveolares" }, { valor: "ESTACAS", rotulo: "Estacas" }] },
     numero("Pistas", "Pistas produzidas"),
   ],
-  // Como a Produção (Lista Arm.) desde 09/10/2026: Unidade, Linha e o peso do mês.
+  // Como a Produção (Armaduras) desde 09/10/2026: Unidade, Linha e o peso do mês.
   PRODUCAO_ARMADURA: [
     { coluna: "Unidade", rotulo: "Unidade", tipo: "opcoes", obrigatorio: true, opcoes: opcoes(["MATRIZ", "FILIAL", "SERVIÇOS"]) },
     {
@@ -70,7 +70,7 @@ export const CAMPOS_DIGITACAO: Record<TipoListaRateio, CampoDigitacao[]> = {
     },
     numero("Peso", "Peso (kg)"),
   ],
-  // Como a Produção Mensal desde 09/10/2026: FINALIDADE, LINHA e o peso do mês.
+  // Como a Produção (Metalúrgica) desde 09/10/2026: FINALIDADE, LINHA e o peso do mês.
   PRODUCAO_METALURGIA: [
     {
       coluna: "FINALIDADE", rotulo: "Finalidade", tipo: "opcoes", obrigatorio: true,

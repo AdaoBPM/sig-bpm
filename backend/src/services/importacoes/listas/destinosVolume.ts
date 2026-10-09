@@ -21,7 +21,7 @@ function semAcento(s: string) {
 }
 
 /**
- * Produção Mensal da metalurgia, por finalidade. Espelha os totais da própria
+ * Produção (Metalúrgica) do LISTAS REALIZADO (OPERAÇÃO), por finalidade. Espelha os totais da própria
  * aba: TOTAL: MATRIZ = Inserto + Manutenção Matriz + Investimento Matriz, e
  * assim por diante. O investimento separado por unidade (desde 09/10/2026)
  * entra no rateio da unidade, como o total da aba; o INVESTIMENTO antigo, sem
@@ -36,7 +36,7 @@ const FINALIDADES: Record<string, Destino | null> = {
   "MANUTENCAO: OBRAS": "MONTAGEM",
   "ESTRUTURA METALICA": "COMPLEMENTAR",
   INVESTIMENTO: null,
-  // Investimento por unidade (Produção Mensal desde 09/10/2026): entra na conta da unidade (decisão de 09/10/2026).
+  // Investimento por unidade (desde 09/10/2026): entra na conta da unidade (decisão de 09/10/2026).
   "INVESTIMENTO: MATRIZ": "MATRIZ",
   "INVESTIMENTO: FILIAL": "FILIAL",
   "INVESTIMENTO: OBRAS": "MONTAGEM",
@@ -48,7 +48,7 @@ export function destinoDaFinalidade(finalidade: string): Destino | null | undefi
 }
 
 /**
- * Linhas da Produção (Lista Arm.). Até 08/10/2026, uma coluna só
+ * Linhas da Produção (Armaduras) (antes, Produção (Lista Arm.)). Até 08/10/2026, uma coluna só
  * (UNIDADE/LINHA: "Matriz (kg)", "Ferragem (kg)"…); desde 09/10/2026, as
  * colunas Unidade, Linha e Und., e a categoria guardada é a Linha.
  */

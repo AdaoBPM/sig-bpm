@@ -31,8 +31,10 @@ type Decimal = Prisma.Decimal;
 
 /**
  * Leiaute de cada lista operacional que alimenta os rateios, a partir das abas
- * do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO) e da Produção Mensal da planilha
- * da metalurgia.
+ * do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO). Desde 09/10/2026, a
+ * metalurgia também vem dele (aba Produção (Metalúrgica)), e não mais da
+ * Planilha Padrão de Requisição e Itens Metálicos Acabados; a armadura, da aba
+ * Produção (Armaduras) (antes, Produção (Lista Arm.)).
  *
  * Desde 09/10/2026, projetos, produção, expedição e montagem vêm das abas
  * (Resumo), agrupadas por obra e linha (leituraResumos.ts); o leiaute das
@@ -257,7 +259,7 @@ const pistas: DefinicaoLista = {
 const armadura: DefinicaoLista = {
   tipo: "PRODUCAO_ARMADURA",
   rotulo: "Produção de armadura (kg)",
-  abas: ["Produção (Lista Arm.)"],
+  abas: ["Produção (Armaduras)"],
   interpretar(linhas, ano, mes) {
     // Desde 09/10/2026: Unidade, Linha e Und. Antes: uma coluna só, UNIDADE/LINHA.
     const novo = localizarCabecalho(linhas, ["UNIDADE", "LINHA"], ["UND."]);
@@ -308,9 +310,9 @@ function armaduraPorLinha(linhas: LinhaPlanilha[], cab: { numero: number; col: R
 const metalurgia: DefinicaoLista = {
   tipo: "PRODUCAO_METALURGIA",
   rotulo: "Produção da metalurgia (kg)",
-  abas: ["Produção Mensal"],
+  abas: ["Produção (Metalúrgica)"],
   interpretar(linhas, ano, mes) {
-    // A coluna LINHA entrou na Produção Mensal em 09/10/2026 (opcional, para os arquivos antigos).
+    // A coluna LINHA (e a UND.) entrou em 09/10/2026 (opcional, para os arquivos antigos).
     const cab = localizarCabecalho(linhas, ["FINALIDADE"], ["LINHA"]);
     if ("erro" in cab) return { ok: false, motivo: cab.erro };
     const linhaCab = linhas.find((l) => l.numero === cab.numero)!;
