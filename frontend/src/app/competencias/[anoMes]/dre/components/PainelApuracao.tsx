@@ -207,7 +207,7 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
       {bloqueio ? (
         // Destaque em vermelho à esquerda, como a faixa dos totais das Listas (que usa o amarelo-ouro); os atalhos à direita, na altura do título.
         <div className="flex items-start gap-2 rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-2.5 text-sm text-gray-800">
-          <LockKeyhole className="mt-0.5 size-4 shrink-0 text-red-600" />
+          <LockKeyhole className="mt-2.5 size-4 shrink-0 text-red-600" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="font-medium text-gray-900">Apuração bloqueada.</p>
@@ -218,7 +218,7 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
                     <Link
                       key={m}
                       href={`/competencias/${aaaa}-${mm}/dre`}
-                      className="inline-flex items-center rounded-sm bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-red-700"
+                      className="inline-flex h-9 items-center rounded-none bg-red-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-red-700"
                     >
                       Ir para {m}
                     </Link>
