@@ -14,7 +14,8 @@ import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { dataHora, lerAnoMes } from "../utils/formatacao";
 import { MEDIDA_BASE, mensagemDeErro, rateiosService, ROTULO_CHAVE } from "./services/rateiosService";
 
-const quant = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+// Volumes com duas casas (pedido de 09/10/2026), como os percentuais.
+const quant = (v: string) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (v: string) => `${(Number(v) * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
 export function RateiosContent() {
@@ -108,10 +109,13 @@ export function RateiosContent() {
             // Cada chave em cards, como os totais do Estoque: um por destino, com o percentual em destaque, e o do total.
             <section key={k.chave}>
               <h2 className="mb-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
+                {/* O total da chave junto do título (o card do total saiu em 09/10/2026). */}
                 {ROTULO_CHAVE[k.chave] ?? k.chave}{" "}
-                <span className="font-normal tracking-normal text-gray-500 normal-case">({MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})</span>
+                <span className="tracking-normal normal-case">
+                  ({quant(k.total)} {MEDIDA_BASE[k.baseFisica] ?? k.baseFisica})
+                </span>
               </h2>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {k.destinos.map((d) => (
                   <div key={d.destino} className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-4">
                     <p className="text-xs font-bold text-gray-600" title={d.rotulo}>
@@ -129,13 +133,6 @@ export function RateiosContent() {
                     ) : null}
                   </div>
                 ))}
-                <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-yellow-50 p-4">
-                  <p className="text-xs font-bold text-gray-600">Total</p>
-                  <p className="mt-1 text-xl font-extrabold text-gray-900">
-                    {quant(k.total)} <span className="text-sm font-bold text-gray-500">{MEDIDA_BASE[k.baseFisica] ?? ""}</span>
-                  </p>
-                  <p className="text-sm text-gray-700">{pct(String(k.destinos.reduce((s, d) => s + Number(d.percentual), 0)))}</p>
-                </div>
               </div>
             </section>
           ))}
