@@ -109,7 +109,12 @@ function abaResultados(b: Bloco, id: Identificacao): AbaEscrita {
 type Indicadores = Awaited<ReturnType<typeof indicadoresService.listar>>;
 const NOME_DO_GRUPO: Record<string, string> = { GME: "Metas Estratégicas (GME)" };
 
-function abaIndicadores(dados: Indicadores, id: Identificacao): AbaEscrita {
+/** Só o mês da competência (a etapa Indicadores do Fechamento Mensal): sem os meses anteriores e sem o acumulado. */
+function soOMes(dados: Indicadores): Indicadores {
+  return { ...dados, meses: dados.meses.slice(-1), indicadores: dados.indicadores.map((i) => ({ ...i, meses: i.meses.slice(-1) })) };
+}
+
+function abaIndicadores(dados: Indicadores, id: Identificacao, acumulado = true): AbaEscrita {
   const linhas: Celula[][] = [
     [{ valor: "Indicadores", estilo: ESTILO.titulo }],
     [{ valor: id.periodo, estilo: ESTILO.informacao }],
@@ -118,7 +123,7 @@ function abaIndicadores(dados: Indicadores, id: Identificacao): AbaEscrita {
     [],
   ];
   const cab = (t: string, direita = false) => ({ valor: t, estilo: direita ? ESTILO.cabecalhoDireita : ESTILO.cabecalho });
-  linhas.push([cab("Indicador"), cab("Nº"), cab("Sentido"), cab("Und."), cab("Metodologia"), ...dados.meses.map((m) => cab(m.rotulo, true)), cab("Acumulado", true)]);
+  linhas.push([cab("Indicador"), cab("Nº"), cab("Sentido"), cab("Und."), cab("Metodologia"), ...dados.meses.map((m) => cab(m.rotulo, true)), ...(acumulado ? [cab("Acumulado", true)] : [])]);
   const cabecalho = linhas.length;
   let grupo = "";
   for (const i of dados.indicadores) {
@@ -135,12 +140,12 @@ function abaIndicadores(dados: Indicadores, id: Identificacao): AbaEscrita {
       { valor: i.unidade },
       { valor: i.metodologia, estilo: ESTILO.informacao },
       ...i.meses.map(valor),
-      valor(i.total),
+      ...(acumulado ? [valor(i.total)] : []),
     ]);
   }
   return {
     nome: "Indicadores",
-    larguras: [46, 7, 8, 12, 40, ...dados.meses.map(() => 14), 16],
+    larguras: [46, 7, 8, 12, 40, ...dados.meses.map(() => 14), ...(acumulado ? [16] : [])],
     linhas,
     linhaCabecalho: cabecalho,
     rodape: `Indicadores ${dados.ano}`,
@@ -235,13 +240,13 @@ function valorIndicador(unidade: string, v: number | null) {
 /** As setas não existem na fonte padrão do PDF (WinAnsi): o sentido vai por extenso. */
 const SENTIDO_PDF: Record<string, string> = { "↑": "maior", "↓": "menor", "=": "=", "-": "-" };
 
-function paginasIndicadores(doc: DocumentoPDF, dados: Indicadores, id: Identificacao) {
+function paginasIndicadores(doc: DocumentoPDF, dados: Indicadores, id: Identificacao, acumulado = true) {
   const larguraNome = 230;
   const fixas = [
     { rotulo: "Sent.", w: 26 },
     { rotulo: "Und.", w: 52 },
   ];
-  const colunas = [...dados.meses.map((m) => m.rotulo), "Acumulado"];
+  const colunas = [...dados.meses.map((m) => m.rotulo), ...(acumulado ? ["Acumulado"] : [])];
   const inicio = M + larguraNome + fixas.reduce((s, f) => s + f.w, 0);
   const w = (DIREITA - inicio) / colunas.length;
   const x = (i: number) => inicio + w * (i + 1) - 3;
@@ -277,7 +282,7 @@ function paginasIndicadores(doc: DocumentoPDF, dados: Indicadores, id: Identific
     doc.texto(M + larguraNome, y, SENTIDO_PDF[i.sentido] ?? i.sentido, { tamanho: CORPO, cor: CINZA });
     doc.texto(M + larguraNome + fixas[0].w, y, i.unidade, { tamanho: CORPO, cor: CINZA });
     i.meses.forEach((v, k) => doc.texto(x(k), y, valorIndicador(i.unidade, v), { fonte, tamanho: CORPO, alinhar: "direita" }));
-    doc.texto(x(i.meses.length), y, valorIndicador(i.unidade, i.total), { fonte: "negrito", tamanho: CORPO, alinhar: "direita" });
+    if (acumulado) doc.texto(x(i.meses.length), y, valorIndicador(i.unidade, i.total), { fonte: "negrito", tamanho: CORPO, alinhar: "direita" });
     y -= 16;
   }
 }
@@ -309,14 +314,17 @@ export const exportacaoRelatoriosService = {
     return { nomeArquivo, tipo: "application/pdf", conteudo: doc.gerar(titulo), visoes: bs.map((b) => b.nome) };
   },
 
-  async indicadores(ano: number, ate: number | undefined, formato: Formato, usuarioNome: string) {
-    const dados = await indicadoresService.listar(ano, ate);
+  /** `apenasMes`: só o mês `ate` (a etapa Indicadores do Fechamento Mensal), sem os anteriores nem o acumulado. */
+  async indicadores(ano: number, ate: number | undefined, formato: Formato, usuarioNome: string, apenasMes = false) {
+    const todos = await indicadoresService.listar(ano, ate);
+    const dados = apenasMes ? soOMes(todos) : todos;
     const id = await identificar(ano, dados.ate, usuarioNome);
-    const titulo = `Indicadores ${ano}`;
-    const nomeArquivo = limpar(`Indicadores ${ano} até ${String(dados.ate).padStart(2, "0")}.${formato}`);
-    if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx([abaIndicadores(dados, id)], titulo), visoes: ["Indicadores"] };
+    const mm = String(dados.ate).padStart(2, "0");
+    const titulo = apenasMes ? `Indicadores ${mm}/${ano}` : `Indicadores ${ano}`;
+    const nomeArquivo = limpar(apenasMes ? `Indicadores ${ano}-${mm}.${formato}` : `Indicadores ${ano} até ${mm}.${formato}`);
+    if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx([abaIndicadores(dados, id, !apenasMes)], titulo), visoes: ["Indicadores"] };
     const doc = new DocumentoPDF(A4_PAISAGEM);
-    paginasIndicadores(doc, dados, id);
+    paginasIndicadores(doc, dados, id, !apenasMes);
     rodapes(doc, id);
     return { nomeArquivo, tipo: "application/pdf", conteudo: doc.gerar(titulo), visoes: ["Indicadores"] };
   },

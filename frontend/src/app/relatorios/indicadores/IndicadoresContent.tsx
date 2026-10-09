@@ -1,15 +1,16 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
-import { TabelaLarga } from "../components/TabelaLarga";
-import { formato, mensagemDeErro, relatoriosService, type Indicador } from "../services/relatoriosService";
+import { formato, mensagemDeErro, relatoriosService, type Indicador, type MesRelatorio } from "../services/relatoriosService";
 
 /** Os grupos, na ordem e com os nomes das abas da planilha (Produção, Serviços…). */
 const NOME_DO_GRUPO: Record<string, string> = { GME: "Metas Estratégicas (GME)" };
@@ -34,10 +35,56 @@ function valor(i: Indicador, v: number | null) {
   }
 }
 
+/** As larguras das colunas fixas (Indicador, Sent., Und.) e das de valor. */
+const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado: 124 };
+
+/**
+ * As colunas, com os filtros e a ordem nos rótulos, como nas demais tabelas.
+ * As três primeiras ficam presas à esquerda; os meses (e o acumulado) rolam.
+ * A posição das presas segue a largura real da coluna Indicador (--largura-indicador),
+ * que cresce quando a tabela é mais estreita que a área.
+ */
+function montarColunas(meses: MesRelatorio[], indices: number[], acumulado: boolean): Coluna<Indicador>[] {
+  return [
+    { chave: "indicador", rotulo: "Indicador", valor: (i) => i.nome, classe: "sticky left-0 !z-30" },
+    {
+      chave: "sentido",
+      rotulo: "Sent.",
+      valor: (i) => i.sentido,
+      texto: (i) => `${i.sentido} ${SENTIDO[i.sentido] ?? ""}`.trim(),
+      classe: "sticky left-[var(--largura-indicador)] !z-30",
+    },
+    { chave: "unidade", rotulo: "Und.", valor: (i) => i.unidade, classe: `sticky left-[calc(var(--largura-indicador)+84px)] !z-30 shadow-[inset_-1px_0_0_#d1d5db]` },
+    ...indices.map(
+      (k): Coluna<Indicador> => ({
+        chave: `mes:${meses[k].mes}`,
+        rotulo: meses[k].rotulo,
+        tipo: "numero",
+        alinhamento: "direita",
+        valor: (i) => i.meses[k],
+        texto: (i) => valor(i, i.meses[k]),
+      }),
+    ),
+    ...(acumulado
+      ? [
+          {
+            chave: "acumulado",
+            rotulo: "Acumulado",
+            tipo: "numero",
+            alinhamento: "direita",
+            valor: (i: Indicador) => i.total,
+            texto: (i: Indicador) => valor(i, i.total),
+            classe: "border-l border-gray-300",
+          } as Coluna<Indicador>,
+        ]
+      : []),
+  ];
+}
+
 /**
  * A tela Indicadores (Resultados e Indicadores), com o exercício e o mês
  * escolhidos no topo; ou, com `periodoFixo`, a etapa Indicadores do
- * Fechamento Mensal: o exercício até o mês da competência, que se troca na
+ * Fechamento Mensal: só os valores do mês da competência, que se troca na
  * barra de etapas.
  */
 export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: number; mes: number } } = {}) {
@@ -56,10 +103,30 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
-  const lista = dados?.indicadores ?? [];
-  const grupos = [...new Set(lista.map((i) => i.grupo))];
-  const colunas = 5 + (dados?.meses.length ?? 0);
-  const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
+
+  // No mês da competência, só a coluna dele (sem os meses anteriores nem o acumulado).
+  const mesesDaTabela = dados?.meses;
+  const colunas = useMemo(() => {
+    if (!mesesDaTabela) return [];
+    const indices = periodoFixo ? [mesesDaTabela.length - 1] : mesesDaTabela.map((_, k) => k);
+    return montarColunas(mesesDaTabela, indices, !periodoFixo);
+  }, [mesesDaTabela, periodoFixo]);
+  const tabela = useTabelaFiltravel(dados?.indicadores, colunas);
+  const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave === "acumulado" ? LARGURA.acumulado : LARGURA.mes))];
+  const total = larguras.reduce((s, w) => s + w, 0);
+
+  // A largura real da coluna Indicador posiciona as outras duas colunas presas.
+  const area = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = area.current;
+    const th = el?.querySelector("thead th");
+    if (!el || !th) return;
+    const medir = () => el.style.setProperty("--largura-indicador", `${th.getBoundingClientRect().width}px`);
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(th);
+    return () => obs.disconnect();
+  }, [colunas]);
 
   return (
     <div className="space-y-6">
@@ -69,9 +136,11 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
           <ul>
             <li>
               {periodoFixo
-                ? "Os meses do exercício até o desta competência; troque o mês no seletor da barra de etapas. Os meses não apurados ficam sem os valores da DRE."
+                ? "Os valores do mês desta competência; troque o mês no seletor da barra de etapas. Num mês não apurado, os indicadores da DRE ficam sem valor."
                 : "Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora."}
             </li>
+            <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
+            <li>As colunas Indicador, Sent. e Und. ficam fixas; role a tabela para os lados e para baixo na barra dela.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
             <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
           </ul>
@@ -79,8 +148,8 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
         sobre={
           <>
             <p>
-              Os indicadores gerenciais do exercício, mês a mês e acumulados, na ordem e com os nomes do INDICADORES DE RESULTADO (aba
-              Realizado (SIG)); a metodologia, o sentido e a forma do acumulado vêm da aba Metas.
+              Os indicadores gerenciais do exercício, {periodoFixo ? "no mês da competência" : "mês a mês e acumulados"}, na ordem e com os nomes do
+              INDICADORES DE RESULTADO (aba Realizado (SIG)); a metodologia, o sentido e a forma do acumulado vêm da aba Metas.
             </p>
             <p>
               Os valores saem da DRE apurada (congelada) de cada competência, dos volumes da apuração (projetos liberados) e dos indicadores
@@ -96,22 +165,29 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
           ano && ate ? (
             <div className="flex flex-wrap items-center gap-4">
               {periodoFixo ? null : (
-              <SeletorPeriodo
-                ano={ano}
-                ate={ate}
-                anos={exercicios.anos}
-                meses={meses}
-                onAno={(a) => {
-                  setAno(a);
-                  setAte(null);
-                }}
-                onAte={setAte}
-              />
+                <SeletorPeriodo
+                  ano={ano}
+                  ate={ate}
+                  anos={exercicios.anos}
+                  meses={meses}
+                  onAno={(a) => {
+                    setAno(a);
+                    setAte(null);
+                  }}
+                  onAte={setAte}
+                />
               )}
               <ExportarRelatorio
                 caminho="indicadores"
-                padrao={`Indicadores ${ano}`}
-                opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]}
+                padrao={periodoFixo ? `Indicadores ${ano}-${String(ate).padStart(2, "0")}` : `Indicadores ${ano}`}
+                opcoes={[
+                  {
+                    chave: "todos",
+                    excel: "Todos os Indicadores",
+                    pdf: "Todos os Indicadores",
+                    params: periodoFixo ? { ano, ate, escopo: "mes" } : { ano, ate },
+                  },
+                ]}
               />
             </div>
           ) : null
@@ -122,75 +198,90 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : !ano || !ate ? (
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>
+      ) : consulta.isError ? (
+        <div className="rounded-sm border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os indicadores.")}</p>
+        </div>
+      ) : !dados ? (
+        <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : (
         <>
-
-          {consulta.isError ? (
-            <div className="rounded-sm border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os indicadores.")}</p>
+          {tabela.ativos ? (
+            <div className="flex justify-end">
+              <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
+                Limpar Filtros
+              </button>
             </div>
-          ) : !dados ? (
-            <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
-          ) : (
-            // Os rótulos presos no topo da página, abaixo do título; o corpo rola para os lados (TabelaLarga).
-            <TabelaLarga
-              larguras={[400, 56, 84, ...dados.meses.map(() => 104), 120]}
-              cabecalho={
-                  <tr className="border-b border-gray-300">
-                    <th className="left-0 !z-20 px-3 py-2 text-left text-xs font-bold text-gray-900">Indicador</th>
-                    <th className="px-2 py-2 text-center text-xs font-bold text-gray-900" title="Sentido">
-                      Sent.
-                    </th>
-                    <th className="px-2 py-2 text-left text-xs font-bold text-gray-900">Und.</th>
-                    {dados.meses.map((m) => (
-                      <th key={m.mes} className={th}>
-                        {m.rotulo}
-                      </th>
-                    ))}
-                    <th className={`${th} border-l border-gray-300`}>Acumulado</th>
-                  </tr>
-              }
-              corpo={grupos.map((g) => (
-                    <Fragment key={g}>
-                      <tr className="border-y border-gray-300">
-                        <td colSpan={colunas} className="bg-gray-50 px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
-                          <span className="sticky left-3">{NOME_DO_GRUPO[g] ?? g}</span>
-                        </td>
-                      </tr>
-                      {lista
-                        .filter((i) => i.grupo === g)
-                        .map((i) => {
-                          const principal = i.numero === "";
-                          const tom = principal ? "text-gray-900" : "text-gray-700";
-                          return (
-                            <tr key={i.nome} className={`border-t border-gray-100 ${principal ? "font-bold" : ""}`}>
-                              <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 ${principal ? "pl-4" : "pl-9"} ${tom}`}>
-                                <div className="flex items-baseline gap-2">
-                                  {i.numero ? <span className="w-10 shrink-0 text-xs font-normal text-gray-400">{i.numero}</span> : null}
-                                  <span>{i.nome}</span>
-                                </div>
-                                <div className={`text-xs font-normal text-gray-500 ${i.numero ? "pl-12" : ""}`}>
-                                  {i.metodologia}
-                                  {i.acumulado === "ATUAL" ? " · acumulado: o último mês" : ""}
-                                </div>
-                              </td>
-                              <td className="px-2 py-1.5 text-center font-normal text-gray-600" title={SENTIDO[i.sentido]}>
-                                {i.sentido}
-                              </td>
-                              <td className="px-2 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600">{i.unidade}</td>
-                              {i.meses.map((v, k) => (
-                                <td key={k} className={`px-2 py-1.5 text-right whitespace-nowrap ${tom}`}>
-                                  {valor(i, v)}
-                                </td>
-                              ))}
-                              <td className={`border-l border-gray-300 px-2 py-1.5 text-right whitespace-nowrap ${tom}`}>{valor(i, i.total)}</td>
-                            </tr>
-                          );
-                        })}
-                    </Fragment>
-                  ))}
-            />
-          )}
+          ) : null}
+          {/* Uma tabela só (rótulos e valores alinhados), com rolagem própria: os rótulos presos no alto da área e as três primeiras colunas à esquerda. */}
+          <div
+            ref={area}
+            className="max-h-[calc(100vh-14rem)] overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white [--largura-indicador:400px] [--topo-tabela:0px]"
+          >
+            <table className="tabela-sig table-fixed border-collapse text-sm" style={{ width: total, minWidth: "100%" }}>
+              <colgroup>
+                {/* A coluna Indicador sem largura: fica com o que sobra quando a tabela é mais estreita que a área. */}
+                <col style={{ minWidth: LARGURA.indicador }} />
+                {larguras.slice(1).map((w, k) => (
+                  <col key={k} style={{ width: w }} />
+                ))}
+              </colgroup>
+              {tabela.cabecalho}
+              <tbody>
+                {tabela.visiveis.length === 0 ? (
+                  <SemResultado colunas={colunas.length} onLimpar={tabela.limpar} />
+                ) : (
+                  tabela.visiveis.map((i, k) => {
+                    const anterior = tabela.visiveis[k - 1];
+                    const principal = i.numero === "";
+                    const tom = principal ? "text-gray-900" : "text-gray-700";
+                    return (
+                      <Fragment key={i.nome}>
+                        {!anterior || anterior.grupo !== i.grupo ? (
+                          <tr className="border-y border-gray-300">
+                            <td colSpan={colunas.length} className="bg-gray-50 px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
+                              <span className="sticky left-3">{NOME_DO_GRUPO[i.grupo] ?? i.grupo}</span>
+                            </td>
+                          </tr>
+                        ) : null}
+                        <tr className={`border-t border-gray-100 ${principal ? "font-bold" : ""}`}>
+                          <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 ${principal ? "pl-4" : "pl-9"} ${tom}`}>
+                            <div className="flex items-baseline gap-2">
+                              {i.numero ? <span className="w-10 shrink-0 text-xs font-normal text-gray-400">{i.numero}</span> : null}
+                              <span>{i.nome}</span>
+                            </div>
+                            <div className={`text-xs font-normal text-gray-500 ${i.numero ? "pl-12" : ""}`}>
+                              {i.metodologia}
+                              {i.acumulado === "ATUAL" && !periodoFixo ? " · acumulado: o último mês" : ""}
+                            </div>
+                          </td>
+                          <td
+                            className="sticky left-[var(--largura-indicador)] z-10 bg-white px-4 py-1.5 font-normal text-gray-600"
+                            title={SENTIDO[i.sentido]}
+                          >
+                            {i.sentido}
+                          </td>
+                          <td
+                            className={`sticky left-[calc(var(--largura-indicador)+84px)] z-10 bg-white shadow-[inset_-1px_0_0_#d1d5db] px-4 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600`}
+                          >
+                            {i.unidade}
+                          </td>
+                          {colunas.slice(3).map((c) => (
+                            <td
+                              key={c.chave}
+                              className={`px-4 py-1.5 text-right whitespace-nowrap ${tom} ${c.chave === "acumulado" ? "border-l border-gray-300" : ""}`}
+                            >
+                              {c.texto?.(i)}
+                            </td>
+                          ))}
+                        </tr>
+                      </Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

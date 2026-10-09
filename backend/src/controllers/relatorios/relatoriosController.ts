@@ -99,7 +99,9 @@ export const relatoriosController = {
     if (!p) return;
     const formato = formatoSchema.safeParse(request.query.formato);
     if (!formato.success) return response.status(400).json({ error: "Formato inválido: use xlsx ou pdf." });
-    return enviarArquivo(request, response, "indicadores", () => exportacaoRelatoriosService.indicadores(p.ano, p.ate, formato.data, request.user!.nome));
+    // ?escopo=mes: só o mês ?ate= (a etapa Indicadores do Fechamento Mensal).
+    const apenasMes = request.query.escopo === "mes";
+    return enviarArquivo(request, response, "indicadores", () => exportacaoRelatoriosService.indicadores(p.ano, p.ate, formato.data, request.user!.nome, apenasMes));
   },
 
   async indicadores(request: Request, response: Response) {
