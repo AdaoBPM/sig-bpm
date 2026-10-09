@@ -45,9 +45,9 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 
 /** As cores do sinal, as da formatação condicional da planilha; o selo do desvio num tom claro da mesma cor. */
 const SINAL = {
-  1: { cor: "bg-[#92D050]", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o orçado" },
-  0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do orçado" },
-  [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o orçado" },
+  1: { cor: "bg-[#92D050]", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o Orçado" },
+  0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do Orçado" },
+  [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o Orçado" },
 } as const;
 
 function Sinal({ s }: { s: BlocoPainel["sinal"] }) {
