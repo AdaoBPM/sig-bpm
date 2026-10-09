@@ -54,7 +54,7 @@ export const estoqueService = {
     const daLista = { competenciaId: c.id };
     const sel = { quantidade: true, nomePeca: true, obra: { select: { codigo: true } }, linha: { select: { codigo: true } } } as const;
     const [producoes, expedicoes, precos, estacas] = await Promise.all([
-      prisma.producao.findMany({ where: daLista, select: { ...sel, secao: true } }),
+      prisma.producao.findMany({ where: daLista, select: { ...sel, secao: true, grupo: true } }),
       prisma.expedicao.findMany({ where: daLista, select: sel }),
       prisma.precoContrato.findMany({
         where: { substituidoEm: null },
@@ -62,11 +62,12 @@ export const estoqueService = {
       }),
       prisma.tabelaEstaca.findMany({ where: { vigenciaFim: null }, select: { grupo: true, secao: true, peca: true, precoLiquido: true } }),
     ]);
-    const mov = (r: { quantidade: Prisma.Decimal; nomePeca: string | null; obra: { codigo: string } | null; linha: { codigo: string } | null; secao?: string | null }) => ({
+    const mov = (r: { quantidade: Prisma.Decimal; nomePeca: string | null; obra: { codigo: string } | null; linha: { codigo: string } | null; secao?: string | null; grupo?: string | null }) => ({
       obra: r.obra?.codigo ?? null,
       linha: r.linha?.codigo ?? null,
       quantidade: r.quantidade,
-      nomePeca: r.nomePeca,
+      // Na produção, o grupo da peça (E, ES, ESD) do Resumo; na lista antiga, o nome da peça, de onde o grupo sai.
+      nomePeca: r.grupo ?? r.nomePeca,
       secao: r.secao ?? null,
     });
     const { saldos, avisos } = calcularEstoque({

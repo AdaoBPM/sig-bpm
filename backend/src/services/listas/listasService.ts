@@ -32,14 +32,16 @@ function rotulo(ano: number, mes: number) {
 
 /** Campos próprios mostrados na tabela, por lista: [campo do modelo, rótulo]. */
 const DETALHES: Record<TipoListaRateio, Array<[string, string]>> = {
-  PROJETO: [["produto", "Produto"], ["nomePeca", "Peça"]],
-  PRODUCAO: [["produto", "Produto"], ["nomePeca", "Peça"]],
+  // Desde 09/10/2026, as abas (Resumo): por obra e linha, com o grupo e a seção da peça (sem produto nem peça a peça).
+  PROJETO: [["grupo", "Grupo"], ["secao", "Seção"]],
+  PRODUCAO: [["grupo", "Grupo"], ["secao", "Seção"]],
   PRODUCAO_PISTA: [],
   // A linha da armadura é a do cadastro (coluna Linha da tabela), desde 09/10/2026.
   PRODUCAO_ARMADURA: [],
   PRODUCAO_METALURGIA: [["finalidade", "Finalidade"]],
-  EXPEDICAO: [["nomePeca", "Peça"], ["pesoKg", "Peso (kg)"], ["volumeInformado", "Volume informado"]],
-  MONTAGEM: [["grupo", "Grupo"]],
+  // A Expedição (Resumo) traz a peça só nas estacas; o volume já é o adotado. A Montagem (Resumo), só a linha.
+  EXPEDICAO: [["nomePeca", "Peça"]],
+  MONTAGEM: [],
   ACOMPANHAMENTO: [["etapa", "Etapa"]],
 };
 

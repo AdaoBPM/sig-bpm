@@ -274,7 +274,7 @@ export function ImportarLoteDialog({
         <DialogHeader>
           <DialogTitle>{fechada ? "Comparar Balancete" : "Importar Arquivo"}</DialogTitle>
           <DialogDescription>
-            Escolha uma planilha (.xlsx). A ferramenta lê o arquivo inteiro, reconhece as abas pelo nome (Balancete (Lista), Projetos (Lista), DRE…),
+            Escolha uma planilha (.xlsx). A ferramenta lê o arquivo inteiro, reconhece as abas pelo nome (Balancete (Lista), Projetos (Resumo), DRE…),
             confere a estrutura e compara, mês a mês, com o que está importado — o mês desta competência e os meses anteriores ainda abertos. Nada é
             importado antes de você confirmar.
           </DialogDescription>

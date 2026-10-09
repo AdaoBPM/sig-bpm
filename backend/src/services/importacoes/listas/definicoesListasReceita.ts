@@ -16,6 +16,7 @@ import {
   type LeituraLista,
   type RegistroLista,
 } from "./leituraListas.js";
+import { devolucoesDoResumo, saidasDoResumo } from "./leituraResumos.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -98,8 +99,11 @@ const creditos = (r: RegistroLista) => r.campos.creditos as Decimal | null;
 const devolucoes: DefinicaoListaReceita = {
   tipo: "DEVOLUCAO",
   rotulo: "Devoluções",
-  abas: ["Devoluções (Lista)"],
+  abas: ["Devoluções (Resumo)"],
   interpretar(linhas, ano, mes) {
+    // Desde 09/10/2026, a aba Devoluções (Resumo); o leiaute da lista continua aceito.
+    const resumo = devolucoesDoResumo(linhas, ano, mes);
+    if (resumo) return resumo;
     const cab = localizarCabecalho(
       linhas,
       ["DATA EMISSÃO", "NOTA FISCAL", "PROJETO", "FILIAL", "DESCRIÇÃO", "QUANTIDADE", "VLR. TOTAL", "MOVIMENTO", "VLR. ICMS", "VLR. PIS", "VLR. COFINS"],
@@ -152,8 +156,11 @@ const devolucoes: DefinicaoListaReceita = {
 const saidas: DefinicaoListaReceita = {
   tipo: "SAIDA",
   rotulo: "Saídas",
-  abas: ["Saídas (Lista)"],
+  abas: ["Saídas (Resumo)"],
   interpretar(linhas, ano, mes) {
+    // Desde 09/10/2026, a aba Saídas (Resumo); o leiaute da lista continua aceito.
+    const resumo = saidasDoResumo(linhas, ano, mes);
+    if (resumo) return resumo;
     const cab = localizarCabecalho(
       linhas,
       ["DATA_EMISSAO", "NF", "PROJETO", "FILIAL", "DESCRICAO_ITEM", "QTD", "VLR_TOTAL", "MOVIMENTO", "ICMS_VLR", "PIS_VLR", "COFINS_VLR"],

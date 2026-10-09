@@ -151,7 +151,7 @@ export function grupoDaEstaca(peca: string | null | undefined) {
   return "E";
 }
 
-/** Código da peça de estaca na expedição — a coluna Peça da Expedição (Lista). */
+/** Código da peça de estaca na expedição — a coluna Peça da Expedição (Resumo), ou o início do nome da peça na lista antiga. */
 export function pecaDaEstaca(peca: string | null | undefined) {
   const p = norm(peca);
   if (p.startsWith("ESD")) return p.slice(0, 5);

@@ -24,6 +24,7 @@ import {
   type RegistroLista,
   type RejeicaoLista,
 } from "./leituraListas.js";
+import { expedicaoDoResumo, montagemDoResumo, producaoDoResumo, projetosDoResumo } from "./leituraResumos.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -32,6 +33,10 @@ type Decimal = Prisma.Decimal;
  * Leiaute de cada lista operacional que alimenta os rateios, a partir das abas
  * do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO) e da Produção Mensal da planilha
  * da metalurgia.
+ *
+ * Desde 09/10/2026, projetos, produção, expedição e montagem vêm das abas
+ * (Resumo), agrupadas por obra e linha (leituraResumos.ts); o leiaute das
+ * abas (Lista) continua aceito — é o da digitação e dos arquivos antigos.
  *
  * As colunas calculadas da planilha (Período, Linha, V. Adot., Etiqueta) são
  * refeitas aqui a partir das colunas de origem, com a regra das fórmulas: as
@@ -133,8 +138,10 @@ export function volumeAdotado(volume: Decimal, peca: string | null, peso: Decima
 const projetos: DefinicaoLista = {
   tipo: "PROJETO",
   rotulo: "Projetos liberados",
-  abas: ["Projetos (Lista)"],
+  abas: ["Projetos (Resumo)"],
   interpretar(linhas, ano, mes) {
+    const resumo = projetosDoResumo(linhas, ano, mes);
+    if (resumo) return resumo;
     const cab = localizarCabecalho(
       linhas,
       ["UNIDADE", "OBRA", "SIGLA OBRA", "DATA", "VOLUME (M³)", "PRODUTO"],
@@ -179,8 +186,10 @@ const projetos: DefinicaoLista = {
 const producao: DefinicaoLista = {
   tipo: "PRODUCAO",
   rotulo: "Produção (m³)",
-  abas: ["Produção (Lista m3)"],
+  abas: ["Produção (Resumo)"],
   interpretar(linhas, ano, mes) {
+    const resumo = producaoDoResumo(linhas, ano, mes);
+    if (resumo) return resumo;
     const cab = localizarCabecalho(
       linhas,
       ["DATA", "UNIDADE", "OBRA", "NOME DA OBRA", "PRODUTO", "VOLUME (M³)"],
@@ -355,8 +364,10 @@ const metalurgia: DefinicaoLista = {
 const expedicao: DefinicaoLista = {
   tipo: "EXPEDICAO",
   rotulo: "Expedição",
-  abas: ["Expedição (Lista)"],
+  abas: ["Expedição (Resumo)"],
   interpretar(linhas, ano, mes) {
+    const resumo = expedicaoDoResumo(linhas, ano, mes);
+    if (resumo) return resumo;
     const cab = localizarCabecalho(
       linhas,
       ["DATA", "OBRA", "NOME DA OBRA", "NOME DA PEÇA", "PESO (KG)", "VOLUME (M³)"],
@@ -412,8 +423,10 @@ const expedicao: DefinicaoLista = {
 const montagem: DefinicaoLista = {
   tipo: "MONTAGEM",
   rotulo: "Montagem",
-  abas: ["Montagem (Lista)"],
+  abas: ["Montagem (Resumo)"],
   interpretar(linhas, ano, mes) {
+    const resumo = montagemDoResumo(linhas, ano, mes);
+    if (resumo) return resumo;
     const cab = localizarCabecalho(linhas, ["DATA", "NOME DA OBRA", "OBRA", "GRUPO", "VOLUME (M³)"], ["SEÇÃO", "QUANT."]);
     if ("erro" in cab) return { ok: false, motivo: cab.erro };
     const k = cab.col;

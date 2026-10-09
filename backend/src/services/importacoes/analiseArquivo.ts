@@ -177,9 +177,12 @@ async function assinaturaEmVigor(t: Tipo, c: Competencia, cache: Map<string, Lin
       ...(t.alcance === "GLOBAL" ? {} : { competenciaId: c.id }),
     },
     orderBy: { importadoEm: "desc" },
-    select: { hashArquivo: true },
+    select: { hashArquivo: true, resumo: true },
   });
   if (!vigente) return null;
+  // Em vigor uma importação de outra aba (a Lista, antes do Resumo de 09/10/2026): não há o que comparar, o mês se importa.
+  const abaVigente = (vigente.resumo as { aba?: unknown } | null)?.aba;
+  if (typeof abaVigente === "string" && !t.abas.some((a) => mesmaAba(a, abaVigente))) return null;
   const chave = `${vigente.hashArquivo}|${t.tipo}`;
   if (!cache.has(chave)) {
     try {

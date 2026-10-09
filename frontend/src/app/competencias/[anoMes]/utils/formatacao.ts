@@ -54,6 +54,7 @@ export const ROTULO_REJEICAO: Record<string, string> = {
   LINHA_DUPLICADA: "Linha repetida",
   DATA_INVALIDA: "Data inválida",
   UNIDADE_INVALIDA: "Unidade inválida",
+  LINHA_INVALIDA: "Linha inválida",
   QUANTIDADE_INVALIDA: "Quantidade inválida",
   VERSAO_INVALIDA: "Versão inválida",
 };

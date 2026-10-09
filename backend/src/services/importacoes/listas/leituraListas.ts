@@ -25,7 +25,7 @@ export type RegistroLista = {
 
 export type RejeicaoLista = {
   linha: number;
-  codigo: "DATA_INVALIDA" | "UNIDADE_INVALIDA" | "QUANTIDADE_INVALIDA" | "VALOR_INVALIDO";
+  codigo: "DATA_INVALIDA" | "UNIDADE_INVALIDA" | "LINHA_INVALIDA" | "QUANTIDADE_INVALIDA" | "VALOR_INVALIDO";
   mensagem: string;
 };
 

@@ -91,3 +91,35 @@ describe("leitura das listas da receita", () => {
     assert.equal((r.campos.valorMedido as { toFixed: (n: number) => string }).toFixed(2), "151728.00");
   });
 });
+
+describe("Devoluções (Resumo) e Saídas (Resumo) (09/10/2026)", () => {
+  const cab = ["Período", "Filial", "Projeto", "Cliente", "Linha", "Movimento", "Valor (R$)", "Deduções (R$)", "Etiqueta"];
+  it("devolução: valor e deduções por obra, linha e movimento; a linha \"-\" fica sem efeito", () => {
+    const l = DEFINICOES_LISTAS_RECEITA.DEVOLUCAO.interpretar(
+      planilha(
+        cab,
+        [JAN, 2, "L866004", "PERVILLE", "ALVEOLARES", "1.2.18", 64170.56, 12923.93, "x"],
+        [JAN, 1, "G3168", "BPM", "ESTRUTURA", "1.2.20", 32539.4051, 0, "y"],
+        [JAN, 1, "G906501", "ALB", "-", "1.2.20", 4463.59, 0, "-"],
+      ),
+      2026,
+      1,
+    );
+    assert.ok(l.ok);
+    assert.deepEqual(
+      l.registros.map((r) => [r.obra?.codigo, r.unidade, r.linha?.codigo, String(r.campos.movimento), Number(r.campos.valor), Number(r.campos.creditos)]),
+      [["L866004", 2, "ALVEOLARES", "1.2.18", 64170.56, 12923.93], ["G3168", 1, "ESTRUTURA", "1.2.20", 32539.4051, 0]],
+    );
+    assert.equal(l.ignoradas.semEfeito, 1);
+  });
+
+  it("saída: a METALURGIA do resumo é a linha METALÚRGICA, na Matriz, mesmo sem projeto", () => {
+    const l = DEFINICOES_LISTAS_RECEITA.SAIDA.interpretar(
+      planilha(["Período", "Filial", "Projeto", "Fantasia", "Linha", "Movimento", "Valor (R$)", "Deduções (R$)", "Etiqueta"], [FEV, 2, null, "SPILLERE", "METALURGIA", "2.2.12", 5479.5, 0, "z"]),
+      2026,
+      2,
+    );
+    assert.ok(l.ok);
+    assert.deepEqual(l.registros.map((r) => [r.obra, r.unidade, r.linha?.codigo, Number(r.campos.valor)]), [[null, 1, "METALÚRGICA", 5479.5]]);
+  });
+});

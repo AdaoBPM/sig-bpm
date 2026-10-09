@@ -154,3 +154,52 @@ describe("armadura e metalurgia com as colunas Linha e Und. (09/10/2026)", () =>
     assert.deepEqual(l.avisos ?? [], []);
   });
 });
+
+describe("abas (Resumo) no lugar das (Lista) (09/10/2026)", () => {
+  it("projetos: o resumo por obra e linha; a aba com Data continua lida como lista", () => {
+    const resumo = DEFINICOES_LISTAS.PROJETO.interpretar(
+      planilha(
+        ["Período", "Unidade", "Sigla Obra", "Obra", "Venda", "Linha", "Grupo", "Seção", "Volume (m³)", "Comprimento (m)", "Quantidade"],
+        [JAN, "Unidade 01", "G3171", "NAIJUS", "GLOBAL", "ESTRUTURA", "ESC", "20", 229.226, 1015.34, 476],
+        [FEV, "Unidade 02", "G3168", "ABIMAR", "GLOBAL", "ALVEOLARES", "LABN", "LABN25.20", 2.68, 20.16, 3],
+      ),
+      2026,
+      1,
+    );
+    assert.ok(resumo.ok);
+    assert.deepEqual(
+      resumo.registros.map((r) => [r.obra?.codigo, r.unidade, r.linha?.codigo, r.quantidade.toNumber(), r.campos.grupo]),
+      [["G3171", 1, "ESTRUTURA", 229.226, "ESC"]],
+    );
+  });
+
+  it("produção: o grupo da peça (E, ES, ESD) e a seção vão para o preço da estaca", () => {
+    const l = DEFINICOES_LISTAS.PRODUCAO.interpretar(
+      planilha(
+        ["Período", "Unidade", "Obra", "Nome da Obra", "Linha", "Grupo", "Seção", "Volume (m³)", "Compr. (m)", "Quantidade", "Etiqueta"],
+        [FEV, "Unidade 02", "E862204", "SCHOROEDER - PONTE", "ESTACAS", "ESD", "35,0X35,0", 58.8, 480, 60, "02/2026.E862204.ESTACAS(ESD35-8)"],
+      ),
+      2026,
+      2,
+    );
+    assert.ok(l.ok);
+    assert.deepEqual([l.registros[0].campos.grupo, l.registros[0].campos.secao, l.registros[0].campos.quantidadePecas], ["ESD", "35,0X35,0", 60]);
+  });
+
+  it("expedição: a peça da estaca, sem peça nas demais linhas; o volume é o adotado", () => {
+    const l = DEFINICOES_LISTAS.EXPEDICAO.interpretar(
+      planilha(
+        ["Período", "Unidade", "Obra", "Nome da Obra", "Linha", "Peça", "Volume (m³)", "Quantidade"],
+        [JAN + 0.125, "Unidade 01", "G3168", "ABIMAR", "ESTRUTURA", "-", 175.4808, 131],
+        [JAN + 0.125, "Unidade 02", "E826405", "VENTISOL", "ESTACAS", "ES26", 108.7083, 153],
+      ),
+      2026,
+      1,
+    );
+    assert.ok(l.ok);
+    assert.deepEqual(l.registros.map((r) => [r.unidade, r.linha?.codigo, r.campos.nomePeca, r.quantidade.toNumber()]), [
+      [1, "ESTRUTURA", null, 175.4808],
+      [2, "ESTACAS", "ES26", 108.7083],
+    ]);
+  });
+});

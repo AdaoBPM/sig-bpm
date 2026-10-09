@@ -52,10 +52,10 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     }),
     prisma.tabelaEstaca.findMany({ where: { vigenciaFim: null }, select: { grupo: true, secao: true, peca: true, precoLiquido: true } }),
     prisma.tipoMovimento.findMany({ where: { ativo: true }, select: { codigo: true } }),
-    prisma.producao.findMany({ where: daLista, select: { ...comuns, nomePeca: true, secao: true } }),
+    prisma.producao.findMany({ where: daLista, select: { ...comuns, nomePeca: true, secao: true, grupo: true } }),
     prisma.expedicao.findMany({ where: daLista, select: { ...comuns, nomePeca: true } }),
-    prisma.saida.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true, movimento: true, nomeMovimento: true } }),
-    prisma.devolucao.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true, movimento: true, nomeMovimento: true } }),
+    prisma.saida.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true, movimento: true, nomeMovimento: true, tipoMovimento: { select: { descricao: true } } } }),
+    prisma.devolucao.findMany({ where: daLista, select: { ...comuns, valor: true, creditos: true, movimento: true, nomeMovimento: true, tipoMovimento: { select: { descricao: true } } } }),
     prisma.medicao.findMany({ where: daLista, select: { ...comuns, valorMedido: true, tipoFaturamento: true } }),
     prisma.lancamentoReceita.findMany({
       where: daLista,
@@ -76,10 +76,12 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     })),
     estacas,
     movimentos: new Set(movimentos.map((m) => m.codigo.trim().toUpperCase())),
-    producoes: producoes.map((r) => registro(r, { nomePeca: r.nomePeca, secao: r.secao })),
+    // Na produção, o grupo da peça (E, ES, ESD) do Resumo; na lista antiga, o nome da peça, de onde o grupo sai.
+    producoes: producoes.map((r) => registro(r, { nomePeca: r.grupo ?? r.nomePeca, secao: r.secao })),
     expedicoes: expedicoes.map((r) => registro(r, { nomePeca: r.nomePeca })),
-    saidas: saidas.map((r) => registro(r, { valor: r.valor, creditos: r.creditos, movimento: r.movimento, nomeMovimento: r.nomeMovimento })),
-    devolucoes: devolucoes.map((r) => registro(r, { valor: r.valor, creditos: r.creditos, movimento: r.movimento, nomeMovimento: r.nomeMovimento })),
+    // O Resumo não traz a descrição do movimento: a do cadastro de Tipos de Movimento.
+    saidas: saidas.map((r) => registro(r, { valor: r.valor, creditos: r.creditos, movimento: r.movimento, nomeMovimento: r.nomeMovimento ?? r.tipoMovimento?.descricao ?? null })),
+    devolucoes: devolucoes.map((r) => registro(r, { valor: r.valor, creditos: r.creditos, movimento: r.movimento, nomeMovimento: r.nomeMovimento ?? r.tipoMovimento?.descricao ?? null })),
     medicoes: medicoes.map((r) => registro(r, { valorMedido: r.valorMedido, tipoFaturamento: r.tipoFaturamento })),
     lancamentos: lancamentos.map((l) => ({
       id: l.id,
