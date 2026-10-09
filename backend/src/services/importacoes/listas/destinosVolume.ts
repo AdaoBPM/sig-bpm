@@ -22,8 +22,10 @@ function semAcento(s: string) {
 
 /**
  * Produção Mensal da metalurgia, por finalidade. Espelha os totais da própria
- * aba: TOTAL: MATRIZ = Inserto + Manutenção Matriz, e assim por diante.
- * INVESTIMENTO não entra em rateio.
+ * aba: TOTAL: MATRIZ = Inserto + Manutenção Matriz + Investimento Matriz, e
+ * assim por diante. O investimento separado por unidade (desde 09/10/2026)
+ * entra no rateio da unidade, como o total da aba; o INVESTIMENTO antigo, sem
+ * unidade, não entra.
  */
 const FINALIDADES: Record<string, Destino | null> = {
   "INSERTO METALICO": "MATRIZ",
@@ -34,10 +36,10 @@ const FINALIDADES: Record<string, Destino | null> = {
   "MANUTENCAO: OBRAS": "MONTAGEM",
   "ESTRUTURA METALICA": "COMPLEMENTAR",
   INVESTIMENTO: null,
-  // A Produção Mensal separa o investimento por unidade desde 09/10/2026; continua fora do rateio.
-  "INVESTIMENTO: MATRIZ": null,
-  "INVESTIMENTO: FILIAL": null,
-  "INVESTIMENTO: OBRAS": null,
+  // Investimento por unidade (Produção Mensal desde 09/10/2026): entra na conta da unidade (decisão de 09/10/2026).
+  "INVESTIMENTO: MATRIZ": "MATRIZ",
+  "INVESTIMENTO: FILIAL": "FILIAL",
+  "INVESTIMENTO: OBRAS": "MONTAGEM",
 };
 
 /** undefined: finalidade desconhecida; null: conhecida e fora do rateio. */

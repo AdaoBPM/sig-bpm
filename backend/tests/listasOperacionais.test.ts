@@ -130,7 +130,7 @@ describe("armadura e metalurgia com as colunas Linha e Und. (09/10/2026)", () =>
     );
   });
 
-  it("metalurgia: a coluna LINHA vira a linha do registro; os investimentos por unidade ficam fora do rateio", () => {
+  it("metalurgia: a coluna LINHA vira a linha do registro; o investimento por unidade entra na conta da unidade", () => {
     const l = DEFINICOES_LISTAS.PRODUCAO_METALURGIA.interpretar(
       planilha(
         ["FINALIDADE", "LINHA", JAN],
@@ -146,9 +146,11 @@ describe("armadura e metalurgia com as colunas Linha e Und. (09/10/2026)", () =>
     assert.deepEqual(l.registros.map((r) => [String(r.campos.finalidade), r.linha?.codigo ?? null, r.unidade]), [
       ["INSERTO METÁLICO", "ESTRUTURA", 1],
       ["ESTRUTURA METÁLICA", "METÁLICA", 3],
-      ["INVESTIMENTO: MATRIZ", "ESTRUTURA", null],
+      ["INVESTIMENTO: MATRIZ", "ESTRUTURA", 1],
     ]);
-    assert.equal(destinoDaFinalidade("INVESTIMENTO: MATRIZ"), null);
+    assert.equal(destinoDaFinalidade("INVESTIMENTO: MATRIZ"), "MATRIZ");
+    assert.equal(destinoDaFinalidade("INVESTIMENTO: OBRAS"), "MONTAGEM");
+    assert.equal(destinoDaFinalidade("INVESTIMENTO"), null);
     assert.deepEqual(l.avisos ?? [], []);
   });
 });
