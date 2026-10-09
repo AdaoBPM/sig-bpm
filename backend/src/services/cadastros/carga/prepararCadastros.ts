@@ -211,7 +211,7 @@ function slug(s: string): string {
     .slice(0, 40);
 }
 
-/** A aba Realizado (…) de cada unidade → o nome da unidade no cadastro (pelo nome, desde que o Tipo saiu, 10/10/2026). */
+/** A aba Realizado (…) de cada unidade → o nome da unidade no cadastro (pelo nome, desde que o Tipo saiu, 09/10/2026). */
 const ABA_PARA_UNIDADE: Record<string, string> = {
   "Realizado (Matriz)": "Matriz",
   "Realizado (Filial)": "Filial",

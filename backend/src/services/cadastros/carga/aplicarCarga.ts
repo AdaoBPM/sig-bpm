@@ -187,7 +187,7 @@ export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
     await tx.contaResultado.upsert({ where: { reduzido: c.reduzido }, create: { reduzido: c.reduzido, ...c.dados }, update: c.dados });
   }
 
-  // A unidade de cada linha pelo nome (o Tipo saiu do cadastro em 10/10/2026), sem diferença de maiúsculas e acentos.
+  // A unidade de cada linha pelo nome (o Tipo saiu do cadastro em 09/10/2026), sem diferença de maiúsculas e acentos.
   const chaveNome = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
   const unidades = await tx.unidadeNegocio.findMany({ select: { id: true, nome: true } });
   const unidadePorNome = new Map(unidades.map((u) => [chaveNome(u.nome), u.id]));

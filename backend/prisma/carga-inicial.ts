@@ -24,11 +24,11 @@ const prisma = getPrismaClient();
 // -----------------------------------------------------------------------------
 
 const UNIDADES = [
-  { codigo: 1, nome: "Matriz", tipo: "MATRIZ" as const },
-  { codigo: 2, nome: "Filial", tipo: "FILIAL" as const },
-  { codigo: 3, nome: "Serviços", tipo: "SERVICOS" as const },
-  { codigo: 4, nome: "Despesas e Extra", tipo: "DESPESAS" as const },
-  { codigo: 5, nome: "RN", tipo: "RN" as const },
+  { codigo: 1, nome: "Matriz" },
+  { codigo: 2, nome: "Filial" },
+  { codigo: 3, nome: "Serviços" },
+  { codigo: 4, nome: "Despesas e Extra" },
+  { codigo: 5, nome: "RN" },
 ];
 
 /**
@@ -75,7 +75,7 @@ async function carregarLinhas() {
 
 async function carregarUnidades() {
   for (const [i, u] of UNIDADES.entries()) {
-    const dados = { nome: u.nome, tipo: u.tipo, ordem: i + 1 };
+    const dados = { nome: u.nome, ordem: i + 1 };
     await prisma.unidadeNegocio.upsert({
       where: { codigo: u.codigo },
       create: { codigo: u.codigo, ...dados },

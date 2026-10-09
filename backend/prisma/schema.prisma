@@ -204,15 +204,6 @@ model AuditLog {
 // nela. Referência entre registros usa `id` ou um `codigo` estável.
 // =============================================================================
 
-/// ENUM: natureza da unidade, define como ela é apurada.
-enum TipoUnidade {
-  MATRIZ
-  FILIAL
-  SERVICOS
-  DESPESAS
-  RN
-}
-
 /// ENUM: nível da conta no plano de contas do ERP. Só ANALITICA classifica.
 enum TipoConta {
   SINTETICA
@@ -338,8 +329,9 @@ model Linha {
 model UnidadeNegocio {
   id        String      @id @default(uuid())
   codigo    Int         @unique
+  /// O nome identifica a unidade onde a planilha a cita (as abas Realizado (…) da carga da Estrutura da DRE);
+  /// a regra de apuração vem do código. O tipo saiu em 09/10/2026.
   nome      String
-  tipo      TipoUnidade
   /// ORDEM: posição na tela, reorganizável pelo usuário.
   ordem     Int         @default(0)
   ativo     Boolean     @default(true)

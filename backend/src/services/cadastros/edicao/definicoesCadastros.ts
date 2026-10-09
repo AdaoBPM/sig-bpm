@@ -493,7 +493,7 @@ const unidades: DefinicaoCadastro = {
   entidade: "unidades",
   titulo: "Unidade de negócio",
   auditoria: "unidade_negocio",
-  // As cinco unidades são fixas: cada uma é apurada por uma regra própria. O Tipo saiu do cadastro (10/10/2026):
+  // As cinco unidades são fixas: cada uma é apurada por uma regra própria. O Tipo saiu do cadastro (09/10/2026):
   // a unidade é identificada pelo código e, onde a planilha a cita (as abas Realizado (…)), pelo nome.
   criar: false,
   excluir: false,

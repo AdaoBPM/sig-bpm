@@ -120,7 +120,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
         </div>
         <SeloDesvio b={b} />
       </header>
-      {/* "Realizado" e "Orçado" no mesmo tamanho, cada um acima do valor (10/10/2026). */}
+      {/* "Realizado" e "Orçado" no mesmo tamanho, cada um acima do valor (09/10/2026). */}
       <div className="mt-2 flex items-end justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs text-gray-600">Realizado</p>
@@ -138,7 +138,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
 
 /**
  * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,4, pedido de 10/10/2026): o Atual (o mês de referência), o Acumulado e o
+ * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,4, pedido de 09/10/2026): o Atual (o mês de referência), o Acumulado e o
  * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
  */
 function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
@@ -287,7 +287,7 @@ export function PainelContent() {
             </div>
           ) : null}
 
-          {/* A legenda: o mês de referência e as cores do gráfico à esquerda; os sinais (a comparação com o orçado) à direita, na mesma linha (10/10/2026). */}
+          {/* A legenda: o mês de referência e as cores do gráfico à esquerda; os sinais (a comparação com o orçado) à direita, na mesma linha (09/10/2026). */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
             <span className="font-bold text-gray-900">
               {dados.rotuloMes} · {dados.rotuloAcumulado}
