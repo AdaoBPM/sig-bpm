@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 
@@ -107,68 +107,78 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
   i.base ? `${b.base === null ? "—" : `${(i.base.casas === 2 ? n2 : n1).format(b.base * 100)}%`} ${i.base.rotulo}` : null;
 
 /**
- * Um indicador em card (09/10/2026): o realizado do mês em destaque, com o orçado e o desvio; o gráfico dos meses do
- * exercício (realizado × orçado, como os da planilha); e o acumulado no rodapé.
+ * Um período do card (o Atual ou o Acumulado): o rótulo com o selo do desvio, o realizado em destaque com o orçado e o
+ * percentual da base. Os dois períodos têm as mesmas linhas, para ficarem alinhados.
  */
-function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
-  const baseMes = percentualDaBase(i, i.mes);
-  const baseAcum = percentualDaBase(i, i.acumulado);
+function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNode; subtitulo: ReactNode; b: BlocoPainel; formato: FormatoPainel; base: string | null }) {
   return (
-    <article className="flex flex-col rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 pt-3 pb-2">
+    <div className="min-w-0">
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
+          {titulo}
+          <p className="text-xs text-gray-500">{subtitulo}</p>
+        </div>
+        <SeloDesvio b={b} />
+      </header>
+      <div className="mt-2 flex items-baseline justify-between gap-2">
+        <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
+        <p className="text-right text-xs whitespace-nowrap text-gray-600">
+          Orçado <span className="font-bold text-gray-900">{formatar(b.orcado, formato)}</span>
+        </p>
+      </div>
+      <p className="h-4 text-xs text-gray-500">{base}</p>
+    </div>
+  );
+}
+
+/**
+ * Um indicador num card da largura da tela (teste de 09/10/2026; a versão com os cards lado a lado está na etiqueta
+ * painel-cards-lado-a-lado do git), em três grupos de um terço cada: o Atual (o mês de referência), o Acumulado e o
+ * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
+ */
+function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
+  const sentido = (
+    <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold text-gray-700">
+      {i.sentido}
+    </span>
+  );
+  return (
+    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
+      <GrupoPeriodo
+        titulo={
           <h3 className="truncate text-sm font-bold text-gray-900" title={i.titulo}>
             {i.titulo}
           </h3>
-          <p className="text-xs text-gray-500">
-            {i.sigla}{" "}
-            <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold text-gray-700">
-              {i.sentido}
-            </span>
-          </p>
-        </div>
-        <SeloDesvio b={i.mes} />
-      </header>
-
-      <div className="mt-2 flex items-baseline justify-between gap-2">
-        <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900" title={`Realizado de ${rotuloMes}`}>
-          {formatar(i.mes.realizado, i.formato)}
-        </p>
-        <p className="text-right text-xs whitespace-nowrap text-gray-600">
-          Orçado <span className="font-bold text-gray-900">{formatar(i.mes.orcado, i.formato)}</span>
-        </p>
-      </div>
-      <p className="h-4 text-xs text-gray-500">{baseMes}</p>
-
-      <div className="mt-1">
+        }
+        subtitulo={
+          <>
+            {i.sigla} {sentido} · {rotuloMes}
+          </>
+        }
+        b={i.mes}
+        formato={i.formato}
+        base={percentualDaBase(i, i.mes)}
+      />
+      <GrupoPeriodo
+        titulo={<h3 className="text-sm font-bold text-gray-900">Acumulado</h3>}
+        subtitulo={rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`}
+        b={i.acumulado}
+        formato={i.formatoAcumulado}
+        base={percentualDaBase(i, i.acumulado)}
+      />
+      <div className="min-w-0 self-center">
         <Grafico item={i} />
       </div>
-
-      {/* O acumulado no rodapé, em três partes como o mês: o realizado (com o percentual), o orçado e o desvio. */}
-      <footer className="mt-1 flex items-end justify-between gap-3 border-t border-gray-100 pt-2 text-xs">
-        <div className="min-w-0">
-          <p className="font-bold tracking-wide text-gray-500 uppercase">Acumulado</p>
-          <p className="whitespace-nowrap">
-            <span className="text-sm font-bold text-gray-900">{formatar(i.acumulado.realizado, i.formatoAcumulado)}</span>
-            {baseAcum ? <span className="text-gray-500"> · {baseAcum}</span> : null}
-          </p>
-        </div>
-        <div className="ml-auto text-right whitespace-nowrap">
-          <p className="text-gray-500">Orçado</p>
-          <p className="text-sm font-bold text-gray-900">{formatar(i.acumulado.orcado, i.formatoAcumulado)}</p>
-        </div>
-        <SeloDesvio b={i.acumulado} />
-      </footer>
     </article>
   );
 }
 
-/** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, uma seção abaixo da outra. */
+/** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção abaixo da outra. */
 function Secao({ q, rotuloMes }: { q: QuadroPainel; rotuloMes: string }) {
   return (
     <section>
       <h2 className="mb-2 text-sm font-bold tracking-wide text-gray-900 uppercase">{q.titulo}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 min-[1700px]:grid-cols-4">
+      <div className="space-y-3">
         {q.itens.map((i) => (
           <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} />
         ))}
@@ -203,9 +213,9 @@ export function PainelContent() {
             <li>Escolha o exercício e o mês de referência; o acumulado vai de janeiro até ele.</li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
-              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador: o realizado do mês em
-              destaque, o orçado e o desvio (vs. Orçado) no selo colorido; o gráfico dos meses do exercício, com o realizado em amarelo-ouro e o
-              orçado em preto; e, no rodapé, o acumulado com o orçado e o desvio.
+              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela, em
+              três partes: o Atual (o mês de referência) e o Acumulado, cada um com o realizado em destaque, o orçado e o desvio (vs. Orçado) no
+              selo colorido; e o gráfico dos meses do exercício, com o realizado em amarelo-ouro e o orçado em preto.
             </li>
             <li>Passe o mouse sobre as colunas do gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>O orçado vem das metas importadas: importe a aba Metas (Orçamento) em cada mês, na etapa Importações do Fechamento Mensal.</li>
