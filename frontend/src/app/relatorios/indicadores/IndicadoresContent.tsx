@@ -239,7 +239,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                       <Fragment key={i.nome}>
                         {!anterior || anterior.grupo !== i.grupo ? (
                           <tr className="border-y border-gray-300">
-                            <td colSpan={colunas.length} className="bg-gray-50 px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
+                            <td colSpan={colunas.length} className="bg-yellow-50 px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
                               <span className="sticky left-3">{NOME_DO_GRUPO[i.grupo] ?? i.grupo}</span>
                             </td>
                           </tr>
