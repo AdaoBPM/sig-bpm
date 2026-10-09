@@ -140,7 +140,7 @@ export function EstoqueContent() {
                 <p className="text-xs font-bold text-gray-600">{ROTULO_MEDIA[m.linha] ?? m.linha}</p>
                 <p className="mt-1 text-xl font-extrabold text-gray-900">{m3(m.volume)} m³</p>
                 <p className="text-sm text-gray-700">{moeda(m.valor)}</p>
-                <p className="mt-0.5 text-xs text-gray-500">preço médio {moeda(m.precoMedio)}/m³</p>
+                <p className="mt-0.5 text-xs text-gray-500">Preço Médio {moeda(m.precoMedio)}/m³</p>
               </div>
             ))}
           </div>
