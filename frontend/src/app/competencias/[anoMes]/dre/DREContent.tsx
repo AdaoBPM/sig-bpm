@@ -337,9 +337,11 @@ function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhi
                 onClick={() => onEscolher(o.codigo)}
                 aria-current={o.codigo === escolhida ? "true" : undefined}
                 title={`${o.nome} (${o.codigo})`}
-                className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${o.codigo === escolhida ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+                className={`block w-full px-3 py-1.5 text-left text-sm ${o.codigo === escolhida ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
               >
-                <span className="min-w-0 truncate">{o.nome}</span>
+                {/* O código do centro de obra no RM acima do nome (09/10/2026). */}
+                <span className={`block text-xs ${o.codigo === escolhida ? "text-gray-300" : "text-gray-500"}`}>{o.codigo}</span>
+                <span className="block truncate">{o.nome}</span>
               </button>
             </li>
           ))}
