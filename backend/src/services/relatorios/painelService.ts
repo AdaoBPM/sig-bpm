@@ -14,7 +14,10 @@ function bloco(item: ItemPainel, realizado: Valor, orcado: Valor) {
   return { realizado: r, orcado: o, base: item.base?.conta(realizado) ?? null, vsOrcado: vsOrcado(r, o), sinal: sinal(item, r, o) };
 }
 
-function montar(quadros: QuadroPainel[], periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor] }) {
+/** Os meses do exercício até o de referência, para os gráficos: o realizado e o orçado de cada um. */
+type MesDaSerie = { rotulo: string; realizado: Valor; orcado: Valor };
+
+function montar(quadros: QuadroPainel[], periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor] }, serie: MesDaSerie[]) {
   return quadros.map((q) => ({
     titulo: q.titulo,
     itens: q.itens.map((i) => ({
@@ -27,6 +30,7 @@ function montar(quadros: QuadroPainel[], periodos: { mes: [Valor, Valor]; acumul
       separar: i.separar ?? false,
       mes: bloco(i, ...periodos.mes),
       acumulado: bloco(i, ...periodos.acumulado),
+      serie: serie.map((m) => ({ mes: m.rotulo, realizado: i.conta(m.realizado), orcado: i.conta(m.orcado) })),
     })),
   }));
 }
@@ -64,6 +68,12 @@ export const painelService = {
     const orcadoAcum: Valor = (n) => (completas ? acumularMeta(n, metas) : null);
 
     const periodos = { mes: [realizadoMes, orcadoMes] as [Valor, Valor], acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor] };
+    // A série mês a mês (gráficos do painel, como os da planilha): o realizado e o orçado de cada mês até o de referência.
+    const serie: MesDaSerie[] = meses.map((m, i) => ({
+      rotulo: MESES[m.mes - 1],
+      realizado: (n) => partes.get(n)?.[i]?.valor ?? null,
+      orcado: (n) => metas[i]?.get(n) ?? null,
+    }));
     return {
       ano,
       ate: ultimo,
@@ -72,8 +82,8 @@ export const painelService = {
       mesApurado: meses[ultimo - 1].competenciaId !== null,
       mesesSemMeta: meses.filter((_, i) => metas[i] === null).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
-        { chave: "resultados", titulo: "Resultados", quadros: montar(PAINEL_RESULTADOS, periodos) },
-        { chave: "performance", titulo: "Performance", quadros: montar(PAINEL_PERFORMANCE, periodos) },
+        { chave: "resultados", titulo: "Resultados", quadros: montar(PAINEL_RESULTADOS, periodos, serie) },
+        { chave: "performance", titulo: "Performance", quadros: montar(PAINEL_PERFORMANCE, periodos, serie) },
       ],
     };
   },

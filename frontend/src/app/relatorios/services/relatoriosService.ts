@@ -56,6 +56,8 @@ export type ItemPainel = {
   separar: boolean;
   mes: BlocoPainel;
   acumulado: BlocoPainel;
+  /** Os meses do exercício até o de referência (os gráficos): o realizado e o orçado de cada um. */
+  serie: Array<{ mes: string; realizado: number | null; orcado: number | null }>;
 };
 export type QuadroPainel = { titulo: string; itens: ItemPainel[] };
 export type Painel = {
