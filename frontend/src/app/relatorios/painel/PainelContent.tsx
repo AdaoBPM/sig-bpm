@@ -287,7 +287,7 @@ export function PainelContent() {
             </div>
           ) : null}
 
-          {/* A legenda: o mês de referência, as cores do gráfico e os sinais. */}
+          {/* A legenda: o mês de referência e as cores do gráfico à esquerda; os sinais (a comparação com o orçado) à direita, na mesma linha (10/10/2026). */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
             <span className="font-bold text-gray-900">
               {dados.rotuloMes} · {dados.rotuloAcumulado}
@@ -300,12 +300,14 @@ export function PainelContent() {
               <span className="inline-block size-3 rounded-[2px] bg-bpm-secondary" />
               Orçado
             </span>
-            {([1, 0, -1] as const).map((s) => (
-              <span key={s} className="inline-flex items-center gap-1.5">
-                <Sinal s={s} />
-                {SINAL[s].texto}
-              </span>
-            ))}
+            <span className="ml-auto inline-flex flex-wrap items-center gap-x-5 gap-y-1">
+              {([1, 0, -1] as const).map((s) => (
+                <span key={s} className="inline-flex items-center gap-1.5">
+                  <Sinal s={s} />
+                  {SINAL[s].texto}
+                </span>
+              ))}
+            </span>
           </div>
 
           <div className="space-y-6">
