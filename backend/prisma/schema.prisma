@@ -670,6 +670,7 @@ model Competencia {
   estoqueIniciais      EstoqueSaldoInicial[]
   indicadoresImportados IndicadorImportado[]
   metasImportadas       MetaImportada[]
+  indicadoresDigitados  IndicadorDigitado[]
 
   projetos            Projeto[]
   producoes           Producao[]
@@ -1136,6 +1137,25 @@ model MetaImportada {
   @@unique([competenciaId, nome])
   @@index([importacaoId])
   @@map("metas_importadas")
+}
+
+/// Indicador digitado na aba Comercial ou Administrativo das Listas: o valor
+/// do mês que sobrepõe o importado (abas Indicadores (Comercial) e (Admin.)).
+/// Uma nova importação da aba volta a valer: apaga os digitados dos
+/// indicadores que ela traz.
+model IndicadorDigitado {
+  id            String   @id @default(uuid())
+  competenciaId String   @map("competencia_id")
+  nome          String
+  /// DECIMAL: o valor do mês, na unidade do indicador (percentuais como fração).
+  valor         Decimal
+  digitadoPor   String   @map("digitado_por")
+  digitadoEm    DateTime @default(now()) @map("digitado_em")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+
+  @@unique([competenciaId, nome])
+  @@map("indicadores_digitados")
 }
 
 // -----------------------------------------------------------------------------

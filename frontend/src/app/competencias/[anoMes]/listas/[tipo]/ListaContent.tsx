@@ -153,7 +153,7 @@ function Lista() {
                 className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
               >
                 <Plus className="size-4" />
-                Novo registro
+                Novo Registro
               </Button>
             </PermissionGuard>
           ) : null

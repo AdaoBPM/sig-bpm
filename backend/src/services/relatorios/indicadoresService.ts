@@ -9,7 +9,7 @@ import { mesesDoExercicio } from "./resultadosService.js";
  */
 export async function dadosDoMes(competenciaId: string, apurado: boolean): Promise<DadosDoMes> {
   const prisma = getPrismaClient();
-  const [dre, volumes, importados] = await Promise.all([
+  const [dre, volumes, importados, digitados] = await Promise.all([
     apurado
       ? prisma.resultadoApurado.findMany({
           where: { competenciaId, centroCustoId: null },
@@ -18,11 +18,13 @@ export async function dadosDoMes(competenciaId: string, apurado: boolean): Promi
       : [],
     apurado ? prisma.volumeOperacional.findMany({ where: { competenciaId }, select: { quantidade: true, regraRateio: { select: { origemDoVolume: true } } } }) : [],
     prisma.indicadorImportado.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
+    // Os digitados nas abas Comercial e Administrativo das Listas sobrepõem os importados.
+    prisma.indicadorDigitado.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
   ]);
   const porVisao = new Map(dre.map((r) => [`${r.unidadeNegocio?.codigo ?? 0}|${r.linhaDRE.codigo}`, Number(r.valor)]));
   // Cada origem aparece em mais de uma regra de rateio com o mesmo volume: vale uma vez.
   const porOrigem = new Map(volumes.map((v) => [v.regraRateio.origemDoVolume, Number(v.quantidade)]));
-  const porNome = new Map(importados.map((i) => [i.nome, Number(i.valor)]));
+  const porNome = new Map([...importados, ...digitados].map((i) => [i.nome, Number(i.valor)]));
   return {
     dre: (u, c) => (apurado ? (porVisao.get(`${u}|${c}`) ?? 0) : NaN),
     volume: (o) => (apurado ? (porOrigem.get(o) ?? 0) : NaN),

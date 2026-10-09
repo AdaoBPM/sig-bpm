@@ -29,7 +29,8 @@ export const LISTAS_INDICADORES = [
 export type IndicadoresDaLista = {
   competencia: { id: string; ano: number; mes: number; status: StatusCompetencia };
   importacao: { nomeArquivo: string; importadoEm: string } | null;
-  indicadores: Array<{ numero: string; nome: string; unidade: string; metodologia: string; valor: number | null }>;
+  /** O valor do mês: o digitado na aba ("Novo Registro") sobrepõe o importado. */
+  indicadores: Array<{ numero: string; nome: string; unidade: string; metodologia: string; valor: number | null; origem: "IMPORTADA" | "DIGITADA" | null }>;
 };
 
 export type CampoDigitacao = {
@@ -84,6 +85,9 @@ export const listasService = {
   },
   excluir: async (anoMes: string, slug: string, id: string) => {
     await api.delete(`${base(anoMes, slug)}/${id}`);
+  },
+  digitarIndicador: async (anoMes: string, slug: string, nome: string, valor: number) => {
+    await api.post(`/proxy/competencias/${anoMes}/listas/indicadores/${slug}`, { nome, valor });
   },
   indicadores: async (anoMes: string, slug: string) => {
     const { data } = await api.get<{ data: IndicadoresDaLista }>(`/proxy/competencias/${anoMes}/listas/indicadores/${slug}`);

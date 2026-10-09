@@ -45,6 +45,8 @@ export async function processarIndicadores(importacaoId: string): Promise<void> 
       } else {
         if (ids.length > 0) await tx.indicadorImportado.deleteMany({ where: { importacaoId: { in: ids } } });
         await tx.indicadorImportado.createMany({ data: dados });
+        // A importação volta a valer sobre o que foi digitado nas Listas para os indicadores que ela traz.
+        await tx.indicadorDigitado.deleteMany({ where: { competenciaId: importacao.competenciaId, nome: { in: dados.map((d) => d.nome) } } });
       }
       if (ids.length > 0) await tx.importacao.updateMany({ where: { id: { in: ids } }, data: { substituidaEm: new Date() } });
       await tx.importacao.update({

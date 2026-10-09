@@ -4,7 +4,7 @@ import { z } from "zod";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { alcancaLista } from "../../services/acesso/acesso.js";
 import { ehListaRateio, type TipoListaRateio } from "../../services/importacoes/listas/definicoesListas.js";
-import { ehSetorIndicadores, indicadoresDaLista, SETORES_INDICADORES } from "../../services/listas/indicadoresDasListas.js";
+import { digitarIndicador, ehSetorIndicadores, indicadoresDaLista, SETORES_INDICADORES } from "../../services/listas/indicadoresDasListas.js";
 import { listasService, RegraListaError } from "../../services/listas/listasService.js";
 
 const filtroSchema = z.object({
@@ -13,6 +13,8 @@ const filtroSchema = z.object({
   // A tela carrega a lista inteira de uma vez para filtrar pelos rótulos das colunas.
   porPagina: z.coerce.number().int().min(1).max(10000).default(50),
 });
+
+const indicadorSchema = z.object({ nome: z.string().trim().min(1).max(200), valor: z.number().finite() });
 
 const corpoSchema = z.object({
   valores: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
@@ -61,6 +63,23 @@ export const listasController = {
     if (!c) return;
     try {
       return response.json({ data: await indicadoresDaLista(setor, c.ano, c.mes) });
+    } catch (error) {
+      return responderRegra(response, error);
+    }
+  },
+
+  /** "Novo Registro" nas abas Comercial e Administrativo: o valor digitado sobrepõe o atual. */
+  async digitarIndicador(request: Request, response: Response) {
+    const setor = String(request.params.setor ?? "");
+    if (!ehSetorIndicadores(setor)) return response.status(404).json({ error: "Lista desconhecida" });
+    if (!alcancaLista(request.user!.acesso, SETORES_INDICADORES[setor].tipo)) return response.status(403).json({ error: "Esta lista não é de um setor seu." });
+    const c = competencia(request, response);
+    if (!c) return;
+    const corpo = indicadorSchema.safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Informe o indicador e um valor numérico." });
+    try {
+      await digitarIndicador(setor, c.ano, c.mes, corpo.data.nome, corpo.data.valor, request.user!.sub);
+      return response.status(201).json({ data: { ok: true } });
     } catch (error) {
       return responderRegra(response, error);
     }

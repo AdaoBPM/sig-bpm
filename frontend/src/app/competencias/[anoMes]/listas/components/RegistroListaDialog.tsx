@@ -65,7 +65,7 @@ export function RegistroListaDialog({ anoMes, slug, rotuloLista, campos, editand
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="rounded-sm sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editando ? "Editar registro" : "Novo registro"} · {rotuloLista}</DialogTitle>
+          <DialogTitle>{editando ? "Editar Registro" : "Novo Registro"} · {rotuloLista}</DialogTitle>
           <DialogDescription>
             O registro entra no mês da competência. Linha, unidade e volume seguem as
             mesmas regras da importação.

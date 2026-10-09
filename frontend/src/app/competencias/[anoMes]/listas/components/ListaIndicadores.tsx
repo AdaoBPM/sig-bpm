@@ -1,20 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { AvisoCongelado } from "../../../components/AvisoCongelado";
 import { lerAnoMes } from "../../utils/formatacao";
 import { LISTAS_INDICADORES, listasService, mensagemDeErro, type IndicadoresDaLista } from "../services/listasService";
+import { IndicadorDialog } from "./IndicadorDialog";
 import { useAbasDasListas } from "./useAbasDasListas";
 
 type Indicador = IndicadoresDaLista["indicadores"][number];
@@ -44,13 +49,14 @@ const COLUNAS: Coluna<Indicador>[] = [
   { chave: "metodologia", rotulo: "Metodologia", valor: (i) => i.metodologia },
   { chave: "unidade", rotulo: "Unidade", valor: (i) => i.unidade, classe: "w-28" },
   { chave: "valor", rotulo: "Valor do Mês", tipo: "numero", alinhamento: "direita", valor: (i) => i.valor, texto: (i) => valor(i), classe: "w-44" },
+  { chave: "origem", rotulo: "Origem", valor: (i) => (i.origem === "DIGITADA" ? "Digitado" : i.origem === "IMPORTADA" ? "Importado" : null), classe: "w-px whitespace-nowrap" },
 ];
 
 /**
  * As abas Comercial e Administrativo das Listas: os indicadores numerados do
  * setor (aba Realizado (SIG) do INDICADORES DE RESULTADO) com o valor do mês
- * importado das abas Indicadores (Comercial) e Indicadores (Admin.). Só
- * leitura: os valores se corrigem no arquivo, reimportado em Importações.
+ * importado das abas Indicadores (Comercial) e Indicadores (Admin.) ou
+ * digitado aqui ("Novo Registro"), que sobrepõe o importado.
  */
 export function ListaIndicadores() {
   const { anoMes, tipo: slug } = useParams<{ anoMes: string; tipo: string }>();
@@ -66,6 +72,7 @@ export function ListaIndicadores() {
   const d = dados.data;
   const tabela = useTabelaFiltravel(d?.indicadores, COLUNAS);
   const fechada = d?.competencia.status === "FECHADA";
+  const [digitando, setDigitando] = useState(false);
   const aba = lista.tipo === "INDICADORES_COMERCIAL" ? "Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL" : "Indicadores (Admin.) do SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)";
 
   return (
@@ -76,14 +83,30 @@ export function ListaIndicadores() {
         comoUsar={
           <ul>
             <li>Escolha a lista nas abas.</li>
-            <li>Os valores das abas Comercial e Administrativo vêm da importação do mês; corrija no arquivo e reimporte em Importações.</li>
+            <li>Os valores das abas Comercial e Administrativo vêm da importação do mês.</li>
+            <li>Use “Novo Registro” para digitar o valor do mês de um indicador: ele substitui o atual, até uma nova importação da aba.</li>
           </ul>
         }
         sobre={
           <p>
             Os indicadores numerados do {lista.rotulo}, como na aba Realizado (SIG) do INDICADORES DE RESULTADO, com o valor do mês importado
-            da aba {aba}. São os mesmos valores da tela Indicadores; não entram na apuração.
+            da aba {aba} ou digitado aqui, que substitui o importado. São os mesmos valores da tela Indicadores e do Painel de Bordo; não entram
+            na apuração.
           </p>
+        }
+        acoes={
+          d && !fechada ? (
+            <PermissionGuard permission="listas_operacionais:editar">
+              <Button
+                type="button"
+                onClick={() => setDigitando(true)}
+                className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
+              >
+                <Plus className="size-4" />
+                Novo Registro
+              </Button>
+            </PermissionGuard>
+          ) : null
         }
       />
 
@@ -126,11 +149,22 @@ export function ListaIndicadores() {
               <td className="px-4 py-2 text-sm text-gray-600">{i.metodologia}</td>
               <td className="px-4 py-2 text-sm text-gray-600">{i.unidade}</td>
               <td className="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-900 tabular-nums">{valor(i)}</td>
+              <td className="px-4 text-xs whitespace-nowrap">
+                {i.origem === "DIGITADA" ? (
+                  <span className="rounded-sm border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 font-medium text-yellow-800">Digitado</span>
+                ) : i.origem === "IMPORTADA" ? (
+                  <span className="text-gray-400">Importado</span>
+                ) : null}
+              </td>
             </tr>
             );
           }}
         />
       </QuadroTabela>
+
+      {digitando && d ? (
+        <IndicadorDialog anoMes={anoMes} slug={slug} rotuloLista={lista.rotulo} indicadores={d.indicadores} formatar={valor} onFechar={() => setDigitando(false)} />
+      ) : null}
     </div>
   );
 }
