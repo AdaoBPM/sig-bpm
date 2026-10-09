@@ -103,7 +103,7 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
               <Link
                 href={`/competencias/${anoMes}/${e.caminho}`}
                 aria-current={ativa ? "page" : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
+                className={`inline-flex items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
               >
                 {e.rotulo}
                 {sinalDe(e.chave)}

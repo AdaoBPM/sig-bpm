@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Calculator, FileBarChart, GitCompareArrows, ListChecks, NotebookPen, Percent, Rows3, TriangleAlert, Upload, Warehouse } from "lucide-react";
+import { Calculator, FileBarChart, Gauge, GitCompareArrows, ListChecks, NotebookPen, Percent, Rows3, TriangleAlert, Upload, Warehouse } from "lucide-react";
 
 /** Uma etapa do fechamento do mês: a tela, na ordem em que o Contábil trabalha. */
 export type Etapa = {
@@ -35,6 +35,8 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
     ...(primeiraLista
       ? [{ caminho: `listas/${primeiraLista}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
       : []),
+    // Os indicadores do exercício até o mês, como a tela Indicadores (Resultados e Indicadores).
+    { caminho: "indicadores", chave: "indicadores", rotulo: "Indicadores", icone: Gauge, permissao: "dre:ver" },
     { caminho: "receita-previa", chave: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ver" },
     { caminho: "rateios", chave: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },
     { caminho: "estoque", chave: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ver" },

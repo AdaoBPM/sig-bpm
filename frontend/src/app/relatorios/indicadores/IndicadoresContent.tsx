@@ -34,14 +34,22 @@ function valor(i: Indicador, v: number | null) {
   }
 }
 
-export function IndicadoresContent() {
-  useRegistrarAcessoTela("/relatorios/indicadores");
+/**
+ * A tela Indicadores (Resultados e Indicadores), com o exercício e o mês
+ * escolhidos no topo; ou, com `periodoFixo`, a etapa Indicadores do
+ * Fechamento Mensal: o exercício até o mês da competência, que se troca na
+ * barra de etapas.
+ */
+export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: number; mes: number } } = {}) {
+  useRegistrarAcessoTela(
+    periodoFixo ? `/competencias/${periodoFixo.ano}-${String(periodoFixo.mes).padStart(2, "0")}/indicadores` : "/relatorios/indicadores",
+  );
   const exercicios = useExercicios();
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
-  const ano = anoEscolhido ?? exercicios.anos[0];
+  const ano = periodoFixo?.ano ?? anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
-  const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
+  const ate = periodoFixo ? periodoFixo.mes : ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
   const consulta = useQuery({
     queryKey: ["relatorios", "indicadores", ano, ate],
     queryFn: () => relatoriosService.indicadores(ano!, ate),
@@ -59,7 +67,11 @@ export function IndicadoresContent() {
         titulo="Indicadores"
         comoUsar={
           <ul>
-            <li>Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora.</li>
+            <li>
+              {periodoFixo
+                ? "Os meses do exercício até o desta competência; troque o mês no seletor da barra de etapas. Os meses não apurados ficam sem os valores da DRE."
+                : "Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora."}
+            </li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
             <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
           </ul>
@@ -83,6 +95,7 @@ export function IndicadoresContent() {
         acoes={
           ano && ate ? (
             <div className="flex flex-wrap items-center gap-4">
+              {periodoFixo ? null : (
               <SeletorPeriodo
                 ano={ano}
                 ate={ate}
@@ -94,6 +107,7 @@ export function IndicadoresContent() {
                 }}
                 onAte={setAte}
               />
+              )}
               <ExportarRelatorio
                 caminho="indicadores"
                 padrao={`Indicadores ${ano}`}
@@ -104,7 +118,7 @@ export function IndicadoresContent() {
         }
       />
 
-      {exercicios.carregando ? (
+      {!periodoFixo && exercicios.carregando ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : !ano || !ate ? (
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>

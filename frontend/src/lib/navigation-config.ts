@@ -141,6 +141,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ver"],
   [/^\/competencias\/[^/]+\/(receita-previa|rateios|estoque|conferencia-planilha)/, "apuracao:ver"],
   [/^\/competencias\/[^/]+\/dre/, "dre:ver"],
+  [/^\/competencias\/[^/]+\/indicadores/, "dre:ver"],
 ];
 
 export function permissaoDaTela(pathname: string): string | null {
