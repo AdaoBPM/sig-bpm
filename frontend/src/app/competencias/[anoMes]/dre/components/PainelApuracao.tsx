@@ -196,44 +196,52 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
   if (!s) return <div className="h-5 w-96 animate-pulse rounded-sm bg-gray-100" />;
   const fechada = s.competencia.status === "FECHADA";
 
-  const motivos = !fechada && !s.podeFechar && s.motivosNaoFechar.length > 0;
+  // Os motivos para não fechar ficam no title do botão Fechar Competência (a linha "Para fechar: …" saiu em 09/10/2026).
   const mudancas = s.apurada && s.mudancas.length > 0;
   const bloqueio = !fechada ? s.bloqueioApuracao : null;
-  if (!fechada && !motivos && !mudancas && !bloqueio) return null;
+  if (!fechada && !mudancas && !bloqueio) return null;
 
   return (
     <div className="space-y-2">
       {/* O bloqueio da apuração: competências anteriores com entradas alteradas depois da apuração. */}
       {bloqueio ? (
-        <div className="flex items-start gap-2 rounded-sm border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          <LockKeyhole className="mt-0.5 size-4 shrink-0" />
-          <div>
-            <p className="font-medium">Apuração bloqueada.</p>
-            <p>{bloqueio}</p>
-            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-              {s.anterioresDesatualizadas.map((m) => {
-                const [mm, aaaa] = m.split("/");
-                return (
-                  <Link key={m} href={`/competencias/${aaaa}-${mm}/dre`} className="font-medium underline underline-offset-2">
-                    Ir para {m}
-                  </Link>
-                );
-              })}
-            </p>
+        // Destaque em vermelho à esquerda, como a faixa dos totais das Listas (que usa o amarelo-ouro); os atalhos à direita, na altura do título.
+        <div className="flex items-start gap-2 rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-2.5 text-sm text-gray-800">
+          <LockKeyhole className="mt-0.5 size-4 shrink-0 text-red-600" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium text-gray-900">Apuração bloqueada.</p>
+              <div className="flex flex-wrap gap-2">
+                {s.anterioresDesatualizadas.map((m) => {
+                  const [mm, aaaa] = m.split("/");
+                  return (
+                    <Link
+                      key={m}
+                      href={`/competencias/${aaaa}-${mm}/dre`}
+                      className="inline-flex items-center rounded-sm bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-red-700"
+                    >
+                      Ir para {m}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="mt-0.5">{bloqueio}</p>
           </div>
         </div>
       ) : null}
-      {fechada || motivos ? (
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-600">
-          {fechada ? <span>Fechada em {dataHora(s.fechadaEm!)}{s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.</span> : null}
-          {motivos ? <span className="text-xs text-gray-500">Para fechar: {s.motivosNaoFechar.join(" ")}</span> : null}
-        </div>
+      {fechada ? (
+        <p className="text-sm text-gray-600">
+          Fechada em {dataHora(s.fechadaEm!)}
+          {s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.
+        </p>
       ) : null}
       {mudancas ? (
-        <div className="flex items-start gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+        // Destaque em amarelo escuro à esquerda, como a faixa dos totais das Listas (que usa o amarelo-ouro).
+        <div className="flex items-start gap-2 rounded-sm border border-l-4 border-gray-200 border-l-yellow-600 bg-white px-4 py-2.5 text-sm text-gray-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600" />
           <div>
-            <p className="font-medium">Entradas alteradas depois da apuração. Os valores abaixo são os da apuração; reapure para incluir as mudanças.</p>
+            <p className="font-medium text-gray-900">Entradas alteradas depois da apuração. Os valores abaixo são os da apuração; reapure para incluir as mudanças.</p>
             <ul className="list-disc pl-5">{s.mudancas.map((m) => <li key={m}>{m}</li>)}</ul>
           </div>
         </div>
