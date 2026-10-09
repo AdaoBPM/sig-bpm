@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { acumular, INDICADORES, type DadosDoMes } from "./indicadores.js";
+import { acumularMeta } from "./metasOrcamento.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
 /**
@@ -39,6 +40,14 @@ export const indicadoresService = {
     const competencias = new Map(
       (await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } })).map((c) => [c.mes, c.id]),
     );
+    // As metas importadas de cada mês (aba Metas (Orçamento)), para o orçado do gráfico do indicador, como no Painel de Bordo.
+    const metasPorMes = new Map(
+      (await getPrismaClient().metaImportada.findMany({ where: { competencia: { ano, mes: { lte: ultimo } } }, select: { nome: true, valor: true, competencia: { select: { mes: true } } } })).reduce(
+        (m, x) => m.set(x.competencia.mes, (m.get(x.competencia.mes) ?? new Map<string, number>()).set(x.nome, Number(x.valor))),
+        new Map<number, Map<string, number>>(),
+      ),
+    );
+    const metas = meses.map((m) => metasPorMes.get(m.mes) ?? null);
     const dados = await Promise.all(
       meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null) : null)),
     );
@@ -58,6 +67,9 @@ export const indicadoresService = {
           acumulado: i.acumulado,
           meses: partes.map((p) => p?.valor ?? null),
           total: acumular(i, partes),
+          /** O orçado de cada mês (null sem as metas do mês, ou sem meta para o indicador) e o acumulado do orçado (só com as metas de todos os meses). */
+          orcado: metas.map((m) => m?.get(i.nome) ?? null),
+          totalOrcado: metas.every((m) => m !== null) ? acumularMeta(i.nome, metas) : null,
         };
       }),
     };

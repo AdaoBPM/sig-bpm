@@ -2,6 +2,7 @@
 
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChartColumn } from "lucide-react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -11,6 +12,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { formato, mensagemDeErro, relatoriosService, type Indicador, type MesRelatorio } from "../services/relatoriosService";
+import { GraficoIndicadorDialog } from "./GraficoIndicadorDialog";
 
 /** Os grupos, na ordem e com os nomes das abas da planilha (Produção, Serviços…). */
 const NOME_DO_GRUPO: Record<string, string> = { GME: "Metas Estratégicas (GME)" };
@@ -103,6 +105,9 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
+  // O indicador com o gráfico aberto (só em Resultados e Indicadores; a etapa do Fechamento Mensal mostra um mês só).
+  const [comGrafico, setComGrafico] = useState<Indicador | null>(null);
+  const abreGrafico = !periodoFixo;
 
   // No mês da competência, só a coluna dele (sem os meses anteriores nem o acumulado).
   const mesesDaTabela = dados?.meses;
@@ -142,6 +147,9 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
             <li>As colunas Indicador, Sent. e Und. ficam fixas; role a tabela para os lados e para baixo na barra dela.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
+            {periodoFixo ? null : (
+              <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (das metas importadas) em preto, como no Painel de Bordo, e o último mês e o acumulado no alto.</li>
+            )}
             <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
           </ul>
         }
@@ -248,10 +256,15 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                             </td>
                           </tr>
                         ) : null}
-                        <tr className={`border-t border-gray-100 ${principal ? "font-bold" : ""}`}>
-                          <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 ${principal ? "pl-4" : "pl-9"} ${tom}`}>
+                        <tr
+                          className={`group border-t border-gray-100 ${principal ? "font-bold" : ""} ${abreGrafico ? "cursor-pointer hover:bg-gray-100" : ""}`}
+                          onClick={abreGrafico ? () => setComGrafico(i) : undefined}
+                          title={abreGrafico ? "Ver o gráfico do indicador" : undefined}
+                        >
+                          <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 ${abreGrafico ? "group-hover:bg-gray-100" : ""} ${principal ? "pl-4" : "pl-9"} ${tom}`}>
                             <div className="flex items-baseline gap-2">
                               {i.numero ? <span className="w-10 shrink-0 text-xs font-normal text-gray-400">{i.numero}</span> : null}
+                              {abreGrafico ? <ChartColumn className="size-3.5 shrink-0 self-center text-gray-400" /> : null}
                               <span>{i.nome}</span>
                             </div>
                             <div className={`text-xs font-normal text-gray-500 ${i.numero ? "pl-12" : ""}`}>
@@ -260,13 +273,13 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                             </div>
                           </td>
                           <td
-                            className="sticky left-[var(--largura-indicador)] z-10 bg-white px-4 py-1.5 font-normal text-gray-600"
+                            className={`sticky left-[var(--largura-indicador)] z-10 bg-white px-4 py-1.5 font-normal text-gray-600 ${abreGrafico ? "group-hover:bg-gray-100" : ""}`}
                             title={SENTIDO[i.sentido]}
                           >
                             {i.sentido}
                           </td>
                           <td
-                            className={`sticky left-[calc(var(--largura-indicador)+84px)] z-10 bg-white shadow-[inset_-1px_0_0_#d1d5db] px-4 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600`}
+                            className={`sticky left-[calc(var(--largura-indicador)+84px)] z-10 bg-white shadow-[inset_-1px_0_0_#d1d5db] px-4 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600 ${abreGrafico ? "group-hover:bg-gray-100" : ""}`}
                           >
                             {i.unidade}
                           </td>
@@ -286,6 +299,9 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               </tbody>
             </table>
           </div>
+          {comGrafico ? (
+            <GraficoIndicadorDialog indicador={comGrafico} meses={dados.meses} formatar={(v) => valor(comGrafico, v)} onFechar={() => setComGrafico(null)} />
+          ) : null}
         </>
       )}
     </div>

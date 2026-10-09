@@ -39,6 +39,9 @@ export type Indicador = {
   acumulado: "ACUM" | "ATUAL";
   meses: Array<number | null>;
   total: number | null;
+  /** O orçado de cada mês, das metas importadas (null sem meta), e o acumulado do orçado. */
+  orcado: Array<number | null>;
+  totalOrcado: number | null;
 };
 export type Indicadores = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: Indicador[] };
 
