@@ -30,7 +30,9 @@ const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${
  * balancete não tem a receita líquida por natureza (na DRE das unidades ela
  * sai da receita prévia): na obra, a Receita Operacional Líquida é a ROB menos
  * os impostos (IRB), e dela saem as margens até o Resultado Líquido, que é o
- * resultado da obra no mês. No recorte do Gestor por departamento, só as
+ * resultado da obra no mês — o valor na lista das obras. A tabela da obra não
+ * mostra esses totais calculados (pedido de 09/10/2026): a primeira ROL, o CPV,
+ * a MB, a MC, o EBITDA, o EBIT, o NOPAT e o RL (CALCULADOS). No recorte do Gestor por departamento, só as
  * linhas dos departamentos dele, com os totais que só somam (como nos centros).
  */
 
@@ -45,6 +47,18 @@ const ROB = "ROB.RECEITA_OPERACIONAL_BRUTA_ROB";
 const IRB = "IRB.IMPOSTOS_SOBRE_A_RECEITA_BRUTA_IRB";
 const ROL = "ROL.RECEITA_OPERACIONAL_LIQUIDA_ROL";
 const RL = "RL.RESULTADO_LIQUIDO_RL";
+
+/** Os totais calculados que a tabela da obra não mostra (a primeira ROL, CPV, margens e resultados). */
+const CALCULADOS = new Set([
+  "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL",
+  "CPV.CUSTO_DE_PRODUTO_VENDIDO_CPV",
+  "MB.MARGEM_BRUTA_MB",
+  "MC.MARGEM_DE_CONTRIBUICAO_MC",
+  "EBITDA.LUCRO_OPERACIONAL_EBITDA",
+  "EBIT.MARGEM_LIQUIDA_EBIT",
+  "NOPAT.LUCRO_OPERACIONAL_LIQUIDO_NOPAT",
+  RL,
+]);
 
 type Movimento = { codigoCentroCusto: string | null; nomeCentroCusto: string | null; linhaDREId: string | null; valorMovimento: Decimal };
 
@@ -157,7 +171,7 @@ export const obrasService = {
       obra: { codigo: o.codigo, nome: o.nome },
       apuradoEm: ap.apuradoEm,
       congelado: ap.congelado,
-      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento),
+      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento).filter((l) => !CALCULADOS.has(l.codigo)),
     };
   },
 };

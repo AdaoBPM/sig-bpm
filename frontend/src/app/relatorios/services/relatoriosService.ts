@@ -87,7 +87,8 @@ export function mensagemDeErro(error: unknown, padrao: string) {
   return (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? padrao;
 }
 
-const numero = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+// signDisplay "negative": o que arredonda para zero sai sem o sinal ("0", e não "-0").
+const numero = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas, signDisplay: "negative" });
 const n0 = numero(0);
 const n1 = numero(1);
 const n2 = numero(2);

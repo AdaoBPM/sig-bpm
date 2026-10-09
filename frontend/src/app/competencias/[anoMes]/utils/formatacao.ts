@@ -28,7 +28,8 @@ export function moeda(valor: string | number) {
 
 /** Valor em reais sem os centavos (as tabelas da DRE e de Resultados). */
 export function moedaInteira(valor: string | number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(valor));
+  // signDisplay "negative": o que arredonda para zero sai sem o sinal ("R$ 0", e não "-R$ 0").
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0, signDisplay: "negative" }).format(Number(valor));
 }
 
 export function inteiro(valor: number) {
