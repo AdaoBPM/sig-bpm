@@ -7,8 +7,8 @@ import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
-import { GraficoRealizadoOrcado, LegendaRealizadoOrcado } from "../components/GraficoRealizadoOrcado";
-import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
+import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
+import { Seletor, SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { mensagemDeErro, relatoriosService, type BlocoPainel, type FormatoPainel, type ItemPainel, type QuadroPainel } from "../services/relatoriosService";
 
 const numero = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas, signDisplay: "negative" });
@@ -104,7 +104,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
  * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,6; o gráfico com o do acumulado ao lado desde 10/10/2026): o Atual (o mês de referência), o Acumulado e o
  * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
  */
-function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
+function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico }) {
   const sentido = (
     <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold text-gray-700">
       {i.sentido}
@@ -137,12 +137,13 @@ function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
       {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
       <div className="flex min-w-0 items-center gap-3 self-center">
         <div className="min-w-0 flex-1">
-          <GraficoRealizadoOrcado dados={i.serie} formatar={(v) => formatar(v, i.formato)} />
+          <GraficoRealizadoOrcado dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} />
         </div>
         <div className="w-24 shrink-0 border-l border-gray-100 pl-3" title="Acumulado do exercício: realizado × orçado">
           <GraficoRealizadoOrcado
             dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
             formatar={(v) => formatar(v, i.formatoAcumulado)}
+            tipo={tipo}
           />
         </div>
       </div>
@@ -151,18 +152,28 @@ function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
 }
 
 /** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção abaixo da outra. */
-function Secao({ q, rotuloMes }: { q: QuadroPainel; rotuloMes: string }) {
+function Secao({ q, rotuloMes, tipo }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico }) {
   return (
     <section>
       <h2 className="mb-2 text-sm font-bold tracking-wide text-gray-900 uppercase">{q.titulo}</h2>
       <div className="space-y-3">
         {q.itens.map((i) => (
-          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} />
+          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} />
         ))}
       </div>
     </section>
   );
 }
+
+const CHAVE_TIPO = "sig.painel.tipoGrafico";
+const tipoGuardado = (): TipoGrafico => {
+  try {
+    return window.localStorage.getItem(CHAVE_TIPO) === "area" ? "area" : "barras";
+  } catch {
+    // Sem armazenamento (janela privada, ou no servidor): Barras.
+    return "barras";
+  }
+};
 
 export function PainelContent() {
   useRegistrarAcessoTela("/relatorios/painel");
@@ -170,6 +181,16 @@ export function PainelContent() {
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [aba, setAba] = useState("resultados");
+  // O tipo dos gráficos (Barras ou Área), lembrado neste navegador.
+  const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>(tipoGuardado);
+  const escolherTipo = (t: TipoGrafico) => {
+    setTipoGrafico(t);
+    try {
+      window.localStorage.setItem(CHAVE_TIPO, t);
+    } catch {
+      // Sem armazenamento: a escolha só não é lembrada.
+    }
+  };
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
@@ -194,7 +215,12 @@ export function PainelContent() {
               três partes: o Atual (o mês de referência) e o Acumulado, cada um com o realizado em destaque, o orçado e o desvio (vs. Orçado) no
               selo colorido; e o gráfico dos meses do exercício, com o realizado em amarelo-ouro e o orçado em preto, e ao lado o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
-            <li>Passe o mouse sobre as colunas do gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
+            <li>
+              Em “Tipo de Gráficos”, escolha Barras (colunas do realizado e do orçado, como na planilha) ou Área (o realizado numa área amarela,
+              mais forte no máximo do período e transparente no zero, com o contorno em amarelo-ouro, e o orçado numa linha preta; no gráfico do
+              acumulado, a coluna do realizado com o mesmo degradê e o orçado como uma linha preta). A escolha fica guardada neste navegador.
+            </li>
+            <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>O orçado vem das metas importadas: importe a aba Metas (Orçamento) em cada mês, na etapa Importações do Fechamento Mensal.</li>
           </ul>
         }
@@ -222,17 +248,29 @@ export function PainelContent() {
         }
         acoes={
           ano && ate ? (
-            <SeletorPeriodo
-              ano={ano}
-              ate={ate}
-              anos={exercicios.anos}
-              meses={meses}
-              onAno={(a) => {
-                setAno(a);
-                setAte(null);
-              }}
-              onAte={setAte}
-            />
+            <div className="flex flex-wrap items-center gap-4">
+              <SeletorPeriodo
+                ano={ano}
+                ate={ate}
+                anos={exercicios.anos}
+                meses={meses}
+                onAno={(a) => {
+                  setAno(a);
+                  setAte(null);
+                }}
+                onAte={setAte}
+              />
+              <Seletor
+                rotulo="Tipo de Gráficos"
+                valor={tipoGrafico}
+                onMudar={(v) => escolherTipo(v === "area" ? "area" : "barras")}
+                largura="w-28"
+                opcoes={[
+                  { valor: "barras", rotulo: "Barras" },
+                  { valor: "area", rotulo: "Área" },
+                ]}
+              />
+            </div>
           ) : null
         }
       />
@@ -264,7 +302,7 @@ export function PainelContent() {
             <span className="font-bold text-gray-900">
               {dados.rotuloMes} · {dados.rotuloAcumulado}
             </span>
-            <LegendaRealizadoOrcado />
+            <LegendaRealizadoOrcado tipo={tipoGrafico} />
             <span className="ml-auto inline-flex flex-wrap items-center gap-x-5 gap-y-1">
               {([1, 0, -1] as const).map((s) => (
                 <span key={s} className="inline-flex items-center gap-1.5">
@@ -277,7 +315,7 @@ export function PainelContent() {
 
           <div className="space-y-6">
             {atual.quadros.map((q) => (
-              <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} />
+              <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipoGrafico} />
             ))}
           </div>
         </>

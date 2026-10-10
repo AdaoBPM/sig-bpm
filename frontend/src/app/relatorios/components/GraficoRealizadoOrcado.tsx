@@ -1,26 +1,37 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
+import { useId } from "react";
+import { Area, Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 
 /** As cores dos gráficos, como os da planilha INDICADORES DE RESULTADO: o realizado em amarelo-ouro e a meta em preto. */
+const OURO = "#ffcc00";
+const PRETO = "#111111";
 const CORES: ChartConfig = {
-  realizado: { label: "Realizado", color: "#ffcc00" },
-  orcado: { label: "Orçado", color: "#111111" },
+  realizado: { label: "Realizado", color: OURO },
+  orcado: { label: "Orçado", color: PRETO },
 };
 
 export type MesDoGrafico = { mes: string; realizado: number | null; orcado: number | null };
 
 /**
- * O gráfico de colunas mês a mês, realizado × orçado (Painel de Bordo e o gráfico do indicador em Indicadores): o
- * padrão dos gráficos da planilha, com a dica do mês ao passar o mouse.
+ * O tipo dos gráficos (Painel de Bordo, caixa Tipo de Gráficos): Barras, o modelo da planilha (colunas do realizado e
+ * do orçado), ou Área (10/10/2026): o realizado numa área amarela, opaca no máximo do período e transparente no zero,
+ * com o contorno de cima em amarelo-ouro, e o orçado numa linha preta.
+ */
+export type TipoGrafico = "barras" | "area";
+
+/**
+ * O gráfico mês a mês, realizado × orçado (Painel de Bordo e o gráfico do indicador em Indicadores): o padrão dos
+ * gráficos da planilha, com a dica do mês ao passar o mouse.
  */
 export function GraficoRealizadoOrcado({
   dados,
   formatar,
   className = "h-28",
   rotulosDosValores = false,
+  tipo = "barras",
 }: {
   dados: MesDoGrafico[];
   /** O valor como a tela mostra (na dica e nos rótulos). */
@@ -29,49 +40,138 @@ export function GraficoRealizadoOrcado({
   className?: string;
   /** Os valores no alto das colunas, no gráfico grande. */
   rotulosDosValores?: boolean;
+  tipo?: TipoGrafico;
 }) {
+  // O degradê da área: id próprio por gráfico (vários na mesma página).
+  const gradiente = `realizado-${useId().replace(/:/g, "")}`;
   const rotulo = rotulosDosValores
     ? { position: "top" as const, fontSize: 10, fill: "#4b5563", formatter: (v: unknown) => (typeof v === "number" ? formatar(v) : "") }
     : undefined;
+  // Um ponto só (o gráfico do acumulado) não forma área: na Área, a coluna do realizado com o mesmo degradê e
+  // contorno, e o orçado como uma linha preta na altura dele.
+  const umPonto = dados.length === 1;
+  const degrade = degradeDoRealizado(dados);
+  const area = tipo === "area";
   return (
     <ChartContainer config={CORES} className={`aspect-auto w-full ${className}`} initialDimension={{ width: 300, height: 112 }}>
-      <BarChart data={dados} margin={{ top: rotulosDosValores ? 18 : 4, right: 0, bottom: 0, left: 0 }} barGap={1} barCategoryGap="18%">
+      <ComposedChart data={dados} margin={{ top: rotulosDosValores ? 18 : 4, right: area && !umPonto ? 4 : 0, bottom: 0, left: area && !umPonto ? 4 : 0 }} barGap={1} barCategoryGap="18%">
+        <defs>
+          {/* Transparente no zero e opaco no maior valor do período (em módulo), nos dois sentidos: a forma vai do maior valor
+              acima do zero (ou do zero) ao menor abaixo dele (ou ao zero), e a opacidade de cada ponta segue o valor dela. */}
+          <linearGradient id={gradiente} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={OURO} stopOpacity={degrade.topo} />
+            <stop offset={`${degrade.zero * 100}%`} stopColor={OURO} stopOpacity={0} />
+            <stop offset="100%" stopColor={OURO} stopOpacity={degrade.base} />
+          </linearGradient>
+        </defs>
         <CartesianGrid vertical={false} stroke="#e5e7eb" />
-        <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} />
-        <YAxis hide />
+        <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? { left: 8, right: 8 } : undefined} />
+        <YAxis hide domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} />
         <Tooltip
-          cursor={{ fill: "#f3f4f6" }}
-          content={({ active, payload, label }: TooltipContentProps<number, string>) =>
-            active && payload?.length ? (
+          cursor={area && !umPonto ? { stroke: "#d1d5db" } : { fill: "#f3f4f6" }}
+          // A dica lê o mês (realizado e orçado) direto dos dados, qualquer que seja a forma desenhada.
+          content={({ active, payload, label }: TooltipContentProps<number, string>) => {
+            const m = payload?.[0]?.payload as MesDoGrafico | undefined;
+            return active && m ? (
               <div className="rounded-sm border border-gray-200 bg-white px-2.5 py-1.5 text-xs shadow-sm">
                 <p className="font-bold text-gray-900">{label}</p>
-                {payload.map((p) => (
-                  <p key={String(p.dataKey)} className="flex items-center gap-1.5 text-gray-700">
-                    <span className="inline-block size-2.5 rounded-[2px]" style={{ background: p.color }} />
-                    {p.dataKey === "realizado" ? "Realizado" : "Orçado"}: {formatar((p.value as number | null) ?? null)}
+                {(["realizado", "orcado"] as const).map((k) => (
+                  <p key={k} className="flex items-center gap-1.5 text-gray-700">
+                    <span className="inline-block size-2.5 rounded-[2px]" style={{ background: k === "realizado" ? OURO : PRETO }} />
+                    {k === "realizado" ? "Realizado" : "Orçado"}: {formatar(m[k])}
                   </p>
                 ))}
               </div>
-            ) : null
-          }
+            ) : null;
+          }}
         />
-        <Bar dataKey="realizado" fill="var(--color-realizado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotulo} />
-        <Bar dataKey="orcado" fill="var(--color-orcado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotulo} />
-      </BarChart>
+        {!area ? (
+          <>
+            <Bar dataKey="realizado" fill="var(--color-realizado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotulo} />
+            <Bar dataKey="orcado" fill="var(--color-orcado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotulo} />
+          </>
+        ) : umPonto ? (
+          <>
+            <Bar dataKey="realizado" maxBarSize={40} isAnimationActive={false} label={rotulo} shape={(p: unknown) => <ColunaDaArea {...(p as FormaColuna)} gradiente={gradiente} />} />
+            {dados[0].orcado !== null ? <ReferenceLine y={dados[0].orcado} stroke={PRETO} strokeWidth={2} ifOverflow="extendDomain" /> : null}
+          </>
+        ) : (
+          <>
+            <Area
+              dataKey="realizado"
+              type="linear"
+              fill={`url(#${gradiente})`}
+              stroke={OURO}
+              strokeWidth={2}
+              baseValue={0}
+              connectNulls
+              dot={false}
+              activeDot={{ r: 3, fill: OURO, stroke: "#fff" }}
+              isAnimationActive={false}
+              label={rotulo}
+            />
+            <Line
+              dataKey="orcado"
+              type="linear"
+              stroke={PRETO}
+              strokeWidth={2}
+              connectNulls
+              dot={{ r: 2, fill: PRETO, stroke: PRETO }}
+              activeDot={{ r: 3, fill: PRETO, stroke: "#fff" }}
+              isAnimationActive={false}
+              label={rotulo}
+            />
+          </>
+        )}
+      </ComposedChart>
     </ChartContainer>
   );
 }
 
-/** A legenda das cores: o realizado em amarelo-ouro e o orçado em preto. */
-export function LegendaRealizadoOrcado() {
+/**
+ * As paradas do degradê do realizado, na altura da forma (do maior valor acima do zero ao menor abaixo dele): a
+ * opacidade das pontas (o valor sobre o maior em módulo) e onde fica o zero (transparente).
+ */
+function degradeDoRealizado(dados: MesDoGrafico[]) {
+  const valores = dados.map((d) => d.realizado).filter((v): v is number => v !== null);
+  const max = Math.max(0, ...valores);
+  const min = Math.min(0, ...valores);
+  const maior = Math.max(max, -min);
+  if (maior === 0) return { topo: 0, zero: 1, base: 0 };
+  return { topo: max / maior, zero: max / (max - min), base: -min / maior };
+}
+
+type FormaColuna = { x?: number; y?: number; width?: number; height?: number; payload?: MesDoGrafico };
+
+/** A coluna do acumulado na Área: o mesmo degradê da área e o contorno só na ponta do valor, em amarelo-ouro. */
+function ColunaDaArea({ x = 0, y = 0, width = 0, height = 0, payload, gradiente }: FormaColuna & { gradiente: string }) {
+  const negativo = (payload?.realizado ?? 0) < 0;
+  const topo = Math.min(y, y + height);
+  const altura = Math.abs(height);
+  // A ponta do valor: em cima, ou embaixo quando o realizado é negativo.
+  const ponta = negativo ? topo + altura : topo;
+  return (
+    <g>
+      <rect x={x} y={topo} width={width} height={altura} fill={`url(#${gradiente})`} />
+      <line x1={x} x2={x + width} y1={ponta} y2={ponta} stroke={OURO} strokeWidth={2} />
+    </g>
+  );
+}
+
+/** A legenda das cores: o realizado em amarelo-ouro e o orçado em preto (na Área, a área amarela e a linha preta). */
+export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico }) {
   return (
     <>
       <span className="inline-flex items-center gap-1.5">
-        <span className="inline-block size-3 rounded-[2px] bg-bpm-primary" />
+        {tipo === "area" ? (
+          <span className="inline-block size-3 rounded-[2px] border-t-2 border-bpm-primary bg-gradient-to-b from-bpm-primary to-transparent" />
+        ) : (
+          <span className="inline-block size-3 rounded-[2px] bg-bpm-primary" />
+        )}
         Realizado
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="inline-block size-3 rounded-[2px] bg-bpm-secondary" />
+        {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-bpm-secondary" /> : <span className="inline-block size-3 rounded-[2px] bg-bpm-secondary" />}
         Orçado
       </span>
     </>

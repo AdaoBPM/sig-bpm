@@ -19,7 +19,7 @@ export function useExercicios() {
 }
 
 /** Um seletor com o rótulo ao lado, compacto para a linha do título da tela. */
-function Seletor({ rotulo, valor, opcoes, onMudar, largura }: { rotulo: string; valor: string; opcoes: Array<{ valor: string; rotulo: string }>; onMudar: (v: string) => void; largura: string }) {
+export function Seletor({ rotulo, valor, opcoes, onMudar, largura }: { rotulo: string; valor: string; opcoes: Array<{ valor: string; rotulo: string }>; onMudar: (v: string) => void; largura: string }) {
   return (
     <label className="flex items-center gap-2">
       <span className="text-xs font-medium whitespace-nowrap text-gray-600">{rotulo}</span>
