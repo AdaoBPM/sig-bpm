@@ -101,7 +101,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
 
 /**
  * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,4, pedido de 09/10/2026): o Atual (o mês de referência), o Acumulado e o
+ * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,6; o gráfico com o do acumulado ao lado desde 10/10/2026): o Atual (o mês de referência), o Acumulado e o
  * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
  */
 function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
@@ -111,7 +111,7 @@ function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
     </span>
   );
   return (
-    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
+    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
       <GrupoPeriodo
         titulo={
           <h3 className="truncate text-base font-bold text-gray-900" title={i.titulo}>
@@ -134,8 +134,17 @@ function CardIndicador({ i, rotuloMes }: { i: ItemPainel; rotuloMes: string }) {
         formato={i.formatoAcumulado}
         base={percentualDaBase(i, i.acumulado)}
       />
-      <div className="min-w-0 self-center">
-        <GraficoRealizadoOrcado dados={i.serie} formatar={(v) => formatar(v, i.formato)} />
+      {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
+      <div className="flex min-w-0 items-center gap-3 self-center">
+        <div className="min-w-0 flex-1">
+          <GraficoRealizadoOrcado dados={i.serie} formatar={(v) => formatar(v, i.formato)} />
+        </div>
+        <div className="w-24 shrink-0 border-l border-gray-100 pl-3" title="Acumulado do exercício: realizado × orçado">
+          <GraficoRealizadoOrcado
+            dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
+            formatar={(v) => formatar(v, i.formatoAcumulado)}
+          />
+        </div>
       </div>
     </article>
   );
@@ -183,7 +192,7 @@ export function PainelContent() {
             <li>
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela, em
               três partes: o Atual (o mês de referência) e o Acumulado, cada um com o realizado em destaque, o orçado e o desvio (vs. Orçado) no
-              selo colorido; e o gráfico dos meses do exercício, com o realizado em amarelo-ouro e o orçado em preto.
+              selo colorido; e o gráfico dos meses do exercício, com o realizado em amarelo-ouro e o orçado em preto, e ao lado o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
             <li>Passe o mouse sobre as colunas do gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>O orçado vem das metas importadas: importe a aba Metas (Orçamento) em cada mês, na etapa Importações do Fechamento Mensal.</li>
