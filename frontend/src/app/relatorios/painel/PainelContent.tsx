@@ -297,11 +297,8 @@ export function PainelContent() {
             </div>
           ) : null}
 
-          {/* A legenda: o mês de referência e as cores do gráfico à esquerda; os sinais (a comparação com o orçado) à direita, na mesma linha (09/10/2026). */}
+          {/* A legenda: as cores do gráfico à esquerda (sem o texto do mês e do acumulado, 10/10/2026); os sinais (a comparação com o orçado) à direita, na mesma linha (09/10/2026). */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-            <span className="font-bold text-gray-900">
-              {dados.rotuloMes} · {dados.rotuloAcumulado}
-            </span>
             <LegendaRealizadoOrcado tipo={tipoGrafico} />
             <span className="ml-auto inline-flex flex-wrap items-center gap-x-5 gap-y-1">
               {([1, 0, -1] as const).map((s) => (

@@ -65,7 +65,8 @@ export function GraficoRealizadoOrcado({
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} stroke="#e5e7eb" />
-        <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? { left: 8, right: 8 } : undefined} />
+        {/* A linha do eixo X um pouco mais escura e grossa que as de grade (10/10/2026). */}
+        <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? { left: 8, right: 8 } : undefined} />
         <YAxis hide domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} />
         <Tooltip
           cursor={area && !umPonto ? { stroke: "#d1d5db" } : { fill: "#f3f4f6" }}
