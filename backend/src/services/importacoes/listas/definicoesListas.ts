@@ -7,6 +7,7 @@ import {
   UNIDADE_DO_DESTINO,
 } from "./destinosVolume.js";
 import {
+  codigoDaLinhaDeObra,
   colunaDoMes,
   obraDe,
   percorrer,
@@ -478,7 +479,7 @@ const acompanhamentos: DefinicaoLista = {
           linhaArquivo: l.numero,
           obra: obraDe(c(k.PROJETO), c(k.OBRA)),
           unidade: 3,
-          linha: etapa ? { tipo: "OBRA", codigo: normalizar(etapa) } : null,
+          linha: etapa ? { tipo: "OBRA", codigo: codigoDaLinhaDeObra(etapa) } : null,
           quantidade: dias,
           campos: { etapa, observacao: texto(c(k["OBSERVAÇÃO"])) },
         }],

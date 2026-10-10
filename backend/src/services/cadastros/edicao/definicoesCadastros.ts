@@ -511,6 +511,103 @@ const unidades: DefinicaoCadastro = {
   gravar: async (db, d, id) => (await db.unidadeNegocio.update({ where: { id: id! }, data: d as Prisma.UnidadeNegocioUpdateInput })).id,
 };
 
+// ---------------------------------------------------------------------- linhas
+/**
+ * As linhas por unidade (10/10/2026): os produtos (Estrutura, Metalúrgica, Alveolares, Estacas) na Matriz ou na Filial
+ * e as linhas de obra (Montagem, Fundação, Capeamento…) em Serviços. É o cadastro que as Listas usam: elas acham a
+ * linha pelo código (o texto das planilhas, em maiúsculas), que não muda depois de criada. As linhas de faturamento
+ * (das medições) ficam fora da tela.
+ */
+const UNIDADES_DAS_LINHAS = [1, 2, 3];
+const tipoDaLinha = (codigoUnidade: number) => (codigoUnidade === 3 ? "OBRA" : "PRODUTO");
+const linhas: DefinicaoCadastro = {
+  entidade: "linhas",
+  titulo: "Linha",
+  auditoria: "linha",
+  criar: true,
+  excluir: true,
+  campos: [
+    {
+      nome: "unidadeNegocioId",
+      rotulo: "Unidade",
+      tipo: "opcao",
+      obrigatorio: true,
+      ajuda: "Matriz ou Filial para os produtos; Serviços para as linhas de obra.",
+      opcoes: async (db) =>
+        (await db.unidadeNegocio.findMany({ where: { codigo: { in: UNIDADES_DAS_LINHAS } }, orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: u.nome })),
+    },
+    { nome: "nome", rotulo: "Linha", tipo: "texto", obrigatorio: true },
+    { nome: "codigo", rotulo: "Código nas Listas", rotuloColuna: "Código", tipo: "texto", derivado: true, ajuda: "O texto das planilhas; na criação, o nome em maiúsculas." },
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
+    { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
+  ],
+  listar: async (db, busca) =>
+    (
+      await db.linha.findMany({
+        where: { tipo: { in: ["PRODUTO", "OBRA"] } },
+        include: { unidadeNegocio: { select: { codigo: true, nome: true } } },
+        orderBy: { ordem: "asc" },
+      })
+    )
+      .sort((a, b) => (a.unidadeNegocio?.codigo ?? 9) - (b.unidadeNegocio?.codigo ?? 9) || a.ordem - b.ordem)
+      .filter((l) => contem(busca, l.nome, l.codigo, l.unidadeNegocio?.nome))
+      .map(({ unidadeNegocio: _u, ...l }) => l),
+  ler: (db, id) => db.linha.findUnique({ where: { id } }),
+  async preparar(db, v, id) {
+    const unidade = await db.unidadeNegocio.findUnique({ where: { id: exigir(v.unidadeNegocioId, "A unidade") } });
+    if (!unidade || !UNIDADES_DAS_LINHAS.includes(unidade.codigo)) throw new RegraCadastroError(400, "A unidade precisa ser Matriz, Filial ou Serviços.");
+    const nome = exigir(v.nome, "A linha");
+    const tipo = tipoDaLinha(unidade.codigo);
+    let codigo: string;
+    if (id) {
+      const atual = await db.linha.findUnique({ where: { id }, select: { tipo: true, codigo: true } });
+      if (!atual) throw new RegraCadastroError(404, "Linha não encontrada.");
+      // O tipo (produto ou obra) vem da unidade e é a chave com que as Listas acham a linha: não muda.
+      if (atual.tipo !== tipo) {
+        throw new RegraCadastroError(400, atual.tipo === "OBRA" ? "Linha de obra fica em Serviços." : "Linha de produto fica na Matriz ou na Filial.");
+      }
+      codigo = atual.codigo;
+    } else {
+      codigo = nome.toLocaleUpperCase("pt-BR");
+      const outra = await db.linha.findUnique({ where: { tipo_codigo: { tipo, codigo } }, select: { id: true } });
+      if (outra) throw new RegraCadastroError(409, `Já existe a linha ${codigo}.`);
+    }
+    return {
+      tipo,
+      codigo,
+      nome,
+      unidadeNegocioId: unidade.id,
+      ordem: inteiro(v.ordem, "A ordem") ?? undefined,
+      ativo: v.ativo === undefined ? true : booleano(v.ativo),
+    };
+  },
+  async gravar(db, d, id) {
+    const dados = d as Prisma.LinhaUncheckedCreateInput;
+    if (id) {
+      const { tipo: _t, codigo: _c, ...editaveis } = dados;
+      return (await db.linha.update({ where: { id }, data: editaveis })).id;
+    }
+    return (await db.linha.create({ data: { ...dados, ordem: dados.ordem ?? (await db.linha.count({ where: { tipo: { in: ["PRODUTO", "OBRA"] } } })) + 1 } })).id;
+  },
+  async impedimentoExclusao(db, id) {
+    const l = await db.linha.findUnique({
+      where: { id },
+      select: {
+        _count: {
+          select: {
+            obras: true, precosContrato: true, estoqueSaldos: true, estoqueIniciais: true, projetos: true, producoes: true,
+            producoesPista: true, producoesArmadura: true, producoesMetalurgia: true, expedicoes: true, montagens: true,
+            acompanhamentos: true, medicoes: true, devolucoes: true, saidas: true,
+          },
+        },
+      },
+    });
+    const n = l ? Object.values(l._count).reduce((s, x) => s + x, 0) : 0;
+    return n ? `A linha está em ${n} registro(s) das listas, do estoque, dos preços ou das obras: inative-a em vez de excluir.` : null;
+  },
+  remover: async (db, id) => void (await db.linha.delete({ where: { id } })),
+};
+
 // ------------------------------------------------------------ regras de rateio
 const regras: DefinicaoCadastro = {
   entidade: "regras-rateio",
@@ -640,7 +737,7 @@ const estacas: DefinicaoCadastro = {
 };
 
 export const DEFINICOES: Record<string, DefinicaoCadastro> = Object.fromEntries(
-  [centros, contas, reclassificacoes, estrutura, unidades, regras, tipos, estacas].map((d) => [d.entidade, d]),
+  [centros, contas, reclassificacoes, estrutura, unidades, linhas, regras, tipos, estacas].map((d) => [d.entidade, d]),
 );
 
 /** Para a tela e para o log: Decimal e Date viram texto. */

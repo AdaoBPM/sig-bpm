@@ -299,6 +299,10 @@ model Linha {
   tipo         TipoLinha
   codigo       String
   nome         String
+  /// A unidade da linha (cadastro Linhas, 10/10/2026): Matriz e Filial para os produtos, Serviços para as linhas de
+  /// obra. As linhas de faturamento (das medições) não têm unidade.
+  unidadeNegocioId String? @map("unidade_negocio_id")
+  unidadeNegocio   UnidadeNegocio? @relation(fields: [unidadeNegocioId], references: [id], onDelete: SetNull)
   /// ORDEM: posição na tela, reorganizável pelo usuário.
   ordem        Int       @default(0)
   ativo        Boolean   @default(true)
@@ -340,6 +344,8 @@ model UnidadeNegocio {
 
   centrosCusto   CentroCusto[]
   regrasRateio   RegraRateio[]
+  /// LISTA: as linhas da unidade (cadastro Linhas).
+  linhas         Linha[]
   /// LISTA: linhas da DRE que se aplicam a esta unidade.
   linhasDRE      LinhaDREUnidade[]
   obras          Obra[]

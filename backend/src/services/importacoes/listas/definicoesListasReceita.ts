@@ -2,6 +2,7 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import type { TipoImportacao } from "../../../generated/prisma/enums.js";
 import type { LinhaPlanilha } from "../../../lib/xlsx.js";
 import {
+  codigoDaLinhaDeObra,
   data,
   localizarCabecalho,
   mesmoMes,
@@ -232,7 +233,7 @@ const medicoes: DefinicaoListaReceita = {
       const [fat, ant, atual] = ["FAT. BPM (R$)", "EXEC. (ANT.)", "EXEC. (ATUAL)"].map((n) => numero(c(k[n])));
       if (!fat || !ant || !atual) return rejeitar(l.numero, "VALOR_INVALIDO", "Faturamento ou percentual de execução não é número.");
       const diferenca = atual.minus(ant);
-      const linha = normalizar(c(k.LINHA));
+      const linha = codigoDaLinhaDeObra(c(k.LINHA));
       return {
         tipo: "registros",
         registros: [{

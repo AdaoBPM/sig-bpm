@@ -203,3 +203,14 @@ describe("abas (Resumo) no lugar das (Lista) (09/10/2026)", () => {
     ]);
   });
 });
+
+describe("Código da linha de obra (cadastro Linhas)", () => {
+  it("lê a etapa ou a linha com espaço, hífen ou minúsculas como o código do cadastro", async () => {
+    const { codigoDaLinhaDeObra } = await import("../src/services/importacoes/listas/leituraListas.js");
+    assert.equal(codigoDaLinhaDeObra("TURN KEY"), "TURN-KEY");
+    assert.equal(codigoDaLinhaDeObra("Turn-Key"), "TURN-KEY");
+    assert.equal(codigoDaLinhaDeObra(" turn - key "), "TURN-KEY");
+    assert.equal(codigoDaLinhaDeObra("Fundação"), "FUNDAÇÃO");
+    assert.equal(codigoDaLinhaDeObra("SAC"), "SAC");
+  });
+});

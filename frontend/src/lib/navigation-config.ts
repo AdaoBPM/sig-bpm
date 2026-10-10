@@ -16,6 +16,7 @@ import {
   ListOrdered,
   ListTree,
   Percent,
+  Rows3,
   Shuffle,
   Table2,
   UserCog,
@@ -75,6 +76,7 @@ export const navGrupos: NavGrupo[] = [
         icon: Database,
         telas: [
           { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
+          { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastros:ver" },
           { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
           { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
           { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
@@ -156,6 +158,7 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/reclassificacoes": "Reclassificações de Conta",
   "/cadastros/precos-contrato": "Preços do Contrato",
   "/cadastros/unidades": "Unidades de Negócio",
+  "/cadastros/linhas": "Linhas",
   "/cadastros/regras-rateio": "Regras de Rateio",
   "/cadastros/tipos-movimento": "Tipos de Movimento",
   "/cadastros/tabela-estacas": "Tabela de Estacas",

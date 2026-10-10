@@ -59,6 +59,14 @@ export function normalizar(v: ValorCelula | undefined): string {
   return v === null || v === undefined ? "" : String(v).trim().toUpperCase();
 }
 
+/**
+ * O código da linha de obra pelo texto da etapa ou da linha (acompanhamentos e medições), como o cadastro Linhas o
+ * grava: em maiúsculas, com hífen no lugar dos espaços ("TURN KEY" → "TURN-KEY", conferência de 10/10/2026).
+ */
+export function codigoDaLinhaDeObra(v: ValorCelula | undefined): string {
+  return normalizar(v).replace(/\s*-\s*|\s+/g, "-");
+}
+
 export function texto(v: ValorCelula | undefined): string | null {
   if (v === null || v === undefined) return null;
   const s = String(v).trim();

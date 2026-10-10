@@ -45,16 +45,16 @@ const UNIDADES = [
  */
 const LINHAS: Array<{ tipo: "PRODUTO" | "OBRA" | "FATURAMENTO"; codigo: string; nome: string }> = [
   { tipo: "PRODUTO", codigo: "ESTRUTURA", nome: "Estrutura" },
+  { tipo: "PRODUTO", codigo: "METALÚRGICA", nome: "Metalúrgica" },
   { tipo: "PRODUTO", codigo: "ALVEOLARES", nome: "Alveolares" },
   { tipo: "PRODUTO", codigo: "ESTACAS", nome: "Estacas" },
-  { tipo: "PRODUTO", codigo: "METALÚRGICA", nome: "Metalúrgica" },
-  { tipo: "OBRA", codigo: "FUNDAÇÃO", nome: "Fundação" },
   { tipo: "OBRA", codigo: "MONTAGEM", nome: "Montagem" },
-  { tipo: "OBRA", codigo: "VEDAÇÃO", nome: "Vedação" },
+  { tipo: "OBRA", codigo: "FUNDAÇÃO", nome: "Fundação" },
   { tipo: "OBRA", codigo: "CAPEAMENTO", nome: "Capeamento" },
   { tipo: "OBRA", codigo: "METÁLICA", nome: "Metálica" },
   { tipo: "OBRA", codigo: "TELHAMENTO", nome: "Telhamento" },
-  { tipo: "OBRA", codigo: "TURN-KEY", nome: "Turn-key" },
+  { tipo: "OBRA", codigo: "TURN-KEY", nome: "Turn-Key" },
+  { tipo: "OBRA", codigo: "VEDAÇÃO", nome: "Vedação" },
   { tipo: "OBRA", codigo: "OUTROS", nome: "Outros" },
   { tipo: "FATURAMENTO", codigo: "Frete e Descarga", nome: "Frete e Descarga" },
   { tipo: "FATURAMENTO", codigo: "Execução de Serviços", nome: "Execução de Serviços" },
@@ -62,12 +62,18 @@ const LINHAS: Array<{ tipo: "PRODUTO" | "OBRA" | "FATURAMENTO"; codigo: string; 
   { tipo: "FATURAMENTO", codigo: "Equipamentos Locados", nome: "Equipamentos Locados" },
 ];
 
+/** A unidade de cada linha (cadastro Linhas): os produtos na Matriz ou na Filial, as de obra em Serviços. */
+const UNIDADE_DA_LINHA: Record<string, number> = { ESTRUTURA: 1, "METALÚRGICA": 1, ALVEOLARES: 2, ESTACAS: 2 };
+
 async function carregarLinhas() {
+  const unidades = new Map((await prisma.unidadeNegocio.findMany({ select: { id: true, codigo: true } })).map((u) => [u.codigo, u.id]));
   for (const [i, l] of LINHAS.entries()) {
+    const codigoUnidade = l.tipo === "OBRA" ? 3 : l.tipo === "PRODUTO" ? UNIDADE_DA_LINHA[l.codigo] : undefined;
+    // Desde o cadastro Linhas (10/10/2026), a carga só cria as que faltam: o nome, a ordem e a unidade se editam na tela.
     await prisma.linha.upsert({
       where: { tipo_codigo: { tipo: l.tipo, codigo: l.codigo } },
-      create: { ...l, ordem: i + 1 },
-      update: { nome: l.nome, ordem: i + 1 },
+      create: { ...l, ordem: i + 1, unidadeNegocioId: codigoUnidade ? (unidades.get(codigoUnidade) ?? null) : null },
+      update: {},
     });
   }
   return LINHAS.length;
