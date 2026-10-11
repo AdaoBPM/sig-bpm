@@ -704,9 +704,9 @@ const TOTAIS_DAS_LISTAS = LINHAS_TOTAIS.map((t) => ({
   destino: DESTINO_DO_TOTAL[t.codigo],
 }));
 const totalDaRegra = (v: unknown, chave: string) => {
-  const t = TOTAIS_DAS_LISTAS.find((x) => x.codigo === exigir(v, "A linha dos Totais"));
-  if (!t) throw new RegraCadastroError(400, "Escolha a linha dos Totais na lista (os totais das Listas Operacionais).");
-  if (!t.chaves.includes(chave)) throw new RegraCadastroError(400, `A linha dos Totais ${t.rotulo} não é da chave ${chave}.`);
+  const t = TOTAIS_DAS_LISTAS.find((x) => x.codigo === exigir(v, "O destino"));
+  if (!t) throw new RegraCadastroError(400, "Escolha o destino na lista (os totais das Listas Operacionais).");
+  if (!t.chaves.includes(chave)) throw new RegraCadastroError(400, `O destino ${t.rotulo} não é da chave ${chave}.`);
   return t;
 };
 
@@ -723,7 +723,8 @@ const regras: DefinicaoCadastro = {
     { nome: "chave", rotulo: "Chave", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas(BALDES.slice(1, 6)) },
     {
       nome: "origemDoVolume",
-      rotulo: "Linha dos Totais",
+      // O campo da linha dos Totais, com o rótulo Destino (11/10/2026): é ela que dá o destino, a unidade e a base física.
+      rotulo: "Destino",
       // Uma lista com os totais destacados na faixa das Listas Operacionais, só os da Chave escolhida (11/10/2026).
       tipo: "opcao",
       obrigatorio: true,
