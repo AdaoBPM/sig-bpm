@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 
-import { GraficoRealizadoOrcado, LegendaRealizadoOrcado } from "../components/GraficoRealizadoOrcado";
+import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
 import type { Indicador, MesRelatorio } from "../services/relatoriosService";
 
 const SENTIDO: Record<string, string> = { "↑": "quanto maior, melhor", "↓": "quanto menor, melhor", "=": "acompanhamento", "-": "sem sentido definido" };
@@ -17,12 +17,15 @@ export function GraficoIndicadorDialog({
   indicador: i,
   meses,
   formatar,
+  tipo = "barras",
   onFechar,
 }: {
   indicador: Indicador;
   meses: MesRelatorio[];
   /** O valor na unidade do indicador, como na tabela. */
   formatar: (v: number | null) => string;
+  /** Barras ou Área (a lista Tipo da tela). */
+  tipo?: TipoGrafico;
   onFechar: () => void;
 }) {
   const dados = meses.map((m, k) => ({ mes: m.rotulo.split("/")[0], realizado: i.meses[k], orcado: i.orcado[k] }));
@@ -52,9 +55,9 @@ export function GraficoIndicadorDialog({
         />
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-          <LegendaRealizadoOrcado />
+          <LegendaRealizadoOrcado tipo={tipo} />
         </div>
-        <GraficoRealizadoOrcado dados={dados} formatar={formatar} className="h-80" rotulosDosValores />
+        <GraficoRealizadoOrcado dados={dados} formatar={formatar} className="h-80" rotulosDosValores tipo={tipo} />
       </DialogContent>
     </Dialog>
   );

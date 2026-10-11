@@ -1,9 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Area, Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+
+import { Seletor } from "./SeletorPeriodo";
 
 /** As cores dos gráficos, como os da planilha INDICADORES DE RESULTADO: o realizado em amarelo-ouro e a meta em preto. */
 const OURO = "#ffcc00";
@@ -21,6 +23,44 @@ export type MesDoGrafico = { mes: string; realizado: number | null; orcado: numb
  * com o contorno de cima em amarelo-ouro, e o orçado numa linha preta.
  */
 export type TipoGrafico = "barras" | "area";
+
+/** A escolha do tipo, guardada neste navegador; a mesma no Painel de Bordo e em Indicadores (11/10/2026). */
+const CHAVE_TIPO = "sig.painel.tipoGrafico";
+export function useTipoGrafico() {
+  const [tipo, setTipo] = useState<TipoGrafico>(() => {
+    try {
+      return window.localStorage.getItem(CHAVE_TIPO) === "area" ? "area" : "barras";
+    } catch {
+      // Sem armazenamento (janela privada, ou no servidor): Barras.
+      return "barras";
+    }
+  });
+  const escolher = (t: TipoGrafico) => {
+    setTipo(t);
+    try {
+      window.localStorage.setItem(CHAVE_TIPO, t);
+    } catch {
+      // Sem armazenamento: a escolha só não é lembrada.
+    }
+  };
+  return [tipo, escolher] as const;
+}
+
+/** A lista Tipo, na linha do título (Painel de Bordo e Indicadores). */
+export function SeletorTipoGrafico({ tipo, onMudar }: { tipo: TipoGrafico; onMudar: (t: TipoGrafico) => void }) {
+  return (
+    <Seletor
+      rotulo="Tipo"
+      valor={tipo}
+      onMudar={(v) => onMudar(v === "area" ? "area" : "barras")}
+      largura="w-28"
+      opcoes={[
+        { valor: "barras", rotulo: "Barras" },
+        { valor: "area", rotulo: "Área" },
+      ]}
+    />
+  );
+}
 
 /**
  * O gráfico mês a mês, realizado × orçado (Painel de Bordo e o gráfico do indicador em Indicadores): o padrão dos
@@ -66,7 +106,7 @@ export function GraficoRealizadoOrcado({
         </defs>
         <CartesianGrid vertical={false} stroke="#e5e7eb" />
         {/* A linha do eixo X um pouco mais escura e grossa que as de grade (10/10/2026). */}
-        <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? { left: 8, right: 8 } : undefined} />
+        <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? (rotulosDosValores ? { left: 28, right: 28 } : { left: 8, right: 8 }) : undefined} />
         <YAxis hide domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} />
         <Tooltip
           cursor={area && !umPonto ? { stroke: "#d1d5db" } : { fill: "#f3f4f6" }}
@@ -120,7 +160,8 @@ export function GraficoRealizadoOrcado({
               dot={{ r: 2, fill: PRETO, stroke: PRETO }}
               activeDot={{ r: 3, fill: PRETO, stroke: "#fff" }}
               isAnimationActive={false}
-              label={rotulo}
+              // Na Área, só o realizado leva o valor escrito (o orçado ficaria por cima dele); o orçado está na dica.
+              label={undefined}
             />
           </>
         )}

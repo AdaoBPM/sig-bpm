@@ -9,7 +9,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
-import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
+import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, SeletorTipoGrafico, useTipoGrafico, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
 import { Seletor, useExercicios } from "../components/SeletorPeriodo";
 import { mensagemDeErro, relatoriosService, type BlocoPainel, type FormatoPainel, type ItemPainel, type QuadroPainel } from "../services/relatoriosService";
 
@@ -183,7 +183,6 @@ function Secao({ q, rotuloMes, tipo }: { q: QuadroPainel; rotuloMes: string; tip
   );
 }
 
-const CHAVE_TIPO = "sig.painel.tipoGrafico";
 const CHAVE_CORES = "sig.painel.cores";
 /** Uma escolha guardada neste navegador (o tipo dos gráficos, as cores), ou o padrão. */
 function guardado<T extends string>(chave: string, valores: readonly T[], padrao: T): T {
@@ -210,7 +209,7 @@ export function PainelContent() {
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [aba, setAba] = useState("resultados");
   // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Daltonismo), lembrados neste navegador.
-  const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>(() => guardado(CHAVE_TIPO, ["barras", "area"] as const, "barras"));
+  const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
   const [cores, setCores] = useState<Cores>(() => guardado(CHAVE_CORES, ["padrao", "daltonismo"] as const, "padrao"));
   const SINAL = SINAIS[cores];
   const ano = anoEscolhido ?? exercicios.anos[0];
@@ -232,7 +231,7 @@ export function PainelContent() {
           <ul>
             <li>
               Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência; o acumulado vai de janeiro até ele), o Tipo
-              dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador.
+              dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador (o Tipo vale também para o gráfico do indicador em Indicadores).
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
@@ -287,20 +286,7 @@ export function PainelContent() {
                 opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
               />
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
-              <Seletor
-                rotulo="Tipo"
-                valor={tipoGrafico}
-                onMudar={(v) => {
-                  const t: TipoGrafico = v === "area" ? "area" : "barras";
-                  setTipoGrafico(t);
-                  guardar(CHAVE_TIPO, t);
-                }}
-                largura="w-28"
-                opcoes={[
-                  { valor: "barras", rotulo: "Barras" },
-                  { valor: "area", rotulo: "Área" },
-                ]}
-              />
+              <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
               <Seletor
                 rotulo="Cores"
                 valor={cores}
