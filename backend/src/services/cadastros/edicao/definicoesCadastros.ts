@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../../config/prisma.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { avaliarExpressao, codigosDaExpressao } from "../../dre/expressao.js";
 import { chaveDaLinha } from "../../../lib/linhas.js";
+import { LINHAS_TOTAIS } from "../../volumes/totaisOperacao.js";
 
 /**
  * Cadastros editáveis pela tela (Passo 25, RF002 e RF003). Cada cadastro
@@ -655,14 +656,23 @@ const linhas: DefinicaoCadastro = {
 };
 
 // ------------------------------------------------------------ regras de rateio
+/** Os totais das Listas (a faixa acima de cada lista), com o rótulo como lá: sem o "(P)" ou "(S)" e com a medida. */
+const TOTAIS_DAS_LISTAS: Array<[string, string]> = LINHAS_TOTAIS.map((t) => [t.codigo, `${t.rotulo.replace(/^\([PS]\) /, "")} (${t.medida})`]);
+const origemDoVolume = (v: unknown) => {
+  const codigo = exigir(v, "A linha dos Totais");
+  if (!TOTAIS_DAS_LISTAS.some(([c]) => c === codigo)) throw new RegraCadastroError(400, "Escolha a linha dos Totais na lista (os totais das Listas Operacionais).");
+  return codigo;
+};
+
 const regras: DefinicaoCadastro = {
   entidade: "regras-rateio",
   titulo: "Regra de rateio",
   auditoria: "regra_rateio",
   criar: true,
   excluir: true,
+  // O Rótulo na primeira coluna e a Chave no lugar dele (11/10/2026).
   campos: [
-    { nome: "chave", rotulo: "Chave", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas(BALDES.slice(1, 6)) },
+    { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true },
     { nome: "destino", rotulo: "Destino", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas([["MATRIZ", "Matriz"], ["FILIAL", "Filial"], ["MONTAGEM", "Montagem"], ["COMPLEMENTAR", "Complementar"]]) },
     {
       nome: "unidadeDestinoId",
@@ -673,9 +683,19 @@ const regras: DefinicaoCadastro = {
       travaComMovimento: true,
       opcoes: async (db) => (await db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: `${u.codigo} · ${u.nome}` })),
     },
-    { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true },
+    { nome: "chave", rotulo: "Chave", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas(BALDES.slice(1, 6)) },
     { nome: "baseFisica", rotulo: "Base física", rotuloColuna: "Base", tipo: "opcao", obrigatorio: true, travaComMovimento: true, opcoes: opcoesFixas([["M3", "m³"], ["KG", "kg"], ["PISTA", "pista"], ["DIA", "dia"]]) },
-    { nome: "origemDoVolume", rotulo: "Linha dos Totais que dá o volume", rotuloColuna: "Linha dos Totais", tipo: "texto", obrigatorio: true, travaComMovimento: true, ajuda: "Ex.: METALURGIA_MONTAGEM." },
+    {
+      nome: "origemDoVolume",
+      rotulo: "Linha dos Totais que dá o volume",
+      rotuloColuna: "Linha dos Totais",
+      // Uma lista com os totais destacados na faixa das Listas Operacionais (11/10/2026), e não mais o código digitado.
+      tipo: "opcao",
+      obrigatorio: true,
+      travaComMovimento: true,
+      ajuda: "Os totais destacados nas Listas Operacionais.",
+      opcoes: opcoesFixas(TOTAIS_DAS_LISTAS),
+    },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
     { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
   ],
@@ -695,7 +715,7 @@ const regras: DefinicaoCadastro = {
       unidadeDestinoId: exigir(v.unidadeDestinoId, "A unidade"),
       rotulo: exigir(v.rotulo, "O rótulo"),
       baseFisica: exigir(v.baseFisica, "A base física"),
-      origemDoVolume: exigir(v.origemDoVolume, "A linha dos Totais"),
+      origemDoVolume: origemDoVolume(v.origemDoVolume),
       vigenciaInicio: inicio,
       vigenciaFim: fim,
     };
