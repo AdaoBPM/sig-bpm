@@ -16,11 +16,15 @@ export type LinhaResultado = {
   podeDetalhar: boolean;
   meses: Celula[];
   total: Celula;
+  /** Nas visões de Resultados Realizados: o orçado do mês de referência e o acumulado (o cenário Orçamento Empresarial; zero sem ele). */
+  orcado?: { mes: number; total: number } | null;
 };
 
 export type Resultados = {
   ano: number;
   ate: number;
+  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
+  cenarioOrcado?: string | null;
   meses: MesRelatorio[];
   linhas: LinhaResultado[];
   grupo?: string;

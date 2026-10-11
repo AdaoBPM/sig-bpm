@@ -54,6 +54,9 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                 : "Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora."}
             </li>
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
+            {periodoFixo ? null : (
+              <li>As colunas de rótulo preto trazem o orçado (o cenário Orçamento Empresarial do exercício; zero sem ele): o do último mês, depois dele, e o acumulado, depois do Acumulado.</li>
+            )}
             <li>As colunas Indicador, Sent. e Und. ficam fixas; role a tabela para os lados e para baixo na barra dela.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
             {periodoFixo ? null : (
@@ -149,6 +152,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             onClicar={abreGrafico ? setComGrafico : undefined}
             dicaDoClique="Ver o gráfico do indicador"
             iconeDoClique={abreGrafico ? ChartColumn : undefined}
+            comOrcado={!periodoFixo}
           />
           {comGrafico ? (
             <GraficoIndicadorDialog indicador={comGrafico} meses={dados.meses} formatar={(v) => valor(comGrafico, v)} tipo={tipoGrafico} onFechar={() => setComGrafico(null)} />

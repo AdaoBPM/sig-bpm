@@ -5,6 +5,7 @@ import { Fragment, useLayoutEffect, useMemo, useRef, type ComponentType } from "
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
+import { ROTULO_DO_ORCADO } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
 import { formato, type Indicador, type MesRelatorio } from "../services/relatoriosService";
 
 /** Os grupos, na ordem e com os nomes das abas da planilha (Produção, Serviços…). */
@@ -31,7 +32,7 @@ export function valor(i: Pick<Indicador, "unidade">, v: number | null) {
 }
 
 /** As larguras das colunas fixas (Indicador, Sent., Und.) e das de valor. */
-const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado: 124 };
+const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado: 124, orcado: 148 };
 
 /**
  * As colunas, com os filtros e a ordem nos rótulos, como nas demais tabelas.
@@ -39,7 +40,15 @@ const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado
  * A posição das presas segue a largura real da coluna Indicador (--largura-indicador),
  * que cresce quando a tabela é mais estreita que a área.
  */
-function montarColunas<T extends Indicador>(meses: MesRelatorio[], indices: number[], acumulado: boolean): Coluna<T>[] {
+function montarColunas<T extends Indicador>(meses: MesRelatorio[], indices: number[], acumulado: boolean, orcado: boolean): Coluna<T>[] {
+  const ultimo = meses.length - 1;
+  // O orçado (Resultados Realizados, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado.
+  const orcadoDoMes: Coluna<T>[] = orcado
+    ? [{ chave: "orcado:mes", rotulo: `Orçado ${meses[ultimo].rotulo}`, tipo: "numero", alinhamento: "direita", valor: (i) => i.orcado[ultimo] ?? null, texto: (i) => valor(i, i.orcado[ultimo] ?? null), classe: ROTULO_DO_ORCADO }]
+    : [];
+  const orcadoAcumulado: Coluna<T>[] = orcado
+    ? [{ chave: "orcado:acum", rotulo: "Orçado Acum.", tipo: "numero", alinhamento: "direita", valor: (i) => i.totalOrcado, texto: (i) => valor(i, i.totalOrcado), classe: ROTULO_DO_ORCADO }]
+    : [];
   return [
     { chave: "indicador", rotulo: "Indicador", valor: (i) => i.nome, classe: "sticky left-0 !z-30" },
     {
@@ -60,6 +69,7 @@ function montarColunas<T extends Indicador>(meses: MesRelatorio[], indices: numb
         texto: (i) => valor(i, i.meses[k]),
       }),
     ),
+    ...orcadoDoMes,
     ...(acumulado
       ? [
           {
@@ -73,6 +83,7 @@ function montarColunas<T extends Indicador>(meses: MesRelatorio[], indices: numb
           } as Coluna<T>,
         ]
       : []),
+    ...orcadoAcumulado,
   ];
 }
 
@@ -85,6 +96,8 @@ type Props<T extends Indicador> = {
   onClicar?: (i: T) => void;
   dicaDoClique?: string;
   iconeDoClique?: ComponentType<{ className?: string }>;
+  /** As colunas do orçado (Resultados Realizados): a do último mês e a do acumulado. */
+  comOrcado?: boolean;
   /** A célula do mês em destaque (o valor digitado, nos lançamentos manuais do cenário). */
   destacar?: (i: T, k: number) => boolean;
   dicaDoDestaque?: string;
@@ -94,13 +107,22 @@ type Props<T extends Indicador> = {
  * A tabela dos indicadores (Resultados Realizados / Indicadores e os cenários sintéticos): os grupos em faixas, as
  * colunas Indicador, Sent. e Und. presas à esquerda, os meses e o acumulado, com os filtros nos rótulos.
  */
-export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soUltimoMes, onClicar, dicaDoClique, iconeDoClique: Icone, destacar, dicaDoDestaque }: Props<T>) {
+export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soUltimoMes, onClicar, dicaDoClique, iconeDoClique: Icone, comOrcado, destacar, dicaDoDestaque }: Props<T>) {
   const colunas = useMemo(() => {
     const indices = soUltimoMes ? [meses.length - 1] : meses.map((_, k) => k);
-    return montarColunas<T>(meses, indices, !soUltimoMes);
-  }, [meses, soUltimoMes]);
+    return montarColunas<T>(meses, indices, !soUltimoMes, !!comOrcado && !soUltimoMes);
+  }, [meses, soUltimoMes, comOrcado]);
   const tabela = useTabelaFiltravel(indicadores, colunas);
-  const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave === "acumulado" ? LARGURA.acumulado : LARGURA.mes))];
+  const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave.startsWith("orcado:") ? LARGURA.orcado : c.chave === "acumulado" ? LARGURA.acumulado : LARGURA.mes))];
+  const ehOrcado = (chave: string) => chave.startsWith("orcado:");
+  // A faixa do grupo em pedaços: amarela nas colunas do realizado, cinza nas do orçado (a mesma escala).
+  const faixas = colunas.reduce<Array<{ orcado: boolean; n: number }>>((fs, c) => {
+    const o = ehOrcado(c.chave);
+    const ultima = fs[fs.length - 1];
+    if (ultima && ultima.orcado === o) ultima.n++;
+    else fs.push({ orcado: o, n: 1 });
+    return fs;
+  }, []);
   const total = larguras.reduce((s, w) => s + w, 0);
 
   // A largura real da coluna Indicador posiciona as outras duas colunas presas.
@@ -149,9 +171,11 @@ export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soU
                   <Fragment key={i.nome}>
                     {!anterior || anterior.grupo !== i.grupo ? (
                       <tr className="border-y border-gray-300">
-                        <td colSpan={colunas.length} className="bg-yellow-50 px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase">
-                          <span className="sticky left-3">{NOME_DO_GRUPO[i.grupo] ?? i.grupo}</span>
-                        </td>
+                        {faixas.map((f, n) => (
+                          <td key={n} colSpan={f.n} className={`${f.orcado ? "bg-gray-200" : "bg-yellow-50"} px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase`}>
+                            {n === 0 ? <span className="sticky left-3">{NOME_DO_GRUPO[i.grupo] ?? i.grupo}</span> : null}
+                          </td>
+                        ))}
                       </tr>
                     ) : null}
                     <tr

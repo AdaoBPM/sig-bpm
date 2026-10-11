@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { cenarioMarcado } from "../cenarios/indicadoresDoCenario.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
 import { linhasDoCentro } from "../dre/recorteCentros.js";
 import { baseDoPercentual, baseDoUnitario, basesDoConsolidado, COD, GRUPOS_DE_VOLUME, type VisaoResultados } from "./basesResultados.js";
@@ -55,6 +56,32 @@ export async function estrutura(): Promise<LinhaEstrutura[]> {
   });
 }
 
+/**
+ * O orçado de uma visão (o cenário Orçamento Empresarial do exercício, 11/10/2026): por linha, o valor do mês de
+ * referência e o acumulado de janeiro até ele. Sem cenário marcado, nenhum (as linhas mostram zero).
+ */
+async function orcadoDaVisao(ano: number, visao: number, ate: number) {
+  const cenario = await cenarioMarcado(ano, "ORCAMENTO_EMPRESARIAL");
+  const porCodigo = new Map<string, { mes: number; total: number }>();
+  if (!cenario) return { cenario: null, porCodigo };
+  const visoes = visao === 4 || visao === 5 ? [visao, 0] : [visao];
+  const rs = await getPrismaClient().cenarioResultado.findMany({
+    where: { cenarioId: cenario.id, visao: { in: visoes }, mes: { lte: ate } },
+    select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } },
+  });
+  for (const r of rs) {
+    // Em Despesas e Extra e no RN, a ROL é a do Consolidado, como no realizado.
+    const daVisao = visao >= 4 ? (r.visao === 0) === (r.linhaDRE.codigo === COD.RO) : true;
+    if (!daVisao) continue;
+    const o = porCodigo.get(r.linhaDRE.codigo) ?? { mes: 0, total: 0 };
+    const v = Number(r.valor);
+    o.total += v;
+    if (r.mes === ate) o.mes += v;
+    porCodigo.set(r.linhaDRE.codigo, o);
+  }
+  return { cenario, porCodigo };
+}
+
 /** Valores por mês e código, de uma unidade (1..5) ou do consolidado (0). */
 async function valoresDaVisao(competencias: Array<string | null>, unidade: number) {
   const ids = competencias.filter((c): c is string => c !== null);
@@ -84,8 +111,10 @@ export function montar(
   valores: Array<Map<string, number>>,
   bases: Array<Map<string, number>>,
   acesso: Acesso,
+  /** As linhas que entram mesmo sem valor nos meses (as que só têm o orçado). */
+  outras: Set<string> = new Set(),
 ) {
-  const temValor = new Set(valores.flatMap((m) => [...m.keys()]));
+  const temValor = new Set([...valores.flatMap((m) => [...m.keys()]), ...outras]);
   return linhas
     .filter((l) => l.tipo === "SECAO" || temValor.has(l.codigo))
     .map((l) => {
@@ -128,7 +157,19 @@ export const resultadosService = {
     // Em Despesas e Extra e no RN, a ROL do Consolidado abre a tabela, como nas abas da planilha.
     if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
     const apurado = meses.map((m) => m.competenciaId !== null);
-    return { ano, ate: ultimo, meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })), linhas: montar(linhas, visao, apurado, valores, consolidado, acesso) };
+    const orcado = await orcadoDaVisao(ano, visao, ultimo);
+    return {
+      ano,
+      ate: ultimo,
+      meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
+      /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
+      cenarioOrcado: orcado.cenario?.nome ?? null,
+      linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, new Set(orcado.porCodigo.keys())).map((l) => ({
+        ...l,
+        /** O orçado do mês de referência e o acumulado de janeiro até ele (zero sem o cenário ou sem a linha nele). */
+        orcado: l.tipo === "SECAO" ? null : { mes: arredonda(orcado.porCodigo.get(l.codigo)?.mes ?? 0, 4), total: arredonda(orcado.porCodigo.get(l.codigo)?.total ?? 0, 4) },
+      })),
+    };
   },
 
   /** Os agrupamentos de centros de custo com valor em algum mês, com o total do exercício (o da tabela de cada um). */

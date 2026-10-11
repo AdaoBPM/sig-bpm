@@ -17,7 +17,8 @@ import { RelatorioError, resultadosService } from "./resultadosService.js";
 export type EscopoResultados = { tipo: "visao"; visao: 0 | 1 | 2 | 3 | 4 | 5 } | { tipo: "centro"; grupo: string } | { tipo: "unidades" } | { tipo: "centros" };
 export type Formato = "xlsx" | "pdf";
 
-type Resultados = Awaited<ReturnType<typeof resultadosService.unidade>>;
+// O que as visões e os centros de custo têm em comum (o orçado das visões não vai para a exportação).
+type Resultados = Pick<Awaited<ReturnType<typeof resultadosService.centros>>, "ano" | "ate" | "meses" | "linhas">;
 type Bloco = { nome: string; titulo: string; dados: Resultados };
 
 const VISOES: Array<{ visao: 0 | 1 | 2 | 3 | 4 | 5; nome: string }> = [
