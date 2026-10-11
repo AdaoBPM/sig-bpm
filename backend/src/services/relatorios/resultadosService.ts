@@ -58,28 +58,31 @@ export async function estrutura(): Promise<LinhaEstrutura[]> {
 
 /**
  * O orçado de uma visão (o cenário Orçamento Empresarial do exercício, 11/10/2026): por linha, o valor do mês de
- * referência e o acumulado de janeiro até ele. Sem cenário marcado, nenhum (as linhas mostram zero).
+ * referência e o acumulado de janeiro até ele, da visão e do Consolidado (as bases do % e do R$/m³ em Despesas e
+ * Extra e no RN). Sem cenário marcado, nenhum (as linhas mostram zero).
  */
 async function orcadoDaVisao(ano: number, visao: number, ate: number) {
   const cenario = await cenarioMarcado(ano, "ORCAMENTO_EMPRESARIAL");
-  const porCodigo = new Map<string, { mes: number; total: number }>();
-  if (!cenario) return { cenario: null, porCodigo };
-  const visoes = visao === 4 || visao === 5 ? [visao, 0] : [visao];
+  const vazio = () => ({ mes: new Map<string, number>(), total: new Map<string, number>() });
+  const daVisao = vazio();
+  const doConsolidado = vazio();
+  if (!cenario) return { cenario: null, daVisao, doConsolidado };
   const rs = await getPrismaClient().cenarioResultado.findMany({
-    where: { cenarioId: cenario.id, visao: { in: visoes }, mes: { lte: ate } },
+    where: { cenarioId: cenario.id, visao: { in: [...new Set([visao, 0])] }, mes: { lte: ate } },
     select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } },
   });
+  const somar = (alvo: ReturnType<typeof vazio>, codigo: string, mes: number, v: number) => {
+    alvo.total.set(codigo, (alvo.total.get(codigo) ?? 0) + v);
+    if (mes === ate) alvo.mes.set(codigo, (alvo.mes.get(codigo) ?? 0) + v);
+  };
   for (const r of rs) {
-    // Em Despesas e Extra e no RN, a ROL é a do Consolidado, como no realizado.
-    const daVisao = visao >= 4 ? (r.visao === 0) === (r.linhaDRE.codigo === COD.RO) : true;
-    if (!daVisao) continue;
-    const o = porCodigo.get(r.linhaDRE.codigo) ?? { mes: 0, total: 0 };
     const v = Number(r.valor);
-    o.total += v;
-    if (r.mes === ate) o.mes += v;
-    porCodigo.set(r.linhaDRE.codigo, o);
+    if (r.visao === 0) somar(doConsolidado, r.linhaDRE.codigo, r.mes, v);
+    // Em Despesas e Extra e no RN, a ROL é a do Consolidado, como no realizado.
+    const entra = visao >= 4 ? (r.visao === 0) === (r.linhaDRE.codigo === COD.RO) : r.visao === visao;
+    if (entra) somar(daVisao, r.linhaDRE.codigo, r.mes, v);
   }
-  return { cenario, porCodigo };
+  return { cenario, daVisao, doConsolidado };
 }
 
 /** Valores por mês e código, de uma unidade (1..5) ou do consolidado (0). */
@@ -158,16 +161,25 @@ export const resultadosService = {
     if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
     const apurado = meses.map((m) => m.competenciaId !== null);
     const orcado = await orcadoDaVisao(ano, visao, ultimo);
+    // O % e o R$/m³ do orçado sobre as bases do próprio orçado (em Despesas e Extra e no RN, as do Consolidado).
+    const basesOrcado = basesDoConsolidado(visao) ? orcado.doConsolidado : orcado.daVisao;
+    const celulaOrcada = (l: LinhaEstrutura, periodo: "mes" | "total") => {
+      const v = arredonda(orcado.daVisao[periodo].get(l.codigo) ?? 0, 4);
+      const bp = baseDoPercentual(visao, l);
+      const bu = baseDoUnitario(l);
+      return { valor: v, pct: bp ? divide(v, basesOrcado[periodo].get(bp)) : null, unitario: bu ? divide(v, basesOrcado[periodo].get(bu)) : null };
+    };
+    const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
     return {
       ano,
       ate: ultimo,
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
       cenarioOrcado: orcado.cenario?.nome ?? null,
-      linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, new Set(orcado.porCodigo.keys())).map((l) => ({
+      linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, new Set(orcado.daVisao.total.keys())).map((l) => ({
         ...l,
-        /** O orçado do mês de referência e o acumulado de janeiro até ele (zero sem o cenário ou sem a linha nele). */
-        orcado: l.tipo === "SECAO" ? null : { mes: arredonda(orcado.porCodigo.get(l.codigo)?.mes ?? 0, 4), total: arredonda(orcado.porCodigo.get(l.codigo)?.total ?? 0, 4) },
+        /** O orçado do mês de referência e o acumulado de janeiro até ele, com o % e o R$/m³ (zero sem o cenário ou sem a linha nele). */
+        orcado: l.tipo === "SECAO" ? null : { mes: celulaOrcada(porCodigo.get(l.codigo)!, "mes"), total: celulaOrcada(porCodigo.get(l.codigo)!, "total") },
       })),
     };
   },
