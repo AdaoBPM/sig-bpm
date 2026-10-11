@@ -142,7 +142,7 @@ export function RecarregarPlanilha() {
       <Dialog open={aberto} onOpenChange={(o) => (!o ? fechar() : undefined)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Recarregar cadastros da planilha</DialogTitle>
+            <DialogTitle>Recarregar Cadastros da Planilha</DialogTitle>
             <DialogDescription>
               Envie o SIG BPM 2026 - UNIDADES E CENTROS DE CUSTO. O sistema mostra o que
               muda nos centros de custo, nas contas de resultado e na estrutura da DRE

@@ -22,6 +22,7 @@ import {
   moeda,
   ROTULO_REJEICAO,
 } from "../../utils/formatacao";
+import { SheetHeader } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { iniciaisMaiusculas } from "@/lib/texto";
@@ -645,6 +646,19 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
     }
   }, [status, anoMes, queryClient, refresh]);
 
+  const titulo = imp ? (
+    <>
+      <h2 className="text-xl font-bold tracking-tight text-gray-900">
+        {ROTULO_TIPO[imp.tipo] ?? imp.tipo} · {imp.nomeArquivo}
+      </h2>
+      <p className="text-sm text-gray-500">
+        {dataHora(imp.importadoEm)}
+        {imp.usuario ? ` · ${imp.usuario.nome}` : null}
+        {imp.substituidaEm ? ` · substituída em ${dataHora(imp.substituidaEm)}` : null}
+      </p>
+    </>
+  ) : null;
+
   if (isPending) {
     return <div className="h-32 animate-pulse rounded-sm bg-gray-100" />;
   }
@@ -658,16 +672,12 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
 
   return (
     <div className={noPainel ? "" : "border border-gray-200 bg-white rounded-sm p-6"}>
-      <div className={`mb-4 flex flex-col gap-1 ${noPainel ? "pr-8" : "sm:flex-row sm:items-baseline sm:justify-between"}`}>
-        <h2 className="text-xl font-bold tracking-tight text-gray-900">
-          {ROTULO_TIPO[imp.tipo] ?? imp.tipo} · {imp.nomeArquivo}
-        </h2>
-        <p className="text-sm text-gray-500">
-          {dataHora(imp.importadoEm)}
-          {imp.usuario ? ` · ${imp.usuario.nome}` : null}
-          {imp.substituidaEm ? ` · substituída em ${dataHora(imp.substituidaEm)}` : null}
-        </p>
-      </div>
+      {noPainel ? (
+        // No painel, o título fica fixo ao rolar (com o botão de fechar).
+        <SheetHeader className="-top-6 -mx-6 -mt-6 mb-1 gap-1 px-6 pt-6 pb-3">{titulo}</SheetHeader>
+      ) : (
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">{titulo}</div>
+      )}
 
       {imp.status === "PROCESSANDO" ? (
         <div className="space-y-2">

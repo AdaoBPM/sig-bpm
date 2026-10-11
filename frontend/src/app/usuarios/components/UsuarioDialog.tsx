@@ -45,7 +45,7 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{editando ? "Editar usuário" : "Novo usuário"}</DialogTitle>
+          <DialogTitle>{editando ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
           <DialogDescription>O que o usuário pode fazer vem do perfil. Setores e departamentos só valem se o perfil recorta por eles.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

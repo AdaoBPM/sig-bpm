@@ -3,9 +3,36 @@
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
+import { iniciaisMaiusculas } from "@/lib/texto"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+
+/**
+ * O cabeçalho fixo dos painéis (11/10/2026): o SheetHeader fica no topo ao rolar o painel, com o botão de fechar dentro
+ * dele; sem cabeçalho, o botão fica no canto do painel, como antes. Num painel com espaçamento, o cabeçalho desconta o
+ * espaçamento no topo (-top-6 com p-6), porque o Firefox prende o sticky dentro dele.
+ */
+const CabecalhoDoPainel = React.createContext<{ fechar: boolean; registrar: () => () => void } | null>(null)
+
+function BotaoFechar() {
+  return (
+    <SheetPrimitive.Close
+      data-slot="sheet-close"
+      render={
+        <Button
+          variant="ghost"
+          className="absolute top-3 right-3"
+          size="icon"
+        />
+      }
+    >
+      <XIcon
+      />
+      <span className="sr-only">Fechar</span>
+    </SheetPrimitive.Close>
+  )
+}
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -46,6 +73,17 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const [cabecalhos, setCabecalhos] = React.useState(0)
+  const contexto = React.useMemo(
+    () => ({
+      fechar: showCloseButton,
+      registrar: () => {
+        setCabecalhos((n) => n + 1)
+        return () => setCabecalhos((n) => n - 1)
+      },
+    }),
+    [showCloseButton]
+  )
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -58,35 +96,26 @@ function SheetContent({
         )}
         {...props}
       >
-        {children}
-        {showCloseButton && (
-          <SheetPrimitive.Close
-            data-slot="sheet-close"
-            render={
-              <Button
-                variant="ghost"
-                className="absolute top-3 right-3"
-                size="icon"
-              />
-            }
-          >
-            <XIcon
-            />
-            <span className="sr-only">Close</span>
-          </SheetPrimitive.Close>
-        )}
+        <CabecalhoDoPainel.Provider value={contexto}>{children}</CabecalhoDoPainel.Provider>
+        {showCloseButton && cabecalhos === 0 && <BotaoFechar />}
       </SheetPrimitive.Popup>
     </SheetPortal>
   )
 }
 
-function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
+function SheetHeader({ className, children, ...props }: React.ComponentProps<"div">) {
+  const painel = React.useContext(CabecalhoDoPainel)
+  const registrar = painel?.registrar
+  React.useLayoutEffect(() => registrar?.(), [registrar])
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 p-4", className)}
+      className={cn("sticky top-0 z-10 flex flex-col gap-0.5 bg-popover p-4", painel?.fechar && "pr-14", className)}
       {...props}
-    />
+    >
+      {children}
+      {painel?.fechar && <BotaoFechar />}
+    </div>
   )
 }
 
@@ -100,7 +129,8 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
+/** O título com iniciais maiúsculas, como os nomes das telas (11/10/2026); os textos de dados também. */
+function SheetTitle({ className, children, ...props }: SheetPrimitive.Title.Props) {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
@@ -109,7 +139,9 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
         className
       )}
       {...props}
-    />
+    >
+      {React.Children.map(children, (c) => (typeof c === "string" ? iniciaisMaiusculas(c) : c))}
+    </SheetPrimitive.Title>
   )
 }
 

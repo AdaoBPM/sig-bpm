@@ -273,7 +273,7 @@ export function DivergenciasContent() {
 
       {dialogo?.tipo === "justificar" ? (
         <DialogoTexto
-          titulo={`Justificar ${escolhidas.length} divergência(s)`}
+          titulo={`Justificar ${escolhidas.length} Divergência(s)`}
           descricao="A justificativa fica registrada com o seu nome. A competência continua como está."
           acao="Justificar"
           pendente={justificar.isPending}
@@ -283,7 +283,7 @@ export function DivergenciasContent() {
       ) : null}
       {dialogo?.tipo === "resolver" ? (
         <DialogoTexto
-          titulo={`Resolver ${dialogo.competencia.slice(5)}/${dialogo.competencia.slice(0, 4)} por reabertura`}
+          titulo={`Resolver ${dialogo.competencia.slice(5)}/${dialogo.competencia.slice(0, 4)} por Reabertura`}
           descricao="A competência é reaberta, com esta justificativa, e as divergências abertas dela ficam resolvidas. Depois, importe o dado novo e reapure."
           acao="Reabrir e resolver"
           pendente={resolver.isPending}

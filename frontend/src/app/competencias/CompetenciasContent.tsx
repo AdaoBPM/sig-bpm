@@ -202,7 +202,7 @@ export function CompetenciasContent() {
           isLoading={isPending}
           error={isError ? "Erro ao carregar as competências." : null}
           emptyMessage="Nenhuma competência aberta"
-          emptyHint="Use o botão Abrir competência para abrir o primeiro mês."
+          emptyHint="Use o botão Abrir Competência para abrir o primeiro mês."
           columns={["Competência", "Estado", "Andamento", "Divergências", "Apurada em", "Fechada em"]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrirMes(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">

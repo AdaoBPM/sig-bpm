@@ -201,7 +201,7 @@ export function ImportarContent() {
           data && podeImportar ? (
             <Button type="button" className={botaoPrimario} onClick={() => setLote(true)}>
               <Upload className="size-4" />
-              {fechada ? "Comparar balancete" : "Importar arquivo"}
+              {fechada ? "Comparar Balancete" : "Importar Arquivo"}
             </Button>
           ) : null
         }
@@ -355,7 +355,7 @@ export function ImportarContent() {
       <Dialog open={envio !== null} onOpenChange={(o) => (!o ? setEnvio(null) : undefined)}>
         <DialogContent className="rounded-sm sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{fechada ? "Comparar balancete" : "Importar arquivo"}</DialogTitle>
+            <DialogTitle>{fechada ? "Comparar Balancete" : "Importar Arquivo"}</DialogTitle>
           </DialogHeader>
           {envio ? (
             <EnviarArquivoForm
@@ -373,7 +373,7 @@ export function ImportarContent() {
 
       <Sheet open={aberta !== null} onOpenChange={(o) => (!o ? setAberta(null) : undefined)}>
         <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-6 data-[side=right]:sm:max-w-4xl">
-          <SheetTitle className="sr-only">Relatório da importação</SheetTitle>
+          <SheetTitle className="sr-only">Relatório da Importação</SheetTitle>
           {aberta ? <ResultadoImportacao key={aberta} id={aberta} anoMes={anoMes} noPainel /> : null}
         </SheetContent>
       </Sheet>

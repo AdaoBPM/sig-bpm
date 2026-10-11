@@ -57,7 +57,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{editando ? `Perfil ${editando.nome}` : "Novo perfil"}</DialogTitle>
+          <DialogTitle>{editando ? `Perfil ${editando.nome}` : "Novo Perfil"}</DialogTitle>
           <DialogDescription>
             O perfil é o tipo de usuário. As permissões valem para todos os usuários dele, a partir da próxima ação de cada um.
           </DialogDescription>

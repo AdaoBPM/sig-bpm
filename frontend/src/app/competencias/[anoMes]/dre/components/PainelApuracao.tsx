@@ -128,7 +128,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
       <Dialog open={dialogo !== null} onOpenChange={(o) => (!o ? setDialogo(null) : undefined)}>
         <DialogContent className="rounded-sm sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{dialogo === "fechar" ? "Fechar a competência" : "Reabrir a competência"}</DialogTitle>
+            <DialogTitle>{dialogo === "fechar" ? "Fechar a Competência" : "Reabrir a Competência"}</DialogTitle>
             <DialogDescription>
               {dialogo === "fechar"
                 ? "Fechada, a competência não aceita importação, digitação nem apuração. Os valores ficam como foram apurados; mudar exige reabrir com justificativa."

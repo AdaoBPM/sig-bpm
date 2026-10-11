@@ -2,12 +2,12 @@
 
 import type { ReactNode } from "react";
 
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 /**
  * O painel de informação que abre à direita (como o relatório das importações
  * em vigor): o "Sobre Esta Tela" do cabeçalho e o agrupamento de um centro de
- * custo na DRE. O título abre a primeira seção; as demais vêm em SecaoPainel.
+ * custo na DRE. O título abre a primeira seção (fixo ao rolar o painel); as demais vêm em SecaoPainel.
  */
 export function PainelInformacao({
   aberto,
@@ -23,7 +23,9 @@ export function PainelInformacao({
   return (
     <Sheet open={aberto} onOpenChange={onMudar}>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-6 data-[side=right]:sm:max-w-2xl">
-        <SheetTitle className="pr-8 text-lg font-extrabold text-gray-900">{titulo}</SheetTitle>
+        <SheetHeader className="-top-6 -mx-6 -mt-6 px-6 pt-6 pb-3">
+          <SheetTitle className="text-lg font-extrabold text-gray-900">{titulo}</SheetTitle>
+        </SheetHeader>
         {children}
       </SheetContent>
     </Sheet>
@@ -38,7 +40,7 @@ const DESTAQUE = "rounded-sm border border-l-4 border-gray-200 border-l-bpm-prim
 
 /** O texto logo abaixo do título do painel. */
 export function TextoPainel({ children }: { children: ReactNode }) {
-  return <div className={`mt-3 space-y-2 text-sm leading-relaxed text-gray-700 ${DESTAQUE}`}>{children}</div>;
+  return <div className={`space-y-2 text-sm leading-relaxed text-gray-700 ${DESTAQUE}`}>{children}</div>;
 }
 
 /** Uma seção seguinte do painel, com título próprio (ex.: "Como Usar Esta Tela"). */

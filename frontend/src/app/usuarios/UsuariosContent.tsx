@@ -45,7 +45,7 @@ function RedefinirSenhaDialog({ usuario, onFechar }: { usuario: Usuario; onFecha
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="rounded-sm sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Redefinir senha</DialogTitle>
+          <DialogTitle>Redefinir Senha</DialogTitle>
           <DialogDescription>
             Nova senha de {usuario.nome} ({usuario.email}). Passe a ele por um canal seguro; ele pode trocá-la depois, no menu do usuário.
           </DialogDescription>

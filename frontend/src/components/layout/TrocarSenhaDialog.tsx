@@ -28,7 +28,7 @@ export function TrocarSenhaDialog({ onFechar }: { onFechar: () => void }) {
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="rounded-sm sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Trocar senha</DialogTitle>
+          <DialogTitle>Trocar Senha</DialogTitle>
           <DialogDescription>A senha nova precisa de ao menos 8 caracteres.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

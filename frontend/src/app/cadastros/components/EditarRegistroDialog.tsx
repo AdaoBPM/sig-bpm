@@ -20,9 +20,6 @@ type Props = { entidade: string; id: string | null; onFechar: () => void };
 /** "A, B e C". */
 const emLista = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : (xs[0] ?? ""));
 
-/** "Linha da DRE" vira "linha da DRE": só a inicial, para não perder as siglas. */
-const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
-
 const classeSelect = "h-9 w-full rounded-sm border border-gray-300 bg-white px-3 text-sm";
 
 /** O valor do campo como a tela o edita. */
@@ -242,7 +239,7 @@ export function EditarRegistroDialog({ entidade, id, onFechar }: Props) {
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{def.data ? `${id ? "Editar" : "Novo registro:"} ${minuscula(def.data.titulo)}` : "Carregando…"}</DialogTitle>
+          <DialogTitle>{def.data ? `${id ? "Editar" : "Novo Registro:"} ${def.data.titulo}` : "Carregando…"}</DialogTitle>
           <DialogDescription>A alteração fica no log de auditoria, com o antes e o depois.</DialogDescription>
         </DialogHeader>
         {def.isError || reg.isError ? <p className="text-sm text-red-700">{mensagemDeErro(def.error ?? reg.error, "Erro ao carregar o cadastro.")}</p> : null}

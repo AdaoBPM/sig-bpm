@@ -83,7 +83,7 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="rounded-sm sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editando ? "Alterar lançamento de receita" : "Novo lançamento de receita"}</DialogTitle>
+          <DialogTitle>{editando ? "Alterar Lançamento de Receita" : "Novo Lançamento de Receita"}</DialogTitle>
           <DialogDescription>
             Correções e redistribuições da receita prévia — o que a aba Receita (Lanç. Manuais) registrava.
           </DialogDescription>

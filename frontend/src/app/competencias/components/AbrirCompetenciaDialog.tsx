@@ -80,7 +80,7 @@ export function AbrirCompetenciaDialog({ sugestao }: Props) {
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="rounded-sm sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Abrir competência</DialogTitle>
+            <DialogTitle>Abrir Competência</DialogTitle>
             <DialogDescription>
               O mês nasce aberto. Importação e digitação só acontecem enquanto ele estiver aberto ou em conferência.
             </DialogDescription>

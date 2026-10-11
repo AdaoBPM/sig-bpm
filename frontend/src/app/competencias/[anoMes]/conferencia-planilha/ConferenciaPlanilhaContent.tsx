@@ -237,7 +237,7 @@ export function ConferenciaPlanilhaContent() {
               className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
             >
               <Upload className="size-4" />
-              {r?.conferencia ? "Enviar outra planilha" : "Enviar planilha"}
+              {r?.conferencia ? "Enviar Outra Planilha" : "Enviar Planilha"}
             </Button>
           ) : null
         }
@@ -266,7 +266,7 @@ export function ConferenciaPlanilhaContent() {
       <Dialog open={enviando} onOpenChange={setEnviando}>
         <DialogContent className="rounded-sm sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{r?.conferencia ? "Enviar outra planilha" : "Enviar planilha"}</DialogTitle>
+            <DialogTitle>{r?.conferencia ? "Enviar Outra Planilha" : "Enviar Planilha"}</DialogTitle>
             <DialogDescription>
               A ferramenta lê a coluna {coluna} das abas Resultados. Vale a última planilha enviada nesta competência.
             </DialogDescription>

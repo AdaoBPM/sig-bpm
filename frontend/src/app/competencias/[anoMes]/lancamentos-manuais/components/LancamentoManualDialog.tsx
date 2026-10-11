@@ -142,7 +142,7 @@ export function LancamentoManualDialog({ anoMes, opcoes, editando, aberto, onFec
     <Dialog open={aberto} onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="rounded-sm sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editando ? "Editar lançamento" : "Novo lançamento manual"}</DialogTitle>
+          <DialogTitle>{editando ? "Editar Lançamento" : "Novo Lançamento Manual"}</DialogTitle>
           <DialogDescription>
             O rateio e o destino na DRE saem da conta (e do centro, quando houver),
             como na aba Gastos (Lanç. Manuais).
