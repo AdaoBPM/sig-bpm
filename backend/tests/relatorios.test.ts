@@ -34,10 +34,10 @@ describe("relatório de Resultados: bases do % e do R$/m³ (abas Resultados (…
 });
 
 describe("indicadores (aba Realizado (SIG) e Metas, 08/10/2026)", () => {
-  it("lista os 110 indicadores, na ordem da planilha", () => {
-    assert.equal(INDICADORES.length, 110);
+  it("lista os 114 indicadores, na ordem da planilha (com os GME 4 e 8 da aba Realizado)", () => {
+    assert.equal(INDICADORES.length, 114);
     assert.equal(INDICADORES[0].nome, "Custos de Produção: Matriz (CPP)");
-    assert.equal(INDICADORES.at(-1)!.nome, "Repres. do Mix Ampliado nas Vendas");
+    assert.equal(INDICADORES.at(-1)!.nome, "Atingimento da MC Acumulada");
   });
 
   it("acumula como a aba Realizado: soma, média ponderada pelo peso ou o último mês", () => {
@@ -98,7 +98,7 @@ describe("metas do orçamento (aba Metas (Orçamento)) e Painel de Bordo", () =>
       { numero: 1, celulas: ["GRUPO", "INDICADOR", "TIPO", "JAN/2026", "FEV/2026"] },
       { numero: 2, celulas: ["Produção", "Produção (Vol.): Matriz", "↑", 1065.718, 1110.197] },
       { numero: 3, celulas: ["4", "Quadro de Lotação", "=", 297, 297] },
-      { numero: 4, celulas: ["GME", "Média Móvel da Demanda Gerada", "↑", 1.1, 1.1] },
+      { numero: 4, celulas: ["GME", "Indicador Fora do Catálogo", "↑", 1.1, 1.1] },
     ];
     const l = lerIndicadores("METAS_ORCAMENTO", linhas, 2026, 2);
     assert.ok(l.ok);
@@ -124,5 +124,31 @@ describe("metas do orçamento (aba Metas (Orçamento)) e Painel de Bordo", () =>
     assert.equal(sinal({ sentido: "↑" }, 90, 100), -1);
     assert.equal(sinal({ sentido: "↓" }, 90, 100), 1);
     assert.equal(sinal({ sentido: "↓" }, 120, null), null);
+  });
+});
+
+describe("GME 4 e GME 8 (aba Realizado, linhas 112 a 115)", () => {
+  const mes = (dre: Record<string, number>, importado: Record<string, number>, meta: Record<string, number>) => ({
+    dre: (u: number, c: string) => (u === 0 ? (dre[c] ?? 0) : 0),
+    volume: () => 0,
+    importado: (n: string) => importado[n] ?? null,
+    meta: (n: string) => meta[n] ?? null,
+  });
+  it("calcula a demanda sobre a capacidade e o atingimento acumulado pelo orçado", async () => {
+    const { INDICADORES, acumular } = await import("../src/services/relatorios/indicadores.js");
+    const { encadearMeses } = await import("../src/services/relatorios/indicadoresService.js");
+    const por = (n: string) => INDICADORES.find((i) => i.nome === n)!;
+    const meses = encadearMeses([
+      mes({ "MC.MARGEM_DE_CONTRIBUICAO_MC": 100, "S.EXPEDICAO_DO_PRE_FABRICADO_M": 50 }, { "Venda: Total": 10, "Demanda (Vol.): Total (Fabricação)": 80 }, { "Produção (Vol.): Total": 100, "Margem de Contribuição (MC): Total": 200 }),
+      mes({ "MC.MARGEM_DE_CONTRIBUICAO_MC": 300, "S.EXPEDICAO_DO_PRE_FABRICADO_M": 150 }, { "Venda: Total": 30, "Demanda (Vol.): Total (Fabricação)": 120 }, { "Produção (Vol.): Total": 100, "Margem de Contribuição (MC): Total": 200 }),
+    ]);
+    const gerada = por("Média Móvel da Demanda Gerada");
+    const partes = meses.map((m) => gerada.calculo(m));
+    assert.deepEqual(partes.map((p) => p.valor), [0.8, 1.2]);
+    assert.equal(acumular(gerada, partes), (0.8 * 10 + 1.2 * 30) / 40);
+    const mc = por("Atingimento da MC Acumulada");
+    const pmc = meses.map((m) => mc.calculo(m));
+    assert.deepEqual(pmc.map((p) => p.valor), [0.5, 1]);
+    assert.equal(acumular(mc, pmc), 1);
   });
 });

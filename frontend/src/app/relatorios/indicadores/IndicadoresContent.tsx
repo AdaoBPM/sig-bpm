@@ -167,6 +167,12 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               turnover), é a média ponderada da planilha. Os de posição (quadro de lotação, inadimplência, vagas) valem o último mês.
             </p>
             <p>
+              Nas Metas Estratégicas (GME), a Média Móvel da Demanda Gerada e a da Demanda Expedida (GME 4) dividem a demanda e a expedição do mês
+              pela capacidade de produção, que é a meta de Produção (Vol.): Total do mês; o Atingimento do FCOL e o da MC (GME 8) dividem o
+              realizado de janeiro até o mês pelo orçado do mesmo período, das metas importadas (aba Metas (Orçamento)), e o acumulado é o do
+              último mês — como as linhas 112 a 115 da aba Realizado do INDICADORES DE RESULTADO.
+            </p>
+            <p>
               Os indicadores numerados do Comercial e do Administrativo também podem ser digitados nas Listas Operacionais (abas Comercial e
               Administrativo): o valor digitado substitui o importado até uma nova importação da aba. Um indicador importado fica sem valor no
               mês em que a aba não foi importada nem o valor digitado.

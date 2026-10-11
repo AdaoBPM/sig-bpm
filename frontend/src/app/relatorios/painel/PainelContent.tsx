@@ -173,7 +173,7 @@ function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: strin
 function Secao({ q, rotuloMes, tipo }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico }) {
   return (
     <section>
-      <h2 className="mb-2 text-sm font-bold tracking-wide text-gray-900 uppercase">{q.titulo}</h2>
+      <h2 className="mb-2 text-base font-bold tracking-wide text-gray-900 uppercase">{q.titulo}</h2>
       <div className="space-y-3">
         {q.itens.map((i) => (
           <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} />

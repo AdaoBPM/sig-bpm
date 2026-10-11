@@ -10,7 +10,7 @@ import { mesesDoExercicio } from "./resultadosService.js";
  */
 export async function dadosDoMes(competenciaId: string, apurado: boolean): Promise<DadosDoMes> {
   const prisma = getPrismaClient();
-  const [dre, volumes, importados, digitados] = await Promise.all([
+  const [dre, volumes, importados, digitados, metas] = await Promise.all([
     apurado
       ? prisma.resultadoApurado.findMany({
           where: { competenciaId, centroCustoId: null },
@@ -21,7 +21,10 @@ export async function dadosDoMes(competenciaId: string, apurado: boolean): Promi
     prisma.indicadorImportado.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
     // Os digitados nas abas Comercial e Administrativo das Listas sobrepõem os importados.
     prisma.indicadorDigitado.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
+    // As metas do orçamento do mês (os GME 4 e 8).
+    prisma.metaImportada.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
   ]);
+  const porMeta = new Map(metas.map((x) => [x.nome, Number(x.valor)]));
   const porVisao = new Map(dre.map((r) => [`${r.unidadeNegocio?.codigo ?? 0}|${r.linhaDRE.codigo}`, Number(r.valor)]));
   // Cada origem aparece em mais de uma regra de rateio com o mesmo volume: vale uma vez.
   const porOrigem = new Map(volumes.map((v) => [v.regraRateio.origemDoVolume, Number(v.quantidade)]));
@@ -30,7 +33,16 @@ export async function dadosDoMes(competenciaId: string, apurado: boolean): Promi
     dre: (u, c) => (apurado ? (porVisao.get(`${u}|${c}`) ?? 0) : NaN),
     volume: (o) => (apurado ? (porOrigem.get(o) ?? 0) : NaN),
     importado: (n) => porNome.get(n) ?? null,
+    meta: (n) => porMeta.get(n) ?? null,
   };
+}
+
+/** Liga cada mês aos anteriores do exercício (em ordem), para os indicadores acumulados do GME 8. */
+export function encadearMeses<T extends DadosDoMes | null>(dados: T[]): T[] {
+  dados.forEach((d, i) => {
+    if (d) d.anteriores = dados.slice(0, i).filter((x): x is NonNullable<T> => x !== null);
+  });
+  return dados;
 }
 
 export const indicadoresService = {
@@ -48,8 +60,8 @@ export const indicadoresService = {
       ),
     );
     const metas = meses.map((m) => metasPorMes.get(m.mes) ?? null);
-    const dados = await Promise.all(
-      meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null) : null)),
+    const dados = encadearMeses(
+      await Promise.all(meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null) : null))),
     );
     return {
       ano,

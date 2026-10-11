@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { acumular, INDICADORES, type Parte } from "./indicadores.js";
-import { dadosDoMes } from "./indicadoresService.js";
+import { dadosDoMes, encadearMeses } from "./indicadoresService.js";
 import { acumularMeta } from "./metasOrcamento.js";
 import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
 import { mesesDoExercicio } from "./resultadosService.js";
@@ -50,8 +50,8 @@ export const painelService = {
       select: { id: true, mes: true, metasImportadas: { select: { nome: true, valor: true } } },
     });
     const porMes = new Map(competencias.map((c) => [c.mes, c]));
-    const dados = await Promise.all(
-      meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null) : null)),
+    const dados = encadearMeses(
+      await Promise.all(meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null) : null))),
     );
     const metas = meses.map((m) => {
       const lista = porMes.get(m.mes)?.metasImportadas ?? [];

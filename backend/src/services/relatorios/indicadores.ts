@@ -29,6 +29,10 @@ export type DadosDoMes = {
   dre: (unidade: number, codigo: string) => number;
   volume: (origem: string) => number;
   importado: (nome: string) => number | null;
+  /** As metas importadas do mês (aba Metas (Orçamento)): a capacidade de produção e o orçado dos atingimentos (GME 4 e GME 8). */
+  meta?: (nome: string) => number | null;
+  /** Os meses anteriores do exercício, em ordem (os atingimentos acumulados do GME 8). */
+  anteriores?: DadosDoMes[];
 };
 /** O valor do mês e o peso dele no acumulado; `componentes`, quando o acumulado pondera partes (Matriz e Filial) em vez do total. */
 export type Parte = { valor: number | null; peso?: number; componentes?: Array<{ valor: number | null; peso: number }> };
@@ -116,6 +120,32 @@ const operacaoTotal =
     return { valor: total.valor, componentes: [matriz, filial].map((p) => ({ valor: p.valor, peso: p.peso ?? 0 })) };
   };
 const venda = (tipo: string) => (m: DadosDoMes) => m.importado(`Venda: ${tipo}`);
+
+/** O valor do mês de outro indicador do catálogo. */
+const valorDe = (nome: string, m: DadosDoMes) => CALCULOS[nome](m).valor;
+
+/**
+ * GME 4 (aba Realizado do INDICADORES DE RESULTADO, linhas 112 e 113): o volume do mês sobre a capacidade de produção,
+ * que é a meta de Produção (Vol.): Total do mês (Metas!M7). A demanda gerada só tem valor no mês com a Venda: Total, e
+ * o acumulado pondera pela venda; a expedida pondera pela expedição.
+ */
+const sobreCapacidade = (volume: (m: DadosDoMes) => number | null, peso: (m: DadosDoMes) => number | null): Calculo => (m) => {
+  const p = peso(m);
+  if (p === null || !Number.isFinite(p)) return { valor: null };
+  return { valor: divide(volume(m) ?? NaN, m.meta?.("Produção (Vol.): Total") ?? NaN), peso: p };
+};
+
+/**
+ * GME 8 (linhas 114 e 115): o realizado de janeiro até o mês sobre o orçado do mesmo período (as metas importadas);
+ * o acumulado é o do último mês.
+ */
+const atingimentoAcumulado = (nome: string): Calculo => (m) => {
+  if (valorDe(nome, m) === null) return { valor: null };
+  const meses = [...(m.anteriores ?? []), m];
+  const realizado = meses.reduce((s, x) => s + (valorDe(nome, x) ?? 0), 0);
+  const orcado = meses.reduce((s, x) => s + (x.meta?.(nome) ?? 0), 0);
+  return { valor: divide(realizado, orcado) };
+};
 
 const CALCULOS: Record<string, Calculo> = {
   "Custos de Produção: Matriz (CPP)": razao(1, [L.CPP], COD.RLPF),
@@ -214,6 +244,10 @@ const CALCULOS: Record<string, Calculo> = {
   "Resultado Líquido (RL)": v(0, L.RL),
   // O mix acumula ponderado pela venda total (célula Q111 da aba Realizado).
   "Repres. do Mix Ampliado nas Vendas": importado("Repres. do Mix Ampliado nas Vendas", venda("Total")),
+  "Média Móvel da Demanda Gerada": sobreCapacidade((m) => m.importado("Demanda (Vol.): Total (Fabricação)"), (m) => m.importado("Venda: Total")),
+  "Média Móvel da Demanda Expedida": sobreCapacidade((m) => finito(m.dre(0, L.EXPEDICAO)), (m) => finito(m.dre(0, L.EXPEDICAO))),
+  "Atingimento do FCOL Acumulado": atingimentoAcumulado("Fluxo de Caixa Operacional Líquido"),
+  "Atingimento da MC Acumulada": atingimentoAcumulado("Margem de Contribuição (MC): Total"),
 };
 
 type Tupla = [grupo: string, numero: string, nome: string, sentido: string, unidade: string, metodologia: string, acumulado: "ACUM" | "ATUAL"];
@@ -329,6 +363,11 @@ const LISTA: Tupla[] = [
   ["Geral", "7", "Eficiência da Operação: MO Geral Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
   ["Geral", "8", "Eficiência da Operação: Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
   ["GME", "GME 3", "Repres. do Mix Ampliado nas Vendas", "↑", "%", "Venda Complementar / Venda Total", "ACUM"],
+  // Os GME 4 e 8, das linhas 112 a 115 da aba Realizado (11/10/2026); não estão na Realizado (SIG).
+  ["GME", "GME 4", "Média Móvel da Demanda Gerada", "↑", "%", "Demanda Gerada / Capacidade de Produção (Global)", "ACUM"],
+  ["GME", "GME 4", "Média Móvel da Demanda Expedida", "↑", "%", "Demanda Expedida / Capacidade de Produção (Global)", "ACUM"],
+  ["GME", "GME 8", "Atingimento do FCOL Acumulado", "↑", "%", "Realizado / Orçado", "ATUAL"],
+  ["GME", "GME 8", "Atingimento da MC Acumulada", "↑", "%", "Realizado / Orçado", "ATUAL"],
 ];
 
 export const INDICADORES: Indicador[] = LISTA.map(([grupo, numero, nome, sentido, unidade, metodologia, acumulado]) => ({
