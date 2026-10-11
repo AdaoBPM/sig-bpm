@@ -88,15 +88,25 @@ export function TabelaResultados({
   // R$/m³, em cinza) e a variação (em amarelo): a diferença, o atingimento e a eficiência.
   const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
   const orcadoDa = (l: LinhaResultado, v: number | undefined) => (l.tipo === "SECAO" || v === undefined ? "" : l.volume ? formato.valor(v) : formato.inteiro(v));
-  /** Diferença: o realizado menos o orçado. */
-  const diferenca = (l: LinhaResultado, r: Celula, o: Celula | undefined) =>
-    l.tipo === "SECAO" || !o ? "" : r.valor === null || o.valor === null ? "—" : l.volume ? formato.valor(r.valor - o.valor) : formato.inteiro(r.valor - o.valor);
+  /** O texto com o sinal: + nos positivos (o − dos negativos vem do formato); o que arredonda para zero fica sem sinal. */
+  const comSinal = (v: number, texto: string) => (v > 0 && /[1-9]/.test(texto) ? `+${texto}` : texto);
+  /** Diferença: o realizado menos o orçado, com o sinal. */
+  const diferenca = (l: LinhaResultado, r: Celula, o: Celula | undefined) => {
+    if (l.tipo === "SECAO" || !o) return "";
+    if (r.valor === null || o.valor === null) return "—";
+    const d = r.valor - o.valor;
+    return comSinal(d, l.volume ? formato.valor(d) : formato.inteiro(d));
+  };
   /** Atingimento: o realizado sobre o orçado, em percentual (orçado zero: traço). */
   const atingimento = (l: LinhaResultado, r: Celula, o: Celula | undefined) =>
     l.tipo === "SECAO" || !o ? "" : r.valor === null || !o.valor ? "—" : formato.pct(r.valor / o.valor);
-  /** Eficiência: o % realizado menos o % orçado, em pontos percentuais (só nas linhas com %). */
-  const eficiencia = (l: LinhaResultado, r: Celula, o: Celula | undefined) =>
-    l.tipo === "SECAO" || l.volume || !o || !temPct(l) ? "" : r.pct === null || o.pct === null ? "—" : `${formato.umaCasa((r.pct - o.pct) * 100)} p.p.`;
+  /** Eficiência: o % realizado menos o % orçado, em pontos percentuais, com o sinal (só nas linhas com %). */
+  const eficiencia = (l: LinhaResultado, r: Celula, o: Celula | undefined) => {
+    if (l.tipo === "SECAO" || l.volume || !o || !temPct(l)) return "";
+    if (r.pct === null || o.pct === null) return "—";
+    const pp = (r.pct - o.pct) * 100;
+    return `${comSinal(pp, formato.umaCasa(pp))} p.p.`;
+  };
   const LARGURAS_DO_ORCADO = [136, 64, 84, 124, 108, 104];
   const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
