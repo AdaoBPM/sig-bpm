@@ -67,7 +67,7 @@ export function CenariosContent() {
               em “Gravar Marcação”; a coluna Marcação mostra a atual. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
-            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome e a descrição, e excluir.</li>
+            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome e a descrição, e excluir. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
             <li>Use os filtros nos rótulos das colunas.</li>
           </ul>
         }
@@ -167,7 +167,15 @@ export function CenariosContent() {
                     <button type="button" className={acao} title="Editar o nome e a descrição" aria-label={`Editar ${c.nome}`} onClick={() => setDialogo({ tipo: "editar", c })}>
                       <Pencil className="size-4" />
                     </button>
-                    <button type="button" className={acao} title="Excluir o cenário" aria-label={`Excluir ${c.nome}`} onClick={() => setDialogo({ tipo: "excluir", c })}>
+                    {/* O cenário marcado não se exclui: o ícone fica apagado, com o motivo na dica. */}
+                    <button
+                      type="button"
+                      className={`${acao} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
+                      disabled={!!c.marcacao}
+                      title={c.marcacao ? `Marcado como ${rotuloMarcacao(c.marcacao)}: tire a marcação antes de excluir` : "Excluir o cenário"}
+                      aria-label={`Excluir ${c.nome}`}
+                      onClick={() => setDialogo({ tipo: "excluir", c })}
+                    >
                       <Trash2 className="size-4" />
                     </button>
                   </>

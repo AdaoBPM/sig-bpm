@@ -222,8 +222,12 @@ export const cenariosService = {
     return this.obter(id);
   },
 
+  /** Exclui o cenário; um cenário marcado (Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos) não se exclui. */
   async excluir(id: string, usuario: Usuario) {
     const antes = await obterOuFalhar(id);
+    if (antes.marcacao) {
+      throw new CenarioError(409, `O cenário ${antes.nome} está marcado como ${MARCACOES[antes.marcacao]}: tire a marcação (ou marque outro cenário) antes de excluí-lo.`);
+    }
     await getPrismaClient().cenario.delete({ where: { id } });
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "EXCLUSAO", entidade: "cenario", entidadeId: id, antes });
   },

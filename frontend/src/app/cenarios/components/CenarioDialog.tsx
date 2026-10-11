@@ -133,7 +133,6 @@ export function ExcluirCenarioDialog({ cenario, onFechar }: { cenario: Cenario; 
           <DialogTitle>Excluir Cenário</DialogTitle>
           <DialogDescription>
             O cenário {cenario.nome} ({cenario.ano}) sai da lista, com a DRE e as metas dele. A exclusão fica no log de auditoria e não se desfaz.
-            {cenario.marcacao === "ORCAMENTO_EMPRESARIAL" ? " Ele é o Orçamento Empresarial: sem ele, o orçado de Resultados Realizados volta a ser o das metas importadas." : ""}
           </DialogDescription>
         </DialogHeader>
         <Erro erro={excluir.isError ? mensagemDeErro(excluir.error, "Não foi possível excluir o cenário.") : null} />
