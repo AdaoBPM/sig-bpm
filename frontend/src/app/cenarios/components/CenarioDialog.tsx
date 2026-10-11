@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +32,6 @@ export function Erro({ erro }: { erro: string | null }) {
  * descrição de um cenário.
  */
 export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenario | null; cenarios: Cenario[]; onFechar: () => void }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const atual = new Date().getFullYear();
   const [nome, setNome] = useState(cenario?.nome ?? "");
@@ -51,7 +49,6 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       toast.success(cenario ? "Cenário alterado." : `Cenário ${c.nome} criado.`);
       onFechar();
-      if (!cenario) router.push(`/cenarios/sinteticos/${c.id}/resultados`);
     },
   });
 
