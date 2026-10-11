@@ -15,8 +15,8 @@ const OBRAS_GENERICAS = new Set(["G11", "M2", "M3", "M9999"]);
  *  - nome da primeira lista que a trouxe. O nome não é sobrescrito depois,
  *    porque cada lista abrevia de um jeito ("ABIMAR" e "ABIMAR | AMPLIAÇÃO
  *    LOJA IÇARA" são a mesma obra) e ele ficaria mudando a cada importação.
- *    A obra que nasceu sem nome (a DRE do Comercial só traz o código) recebe
- *    o da primeira lista que o trouxer.
+ *    A obra que nasceu sem nome recebe o da primeira lista que o trouxer (ou o
+ *    da aba Pedidos, na importação da DRE do Comercial).
  *
  * A situação diante do contrato (SEM_CONTRATO, INCONSISTENTE) é apurada no
  * Passo 14, com a DRE do Comercial.
@@ -24,16 +24,20 @@ const OBRAS_GENERICAS = new Set(["G11", "M2", "M3", "M9999"]);
 export async function garantirObras(
   tx: Tx,
   obras: Map<string, string | null>,
-): Promise<{ porCodigo: Map<string, string>; criadas: number }> {
+): Promise<{ porCodigo: Map<string, string>; criadas: number; nomeadas: number }> {
   const codigos = [...obras.keys()];
   const existentes = await tx.obra.findMany({
     where: { codigo: { in: codigos } },
     select: { id: true, codigo: true, nome: true },
   });
   const porCodigo = new Map(existentes.map((o) => [o.codigo, o.id]));
+  let nomeadas = 0;
   for (const o of existentes) {
     const nome = obras.get(o.codigo)?.trim();
-    if (nome && nome !== o.codigo && (!o.nome || o.nome === o.codigo)) await tx.obra.update({ where: { id: o.id }, data: { nome } });
+    if (nome && nome !== o.codigo && (!o.nome || o.nome === o.codigo)) {
+      await tx.obra.update({ where: { id: o.id }, data: { nome } });
+      nomeadas++;
+    }
   }
 
   const novas = codigos.filter((c) => !porCodigo.has(c));
@@ -56,5 +60,5 @@ export async function garantirObras(
     });
     for (const o of criadas) porCodigo.set(o.codigo, o.id);
   }
-  return { porCodigo, criadas: novas.length };
+  return { porCodigo, criadas: novas.length, nomeadas };
 }

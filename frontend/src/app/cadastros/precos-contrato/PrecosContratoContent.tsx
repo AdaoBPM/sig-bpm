@@ -77,7 +77,7 @@ export function PrecosContratoContent() {
           <li>Os preços não se editam aqui: para mudá-los, reimporte a DRE do Comercial em Importações.</li>
         </ul>
       }
-      descricao="Da DRE de venda do Comercial, importada em Importações. Um preço alterado numa reimportação substitui o anterior, que fica no histórico. Somente leitura."
+      descricao="Da DRE de venda do Comercial, importada em Importações; o nome da obra vem da aba Pedidos do mesmo arquivo (Cliente | Nome da Obra), quando nenhuma lista o trouxe antes. Um preço alterado numa reimportação substitui o anterior, que fica no histórico. Somente leitura."
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}

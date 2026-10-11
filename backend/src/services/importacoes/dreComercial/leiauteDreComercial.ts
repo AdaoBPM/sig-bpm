@@ -16,6 +16,7 @@ type Decimal = Prisma.Decimal;
  */
 
 export const ABA_DRE_COMERCIAL = "DRE";
+export const ABA_PEDIDOS = "Pedidos";
 
 /**
  * Só entram as linhas da DRE que a receita prévia usa (decisão do usuário,
@@ -177,4 +178,36 @@ export function interpretarDreComercial(linhas: LinhaPlanilha[]): LeituraDreCome
     precos.push(preco);
   }
   return { ok: true, linhasLidas, precos, rejeicoes, ignoradas, obrasRepetidas };
+}
+
+/**
+ * O nome de cada obra pela aba Pedidos do mesmo arquivo (11/10/2026): os itens "Cliente" e "Nome da Obra" da menor
+ * versão, como "CLIENTE | NOME DA OBRA" — a forma das listas ("ABIMAR | AMPLIAÇÃO LOJA IÇARA"); só um dos dois quando
+ * o outro falta ou é igual. A DRE só traz o código, e a obra que ainda não apareceu numa lista ficava sem nome.
+ */
+export function nomesDasObras(linhas: LinhaPlanilha[]): Map<string, string> {
+  const cab = localizarCabecalho(linhas, ["CÓD.", "ITEM", "DESCRIÇÃO / VALOR"], ["VERSÃO (N)"]);
+  if ("erro" in cab) return new Map();
+  const c = (l: LinhaPlanilha, n: string) => (cab.col[n] >= 0 ? l.celulas[cab.col[n]] : null);
+  const porObra = new Map<string, { versao: number; cliente?: string; nome?: string }>();
+  for (const l of linhas) {
+    if (l.numero <= cab.numero) continue;
+    const obra = texto(c(l, "CÓD."));
+    const item = normalizar(c(l, "ITEM"));
+    const valor = c(l, "DESCRIÇÃO / VALOR");
+    if (!obra || (item !== "CLIENTE" && item !== "NOME DA OBRA") || vazia(valor)) continue;
+    const versao = Number(c(l, "VERSÃO (N)") ?? 0) || 0;
+    const atual = porObra.get(obra);
+    if (atual && atual.versao < versao) continue;
+    const dados = atual && atual.versao === versao ? atual : { versao };
+    dados[item === "CLIENTE" ? "cliente" : "nome"] = String(valor).trim().replace(/\s+/g, " ");
+    porObra.set(obra, dados);
+  }
+  const nomes = new Map<string, string>();
+  for (const [obra, { cliente, nome }] of porObra) {
+    const partes = [cliente, nome].filter((p): p is string => !!p);
+    const unico = partes.length === 2 && partes[0].toUpperCase() === partes[1].toUpperCase() ? [partes[0]] : partes;
+    if (unico.length) nomes.set(obra, unico.join(" | "));
+  }
+  return nomes;
 }

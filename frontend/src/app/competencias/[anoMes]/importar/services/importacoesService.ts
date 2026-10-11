@@ -99,6 +99,8 @@ export type ResumoDreComercial = {
   }>;
   removidosExemplos: Array<{ obra: string; etapa: string | null; linha: string; conta: string }>;
   obrasComAditivo: string[];
+  /** Obras sem nome que receberam o da aba Pedidos (desde 11/10/2026). */
+  obrasNomeadas?: number;
   obrasRepetidas: Array<{ obra: string; linhas: number }>;
   obrasSemContrato: number;
   /** Preços alterados que valoraram receita de meses já apurados: viram divergências. */

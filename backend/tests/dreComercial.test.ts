@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { LinhaPlanilha, ValorCelula } from "../src/lib/xlsx.js";
-import { assinaturaDoPreco, interpretarDreComercial, usadoNaReceita } from "../src/services/importacoes/dreComercial/leiauteDreComercial.js";
+import { assinaturaDoPreco, interpretarDreComercial, nomesDasObras, usadoNaReceita } from "../src/services/importacoes/dreComercial/leiauteDreComercial.js";
 
 const planilha = (...linhas: ValorCelula[][]): LinhaPlanilha[] =>
   linhas.map((celulas, i) => ({ numero: i + 1, celulas }));
@@ -78,5 +78,25 @@ describe("leitura da DRE do Comercial", () => {
     assert.equal(ok("Receita Bruta de Montagem", "MONTAGEM", "ROB"), true);
     assert.equal(ok("Impostos Operacionais", "ESTRUTURA", "IRB"), false);
     assert.equal(ok("Matérias Primas", "ESTRUTURA", "CPP"), false);
+  });
+});
+
+describe("nomes das obras pela aba Pedidos", () => {
+  it("monta CLIENTE | NOME DA OBRA na menor versão, sem repetir e sem os vazios", () => {
+    const n = nomesDasObras(
+      planilha(
+        ["PEDIDOS", null, null, "Obs.: Colar Apenas Valores."],
+        ["CÓD.", "PRODUTO / SERVIÇO", "ITEM", "DESCRIÇÃO / VALOR", "FORNECIMENTO", "VENDA", "VERSÃO (N)"],
+        ["G1", null, "Nome da Obra", "AMPLIAÇÃO  LOJA ", "Obra", "Global", 0],
+        ["G1", null, "Cliente", "ABIMAR", "Obra", "Global", 0],
+        ["G1", null, "Cliente", "OUTRO", "Obra", "Global", 1],
+        ["L2", null, "Cliente", "MIREIA", "Fab", "Mercantil", 0],
+        ["L2", null, "Nome da Obra", "Mireia", "Fab", "Mercantil", 0],
+        ["L3", null, "Nome da Obra", 0, "Fab", "Mercantil", 0],
+        ["L3", null, "Grupo Cliente", "X", "Fab", "Mercantil", 0],
+      ),
+    );
+    assert.deepEqual([...n], [["G1", "ABIMAR | AMPLIAÇÃO LOJA"], ["L2", "MIREIA"]]);
+    assert.equal(nomesDasObras(planilha(["outra coisa"])).size, 0);
   });
 });

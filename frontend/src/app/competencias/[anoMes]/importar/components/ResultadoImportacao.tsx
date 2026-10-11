@@ -456,6 +456,9 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
                 ? `${inteiro(resumo.obrasCriadas)} obra(s) nova(s) cadastradas a partir da DRE.`
                 : "Nenhuma obra nova."}
             </p>
+            {resumo.obrasNomeadas ? (
+              <p className="mt-1">{inteiro(resumo.obrasNomeadas)} obra(s) sem nome receberam o nome da aba Pedidos.</p>
+            ) : null}
             <p className="mt-1">
               {resumo.obrasComAditivo.length > 0
                 ? `Com aditivo (versão acima de 0): ${resumo.obrasComAditivo.join(", ")}.`

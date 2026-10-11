@@ -9,8 +9,10 @@ import { garantirObras } from "../listas/obras.js";
 import { escolherAba, recusarImportacao, registrarProgresso } from "../statusImportacao.js";
 import {
   ABA_DRE_COMERCIAL,
+  ABA_PEDIDOS,
   assinaturaDoPreco,
   interpretarDreComercial,
+  nomesDasObras,
   type PrecoLido,
 } from "./leiauteDreComercial.js";
 import { detectarPrecos, type SubstituicaoPreco } from "../../divergencias/divergenciasService.js";
@@ -46,14 +48,21 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
 
     const leitura = interpretarDreComercial(aba.linhas);
     if (!leitura.ok) throw new ArquivoRecusado(leitura.motivo);
+    // Os nomes das obras, da aba Pedidos do mesmo arquivo; sem a aba, as obras novas ficam com o código, como antes.
+    let nomes = new Map<string, string>();
+    try {
+      nomes = nomesDasObras(lerAba(conteudo, (abas) => abas.find((a) => a.trim().toLowerCase() === ABA_PEDIDOS.toLowerCase()) ?? null).linhas);
+    } catch (error) {
+      if (!(error instanceof ArquivoInvalidoError)) throw error;
+    }
     if (leitura.precos.length === 0) throw new ArquivoRecusado(`A aba "${aba.nome}" não tem nenhuma linha de preço.`);
     await registrarProgresso(importacaoId, 50);
 
     const agora = new Date();
     const resultado = await prisma.$transaction(
       async (tx) => {
-        const obras = new Map(leitura.precos.map((p) => [p.obra, null]));
-        const { porCodigo, criadas } = await garantirObras(tx, obras);
+        const obras = new Map(leitura.precos.map((p) => [p.obra, nomes.get(p.obra) ?? null]));
+        const { porCodigo, criadas, nomeadas } = await garantirObras(tx, obras);
 
         const linhas = await tx.linha.findMany({ where: { tipo: { in: ["PRODUTO", "OBRA"] } }, select: { id: true, tipo: true, nome: true } });
         // A LINHA da DRE mistura linhas de produto e de obra; produto tem precedência.
@@ -122,6 +131,7 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
           aba: aba.nome,
           obras: obras.size,
           obrasCriadas: criadas,
+          obrasNomeadas: nomeadas,
           precos: { novos: novos.length, alterados: alterados.length, inalterados, removidos: removidos.length },
           alteracoes: alterados.slice(0, MAX_EXEMPLOS).map(({ lido, anterior }) => ({
             obra: lido.obra,
