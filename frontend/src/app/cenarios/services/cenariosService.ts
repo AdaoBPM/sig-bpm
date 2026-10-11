@@ -72,7 +72,7 @@ export const cenariosService = {
       })
     ).data.data,
   /** Importação, passo 2: grava o que a prévia mostrou, no cenário ou num cenário novo (nome e descrição). */
-  importar: async (previa: PreviaCenario, destino: { cenarioId: string } | { nome: string; descricao: string | null }) =>
+  importar: async (previa: PreviaCenario, destino: { cenarioId: string } | { nome: string; ano: number; descricao: string | null }) =>
     (
       await api.post<{ data: { cenario: Cenario; previa: PreviaCenario } }>("/proxy/cenarios/importar", {
         hash: previa.hash,

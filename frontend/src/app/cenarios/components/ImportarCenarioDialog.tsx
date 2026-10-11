@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, type Cenario, type Mudancas, type PreviaCenario } from "../services/cenariosService";
-import { botaoPrimario, Erro } from "./CenarioDialog";
+import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
 
 const ICONES = {
   importar: <ArrowDownToLine className="size-4 text-gray-900" />,
@@ -148,6 +148,8 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
+  const atual = new Date().getFullYear();
+  const [ano, setAno] = useState(String(atual));
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [envio, setEnvio] = useState(0);
   const analisar = useMutation({
@@ -157,7 +159,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
     },
   });
   const importar = useMutation({
-    mutationFn: () => cenariosService.importar(analisar.data!, cenario ? { cenarioId: cenario.id } : { nome: nome.trim(), descricao: descricao.trim() || null }),
+    mutationFn: () => cenariosService.importar(analisar.data!, cenario ? { cenarioId: cenario.id } : { nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
@@ -172,6 +174,8 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
     setArquivo(null);
   };
   const ocupado = analisar.isPending || importar.isPending;
+  // O exercício escolhido precisa ser o dos meses do arquivo (num cenário existente, o do cenário, conferido na prévia).
+  const exercicioDiferente = !cenario && previa && !feito && previa.ano !== Number(ano) ? `O arquivo é de ${previa.ano}, e o exercício escolhido, ${ano}: escolha ${previa.ano} ou outro arquivo.` : null;
 
   return (
     <Dialog open onOpenChange={(o) => (!o && !ocupado ? onFechar() : undefined)}>
@@ -181,17 +185,31 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
           <DialogDescription>
             Escolha uma planilha (.xlsx) com as abas da DRE por unidade, como as do ORÇAMENTO BPM 2026 (Consolidado, Matriz, Filial, Serviços,
             Desp.+Extra e Extra RN), e a aba das metas, como a Metas (Orçamento) do INDICADORES DE RESULTADO. A ferramenta lê o arquivo, confere as
-            abas e mostra o que vai entrar{cenario ? " e o que muda no cenário" : ""}. Nada é importado antes de você confirmar.
+            abas e o exercício (os meses dos rótulos) e mostra o que vai entrar{cenario ? " e o que muda no cenário" : ""}. Nada é importado antes de você confirmar.
           </DialogDescription>
         </DialogHeader>
 
-        {cenario || feito ? null : (
-          <div className="grid shrink-0 gap-3 sm:grid-cols-2">
+        {feito ? null : cenario ? (
+          <p className="shrink-0 text-sm text-gray-700">
+            Exercício: <span className="font-medium text-gray-900">{cenario.ano}</span> (o do cenário).
+          </p>
+        ) : (
+          <div className="grid shrink-0 gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
             <div className="space-y-1.5">
               <Label htmlFor="importar-nome">Nome do Cenário</Label>
               <Input id="importar-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} className="rounded-sm" placeholder="Ex.: Cenário Adotado (REV02)" />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="importar-ano">Exercício</Label>
+              <select id="importar-ano" value={ano} onChange={(e) => setAno(e.target.value)} disabled={importar.isPending} className={classeSelect}>
+                {[atual - 1, atual, atual + 1, atual + 2].map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="importar-descricao">Descrição (opcional)</Label>
               <Input id="importar-descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={500} className="rounded-sm" />
             </div>
@@ -232,6 +250,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
                   : ", num cenário novo."}
             </p>
             {exibida.bloqueio ? <Erro erro={exibida.bloqueio} /> : null}
+            {exercicioDiferente ? <Erro erro={exercicioDiferente} /> : null}
             {!feito && !exibida.cenario && !nome.trim() ? <p className="shrink-0 text-sm text-yellow-800">Dê um nome ao cenário para importar.</p> : null}
             <TabelaPrevia p={exibida} importado={!!feito} />
             <Erro erro={importar.isError ? mensagemDeErro(importar.error, "Não foi possível importar o arquivo.") : null} />
@@ -256,7 +275,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
               <Button
                 type="button"
                 className={botaoPrimario}
-                disabled={!!previa.bloqueio || (!cenario && !nome.trim()) || importar.isPending}
+                disabled={!!previa.bloqueio || !!exercicioDiferente || (!cenario && !nome.trim()) || importar.isPending}
                 title={!cenario && !nome.trim() ? "Dê um nome ao cenário" : undefined}
                 onClick={() => importar.mutate()}
               >

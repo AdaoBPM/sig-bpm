@@ -270,9 +270,9 @@ export const cenariosService = {
   /**
    * Importação, passo 2 (o usuário confirmou): relê o arquivo guardado e grava. As abas da DRE substituem as mesmas
    * visões do cenário, e a aba das metas substitui as metas (inclusive as digitadas). Sem `cenarioId`, cria o
-   * cenário, no exercício do arquivo.
+   * cenário no exercício escolhido (`ano`), que precisa ser o dos meses do arquivo.
    */
-  async importar(dados: { hash: string; cenarioId: string | null; nome: string | null; descricao: string | null; nomeArquivo: string }, usuario: Usuario) {
+  async importar(dados: { hash: string; cenarioId: string | null; nome: string | null; ano: number | null; descricao: string | null; nomeArquivo: string }, usuario: Usuario) {
     const prisma = getPrismaClient();
     let conteudo: Buffer;
     try {
@@ -284,6 +284,7 @@ export const cenariosService = {
     const p = await previa(lido, dados.cenarioId);
     if (p.bloqueio) throw new CenarioError(400, p.bloqueio);
     if (!p.cenario && !dados.nome) throw new CenarioError(400, "Dê um nome ao cenário.");
+    if (!p.cenario && dados.ano !== null && dados.ano !== lido.ano) throw new CenarioError(400, `O arquivo é de ${lido.ano}, e o exercício escolhido, ${dados.ano}.`);
     const { ano, dre, metas } = lido;
 
     const agora = new Date();

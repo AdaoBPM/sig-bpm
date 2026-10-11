@@ -24,7 +24,6 @@ import { ImportarCenarioDialog } from "../components/ImportarCenarioDialog";
 import { cenariosService, MARCACOES, rotuloMarcacao, type Cenario, type MarcacaoCenario } from "../services/cenariosService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
-const instante = (iso: string | null) => (iso ? new Date(iso).getTime() : null);
 
 /** O que o cenário tem: as visões da DRE (das seis) e os indicadores com meta. */
 const conteudoDe = (c: Cenario) => (c.visoes.length === 0 && c.indicadores === 0 ? "Vazio" : `DRE: ${c.visoes.length}/6 · Metas: ${c.indicadores}`);
@@ -34,9 +33,8 @@ const COLUNAS: Coluna<Cenario>[] = [
   { chave: "ano", rotulo: "Exercício", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
   { chave: "marcacao", rotulo: "Marcação", valor: (c) => rotuloMarcacao(c.marcacao) },
   { chave: "conteudo", rotulo: "Conteúdo", valor: conteudoDe },
+  // O arquivo e, embaixo, quando foi importado (uma coluna só, para a tabela caber na largura da tela).
   { chave: "arquivo", rotulo: "Arquivo", valor: (c) => c.nomeArquivo },
-  { chave: "importadoEm", rotulo: "Importado em", tipo: "data", valor: (c) => instante(c.importadoEm), texto: (c) => dataCurta(c.importadoEm) },
-  { chave: "criadoEm", rotulo: "Criado em", tipo: "data", valor: (c) => instante(c.criadoEm), texto: (c) => `${dataCurta(c.criadoEm)}${c.criadoPor ? ` · ${c.criadoPor}` : ""}` },
   { chave: "acoes", rotulo: "", semFiltro: true },
 ];
 
@@ -63,7 +61,7 @@ function Marcacao({ c, pode }: { c: Cenario; pode: boolean }) {
       disabled={marcar.isPending}
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => marcar.mutate((e.target.value || null) as MarcacaoCenario | null)}
-      className={`h-8 rounded-sm border border-gray-300 bg-white px-2 text-sm ${c.marcacao ? "font-medium text-gray-900" : "text-gray-500"}`}
+      className={`h-8 w-40 rounded-sm border border-gray-300 bg-white px-2 text-sm ${c.marcacao ? "font-medium text-gray-900" : "text-gray-500"}`}
     >
       <option value="">Sem Marcação</option>
       {MARCACOES.map((m) => (
@@ -94,7 +92,7 @@ export function CenariosContent() {
         titulo="Cenários Gerados"
         comoUsar={
           <ul>
-            <li>Use “Importar Cenário” para criar um cenário a partir de uma planilha, ou “Novo Cenário” para um cenário vazio ou a cópia de outro.</li>
+            <li>Use “Importar Cenário” para criar um cenário a partir de uma planilha (com o nome, o exercício e a descrição), ou “Novo Cenário” para um cenário vazio ou a cópia de outro.</li>
             <li>
               Na importação, escolha o arquivo: a ferramenta lê e confere as abas e mostra, aba por aba, o que vai entrar e o que muda no cenário
               (valores novos, alterados e removidos; “Sem mudança” quando é igual). Nada é gravado antes de você clicar em “Importar”.
@@ -157,27 +155,37 @@ export function CenariosContent() {
           error={isError ? "Erro ao carregar os cenários." : null}
           emptyMessage="Nenhum cenário gerado"
           emptyHint="Use Importar Cenário ou Novo Cenário para criar o primeiro."
-          columns={["Cenário", "Exercício", "Marcação", "Conteúdo", "Arquivo", "Importado em", "Criado em", ""]}
+          columns={["Cenário", "Exercício", "Marcação", "Conteúdo", "Arquivo", ""]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrir(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
-              <td className="min-w-44 px-4 py-2 text-sm">
+              <td className="min-w-48 px-4 py-2 text-sm">
                 <Link href={`/cenarios/sinteticos/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
                   {c.nome}
                 </Link>
                 {c.descricao ? <div className="text-xs text-gray-500">{c.descricao}</div> : null}
+                {/* Quando e por quem foi criado, embaixo do nome (sem coluna própria, para a tabela caber na largura da tela). */}
+                <div className="text-xs text-gray-400">
+                  Criado em {dataCurta(c.criadoEm)}
+                  {c.criadoPor ? ` por ${c.criadoPor}` : ""}
+                </div>
               </td>
               <td className="px-4 text-sm">{c.ano}</td>
               <td className="px-4 text-sm">
                 <Marcacao c={c} pode={podeEditar} />
               </td>
-              <td className="px-4 text-sm whitespace-nowrap">{conteudoDe(c)}</td>
-              <td className="max-w-40 truncate px-4 text-sm" title={c.nomeArquivo ?? undefined}>
-                {c.nomeArquivo ?? "—"}
-              </td>
-              <td className="px-4 text-sm whitespace-nowrap">{dataCurta(c.importadoEm) ?? "—"}</td>
               <td className="px-4 text-sm whitespace-nowrap">
-                {dataCurta(c.criadoEm)}
-                {c.criadoPor ? <div className="text-xs text-gray-500">{c.criadoPor}</div> : null}
+                {c.visoes.length === 0 && c.indicadores === 0 ? (
+                  "Vazio"
+                ) : (
+                  <>
+                    <div>DRE: {c.visoes.length}/6</div>
+                    <div>Metas: {c.indicadores}</div>
+                  </>
+                )}
+              </td>
+              <td className="max-w-44 px-4 text-sm" title={c.nomeArquivo ?? undefined}>
+                <div className="truncate">{c.nomeArquivo ?? "—"}</div>
+                {c.importadoEm ? <div className="text-xs whitespace-nowrap text-gray-500">Importado em {dataCurta(c.importadoEm)}</div> : null}
               </td>
               <td className="px-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                 {podeEditar ? (

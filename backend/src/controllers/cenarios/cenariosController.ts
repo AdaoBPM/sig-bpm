@@ -84,13 +84,14 @@ export const cenariosController = {
         nomeArquivo: z.string().trim().min(1).max(255),
         cenarioId: idSchema.nullish(),
         nome: z.string().trim().max(120).nullish(),
+        ano: anoSchema.nullish(),
         descricao: descricaoSchema,
       })
       .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Dados inválidos." });
     const d = corpo.data;
     return responder(response, () =>
-      cenariosService.importar({ hash: d.hash, nomeArquivo: d.nomeArquivo, cenarioId: d.cenarioId ?? null, nome: d.nome || null, descricao: d.descricao }, usuario(request)),
+      cenariosService.importar({ hash: d.hash, nomeArquivo: d.nomeArquivo, cenarioId: d.cenarioId ?? null, nome: d.nome || null, ano: d.ano ?? null, descricao: d.descricao }, usuario(request)),
     );
   },
 
