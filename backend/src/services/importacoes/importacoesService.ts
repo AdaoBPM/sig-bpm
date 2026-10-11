@@ -264,8 +264,20 @@ export const importacoesService = {
    * refaz a prévia e põe na fila, uma por vez, cada mês a importar (ou, em mês
    * fechado, a comparar). Os meses anteriores ficam marcados com a competência
    * do envio (enviadaDe), para a sinalização. Um mês com erro não impede os outros.
+   *
+   * `reimportar` (11/10/2026): o arquivo é igual ao importado, e o usuário quer importá-lo assim mesmo (por exemplo,
+   * para a importação gravar algo que antes não lia, como o nome das obras da aba Pedidos). Entram também os meses
+   * sem mudança do mês do envio (os anteriores ficam como estão, para não pedirem reapuração à toa).
    */
-  async importarLote(input: { ano: number; mes: number; hash: string; nomeArquivo: string; usuarioId: string; alcanca: (tipo: TipoImportacao) => boolean }) {
+  async importarLote(input: {
+    ano: number;
+    mes: number;
+    hash: string;
+    nomeArquivo: string;
+    usuarioId: string;
+    alcanca: (tipo: TipoImportacao) => boolean;
+    reimportar?: boolean;
+  }) {
     const origem = await competenciaPorAnoMes(input.ano, input.mes);
     let conteudo: Buffer;
     try {
@@ -283,7 +295,8 @@ export const importacoesService = {
     for (const a of analise.abas) {
       const meses: MesImportado[] = [];
       for (const m of a.meses) {
-        if (m.acao !== "IMPORTAR" && m.acao !== "COMPARAR") {
+        const reimporta = !!input.reimportar && m.acao === "SEM_MUDANCA" && m.atual;
+        if (m.acao !== "IMPORTAR" && m.acao !== "COMPARAR" && !reimporta) {
           meses.push(m);
           continue;
         }
@@ -300,7 +313,7 @@ export const importacoesService = {
             forcar: true,
             enviadaDe: m.atual ? undefined : anoMesOrigem,
           });
-          meses.push({ ...m, importacaoId: imp.id });
+          meses.push({ ...m, acao: reimporta ? "IMPORTAR" : m.acao, importacaoId: imp.id });
         } catch (error) {
           if (!(error instanceof RegraImportacaoError)) throw error;
           meses.push({ ...m, erro: error.message });

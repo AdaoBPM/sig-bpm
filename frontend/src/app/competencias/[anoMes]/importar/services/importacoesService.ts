@@ -194,10 +194,12 @@ export const importacoesService = {
   },
 
   /** Importação em lote, passo 2: importa o que a prévia indicou; devolve as importações na fila. */
-  importarLote: async (anoMes: string, previa: PreviaLote): Promise<PreviaLote> => {
+  importarLote: async (anoMes: string, previa: PreviaLote, reimportar = false): Promise<PreviaLote> => {
     const { data } = await api.post<{ data: PreviaLote }>(`/proxy/competencias/${anoMes}/importacoes/lote/importar`, {
       hash: previa.hash,
       nomeArquivo: previa.nomeArquivo,
+      // Sem nenhuma mudança no arquivo: reimporta o mês do envio assim mesmo.
+      reimportar,
     });
     return data.data;
   },

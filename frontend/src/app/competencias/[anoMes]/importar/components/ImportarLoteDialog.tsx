@@ -209,7 +209,8 @@ function Aba({ anoMes, a, onAbrirRelatorio }: { anoMes: string; a: AbaLote; onAb
  * arquivo inteiro e mostra a prévia — as abas que reconheceu e, em cada uma,
  * o que muda no mês da competência e nos meses anteriores ainda abertos. Com
  * "Importar", os meses que mudaram entram na fila, um por vez; um erro é
- * avisado e o próximo segue.
+ * avisado e o próximo segue. Sem nenhuma mudança, "Importar" continua valendo e
+ * reimporta o mês do envio das abas sem mudança (11/10/2026).
  */
 /** Os arquivos que a importação lê, com as abas de cada um (o reconhecimento é pelo nome da aba). */
 const ARQUIVOS_DE_IMPORTACAO = [
@@ -266,7 +267,7 @@ export function ImportarLoteDialog({
     onSuccess: setPrevia,
   });
   const importar = useMutation({
-    mutationFn: () => importacoesService.importarLote(anoMes, previa!),
+    mutationFn: () => importacoesService.importarLote(anoMes, previa!, reimportar),
     onSuccess: (r) => {
       setImportado(r);
       // As importações novas (na fila) já entram no Histórico, no Em Vigor e nos sinais das competências.
@@ -287,6 +288,10 @@ export function ImportarLoteDialog({
   const meses = (previa?.abas ?? []).flatMap((a) => a.meses);
   const aImportar = meses.filter((m) => m.acao === "IMPORTAR" || m.acao === "COMPARAR");
   const anteriores = aImportar.filter((m) => !m.atual);
+  // Nada mudou: "Importar" reimporta assim mesmo o mês do envio das abas sem mudança.
+  const aReimportar = aImportar.length === 0 ? meses.filter((m) => m.acao === "SEM_MUDANCA" && m.atual) : [];
+  const reimportar = aReimportar.length > 0;
+  const quantos = aImportar.length || aReimportar.length;
   return (
     <Dialog
       open={aberto}
@@ -346,8 +351,10 @@ export function ImportarLoteDialog({
               {exibida.abas.length === 0
                 ? "nenhuma aba que a ferramenta importa."
                 : importado
-                  ? `${aImportar.length} mês(es) na fila de importação.`
-                  : aImportar.length === 0
+                  ? `${(importado.abas ?? []).flatMap((a) => a.meses).filter((m) => m.importacaoId).length} mês(es) na fila de importação.`
+                  : reimportar
+                    ? "nenhuma mudança: o arquivo é igual ao que está importado. “Importar” reimporta o mês atual assim mesmo."
+                    : aImportar.length === 0
                     ? "nada a importar: o arquivo é igual ao que está importado."
                     : `${aImportar.length} mês(es) a importar${anteriores.length ? `, dos quais ${anteriores.length} de meses anteriores ainda abertos` : ""}.`}
             </p>
@@ -397,11 +404,11 @@ export function ImportarLoteDialog({
                   <Button
                     type="button"
                     onClick={() => importar.mutate()}
-                    disabled={aImportar.length === 0 || importar.isPending}
+                    disabled={quantos === 0 || importar.isPending}
                     className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
                   >
                     {importar.isPending ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                    {importar.isPending ? "Importando…" : `Importar${aImportar.length ? ` (${aImportar.length})` : ""}`}
+                    {importar.isPending ? "Importando…" : `Importar${quantos ? ` (${quantos})` : ""}`}
                   </Button>
                 </>
               )}

@@ -81,7 +81,9 @@ export const importacoesController = {
   /** Importação em lote, passo 2: importa, mês a mês, o que a prévia indicou. */
   async importarLote(request: Request, response: Response) {
     const competencia = anoMesSchema.safeParse(request.params.anoMes);
-    const corpo = z.object({ hash: z.string().regex(/^[0-9a-f]{64}$/), nomeArquivo: z.string().trim().min(1).max(255) }).safeParse(request.body);
+    const corpo = z
+      .object({ hash: z.string().regex(/^[0-9a-f]{64}$/), nomeArquivo: z.string().trim().min(1).max(255), reimportar: z.boolean().optional() })
+      .safeParse(request.body);
     if (!competencia.success || !corpo.success) return response.status(400).json({ error: "Dados inválidos." });
     try {
       const data = await importacoesService.importarLote({
