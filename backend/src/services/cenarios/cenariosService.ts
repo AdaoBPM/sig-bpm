@@ -1,8 +1,12 @@
+import { createHash } from "node:crypto";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+
 import { getPrismaClient } from "../../config/prisma.js";
 import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
 import { ArquivoInvalidoError, lerAba, listarAbas } from "../../lib/xlsx.js";
 import { ACESSO_TOTAL } from "../acesso/acesso.js";
 import { auditar } from "../auditoriaService.js";
+import { caminhoDoArquivo, diretorioUploads } from "../importacoes/arquivosImportados.js";
 import { INDICADORES_DAS_LISTAS } from "../relatorios/catalogoIndicadores.js";
 import { basesDoConsolidado, COD } from "../relatorios/basesResultados.js";
 import { estrutura, montar } from "../relatorios/resultadosService.js";
@@ -57,6 +61,124 @@ async function conteudo(ids: string[]) {
 async function gravarEmLotes<T>(itens: T[], gravar: (lote: T[]) => Promise<unknown>) {
   for (let i = 0; i < itens.length; i += LOTE) await gravar(itens.slice(i, i + LOTE));
 }
+
+/** As abas do arquivo que a importação lê: a DRE por visão e as metas, com o exercício dos rótulos. */
+async function lerArquivo(conteudo: Buffer) {
+  const prisma = getPrismaClient();
+  let abas: string[];
+  try {
+    abas = listarAbas(conteudo);
+  } catch (error) {
+    if (error instanceof ArquivoInvalidoError) throw new CenarioError(400, error.message);
+    throw error;
+  }
+  const linhasDRE = await prisma.linhaDRE.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" }, select: { id: true, codigo: true, descricao: true } });
+  const nomes = (await prisma.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome);
+  const dre: AbaDRELida[] = [];
+  const ignoradas: string[] = [];
+  let metas: AbaMetasLida | null = null;
+  try {
+    const ler = (aba: string) => lerAba(conteudo, () => aba).linhas;
+    for (const a of ABAS_DRE) {
+      const aba = acharAba(abas, a.abas);
+      if (!aba) continue;
+      const lida = lerAbaDRE(a.visao, aba, ler(aba), linhasDRE);
+      if (lida) dre.push(lida);
+      else ignoradas.push(aba);
+    }
+    const abaMetas = acharAba(abas, ABAS_METAS);
+    if (abaMetas) {
+      metas = lerAbaMetas(abaMetas, ler(abaMetas), nomes);
+      if (!metas) ignoradas.push(abaMetas);
+    }
+  } catch (error) {
+    if (error instanceof ArquivoInvalidoError) throw new CenarioError(400, error.message);
+    throw error;
+  }
+  if (dre.length === 0 && !metas) {
+    throw new CenarioError(
+      400,
+      `O arquivo não tem nenhuma aba de cenário. As abas lidas são: ${ABAS_DRE.map((a) => a.abas[0]).join(", ")} (a DRE por unidade) e Metas ou Metas (Orçamento) (as metas dos indicadores). Abas encontradas: ${abas.join(", ")}.`,
+    );
+  }
+  const anos = [...new Set([...dre.map((d) => d.ano), ...(metas ? [metas.ano] : [])].filter((a) => a > 0))];
+  if (anos.length !== 1) throw new CenarioError(400, anos.length ? `As abas são de exercícios diferentes (${anos.join(", ")}).` : "Não achei o exercício nos rótulos dos meses.");
+  return { ano: anos[0], dre, metas, ignoradas };
+}
+
+const igual = (a: number, b: number) => Math.abs(a - b) <= Math.max(1e-6, Math.abs(b) * 1e-9);
+
+/** Os valores novos contra os do cenário: quantos entram, mudam e saem (o que ficaria igual não conta). */
+function comparar(novos: Map<string, number>, atuais: Map<string, number>) {
+  let novas = 0;
+  let alteradas = 0;
+  for (const [k, v] of novos) {
+    const a = atuais.get(k);
+    if (a === undefined) novas++;
+    else if (!igual(v, a)) alteradas++;
+  }
+  const removidas = [...atuais.keys()].filter((k) => !novos.has(k)).length;
+  return { novas, alteradas, removidas, semMudanca: novas + alteradas + removidas === 0 };
+}
+
+/**
+ * A prévia da importação: o que o arquivo traz, aba por aba, e, num cenário que já existe, o que muda nele. O
+ * bloqueio (o exercício do arquivo diferente do do cenário) impede a importação.
+ */
+async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: string | null) {
+  const prisma = getPrismaClient();
+  const existente = cenarioId ? await obterOuFalhar(cenarioId) : null;
+  const [resultados, metasAtuais] = existente
+    ? await Promise.all([
+        prisma.cenarioResultado.findMany({ where: { cenarioId: existente.id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
+        prisma.cenarioIndicador.findMany({ where: { cenarioId: existente.id }, select: { nome: true, mes: true, valor: true, origem: true } }),
+      ])
+    : [[], []];
+  const visoesAtuais = new Set(resultados.map((r) => r.visao));
+  return {
+    ano: lido.ano,
+    cenario: existente ? { id: existente.id, nome: existente.nome, ano: existente.ano } : null,
+    bloqueio: existente && existente.ano !== lido.ano ? `O arquivo é de ${lido.ano}, e o cenário, de ${existente.ano}: importe num cenário de ${lido.ano} ou num cenário novo.` : null,
+    visoes: lido.dre.map((d) => {
+      const atuais = new Map(resultados.filter((r) => r.visao === d.visao).map((r) => [`${r.linhaDREId}|${r.mes}`, Number(r.valor)]));
+      const novos = new Map(d.valores.map((v) => [`${v.linhaDREId}|${v.mes}`, v.valor]));
+      return {
+        visao: d.visao,
+        nome: ABAS_DRE.find((a) => a.visao === d.visao)!.nome,
+        aba: d.aba,
+        meses: d.meses,
+        linhas: d.linhas,
+        semPar: d.semPar,
+        valores: d.valores.length,
+        /** NOVA: o cenário não tem a visão; SUBSTITUI: tem, e o arquivo a substitui. */
+        acao: atuais.size === 0 ? ("NOVA" as const) : ("SUBSTITUI" as const),
+        mudancas: comparar(novos, atuais),
+      };
+    }),
+    /** As visões que o arquivo não traz: ficam como estão (com valores) ou vazias. */
+    faltam: ABAS_DRE.filter((a) => !lido.dre.some((d) => d.visao === a.visao)).map((a) => ({ nome: a.nome, temValores: visoesAtuais.has(a.visao) })),
+    metas: lido.metas
+      ? (() => {
+          const atuais = new Map(metasAtuais.map((m) => [`${m.nome}|${m.mes}`, Number(m.valor)]));
+          const novos = new Map(lido.metas.valores.map((v) => [`${v.nome}|${v.mes}`, v.valor]));
+          return {
+            aba: lido.metas.aba,
+            indicadores: lido.metas.indicadores,
+            meses: new Set(lido.metas.valores.map((v) => v.mes)).size,
+            ignorados: lido.metas.ignorados,
+            acao: atuais.size === 0 ? ("NOVA" as const) : ("SUBSTITUI" as const),
+            mudancas: comparar(novos, atuais),
+            /** Os lançamentos manuais digitados que a importação substitui. */
+            digitados: metasAtuais.filter((m) => m.origem === "DIGITADO").length,
+          };
+        })()
+      : null,
+    metasAtuais: metasAtuais.length,
+    ignoradas: lido.ignoradas,
+  };
+}
+
+export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 
 export const cenariosService = {
   async listar() {
@@ -129,60 +251,46 @@ export const cenariosService = {
   },
 
   /**
-   * Importa um arquivo: as abas da DRE que ele tiver substituem as mesmas visões do cenário, e a aba das metas
-   * substitui as metas (inclusive as digitadas). Sem `cenarioId`, cria o cenário, no exercício do arquivo.
+   * Importação, passo 1: guarda o arquivo (pelo hash) e devolve a prévia — o que cada aba traz e o que muda no
+   * cenário (`cenarioId`) ou, sem ele, no cenário novo. Nada é gravado no cenário.
    */
-  async importar(dados: { cenarioId: string | null; nome: string | null; descricao: string | null; nomeArquivo: string; conteudo: Buffer }, usuario: Usuario) {
-    const prisma = getPrismaClient();
-    let abas: string[];
+  async analisar(dados: { cenarioId: string | null; nomeArquivo: string; conteudo: Buffer }) {
+    const lido = await lerArquivo(dados.conteudo);
+    const hash = createHash("sha256").update(dados.conteudo).digest("hex");
+    await mkdir(diretorioUploads(), { recursive: true });
+    const caminho = caminhoDoArquivo(hash);
     try {
-      abas = listarAbas(dados.conteudo);
-    } catch (error) {
-      if (error instanceof ArquivoInvalidoError) throw new CenarioError(400, error.message);
-      throw error;
+      await access(caminho);
+    } catch {
+      await writeFile(caminho, dados.conteudo);
     }
-    const linhasDRE = await prisma.linhaDRE.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" }, select: { id: true, codigo: true, descricao: true } });
-    const nomes = (await prisma.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome);
-    const ler = (aba: string) => lerAba(dados.conteudo, () => aba).linhas;
+    return { hash, nomeArquivo: dados.nomeArquivo, ...(await previa(lido, dados.cenarioId)) };
+  },
 
-    const dre: AbaDRELida[] = [];
-    const ignoradas: string[] = [];
-    let metas: AbaMetasLida | null = null;
+  /**
+   * Importação, passo 2 (o usuário confirmou): relê o arquivo guardado e grava. As abas da DRE substituem as mesmas
+   * visões do cenário, e a aba das metas substitui as metas (inclusive as digitadas). Sem `cenarioId`, cria o
+   * cenário, no exercício do arquivo.
+   */
+  async importar(dados: { hash: string; cenarioId: string | null; nome: string | null; descricao: string | null; nomeArquivo: string }, usuario: Usuario) {
+    const prisma = getPrismaClient();
+    let conteudo: Buffer;
     try {
-      for (const a of ABAS_DRE) {
-        const aba = acharAba(abas, a.abas);
-        if (!aba) continue;
-        const lida = lerAbaDRE(a.visao, aba, ler(aba), linhasDRE);
-        if (lida) dre.push(lida);
-        else ignoradas.push(aba);
-      }
-      const abaMetas = acharAba(abas, ABAS_METAS);
-      if (abaMetas) {
-        metas = lerAbaMetas(abaMetas, ler(abaMetas), nomes);
-        if (!metas) ignoradas.push(abaMetas);
-      }
-    } catch (error) {
-      if (error instanceof ArquivoInvalidoError) throw new CenarioError(400, error.message);
-      throw error;
+      conteudo = await readFile(caminhoDoArquivo(dados.hash));
+    } catch {
+      throw new CenarioError(404, "O arquivo analisado não foi encontrado. Escolha o arquivo de novo.");
     }
-    if (dre.length === 0 && !metas) {
-      throw new CenarioError(
-        400,
-        `O arquivo não tem nenhuma aba de cenário. As abas lidas são: ${ABAS_DRE.map((a) => a.abas[0]).join(", ")} (a DRE por unidade) e Metas ou Metas (Orçamento) (as metas dos indicadores). Abas encontradas: ${abas.join(", ")}.`,
-      );
-    }
-    const anos = [...new Set([...dre.map((d) => d.ano), ...(metas ? [metas.ano] : [])].filter((a) => a > 0))];
-    if (anos.length !== 1) throw new CenarioError(400, anos.length ? `As abas são de exercícios diferentes (${anos.join(", ")}).` : "Não achei o exercício nos rótulos dos meses.");
-    const ano = anos[0];
-    const existente = dados.cenarioId ? await obterOuFalhar(dados.cenarioId) : null;
-    if (existente && existente.ano !== ano) throw new CenarioError(400, `O arquivo é de ${ano}, e o cenário, de ${existente.ano}.`);
-    if (!existente && !dados.nome) throw new CenarioError(400, "Dê um nome ao cenário.");
+    const lido = await lerArquivo(conteudo);
+    const p = await previa(lido, dados.cenarioId);
+    if (p.bloqueio) throw new CenarioError(400, p.bloqueio);
+    if (!p.cenario && !dados.nome) throw new CenarioError(400, "Dê um nome ao cenário.");
+    const { ano, dre, metas } = lido;
 
     const agora = new Date();
     const cenario = await prisma.$transaction(
       async (tx) => {
-        const c = existente
-          ? await tx.cenario.update({ where: { id: existente.id }, data: { nomeArquivo: dados.nomeArquivo, importadoEm: agora } })
+        const c = p.cenario
+          ? await tx.cenario.update({ where: { id: p.cenario.id }, data: { nomeArquivo: dados.nomeArquivo, importadoEm: agora } })
           : await tx.cenario.create({ data: { nome: dados.nome!, ano, descricao: dados.descricao, criadoPor: usuario.nome, nomeArquivo: dados.nomeArquivo, importadoEm: agora } });
         for (const d of dre) {
           await tx.cenarioResultado.deleteMany({ where: { cenarioId: c.id, visao: d.visao } });
@@ -196,23 +304,15 @@ export const cenariosService = {
       },
       { timeout: 120_000 },
     );
-    const resumo = {
-      ano,
-      visoes: dre.map((d) => ({ visao: d.visao, nome: ABAS_DRE.find((a) => a.visao === d.visao)!.nome, aba: d.aba, meses: d.meses, linhas: d.linhas, semPar: d.semPar })),
-      /** Abas com o nome de uma unidade que não são uma DRE. */
-      ignoradas,
-      faltam: ABAS_DRE.filter((a) => !dre.some((d) => d.visao === a.visao)).map((a) => a.nome),
-      metas: metas ? { aba: metas.aba, indicadores: metas.indicadores, ignorados: metas.ignorados } : null,
-    };
     await auditar({
       usuarioId: usuario.id,
       usuarioNome: usuario.nome,
       acao: "IMPORTACAO",
       entidade: "cenario",
       entidadeId: cenario.id,
-      metadados: { arquivo: dados.nomeArquivo, novo: !existente, visoes: resumo.visoes.map((v) => v.aba), metas: resumo.metas?.aba ?? null },
+      metadados: { arquivo: dados.nomeArquivo, hash: dados.hash, novo: !p.cenario, visoes: p.visoes.map((v) => v.aba), metas: p.metas?.aba ?? null },
     });
-    return { cenario: await this.obter(cenario.id), resumo };
+    return { cenario: await this.obter(cenario.id), previa: { hash: dados.hash, nomeArquivo: dados.nomeArquivo, ...p } };
   },
 
   /** Uma visão da DRE do cenário (0 Consolidado, 1 a 5 as unidades), mês a mês, como as abas de Resultados Realizados. */

@@ -68,18 +68,29 @@ export const cenariosController = {
     return responder(response, () => cenariosService.marcar(c, corpo.data.marcacao, usuario(request)));
   },
 
-  /** O arquivo vai cru no corpo; ?nomeArquivo=, e ?cenarioId= (importar num cenário) ou ?nome= e ?descricao= (cenário novo). */
-  importar(request: Request, response: Response) {
-    const q = z
-      .object({ nomeArquivo: z.string().trim().min(1).max(255), cenarioId: idSchema.optional(), nome: z.string().trim().max(120).optional(), descricao: z.string().trim().max(500).optional() })
-      .safeParse(request.query);
+  /** Importação, passo 1: o arquivo vai cru no corpo; ?nomeArquivo= e, para importar num cenário, ?cenarioId=. Devolve a prévia. */
+  analisar(request: Request, response: Response) {
+    const q = z.object({ nomeArquivo: z.string().trim().min(1).max(255), cenarioId: idSchema.optional() }).safeParse(request.query);
     if (!q.success) return response.status(400).json({ error: "Dados inválidos." });
     if (!Buffer.isBuffer(request.body) || request.body.length === 0) return response.status(400).json({ error: "O arquivo enviado está vazio." });
+    return responder(response, () => cenariosService.analisar({ cenarioId: q.data.cenarioId ?? null, nomeArquivo: q.data.nomeArquivo, conteudo: request.body as Buffer }));
+  },
+
+  /** Importação, passo 2 (o usuário confirmou): o hash da prévia e o destino — o cenário ou o nome do novo. */
+  importar(request: Request, response: Response) {
+    const corpo = z
+      .object({
+        hash: z.string().regex(/^[0-9a-f]{64}$/),
+        nomeArquivo: z.string().trim().min(1).max(255),
+        cenarioId: idSchema.nullish(),
+        nome: z.string().trim().max(120).nullish(),
+        descricao: descricaoSchema,
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Dados inválidos." });
+    const d = corpo.data;
     return responder(response, () =>
-      cenariosService.importar(
-        { cenarioId: q.data.cenarioId ?? null, nome: q.data.nome || null, descricao: q.data.descricao || null, nomeArquivo: q.data.nomeArquivo, conteudo: request.body as Buffer },
-        usuario(request),
-      ),
+      cenariosService.importar({ hash: d.hash, nomeArquivo: d.nomeArquivo, cenarioId: d.cenarioId ?? null, nome: d.nome || null, descricao: d.descricao }, usuario(request)),
     );
   },
 

@@ -95,6 +95,10 @@ export function CenariosContent() {
         comoUsar={
           <ul>
             <li>Use “Importar Cenário” para criar um cenário a partir de uma planilha, ou “Novo Cenário” para um cenário vazio ou a cópia de outro.</li>
+            <li>
+              Na importação, escolha o arquivo: a ferramenta lê e confere as abas e mostra, aba por aba, o que vai entrar e o que muda no cenário
+              (valores novos, alterados e removidos; “Sem mudança” quando é igual). Nada é gravado antes de você clicar em “Importar”.
+            </li>
             <li>Clique na linha para abrir o cenário, com as telas Resultados e Indicadores.</li>
             <li>
               Na coluna Marcação, escolha o papel do cenário no exercício: Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos. Cada

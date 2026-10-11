@@ -28,12 +28,21 @@ export type Cenario = {
   indicadores: number;
 };
 
-export type ResumoImportacao = {
+/** Quantos valores entram, mudam e saem do cenário. */
+export type Mudancas = { novas: number; alteradas: number; removidas: number; semMudanca: boolean };
+/** A prévia da importação: o que o arquivo traz, aba por aba, e o que muda no cenário. */
+export type PreviaCenario = {
+  hash: string;
+  nomeArquivo: string;
   ano: number;
-  visoes: Array<{ visao: number; nome: string; aba: string; meses: number; linhas: number; semPar: string[] }>;
+  cenario: { id: string; nome: string; ano: number } | null;
+  /** O que impede a importação (o exercício do arquivo diferente do do cenário). */
+  bloqueio: string | null;
+  visoes: Array<{ visao: number; nome: string; aba: string; meses: number; linhas: number; semPar: string[]; valores: number; acao: "NOVA" | "SUBSTITUI"; mudancas: Mudancas }>;
+  faltam: Array<{ nome: string; temValores: boolean }>;
+  metas: { aba: string; indicadores: number; meses: number; ignorados: string[]; acao: "NOVA" | "SUBSTITUI"; mudancas: Mudancas; digitados: number } | null;
+  metasAtuais: number;
   ignoradas: string[];
-  faltam: string[];
-  metas: { aba: string; indicadores: number; ignorados: string[] } | null;
 };
 
 /** RESULTADO: sai da DRE do cenário; MANUAL: lançamento manual; CALCULADO: DRE e lançamentos (eficiências); IMPORTADO: da aba das metas. */
@@ -51,15 +60,24 @@ export const cenariosService = {
   },
   marcar: async (id: string, marcacao: MarcacaoCenario | null) =>
     (await api.put<{ data: { desmarcado: string | null } }>(`/proxy/cenarios/${id}/marcacao`, { marcacao })).data.data,
-  /** O arquivo vai cru no corpo: num cenário (cenarioId) ou num cenário novo (nome e descrição). */
-  importar: async (arquivo: File, destino: { cenarioId: string } | { nome: string; descricao: string | null }, onProgresso?: (percentual: number) => void) =>
+  /** Importação, passo 1: o arquivo vai cru no corpo; devolve a prévia (nada é gravado). */
+  analisar: async (arquivo: File, cenarioId: string | null, onProgresso?: (percentual: number) => void) =>
     (
-      await api.post<{ data: { cenario: Cenario; resumo: ResumoImportacao } }>("/proxy/cenarios/importar", arquivo, {
-        params: { nomeArquivo: arquivo.name, ...("cenarioId" in destino ? { cenarioId: destino.cenarioId } : { nome: destino.nome, descricao: destino.descricao ?? undefined }) },
+      await api.post<{ data: PreviaCenario }>("/proxy/cenarios/importar/analise", arquivo, {
+        params: { nomeArquivo: arquivo.name, ...(cenarioId ? { cenarioId } : {}) },
         headers: { "Content-Type": "application/octet-stream" },
         onUploadProgress: (e) => {
           if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
         },
+      })
+    ).data.data,
+  /** Importação, passo 2: grava o que a prévia mostrou, no cenário ou num cenário novo (nome e descrição). */
+  importar: async (previa: PreviaCenario, destino: { cenarioId: string } | { nome: string; descricao: string | null }) =>
+    (
+      await api.post<{ data: { cenario: Cenario; previa: PreviaCenario } }>("/proxy/cenarios/importar", {
+        hash: previa.hash,
+        nomeArquivo: previa.nomeArquivo,
+        ...destino,
       })
     ).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,

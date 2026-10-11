@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import { AlertTriangle, ArrowDownToLine, CheckCircle2, Loader2, MinusCircle, Upload, XCircle } from "lucide-react";
 
 import { CampoArquivo } from "@/components/shared/CampoArquivo";
 import { Button } from "@/components/ui/button";
@@ -13,47 +13,136 @@ import { Label } from "@/components/ui/label";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type Cenario, type ResumoImportacao } from "../services/cenariosService";
+import { cenariosService, type Cenario, type Mudancas, type PreviaCenario } from "../services/cenariosService";
 import { botaoPrimario, Erro } from "./CenarioDialog";
 
-/** O que o resultado da importação mostra: as abas lidas e o que ficou de fora. */
-function Resumo({ r }: { r: ResumoImportacao }) {
+const ICONES = {
+  importar: <ArrowDownToLine className="size-4 text-gray-900" />,
+  ok: <CheckCircle2 className="size-4 text-green-600" />,
+  aviso: <AlertTriangle className="size-4 text-yellow-600" />,
+  erro: <XCircle className="size-4 text-red-600" />,
+  fora: <MinusCircle className="size-4 text-gray-400" />,
+};
+
+/** A situação de uma aba, como na importação do Fechamento Mensal: o ícone, o texto, o detalhe e os avisos. */
+function Situacao({ icone, texto, detalhe, avisos = [] }: { icone: keyof typeof ICONES; texto: string; detalhe?: string; avisos?: string[] }) {
   return (
-    <div className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-green-600 bg-white px-4 py-3 text-sm text-gray-700">
-      <p className="flex items-center gap-2 font-bold text-gray-900">
-        <CheckCircle2 className="size-4 text-green-700" />
-        Importado: exercício {r.ano}.
-      </p>
-      {r.visoes.length ? (
-        <ul className="list-disc space-y-0.5 pl-5">
-          {r.visoes.map((v) => (
-            <li key={v.visao}>
-              {v.nome} (aba {v.aba}): {v.linhas} linhas da DRE, {v.meses} meses.
-              {v.semPar.length ? <span className="text-yellow-800"> Sem par na Estrutura da DRE: {v.semPar.join("; ")}.</span> : null}
-            </li>
+    <div className="flex min-w-0 items-start gap-2 py-1">
+      <span className="mt-0.5 shrink-0">{ICONES[icone]}</span>
+      <div className="min-w-0">
+        <span className={`font-medium ${icone === "erro" ? "text-red-700" : "text-gray-900"}`}>{texto}</span>
+        {detalhe ? <p className="text-xs text-gray-600">{detalhe}</p> : null}
+        {avisos.map((a) => (
+          <p key={a} className="text-xs text-yellow-800">
+            {a}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const plural = (n: number, um: string, varios: string) => `${n.toLocaleString("pt-BR")} ${n === 1 ? um : varios}`;
+
+/** O que muda no cenário: os valores novos, os alterados e os que saem. */
+function textoMudancas(m: Mudancas) {
+  const partes = [m.novas ? plural(m.novas, "valor novo", "valores novos") : null, m.alteradas ? plural(m.alteradas, "alterado", "alterados") : null, m.removidas ? plural(m.removidas, "removido", "removidos") : null];
+  return partes.filter(Boolean).join(", ");
+}
+
+/** A situação de uma aba da prévia (ou, depois de importar, o que foi feito). */
+function situacaoDaAba(acao: "NOVA" | "SUBSTITUI", mudancas: Mudancas, conteudo: string, importado: boolean, avisos: string[], substitui = "Substitui a do cenário"): ReactNode {
+  if (importado) return <Situacao icone="ok" texto="Importada" detalhe={conteudo} avisos={avisos} />;
+  if (acao === "NOVA") return <Situacao icone={avisos.length ? "aviso" : "importar"} texto="Será importada" detalhe={conteudo} avisos={avisos} />;
+  if (mudancas.semMudanca) return <Situacao icone="fora" texto="Sem mudança" detalhe={`${conteudo}; igual ao que o cenário tem.`} avisos={avisos} />;
+  return <Situacao icone={avisos.length ? "aviso" : "importar"} texto={substitui} detalhe={`${conteudo}; ${textoMudancas(mudancas)}.`} avisos={avisos} />;
+}
+
+/** A prévia: as abas lidas, o que cada uma traz e o que muda no cenário; depois de importar, o mesmo quadro com o que foi feito. */
+function TabelaPrevia({ p, importado }: { p: PreviaCenario; importado: boolean }) {
+  const novo = !p.cenario;
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto rounded-sm border border-gray-200 [--topo-tabela:0px]">
+      <table className="tabela-sig w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900">
+            <th className="w-56 px-3 py-2">Aba</th>
+            <th className="px-3 py-2">Situação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {p.visoes.map((v) => (
+            <tr key={v.visao} className="border-b border-gray-100 align-top">
+              <td className="px-3 py-2">
+                <div className="font-medium text-gray-900">{v.aba}</div>
+                <div className="text-xs text-gray-500">DRE · {v.nome}</div>
+              </td>
+              <td className="px-3 py-1">
+                {situacaoDaAba(
+                  v.acao,
+                  v.mudancas,
+                  `${plural(v.linhas, "linha da DRE", "linhas da DRE")}, ${plural(v.meses, "mês", "meses")}`,
+                  importado,
+                  v.semPar.length ? [`Sem par na Estrutura da DRE (fica de fora): ${v.semPar.join("; ")}.`] : [],
+                )}
+              </td>
+            </tr>
           ))}
-        </ul>
-      ) : (
-        <p>Nenhuma aba da DRE no arquivo: a DRE do cenário ficou como estava.</p>
-      )}
-      {r.visoes.length && r.faltam.length ? <p className="text-yellow-800">Sem aba no arquivo (ficaram como estavam): {r.faltam.join(", ")}.</p> : null}
-      {r.metas ? (
-        <p>
-          Metas (aba {r.metas.aba}): {r.metas.indicadores} indicadores.
-          {r.metas.ignorados.length ? <span className="text-yellow-800"> Fora do cadastro dos indicadores (ignorados): {r.metas.ignorados.join("; ")}.</span> : null}
-        </p>
-      ) : (
-        <p>Sem a aba das metas: as metas do cenário ficaram como estavam.</p>
-      )}
-      {r.ignoradas.length ? <p className="text-gray-500">Abas com o nome de uma unidade que não são uma DRE (ignoradas): {r.ignoradas.join(", ")}.</p> : null}
+          {/* As visões sem aba no arquivo, numa linha só: as que ficam como estão e as que ficam vazias. */}
+          {[true, false].map((temValores) => {
+            const grupo = p.faltam.filter((f) => !novo && f.temValores === temValores);
+            const lista = novo ? (temValores ? [] : p.faltam) : grupo;
+            if (lista.length === 0) return null;
+            return (
+              <tr key={String(temValores)} className="border-b border-gray-100 align-top">
+                <td className="px-3 py-2">
+                  <div className="font-medium text-gray-400">—</div>
+                  <div className="text-xs text-gray-500">DRE · {lista.map((f) => f.nome).join(", ")}</div>
+                </td>
+                <td className="px-3 py-1">
+                  <Situacao icone="fora" texto="Sem aba no arquivo" detalhe={temValores ? "Fica como está no cenário." : lista.length > 1 ? "As visões ficam vazias no cenário." : "A visão fica vazia no cenário."} />
+                </td>
+              </tr>
+            );
+          })}
+          <tr className="align-top">
+            <td className="px-3 py-2">
+              <div className={`font-medium ${p.metas ? "text-gray-900" : "text-gray-400"}`}>{p.metas?.aba ?? "—"}</div>
+              <div className="text-xs text-gray-500">Metas dos Indicadores</div>
+            </td>
+            <td className="px-3 py-1">
+              {p.metas ? (
+                situacaoDaAba(
+                  p.metas.acao,
+                  p.metas.mudancas,
+                  `${plural(p.metas.indicadores, "indicador", "indicadores")}, ${plural(p.metas.meses, "mês", "meses")}`,
+                  importado,
+                  [
+                    ...(p.metas.ignorados.length ? [`Fora do cadastro dos indicadores (ignorados): ${p.metas.ignorados.join("; ")}.`] : []),
+                    ...(p.metas.digitados && !importado ? [`Substitui ${plural(p.metas.digitados, "lançamento manual digitado", "lançamentos manuais digitados")} no cenário.`] : []),
+                  ],
+                  "Substitui as do cenário",
+                )
+              ) : (
+                <Situacao
+                  icone="fora"
+                  texto="Sem a aba das metas no arquivo"
+                  detalhe={novo || p.metasAtuais === 0 ? "O cenário fica sem metas: importe depois um arquivo com a aba Metas (Orçamento) ou Metas." : "As metas ficam como estão no cenário."}
+                />
+              )}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {p.ignoradas.length ? <p className="px-3 py-2 text-xs text-gray-500">Abas com o nome de uma unidade que não são uma DRE (ignoradas): {p.ignoradas.join(", ")}.</p> : null}
     </div>
   );
 }
 
 /**
- * Importar um arquivo: num cenário novo (com o nome e a descrição) ou num cenário que já existe. As abas da DRE
- * (Consolidado, Matriz, Filial, Serviços, Desp.+Extra, RN) substituem as mesmas visões do cenário; a aba das metas
- * (Metas ou Metas (Orçamento)) substitui as metas, inclusive os lançamentos manuais digitados.
+ * Importar um arquivo, num cenário novo ou num que já existe, como a importação do Fechamento Mensal: escolhido o
+ * arquivo, a ferramenta lê e confere as abas e mostra o que vai entrar e o que muda no cenário; nada é gravado antes
+ * de o usuário clicar em Importar.
  */
 export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario | null; onFechar: () => void }) {
   const queryClient = useQueryClient();
@@ -61,63 +150,95 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
   const [descricao, setDescricao] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [envio, setEnvio] = useState(0);
-  const importar = useMutation({
-    mutationFn: () => cenariosService.importar(arquivo!, cenario ? { cenarioId: cenario.id } : { nome: nome.trim(), descricao: descricao.trim() || null }, setEnvio),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cenarios"] }),
+  const analisar = useMutation({
+    mutationFn: (f: File) => {
+      setEnvio(0);
+      return cenariosService.analisar(f, cenario?.id ?? null, setEnvio);
+    },
   });
+  const importar = useMutation({
+    mutationFn: () => cenariosService.importar(analisar.data!, cenario ? { cenarioId: cenario.id } : { nome: nome.trim(), descricao: descricao.trim() || null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cenarios"] });
+      queryClient.invalidateQueries({ queryKey: ["relatorios"] });
+    },
+  });
+  const previa = analisar.data;
   const feito = importar.data;
+  const exibida = feito?.previa ?? previa;
+  const recomecar = () => {
+    analisar.reset();
+    importar.reset();
+    setArquivo(null);
+  };
+  const ocupado = analisar.isPending || importar.isPending;
 
   return (
-    <Dialog open onOpenChange={(o) => (!o && !importar.isPending ? onFechar() : undefined)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
+    <Dialog open onOpenChange={(o) => (!o && !ocupado ? onFechar() : undefined)}>
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-sm sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{cenario ? `Importar Arquivo no Cenário ${cenario.nome}` : "Importar Cenário"}</DialogTitle>
           <DialogDescription>
-            Uma planilha (.xlsx) com as abas da DRE por unidade, como as do ORÇAMENTO BPM 2026 (Consolidado, Matriz, Filial, Serviços, Desp.+Extra e
-            Extra RN), e a aba das metas, como a Metas (ou Metas (Orçamento)) do INDICADORES DE RESULTADO. O nome do arquivo não importa; as abas que
-            faltarem ficam como estão{cenario ? "" : " (vazias, num cenário novo)"}. O exercício sai dos meses dos rótulos.
-            {cenario ? " A aba das metas substitui também os lançamentos manuais digitados." : ""}
+            Escolha uma planilha (.xlsx) com as abas da DRE por unidade, como as do ORÇAMENTO BPM 2026 (Consolidado, Matriz, Filial, Serviços,
+            Desp.+Extra e Extra RN), e a aba das metas, como a Metas (Orçamento) do INDICADORES DE RESULTADO. A ferramenta lê o arquivo, confere as
+            abas e mostra o que vai entrar{cenario ? " e o que muda no cenário" : ""}. Nada é importado antes de você confirmar.
           </DialogDescription>
         </DialogHeader>
-        {feito ? (
-          <Resumo r={feito.resumo} />
-        ) : (
-          <div className="grid gap-4">
-            {cenario ? null : (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="importar-nome">Nome do Cenário</Label>
-                  <Input id="importar-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} className="rounded-sm" placeholder="Ex.: Cenário Adotado (REV02)" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="importar-descricao">Descrição (opcional)</Label>
-                  <Input id="importar-descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={500} className="rounded-sm" />
-                </div>
-              </>
-            )}
+
+        {cenario || feito ? null : (
+          <div className="grid shrink-0 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="importar-nome">Nome do Cenário</Label>
+              <Input id="importar-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} className="rounded-sm" placeholder="Ex.: Cenário Adotado (REV02)" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="importar-descricao">Descrição (opcional)</Label>
+              <Input id="importar-descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={500} className="rounded-sm" />
+            </div>
+          </div>
+        )}
+
+        {!exibida ? (
+          <div className="shrink-0 space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="importar-arquivo">Arquivo</Label>
               <CampoArquivo
                 id="importar-arquivo"
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 arquivo={arquivo}
-                disabled={importar.isPending}
+                disabled={analisar.isPending}
                 onEscolher={(f) => {
                   setArquivo(f);
-                  importar.reset();
+                  if (f) analisar.mutate(f);
                 }}
               />
             </div>
-            {importar.isPending ? (
+            {analisar.isPending ? (
               <p className="flex items-center gap-2 text-sm text-gray-700">
                 <Loader2 className="size-4 animate-spin" />
-                {envio < 100 ? `Enviando o arquivo… ${envio}%` : "Lendo as abas e gravando o cenário…"}
+                {envio < 100 ? `Enviando o arquivo… ${envio}%` : "Lendo as abas e comparando com o cenário…"}
               </p>
             ) : null}
+            <Erro erro={analisar.isError ? mensagemDeErro(analisar.error, "Não foi possível ler o arquivo.") : null} />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <p className="shrink-0 text-sm text-gray-700">
+              <span className="font-medium text-gray-900">{exibida.nomeArquivo}</span>: exercício {exibida.ano}
+              {feito
+                ? `, importado em ${feito.cenario.nome}.`
+                : exibida.cenario
+                  ? `, no cenário ${exibida.cenario.nome}.`
+                  : ", num cenário novo."}
+            </p>
+            {exibida.bloqueio ? <Erro erro={exibida.bloqueio} /> : null}
+            {!feito && !exibida.cenario && !nome.trim() ? <p className="shrink-0 text-sm text-yellow-800">Dê um nome ao cenário para importar.</p> : null}
+            <TabelaPrevia p={exibida} importado={!!feito} />
             <Erro erro={importar.isError ? mensagemDeErro(importar.error, "Não foi possível importar o arquivo.") : null} />
           </div>
         )}
-        <DialogFooter>
+
+        <DialogFooter className="shrink-0">
           {feito ? (
             <>
               <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
@@ -127,16 +248,26 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
                 Abrir o Cenário
               </Link>
             </>
-          ) : (
+          ) : previa ? (
             <>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar} disabled={importar.isPending}>
-                Cancelar
+              <Button type="button" variant="outline" className="rounded-sm" onClick={recomecar} disabled={importar.isPending}>
+                Escolher Outro Arquivo
               </Button>
-              <Button type="button" className={botaoPrimario} disabled={!arquivo || (!cenario && !nome.trim()) || importar.isPending} onClick={() => importar.mutate()}>
-                <Upload className="size-4" />
-                Importar
+              <Button
+                type="button"
+                className={botaoPrimario}
+                disabled={!!previa.bloqueio || (!cenario && !nome.trim()) || importar.isPending}
+                title={!cenario && !nome.trim() ? "Dê um nome ao cenário" : undefined}
+                onClick={() => importar.mutate()}
+              >
+                {importar.isPending ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                {importar.isPending ? "Importando…" : "Importar"}
               </Button>
             </>
+          ) : (
+            <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar} disabled={analisar.isPending}>
+              Cancelar
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
