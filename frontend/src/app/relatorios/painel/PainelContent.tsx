@@ -2,20 +2,15 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Settings } from "lucide-react";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
 import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
-import { useExercicios } from "../components/SeletorPeriodo";
+import { Seletor, useExercicios } from "../components/SeletorPeriodo";
 import { mensagemDeErro, relatoriosService, type BlocoPainel, type FormatoPainel, type ItemPainel, type QuadroPainel } from "../services/relatoriosService";
 
 const numero = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas, signDisplay: "negative" });
@@ -50,8 +45,9 @@ function formatar(v: number | null, f: FormatoPainel) {
 const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${n1.format(v * 100)}%`);
 
 /**
- * As cores do sinal (Configurações › Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde,
- * amarelo e vermelho); Daltonismo, com azul no lugar do vermelho. O selo do desvio fica num tom claro da mesma cor.
+ * As cores do sinal (lista Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde, amarelo e
+ * vermelho); Daltonismo, com azul no lugar do verde (melhor que o orçado), amarelo e vermelho. O selo do desvio fica
+ * num tom claro da mesma cor.
  */
 type Cores = "padrao" | "daltonismo";
 const SINAIS = {
@@ -61,9 +57,9 @@ const SINAIS = {
     [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o Orçado" },
   },
   daltonismo: {
-    1: { cor: "bg-[#92D050]", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o Orçado" },
+    1: { cor: "bg-[#0070C0]", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Melhor que o Orçado" },
     0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do Orçado" },
-    [-1]: { cor: "bg-[#0070C0]", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Pior que o Orçado" },
+    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o Orçado" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -207,28 +203,6 @@ function guardar(chave: string, valor: string) {
   }
 }
 
-/** Uma lista suspensa do modal Configurações, com o rótulo acima. */
-function ListaConfig({ rotulo, valor, opcoes, onMudar }: { rotulo: string; valor: string; opcoes: Array<{ valor: string; rotulo: string }>; onMudar: (v: string) => void }) {
-  const id = `config-${rotulo}`;
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{rotulo}</Label>
-      <Select value={valor} onValueChange={(v) => v !== null && onMudar(String(v))}>
-        <SelectTrigger id={id} className="w-full rounded-sm bg-white" aria-label={rotulo}>
-          <SelectValue>{(v: string | null) => opcoes.find((o) => o.valor === v)?.rotulo ?? v}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {opcoes.map((o) => (
-            <SelectItem key={o.valor} value={o.valor}>
-              {o.rotulo}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 export function PainelContent() {
   useRegistrarAcessoTela("/relatorios/painel");
   const exercicios = useExercicios();
@@ -238,7 +212,6 @@ export function PainelContent() {
   // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Daltonismo), lembrados neste navegador.
   const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>(() => guardado(CHAVE_TIPO, ["barras", "area"] as const, "barras"));
   const [cores, setCores] = useState<Cores>(() => guardado(CHAVE_CORES, ["padrao", "daltonismo"] as const, "padrao"));
-  const [configurando, setConfigurando] = useState(false);
   const SINAL = SINAIS[cores];
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
@@ -258,8 +231,8 @@ export function PainelContent() {
         comoUsar={
           <ul>
             <li>
-              Em “Configurações”, à direita do título, escolha o Exercício, o Período (o mês de referência; o acumulado vai de janeiro até ele),
-              o Tipo dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador.
+              Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência; o acumulado vai de janeiro até ele), o Tipo
+              dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
@@ -270,8 +243,8 @@ export function PainelContent() {
             <li>
               Tipo: Barras (colunas do realizado e do orçado, como na planilha) ou Área (o realizado numa área amarela, mais forte no máximo do
               período e transparente no zero, com o contorno em amarelo-ouro, e o orçado numa linha preta; no gráfico do acumulado, a coluna do
-              realizado com o mesmo degradê e o orçado como uma linha preta). Cores: Padrão (verde, amarelo e vermelho) ou Daltonismo (verde,
-              amarelo e azul, no lugar do vermelho); a legenda acompanha.
+              realizado com o mesmo degradê e o orçado como uma linha preta). Cores: Padrão (verde, amarelo e vermelho) ou Daltonismo (azul
+              no lugar do verde, amarelo e vermelho); a legenda acompanha.
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>O orçado vem das metas importadas: importe a aba Metas (Orçamento) em cada mês, na etapa Importações do Fechamento Mensal.</li>
@@ -290,7 +263,7 @@ export function PainelContent() {
             </p>
             <p>
               O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O sinal fica verde
-              quando o realizado está do lado bom do orçado, vermelho do lado ruim (azul, nas cores para daltonismo), e amarelo quando o desvio é de até 5%. O lado bom depende
+              (azul, nas cores para daltonismo) quando o realizado está do lado bom do orçado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%. O lado bom depende
               do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
             </p>
             <p>
@@ -300,35 +273,21 @@ export function PainelContent() {
           </>
         }
         acoes={
+          // As listas na linha do título, como em Resultados e Indicadores (de volta do botão Configurações, 11/10/2026).
           ano && ate ? (
-            <Button type="button" onClick={() => setConfigurando(true)} className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm">
-              <Settings className="size-4" />
-              Configurações
-            </Button>
-          ) : null
-        }
-      />
-
-      {/* As quatro listas (11/10/2026): o exercício, o período, o tipo dos gráficos e as cores; valem na hora. */}
-      {configurando && ano && ate ? (
-        <Dialog open onOpenChange={(aberto) => (aberto ? undefined : setConfigurando(false))}>
-          <DialogContent className="rounded-sm sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Configurações</DialogTitle>
-              <DialogDescription>As escolhas valem na hora. O Tipo e as Cores ficam guardados neste navegador.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ListaConfig
+            <div className="flex flex-wrap items-center gap-4">
+              <Seletor
                 rotulo="Exercício"
                 valor={String(ano)}
                 onMudar={(v) => {
                   setAno(Number(v));
                   setAte(null);
                 }}
+                largura="w-28"
                 opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
               />
-              <ListaConfig rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
-              <ListaConfig
+              <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
+              <Seletor
                 rotulo="Tipo"
                 valor={tipoGrafico}
                 onMudar={(v) => {
@@ -336,12 +295,13 @@ export function PainelContent() {
                   setTipoGrafico(t);
                   guardar(CHAVE_TIPO, t);
                 }}
+                largura="w-28"
                 opcoes={[
                   { valor: "barras", rotulo: "Barras" },
                   { valor: "area", rotulo: "Área" },
                 ]}
               />
-              <ListaConfig
+              <Seletor
                 rotulo="Cores"
                 valor={cores}
                 onMudar={(v) => {
@@ -349,20 +309,16 @@ export function PainelContent() {
                   setCores(c);
                   guardar(CHAVE_CORES, c);
                 }}
+                largura="w-32"
                 opcoes={[
-                  { valor: "padrao", rotulo: "Padrão (Verde, Amarelo e Vermelho)" },
-                  { valor: "daltonismo", rotulo: "Daltonismo (Verde, Amarelo e Azul)" },
+                  { valor: "padrao", rotulo: "Padrão" },
+                  { valor: "daltonismo", rotulo: "Daltonismo" },
                 ]}
               />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setConfigurando(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
+          ) : null
+        }
+      />
 
       {exercicios.carregando ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
