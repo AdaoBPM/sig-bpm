@@ -16,7 +16,7 @@ import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type Aba
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
  * de outro), a importação de um arquivo, a marcação (Orçamento Empresarial, Resultados Anteriores, Resultados
- * Vendidos — uma por exercício) e as telas Resultados e Indicadores de cada cenário.
+ * Vendidos — cada uma ativa em um cenário só por vez) e as telas Resultados e Indicadores de cada cenário.
  */
 
 export class CenarioError extends Error {
@@ -228,11 +228,11 @@ export const cenariosService = {
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "EXCLUSAO", entidade: "cenario", entidadeId: id, antes });
   },
 
-  /** Marca o cenário (ou tira a marcação); a marcação sai do outro cenário do exercício que a tinha. */
+  /** Marca o cenário (ou tira a marcação); a marcação sai do outro cenário que a tinha (de qualquer exercício). */
   async marcar(id: string, marcacao: MarcacaoCenario | null, usuario: Usuario) {
     const prisma = getPrismaClient();
     const antes = await obterOuFalhar(id);
-    const anterior = marcacao ? await prisma.cenario.findFirst({ where: { ano: antes.ano, marcacao, id: { not: id } }, select: { id: true, nome: true } }) : null;
+    const anterior = marcacao ? await prisma.cenario.findFirst({ where: { marcacao, id: { not: id } }, select: { id: true, nome: true } }) : null;
     await prisma.$transaction(async (tx) => {
       if (anterior) await tx.cenario.update({ where: { id: anterior.id }, data: { marcacao: null } });
       await tx.cenario.update({ where: { id }, data: { marcacao } });

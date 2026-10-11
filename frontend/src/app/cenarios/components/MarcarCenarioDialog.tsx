@@ -1,0 +1,89 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
+
+import { cenariosService, MARCACOES, rotuloMarcacao, type Cenario, type MarcacaoCenario } from "../services/cenariosService";
+import { botaoPrimario, Erro } from "./CenarioDialog";
+
+/** O que cada marcação faz, embaixo da opção. */
+const EFEITO: Record<MarcacaoCenario, (c: Cenario) => string> = {
+  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados em ${c.ano}.`,
+  RESULTADOS_ANTERIORES: () => "Os resultados de comparação do exercício anterior (para as telas que vierem).",
+  RESULTADOS_VENDIDOS: () => "Os resultados do que foi vendido (para as telas que vierem).",
+};
+
+/**
+ * A marcação de um cenário, como uma ação com confirmação (e não uma lista na tabela, para evitar a troca por
+ * engano). Cada marcação fica ativa em um cenário só: marcar este tira a marcação do cenário que a tinha.
+ */
+export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenario; cenarios: Cenario[]; onFechar: () => void }) {
+  const queryClient = useQueryClient();
+  const [escolha, setEscolha] = useState<MarcacaoCenario | "">(cenario.marcacao ?? "");
+  const dono = (m: MarcacaoCenario) => cenarios.find((c) => c.marcacao === m && c.id !== cenario.id) ?? null;
+  const outro = escolha ? dono(escolha) : null;
+  const marcar = useMutation({
+    mutationFn: () => cenariosService.marcar(cenario.id, escolha || null),
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: ["cenarios"] });
+      // O orçado de Resultados Realizados muda com o Orçamento Empresarial.
+      queryClient.invalidateQueries({ queryKey: ["relatorios"] });
+      toast.success(escolha ? `${cenario.nome} marcado como ${rotuloMarcacao(escolha)}.${r.desmarcado ? ` ${r.desmarcado} deixou de ser.` : ""}` : `${cenario.nome} ficou sem marcação.`);
+      onFechar();
+    },
+  });
+  const opcoes: Array<{ valor: MarcacaoCenario | ""; rotulo: string }> = [...MARCACOES, { valor: "", rotulo: "Sem Marcação" }];
+
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent className="rounded-sm sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Marcar Cenário</DialogTitle>
+          <DialogDescription>
+            {cenario.nome} ({cenario.ano}). Cada marcação fica ativa em um cenário só: marcar este tira a marcação do cenário que a tinha.
+          </DialogDescription>
+        </DialogHeader>
+        <fieldset className="space-y-2">
+          <legend className="sr-only">Marcação</legend>
+          {opcoes.map((o) => {
+            const atualDe = o.valor ? dono(o.valor) : null;
+            return (
+              <label
+                key={o.valor || "nenhuma"}
+                className={`flex cursor-pointer items-start gap-3 rounded-sm border px-3 py-2 text-sm ${escolha === o.valor ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}
+              >
+                <input type="radio" name="marcacao" className="mt-1 accent-black" checked={escolha === o.valor} onChange={() => setEscolha(o.valor)} />
+                <span className="min-w-0">
+                  <span className="font-medium text-gray-900">{o.rotulo}</span>
+                  {cenario.marcacao === (o.valor || null) ? <span className="ml-2 text-xs text-gray-500">(a atual)</span> : null}
+                  {o.valor ? <span className="block text-xs text-gray-600">{EFEITO[o.valor](cenario)}</span> : null}
+                  {atualDe ? <span className="block text-xs text-gray-500">Hoje em: {atualDe.nome} ({atualDe.ano}).</span> : null}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
+        {outro ? (
+          <p className="rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
+            {outro.nome} ({outro.ano}) deixa de ser {rotuloMarcacao(escolha || null)}.
+          </p>
+        ) : null}
+        <Erro erro={marcar.isError ? mensagemDeErro(marcar.error, "Não foi possível marcar o cenário.") : null} />
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button type="button" className={botaoPrimario} disabled={escolha === (cenario.marcacao ?? "") || marcar.isPending} onClick={() => marcar.mutate()}>
+            {marcar.isPending ? "Gravando…" : "Gravar Marcação"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

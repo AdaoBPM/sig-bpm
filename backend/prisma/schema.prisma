@@ -1861,8 +1861,8 @@ model Cenario {
   /// SINTETICO (agora) ou ANALITICO (depois).
   tipo         String           @default("SINTETICO")
   descricao    String?
-  /// O papel do cenário no exercício; cada marcação vale para um cenário só por exercício. O Orçamento Empresarial
-  /// dá o orçado de Resultados Realizados.
+  /// O papel do cenário; cada marcação fica ativa em um cenário só por vez (11/10/2026; antes, uma por exercício). O
+  /// Orçamento Empresarial dá o orçado de Resultados Realizados do exercício dele.
   marcacao     MarcacaoCenario?
   /// O último arquivo importado no cenário.
   nomeArquivo  String?          @map("nome_arquivo")
@@ -1874,7 +1874,7 @@ model Cenario {
   resultados  CenarioResultado[]
   indicadores CenarioIndicador[]
 
-  @@unique([ano, marcacao])
+  @@unique([marcacao])
   @@map("cenarios")
 }
 

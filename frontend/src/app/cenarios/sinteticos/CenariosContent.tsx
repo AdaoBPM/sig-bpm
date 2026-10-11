@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { Bookmark, Pencil, Plus, Trash2, Upload } from "lucide-react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -17,11 +16,10 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
-import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
-
 import { botaoPrimario, CenarioDialog, ExcluirCenarioDialog } from "../components/CenarioDialog";
 import { ImportarCenarioDialog } from "../components/ImportarCenarioDialog";
-import { cenariosService, MARCACOES, rotuloMarcacao, type Cenario, type MarcacaoCenario } from "../services/cenariosService";
+import { MarcarCenarioDialog } from "../components/MarcarCenarioDialog";
+import { cenariosService, rotuloMarcacao, type Cenario } from "../services/cenariosService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
 
@@ -31,49 +29,15 @@ const conteudoDe = (c: Cenario) => (c.visoes.length === 0 && c.indicadores === 0
 const COLUNAS: Coluna<Cenario>[] = [
   { chave: "nome", rotulo: "Cenário", valor: (c) => c.nome },
   { chave: "ano", rotulo: "Exercício", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
-  { chave: "marcacao", rotulo: "Marcação", valor: (c) => rotuloMarcacao(c.marcacao) },
   { chave: "conteudo", rotulo: "Conteúdo", valor: conteudoDe },
   // O arquivo e, embaixo, quando foi importado (uma coluna só, para a tabela caber na largura da tela).
   { chave: "arquivo", rotulo: "Arquivo", valor: (c) => c.nomeArquivo },
+  // A marcação logo antes das ações; muda pela ação Marcar (não na tabela, para evitar a troca por engano).
+  { chave: "marcacao", rotulo: "Marcação", valor: (c) => rotuloMarcacao(c.marcacao) },
   { chave: "acoes", rotulo: "", semFiltro: true },
 ];
 
-/** A marcação do cenário: quem edita escolhe na lista; uma marcação vale para um cenário só por exercício. */
-function Marcacao({ c, pode }: { c: Cenario; pode: boolean }) {
-  const queryClient = useQueryClient();
-  const marcar = useMutation({
-    mutationFn: (m: MarcacaoCenario | null) => cenariosService.marcar(c.id, m),
-    onSuccess: (r, m) => {
-      queryClient.invalidateQueries({ queryKey: ["cenarios"] });
-      // O orçado de Resultados Realizados muda com o Orçamento Empresarial.
-      queryClient.invalidateQueries({ queryKey: ["relatorios"] });
-      toast.success(
-        m ? `${c.nome} marcado como ${rotuloMarcacao(m)}.${r.desmarcado ? ` ${r.desmarcado} deixou de ser.` : ""}` : `${c.nome} ficou sem marcação.`,
-      );
-    },
-    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível marcar o cenário.")),
-  });
-  if (!pode) return <span className={c.marcacao ? "font-medium text-gray-900" : "text-gray-400"}>{rotuloMarcacao(c.marcacao) ?? "—"}</span>;
-  return (
-    <select
-      aria-label={`Marcação de ${c.nome}`}
-      value={c.marcacao ?? ""}
-      disabled={marcar.isPending}
-      onClick={(e) => e.stopPropagation()}
-      onChange={(e) => marcar.mutate((e.target.value || null) as MarcacaoCenario | null)}
-      className={`h-8 w-40 rounded-sm border border-gray-300 bg-white px-2 text-sm ${c.marcacao ? "font-medium text-gray-900" : "text-gray-500"}`}
-    >
-      <option value="">Sem Marcação</option>
-      {MARCACOES.map((m) => (
-        <option key={m.valor} value={m.valor}>
-          {m.rotulo}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-type Dialogo = { tipo: "novo" } | { tipo: "editar"; c: Cenario } | { tipo: "excluir"; c: Cenario } | { tipo: "importar"; c: Cenario | null } | null;
+type Dialogo = { tipo: "novo" } | { tipo: "editar"; c: Cenario } | { tipo: "excluir"; c: Cenario } | { tipo: "importar"; c: Cenario | null } | { tipo: "marcar"; c: Cenario } | null;
 
 export function CenariosContent() {
   useRegistrarAcessoTela("/cenarios/sinteticos");
@@ -99,11 +63,11 @@ export function CenariosContent() {
             </li>
             <li>Clique na linha para abrir o cenário, com as telas Resultados e Indicadores.</li>
             <li>
-              Na coluna Marcação, escolha o papel do cenário no exercício: Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos. Cada
-              marcação vale para um cenário só por exercício: marcar outro tira a marcação do anterior.
+              Para marcar o cenário como Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos, use o ícone de marcador na linha e confirme
+              em “Gravar Marcação”; a coluna Marcação mostra a atual. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
-            <li>Nos ícones da linha: importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome e a descrição, e excluir.</li>
+            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome e a descrição, e excluir.</li>
             <li>Use os filtros nos rótulos das colunas.</li>
           </ul>
         }
@@ -155,7 +119,7 @@ export function CenariosContent() {
           error={isError ? "Erro ao carregar os cenários." : null}
           emptyMessage="Nenhum cenário gerado"
           emptyHint="Use Importar Cenário ou Novo Cenário para criar o primeiro."
-          columns={["Cenário", "Exercício", "Marcação", "Conteúdo", "Arquivo", ""]}
+          columns={["Cenário", "Exercício", "Conteúdo", "Arquivo", "Marcação", ""]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrir(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
               <td className="min-w-48 px-4 py-2 text-sm">
@@ -170,9 +134,6 @@ export function CenariosContent() {
                 </div>
               </td>
               <td className="px-4 text-sm">{c.ano}</td>
-              <td className="px-4 text-sm">
-                <Marcacao c={c} pode={podeEditar} />
-              </td>
               <td className="px-4 text-sm whitespace-nowrap">
                 {c.visoes.length === 0 && c.indicadores === 0 ? (
                   "Vazio"
@@ -187,9 +148,19 @@ export function CenariosContent() {
                 <div className="truncate">{c.nomeArquivo ?? "—"}</div>
                 {c.importadoEm ? <div className="text-xs whitespace-nowrap text-gray-500">Importado em {dataCurta(c.importadoEm)}</div> : null}
               </td>
+              <td className="px-4 text-sm whitespace-nowrap">
+                {c.marcacao ? (
+                  <span className="rounded-sm border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-900">{rotuloMarcacao(c.marcacao)}</span>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
+              </td>
               <td className="px-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                 {podeEditar ? (
                   <>
+                    <button type="button" className={acao} title="Marcar o cenário (Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos)" aria-label={`Marcar ${c.nome}`} onClick={() => setDialogo({ tipo: "marcar", c })}>
+                      <Bookmark className="size-4" />
+                    </button>
                     <button type="button" className={acao} title="Importar um arquivo neste cenário" aria-label={`Importar arquivo em ${c.nome}`} onClick={() => setDialogo({ tipo: "importar", c })}>
                       <Upload className="size-4" />
                     </button>
@@ -211,6 +182,7 @@ export function CenariosContent() {
       {dialogo?.tipo === "editar" ? <CenarioDialog cenario={dialogo.c} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
       {dialogo?.tipo === "excluir" ? <ExcluirCenarioDialog cenario={dialogo.c} onFechar={() => setDialogo(null)} /> : null}
       {dialogo?.tipo === "importar" ? <ImportarCenarioDialog cenario={dialogo.c} onFechar={() => setDialogo(null)} /> : null}
+      {dialogo?.tipo === "marcar" ? <MarcarCenarioDialog cenario={dialogo.c} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
     </div>
   );
 }
