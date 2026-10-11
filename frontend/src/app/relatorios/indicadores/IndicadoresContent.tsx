@@ -86,8 +86,8 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             </p>
             <p>
               O orçado (o gráfico do indicador) vem das Metas Orçadas do cenário marcado como Orçamento Empresarial no exercício (Criação de
-              Cenários / Cenários Sintéticos){dados?.cenarioOrcado ? ` — hoje, ${dados.cenarioOrcado}` : ""}; sem cenário marcado, das metas
-              importadas da aba Metas (Orçamento) do INDICADORES DE RESULTADO.
+              Cenários / Cenários Sintéticos){dados?.cenarioOrcado ? ` — hoje, ${dados.cenarioOrcado}` : ""}. Sem cenário marcado no
+              exercício, ou sem o valor no cenário, o orçado é zero.
             </p>
             <p>
               Os indicadores numerados do Comercial e do Administrativo também podem ser digitados nas Listas Operacionais (abas Comercial e

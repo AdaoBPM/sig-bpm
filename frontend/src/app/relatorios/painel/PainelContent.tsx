@@ -246,7 +246,7 @@ export function PainelContent() {
               no lugar do verde, amarelo e vermelho); a legenda acompanha.
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
-            <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, das metas importadas da aba Metas (Orçamento), mês a mês, na etapa Importações do Fechamento Mensal.</li>
+            <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, o orçado fica zero.</li>
           </ul>
         }
         sobre={
@@ -258,9 +258,8 @@ export function PainelContent() {
             <p>
               O realizado sai dos mesmos valores da tela Indicadores: a DRE apurada, os volumes da apuração e os indicadores importados (ou
               digitados nas Listas Operacionais). O orçado sai das Metas Orçadas do cenário marcado como Orçamento Empresarial no exercício
-              (Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também; sem cenário marcado, da aba
-              Metas (Orçamento) do INDICADORES DE RESULTADO, importada mês a mês, com o acumulado da aba Metas (soma dos meses ou, nas razões, a
-              média ponderada pela base).
+              (Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem cenário marcado no
+              exercício, ou sem o valor no cenário, o orçado é zero.
             </p>
             <p>
               O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O sinal fica verde
@@ -322,12 +321,15 @@ export function PainelContent() {
         <CoresDoPainel.Provider value={cores}>
           <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={setAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
 
-          {dados.mesesSemMeta.length > 0 ? (
+          {!dados.cenarioOrcado ? (
             <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-              {dados.cenarioOrcado
-                ? `O cenário ${dados.cenarioOrcado} (Orçamento Empresarial) não tem as metas de ${dados.mesesSemMeta.join(", ")}: importe nele um arquivo com esses meses (Cenários Sintéticos).`
-                : `Sem as metas do orçamento de ${dados.mesesSemMeta.join(", ")}: marque um cenário como Orçamento Empresarial (Cenários Sintéticos) ou importe a aba Metas (Orçamento) do INDICADORES DE RESULTADO nesses meses (etapa Importações).`}{" "}
-              Até lá, o orçado {dados.mesesSemMeta.includes(dados.rotuloMes) ? "do mês e o " : "o "}acumulado ficam sem valor.
+              Nenhum cenário está marcado como Orçamento Empresarial para {dados.ano}: o orçado aparece como zero. Marque um cenário de {dados.ano} em
+              Criação de Cenários / Cenários Sintéticos.
+            </div>
+          ) : dados.mesesSemMeta.length > 0 ? (
+            <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+              O cenário {dados.cenarioOrcado} (Orçamento Empresarial) não tem valores de {dados.mesesSemMeta.join(", ")}: o orçado desses meses aparece
+              como zero. Importe nele um arquivo com esses meses (Cenários Sintéticos).
             </div>
           ) : null}
 

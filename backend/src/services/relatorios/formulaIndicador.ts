@@ -7,7 +7,7 @@
  * - [LISTA|código]: um totalizador das Listas Operacionais (Projetos Liberados: Matriz…; os "_TOTAL" somam a lista);
  * - [IND|nome]: um indicador importado ou digitado das abas Comercial e Administrativo (Venda: Total, Quadro de
  *   Lotação…);
- * - [META|nome]: a meta do orçamento do mês de um indicador (aba Metas (Orçamento)).
+ * - [META|nome]: a meta do mês de um indicador no cenário Orçamento Empresarial do exercício (zero sem ele).
  *
  * O valor do mês é a fórmula com os itens do mês; sem dado em algum item (mês não apurado, indicador não importado)
  * ou com divisão por zero, o indicador fica sem valor. O acumulado depende do modo do indicador (indicadores.ts).

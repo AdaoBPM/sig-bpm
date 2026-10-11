@@ -792,18 +792,18 @@ const estruturaIndicadores: DefinicaoCadastro = {
     if (id) return (await db.indicadorEstrutura.update({ where: { id }, data: dados })).id;
     return (await db.indicadorEstrutura.create({ data: { ...dados, ordem: dados.ordem ?? (await db.indicadorEstrutura.count()) + 1 } })).id;
   },
-  // O nome liga o indicador às metas importadas, aos valores digitados e ao Painel de Bordo.
+  // O nome liga o indicador às metas dos cenários, aos valores importados e digitados e ao Painel de Bordo.
   async movimentos(db, id) {
     const i = await db.indicadorEstrutura.findUnique({ where: { id }, select: { nome: true } });
     if (!i) return null;
     const [metas, digitados, importados] = await Promise.all([
-      db.metaImportada.count({ where: { nome: i.nome } }),
+      db.cenarioIndicador.count({ where: { nome: i.nome } }),
       db.indicadorDigitado.count({ where: { nome: i.nome } }),
       db.indicadorImportado.count({ where: { nome: i.nome } }),
     ]);
     const noPainel = NOMES_DO_PAINEL().includes(i.nome);
     if (!metas && !digitados && !importados && !noPainel) return null;
-    const partes = [metas ? `${metas} meta(s) importada(s)` : null, importados + digitados ? `${importados + digitados} valor(es) importado(s) ou digitado(s)` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
+    const partes = [metas ? `${metas} meta(s) de cenários` : null, importados + digitados ? `${importados + digitados} valor(es) importado(s) ou digitado(s)` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
     return `O indicador é usado por ${partes.join(", ")}.`;
   },
   async impedimentoExclusao(db, id) {

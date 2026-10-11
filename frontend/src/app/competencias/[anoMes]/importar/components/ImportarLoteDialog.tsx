@@ -234,7 +234,6 @@ const ARQUIVOS_DE_IMPORTACAO = [
   },
   { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)"] },
   { arquivo: "CONTROLE DAS VENDAS - COMERCIAL", abas: ["DRE", "Indicadores (Comercial)"] },
-  { arquivo: "SIG BPM 2026 - INDICADORES DE RESULTADO", abas: ["Metas (Orçamento)"] },
 ];
 
 export function ImportarLoteDialog({

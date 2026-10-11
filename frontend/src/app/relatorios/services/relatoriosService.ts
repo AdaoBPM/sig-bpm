@@ -39,14 +39,14 @@ export type Indicador = {
   acumulado: "ACUM" | "ATUAL";
   meses: Array<number | null>;
   total: number | null;
-  /** O orçado de cada mês, das metas importadas (null sem meta), e o acumulado do orçado. */
+  /** O orçado de cada mês e o acumulado do orçado: o cenário Orçamento Empresarial do exercício (zero sem ele). */
   orcado: Array<number | null>;
   totalOrcado: number | null;
 };
 export type Indicadores = {
   ano: number;
   ate: number;
-  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: as metas importadas. */
+  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
   cenarioOrcado?: string | null;
   meses: MesRelatorio[];
   indicadores: Indicador[];
@@ -77,7 +77,7 @@ export type Painel = {
   rotuloAcumulado: string;
   mesApurado: boolean;
   mesesSemMeta: string[];
-  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: as metas importadas. */
+  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
   cenarioOrcado: string | null;
   abas: Array<{ chave: string; titulo: string; quadros: QuadroPainel[] }>;
 };

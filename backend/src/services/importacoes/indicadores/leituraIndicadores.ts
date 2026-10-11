@@ -96,6 +96,7 @@ export const DEFINICOES_INDICADORES: Record<TipoIndicadores, Definicao> = {
       "Repres. do Mix Ampliado nas Vendas",
     ],
   },
+  // Desde 11/10/2026, não se importa mais no mês (as metas ficam nos cenários); a definição fica para as importações antigas.
   METAS_ORCAMENTO: {
     aba: "Metas (Orçamento)",
     rotulo: "Metas do Orçamento",

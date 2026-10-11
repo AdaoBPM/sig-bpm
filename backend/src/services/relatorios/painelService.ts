@@ -40,9 +40,10 @@ export const painelService = {
   /**
    * O Painel de Bordo do mês `ate` (sem ele, o último apurado): o realizado
    * sai dos indicadores (DRE apurada, volumes e indicadores importados); o
-   * orçado, do cenário marcado como Orçamento Empresarial no exercício (desde
-   * 11/10/2026) ou, sem ele, das metas importadas (aba Metas (Orçamento)). O
-   * acumulado vai de janeiro ao mês; os meses sem orçado vão em `mesesSemMeta`.
+   * orçado, do cenário marcado como Orçamento Empresarial no exercício; sem
+   * ele, ou sem o valor nele, zero (as metas importadas não valem mais, desde
+   * 11/10/2026). O acumulado vai de janeiro ao mês; os meses que o cenário não
+   * tem vão em `mesesSemMeta`.
    */
   async painel(ano: number, ate?: number) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate);
@@ -51,7 +52,7 @@ export const painelService = {
     const orcamento = await orcamentoDoExercicio(ano);
     const dados = encadearMeses(
       await Promise.all(
-        meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null, orcamento.cenario ? orcamento.porMes[m.mes - 1] : undefined) : null)),
+        meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null, orcamento.porMes[m.mes - 1]) : null)),
       ),
     );
     const metas = meses.map((m) => orcamento.porMes[m.mes - 1]);
@@ -62,15 +63,15 @@ export const painelService = {
     const porNome = new Map(catalogo.map((i) => [i.nome, i]));
     const realizadoMes: Valor = (n) => partes.get(n)?.[ultimo - 1]?.valor ?? null;
     const realizadoAcum: Valor = (n) => (porNome.has(n) ? acumular(porNome.get(n)!, partes.get(n)!) : null);
-    const orcadoMes: Valor = (n) => metas[ultimo - 1]?.get(n) ?? null;
-    const orcadoAcum: Valor = (n) => (porNome.has(n) ? orcamento.acumulado(porNome.get(n)!, ultimo) : null);
+    const orcadoMes: Valor = (n) => metas[ultimo - 1].get(n) ?? 0;
+    const orcadoAcum: Valor = (n) => (porNome.has(n) ? orcamento.acumulado(porNome.get(n)!, ultimo) : 0);
 
     const periodos = { mes: [realizadoMes, orcadoMes] as [Valor, Valor], acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor] };
     // A série mês a mês (gráficos do painel, como os da planilha): o realizado e o orçado de cada mês até o de referência.
     const serie: MesDaSerie[] = meses.map((m, i) => ({
       rotulo: MESES[m.mes - 1],
       realizado: (n) => partes.get(n)?.[i]?.valor ?? null,
-      orcado: (n) => metas[i]?.get(n) ?? null,
+      orcado: (n) => metas[i].get(n) ?? 0,
     }));
     return {
       ano,
@@ -78,9 +79,9 @@ export const painelService = {
       rotuloMes: `${MESES[ultimo - 1]}/${ano}`,
       rotuloAcumulado: `ACUMULADO/${ano}`,
       mesApurado: meses[ultimo - 1].competenciaId !== null,
-      /** O cenário do orçado (null: as metas importadas). */
+      /** O cenário do orçado (null: nenhum cenário Orçamento Empresarial no exercício; o orçado é zero). */
       cenarioOrcado: orcamento.cenario?.nome ?? null,
-      mesesSemMeta: meses.filter((_, i) => metas[i] === null).map((m) => `${MESES[m.mes - 1]}/${ano}`),
+      mesesSemMeta: meses.filter((m) => orcamento.mesesSemValor.includes(m.mes)).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
         { chave: "resultados", titulo: "Resultados", quadros: montar(PAINEL_RESULTADOS, periodos, serie) },
         { chave: "performance", titulo: "Performance", quadros: montar(PAINEL_PERFORMANCE, periodos, serie) },

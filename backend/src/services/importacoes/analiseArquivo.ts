@@ -90,7 +90,8 @@ const listas: Tipo[] = [...Object.values(DEFINICOES_LISTAS), ...Object.values(DE
 }));
 
 /** Os indicadores do mês (abas Indicadores (Admin.) e (Comercial)): sem a coluna do mês, nada do mês. */
-const indicadores: Tipo[] = (Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[]).map((tipo) => ({
+// As metas do orçamento (aba Metas (Orçamento)) não se importam mais no mês: ficam nos cenários (11/10/2026).
+const indicadores: Tipo[] = (Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[]).filter((t) => t !== "METAS_ORCAMENTO").map((tipo) => ({
   tipo,
   rotulo: DEFINICOES_INDICADORES[tipo].rotulo,
   abas: [DEFINICOES_INDICADORES[tipo].aba],

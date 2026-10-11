@@ -42,7 +42,8 @@ const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   "BALANCETE",
   "DRE_COMERCIAL",
   "ESTOQUE_INICIAL",
-  ...(Object.keys(DEFINICOES_INDICADORES) as TipoImportacao[]),
+  // As metas do orçamento (aba Metas (Orçamento)) não se importam mais no mês: ficam nos cenários (11/10/2026).
+  ...(Object.keys(DEFINICOES_INDICADORES) as TipoImportacao[]).filter((t) => t !== "METAS_ORCAMENTO"),
   ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
   ...(Object.keys(DEFINICOES_LISTAS_RECEITA) as TipoImportacao[]),
 ];
@@ -102,6 +103,12 @@ export const importacoesService = {
   async receber(input: ReceberImportacaoInput) {
     const prisma = getPrismaClient();
 
+    if (input.tipo === "METAS_ORCAMENTO") {
+      throw new RegraImportacaoError(
+        400,
+        "As metas do orçamento não se importam mais no mês: importe a aba Metas (Orçamento) num cenário (Criação de Cenários / Cenários Sintéticos) e marque-o como Orçamento Empresarial.",
+      );
+    }
     if (!TIPOS_DISPONIVEIS.includes(input.tipo)) {
       throw new RegraImportacaoError(
         400,

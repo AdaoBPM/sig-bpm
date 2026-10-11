@@ -46,7 +46,7 @@ export const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; 
   { valor: "SAIDA", rotulo: "Saídas", disponivel: true, origem: `aba Saídas (Resumo) do ${LISTAS}: por obra, linha e movimento` },
   { valor: "INDICADORES_ADMIN", rotulo: "Indicadores do Administrativo", disponivel: true, origem: `aba Indicadores (Admin.) do ${LISTAS}: quadro de lotação, fluxo de caixa, inadimplência, turnover, vagas e acidentes, na coluna do mês. Vão para a tela Indicadores; não entram na apuração` },
   { valor: "INDICADORES_COMERCIAL", rotulo: "Indicadores do Comercial", disponivel: true, origem: "aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL: vendas, receita líquida vendida, margem de contribuição, demanda e mix ampliado, na coluna do mês. Vão para a tela Indicadores; não entram na apuração" },
-  { valor: "METAS_ORCAMENTO", rotulo: "Metas do Orçamento", disponivel: true, origem: "aba Metas (Orçamento) do SIG BPM 2026 - INDICADORES DE RESULTADO: o valor orçado de cada indicador, na coluna do mês. É o orçado do Painel de Bordo; não entra na apuração" },
+  // As Metas do Orçamento saíram da importação do mês (11/10/2026): ficam nos cenários (Cenários Sintéticos).
   { valor: "ESTOQUE_INICIAL", rotulo: "Saldo inicial do estoque", disponivel: true, origem: `aba Estoque (2025) do ${LISTAS}. Importe no primeiro mês da ferramenta (01/2026): a apuração do estoque dele parte deste saldo` },
   { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: true, origem: "aba DRE do CONTROLE DAS VENDAS - COMERCIAL. Os preços valem para todas as competências; um preço alterado substitui o anterior, que fica no histórico" },
 ];

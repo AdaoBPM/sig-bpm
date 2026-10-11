@@ -25,7 +25,7 @@ export type DadosDoMes = {
   dre: (unidade: number, codigo: string) => number;
   volume: (origem: string) => number;
   importado: (nome: string) => number | null;
-  /** As metas importadas do mês (aba Metas (Orçamento)): a capacidade de produção e o orçado dos atingimentos (GME 4 e GME 8). */
+  /** O orçado do mês (o cenário Orçamento Empresarial do exercício): a capacidade de produção e o orçado dos atingimentos (GME 4 e GME 8). */
   meta?: (nome: string) => number | null;
   /** Os meses anteriores do exercício, em ordem (os atingimentos acumulados do GME 8). */
   anteriores?: DadosDoMes[];

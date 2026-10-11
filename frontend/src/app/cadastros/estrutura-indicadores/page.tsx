@@ -19,7 +19,7 @@ export default function EstruturaIndicadoresPage() {
               <li>Use “Novo” para incluir um indicador; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>
                 Na Metodologia, monte a fórmula do indicador: escolha o tipo do item (uma linha da DRE, com a unidade; um totalizador das Listas;
-                um indicador do Comercial ou do Administrativo; uma meta do orçamento), busque, escolha e clique em “Inserir Item”; entre os
+                um indicador do Comercial ou do Administrativo; uma meta do Orçamento Empresarial, o cenário marcado), busque, escolha e clique em “Inserir Item”; entre os
                 itens, use os operadores (+ − × ÷), os parênteses e “Inserir Número” (por exemplo, ÷ 1000 para milhares). “Apagar Último” desfaz
                 o último pedaço.
               </li>
@@ -30,10 +30,10 @@ export default function EstruturaIndicadoresPage() {
               </li>
               <li>A Descrição é o texto que a tela Indicadores mostra sob o nome.</li>
               <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os indicadores inativos (que saem das telas Indicadores e Painel de Bordo).</li>
-              <li>O Nome de um indicador com metas importadas, valores importados ou digitados, ou usado no Painel de Bordo, não muda, e o indicador não se exclui: inative-o.</li>
+              <li>O Nome de um indicador com metas em cenários, valores importados ou digitados, ou usado no Painel de Bordo, não muda, e o indicador não se exclui: inative-o.</li>
             </ul>
           }
-          descricao="Os indicadores de resultado, como na aba Realizado (SIG) do INDICADORES DE RESULTADO, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do orçamento. Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
+          descricao="Os indicadores de resultado, como na aba Realizado (SIG) do INDICADORES DE RESULTADO, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento Empresarial (o cenário marcado no exercício). Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
         />
       </PermissionGuard>
     </ProtectedLayout>
