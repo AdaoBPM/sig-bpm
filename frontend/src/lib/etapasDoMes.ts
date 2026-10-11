@@ -35,7 +35,7 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
     ...(primeiraLista
       ? [{ caminho: `listas/${primeiraLista}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
       : []),
-    // Os indicadores do exercício até o mês, como a tela Indicadores (Resultados e Indicadores).
+    // Os indicadores do exercício até o mês, como a tela Indicadores (Resultados Realizados).
     { caminho: "indicadores", chave: "indicadores", rotulo: "Indicadores", icone: Gauge, permissao: "dre:ver" },
     { caminho: "receita-previa", chave: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ver" },
     { caminho: "rateios", chave: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },

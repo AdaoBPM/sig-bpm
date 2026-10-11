@@ -6,7 +6,7 @@ import { IndicadoresContent } from "@/app/relatorios/indicadores/IndicadoresCont
 
 import { lerAnoMes } from "../utils/formatacao";
 
-/** A etapa Indicadores do mês: a tela Indicadores de Resultados e Indicadores, com o exercício até a competência. */
+/** A etapa Indicadores do mês: a tela Indicadores de Resultados Realizados, com o exercício até a competência. */
 export function IndicadoresDoMes() {
   const { anoMes } = useParams<{ anoMes: string }>();
   const periodo = lerAnoMes(anoMes);

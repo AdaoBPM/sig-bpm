@@ -39,7 +39,7 @@ export function Seletor({ rotulo, valor, opcoes, onMudar, largura }: { rotulo: s
   );
 }
 
-/** O exercício e o mês até onde ver, à direita da linha do título (Resultados e Indicadores). */
+/** O exercício e o mês até onde ver, à direita da linha do título (Resultados Realizados). */
 export function SeletorPeriodo({
   ano,
   ate,

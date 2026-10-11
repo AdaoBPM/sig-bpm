@@ -272,7 +272,7 @@ export function PainelContent() {
           </>
         }
         acoes={
-          // As listas na linha do título, como em Resultados e Indicadores (de volta do botão Configurações, 11/10/2026).
+          // As listas na linha do título, como em Resultados Realizados (de volta do botão Configurações, 11/10/2026).
           ano && ate ? (
             <div className="flex flex-wrap items-center gap-4">
               <Seletor

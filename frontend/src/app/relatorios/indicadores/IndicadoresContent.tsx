@@ -85,7 +85,7 @@ function montarColunas(meses: MesRelatorio[], indices: number[], acumulado: bool
 }
 
 /**
- * A tela Indicadores (Resultados e Indicadores), com o exercício e o mês
+ * A tela Indicadores (Resultados Realizados), com o exercício e o mês
  * escolhidos no topo; ou, com `periodoFixo`, a etapa Indicadores do
  * Fechamento Mensal: só os valores do mês da competência, que se troca na
  * barra de etapas.
@@ -106,7 +106,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
-  // O indicador com o gráfico aberto (só em Resultados e Indicadores; a etapa do Fechamento Mensal mostra um mês só).
+  // O indicador com o gráfico aberto (só em Resultados Realizados; a etapa do Fechamento Mensal mostra um mês só).
   const [comGrafico, setComGrafico] = useState<Indicador | null>(null);
   const abreGrafico = !periodoFixo;
   // O tipo do gráfico do indicador (Barras ou Área), o mesmo do Painel de Bordo.
