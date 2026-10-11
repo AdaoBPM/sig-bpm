@@ -161,7 +161,7 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         {def.campos.map((c) => (
-          <div key={c.nome} className={c.tipo === "multipla" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : ""}>
+          <div key={c.nome} className={c.larguraInteira || c.tipo === "multipla" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : ""}>
             <CampoForm
               c={c}
               valor={valores[c.nome]}

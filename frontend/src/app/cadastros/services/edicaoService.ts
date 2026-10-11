@@ -15,6 +15,8 @@ export type Campo = {
   travaComMovimento?: boolean;
   /** A lista mostra só as opções do valor escolhido neste outro campo. */
   filtradoPor?: string;
+  /** Ocupa as duas colunas do formulário de edição. */
+  larguraInteira?: boolean;
   ajuda?: string;
   opcoes?: Opcao[];
 };

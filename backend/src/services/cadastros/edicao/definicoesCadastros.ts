@@ -44,6 +44,8 @@ export type Campo = {
   travaComMovimento?: boolean;
   /** A lista mostra só as opções do valor escolhido neste outro campo (as Linhas dos Totais da Chave, nas regras de rateio). */
   filtradoPor?: string;
+  /** Ocupa as duas colunas do formulário de edição. */
+  larguraInteira?: boolean;
   ajuda?: string;
   opcoes?: (db: Db) => Promise<Opcao[]>;
 };
@@ -670,6 +672,27 @@ const CHAVES_DA_LISTA: Record<string, string[]> = {
 };
 /** A base física pela medida do total. */
 const BASE_DA_MEDIDA: Record<string, string> = { "m³": "M3", kg: "KG", und: "PISTA", d: "DIA" };
+/** O destino de cada linha dos Totais (11/10/2026): o da unidade ou do serviço que ela mede (as pistas são da Filial). */
+const DESTINO_DO_TOTAL: Record<string, string> = {
+  PROJETOS_MATRIZ: "MATRIZ",
+  PROJETOS_FILIAL: "FILIAL",
+  PREFABRICADO_MATRIZ: "MATRIZ",
+  PREFABRICADO_FILIAL: "FILIAL",
+  PREFABRICADO_PISTAS: "FILIAL",
+  METALURGIA_MATRIZ: "MATRIZ",
+  METALURGIA_FILIAL: "FILIAL",
+  METALURGIA_MONTAGEM: "MONTAGEM",
+  METALURGIA_COMPLEMENTAR: "COMPLEMENTAR",
+  ARMADURA_MATRIZ: "MATRIZ",
+  ARMADURA_FILIAL: "FILIAL",
+  ARMADURA_MONTAGEM: "MONTAGEM",
+  ARMADURA_COMPLEMENTAR: "COMPLEMENTAR",
+  EXPEDICAO_MATRIZ: "MATRIZ",
+  EXPEDICAO_FILIAL: "FILIAL",
+  MONTAGEM: "MONTAGEM",
+  ACOMPANHAMENTO_MONTAGEM: "MONTAGEM",
+  ACOMPANHAMENTO_COMPLEMENTAR: "COMPLEMENTAR",
+};
 /** A unidade que recebe pelo destino (11/10/2026): Matriz, Filial, ou Serviços para a Montagem e a Complementar. */
 const UNIDADE_DO_DESTINO: Record<string, number> = { MATRIZ: 1, FILIAL: 2, MONTAGEM: 3, COMPLEMENTAR: 3 };
 /** Os totais das Listas (a faixa acima de cada lista), com o rótulo como lá: sem o "(P)" ou "(S)" e com a medida. */
@@ -678,6 +701,7 @@ const TOTAIS_DAS_LISTAS = LINHAS_TOTAIS.map((t) => ({
   rotulo: `${t.rotulo.replace(/^\([PS]\) /, "")} (${t.medida})`,
   chaves: CHAVES_DA_LISTA[t.tipo] ?? [],
   base: BASE_DA_MEDIDA[t.medida],
+  destino: DESTINO_DO_TOTAL[t.codigo],
 }));
 const totalDaRegra = (v: unknown, chave: string) => {
   const t = TOTAIS_DAS_LISTAS.find((x) => x.codigo === exigir(v, "A linha dos Totais"));
@@ -694,8 +718,8 @@ const regras: DefinicaoCadastro = {
   excluir: true,
   // O Rótulo na primeira coluna e a Chave no lugar dele (11/10/2026).
   campos: [
-    { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true },
-    { nome: "destino", rotulo: "Destino", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas([["MATRIZ", "Matriz"], ["FILIAL", "Filial"], ["MONTAGEM", "Montagem"], ["COMPLEMENTAR", "Complementar"]]) },
+    // O Destino saiu da tela (11/10/2026): é o da Linha dos Totais escolhida.
+    { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true, larguraInteira: true },
     { nome: "chave", rotulo: "Chave", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas(BALDES.slice(1, 6)) },
     {
       nome: "origemDoVolume",
@@ -705,7 +729,6 @@ const regras: DefinicaoCadastro = {
       obrigatorio: true,
       travaComMovimento: true,
       filtradoPor: "chave",
-      ajuda: "Os totais destacados nas Listas Operacionais, da Chave escolhida. A base física (m³, kg, pistas, dias) é a do total.",
       opcoes: async () => TOTAIS_DAS_LISTAS.map((t) => ({ valor: t.codigo, rotulo: t.rotulo, grupos: t.chaves })),
     },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
@@ -718,8 +741,8 @@ const regras: DefinicaoCadastro = {
     const fim = data(v.vigenciaFim, "A vigência final");
     if (fim && fim < inicio) throw new RegraCadastroError(400, "A vigência final é anterior à inicial.");
     const chave = exigir(v.chave, "A chave");
-    const destino = exigir(v.destino, "O destino");
     const total = totalDaRegra(v.origemDoVolume, chave);
+    const destino = total.destino;
     const unidade = await db.unidadeNegocio.findUnique({ where: { codigo: UNIDADE_DO_DESTINO[destino] ?? -1 }, select: { id: true } });
     if (!unidade) throw new RegraCadastroError(400, "Destino inválido.");
     const outra = await db.regraRateio.findFirst({ where: { chave: chave as never, destino: destino as never, vigenciaInicio: inicio }, select: { id: true } });
@@ -739,7 +762,8 @@ const regras: DefinicaoCadastro = {
   async gravar(db, d, id) {
     const dados = d as Prisma.RegraRateioUncheckedCreateInput;
     if (id) {
-      const { chave: _c, destino: _d, ...resto } = dados;
+      // A chave não muda; o destino acompanha a Linha dos Totais (que, com apurações, não muda).
+      const { chave: _c, ...resto } = dados;
       return (await db.regraRateio.update({ where: { id }, data: resto })).id;
     }
     return (await db.regraRateio.create({ data: { ...dados, ordem: (await db.regraRateio.count()) + 1 } })).id;
