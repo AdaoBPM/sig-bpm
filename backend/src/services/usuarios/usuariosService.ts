@@ -37,6 +37,7 @@ export const RECURSOS: RecursoSistema[] = [
   "DRE",
   "DIVERGENCIA",
   "AUDITORIA",
+  "CENARIOS",
 ];
 const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   CADASTROS: "Cadastros",
@@ -50,6 +51,7 @@ const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   DRE: "DRE",
   DIVERGENCIA: "Divergências",
   AUDITORIA: "Auditoria",
+  CENARIOS: "Cenários (criação de cenários)",
 };
 const ACOES: AcaoPermissao[] = ["VER", "LER", "EDITAR"];
 const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [

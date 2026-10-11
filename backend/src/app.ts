@@ -26,6 +26,7 @@ import { perfisRoutes, usuariosRoutes } from "./routes/usuarios/usuariosRoutes.j
 import { estoqueRoutes } from "./routes/estoque/estoqueRoutes.js";
 import { rateiosRoutes } from "./routes/rateios/rateiosRoutes.js";
 import { relatoriosRoutes } from "./routes/relatorios/relatoriosRoutes.js";
+import { cenariosRoutes } from "./routes/cenarios/cenariosRoutes.js";
 import {
   importacoesDaCompetenciaRoutes,
   importacoesRoutes,
@@ -81,6 +82,7 @@ app.use("/lancamentos-manuais", lancamentosManuaisRoutes);
 app.use("/listas", listasRoutes);
 app.use("/lancamentos-receita", lancamentosReceitaRoutes);
 app.use("/relatorios", relatoriosRoutes);
+app.use("/cenarios", cenariosRoutes);
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Rota não encontrada" });

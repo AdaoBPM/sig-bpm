@@ -38,6 +38,8 @@ enum RecursoSistema {
   DRE
   DIVERGENCIA
   AUDITORIA
+  /// Criação de Cenários (11/10/2026).
+  CENARIOS
 }
 
 /// ENUM: ação permitida sobre um recurso — é o "pode fazer o quê".
@@ -471,6 +473,7 @@ model LinhaDRE {
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
   resultadosApurados   ResultadoApurado[]
+  cenariosResultados   CenarioResultado[]
 
   @@index([grupoSigla])
   @@map("linhas_dre")
@@ -1839,4 +1842,70 @@ model ConferenciaPlanilha {
 
   @@index([competenciaId, enviadoEm])
   @@map("conferencias_planilha")
+}
+
+/// Criação de Cenários (11/10/2026): um cenário sintético é uma DRE por unidade, mês a mês no exercício, com as metas
+/// dos indicadores — importado de uma planilha como o ORÇAMENTO BPM (abas Consolidado, Matriz, Filial, Serviços,
+/// Desp.+Extra e RN) e a aba Metas do INDICADORES DE RESULTADO. Os cenários analíticos virão depois.
+enum MarcacaoCenario {
+  ORCAMENTO_EMPRESARIAL
+  RESULTADOS_ANTERIORES
+  RESULTADOS_VENDIDOS
+}
+
+model Cenario {
+  id           String           @id @default(uuid())
+  nome         String
+  /// O exercício do cenário (os meses JAN a DEZ dele).
+  ano          Int
+  /// SINTETICO (agora) ou ANALITICO (depois).
+  tipo         String           @default("SINTETICO")
+  descricao    String?
+  /// O papel do cenário no exercício; cada marcação vale para um cenário só por exercício. O Orçamento Empresarial
+  /// dá o orçado de Resultados Realizados.
+  marcacao     MarcacaoCenario?
+  /// O último arquivo importado no cenário.
+  nomeArquivo  String?          @map("nome_arquivo")
+  importadoEm  DateTime?        @map("importado_em")
+  criadoPor    String?          @map("criado_por")
+  criadoEm     DateTime         @default(now()) @map("criado_em")
+  atualizadoEm DateTime         @updatedAt @map("atualizado_em")
+
+  resultados  CenarioResultado[]
+  indicadores CenarioIndicador[]
+
+  @@unique([ano, marcacao])
+  @@map("cenarios")
+}
+
+/// O valor de uma linha da DRE do cenário, numa visão (0 Consolidado, 1 a 5 as unidades), num mês.
+model CenarioResultado {
+  cenarioId  String  @map("cenario_id")
+  visao      Int
+  linhaDREId String  @map("linha_dre_id")
+  mes        Int
+  valor      Decimal
+
+  cenario  Cenario  @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+  linhaDRE LinhaDRE @relation(fields: [linhaDREId], references: [id])
+
+  @@id([cenarioId, visao, linhaDREId, mes])
+  @@index([linhaDREId])
+  @@map("cenarios_resultados")
+}
+
+/// A meta de um indicador no cenário, num mês, pelo nome do indicador: importada (aba Metas) ou digitada (os
+/// lançamentos manuais: quadros de lotação, Comercial e Administrativo).
+model CenarioIndicador {
+  cenarioId String  @map("cenario_id")
+  nome      String
+  mes       Int
+  valor     Decimal
+  /// IMPORTADO ou DIGITADO.
+  origem    String  @default("IMPORTADO")
+
+  cenario Cenario @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+
+  @@id([cenarioId, nome, mes])
+  @@map("cenarios_indicadores")
 }

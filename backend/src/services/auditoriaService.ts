@@ -66,6 +66,7 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   lancamento_receita: "Lançamento de receita",
   lista_operacional: "Lista operacional",
   divergencia: "Divergência",
+  cenario: "Cenário",
   centro_custo: "Centro de custo",
   conta_resultado: "Conta de resultado",
   reclassificacao: "Reclassificação de conta",

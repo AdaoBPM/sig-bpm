@@ -2,7 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { acumular, type Parte } from "./indicadores.js";
 import { catalogoDeIndicadores } from "./catalogoIndicadores.js";
 import { dadosDoMes, encadearMeses } from "./indicadoresService.js";
-import { acumularMeta } from "./metasOrcamento.js";
+import { orcamentoDoExercicio } from "./orcamento.js";
 import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
@@ -40,24 +40,21 @@ export const painelService = {
   /**
    * O Painel de Bordo do mês `ate` (sem ele, o último apurado): o realizado
    * sai dos indicadores (DRE apurada, volumes e indicadores importados); o
-   * orçado, das metas importadas (aba Metas (Orçamento)). O acumulado vai de
-   * janeiro ao mês; sem as metas de algum desses meses, o orçado acumulado
-   * fica sem valor (e os meses vão em `mesesSemMeta`).
+   * orçado, do cenário marcado como Orçamento Empresarial no exercício (desde
+   * 11/10/2026) ou, sem ele, das metas importadas (aba Metas (Orçamento)). O
+   * acumulado vai de janeiro ao mês; os meses sem orçado vão em `mesesSemMeta`.
    */
   async painel(ano: number, ate?: number) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate);
-    const competencias = await getPrismaClient().competencia.findMany({
-      where: { ano, mes: { lte: ultimo } },
-      select: { id: true, mes: true, metasImportadas: { select: { nome: true, valor: true } } },
-    });
+    const competencias = await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } });
     const porMes = new Map(competencias.map((c) => [c.mes, c]));
+    const orcamento = await orcamentoDoExercicio(ano);
     const dados = encadearMeses(
-      await Promise.all(meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null) : null))),
+      await Promise.all(
+        meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null, orcamento.cenario ? orcamento.porMes[m.mes - 1] : undefined) : null)),
+      ),
     );
-    const metas = meses.map((m) => {
-      const lista = porMes.get(m.mes)?.metasImportadas ?? [];
-      return lista.length ? new Map(lista.map((x) => [x.nome, Number(x.valor)])) : null;
-    });
+    const metas = meses.map((m) => orcamento.porMes[m.mes - 1]);
 
     // Os indicadores realizados: as partes de cada mês, para o valor do mês de referência e o acumulado.
     const catalogo = await catalogoDeIndicadores();
@@ -66,8 +63,7 @@ export const painelService = {
     const realizadoMes: Valor = (n) => partes.get(n)?.[ultimo - 1]?.valor ?? null;
     const realizadoAcum: Valor = (n) => (porNome.has(n) ? acumular(porNome.get(n)!, partes.get(n)!) : null);
     const orcadoMes: Valor = (n) => metas[ultimo - 1]?.get(n) ?? null;
-    const completas = metas.every((m) => m !== null);
-    const orcadoAcum: Valor = (n) => (completas ? acumularMeta(porNome.get(n), metas) : null);
+    const orcadoAcum: Valor = (n) => (porNome.has(n) ? orcamento.acumulado(porNome.get(n)!, ultimo) : null);
 
     const periodos = { mes: [realizadoMes, orcadoMes] as [Valor, Valor], acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor] };
     // A série mês a mês (gráficos do painel, como os da planilha): o realizado e o orçado de cada mês até o de referência.
@@ -82,6 +78,8 @@ export const painelService = {
       rotuloMes: `${MESES[ultimo - 1]}/${ano}`,
       rotuloAcumulado: `ACUMULADO/${ano}`,
       mesApurado: meses[ultimo - 1].competenciaId !== null,
+      /** O cenário do orçado (null: as metas importadas). */
+      cenarioOrcado: orcamento.cenario?.nome ?? null,
       mesesSemMeta: meses.filter((_, i) => metas[i] === null).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
         { chave: "resultados", titulo: "Resultados", quadros: montar(PAINEL_RESULTADOS, periodos, serie) },

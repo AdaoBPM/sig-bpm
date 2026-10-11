@@ -43,7 +43,14 @@ export type Indicador = {
   orcado: Array<number | null>;
   totalOrcado: number | null;
 };
-export type Indicadores = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: Indicador[] };
+export type Indicadores = {
+  ano: number;
+  ate: number;
+  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: as metas importadas. */
+  cenarioOrcado?: string | null;
+  meses: MesRelatorio[];
+  indicadores: Indicador[];
+};
 
 /** Os formatos das células do Painel de Bordo, como na planilha. */
 export type FormatoPainel = "MILHOES" | "MILHARES" | "M3" | "PISTAS" | "PCT" | "PCT_RL" | "RS_M3";
@@ -70,6 +77,8 @@ export type Painel = {
   rotuloAcumulado: string;
   mesApurado: boolean;
   mesesSemMeta: string[];
+  /** O cenário do orçado (o Orçamento Empresarial do exercício); null: as metas importadas. */
+  cenarioOrcado: string | null;
   abas: Array<{ chave: string; titulo: string; quadros: QuadroPainel[] }>;
 };
 

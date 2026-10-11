@@ -25,7 +25,7 @@ export class RelatorioError extends Error {
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano).slice(2)}`;
 
-type LinhaEstrutura = { id: string; codigo: string; tipo: string; grupo: string; grupoSigla: string; descricao: string };
+export type LinhaEstrutura = { id: string; codigo: string; tipo: string; grupo: string; grupoSigla: string; descricao: string };
 type Celula = { valor: number | null; pct: number | null; unitario: number | null };
 
 /** Os meses do exercício até `ate`, com a competência apurada de cada um (ou nenhuma). */
@@ -47,7 +47,7 @@ export async function mesesDoExercicio(ano: number, ate?: number) {
   };
 }
 
-async function estrutura(): Promise<LinhaEstrutura[]> {
+export async function estrutura(): Promise<LinhaEstrutura[]> {
   return getPrismaClient().linhaDRE.findMany({
     where: { ativo: true },
     orderBy: { ordem: "asc" },
@@ -77,7 +77,7 @@ const soma = (xs: Array<number | null | undefined>) => arredonda(xs.reduce<numbe
  * e o total do exercício (a soma dos meses apurados), com o % e o R$/m³ do
  * total sobre as bases somadas.
  */
-function montar(
+export function montar(
   linhas: LinhaEstrutura[],
   visao: VisaoResultados,
   apurado: boolean[],

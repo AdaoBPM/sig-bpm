@@ -12,6 +12,7 @@ import {
   History,
   KeyRound,
   Landmark,
+  Layers,
   LayoutDashboard,
   ListOrdered,
   ListTree,
@@ -21,6 +22,7 @@ import {
   Table2,
   UserCog,
   Users,
+  Workflow,
 } from "lucide-react";
 
 export type NavItem = {
@@ -40,6 +42,14 @@ export type NavItem = {
 export type NavGrupo = { titulo: string; itens: NavItem[] };
 
 export const navGrupos: NavGrupo[] = [
+  {
+    // Criação de Cenários (11/10/2026): por enquanto, os sintéticos; os analíticos virão depois.
+    titulo: "Criação de Cenários",
+    itens: [
+      { title: "Cenários Sintéticos", href: "/cenarios/sinteticos", icon: Layers, permission: "cenarios:ver" },
+      { title: "Cenários Analíticos", href: "/cenarios/analiticos", icon: Workflow, permission: "cenarios:ver" },
+    ],
+  },
   {
     titulo: "Apuração dos Resultados",
     itens: [
@@ -137,6 +147,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/auditoria(\/|$)/, "auditoria:ver"],
   [/^\/divergencias(\/|$)/, "divergencia:ver"],
   [/^\/relatorios(\/|$)/, "dre:ver"],
+  [/^\/cenarios(\/|$)/, "cenarios:ver"],
   [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ver"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ver"],
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
@@ -171,6 +182,8 @@ export const pageTitles: Record<string, string> = {
   "/relatorios/resultados": "Resultados",
   "/relatorios/indicadores": "Indicadores",
   "/relatorios/painel": "Painel de Bordo",
+  "/cenarios/sinteticos": "Cenários Gerados",
+  "/cenarios/analiticos": "Cenários Analíticos",
 };
 
 /** Uma parte do caminho no topo da tela; sem href, é a tela atual. */
@@ -186,6 +199,9 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
     const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
     return [{ rotulo: "Fechamento Mensal", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
   }
+  // As telas de um cenário: "Cenários Sintéticos › Resultados".
+  const cenario = pathname.match(/^\/cenarios\/sinteticos\/[^/]+\/([^/]+)/);
+  if (cenario) return [{ rotulo: "Cenários Sintéticos", href: "/cenarios/sinteticos" }, { rotulo: cenario[1] === "indicadores" ? "Indicadores" : "Resultados" }];
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];
   return [{ rotulo: getPageTitle(pathname) }];

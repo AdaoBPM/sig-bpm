@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BarraDeTelas } from "@/components/layout/BarraDeTelas";
 import { EtapasDoMes } from "@/components/layout/EtapasDoMes";
+import { BarraDoCenario, lerRotaDoCenario } from "@/app/cenarios/components/BarraDoCenario";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
@@ -43,6 +44,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const doMes = lerRotaDoMes(pathname);
   // Nas telas de um grupo (cadastros, usuários), a barra do grupo.
   const doGrupo = grupoDaTela(pathname);
+  // Nas telas de um cenário sintético, a barra do cenário (Resultados e Indicadores).
+  const doCenario = lerRotaDoCenario(pathname);
 
   return (
     <SidebarProvider>
@@ -65,6 +68,7 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
         <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
           {doMes && user ? <EtapasDoMes anoMes={doMes.anoMes} chave={doMes.chave} resto={doMes.resto} /> : null}
           {doGrupo && user ? <BarraDeTelas grupo={doGrupo.grupo} atual={doGrupo.tela.href} /> : null}
+          {doCenario && user && !bloqueada ? <BarraDoCenario id={doCenario.id} tela={doCenario.tela} /> : null}
           {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso /> : children}
         </div>
       </SidebarInset>

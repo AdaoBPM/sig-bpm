@@ -1,16 +1,17 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { acumular, type DadosDoMes } from "./indicadores.js";
-import { acumularMeta } from "./metasOrcamento.js";
 import { catalogoDeIndicadores, TOTAIS_SINTETICOS } from "./catalogoIndicadores.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
+import { orcamentoDoExercicio } from "./orcamento.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
 /**
  * Os dados de um mês: a DRE de todas as visões e os volumes congelados dos
  * rateios (só no mês apurado; senão NaN, e o indicador fica sem valor) e os
- * indicadores importados (com ou sem apuração).
+ * indicadores importados (com ou sem apuração). `metas`: o orçado do mês (o do cenário Orçamento Empresarial, que
+ * os GME 4 e 8 usam); sem ele, as metas importadas do mês.
  */
-export async function dadosDoMes(competenciaId: string, apurado: boolean): Promise<DadosDoMes> {
+export async function dadosDoMes(competenciaId: string, apurado: boolean, metasDoOrcamento?: Map<string, number> | null): Promise<DadosDoMes> {
   const prisma = getPrismaClient();
   const [dre, volumes, importados, digitados, metas, totaisListas] = await Promise.all([
     apurado
@@ -24,13 +25,13 @@ export async function dadosDoMes(competenciaId: string, apurado: boolean): Promi
     // Os digitados nas abas Comercial e Administrativo das Listas sobrepõem os importados.
     prisma.indicadorDigitado.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
     // As metas do orçamento do mês (os GME 4 e 8).
-    prisma.metaImportada.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
+    metasDoOrcamento !== undefined ? [] : prisma.metaImportada.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
     // Os totais das listas do mês (os totalizadores que não têm volume congelado: Expedição, Montagem, Pistas…).
     apurado ? totaisDaCompetencia(competenciaId) : [],
   ]);
   const porLista = new Map(totaisListas.map((t) => [t.codigo as string, Number(t.quantidade)]));
   const totalDaLista = (c: string): number => (porOrigem.has(c) ? porOrigem.get(c)! : (porLista.get(c) ?? 0));
-  const porMeta = new Map(metas.map((x) => [x.nome, Number(x.valor)]));
+  const porMeta = metasDoOrcamento !== undefined ? (metasDoOrcamento ?? new Map<string, number>()) : new Map(metas.map((x) => [x.nome, Number(x.valor)]));
   const porVisao = new Map(dre.map((r) => [`${r.unidadeNegocio?.codigo ?? 0}|${r.linhaDRE.codigo}`, Number(r.valor)]));
   // Cada origem aparece em mais de uma regra de rateio com o mesmo volume: vale uma vez.
   const porOrigem = new Map(volumes.map((v) => [v.regraRateio.origemDoVolume, Number(v.quantidade)]));
@@ -63,22 +64,19 @@ export const indicadoresService = {
     const competencias = new Map(
       (await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } })).map((c) => [c.mes, c.id]),
     );
-    // As metas importadas de cada mês (aba Metas (Orçamento)), para o orçado do gráfico do indicador, como no Painel de Bordo.
-    const metasPorMes = new Map(
-      (await getPrismaClient().metaImportada.findMany({ where: { competencia: { ano, mes: { lte: ultimo } } }, select: { nome: true, valor: true, competencia: { select: { mes: true } } } })).reduce(
-        (m, x) => m.set(x.competencia.mes, (m.get(x.competencia.mes) ?? new Map<string, number>()).set(x.nome, Number(x.valor))),
-        new Map<number, Map<string, number>>(),
-      ),
-    );
-    const metas = meses.map((m) => metasPorMes.get(m.mes) ?? null);
+    // O orçado de cada mês, para o gráfico do indicador, como no Painel de Bordo: o cenário Orçamento Empresarial (ou as metas importadas).
+    const orcamento = await orcamentoDoExercicio(ano);
+    const metas = meses.map((m) => orcamento.porMes[m.mes - 1]);
     // Os indicadores do cadastro Estrutura dos Indicadores, com as fórmulas.
     const catalogo = await catalogoDeIndicadores();
     const dados = encadearMeses(
-      await Promise.all(meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null) : null))),
+      await Promise.all(meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null, orcamento.cenario ? orcamento.porMes[m.mes - 1] : undefined) : null))),
     );
     return {
       ano,
       ate: ultimo,
+      /** O cenário do orçado (null: as metas importadas). */
+      cenarioOrcado: orcamento.cenario?.nome ?? null,
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       indicadores: catalogo.map((i) => {
         const partes = dados.map((d) => (d ? i.calculo(d) : null));
@@ -92,9 +90,9 @@ export const indicadoresService = {
           acumulado: i.acumulado,
           meses: partes.map((p) => p?.valor ?? null),
           total: acumular(i, partes),
-          /** O orçado de cada mês (null sem as metas do mês, ou sem meta para o indicador) e o acumulado do orçado (só com as metas de todos os meses). */
+          /** O orçado de cada mês (null sem o orçado do mês, ou sem ele para o indicador) e o acumulado do orçado. */
           orcado: metas.map((m) => m?.get(i.nome) ?? null),
-          totalOrcado: metas.every((m) => m !== null) ? acumularMeta(i, metas) : null,
+          totalOrcado: orcamento.acumulado(i, ultimo),
         };
       }),
     };

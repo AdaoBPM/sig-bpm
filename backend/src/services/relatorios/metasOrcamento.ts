@@ -14,7 +14,8 @@ import { acumular, type Indicador, type Parte } from "./indicadores.js";
  * - custos e eficiências da montagem: o rendimento;
  * - DL, DT, DC, DA e eficiência da operação total: a receita líquida total;
  * - margem das vendas: a venda do tipo; mix ampliado: a venda total;
- * - turnover: o quadro de lotação total.
+ * - turnover: o quadro de lotação total;
+ * - GME 4 (11/10/2026): a demanda gerada pela venda total; a expedida pela expedição total — como o realizado.
  */
 type Peso = string | { componentes: Array<[nome: string, peso: string]> };
 
@@ -33,6 +34,8 @@ function pesoDaMeta(nome: string): Peso | null {
   if (nome.startsWith("Margem de Contribuição: ")) return `Venda: ${nome.slice("Margem de Contribuição: ".length)}`;
   if (nome === "Repres. do Mix Ampliado nas Vendas") return "Venda: Total";
   if (nome === "Turnover") return "Quadro de Lotação Total";
+  if (nome === "Média Móvel da Demanda Gerada") return "Venda: Total";
+  if (nome === "Média Móvel da Demanda Expedida") return "Expedição (Vol.): Total";
   if (nome.startsWith("Eficiência da Operação: ")) {
     if (nome.endsWith("Montagem")) return "Receita Líquida: Montagem";
     if (nome.endsWith("Matriz")) return RL_MATRIZ;

@@ -57,14 +57,16 @@ const listavel = (l: LinhaResultado, visao: VisaoDetalhe) => l.volume && l.tipo 
  * o valor e o %; o mês de referência (o último), também o R$/m³; no fim, o
  * total do exercício com o % e o R$/m³. Clicar no valor de um mês abre a
  * consulta daquele mês (os lançamentos ou as listas, como na DRE); clicar na
- * descrição, a do mês de referência.
+ * descrição, a do mês de referência. Sem `consultas` (os cenários, que não têm
+ * lançamentos), nada abre.
  */
-function TabelaResultados({
+export function TabelaResultados({
   dados,
   titulo,
   visao,
   nomeVisao,
   aoLadoDoTitulo,
+  consultas = true,
 }: {
   dados: Resultados;
   titulo: string;
@@ -72,6 +74,7 @@ function TabelaResultados({
   nomeVisao: string;
   /** Conteúdo logo depois do título (o botão de informação do centro de custo), como na DRE. */
   aoLadoDoTitulo?: ReactNode;
+  consultas?: boolean;
 }) {
   const niveis = useNiveisDRE(dados.linhas, "sig.resultados.nivel");
   const [consulta, setConsulta] = useState<{ linha: LinhaResultado; mes: MesRelatorio } | null>(null);
@@ -80,7 +83,7 @@ function TabelaResultados({
   const referencia = dados.meses.length - 1;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
-  const abre = (l: LinhaResultado) => detalhavel(l) || listavel(l, visao);
+  const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
   const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.

@@ -1,0 +1,70 @@
+import { api } from "@/lib/api";
+
+import type { Indicador, MesRelatorio, Resultados } from "@/app/relatorios/services/relatoriosService";
+
+export type MarcacaoCenario = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS";
+
+export const MARCACOES: Array<{ valor: MarcacaoCenario; rotulo: string }> = [
+  { valor: "ORCAMENTO_EMPRESARIAL", rotulo: "Orçamento Empresarial" },
+  { valor: "RESULTADOS_ANTERIORES", rotulo: "Resultados Anteriores" },
+  { valor: "RESULTADOS_VENDIDOS", rotulo: "Resultados Vendidos" },
+];
+export const rotuloMarcacao = (m: MarcacaoCenario | null) => MARCACOES.find((x) => x.valor === m)?.rotulo ?? null;
+
+export type Cenario = {
+  id: string;
+  nome: string;
+  ano: number;
+  tipo: string;
+  descricao: string | null;
+  marcacao: MarcacaoCenario | null;
+  nomeArquivo: string | null;
+  importadoEm: string | null;
+  criadoPor: string | null;
+  criadoEm: string;
+  /** As visões da DRE com valor (0 Consolidado, 1 a 5 as unidades). */
+  visoes: number[];
+  /** Os indicadores com meta. */
+  indicadores: number;
+};
+
+export type ResumoImportacao = {
+  ano: number;
+  visoes: Array<{ visao: number; nome: string; aba: string; meses: number; linhas: number; semPar: string[] }>;
+  ignoradas: string[];
+  faltam: string[];
+  metas: { aba: string; indicadores: number; ignorados: string[] } | null;
+};
+
+/** RESULTADO: sai da DRE do cenário; MANUAL: lançamento manual; CALCULADO: DRE e lançamentos (eficiências); IMPORTADO: da aba das metas. */
+export type ClasseIndicador = "RESULTADO" | "MANUAL" | "CALCULADO" | "IMPORTADO";
+export type IndicadorDoCenario = Indicador & { classe: ClasseIndicador; digitados: boolean[] };
+export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: IndicadorDoCenario[] };
+
+export const cenariosService = {
+  listar: async () => (await api.get<{ data: Cenario[] }>("/proxy/cenarios")).data.data,
+  obter: async (id: string) => (await api.get<{ data: Cenario }>(`/proxy/cenarios/${id}`)).data.data,
+  criar: async (dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null }) => (await api.post<{ data: Cenario }>("/proxy/cenarios", dados)).data.data,
+  atualizar: async (id: string, dados: { nome: string; descricao: string | null }) => (await api.patch<{ data: Cenario }>(`/proxy/cenarios/${id}`, dados)).data.data,
+  excluir: async (id: string) => {
+    await api.delete(`/proxy/cenarios/${id}`);
+  },
+  marcar: async (id: string, marcacao: MarcacaoCenario | null) =>
+    (await api.put<{ data: { desmarcado: string | null } }>(`/proxy/cenarios/${id}/marcacao`, { marcacao })).data.data,
+  /** O arquivo vai cru no corpo: num cenário (cenarioId) ou num cenário novo (nome e descrição). */
+  importar: async (arquivo: File, destino: { cenarioId: string } | { nome: string; descricao: string | null }, onProgresso?: (percentual: number) => void) =>
+    (
+      await api.post<{ data: { cenario: Cenario; resumo: ResumoImportacao } }>("/proxy/cenarios/importar", arquivo, {
+        params: { nomeArquivo: arquivo.name, ...("cenarioId" in destino ? { cenarioId: destino.cenarioId } : { nome: destino.nome, descricao: destino.descricao ?? undefined }) },
+        headers: { "Content-Type": "application/octet-stream" },
+        onUploadProgress: (e) => {
+          if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
+        },
+      })
+    ).data.data,
+  resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
+  indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
+  salvarManual: async (id: string, nome: string, valores: Array<number | null>) => {
+    await api.put(`/proxy/cenarios/${id}/indicadores/manuais`, { nome, valores });
+  },
+};
