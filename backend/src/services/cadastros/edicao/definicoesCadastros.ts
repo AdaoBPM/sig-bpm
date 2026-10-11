@@ -533,9 +533,9 @@ const unidades: DefinicaoCadastro = {
   criar: false,
   excluir: false,
   campos: [
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
     { nome: "codigo", rotulo: "Código", tipo: "inteiro", derivado: true },
     { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, travaComMovimento: true },
-    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
   listar: async (db) => db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } }),
@@ -571,6 +571,7 @@ const linhas: DefinicaoCadastro = {
   criar: true,
   excluir: true,
   campos: [
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
     {
       nome: "unidadeNegocioId",
       rotulo: "Unidade",
@@ -582,7 +583,6 @@ const linhas: DefinicaoCadastro = {
         (await db.unidadeNegocio.findMany({ where: { codigo: { in: UNIDADES_DAS_LINHAS } }, orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: u.nome })),
     },
     { nome: "nome", rotulo: "Linha", tipo: "texto", obrigatorio: true, travaComMovimento: true, ajuda: "O nome com que as planilhas das Listas citam a linha (sem diferença de maiúsculas)." },
-    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
   listar: async (db, busca) =>
