@@ -50,7 +50,8 @@ export type LinhaDRE = {
   tipo: "SECAO" | "ITEM" | "SUBTOTAL" | "TOTAL";
   expressao: string | null;
   definicao: string | null;
-  unidades: { unidadeNegocio: { nome: string; tipo: string } }[];
+  ativo: boolean;
+  unidades: { unidadeNegocio: { nome: string } }[];
   _count: { contas: number };
 };
 

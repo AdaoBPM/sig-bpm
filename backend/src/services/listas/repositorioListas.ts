@@ -25,7 +25,7 @@ const INCLUIR = {
   unidadeNegocio: { select: { codigo: true, nome: true } },
   obra: { select: { codigo: true, nome: true } },
 } as const;
-const INCLUIR_COM_LINHA = { ...INCLUIR, linha: { select: { codigo: true, nome: true } } } as const;
+const INCLUIR_COM_LINHA = { ...INCLUIR, linha: { select: { nome: true } } } as const;
 
 type Filtro = { competenciaId: string; busca?: string };
 

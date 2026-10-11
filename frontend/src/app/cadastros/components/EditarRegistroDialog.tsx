@@ -16,6 +16,9 @@ import { edicaoService, mensagemDeErro, textoDoEfeito, type Campo, type Definica
 
 type Props = { entidade: string; id: string | null; onFechar: () => void };
 
+/** "A, B e C". */
+const emLista = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : (xs[0] ?? ""));
+
 /** "Linha da DRE" vira "linha da DRE": só a inicial, para não perder as siglas. */
 const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
@@ -30,8 +33,9 @@ const paraTela = (c: Campo, v: unknown) => {
   return c.tipo === "decimal" ? String(Number(Number(v).toFixed(6))).replace(".", ",") : String(v);
 };
 
-function CampoForm({ c, valor, onMuda, editando }: { c: Campo; valor: unknown; onMuda: (v: unknown) => void; editando: boolean }) {
-  const travado = c.derivado || (editando && c.somenteNaCriacao);
+function CampoForm({ c, valor, onMuda, editando, comMovimento }: { c: Campo; valor: unknown; onMuda: (v: unknown) => void; editando: boolean; comMovimento: boolean }) {
+  // Travado: calculado, só na criação, ou campo-chave de um registro com movimentos (11/10/2026).
+  const travado = c.derivado || (editando && c.somenteNaCriacao) || comMovimento;
   const id = `campo-${c.nome}`;
   if (c.tipo === "booleano") {
     return (
@@ -64,6 +68,7 @@ function CampoForm({ c, valor, onMuda, editando }: { c: Campo; valor: unknown; o
               <label key={o.valor} className="flex items-center gap-1.5 text-sm text-gray-700">
                 <input
                   type="checkbox"
+                  disabled={travado}
                   checked={lista.includes(o.valor)}
                   onChange={(e) => onMuda(e.target.checked ? [...lista, o.valor] : lista.filter((x) => x !== o.valor))}
                   className="size-4 accent-black"
@@ -95,6 +100,7 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
     Object.fromEntries(def.campos.map((c) => [c.nome, paraTela(c, registro ? registro[c.nome] : c.tipo === "booleano" ? true : undefined)])),
   );
   const [confirmaExclusao, setConfirmaExclusao] = useState(false);
+  const travas = registro?.__travas;
   const concluir = (msg: string, efeito?: { reclassificadas: string[]; apuradasPorReapurar: string[] }) => {
     const extra = efeito ? textoDoEfeito(efeito) : "";
     toast.success(`${msg}${extra ? ` ${extra}` : ""}`);
@@ -103,7 +109,7 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
   };
   const salvar = useMutation({
     mutationFn: () => {
-      const enviar = Object.fromEntries(def.campos.filter((c) => !c.derivado).map((c) => [c.nome, valores[c.nome]]));
+      const enviar = Object.fromEntries(def.campos.filter((c) => !c.derivado && !registro?.__travas?.campos.includes(c.nome)).map((c) => [c.nome, valores[c.nome]]));
       return registro ? edicaoService.atualizar(entidade, registro.id, enviar) : edicaoService.criar(entidade, enviar);
     },
     onSuccess: (r) => concluir(registro ? `${def.titulo} atualizado.` : `${def.titulo} criado.`, r),
@@ -120,10 +126,27 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
 
   return (
     <>
+      {travas?.movimentos ? (
+        <div className="rounded-sm border border-l-4 border-gray-200 border-l-yellow-600 bg-white px-4 py-2.5 text-sm text-gray-700">
+          <p className="font-medium text-gray-900">Registro com movimentos.</p>
+          <p>
+            {travas.movimentos}{" "}
+            {travas.campos.length
+              ? `Por isso, ${emLista(def.campos.filter((c) => travas.campos.includes(c.nome)).map((c) => c.rotulo))} ${travas.campos.length > 1 ? "não mudam" : "não muda"}${def.excluir ? " e o registro não se exclui" : ""}: ${travas.campos.length > 1 ? "essas informações ligam" : "essa informação liga"} o cadastro a outras telas.`
+              : ""}
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         {def.campos.map((c) => (
           <div key={c.nome} className={c.tipo === "multipla" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : ""}>
-            <CampoForm c={c} valor={valores[c.nome]} editando={!!registro} onMuda={(v) => setValores((x) => ({ ...x, [c.nome]: v }))} />
+            <CampoForm
+              c={c}
+              valor={valores[c.nome]}
+              editando={!!registro}
+              comMovimento={!!travas?.campos.includes(c.nome)}
+              onMuda={(v) => setValores((x) => ({ ...x, [c.nome]: v }))}
+            />
           </div>
         ))}
       </div>
@@ -135,7 +158,13 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
       ) : null}
       <DialogFooter className="sm:justify-between">
         <div>
-          {registro && def.excluir ? (
+          {registro && def.excluir && travas?.exclusao ? (
+            // Com movimentos, a exclusão fica bloqueada; o motivo, na dica do botão.
+            <Button type="button" variant="ghost" className="rounded-sm text-gray-400" disabled title={travas.exclusao}>
+              <Trash2 className="size-4" />
+              Excluir
+            </Button>
+          ) : registro && def.excluir ? (
             confirmaExclusao ? (
               <Button type="button" variant="destructive" className="rounded-sm" disabled={excluir.isPending} onClick={() => excluir.mutate()}>
                 Confirmar exclusão

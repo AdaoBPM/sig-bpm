@@ -10,11 +10,15 @@ export type Campo = {
   obrigatorio?: boolean;
   somenteNaCriacao?: boolean;
   derivado?: boolean;
+  /** Informação-chave: não muda quando o registro tem movimentos. */
+  travaComMovimento?: boolean;
   ajuda?: string;
   opcoes?: Opcao[];
 };
 export type DefinicaoCadastro = { entidade: string; titulo: string; criar: boolean; excluir: boolean; reclassifica: boolean; campos: Campo[] };
-export type Registro = Record<string, unknown> & { id: string };
+/** As travas do registro: com movimentos, os campos-chave não mudam e a exclusão é recusada (11/10/2026). */
+export type Travas = { movimentos: string | null; campos: string[]; exclusao: string | null };
+export type Registro = Record<string, unknown> & { id: string; __travas?: Travas };
 /** O efeito de uma alteração que classifica: o que foi reclassificado e o que precisa ser reapurado. */
 export type Efeito = { reclassificadas: string[]; apuradasPorReapurar: string[] };
 

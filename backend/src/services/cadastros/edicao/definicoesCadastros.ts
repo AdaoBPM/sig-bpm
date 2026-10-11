@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../../config/prisma.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { avaliarExpressao, codigosDaExpressao } from "../../dre/expressao.js";
+import { chaveDaLinha } from "../../../lib/linhas.js";
 
 /**
  * Cadastros editáveis pela tela (Passo 25, RF002 e RF003). Cada cadastro
@@ -34,6 +35,11 @@ export type Campo = {
   somenteNaCriacao?: boolean;
   /** Calculado pelo sistema; a tela mostra, não edita. */
   derivado?: boolean;
+  /**
+   * Informação-chave, que liga o cadastro a outras telas (o código do balancete, o nome com que as planilhas citam a
+   * linha…): não muda quando o registro já tem movimentos (11/10/2026).
+   */
+  travaComMovimento?: boolean;
   ajuda?: string;
   opcoes?: (db: Db) => Promise<Opcao[]>;
 };
@@ -56,6 +62,11 @@ export type DefinicaoCadastro = {
   gravar: (db: Db, dados: Record<string, unknown>, id: string | null) => Promise<string>;
   /** Por que não pode ser excluído (nulo se pode). */
   impedimentoExclusao?: (db: Db, id: string) => Promise<string | null>;
+  /**
+   * Os movimentos do registro (lançamentos, valores apurados, registros das listas…), em texto, ou nulo sem nenhum.
+   * Com movimentos, os campos travaComMovimento não mudam e a exclusão é recusada.
+   */
+  movimentos?: (db: Db, id: string) => Promise<string | null>;
   remover?: (db: Db, id: string) => Promise<void>;
 };
 
@@ -151,10 +162,10 @@ const centros: DefinicaoCadastro = {
   excluir: true,
   reclassifica: true,
   campos: [
-    { nome: "codigoRM", rotulo: "Código RM", tipo: "texto", ajuda: "A chave do balancete. Vazio só para centros mantidos fora do RM." },
+    { nome: "codigoRM", rotulo: "Código RM", tipo: "texto", travaComMovimento: true, ajuda: "A chave do balancete. Vazio só para centros mantidos fora do RM." },
     { nome: "coligada", rotulo: "Coligada", tipo: "inteiro" },
     { nome: "nomeRM", rotulo: "Nome no RM", tipo: "texto", obrigatorio: true },
-    { nome: "nomeControladoria", rotulo: "Centro de custo (controladoria)", tipo: "texto", ajuda: "Agrupa os centros na visão por centro de custo." },
+    { nome: "nomeControladoria", rotulo: "Centro de custo (controladoria)", tipo: "texto", travaComMovimento: true, ajuda: "Agrupa os centros na visão por centro de custo (DRE e Resultados)." },
     {
       nome: "departamento",
       rotulo: "Departamento",
@@ -206,13 +217,17 @@ const centros: DefinicaoCadastro = {
     const dados = d as Prisma.CentroCustoUncheckedCreateInput;
     return id ? (await db.centroCusto.update({ where: { id }, data: dados })).id : (await db.centroCusto.create({ data: { ...dados, ordem: (await db.centroCusto.count()) + 1 } })).id;
   },
-  async impedimentoExclusao(db, id) {
+  async movimentos(db, id) {
     const [l, m, r] = await Promise.all([
       db.lancamentoContabil.count({ where: { centroCustoId: id } }),
       db.lancamentoManual.count({ where: { centroCustoId: id } }),
       db.resultadoApurado.count({ where: { centroCustoId: id } }),
     ]);
-    return l + m + r > 0 ? `O centro tem ${l} lançamento(s) do balancete, ${m} manual(is) e ${r} valor(es) apurado(s): inative-o em vez de excluir.` : null;
+    return l + m + r > 0 ? `O centro tem ${l} lançamento(s) do balancete, ${m} manual(is) e ${r} valor(es) apurado(s).` : null;
+  },
+  async impedimentoExclusao(db, id) {
+    const m = await this.movimentos!(db, id);
+    return m ? `${m} Inative-o em vez de excluir.` : null;
   },
   remover: async (db, id) => void (await db.centroCusto.delete({ where: { id } })),
 };
@@ -226,7 +241,7 @@ const contas: DefinicaoCadastro = {
   excluir: true,
   reclassifica: true,
   campos: [
-    { nome: "reduzido", rotulo: "Reduzido", tipo: "texto", obrigatorio: true, somenteNaCriacao: true, ajuda: "A chave do balancete." },
+    { nome: "reduzido", rotulo: "Reduzido", tipo: "texto", obrigatorio: true, somenteNaCriacao: true, travaComMovimento: true, ajuda: "A chave do balancete." },
     { nome: "conta", rotulo: "Conta", tipo: "texto", obrigatorio: true },
     { nome: "descricao", rotulo: "Descrição", tipo: "texto", obrigatorio: true },
     { nome: "tipoConta", rotulo: "Tipo", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas([["ANALITICA", "Analítica"], ["SINTETICA", "Sintética"]]) },
@@ -289,6 +304,14 @@ const contas: DefinicaoCadastro = {
       db.reclassificacaoConta.count({ where: { OR: [{ contaOrigemId: id }, { contaDestinoId: id }] } }),
     ]);
     return l + a + m + r > 0 ? `A conta é usada por ${l + a} lançamento(s) do balancete, ${m} manual(is) e ${r} reclassificação(ões): inative-a em vez de excluir.` : null;
+  },
+  async movimentos(db, id) {
+    const [l, a, m] = await Promise.all([
+      db.lancamentoContabil.count({ where: { contaResultadoId: id } }),
+      db.lancamentoContabil.count({ where: { contaAdotadaId: id } }),
+      db.lancamentoManual.count({ where: { contaResultadoId: id } }),
+    ]);
+    return l + a + m > 0 ? `A conta é usada por ${l + a} lançamento(s) do balancete e ${m} manual(is).` : null;
   },
   remover: async (db, id) => void (await db.contaResultado.delete({ where: { id } })),
 };
@@ -354,17 +377,18 @@ const estrutura: DefinicaoCadastro = {
   campos: [
     { nome: "codigo", rotulo: "Código", tipo: "texto", obrigatorio: true, somenteNaCriacao: true, ajuda: "Referência estável nas expressões (ex.: CPP.MOD.REMUNERACOES_CLT)." },
     { nome: "ordem", rotulo: "Ordem", tipo: "inteiro", obrigatorio: true },
-    { nome: "tipo", rotulo: "Tipo", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas([["SECAO", "Seção"], ["ITEM", "Item"], ["SUBTOTAL", "Subtotal"], ["TOTAL", "Total"]]) },
-    { nome: "grupo", rotulo: "Grupo", tipo: "texto", obrigatorio: true },
-    { nome: "grupoSigla", rotulo: "Sigla do grupo", tipo: "texto", obrigatorio: true },
-    { nome: "atribuicao", rotulo: "Atribuição", tipo: "texto" },
-    { nome: "atribuicaoSigla", rotulo: "Sigla da atribuição", tipo: "texto" },
-    { nome: "descricao", rotulo: "Descrição", tipo: "texto", obrigatorio: true },
+    { nome: "tipo", rotulo: "Tipo", tipo: "opcao", obrigatorio: true, travaComMovimento: true, opcoes: opcoesFixas([["SECAO", "Seção"], ["ITEM", "Item"], ["SUBTOTAL", "Subtotal"], ["TOTAL", "Total"]]) },
+    { nome: "grupo", rotulo: "Grupo", tipo: "texto", obrigatorio: true, travaComMovimento: true },
+    { nome: "grupoSigla", rotulo: "Sigla do grupo", tipo: "texto", obrigatorio: true, travaComMovimento: true },
+    { nome: "atribuicao", rotulo: "Atribuição", tipo: "texto", travaComMovimento: true },
+    { nome: "atribuicaoSigla", rotulo: "Sigla da atribuição", tipo: "texto", travaComMovimento: true },
+    { nome: "descricao", rotulo: "Descrição", tipo: "texto", obrigatorio: true, travaComMovimento: true },
     { nome: "expressao", rotulo: "Expressão", tipo: "texto", ajuda: "Subtotal e total: códigos de outras linhas com + e −, parênteses e SUM(a, b)." },
     {
       nome: "unidades",
       rotulo: "Unidades em que aparece",
       tipo: "multipla",
+      travaComMovimento: true,
       opcoes: async (db) => (await db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } })).map((u) => ({ valor: String(u.codigo), rotulo: u.nome })),
     },
     { nome: "definicao", rotulo: "O que a linha significa", tipo: "texto" },
@@ -415,6 +439,17 @@ const estrutura: DefinicaoCadastro = {
       if (ids.length) await tx.linhaDREUnidade.createMany({ data: ids.map((unidadeNegocioId) => ({ linhaDREId: linha.id, unidadeNegocioId })) });
       return linha.id;
     });
+  },
+  async movimentos(db, id) {
+    const [contasN, resultados, manuais, lancamentos] = await Promise.all([
+      db.contaResultado.count({ where: { linhaDREId: id } }),
+      db.resultadoApurado.count({ where: { linhaDREId: id } }),
+      db.lancamentoManual.count({ where: { linhaDREId: id } }),
+      db.lancamentoContabil.count({ where: { linhaDREId: id } }),
+    ]);
+    return contasN + resultados + manuais + lancamentos > 0
+      ? `A linha tem ${contasN} conta(s) vinculada(s), ${lancamentos} lançamento(s) do balancete, ${manuais} manual(is) e ${resultados} valor(es) apurado(s).`
+      : null;
   },
   async impedimentoExclusao(db, id) {
     const l = await db.linhaDRE.findUniqueOrThrow({ where: { id }, select: { codigo: true } });
@@ -499,11 +534,20 @@ const unidades: DefinicaoCadastro = {
   excluir: false,
   campos: [
     { nome: "codigo", rotulo: "Código", tipo: "inteiro", derivado: true },
-    { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true },
+    { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, travaComMovimento: true },
     { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
   listar: async (db) => db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } }),
+  // O nome identifica a unidade na carga da Estrutura da DRE (as abas Realizado (…)): com movimentos, não muda.
+  async movimentos(db, id) {
+    const u = await db.unidadeNegocio.findUnique({
+      where: { id },
+      select: { _count: { select: { resultadosApurados: true, receitasPrevias: true, volumesOperacionais: true, projetos: true, producoes: true, expedicoes: true, montagens: true, acompanhamentos: true, medicoes: true, devolucoes: true, saidas: true } } },
+    });
+    const n = u ? Object.values(u._count).reduce((s, x) => s + x, 0) : 0;
+    return n ? `A unidade tem ${n} registro(s) nas listas, nos rateios, na receita prévia e na DRE apurada.` : null;
+  },
   ler: (db, id) => db.unidadeNegocio.findUnique({ where: { id } }),
   async preparar(_db, v) {
     return { nome: exigir(v.nome, "O nome"), ordem: inteiro(v.ordem, "A ordem") ?? 0, ativo: v.ativo === undefined ? true : booleano(v.ativo) };
@@ -533,11 +577,11 @@ const linhas: DefinicaoCadastro = {
       tipo: "opcao",
       obrigatorio: true,
       ajuda: "Matriz ou Filial para os produtos; Serviços para as linhas de obra.",
+      travaComMovimento: true,
       opcoes: async (db) =>
         (await db.unidadeNegocio.findMany({ where: { codigo: { in: UNIDADES_DAS_LINHAS } }, orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: u.nome })),
     },
-    { nome: "nome", rotulo: "Linha", tipo: "texto", obrigatorio: true },
-    { nome: "codigo", rotulo: "Código nas Listas", rotuloColuna: "Código", tipo: "texto", derivado: true, ajuda: "O texto das planilhas; na criação, o nome em maiúsculas." },
+    { nome: "nome", rotulo: "Linha", tipo: "texto", obrigatorio: true, travaComMovimento: true, ajuda: "O nome com que as planilhas das Listas citam a linha (sem diferença de maiúsculas)." },
     { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
@@ -558,20 +602,18 @@ const linhas: DefinicaoCadastro = {
     if (!unidade || !UNIDADES_DAS_LINHAS.includes(unidade.codigo)) throw new RegraCadastroError(400, "A unidade precisa ser Matriz, Filial ou Serviços.");
     const nome = exigir(v.nome, "A linha");
     const tipo = tipoDaLinha(unidade.codigo);
-    let codigo: string;
     if (id) {
-      const atual = await db.linha.findUnique({ where: { id }, select: { tipo: true, codigo: true } });
+      const atual = await db.linha.findUnique({ where: { id }, select: { tipo: true } });
       if (!atual) throw new RegraCadastroError(404, "Linha não encontrada.");
-      // O tipo (produto ou obra) vem da unidade e é a chave com que as Listas acham a linha: não muda.
+      // O tipo (produto ou obra) vem da unidade e faz parte da chave com que as telas acham a linha: não muda.
       if (atual.tipo !== tipo) {
         throw new RegraCadastroError(400, atual.tipo === "OBRA" ? "Linha de obra fica em Serviços." : "Linha de produto fica na Matriz ou na Filial.");
       }
-      codigo = atual.codigo;
-    } else {
-      codigo = nome.toLocaleUpperCase("pt-BR");
-      const outra = await db.linha.findUnique({ where: { tipo_codigo: { tipo, codigo } }, select: { id: true } });
-      if (outra) throw new RegraCadastroError(409, `Já existe a linha ${codigo}.`);
     }
+    // As telas e as importações acham a linha pelo Nome (11/10/2026); o código interno o acompanha, em maiúsculas.
+    const codigo = chaveDaLinha(nome);
+    const mesmoNome = (await db.linha.findMany({ where: { tipo }, select: { id: true, nome: true } })).find((l) => l.id !== id && chaveDaLinha(l.nome) === codigo);
+    if (mesmoNome) throw new RegraCadastroError(409, `Já existe a linha ${mesmoNome.nome}.`);
     return {
       tipo,
       codigo,
@@ -584,12 +626,12 @@ const linhas: DefinicaoCadastro = {
   async gravar(db, d, id) {
     const dados = d as Prisma.LinhaUncheckedCreateInput;
     if (id) {
-      const { tipo: _t, codigo: _c, ...editaveis } = dados;
+      const { tipo: _t, ...editaveis } = dados;
       return (await db.linha.update({ where: { id }, data: editaveis })).id;
     }
     return (await db.linha.create({ data: { ...dados, ordem: dados.ordem ?? (await db.linha.count({ where: { tipo: { in: ["PRODUTO", "OBRA"] } } })) + 1 } })).id;
   },
-  async impedimentoExclusao(db, id) {
+  async movimentos(db, id) {
     const l = await db.linha.findUnique({
       where: { id },
       select: {
@@ -603,7 +645,11 @@ const linhas: DefinicaoCadastro = {
       },
     });
     const n = l ? Object.values(l._count).reduce((s, x) => s + x, 0) : 0;
-    return n ? `A linha está em ${n} registro(s) das listas, do estoque, dos preços ou das obras: inative-a em vez de excluir.` : null;
+    return n ? `A linha está em ${n} registro(s) das listas, do estoque, dos preços ou das obras.` : null;
+  },
+  async impedimentoExclusao(db, id) {
+    const m = await this.movimentos!(db, id);
+    return m ? `${m} Inative-a em vez de excluir.` : null;
   },
   remover: async (db, id) => void (await db.linha.delete({ where: { id } })),
 };
@@ -624,11 +670,12 @@ const regras: DefinicaoCadastro = {
       rotuloColuna: "Unidade",
       tipo: "opcao",
       obrigatorio: true,
+      travaComMovimento: true,
       opcoes: async (db) => (await db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: `${u.codigo} · ${u.nome}` })),
     },
     { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true },
-    { nome: "baseFisica", rotulo: "Base física", rotuloColuna: "Base", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas([["M3", "m³"], ["KG", "kg"], ["PISTA", "pista"], ["DIA", "dia"]]) },
-    { nome: "origemDoVolume", rotulo: "Linha dos Totais que dá o volume", rotuloColuna: "Linha dos Totais", tipo: "texto", obrigatorio: true, ajuda: "Ex.: METALURGIA_MONTAGEM." },
+    { nome: "baseFisica", rotulo: "Base física", rotuloColuna: "Base", tipo: "opcao", obrigatorio: true, travaComMovimento: true, opcoes: opcoesFixas([["M3", "m³"], ["KG", "kg"], ["PISTA", "pista"], ["DIA", "dia"]]) },
+    { nome: "origemDoVolume", rotulo: "Linha dos Totais que dá o volume", rotuloColuna: "Linha dos Totais", tipo: "texto", obrigatorio: true, travaComMovimento: true, ajuda: "Ex.: METALURGIA_MONTAGEM." },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
     { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
   ],
@@ -661,9 +708,13 @@ const regras: DefinicaoCadastro = {
     }
     return (await db.regraRateio.create({ data: { ...dados, ordem: (await db.regraRateio.count()) + 1 } })).id;
   },
-  async impedimentoExclusao(db, id) {
+  async movimentos(db, id) {
     const n = await db.volumeOperacional.count({ where: { regraRateioId: id } });
-    return n ? `A regra já foi usada em ${n} apuração(ões) de rateio: encerre a vigência em vez de excluir.` : null;
+    return n ? `A regra já foi usada em ${n} apuração(ões) de rateio.` : null;
+  },
+  async impedimentoExclusao(db, id) {
+    const m = await this.movimentos!(db, id);
+    return m ? `${m} Encerre a vigência em vez de excluir.` : null;
   },
   remover: async (db, id) => void (await db.regraRateio.delete({ where: { id } })),
 };

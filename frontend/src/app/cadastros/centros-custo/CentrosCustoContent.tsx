@@ -16,6 +16,9 @@ import {
   cadastrosService,
   type CentroCusto,
 } from "../services/cadastrosService";
+import { useApenasAtivas } from "../components/ApenasAtivas";
+
+const ativoDoRegistro = (r: { ativo: boolean }) => r.ativo;
 
 const POR_PAGINA_INICIAL = 50;
 /** O cadastro inteiro vem de uma vez: o filtro e a ordem das colunas valem para todos os centros. */
@@ -42,10 +45,12 @@ export function CentrosCustoContent() {
     placeholderData: keepPreviousData,
   });
   const colunas = useMemo(() => (edicao.pode ? [...COLUNAS, EDITAR] : COLUNAS), [edicao.pode]);
-  const tabela = useTabelaFiltravel(data?.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
+  const ativas = useApenasAtivas(data?.itens, ativoDoRegistro);
+  const tabela = useTabelaFiltravel(ativas.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   return (
     <CadastroShell
+      apenasAtivas={ativas.controle}
       titulo="Centros de Custo"
       comoUsar={
         <ul>
@@ -53,6 +58,8 @@ export function CentrosCustoContent() {
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
           <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
+          <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
+          <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Código RM e o Centro de Custo (Controladoria) e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
         </ul>
       }
       descricao="Carregados da planilha UNIDADES E CENTROS DE CUSTO e editáveis aqui. O departamento é o do cadastro; a sigla vem dele."

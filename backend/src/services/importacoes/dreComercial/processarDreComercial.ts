@@ -14,6 +14,7 @@ import {
   type PrecoLido,
 } from "./leiauteDreComercial.js";
 import { detectarPrecos, type SubstituicaoPreco } from "../../divergencias/divergenciasService.js";
+import { chaveDaLinha } from "../../../lib/linhas.js";
 
 /**
  * Importação da DRE do Comercial, com o preço historiado, não sobrescrito
@@ -54,10 +55,11 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
         const obras = new Map(leitura.precos.map((p) => [p.obra, null]));
         const { porCodigo, criadas } = await garantirObras(tx, obras);
 
-        const linhas = await tx.linha.findMany({ where: { tipo: { in: ["PRODUTO", "OBRA"] } }, select: { id: true, tipo: true, codigo: true } });
+        const linhas = await tx.linha.findMany({ where: { tipo: { in: ["PRODUTO", "OBRA"] } }, select: { id: true, tipo: true, nome: true } });
         // A LINHA da DRE mistura linhas de produto e de obra; produto tem precedência.
         const linhaPorCodigo = new Map<string, string>();
-        for (const tipo of ["OBRA", "PRODUTO"]) for (const l of linhas) if (l.tipo === tipo) linhaPorCodigo.set(l.codigo, l.id);
+        // Pelo Nome da linha (11/10/2026), na forma do texto da planilha.
+        for (const tipo of ["OBRA", "PRODUTO"]) for (const l of linhas) if (l.tipo === tipo) linhaPorCodigo.set(chaveDaLinha(l.nome), l.id);
 
         const vigentes = await tx.precoContrato.findMany({
           where: { substituidoEm: null },
@@ -87,7 +89,7 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
           chave: p.chave,
           etapa: p.etapa,
           linhaTexto: p.linhaTexto,
-          linhaId: linhaPorCodigo.get(p.linhaTexto) ?? null,
+          linhaId: linhaPorCodigo.get(chaveDaLinha(p.linhaTexto)) ?? null,
           contaResultado: p.contaResultado,
           departamento: p.departamento,
           atribuicao: p.atribuicao,

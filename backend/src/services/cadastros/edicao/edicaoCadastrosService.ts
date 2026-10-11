@@ -13,6 +13,20 @@ import { apresentar, DEFINICOES, RegraCadastroError, type DefinicaoCadastro, typ
 
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 
+/** O valor de um campo para comparar o antes e o depois (as listas sem ordem; vazio e nulo iguais). */
+const comparavel = (x: unknown) => (Array.isArray(x) ? x.map(String).sort().join("|") : x === null || x === undefined ? "" : String(x));
+
+/**
+ * As travas do registro (11/10/2026): com movimentos, os campos-chave (travaComMovimento) não mudam e a exclusão é
+ * recusada. A tela recebe isso junto do registro, para mostrar os campos travados e o motivo.
+ */
+async function travasDo(d: DefinicaoCadastro, id: string) {
+  const db = getPrismaClient();
+  const movimentos = d.movimentos ? await d.movimentos(db, id) : null;
+  const exclusao = d.excluir && d.impedimentoExclusao ? await d.impedimentoExclusao(db, id) : null;
+  return { movimentos, campos: movimentos ? d.campos.filter((c) => c.travaComMovimento).map((c) => c.nome) : [], exclusao };
+}
+
 function definicao(entidade: string): DefinicaoCadastro {
   const d = Object.hasOwn(DEFINICOES, entidade) ? DEFINICOES[entidade] : undefined;
   if (!d) throw new RegraCadastroError(404, `Cadastro ${entidade} desconhecido.`);
@@ -46,9 +60,10 @@ export const edicaoCadastrosService = {
   },
 
   async ler(entidade: string, id: string) {
-    const v = await definicao(entidade).ler(getPrismaClient(), id);
+    const d = definicao(entidade);
+    const v = await d.ler(getPrismaClient(), id);
     if (!v) throw new RegraCadastroError(404, "Registro não encontrado.");
-    return apresentar(v);
+    return { ...apresentar(v), __travas: await travasDo(d, id) };
   },
 
   async criar(entidade: string, valores: Valores, quem: string) {
@@ -70,6 +85,15 @@ export const edicaoCadastrosService = {
     // Os campos de criação e os derivados não vêm da tela na edição: valem os gravados.
     const fixos = Object.fromEntries(d.campos.filter((c) => c.somenteNaCriacao).map((c) => [c.nome, antes[c.nome]]));
     const dados = await d.preparar(db, { ...antes, ...valores, ...fixos }, id);
+    // Com movimentos, os campos-chave ficam como estão.
+    const { movimentos, campos } = await travasDo(d, id);
+    const mudados = d.campos.filter((c) => campos.includes(c.nome) && c.nome in dados && comparavel(dados[c.nome]) !== comparavel(antes[c.nome]));
+    if (mudados.length) {
+      throw new RegraCadastroError(
+        409,
+        `Não é possível mudar ${mudados.map((c) => c.rotulo).join(", ")}: ${movimentos} ${mudados.length > 1 ? "Essas informações ligam" : "Essa informação liga"} o cadastro a outras telas.`,
+      );
+    }
     await d.gravar(db, dados, id);
     const depois = apresentar(await d.ler(db, id));
     await auditar({ usuarioId: quem, acao: "ALTERACAO", entidade: d.auditoria, entidadeId: id, antes, depois, metadados: { nome: rotuloDoRegistro(depois) } });

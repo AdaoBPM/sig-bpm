@@ -6,6 +6,8 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
+import { CaixaApenasAtivas, type ControleApenasAtivas } from "./ApenasAtivas";
+
 type CadastroShellProps = {
   titulo: string;
   descricao: string;
@@ -22,6 +24,8 @@ type CadastroShellProps = {
   filtros?: { totalGeral: number; ativos: boolean; onLimpar: () => void };
   /** Botões à direita do título, como o de recarga da planilha. */
   acoes?: ReactNode;
+  /** A caixa "Apenas Ativas" (Cadastros da Controladoria), logo antes dos botões. */
+  apenasAtivas?: ControleApenasAtivas;
   children: ReactNode;
 };
 
@@ -42,11 +46,26 @@ export function CadastroShell({
   carregando,
   filtros,
   acoes,
+  apenasAtivas,
   children,
 }: CadastroShellProps) {
   return (
     <div className="space-y-4">
-      <CabecalhoDaTela titulo={titulo} sobre={<p>{descricao}</p>} comoUsar={comoUsar} acoes={acoes} />
+      <CabecalhoDaTela
+        titulo={titulo}
+        sobre={<p>{descricao}</p>}
+        comoUsar={comoUsar}
+        acoes={
+          apenasAtivas ? (
+            <div className="flex flex-wrap items-center gap-4">
+              <CaixaApenasAtivas {...apenasAtivas} />
+              {acoes}
+            </div>
+          ) : (
+            acoes
+          )
+        }
+      />
       <QuadroTabela
         barra={
           filtros?.ativos ? (

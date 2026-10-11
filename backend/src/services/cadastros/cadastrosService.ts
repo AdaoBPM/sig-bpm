@@ -238,6 +238,7 @@ export const cadastrosService = {
           tipo: true,
           expressao: true,
           definicao: true,
+          ativo: true,
           unidades: {
             select: { unidadeNegocio: { select: { nome: true } } },
           },

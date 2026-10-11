@@ -9,6 +9,7 @@ import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { edicaoService, type Campo, type Registro } from "../services/edicaoService";
+import { registroAtivo, useApenasAtivas } from "./ApenasAtivas";
 import { CadastroShell } from "./CadastroShell";
 import { useEdicaoCadastro } from "./EdicaoCadastro";
 
@@ -51,10 +52,18 @@ function colunaDoCampo(c: Campo): Coluna<Registro> {
 
 const EDITAR: Coluna<Registro> = { chave: "editar", rotulo: "", semFiltro: true };
 
-type Props = { entidade: string; rota: string; titulo: string; descricao: string; comoUsar?: ReactNode };
+type Props = {
+  entidade: string;
+  rota: string;
+  titulo: string;
+  descricao: string;
+  comoUsar?: ReactNode;
+  /** A caixa "Apenas Ativas" (as telas dos Cadastros da Controladoria). */
+  apenasAtivas?: boolean;
+};
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
-export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar }: Props) {
+export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas }: Props) {
   useRegistrarAcessoTela(rota);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
@@ -65,7 +74,8 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
     const doCadastro = campos.map(colunaDoCampo);
     return edicao.pode ? [...doCadastro, EDITAR] : doCadastro;
   }, [campos, edicao.pode]);
-  const tabela = useTabelaFiltravel(lista.data, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
+  const ativas = useApenasAtivas(lista.data, registroAtivo);
+  const tabela = useTabelaFiltravel(ativas.itens, colunas, { porPaginaInicial: POR_PAGINA_INICIAL });
 
   return (
     <CadastroShell
@@ -73,6 +83,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
       descricao={descricao}
       comoUsar={comoUsar}
       acoes={edicao.botaoNovo}
+      apenasAtivas={apenasAtivas ? ativas.controle : undefined}
       total={tabela.total}
       pagina={tabela.pagina}
       porPagina={tabela.porPagina}

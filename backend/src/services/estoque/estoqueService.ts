@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { calcularEstoque, mediasPorLinha } from "./calculoEstoque.js";
+import { chaveDaLinha } from "../../lib/linhas.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraEstoqueError extends Error {
@@ -52,7 +53,7 @@ export const estoqueService = {
     }
 
     const daLista = { competenciaId: c.id };
-    const sel = { quantidade: true, nomePeca: true, obra: { select: { codigo: true } }, linha: { select: { codigo: true } } } as const;
+    const sel = { quantidade: true, nomePeca: true, obra: { select: { codigo: true } }, linha: { select: { nome: true } } } as const;
     const [producoes, expedicoes, precos, estacas] = await Promise.all([
       prisma.producao.findMany({ where: daLista, select: { ...sel, secao: true, grupo: true } }),
       prisma.expedicao.findMany({ where: daLista, select: sel }),
@@ -62,9 +63,9 @@ export const estoqueService = {
       }),
       prisma.tabelaEstaca.findMany({ where: { vigenciaFim: null }, select: { grupo: true, secao: true, peca: true, precoLiquido: true } }),
     ]);
-    const mov = (r: { quantidade: Prisma.Decimal; nomePeca: string | null; obra: { codigo: string } | null; linha: { codigo: string } | null; secao?: string | null; grupo?: string | null }) => ({
+    const mov = (r: { quantidade: Prisma.Decimal; nomePeca: string | null; obra: { codigo: string } | null; linha: { nome: string } | null; secao?: string | null; grupo?: string | null }) => ({
       obra: r.obra?.codigo ?? null,
-      linha: r.linha?.codigo ?? null,
+      linha: r.linha ? chaveDaLinha(r.linha.nome) : null,
       quantidade: r.quantidade,
       // Na produção, o grupo da peça (E, ES, ESD) do Resumo; na lista antiga, o nome da peça, de onde o grupo sai.
       nomePeca: r.grupo ?? r.nomePeca,
@@ -79,7 +80,7 @@ export const estoqueService = {
     });
 
     const obras = new Map((await prisma.obra.findMany({ where: { codigo: { in: [...new Set(saldos.map((s) => s.obra))] } }, select: { id: true, codigo: true } })).map((o) => [o.codigo.toUpperCase(), o.id]));
-    const linhas = new Map((await prisma.linha.findMany({ where: { tipo: "PRODUTO" }, select: { id: true, codigo: true } })).map((l) => [l.codigo, l.id]));
+    const linhas = new Map((await prisma.linha.findMany({ where: { tipo: "PRODUTO" }, select: { id: true, nome: true } })).map((l) => [chaveDaLinha(l.nome), l.id]));
     const semObra = saldos.filter((s) => !obras.has(s.obra)).map((s) => s.obra);
     if (semObra.length) throw new RegraEstoqueError(409, `Obras sem cadastro no saldo: ${[...new Set(semObra)].join(", ")}. Importe a DRE do Comercial ou as listas que as cadastram.`);
     const agora = new Date();
@@ -89,7 +90,7 @@ export const estoqueService = {
         data: saldos.map((s) => ({
           competenciaId: c.id,
           obraId: obras.get(s.obra)!,
-          linhaId: linhas.get(s.linha) ?? null,
+          linhaId: linhas.get(chaveDaLinha(s.linha)) ?? null,
           linhaTexto: s.linha,
           movimentoVolume: s.movimentoVolume,
           movimentoValor: s.movimentoValor,

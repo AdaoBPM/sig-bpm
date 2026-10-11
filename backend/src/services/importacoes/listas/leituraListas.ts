@@ -1,5 +1,6 @@
 import { Prisma } from "../../../generated/prisma/client.js";
 import type { LinhaPlanilha, ValorCelula } from "../../../lib/xlsx.js";
+import { chaveDaLinha } from "../../../lib/linhas.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -64,7 +65,7 @@ export function normalizar(v: ValorCelula | undefined): string {
  * grava: em maiúsculas, com hífen no lugar dos espaços ("TURN KEY" → "TURN-KEY", conferência de 10/10/2026).
  */
 export function codigoDaLinhaDeObra(v: ValorCelula | undefined): string {
-  return normalizar(v).replace(/\s*-\s*|\s+/g, "-");
+  return chaveDaLinha(v);
 }
 
 export function texto(v: ValorCelula | undefined): string | null {

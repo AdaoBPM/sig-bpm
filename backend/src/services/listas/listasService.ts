@@ -15,6 +15,7 @@ import {
   type RegistroBruto,
 } from "./repositorioListas.js";
 import { auditar } from "../auditoriaService.js";
+import { chaveDaLinha } from "../../lib/linhas.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraListaError extends Error {
@@ -61,11 +62,11 @@ function valoresDoFormulario(tipo: TipoListaRateio, r: RegistroBruto): Record<st
     case "PRODUCAO":
       return { Unidade: unidade, Obra: r.obra?.codigo ?? null, "Nome da Obra": r.obra?.nome ?? null, Produto: texto(r.produto), "Nome Peça": texto(r.nomePeca), "Volume (m³)": q };
     case "PRODUCAO_PISTA":
-      return { Linha: r.linha?.codigo ?? null, Pistas: q };
+      return { Linha: r.linha ? chaveDaLinha(r.linha.nome) : null, Pistas: q };
     case "PRODUCAO_ARMADURA":
-      return { Unidade: ["MATRIZ", "FILIAL", "SERVIÇOS"][(r.unidadeNegocio?.codigo ?? 0) - 1] ?? null, Linha: r.linha?.codigo ?? null, Peso: q };
+      return { Unidade: ["MATRIZ", "FILIAL", "SERVIÇOS"][(r.unidadeNegocio?.codigo ?? 0) - 1] ?? null, Linha: r.linha ? chaveDaLinha(r.linha.nome) : null, Peso: q };
     case "PRODUCAO_METALURGIA":
-      return { FINALIDADE: texto(r.finalidade), LINHA: r.linha?.codigo ?? null, Peso: q };
+      return { FINALIDADE: texto(r.finalidade), LINHA: r.linha ? chaveDaLinha(r.linha.nome) : null, Peso: q };
     case "EXPEDICAO":
       return { Obra: r.obra?.codigo ?? null, "Nome da Obra": r.obra?.nome ?? null, "Nome da Peça": texto(r.nomePeca), "Peso (kg)": String(r.pesoKg ?? "0"), "Volume (m³)": String(r.volumeInformado ?? "0") };
     case "MONTAGEM":

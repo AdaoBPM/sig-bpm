@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import { calcularReceita, separarPorVenda, totalizar, type DadosCalculo, type Registro } from "./calculoReceita.js";
+import { chaveDaLinha } from "../../lib/linhas.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraReceitaError extends Error {
@@ -33,14 +34,14 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     quantidade: true,
     obra: { select: { codigo: true } },
     unidadeNegocio: { select: { codigo: true } },
-    linha: { select: { codigo: true } },
+    linha: { select: { nome: true } },
   } as const;
-  type Bruto = { id: string; quantidade: Registro["quantidade"]; obra: { codigo: string } | null; unidadeNegocio: { codigo: number } | null; linha: { codigo: string } | null };
+  type Bruto = { id: string; quantidade: Registro["quantidade"]; obra: { codigo: string } | null; unidadeNegocio: { codigo: number } | null; linha: { nome: string } | null };
   const registro = (r: Bruto, extra: Partial<Registro> = {}): Registro => ({
     id: r.id,
     obra: r.obra?.codigo ?? null,
     unidade: r.unidadeNegocio?.codigo ?? null,
-    linha: r.linha?.codigo ?? null,
+    linha: r.linha ? chaveDaLinha(r.linha.nome) : null,
     quantidade: r.quantidade,
     ...extra,
   });

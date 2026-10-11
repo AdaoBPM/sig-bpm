@@ -4,6 +4,7 @@ import { alcancaLista, type Acesso } from "../acesso/acesso.js";
 import { LINHAS_TOTAIS, linhaDosTotais, type CodigoTotais, type ItemVolume } from "../volumes/totaisOperacao.js";
 import { VOLUMES_DA_DRE } from "./apuracaoUnidades.js";
 import { RegraDREError } from "./dreService.js";
+import { chaveDaLinha } from "../../lib/linhas.js";
 
 const Decimal = Prisma.Decimal;
 const n = (s: string | null | undefined) => (s ?? "").trim().toUpperCase();
@@ -50,12 +51,12 @@ export async function volumesDaLinha(ano: number, mes: number, codigoLinha: stri
     unidadeNegocio: { select: { codigo: true } },
     obra: { select: { codigo: true, nome: true, tipoVenda: true } },
   } as const;
-  const comLinha = { ...base, linha: { select: { codigo: true } } } as const;
+  const comLinha = { ...base, linha: { select: { nome: true } } } as const;
   type Registro = {
     quantidade: Prisma.Decimal;
     unidadeNegocio: { codigo: number } | null;
     obra: { codigo: string; nome: string; tipoVenda: string | null } | null;
-    linha?: { codigo: string } | null;
+    linha?: { nome: string } | null;
     categoria?: string | null;
     finalidade?: string | null;
     etapa?: string | null;
@@ -81,19 +82,19 @@ export async function volumesDaLinha(ano: number, mes: number, codigoLinha: stri
         tipo,
         quantidade: r.quantidade,
         unidade: r.unidadeNegocio?.codigo ?? null,
-        linha: r.linha?.codigo ?? null,
+        linha: r.linha ? chaveDaLinha(r.linha.nome) : null,
         obraGlobal: r.obra?.tipoVenda === "GLOBAL",
         categoria: r.categoria ?? null,
         finalidade: r.finalidade ?? null,
         etapa: r.etapa ?? null,
       });
       if (!destino || !codigos.has(destino)) continue;
-      const chave = [r.obra?.codigo ?? "", destino, r.linha?.codigo ?? ""].join("|");
+      const chave = [r.obra?.codigo ?? "", destino, r.linha?.nome ?? ""].join("|");
       const g = grupos.get(chave) ?? {
         obra: r.obra?.codigo ?? null,
         obraNome: r.obra && r.obra.nome !== r.obra.codigo ? r.obra.nome : null,
         destino: rotulo.get(destino) ?? destino,
-        linha: r.linha?.codigo ?? null,
+        linha: r.linha?.nome ?? null,
         quantidade: "0",
         registros: 0,
         soma: new Decimal(0),
