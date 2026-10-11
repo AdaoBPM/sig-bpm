@@ -84,9 +84,8 @@ export function GraficoRealizadoOrcado({
 }) {
   // O degradê da área: id próprio por gráfico (vários na mesma página).
   const gradiente = `realizado-${useId().replace(/:/g, "")}`;
-  const rotulo = rotulosDosValores
-    ? { position: "top" as const, fontSize: 10, fill: "#4b5563", formatter: (v: unknown) => (typeof v === "number" ? formatar(v) : "") }
-    : undefined;
+  // Os valores escritos (o gráfico grande de Indicadores): numa caixa branca com o contorno fino da cor da série (11/10/2026).
+  const rotuloDe = (cor: string) => (rotulosDosValores ? (p: unknown) => <RotuloValor {...(p as PropsRotulo)} cor={cor} formatar={formatar} /> : undefined);
   // Um ponto só (o gráfico do acumulado) não forma área: na Área, a coluna do realizado com o mesmo degradê e
   // contorno, e o orçado como uma linha preta na altura dele.
   const umPonto = dados.length === 1;
@@ -94,7 +93,7 @@ export function GraficoRealizadoOrcado({
   const area = tipo === "area";
   return (
     <ChartContainer config={CORES} className={`aspect-auto w-full ${className}`} initialDimension={{ width: 300, height: 112 }}>
-      <ComposedChart data={dados} margin={{ top: rotulosDosValores ? 18 : 4, right: area && !umPonto ? 4 : 0, bottom: 0, left: area && !umPonto ? 4 : 0 }} barGap={1} barCategoryGap="18%">
+      <ComposedChart data={dados} margin={{ top: rotulosDosValores ? 28 : 4, right: area && !umPonto ? 4 : 0, bottom: 0, left: area && !umPonto ? 4 : 0 }} barGap={1} barCategoryGap="18%">
         <defs>
           {/* Transparente no zero e opaco no maior valor do período (em módulo), nos dois sentidos: a forma vai do maior valor
               acima do zero (ou do zero) ao menor abaixo dele (ou ao zero), e a opacidade de cada ponta segue o valor dela. */}
@@ -106,7 +105,7 @@ export function GraficoRealizadoOrcado({
         </defs>
         <CartesianGrid vertical={false} stroke="#e5e7eb" />
         {/* A linha do eixo X um pouco mais escura e grossa que as de grade (10/10/2026). */}
-        <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? (rotulosDosValores ? { left: 28, right: 28 } : { left: 8, right: 8 }) : undefined} />
+        <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? (rotulosDosValores ? { left: 44, right: 44 } : { left: 8, right: 8 }) : undefined} />
         <YAxis hide domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} />
         <Tooltip
           cursor={area && !umPonto ? { stroke: "#d1d5db" } : { fill: "#f3f4f6" }}
@@ -128,12 +127,12 @@ export function GraficoRealizadoOrcado({
         />
         {!area ? (
           <>
-            <Bar dataKey="realizado" fill="var(--color-realizado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotulo} />
-            <Bar dataKey="orcado" fill="var(--color-orcado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotulo} />
+            <Bar dataKey="realizado" fill="var(--color-realizado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotuloDe(OURO)} />
+            <Bar dataKey="orcado" fill="var(--color-orcado)" radius={[2, 2, 0, 0]} isAnimationActive={false} label={rotuloDe(PRETO)} />
           </>
         ) : umPonto ? (
           <>
-            <Bar dataKey="realizado" maxBarSize={40} isAnimationActive={false} label={rotulo} shape={(p: unknown) => <ColunaDaArea {...(p as FormaColuna)} gradiente={gradiente} />} />
+            <Bar dataKey="realizado" maxBarSize={40} isAnimationActive={false} label={rotuloDe(OURO)} shape={(p: unknown) => <ColunaDaArea {...(p as FormaColuna)} gradiente={gradiente} />} />
             {dados[0].orcado !== null ? <ReferenceLine y={dados[0].orcado} stroke={PRETO} strokeWidth={2} ifOverflow="extendDomain" /> : null}
           </>
         ) : (
@@ -149,7 +148,7 @@ export function GraficoRealizadoOrcado({
               dot={false}
               activeDot={{ r: 3, fill: OURO, stroke: "#fff" }}
               isAnimationActive={false}
-              label={rotulo}
+              label={rotuloDe(OURO)}
             />
             <Line
               dataKey="orcado"
@@ -181,6 +180,28 @@ function degradeDoRealizado(dados: MesDoGrafico[]) {
   const maior = Math.max(max, -min);
   if (maior === 0) return { topo: 0, zero: 1, base: 0 };
   return { topo: max / maior, zero: max / (max - min), base: -min / maior };
+}
+
+type PropsRotulo = { x?: number | string; y?: number | string; width?: number | string; value?: unknown };
+
+/** O valor escrito sobre a coluna ou o ponto: caixa branca, contorno fino na cor da série, texto um pouco maior. */
+function RotuloValor({ x, y, width, value, cor, formatar }: PropsRotulo & { cor: string; formatar: (v: number | null) => string }) {
+  if (typeof value !== "number") return null;
+  const texto = formatar(value);
+  const fonte = 12;
+  const largura = texto.length * fonte * 0.6 + 10;
+  const altura = fonte + 6;
+  // Na coluna, sobre o meio dela; no ponto da área, sobre ele.
+  const cx = Number(x ?? 0) + (width !== undefined ? Number(width) / 2 : 0);
+  const topo = Number(y ?? 0) - altura - 4;
+  return (
+    <g>
+      <rect x={cx - largura / 2} y={topo} width={largura} height={altura} rx={2} fill="#ffffff" stroke={cor} strokeWidth={1} />
+      <text x={cx} y={topo + altura / 2} textAnchor="middle" dominantBaseline="central" fontSize={fonte} fill="#111827">
+        {texto}
+      </text>
+    </g>
+  );
 }
 
 type FormaColuna = { x?: number; y?: number; width?: number; height?: number; payload?: MesDoGrafico };
