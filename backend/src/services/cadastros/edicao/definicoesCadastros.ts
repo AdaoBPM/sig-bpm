@@ -24,7 +24,8 @@ export class RegraCadastroError extends Error {
   }
 }
 
-export type Opcao = { valor: string; rotulo: string };
+/** Uma opção de lista; `grupos`: os valores do campo `filtradoPor` em que ela aparece. */
+export type Opcao = { valor: string; rotulo: string; grupos?: string[] };
 export type Campo = {
   nome: string;
   rotulo: string;
@@ -41,6 +42,8 @@ export type Campo = {
    * linha…): não muda quando o registro já tem movimentos (11/10/2026).
    */
   travaComMovimento?: boolean;
+  /** A lista mostra só as opções do valor escolhido neste outro campo (as Linhas dos Totais da Chave, nas regras de rateio). */
+  filtradoPor?: string;
   ajuda?: string;
   opcoes?: (db: Db) => Promise<Opcao[]>;
 };
@@ -656,12 +659,31 @@ const linhas: DefinicaoCadastro = {
 };
 
 // ------------------------------------------------------------ regras de rateio
+/** As chaves de rateio de cada lista dos Totais (a Expedição e a Montagem não são base de nenhuma). */
+const CHAVES_DA_LISTA: Record<string, string[]> = {
+  PROJETO: ["PROJETO"],
+  PRODUCAO: ["PRODUCAO"],
+  PRODUCAO_PISTA: ["PRODUCAO"],
+  PRODUCAO_METALURGIA: ["METALURGIA"],
+  PRODUCAO_ARMADURA: ["ARMADURA"],
+  ACOMPANHAMENTO: ["ACOMPANHAMENTO"],
+};
+/** A base física pela medida do total. */
+const BASE_DA_MEDIDA: Record<string, string> = { "m³": "M3", kg: "KG", und: "PISTA", d: "DIA" };
+/** A unidade que recebe pelo destino (11/10/2026): Matriz, Filial, ou Serviços para a Montagem e a Complementar. */
+const UNIDADE_DO_DESTINO: Record<string, number> = { MATRIZ: 1, FILIAL: 2, MONTAGEM: 3, COMPLEMENTAR: 3 };
 /** Os totais das Listas (a faixa acima de cada lista), com o rótulo como lá: sem o "(P)" ou "(S)" e com a medida. */
-const TOTAIS_DAS_LISTAS: Array<[string, string]> = LINHAS_TOTAIS.map((t) => [t.codigo, `${t.rotulo.replace(/^\([PS]\) /, "")} (${t.medida})`]);
-const origemDoVolume = (v: unknown) => {
-  const codigo = exigir(v, "A linha dos Totais");
-  if (!TOTAIS_DAS_LISTAS.some(([c]) => c === codigo)) throw new RegraCadastroError(400, "Escolha a linha dos Totais na lista (os totais das Listas Operacionais).");
-  return codigo;
+const TOTAIS_DAS_LISTAS = LINHAS_TOTAIS.map((t) => ({
+  codigo: t.codigo as string,
+  rotulo: `${t.rotulo.replace(/^\([PS]\) /, "")} (${t.medida})`,
+  chaves: CHAVES_DA_LISTA[t.tipo] ?? [],
+  base: BASE_DA_MEDIDA[t.medida],
+}));
+const totalDaRegra = (v: unknown, chave: string) => {
+  const t = TOTAIS_DAS_LISTAS.find((x) => x.codigo === exigir(v, "A linha dos Totais"));
+  if (!t) throw new RegraCadastroError(400, "Escolha a linha dos Totais na lista (os totais das Listas Operacionais).");
+  if (!t.chaves.includes(chave)) throw new RegraCadastroError(400, `A linha dos Totais ${t.rotulo} não é da chave ${chave}.`);
+  return t;
 };
 
 const regras: DefinicaoCadastro = {
@@ -674,27 +696,17 @@ const regras: DefinicaoCadastro = {
   campos: [
     { nome: "rotulo", rotulo: "Rótulo", tipo: "texto", obrigatorio: true },
     { nome: "destino", rotulo: "Destino", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas([["MATRIZ", "Matriz"], ["FILIAL", "Filial"], ["MONTAGEM", "Montagem"], ["COMPLEMENTAR", "Complementar"]]) },
-    {
-      nome: "unidadeDestinoId",
-      rotulo: "Unidade que recebe",
-      rotuloColuna: "Unidade",
-      tipo: "opcao",
-      obrigatorio: true,
-      travaComMovimento: true,
-      opcoes: async (db) => (await db.unidadeNegocio.findMany({ orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: `${u.codigo} · ${u.nome}` })),
-    },
     { nome: "chave", rotulo: "Chave", tipo: "opcao", obrigatorio: true, somenteNaCriacao: true, opcoes: opcoesFixas(BALDES.slice(1, 6)) },
-    { nome: "baseFisica", rotulo: "Base física", rotuloColuna: "Base", tipo: "opcao", obrigatorio: true, travaComMovimento: true, opcoes: opcoesFixas([["M3", "m³"], ["KG", "kg"], ["PISTA", "pista"], ["DIA", "dia"]]) },
     {
       nome: "origemDoVolume",
-      rotulo: "Linha dos Totais que dá o volume",
-      rotuloColuna: "Linha dos Totais",
-      // Uma lista com os totais destacados na faixa das Listas Operacionais (11/10/2026), e não mais o código digitado.
+      rotulo: "Linha dos Totais",
+      // Uma lista com os totais destacados na faixa das Listas Operacionais, só os da Chave escolhida (11/10/2026).
       tipo: "opcao",
       obrigatorio: true,
       travaComMovimento: true,
-      ajuda: "Os totais destacados nas Listas Operacionais.",
-      opcoes: opcoesFixas(TOTAIS_DAS_LISTAS),
+      filtradoPor: "chave",
+      ajuda: "Os totais destacados nas Listas Operacionais, da Chave escolhida. A base física (m³, kg, pistas, dias) é a do total.",
+      opcoes: async () => TOTAIS_DAS_LISTAS.map((t) => ({ valor: t.codigo, rotulo: t.rotulo, grupos: t.chaves })),
     },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
     { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
@@ -707,15 +719,19 @@ const regras: DefinicaoCadastro = {
     if (fim && fim < inicio) throw new RegraCadastroError(400, "A vigência final é anterior à inicial.");
     const chave = exigir(v.chave, "A chave");
     const destino = exigir(v.destino, "O destino");
+    const total = totalDaRegra(v.origemDoVolume, chave);
+    const unidade = await db.unidadeNegocio.findUnique({ where: { codigo: UNIDADE_DO_DESTINO[destino] ?? -1 }, select: { id: true } });
+    if (!unidade) throw new RegraCadastroError(400, "Destino inválido.");
     const outra = await db.regraRateio.findFirst({ where: { chave: chave as never, destino: destino as never, vigenciaInicio: inicio }, select: { id: true } });
     if (outra && outra.id !== id) throw new RegraCadastroError(409, "Já existe uma regra desta chave e deste destino com a mesma vigência.");
     return {
       chave,
       destino,
-      unidadeDestinoId: exigir(v.unidadeDestinoId, "A unidade"),
+      // A unidade sai do destino e a base física, da medida da linha dos Totais (os campos saíram da tela em 11/10/2026).
+      unidadeDestinoId: unidade.id,
       rotulo: exigir(v.rotulo, "O rótulo"),
-      baseFisica: exigir(v.baseFisica, "A base física"),
-      origemDoVolume: origemDoVolume(v.origemDoVolume),
+      baseFisica: total.base,
+      origemDoVolume: total.codigo,
       vigenciaInicio: inicio,
       vigenciaFim: fim,
     };

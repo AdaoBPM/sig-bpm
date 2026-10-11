@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 
-export type Opcao = { valor: string; rotulo: string };
+/** Uma opção de lista; `grupos`: os valores do campo `filtradoPor` em que ela aparece. */
+export type Opcao = { valor: string; rotulo: string; grupos?: string[] };
 export type Campo = {
   nome: string;
   rotulo: string;
@@ -12,6 +13,8 @@ export type Campo = {
   derivado?: boolean;
   /** Informação-chave: não muda quando o registro tem movimentos. */
   travaComMovimento?: boolean;
+  /** A lista mostra só as opções do valor escolhido neste outro campo. */
+  filtradoPor?: string;
   ajuda?: string;
   opcoes?: Opcao[];
 };

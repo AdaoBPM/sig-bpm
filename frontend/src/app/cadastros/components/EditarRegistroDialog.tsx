@@ -33,7 +33,29 @@ const paraTela = (c: Campo, v: unknown) => {
   return c.tipo === "decimal" ? String(Number(Number(v).toFixed(6))).replace(".", ",") : String(v);
 };
 
-function CampoForm({ c, valor, onMuda, editando, comMovimento }: { c: Campo; valor: unknown; onMuda: (v: unknown) => void; editando: boolean; comMovimento: boolean }) {
+/** As opções do campo: as do valor escolhido no campo que o filtra, quando há um (11/10/2026). */
+const opcoesVisiveis = (c: Campo, valores: Record<string, unknown>) =>
+  c.filtradoPor ? (c.opcoes ?? []).filter((o) => !o.grupos || o.grupos.includes(String(valores[c.filtradoPor!] ?? ""))) : (c.opcoes ?? []);
+
+function CampoForm({
+  c,
+  valor,
+  onMuda,
+  editando,
+  comMovimento,
+  opcoes,
+  semFiltro,
+}: {
+  c: Campo;
+  valor: unknown;
+  onMuda: (v: unknown) => void;
+  editando: boolean;
+  comMovimento: boolean;
+  /** As opções a mostrar (já filtradas). */
+  opcoes: Campo["opcoes"];
+  /** O rótulo do campo que filtra a lista, ainda sem valor. */
+  semFiltro?: string;
+}) {
   // Travado: calculado, só na criação, ou campo-chave de um registro com movimentos (11/10/2026).
   const travado = c.derivado || (editando && c.somenteNaCriacao) || comMovimento;
   const id = `campo-${c.nome}`;
@@ -53,8 +75,8 @@ function CampoForm({ c, valor, onMuda, editando, comMovimento }: { c: Campo; val
       </Label>
       {c.tipo === "opcao" && !travado ? (
         <select id={id} value={String(valor ?? "")} onChange={(e) => onMuda(e.target.value)} className={classeSelect}>
-          <option value="">{c.obrigatorio ? "Escolha…" : "—"}</option>
-          {c.opcoes?.map((o) => (
+          <option value="">{semFiltro ? `Escolha antes: ${semFiltro}` : c.obrigatorio ? "Escolha…" : "—"}</option>
+          {opcoes?.map((o) => (
             <option key={o.valor} value={o.valor}>
               {o.rotulo}
             </option>
@@ -145,7 +167,18 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
               valor={valores[c.nome]}
               editando={!!registro}
               comMovimento={!!travas?.campos.includes(c.nome)}
-              onMuda={(v) => setValores((x) => ({ ...x, [c.nome]: v }))}
+              opcoes={opcoesVisiveis(c, valores)}
+              semFiltro={c.filtradoPor && !valores[c.filtradoPor] ? def.campos.find((x) => x.nome === c.filtradoPor)?.rotulo : undefined}
+              onMuda={(v) =>
+                setValores((x) => {
+                  const novo = { ...x, [c.nome]: v };
+                  // A lista que depende deste campo perde a escolha que não é mais dele.
+                  for (const d of def.campos.filter((y) => y.filtradoPor === c.nome)) {
+                    if (novo[d.nome] && !opcoesVisiveis(d, novo).some((o) => o.valor === novo[d.nome])) novo[d.nome] = "";
+                  }
+                  return novo;
+                })
+              }
             />
           </div>
         ))}
