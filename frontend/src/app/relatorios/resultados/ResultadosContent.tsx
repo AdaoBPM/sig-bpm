@@ -85,7 +85,7 @@ export function TabelaResultados({
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
   // O orçado (só nas visões de Resultados Realizados): depois do mês de referência e depois do total, o orçado (valor, % e
-  // R$/m³, em cinza) e a variação (em amarelo): a diferença, o atingimento e a eficiência.
+  // R$/m³, em cinza); só depois do total, a variação (em amarelo): a diferença, o atingimento e a eficiência.
   const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
   const orcadoDa = (l: LinhaResultado, v: number | undefined) => (l.tipo === "SECAO" || v === undefined ? "" : l.volume ? formato.valor(v) : formato.inteiro(v));
   /** O texto com o sinal: + nos positivos (o − dos negativos vem do formato); o que arredonda para zero fica sem sinal. */
@@ -107,7 +107,8 @@ export function TabelaResultados({
     const pp = (r.pct - o.pct) * 100;
     return `${comSinal(pp, formato.umaCasa(pp))} p.p.`;
   };
-  const LARGURAS_DO_ORCADO = [136, 64, 84, 124, 108, 104];
+  const LARGURAS_DO_ORCADO = [136, 64, 84];
+  const LARGURAS_DA_VARIACAO = [124, 108, 104];
   const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
@@ -118,17 +119,21 @@ export function TabelaResultados({
     124,
     64,
     84,
-    ...(comOrcado ? [156, ...LARGURAS_DO_ORCADO.slice(1)] : []),
+    ...(comOrcado ? [156, ...LARGURAS_DO_ORCADO.slice(1), ...LARGURAS_DA_VARIACAO] : []),
   ];
-  /** Os rótulos do orçado (pretos) e da variação (amarelo-ouro, como os demais). */
-  const rotulosDoOrcado = (rotulo: string) => (
+  /** Os rótulos do orçado (pretos) e, nos totais, da variação (amarelo-ouro, como os demais). */
+  const rotulosDoOrcado = (rotulo: string, variacao: boolean) => (
     <>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>{rotulo}</th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>%</th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th>
-      <th className={`${th} border-l border-gray-300`}>DIFERENÇA</th>
-      <th className={th}>ATINGIMENTO</th>
-      <th className={th}>EFICIÊNCIA</th>
+      {variacao ? (
+        <>
+          <th className={`${th} border-l border-gray-300`}>DIFERENÇA</th>
+          <th className={th}>ATINGIMENTO</th>
+          <th className={th}>EFICIÊNCIA</th>
+        </>
+      ) : null}
     </>
   );
   return (
@@ -151,13 +156,13 @@ export function TabelaResultados({
                 <th className={`${th} border-l border-gray-300`}>{m.rotulo}</th>
                 <th className={th}>%</th>
                 {i === referencia ? <th className={th}>R$/m³</th> : null}
-                {i === referencia && comOrcado ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`) : null}
+                {i === referencia && comOrcado ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
               </Fragment>
             ))}
             <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
             <th className={th}>%</th>
             <th className={th}>R$/m³</th>
-            {comOrcado ? rotulosDoOrcado(`ORÇADO TOTAL/${ano}`) : null}
+            {comOrcado ? rotulosDoOrcado(`ORÇADO TOTAL/${ano}`, true) : null}
           </tr>
         }
         corpo={niveis.linhas.filter(niveis.visivel).map((l) => {
@@ -167,15 +172,19 @@ export function TabelaResultados({
             const pct = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
             const clicavel = abre(l);
             const pctOrcado = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
-            // O orçado (valor, % e R$/m³, no cinza) e a variação contra o realizado (no amarelo da linha).
-            const celulasDoOrcado = (l: LinhaResultado, r: Celula, o: Celula | undefined) => (
+            // O orçado (valor, % e R$/m³, no cinza) e, nos totais, a variação contra o realizado (no amarelo da linha).
+            const celulasDoOrcado = (l: LinhaResultado, r: Celula, o: Celula | undefined, variacao: boolean) => (
               <>
                 <td className={`${td} ${fundoDoOrcado(l)}`}>{orcadoDa(l, o?.valor ?? undefined)}</td>
                 <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? fracao(l, o.pct, temPct(l)) : ""}</td>
                 <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? unitario(l, o.unitario) : ""}</td>
-                <td className={`${td} border-l border-gray-100 ${fundo}`}>{diferenca(l, r, o)}</td>
-                <td className={`${td} ${fundo}`}>{atingimento(l, r, o)}</td>
-                <td className={`${td} ${fundo}`}>{eficiencia(l, r, o)}</td>
+                {variacao ? (
+                  <>
+                    <td className={`${td} border-l border-gray-100 ${fundo}`}>{diferenca(l, r, o)}</td>
+                    <td className={`${td} ${fundo}`}>{atingimento(l, r, o)}</td>
+                    <td className={`${td} ${fundo}`}>{eficiencia(l, r, o)}</td>
+                  </>
+                ) : null}
               </>
             );
             const dica = (m: MesRelatorio) => (detalhavel(l) ? `Ver os lançamentos de origem de ${m.rotulo}` : `Ver as listas por obra de ${m.rotulo}`);
@@ -206,14 +215,14 @@ export function TabelaResultados({
                       </td>
                       <td className={`${pct} ${fundo}`}>{fracao(l, c.pct, temPct(l))}</td>
                       {i === referencia ? <td className={`${pct} ${fundo}`}>{unitario(l, c.unitario)}</td> : null}
-                      {i === referencia && comOrcado ? celulasDoOrcado(l, c, l.orcado?.mes) : null}
+                      {i === referencia && comOrcado ? celulasDoOrcado(l, c, l.orcado?.mes, false) : null}
                     </Fragment>
                   );
                 })}
                 <td className={`${td} border-l border-gray-300 ${fundo}`}>{valorDa(l, l.total)}</td>
                 <td className={`${pct} ${fundo}`}>{fracao(l, l.total.pct, temPct(l))}</td>
                 <td className={`${pct} ${fundo}`}>{unitario(l, l.total.unitario)}</td>
-                {comOrcado ? celulasDoOrcado(l, l.total, l.orcado?.total) : null}
+                {comOrcado ? celulasDoOrcado(l, l.total, l.orcado?.total, true) : null}
               </tr>
             );
           })}
@@ -350,7 +359,7 @@ export function ResultadosContent() {
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. O mês de referência (o último) e o total do exercício trazem também o valor por m³.</li>
             <li>
               Nas unidades e no Consolidado, as colunas de rótulo preto trazem o orçado (valor, % e R$/m³): depois do mês de referência, o do mês;
-              depois do total, o acumulado de janeiro até ele. Em seguida, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷
+              depois do total, o acumulado de janeiro até ele. Depois do orçado acumulado, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷
               orçado) e Eficiência (% realizado − % orçado, em pontos percentuais). O orçado é o do cenário marcado como Orçamento Empresarial no
               exercício (Criação de Cenários / Cenários Sintéticos); sem ele, zero. Os centros de custo não têm orçado.
             </li>
