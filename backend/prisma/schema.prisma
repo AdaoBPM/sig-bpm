@@ -1121,6 +1121,36 @@ model IndicadorImportado {
 /// Meta do orçamento: o valor orçado do mês de um indicador do catálogo, da
 /// aba Metas (Orçamento) do INDICADORES DE RESULTADO. É a base do "vs. Orçado"
 /// do Painel de Bordo.
+/// Estrutura dos Indicadores (cadastro da Controladoria, 11/10/2026): os indicadores de resultado, com a fórmula
+/// que os calcula — itens da DRE apurada, totalizadores das Listas, indicadores do Comercial e do Administrativo e
+/// metas do orçamento, com + − × ÷ (formulaIndicador.ts). O nome identifica o indicador nas metas importadas, nos
+/// valores digitados e no Painel de Bordo.
+model IndicadorEstrutura {
+  id           String   @id @default(uuid())
+  /// ORDEM: posição na tela (a da aba Realizado (SIG)).
+  ordem        Int      @default(0)
+  grupo        String
+  /// A numeração no grupo, como na planilha; vazia nos indicadores principais do grupo.
+  numero       String   @default("")
+  nome         String   @unique
+  /// Comportamento: ↑ quanto maior, melhor; ↓ quanto menor, melhor; = acompanhamento; - sem sentido.
+  sentido      String
+  unidade      String
+  /// O texto da metodologia da aba Metas, que a tela Indicadores mostra sob o nome.
+  descricao    String?
+  /// A fórmula (Metodologia); nula nos de cálculo do sistema.
+  formula      String?
+  /// O acumulado: SOMA, MEDIA_PONDERADA (pela fórmula do peso), ULTIMO ou SISTEMA (a conta fica no código).
+  modo         String
+  peso         String?
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@index([ordem])
+  @@map("indicadores_estrutura")
+}
+
 model MetaImportada {
   id            String  @id @default(uuid())
   competenciaId String  @map("competencia_id")

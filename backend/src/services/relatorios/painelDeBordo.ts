@@ -41,6 +41,9 @@ const div = (a: number | null, b: number | null) => (a === null || b === null ||
 const mul = (...xs: Array<number | null>) => (xs.some((x) => x === null) ? null : xs.reduce<number>((p, x) => p * x!, 1));
 const soma = (...xs: Array<number | null>) => (xs.some((x) => x === null) ? null : xs.reduce<number>((s, x) => s + x!, 0));
 
+/** Os indicadores que o Painel usa, pelo nome (o nome não muda no cadastro Estrutura dos Indicadores). */
+export const NOMES_DO_PAINEL = (): string[] => Object.values(N);
+
 const N = {
   CPP_MATRIZ: "Custos de Produção: Matriz (CPP)",
   CPP_FILIAL: "Custos de Produção: Filial (CPP)",

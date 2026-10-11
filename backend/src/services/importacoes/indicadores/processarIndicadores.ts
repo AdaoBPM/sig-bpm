@@ -5,7 +5,7 @@ import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
 import { logger } from "../../../utils/logger.js";
 import { caminhoDoArquivo } from "../arquivosImportados.js";
 import { escolherAba, recusarImportacao, registrarProgresso } from "../statusImportacao.js";
-import { DEFINICOES_INDICADORES, lerIndicadores, type TipoIndicadores } from "./leituraIndicadores.js";
+import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type TipoIndicadores } from "./leituraIndicadores.js";
 
 class ArquivoRecusado extends Error {}
 
@@ -26,6 +26,7 @@ export async function processarIndicadores(importacaoId: string): Promise<void> 
     const def = DEFINICOES_INDICADORES[tipo];
     const aba = lerAba(await readFile(caminhoDoArquivo(importacao.hashArquivo)), escolherAba([def.aba]));
     await registrarProgresso(importacaoId, 40);
+    await atualizarNomesDasMetas();
     const leitura = lerIndicadores(tipo, aba.linhas, importacao.competencia.ano, importacao.competencia.mes);
     if (!leitura.ok) throw new ArquivoRecusado(leitura.motivo);
     if (leitura.valores.length === 0) throw new ArquivoRecusado(`A aba "${aba.nome}" não tem nenhum indicador com valor no mês.`);

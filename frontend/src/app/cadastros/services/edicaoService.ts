@@ -7,7 +7,8 @@ export type Campo = {
   rotulo: string;
   /** O rótulo curto no cabeçalho da tabela, quando o do formulário é longo demais. */
   rotuloColuna?: string;
-  tipo: "texto" | "inteiro" | "decimal" | "booleano" | "data" | "opcao" | "multipla";
+  /** "formula": a fórmula de um indicador, montada com os itens das opções (Estrutura dos Indicadores). */
+  tipo: "texto" | "inteiro" | "decimal" | "booleano" | "data" | "opcao" | "multipla" | "formula";
   obrigatorio?: boolean;
   somenteNaCriacao?: boolean;
   derivado?: boolean;
@@ -17,6 +18,11 @@ export type Campo = {
   filtradoPor?: string;
   /** Ocupa as duas colunas do formulário de edição. */
   larguraInteira?: boolean;
+  /** Fora da tabela (só no formulário) ou fora do formulário (só na tabela). */
+  naTabela?: boolean;
+  noFormulario?: boolean;
+  /** No formulário, só aparece com um destes valores no outro campo. */
+  visivelSe?: { campo: string; valores: string[] };
   ajuda?: string;
   opcoes?: Opcao[];
 };

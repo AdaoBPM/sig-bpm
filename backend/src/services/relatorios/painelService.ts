@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
-import { acumular, INDICADORES, type Parte } from "./indicadores.js";
+import { acumular, type Parte } from "./indicadores.js";
+import { catalogoDeIndicadores } from "./catalogoIndicadores.js";
 import { dadosDoMes, encadearMeses } from "./indicadoresService.js";
 import { acumularMeta } from "./metasOrcamento.js";
 import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
@@ -59,13 +60,14 @@ export const painelService = {
     });
 
     // Os indicadores realizados: as partes de cada mês, para o valor do mês de referência e o acumulado.
-    const partes = new Map(INDICADORES.map((i) => [i.nome, dados.map((d): Parte | null => (d ? i.calculo(d) : null))]));
-    const porNome = new Map(INDICADORES.map((i) => [i.nome, i]));
+    const catalogo = await catalogoDeIndicadores();
+    const partes = new Map(catalogo.map((i) => [i.nome, dados.map((d): Parte | null => (d ? i.calculo(d) : null))]));
+    const porNome = new Map(catalogo.map((i) => [i.nome, i]));
     const realizadoMes: Valor = (n) => partes.get(n)?.[ultimo - 1]?.valor ?? null;
     const realizadoAcum: Valor = (n) => (porNome.has(n) ? acumular(porNome.get(n)!, partes.get(n)!) : null);
     const orcadoMes: Valor = (n) => metas[ultimo - 1]?.get(n) ?? null;
     const completas = metas.every((m) => m !== null);
-    const orcadoAcum: Valor = (n) => (completas ? acumularMeta(n, metas) : null);
+    const orcadoAcum: Valor = (n) => (completas ? acumularMeta(porNome.get(n), metas) : null);
 
     const periodos = { mes: [realizadoMes, orcadoMes] as [Valor, Valor], acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor] };
     // A série mês a mês (gráficos do painel, como os da planilha): o realizado e o orçado de cada mês até o de referência.

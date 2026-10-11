@@ -3,6 +3,10 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { avaliarExpressao, codigosDaExpressao } from "../../dre/expressao.js";
 import { chaveDaLinha } from "../../../lib/linhas.js";
 import { LINHAS_TOTAIS } from "../../volumes/totaisOperacao.js";
+import { formulasPorExtenso, INDICADORES_DAS_LISTAS, TOTALIZADORES_DAS_LISTAS } from "../../relatorios/catalogoIndicadores.js";
+import { compilarFormula, FormulaInvalidaError } from "../../relatorios/formulaIndicador.js";
+import { CALCULOS_SISTEMA } from "../../relatorios/indicadores.js";
+import { NOMES_DO_PAINEL } from "../../relatorios/painelDeBordo.js";
 
 /**
  * Cadastros editáveis pela tela (Passo 25, RF002 e RF003). Cada cadastro
@@ -31,7 +35,8 @@ export type Campo = {
   rotulo: string;
   /** O rótulo curto no cabeçalho da tabela, quando o do formulário é longo demais. */
   rotuloColuna?: string;
-  tipo: "texto" | "inteiro" | "decimal" | "booleano" | "data" | "opcao" | "multipla";
+  /** "formula": a fórmula de um indicador, montada na tela com os itens das opções (Estrutura dos Indicadores). */
+  tipo: "texto" | "inteiro" | "decimal" | "booleano" | "data" | "opcao" | "multipla" | "formula";
   obrigatorio?: boolean;
   /** Só na criação: a chave natural não muda depois (código RM, reduzido, código da linha). */
   somenteNaCriacao?: boolean;
@@ -46,6 +51,11 @@ export type Campo = {
   filtradoPor?: string;
   /** Ocupa as duas colunas do formulário de edição. */
   larguraInteira?: boolean;
+  /** Fora da tabela (só no formulário) ou fora do formulário (só na tabela). */
+  naTabela?: boolean;
+  noFormulario?: boolean;
+  /** No formulário, só aparece com um destes valores no outro campo (o peso, na média ponderada). */
+  visivelSe?: { campo: string; valores: string[] };
   ajuda?: string;
   opcoes?: (db: Db) => Promise<Opcao[]>;
 };
@@ -660,6 +670,149 @@ const linhas: DefinicaoCadastro = {
   remover: async (db, id) => void (await db.linha.delete({ where: { id } })),
 };
 
+// --------------------------------------------------------- estrutura dos indicadores
+/**
+ * A Estrutura dos Indicadores (11/10/2026): os indicadores de resultado, com a fórmula (Metodologia) que os calcula —
+ * itens da DRE (qualquer linha, por unidade), totalizadores das Listas, indicadores do Comercial e do Administrativo
+ * e metas do orçamento, com + − × ÷ e parênteses. O nome identifica o indicador nas metas importadas, nos valores
+ * digitados e no Painel de Bordo: com eles, não muda.
+ */
+const GRUPOS_DE_INDICADORES = ["Produção", "Serviços", "Logística", "Técnico", "Comercial", "Administrativo", "Geral", "GME"];
+const SENTIDOS: Array<[string, string]> = [["↑", "↑ Maior, melhor"], ["↓", "↓ Menor, melhor"], ["=", "= Acompanhamento"], ["-", "- Sem sentido"]];
+// As unidades que as telas sabem mostrar (formatação dos valores).
+const UNIDADES_DE_INDICADOR = ["%", "R$", "R$/m³", "R$ (K)/colab.", "m³", "m³/colab.", "pistas", "colab.", "ocorr."];
+const MODOS_DO_ACUMULADO: Array<[string, string]> = [["SOMA", "Soma dos meses"], ["MEDIA_PONDERADA", "Média ponderada"], ["ULTIMO", "Último mês"], ["SISTEMA", "Cálculo do sistema"]];
+
+/** Os itens que a fórmula pode usar (as opções do montador): valor "TIPO|chave", grupo pelo tipo do item. */
+async function itensDaFormula(db: Db): Promise<Opcao[]> {
+  const linhas = await db.linhaDRE.findMany({ where: { tipo: { not: "SECAO" }, ativo: true }, orderBy: { ordem: "asc" }, select: { codigo: true, descricao: true, grupoSigla: true, tipo: true } });
+  const nomes = (await db.indicadorEstrutura.findMany({ orderBy: { ordem: "asc" }, select: { nome: true } })).map((i) => i.nome);
+  return [
+    ...linhas.map((l) => ({ valor: `DRE|${l.codigo}`, rotulo: `${l.grupoSigla} › ${l.descricao}${l.tipo === "ITEM" ? "" : " (total)"}`, grupos: ["DRE"] })),
+    ...TOTALIZADORES_DAS_LISTAS.map((t) => ({ valor: `LISTA|${t.codigo}`, rotulo: t.rotulo, grupos: ["LISTA"] })),
+    ...INDICADORES_DAS_LISTAS.map((n) => ({ valor: `IND|${n}`, rotulo: n, grupos: ["IND"] })),
+    ...nomes.map((n) => ({ valor: `META|${n}`, rotulo: n, grupos: ["META"] })),
+  ];
+}
+
+/** Valida a fórmula: a escrita e os itens (linhas que existem na DRE, totalizadores, indicadores e metas conhecidos). */
+async function validarFormula(db: Db, formula: string, rotulo: string, nomesDoCatalogo: string[]) {
+  let compilada: ReturnType<typeof compilarFormula>;
+  try {
+    compilada = compilarFormula(formula);
+  } catch (e) {
+    throw new RegraCadastroError(400, `${rotulo}: ${e instanceof FormulaInvalidaError ? e.message : "fórmula inválida."}`);
+  }
+  const codigos = new Set((await db.linhaDRE.findMany({ select: { codigo: true } })).map((l) => l.codigo));
+  const listas = new Set(TOTALIZADORES_DAS_LISTAS.map((t) => t.codigo));
+  const indicadores = new Set(INDICADORES_DAS_LISTAS);
+  const metas = new Set(nomesDoCatalogo);
+  for (const i of compilada.itens.values()) {
+    const ok = i.tipo === "DRE" ? codigos.has(i.codigo) : i.tipo === "LISTA" ? listas.has(i.codigo) : i.tipo === "IND" ? indicadores.has(i.nome) : metas.has(i.nome);
+    if (!ok) throw new RegraCadastroError(400, `${rotulo}: o item ${i.tipo === "DRE" ? i.codigo : i.tipo === "LISTA" ? i.codigo : i.nome} não existe.`);
+  }
+}
+
+const estruturaIndicadores: DefinicaoCadastro = {
+  entidade: "estrutura-indicadores",
+  titulo: "Indicador",
+  auditoria: "indicador_estrutura",
+  criar: true,
+  excluir: true,
+  campos: [
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
+    { nome: "grupo", rotulo: "Grupo", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(GRUPOS_DE_INDICADORES.map((g) => [g, g])) },
+    { nome: "numero", rotulo: "Numeração", rotuloColuna: "Nº", tipo: "texto", ajuda: "Vazia nos indicadores principais do grupo." },
+    { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, travaComMovimento: true },
+    { nome: "sentido", rotulo: "Comportamento", rotuloColuna: "Comp.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(SENTIDOS) },
+    { nome: "unidade", rotulo: "Unidade de Medida", rotuloColuna: "Und.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(UNIDADES_DE_INDICADOR.map((u) => [u, u])) },
+    { nome: "descricao", rotulo: "Descrição", tipo: "texto", larguraInteira: true, naTabela: false, ajuda: "O texto que a tela Indicadores mostra sob o nome." },
+    { nome: "formula", rotulo: "Metodologia", tipo: "formula", larguraInteira: true, naTabela: false, opcoes: itensDaFormula },
+    { nome: "metodologiaTexto", rotulo: "Metodologia", tipo: "texto", derivado: true, noFormulario: false },
+    { nome: "modo", rotulo: "Acumulado", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(MODOS_DO_ACUMULADO) },
+    { nome: "peso", rotulo: "Peso da Média", tipo: "formula", larguraInteira: true, naTabela: false, visivelSe: { campo: "modo", valores: ["MEDIA_PONDERADA"] }, opcoes: itensDaFormula },
+    { nome: "ativo", rotulo: "Ativo", tipo: "booleano" },
+  ],
+  async listar(db, busca) {
+    const r = (await db.indicadorEstrutura.findMany({ orderBy: { ordem: "asc" } })).filter((i) => contem(busca, i.grupo, i.nome, i.numero));
+    const textos = await formulasPorExtenso(r.map((i) => i.formula));
+    return r.map((i, k) => ({ ...i, metodologiaTexto: i.modo === "SISTEMA" ? "Cálculo do sistema" : textos[k] }));
+  },
+  async ler(db, id) {
+    const i = await db.indicadorEstrutura.findUnique({ where: { id } });
+    if (!i) return null;
+    return { ...i, metodologiaTexto: i.modo === "SISTEMA" ? "Cálculo do sistema" : (await formulasPorExtenso([i.formula]))[0] };
+  },
+  async preparar(db, v, id) {
+    const nome = exigir(v.nome, "O nome");
+    const outro = await db.indicadorEstrutura.findUnique({ where: { nome }, select: { id: true } });
+    if (outro && outro.id !== id) throw new RegraCadastroError(409, `Já existe o indicador ${nome}.`);
+    const grupo = exigir(v.grupo, "O grupo");
+    if (!GRUPOS_DE_INDICADORES.includes(grupo)) throw new RegraCadastroError(400, "Grupo inválido.");
+    const sentido = exigir(v.sentido, "O comportamento");
+    if (!SENTIDOS.some(([s]) => s === sentido)) throw new RegraCadastroError(400, "Comportamento inválido.");
+    const unidade = exigir(v.unidade, "A unidade de medida");
+    if (!UNIDADES_DE_INDICADOR.includes(unidade)) throw new RegraCadastroError(400, "Unidade de medida inválida.");
+    const modo = exigir(v.modo, "O acumulado");
+    if (!MODOS_DO_ACUMULADO.some(([m]) => m === modo)) throw new RegraCadastroError(400, "Acumulado inválido.");
+    const nomes = (await db.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome).concat(nome);
+    let formula = texto(v.formula);
+    let peso = texto(v.peso);
+    if (modo === "SISTEMA") {
+      // Só os que têm a conta no código; a fórmula não vale para eles.
+      if (!CALCULOS_SISTEMA[nome]) throw new RegraCadastroError(400, "O cálculo do sistema só vale para os indicadores que já o têm; monte a Metodologia.");
+      formula = null;
+      peso = null;
+    } else {
+      if (!formula) throw new RegraCadastroError(400, "Monte a Metodologia (a fórmula do indicador).");
+      await validarFormula(db, formula, "Metodologia", nomes);
+      if (modo === "MEDIA_PONDERADA") {
+        if (!peso) throw new RegraCadastroError(400, "Na média ponderada, monte o Peso da Média.");
+        await validarFormula(db, peso, "Peso da Média", nomes);
+      } else {
+        peso = null;
+      }
+    }
+    return {
+      ordem: inteiro(v.ordem, "A ordem") ?? undefined,
+      grupo,
+      numero: texto(v.numero) ?? "",
+      nome,
+      sentido,
+      unidade,
+      descricao: texto(v.descricao),
+      formula,
+      modo,
+      peso,
+      ativo: v.ativo === undefined ? true : booleano(v.ativo),
+    };
+  },
+  async gravar(db, d, id) {
+    const dados = d as Prisma.IndicadorEstruturaUncheckedCreateInput;
+    if (id) return (await db.indicadorEstrutura.update({ where: { id }, data: dados })).id;
+    return (await db.indicadorEstrutura.create({ data: { ...dados, ordem: dados.ordem ?? (await db.indicadorEstrutura.count()) + 1 } })).id;
+  },
+  // O nome liga o indicador às metas importadas, aos valores digitados e ao Painel de Bordo.
+  async movimentos(db, id) {
+    const i = await db.indicadorEstrutura.findUnique({ where: { id }, select: { nome: true } });
+    if (!i) return null;
+    const [metas, digitados, importados] = await Promise.all([
+      db.metaImportada.count({ where: { nome: i.nome } }),
+      db.indicadorDigitado.count({ where: { nome: i.nome } }),
+      db.indicadorImportado.count({ where: { nome: i.nome } }),
+    ]);
+    const noPainel = NOMES_DO_PAINEL().includes(i.nome);
+    if (!metas && !digitados && !importados && !noPainel) return null;
+    const partes = [metas ? `${metas} meta(s) importada(s)` : null, importados + digitados ? `${importados + digitados} valor(es) importado(s) ou digitado(s)` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
+    return `O indicador é usado por ${partes.join(", ")}.`;
+  },
+  async impedimentoExclusao(db, id) {
+    const m = await this.movimentos!(db, id);
+    return m ? `${m} Inative-o em vez de excluir.` : null;
+  },
+  remover: async (db, id) => void (await db.indicadorEstrutura.delete({ where: { id } })),
+};
+
 // ------------------------------------------------------------ regras de rateio
 /** As chaves de rateio de cada lista dos Totais (a Expedição e a Montagem não são base de nenhuma). */
 const CHAVES_DA_LISTA: Record<string, string[]> = {
@@ -849,7 +1002,7 @@ const estacas: DefinicaoCadastro = {
 };
 
 export const DEFINICOES: Record<string, DefinicaoCadastro> = Object.fromEntries(
-  [centros, contas, reclassificacoes, estrutura, unidades, linhas, regras, tipos, estacas].map((d) => [d.entidade, d]),
+  [centros, contas, reclassificacoes, estrutura, unidades, linhas, estruturaIndicadores, regras, tipos, estacas].map((d) => [d.entidade, d]),
 );
 
 /** Para a tela e para o log: Decimal e Date viram texto. */

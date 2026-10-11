@@ -10,7 +10,7 @@ import { ABA_DRE_COMERCIAL, interpretarDreComercial } from "./dreComercial/leiau
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { localizarCabecalho } from "./listas/leituraListas.js";
-import { DEFINICOES_INDICADORES, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
+import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
 import { escolherAba } from "./statusImportacao.js";
 
 /**
@@ -236,6 +236,8 @@ export async function analisarArquivo(
   alcanca: (tipo: TipoImportacao) => boolean,
   fontes: FontesAnalise = fontesDoBanco(),
 ) {
+  // Os nomes dos indicadores do cadastro, para a aba das metas.
+  await atualizarNomesDasMetas();
   let nomes: string[];
   try {
     nomes = listarAbas(conteudo);

@@ -13,6 +13,7 @@ import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { iniciaisMaiusculas } from "@/lib/texto";
 
 import { edicaoService, mensagemDeErro, textoDoEfeito, type Campo, type DefinicaoCadastro, type Registro } from "../services/edicaoService";
+import { EditorFormula } from "./EditorFormula";
 
 type Props = { entidade: string; id: string | null; onFechar: () => void };
 
@@ -73,7 +74,9 @@ function CampoForm({
         {c.rotulo}
         {c.obrigatorio && !travado ? <span className="text-red-700"> *</span> : null}
       </Label>
-      {c.tipo === "opcao" && !travado ? (
+      {c.tipo === "formula" ? (
+        <EditorFormula id={id} valor={String(valor ?? "")} onMuda={onMuda} opcoes={c.opcoes ?? []} travado={travado} />
+      ) : c.tipo === "opcao" && !travado ? (
         <select id={id} value={String(valor ?? "")} onChange={(e) => onMuda(e.target.value)} className={classeSelect}>
           <option value="">{semFiltro ? `Escolha antes: ${semFiltro}` : c.obrigatorio ? "Escolha…" : "—"}</option>
           {opcoes?.map((o) => (
@@ -131,7 +134,9 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
   };
   const salvar = useMutation({
     mutationFn: () => {
-      const enviar = Object.fromEntries(def.campos.filter((c) => !c.derivado && !registro?.__travas?.campos.includes(c.nome)).map((c) => [c.nome, valores[c.nome]]));
+      const enviar = Object.fromEntries(
+        def.campos.filter((c) => !c.derivado && c.noFormulario !== false && !registro?.__travas?.campos.includes(c.nome)).map((c) => [c.nome, valores[c.nome]]),
+      );
       return registro ? edicaoService.atualizar(entidade, registro.id, enviar) : edicaoService.criar(entidade, enviar);
     },
     onSuccess: (r) => concluir(registro ? `${def.titulo} atualizado.` : `${def.titulo} criado.`, r),
@@ -160,8 +165,8 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
         </div>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        {def.campos.map((c) => (
-          <div key={c.nome} className={c.larguraInteira || c.tipo === "multipla" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : ""}>
+        {def.campos.filter((c) => c.noFormulario !== false && (!c.visivelSe || c.visivelSe.valores.includes(String(valores[c.visivelSe.campo] ?? "")))).map((c) => (
+          <div key={c.nome} className={c.larguraInteira || c.tipo === "multipla" || c.tipo === "formula" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : ""}>
             <CampoForm
               c={c}
               valor={valores[c.nome]}

@@ -13,6 +13,7 @@ import { getPrismaClient } from "../src/config/prisma.js";
 import type { AcaoPermissao, RecursoSistema } from "../src/generated/prisma/enums.js";
 import { REGRAS_RATEIO, VIGENCIA_REGRAS } from "../src/services/volumes/regrasRateio.js";
 import { carregarCadastrosDaPasta } from "./cargaCadastros.js";
+import { carregarEstruturaIndicadores } from "../src/services/relatorios/cargaEstruturaIndicadores.js";
 
 const prisma = getPrismaClient();
 
@@ -237,10 +238,12 @@ const perfis = await carregarPerfisEUsuario();
 const un = await carregarUnidades();
 const linhas = await carregarLinhas();
 const regras = await carregarRegrasRateio();
+const indicadores = await carregarEstruturaIndicadores(prisma);
 
 console.log("Carga inicial\n");
 console.log(`Perfis              : ${perfis.perfis} gravados, com o usuário inicial`);
 console.log(`Unidades de negócio : ${un} gravadas`);
 console.log(`Linhas              : ${linhas} gravadas (produto, obra e faturamento)`);
 console.log(`Regras de rateio    : ${regras} gravadas`);
+console.log(`Indicadores         : ${indicadores.criados} gravados (de ${indicadores.total} da carga inicial)`);
 await carregarCadastrosDaPasta();

@@ -1,6 +1,8 @@
 import { getPrismaClient } from "../../config/prisma.js";
-import { acumular, INDICADORES, type DadosDoMes } from "./indicadores.js";
+import { acumular, type DadosDoMes } from "./indicadores.js";
 import { acumularMeta } from "./metasOrcamento.js";
+import { catalogoDeIndicadores, TOTAIS_SINTETICOS } from "./catalogoIndicadores.js";
+import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
 /**
@@ -10,7 +12,7 @@ import { mesesDoExercicio } from "./resultadosService.js";
  */
 export async function dadosDoMes(competenciaId: string, apurado: boolean): Promise<DadosDoMes> {
   const prisma = getPrismaClient();
-  const [dre, volumes, importados, digitados, metas] = await Promise.all([
+  const [dre, volumes, importados, digitados, metas, totaisListas] = await Promise.all([
     apurado
       ? prisma.resultadoApurado.findMany({
           where: { competenciaId, centroCustoId: null },
@@ -23,7 +25,11 @@ export async function dadosDoMes(competenciaId: string, apurado: boolean): Promi
     prisma.indicadorDigitado.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
     // As metas do orçamento do mês (os GME 4 e 8).
     prisma.metaImportada.findMany({ where: { competenciaId }, select: { nome: true, valor: true } }),
+    // Os totais das listas do mês (os totalizadores que não têm volume congelado: Expedição, Montagem, Pistas…).
+    apurado ? totaisDaCompetencia(competenciaId) : [],
   ]);
+  const porLista = new Map(totaisListas.map((t) => [t.codigo as string, Number(t.quantidade)]));
+  const totalDaLista = (c: string): number => (porOrigem.has(c) ? porOrigem.get(c)! : (porLista.get(c) ?? 0));
   const porMeta = new Map(metas.map((x) => [x.nome, Number(x.valor)]));
   const porVisao = new Map(dre.map((r) => [`${r.unidadeNegocio?.codigo ?? 0}|${r.linhaDRE.codigo}`, Number(r.valor)]));
   // Cada origem aparece em mais de uma regra de rateio com o mesmo volume: vale uma vez.
@@ -34,6 +40,11 @@ export async function dadosDoMes(competenciaId: string, apurado: boolean): Promi
     volume: (o) => (apurado ? (porOrigem.get(o) ?? 0) : NaN),
     importado: (n) => porNome.get(n) ?? null,
     meta: (n) => porMeta.get(n) ?? null,
+    lista: (c) => {
+      if (!apurado) return NaN;
+      const sintetico = TOTAIS_SINTETICOS[c];
+      return sintetico ? sintetico.codigos.reduce((s, x) => s + totalDaLista(x), 0) : totalDaLista(c);
+    },
   };
 }
 
@@ -60,6 +71,8 @@ export const indicadoresService = {
       ),
     );
     const metas = meses.map((m) => metasPorMes.get(m.mes) ?? null);
+    // Os indicadores do cadastro Estrutura dos Indicadores, com as fórmulas.
+    const catalogo = await catalogoDeIndicadores();
     const dados = encadearMeses(
       await Promise.all(meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null) : null))),
     );
@@ -67,7 +80,7 @@ export const indicadoresService = {
       ano,
       ate: ultimo,
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
-      indicadores: INDICADORES.map((i) => {
+      indicadores: catalogo.map((i) => {
         const partes = dados.map((d) => (d ? i.calculo(d) : null));
         return {
           grupo: i.grupo,
@@ -81,7 +94,7 @@ export const indicadoresService = {
           total: acumular(i, partes),
           /** O orçado de cada mês (null sem as metas do mês, ou sem meta para o indicador) e o acumulado do orçado (só com as metas de todos os meses). */
           orcado: metas.map((m) => m?.get(i.nome) ?? null),
-          totalOrcado: metas.every((m) => m !== null) ? acumularMeta(i.nome, metas) : null,
+          totalOrcado: metas.every((m) => m !== null) ? acumularMeta(i, metas) : null,
         };
       }),
     };

@@ -1,5 +1,17 @@
 import type { LinhaPlanilha, ValorCelula } from "../../../lib/xlsx.js";
-import { INDICADORES } from "../../relatorios/indicadores.js";
+import { getPrismaClient } from "../../../config/prisma.js";
+import { ESTRUTURA_INICIAL_INDICADORES } from "../../relatorios/estruturaInicialIndicadores.js";
+
+/**
+ * Os nomes dos indicadores do cadastro Estrutura dos Indicadores, para a aba das metas (11/10/2026): um indicador
+ * novo no cadastro já recebe a meta dele. Lidos do banco antes de cada análise e de cada importação; até lá, os da
+ * carga inicial.
+ */
+let nomesDasMetas: string[] = ESTRUTURA_INICIAL_INDICADORES.map((i) => i.nome);
+export async function atualizarNomesDasMetas() {
+  const nomes = (await getPrismaClient().indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome);
+  if (nomes.length) nomesDasMetas = nomes;
+}
 
 /**
  * Indicadores gerenciais que não saem da DRE, importados mês a mês:
@@ -88,7 +100,9 @@ export const DEFINICOES_INDICADORES: Record<TipoIndicadores, Definicao> = {
     aba: "Metas (Orçamento)",
     rotulo: "Metas do Orçamento",
     destino: "META",
-    nomes: INDICADORES.map((i) => i.nome),
+    get nomes() {
+      return nomesDasMetas;
+    },
     apelidos: { "Quadro de Lotação": "Quadro de Lotação Total" },
     ignorarOutros: true,
   },

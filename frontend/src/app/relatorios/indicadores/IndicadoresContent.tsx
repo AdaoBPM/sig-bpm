@@ -163,7 +163,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
           <>
             <p>
               Os indicadores gerenciais do exercício, {periodoFixo ? "no mês da competência" : "mês a mês e acumulados"}, na ordem e com os nomes do
-              INDICADORES DE RESULTADO (aba Realizado (SIG)); a metodologia, o sentido e a forma do acumulado vêm da aba Metas.
+              INDICADORES DE RESULTADO (aba Realizado (SIG)). O catálogo — grupo, numeração, nome, comportamento, unidade, a fórmula de cada indicador e a forma do acumulado — fica em Cadastros da Controladoria / Estrutura dos Indicadores, onde se edita.
             </p>
             <p>
               Os valores saem da DRE apurada (congelada) de cada competência, dos volumes da apuração (projetos liberados) e dos indicadores

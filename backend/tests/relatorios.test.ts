@@ -3,7 +3,13 @@ import { describe, it } from "node:test";
 
 import { baseDoPercentual, baseDoUnitario, COD } from "../src/services/relatorios/basesResultados.js";
 import { lerIndicadores } from "../src/services/importacoes/indicadores/leituraIndicadores.js";
-import { acumular, INDICADORES } from "../src/services/relatorios/indicadores.js";
+import { acumular } from "../src/services/relatorios/indicadores.js";
+import { montarIndicador } from "../src/services/relatorios/catalogoIndicadores.js";
+import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
+
+// O catálogo da carga inicial do cadastro Estrutura dos Indicadores, com as fórmulas compiladas (sem o banco).
+const INDICADORES = ESTRUTURA_INICIAL_INDICADORES.map(montarIndicador);
+const porNomeDoCatalogo = (n: string) => INDICADORES.find((i) => i.nome === n);
 import { acumularMeta } from "../src/services/relatorios/metasOrcamento.js";
 import { sinal, vsOrcado } from "../src/services/relatorios/painelDeBordo.js";
 
@@ -61,7 +67,11 @@ describe("indicadores (aba Realizado (SIG) e Metas, 08/10/2026)", () => {
       u === 1 && c === "CPP.CUSTOS_DE_PRODUCAO_PRE_FABRICADOS_CPP" ? 72 : u === 1 && c === COD.RLPF ? 100 : u === 1 && c === COD.PRODUCAO ? 1065.72 : 0;
     const importados: Record<string, number> = { "Quadro de Lotação: MO Direta Matriz": 90, Turnover: 0.05, "Quadro de Lotação Total": 274 };
     const m = { dre, volume: () => 0, importado: (n: string) => importados[n] ?? null };
-    assert.deepEqual(porNome("Custos de Produção: Matriz (CPP)").calculo!(m), { valor: 0.72, peso: 100 });
+    const cpp = porNome("Custos de Produção: Matriz (CPP)");
+    assert.equal(cpp.calculo!(m).valor, 0.72);
+    // O acumulado da razão: a soma dos numeradores sobre a dos denominadores (72 + 30) ÷ (100 + 50).
+    const m2 = { ...m, dre: (u: number, c: string) => (u === 1 && c === "CPP.CUSTOS_DE_PRODUCAO_PRE_FABRICADOS_CPP" ? 30 : u === 1 && c === COD.RLPF ? 50 : 0) };
+    assert.equal(acumular(cpp, [cpp.calculo!(m), cpp.calculo!(m2)]), 102 / 150);
     const ef = porNome("Eficiência da Produção: MO Direta Matriz").calculo!(m);
     assert.equal(ef.valor!.toFixed(2), "11.84"); // 1.065,72 m³ ÷ 90 colaboradores, como na planilha
     assert.equal(ef.peso, 1065.72);
@@ -112,9 +122,9 @@ describe("metas do orçamento (aba Metas (Orçamento)) e Painel de Bordo", () =>
       mes({ "Produção (Vol.): Matriz": 1000, "Mão de Obra: Matriz": 900, "Quadro de Lotação Total": 290 }),
       mes({ "Produção (Vol.): Matriz": 3000, "Mão de Obra: Matriz": 1000, "Quadro de Lotação Total": 297 }),
     ];
-    assert.equal(acumularMeta("Produção (Vol.): Matriz", meses), 4000);
-    assert.equal(acumularMeta("Mão de Obra: Matriz", meses), (900 * 1000 + 1000 * 3000) / 4000);
-    assert.equal(acumularMeta("Quadro de Lotação Total", meses), 297);
+    assert.equal(acumularMeta(porNomeDoCatalogo("Produção (Vol.): Matriz"), meses), 4000);
+    assert.equal(acumularMeta(porNomeDoCatalogo("Mão de Obra: Matriz"), meses), (900 * 1000 + 1000 * 3000) / 4000);
+    assert.equal(acumularMeta(porNomeDoCatalogo("Quadro de Lotação Total"), meses), 297);
   });
 
   it("desvio contra o orçado (com o orçado negativo, o sinal se inverte) e o sinal com a faixa de 5%", () => {
@@ -135,7 +145,7 @@ describe("GME 4 e GME 8 (aba Realizado, linhas 112 a 115)", () => {
     meta: (n: string) => meta[n] ?? null,
   });
   it("calcula a demanda sobre a capacidade e o atingimento acumulado pelo orçado", async () => {
-    const { INDICADORES, acumular } = await import("../src/services/relatorios/indicadores.js");
+    const { acumular } = await import("../src/services/relatorios/indicadores.js");
     const { encadearMeses } = await import("../src/services/relatorios/indicadoresService.js");
     const por = (n: string) => INDICADORES.find((i) => i.nome === n)!;
     const meses = encadearMeses([

@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { auditar } from "../auditoriaService.js";
-import { INDICADORES } from "../relatorios/indicadores.js";
+import { catalogoDeIndicadores } from "../relatorios/catalogoIndicadores.js";
 import { RegraListaError } from "./listasService.js";
 
 /**
@@ -21,7 +21,8 @@ export const ehSetorIndicadores = (s: string): s is SetorIndicadores => s in SET
 
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 
-const doSetor = (setor: SetorIndicadores) => INDICADORES.filter((i) => i.grupo === SETORES_INDICADORES[setor].grupo && i.numero !== "");
+/** Os indicadores numerados do grupo, do cadastro Estrutura dos Indicadores. */
+const doSetor = async (setor: SetorIndicadores) => (await catalogoDeIndicadores()).filter((i) => i.grupo === SETORES_INDICADORES[setor].grupo && i.numero !== "");
 
 async function competencia(ano: number, mes: number) {
   const c = await getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true, ano: true, mes: true, status: true } });
@@ -32,7 +33,7 @@ async function competencia(ano: number, mes: number) {
 export async function indicadoresDaLista(setor: SetorIndicadores, ano: number, mes: number) {
   const prisma = getPrismaClient();
   const c = await competencia(ano, mes);
-  const lista = doSetor(setor);
+  const lista = await doSetor(setor);
   const nomes = lista.map((i) => i.nome);
   const [importacao, digitados] = await Promise.all([
     prisma.importacao.findFirst({
@@ -63,7 +64,7 @@ export async function digitarIndicador(setor: SetorIndicadores, ano: number, mes
   const prisma = getPrismaClient();
   const c = await competencia(ano, mes);
   if (c.status === "FECHADA") throw new RegraListaError(409, `A competência ${rotulo(ano, mes)} está fechada. Digitar nela exige reabri-la.`);
-  if (!doSetor(setor).some((i) => i.nome === nome)) throw new RegraListaError(400, `"${nome}" não é um indicador desta lista.`);
+  if (!(await doSetor(setor)).some((i) => i.nome === nome)) throw new RegraListaError(400, `"${nome}" não é um indicador desta lista.`);
   const antes = await indicadoresDaLista(setor, ano, mes).then((l) => l.indicadores.find((i) => i.nome === nome));
   const gravado = await prisma.indicadorDigitado.upsert({
     where: { competenciaId_nome: { competenciaId: c.id, nome } },

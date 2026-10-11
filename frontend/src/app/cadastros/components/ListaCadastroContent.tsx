@@ -69,7 +69,8 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
   const edicao = useEdicaoCadastro(entidade, { criar: def.data?.criar ?? false });
 
-  const campos = useMemo(() => (def.data?.campos ?? []).filter((c) => c.tipo !== "multipla"), [def.data]);
+  // Na tabela, só os campos de mostrar (sem as listas múltiplas, as fórmulas em texto bruto e os só do formulário).
+  const campos = useMemo(() => (def.data?.campos ?? []).filter((c) => c.tipo !== "multipla" && c.tipo !== "formula" && c.naTabela !== false), [def.data]);
   const colunas = useMemo(() => {
     const doCadastro = campos.map(colunaDoCampo);
     return edicao.pode ? [...doCadastro, EDITAR] : doCadastro;

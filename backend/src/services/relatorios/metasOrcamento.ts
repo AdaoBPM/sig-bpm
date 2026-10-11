@@ -1,4 +1,4 @@
-import { acumular, INDICADORES, type Parte } from "./indicadores.js";
+import { acumular, type Indicador, type Parte } from "./indicadores.js";
 
 /**
  * O acumulado das metas do orçamento, como a coluna Y da aba Metas do SIG BPM
@@ -43,17 +43,18 @@ function pesoDaMeta(nome: string): Peso | null {
   return null;
 }
 
-const POR_NOME = new Map(INDICADORES.map((i) => [i.nome, i]));
-
-/** O acumulado da meta de um indicador nos meses dados (cada mês: as metas importadas dele, por nome; null sem importação). */
-export function acumularMeta(nome: string, meses: Array<Map<string, number> | null>): number | null {
-  const indicador = POR_NOME.get(nome);
+/**
+ * O acumulado da meta de um indicador nos meses dados (cada mês: as metas importadas dele, por nome; null sem
+ * importação). O indicador vem do cadastro; só o modo (último mês ou acumulado) importa aqui.
+ */
+export function acumularMeta(indicador: Pick<Indicador, "nome" | "acumulado"> | undefined, meses: Array<Map<string, number> | null>): number | null {
   if (!indicador) return null;
+  const nome = indicador.nome;
   const peso = pesoDaMeta(nome);
   const partes = meses.map((m): Parte | null => {
     if (!m) return null;
     if (peso && typeof peso === "object") return { valor: null, componentes: peso.componentes.map(([n, p]) => ({ valor: m.get(n) ?? null, peso: m.get(p) ?? 0 })) };
     return { valor: m.get(nome) ?? null, peso: peso ? (m.get(peso) ?? undefined) : undefined };
   });
-  return acumular(indicador, partes);
+  return acumular({ acumulado: indicador.acumulado }, partes);
 }
