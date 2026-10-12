@@ -21,6 +21,8 @@ export function lerNumero(texto: string): number | null | undefined {
 
 /** O valor para um campo: até duas casas, sem separador de milhar (fácil de editar). */
 export const paraCampo = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2, useGrouping: false });
+/** O valor com separador de milhar e sempre duas casas (o valor atual e o recalculado da edição de um valor). */
+export const comDuasCasas = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 /** O valor para ler: com separador de milhar e até duas casas. */
 export const paraTexto = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
@@ -145,15 +147,17 @@ export function ValorDialog({
 }) {
   const [tipo, setTipo] = useState<Reajuste>("PERCENTUAL");
   const [reajuste, setReajuste] = useState("");
-  const [novo, setNovo] = useState(paraCampo(atual));
+  // O recalculado sempre com separador de milhar e duas casas (12/10/2026); ao digitar, fica como se digita e se
+  // formata ao sair do campo.
+  const [novo, setNovo] = useState(comDuasCasas(atual));
   const [replicar, setReplicar] = useState(false);
   const valorNovo = lerNumero(novo);
   // O reajuste muda o valor recalculado; digitar o recalculado muda o reajuste (o percentual, só com valor atual).
   const mudarReajuste = (t: string, tp = tipo) => {
     setReajuste(t);
     const x = lerNumero(t);
-    if (typeof x === "number") setNovo(paraCampo(reajustar(atual, tp, x)));
-    else if (x === null) setNovo(paraCampo(atual));
+    if (typeof x === "number") setNovo(comDuasCasas(reajustar(atual, tp, x)));
+    else if (x === null) setNovo(comDuasCasas(atual));
   };
   const mudarNovo = (t: string) => {
     setNovo(t);
@@ -176,7 +180,7 @@ export function ValorDialog({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="valor-atual">Valor Atual</Label>
-            <Input id="valor-atual" value={paraTexto(atual)} readOnly className="rounded-sm bg-gray-50 text-gray-700" />
+            <Input id="valor-atual" value={comDuasCasas(atual)} readOnly className="rounded-sm bg-gray-50 text-right text-gray-700" />
           </div>
           <TipoReajuste
             tipo={tipo}
@@ -192,7 +196,14 @@ export function ValorDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="valor-novo">Valor Recalculado</Label>
-              <Input id="valor-novo" autoFocus value={novo} onChange={(e) => mudarNovo(e.target.value)} className="rounded-sm font-bold" />
+              <Input
+                id="valor-novo"
+                autoFocus
+                value={novo}
+                onChange={(e) => mudarNovo(e.target.value)}
+                onBlur={() => typeof valorNovo === "number" && setNovo(comDuasCasas(valorNovo))}
+                className="rounded-sm text-right font-bold"
+              />
               {valorNovo === undefined ? <p className="text-xs text-red-700">Número inválido.</p> : null}
             </div>
           </div>
