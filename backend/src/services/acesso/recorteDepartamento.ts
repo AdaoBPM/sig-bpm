@@ -60,9 +60,15 @@ export function departamentoDaLinha(l: { grupoSigla: string; descricao: string }
   return POR_SIGLA[l.grupoSigla] ?? null;
 }
 
+/**
+ * Grupos da DRE com as movimentações abertas a todos os gestores, de qualquer departamento (11/10/2026): a Receita
+ * Operacional Bruta (ROB).
+ */
+const ABERTOS_A_TODOS = new Set(["ROB"]);
+
 /** O usuário pode consultar as movimentações desta linha? */
 export function podeVerMovimentos(acesso: Acesso, l: { grupoSigla: string; descricao: string }) {
-  if (!acesso.recorteDepartamento) return true;
+  if (!acesso.recorteDepartamento || ABERTOS_A_TODOS.has(l.grupoSigla)) return true;
   const d = departamentoDaLinha(l);
   return d !== null && acesso.departamentos.includes(d);
 }
