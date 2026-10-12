@@ -488,41 +488,72 @@ export const cenariosService = {
    * (o Consolidado e as cinco unidades, mês a mês) substitui a DRE do cenário; os meses sem competência fechada
    * ficam vazios. Os indicadores realizados desses meses (os de Resultados Realizados) substituem os do cenário, como
    * a aba das metas de um arquivo (12/10/2026): os que saem da DRE o cenário recalcula; os das listas, os
-   * lançamentos manuais e os GME ficam com o realizado.
+   * lançamentos manuais e os GME ficam com o realizado. Com `modo` MEDIA (12/10/2026), a média do período `de`–`ate`
+   * (todo de competências fechadas) vai para os doze meses do cenário, na DRE e nos indicadores.
    */
-  async referenciaRealizado(id: string, ano: number, usuario: Usuario) {
+  async referenciaRealizado(id: string, ano: number, usuario: Usuario, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) {
     const c = await obterOuFalhar(id, usuario);
     const prisma = getPrismaClient();
-    const fechadas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
-    if (fechadas.length === 0) throw new CenarioError(400, `Nenhuma competência de ${ano} está fechada.`);
+    const todas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
+    if (todas.length === 0) throw new CenarioError(400, `Nenhuma competência de ${ano} está fechada.`);
+    // A média replicada (12/10/2026): o período escolhido, todo de competências fechadas.
+    const media = opcoes.modo === "MEDIA";
+    const de = opcoes.de ?? todas[0].mes;
+    const ate = opcoes.ate ?? todas[todas.length - 1].mes;
+    if (media) {
+      if (de > ate) throw new CenarioError(400, "O mês inicial do período vem depois do final.");
+      const abertas = Array.from({ length: ate - de + 1 }, (_, k) => de + k).filter((m) => !todas.some((f) => f.mes === m));
+      if (abertas.length) throw new CenarioError(400, `O período tem meses sem competência fechada: ${abertas.map((m) => `${String(m).padStart(2, "0")}/${ano}`).join(", ")}.`);
+    }
+    const fechadas = media ? todas.filter((f) => f.mes >= de && f.mes <= ate) : todas;
     const mesDe = new Map(fechadas.map((f) => [f.id, f.mes]));
     const rs = await prisma.resultadoApurado.findMany({
       where: { competenciaId: { in: fechadas.map((f) => f.id) }, centroCustoId: null },
       select: { competenciaId: true, linhaDREId: true, valor: true, unidadeNegocio: { select: { codigo: true } } },
     });
     const meses = fechadas.map((f) => String(f.mes).padStart(2, "0"));
-    // Os indicadores realizados dos meses fechados (os demais meses vêm vazios).
+    const periodo = meses.length === 1 ? meses[0] : `${meses[0]} a ${meses[meses.length - 1]}`;
     const realizados = await indicadoresService.listar(ano, fechadas[fechadas.length - 1].mes, true);
-    const indicadores = realizados.indicadores.flatMap((i) =>
-      i.meses.flatMap((v, k) => (v === null || !Number.isFinite(v) || !fechadas.some((f) => f.mes === k + 1) ? [] : [{ nome: i.nome, mes: k + 1, valor: new Prisma.Decimal(v.toFixed(8)) }])),
-    );
-    const nomeArquivo = `Resultado realizado de ${ano} (${meses.length === 1 ? meses[0] : `${meses[0]} a ${meses[meses.length - 1]}`})`;
+    const doze = Array.from({ length: 12 }, (_, k) => k + 1);
+    // A DRE: mês a mês, os valores de cada competência; na média, a soma de cada linha no período ÷ o número de meses,
+    // em todos os doze meses (os totais, recalculados das contas médias, também são as médias).
+    const somas = new Map<string, Prisma.Decimal>();
+    if (media) {
+      for (const r of rs) {
+        const k = `${r.unidadeNegocio?.codigo ?? 0}|${r.linhaDREId}`;
+        somas.set(k, (somas.get(k) ?? new Prisma.Decimal(0)).plus(r.valor));
+      }
+    }
+    const dre: Array<{ visao: number; linhaDREId: string; mes: number; valor: Prisma.Decimal }> = media
+      ? [...somas].flatMap(([k, soma]) => {
+          const [visao, linhaDREId] = k.split("|");
+          const valor = new Prisma.Decimal(soma.div(fechadas.length).toFixed(4));
+          return doze.map((mes) => ({ visao: Number(visao), linhaDREId, mes, valor }));
+        })
+      : rs.map((r) => ({ visao: r.unidadeNegocio?.codigo ?? 0, linhaDREId: r.linhaDREId, mes: mesDe.get(r.competenciaId)!, valor: r.valor }));
+    // Os indicadores realizados: mês a mês, os dos meses fechados; na média, a média simples dos meses do período com
+    // valor, nos doze meses (os que saem da DRE o cenário recalcula das contas médias).
+    const noPeriodo = (k: number) => fechadas.some((f) => f.mes === k + 1);
+    const indicadores = realizados.indicadores.flatMap((i) => {
+      if (!media) return i.meses.flatMap((v, k) => (v === null || !Number.isFinite(v) || !noPeriodo(k) ? [] : [{ nome: i.nome, mes: k + 1, valor: new Prisma.Decimal(v.toFixed(8)) }]));
+      const vs = i.meses.filter((v, k): v is number => v !== null && Number.isFinite(v) && noPeriodo(k));
+      if (!vs.length) return [];
+      const valor = new Prisma.Decimal((vs.reduce((s, v) => s + v, 0) / vs.length).toFixed(8));
+      return doze.map((mes) => ({ nome: i.nome, mes, valor }));
+    });
+    const nomeArquivo = media ? `Média do realizado de ${ano} (${periodo}), nos 12 meses` : `Resultado realizado de ${ano} (${periodo})`;
     await prisma.$transaction(
       async (tx) => {
         await tx.cenarioResultado.deleteMany({ where: { cenarioId: id } });
-        await gravarEmLotes(rs, (lote) =>
-          tx.cenarioResultado.createMany({
-            data: lote.map((r) => ({ cenarioId: id, visao: r.unidadeNegocio?.codigo ?? 0, linhaDREId: r.linhaDREId, mes: mesDe.get(r.competenciaId)!, valor: r.valor })),
-          }),
-        );
-        await recalcular(tx, id, fechadas.map((f) => f.mes), UNIDADES);
+        await gravarEmLotes(dre, (lote) => tx.cenarioResultado.createMany({ data: lote.map((r) => ({ cenarioId: id, ...r })) }));
+        await recalcular(tx, id, media ? doze : fechadas.map((f) => f.mes), UNIDADES);
         await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id } });
         await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((v) => ({ cenarioId: id, ...v, origem: "IMPORTADO" as const })) }));
         await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
       },
       { timeout: 120_000 },
     );
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: "realizado", ano, meses, indicadores: indicadores.length } });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: media ? "media do realizado" : "realizado", ano, meses, indicadores: indicadores.length } });
     return this.obter(id, usuario);
   },
 

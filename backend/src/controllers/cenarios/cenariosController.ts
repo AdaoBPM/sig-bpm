@@ -134,13 +134,16 @@ export const cenariosController = {
     return responder(response, () => cenariosService.gravarValores(c, corpo.data.visao, corpo.data.alteracoes, usuario(request)));
   },
 
-  /** A referência pelo resultado realizado: { ano } (as competências fechadas dele). */
+  /** A referência pelo resultado realizado: { ano, modo: MES_A_MES | MEDIA, de?, ate? } (as competências fechadas dele). */
   referenciaRealizado(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;
-    const corpo = z.object({ ano: anoSchema }).safeParse(request.body);
-    if (!corpo.success) return response.status(400).json({ error: "Exercício inválido." });
-    return responder(response, () => cenariosService.referenciaRealizado(c, corpo.data.ano, usuario(request)));
+    const corpo = z
+      .object({ ano: anoSchema, modo: z.enum(["MES_A_MES", "MEDIA"]).default("MES_A_MES"), de: z.number().int().min(1).max(12).optional(), ate: z.number().int().min(1).max(12).optional() })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Exercício ou período inválido." });
+    const { ano, ...opcoes } = corpo.data;
+    return responder(response, () => cenariosService.referenciaRealizado(c, ano, usuario(request), opcoes));
   },
 
   salvarManual(request: Request, response: Response) {

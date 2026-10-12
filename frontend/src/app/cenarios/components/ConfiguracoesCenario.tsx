@@ -35,6 +35,16 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
   const ano = anoEscolhido ?? anos[0] ?? null;
   const mesesFechados = fechadas.filter((c) => c.ano === ano).map((c) => c.mes).sort((a, b) => a - b);
   const [confirmar, setConfirmar] = useState(false);
+  // Mês a mês (os meses fechados, cada um no seu mês) ou a média de um período replicada nos doze meses (12/10/2026).
+  const [modo, setModo] = useState<"MES_A_MES" | "MEDIA">("MES_A_MES");
+  const [deEscolhido, setDe] = useState<number | null>(null);
+  const [ateEscolhido, setAte] = useState<number | null>(null);
+  const de = deEscolhido !== null && mesesFechados.includes(deEscolhido) ? deEscolhido : mesesFechados[0];
+  const ate = ateEscolhido !== null && mesesFechados.includes(ateEscolhido) ? ateEscolhido : mesesFechados[mesesFechados.length - 1];
+  const periodo = de && ate && de <= ate ? Array.from({ length: ate - de + 1 }, (_, k) => de + k) : [];
+  const abertasNoPeriodo = periodo.filter((m) => !mesesFechados.includes(m));
+  const periodoInvalido = modo === "MEDIA" && (!periodo.length || abertasNoPeriodo.length > 0);
+  const abrev = (m: number) => MESES[m - 1].slice(0, 3);
 
   const salvar = useMutation({
     mutationFn: () => cenariosService.atualizar(cenario.id, { nome: nome.trim(), descricao: descricao.trim() || null, visualizacao }),
@@ -44,11 +54,11 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
     },
   });
   const carregar = useMutation({
-    mutationFn: () => cenariosService.referenciaRealizado(cenario.id, ano!),
+    mutationFn: () => cenariosService.referenciaRealizado(cenario.id, ano!, modo === "MEDIA" ? { modo, de, ate } : { modo }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
-      toast.success(`Resultado realizado de ${ano} carregado no cenário.`);
+      toast.success(modo === "MEDIA" ? `Média do realizado de ${ano} (${abrev(de)} a ${abrev(ate)}) carregada nos 12 meses.` : `Resultado realizado de ${ano} carregado no cenário.`);
       setConfirmar(false);
     },
   });
@@ -110,7 +120,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
           {(
             [
               ["arquivo", "Arquivo", "Uma planilha como o ORÇAMENTO BPM (abas Consolidado, Matriz, Filial, Serviços, Desp.+Extra, RN e Metas).", FileSpreadsheet],
-              ["realizado", "Resultado Realizado", "A DRE e os indicadores das competências fechadas de um exercício, mês a mês.", History],
+              ["realizado", "Resultado Realizado", "A DRE e os indicadores das competências fechadas de um exercício: mês a mês ou a média de um período, replicada nos doze meses.", History],
             ] as const
           ).map(([v, rotulo, detalhe, Icone]) => (
             <label key={v} className={`flex cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 text-sm ${referencia === v ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}>
@@ -135,24 +145,71 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
         ) : anos.length === 0 ? (
           <p className="rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">Nenhuma competência fechada ainda.</p>
         ) : (
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="cfg-realizado">Exercício</Label>
-              <select id="cfg-realizado" value={ano ?? ""} onChange={(e) => setAno(Number(e.target.value))} className={`${classeSelect} w-32`}>
-                {anos.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cfg-realizado">Exercício</Label>
+                <select id="cfg-realizado" value={ano ?? ""} onChange={(e) => setAno(Number(e.target.value))} className={`${classeSelect} w-32`}>
+                  {anos.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">Fechadas: {mesesFechados.map((m) => MESES[m - 1]).join(", ")}.</p>
             </div>
-            <p className="min-w-0 flex-1 text-xs text-gray-600">
-              Fechadas: {mesesFechados.map((m) => MESES[m - 1]).join(", ")}. Os demais meses ficam vazios no cenário.
-            </p>
-            <Button type="button" className={botaoPrimario} onClick={() => setConfirmar(true)}>
-              <History className="size-4" />
-              Carregar Realizado
-            </Button>
+            <fieldset className="grid gap-2 sm:grid-cols-2">
+              <legend className="mb-1.5 text-sm leading-none font-medium">Importação</legend>
+              {(
+                [
+                  ["MES_A_MES", "Mês a Mês", "Cada competência fechada no mês dela; os demais meses ficam vazios."],
+                  ["MEDIA", "Média Replicada", "A média de um período do realizado, replicada em todos os doze meses do cenário."],
+                ] as const
+              ).map(([v, rotulo, detalhe]) => (
+                <label key={v} className={`flex cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 text-sm ${modo === v ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}>
+                  <input type="radio" name="modo-realizado" className="mt-1 accent-black" checked={modo === v} onChange={() => setModo(v)} />
+                  <span>
+                    <span className="font-medium text-gray-900">{rotulo}</span>
+                    <span className="block text-xs text-gray-600">{detalhe}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            {modo === "MEDIA" ? (
+              <div className="flex flex-wrap items-end gap-3">
+                {(
+                  [
+                    ["cfg-de", "De", de, setDe],
+                    ["cfg-ate", "Até", ate, setAte],
+                  ] as const
+                ).map(([idCampo, rotulo, valor, mudar]) => (
+                  <div key={idCampo} className="space-y-1.5">
+                    <Label htmlFor={idCampo}>{rotulo}</Label>
+                    <select id={idCampo} value={valor ?? ""} onChange={(e) => mudar(Number(e.target.value))} className={`${classeSelect} w-36`}>
+                      {mesesFechados.map((m) => (
+                        <option key={m} value={m}>
+                          {MESES[m - 1]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+                <p className={`min-w-0 flex-1 pb-2 text-xs ${periodoInvalido ? "text-red-700" : "text-gray-600"}`}>
+                  {!periodo.length
+                    ? "O mês inicial vem depois do final."
+                    : abertasNoPeriodo.length
+                      ? `O período tem meses sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
+                      : `A média de ${periodo.length} mês(es), de ${MESES[de - 1]} a ${MESES[ate - 1]}, em todos os meses do cenário.`}
+                </p>
+              </div>
+            ) : null}
+            <div className="flex justify-end">
+              <Button type="button" className={botaoPrimario} disabled={periodoInvalido} onClick={() => setConfirmar(true)}>
+                <History className="size-4" />
+                Carregar Realizado
+              </Button>
+            </div>
           </div>
         )}
       </section>
@@ -164,8 +221,10 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
             <DialogHeader>
               <DialogTitle>Carregar Resultado Realizado</DialogTitle>
               <DialogDescription>
-                A DRE do cenário (todas as abas e os doze meses) é substituída pela das competências fechadas de {ano} ({mesesFechados.map((m) => MESES[m - 1].slice(0, 3)).join(", ")}
-                ). Os indicadores do cenário também são substituídos pelos realizados desses meses. Os valores editados e os lançamentos manuais do cenário se perdem.
+                {modo === "MEDIA"
+                  ? `A DRE do cenário (todas as abas e os doze meses) é substituída pela média do realizado de ${ano}, de ${MESES[de - 1]} a ${MESES[ate - 1]} (${periodo.length} mês(es)), replicada em todos os meses. Os indicadores do cenário também ficam com as médias realizadas do período em todos os meses (os que saem da DRE se recalculam das contas médias).`
+                  : `A DRE do cenário (todas as abas e os doze meses) é substituída pela das competências fechadas de ${ano} (${mesesFechados.map(abrev).join(", ")}), cada uma no seu mês. Os indicadores do cenário também são substituídos pelos realizados desses meses.`}{" "}
+                Os valores editados e os lançamentos manuais do cenário se perdem.
               </DialogDescription>
             </DialogHeader>
             <Erro erro={carregar.isError ? mensagemDeErro(carregar.error, "Não foi possível carregar o realizado.") : null} />

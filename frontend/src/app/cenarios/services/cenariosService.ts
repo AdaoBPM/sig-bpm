@@ -95,7 +95,9 @@ export const cenariosService = {
   gravarValores: async (id: string, visao: number, alteracoes: Array<{ linha: string; mes: number; valor: number }>) =>
     (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/edicao/valores`, { visao, alteracoes })).data.data,
   /** A referência pelo resultado realizado: a DRE das competências fechadas do exercício substitui a do cenário. */
-  referenciaRealizado: async (id: string, ano: number) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano })).data.data,
+  /** Mês a mês (os meses fechados) ou a média de um período (de–ate) replicada nos doze meses. */
+  referenciaRealizado: async (id: string, ano: number, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) =>
+    (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano, ...opcoes })).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
   indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
   salvarManual: async (id: string, nome: string, valores: Array<number | null>) => {
