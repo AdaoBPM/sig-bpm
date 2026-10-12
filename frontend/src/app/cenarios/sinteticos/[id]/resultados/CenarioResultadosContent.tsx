@@ -13,6 +13,7 @@ import { TabelaResultados } from "@/app/relatorios/resultados/ResultadosContent"
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { AvisoMarcado } from "../../../components/AvisoMarcado";
+import { ComparativoCenario } from "../../../components/ComparativoCenario";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
 import { cenariosService } from "../../../services/cenariosService";
 
@@ -64,7 +65,9 @@ export function CenarioResultadosContent() {
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const marcacao = cenario.data?.marcacao ?? null;
   const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !marcacao;
-  const nome = VISOES.find((v) => v.chave === visao)!.nome;
+  // A aba Comparar (12/10/2026), à direita das visões: o cenário comparado e as variações máximas.
+  const comparar = visao === "comparar";
+  const nome = VISOES.find((v) => v.chave === visao)?.nome ?? "Comparar";
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -73,6 +76,10 @@ export function CenarioResultadosContent() {
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
+            <li>
+              Na aba Comparar (à direita), escolha outro cenário para comparar e a variação máxima (em %) de cada total da DRE. Com um cenário comparado,
+              aparece a tela Justificativas (na barra do topo, depois de Reajustes), com as contas que passam da variação.
+            </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses antes de dezembro; a escolha fica guardada neste navegador.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos, e a barra de rolagem fica no pé da janela, sempre à vista. Dezembro e o total do exercício trazem também o valor por m³.</li>
@@ -102,9 +109,18 @@ export function CenarioResultadosContent() {
           </>
         }
       />
-      <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
-      {marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="a DRE" /> : null}
-      {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
+      <Abas
+        rotulo="Visão dos resultados do cenário"
+        ativa={visao}
+        onMudar={setVisao}
+        abas={[...VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome })), { chave: "comparar", rotulo: "Comparar", aDireita: true }]}
+      />
+      {comparar ? (
+        <ComparativoCenario id={id} podeEditar={hasPermission("cenarios:editar")} />
+      ) : marcacao && hasPermission("cenarios:editar") ? (
+        <AvisoMarcado marcacao={marcacao} oQue="a DRE" />
+      ) : null}
+      {comparar ? null : podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
     </div>
   );
 }

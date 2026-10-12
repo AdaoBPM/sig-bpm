@@ -15,6 +15,7 @@ import { estrutura as estruturaDRE } from "../dre/dreService.js";
 import { contasDaUnidade, ErroEdicao, gravarValores, linhasDaUnidade, linhasDoConsolidado, recalcular, UNIDADES, type Alteracao } from "./edicaoCenario.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { calcularCenario } from "./indicadoresDoCenario.js";
+import { linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 
 /**
@@ -607,6 +608,137 @@ export const cenariosService = {
       contas: (r.contas ?? []) as Array<{ codigo: string; descricao: string }>,
       meses: (r.meses ?? []) as number[],
     }));
+  },
+
+  /**
+   * O comparativo do cenário (12/10/2026): o cenário comparado, os cenários que o usuário pode escolher e os totais da
+   * DRE com a variação máxima (em %) de cada um (nula: o total não se verifica).
+   */
+  async comparativo(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id } }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
+    const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
+    const { totais } = totaisDaDRE(await estruturaDRE());
+    const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
+    return {
+      comparadoCom: comparado,
+      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, marcacao: o.marcacao })),
+      totais: totais.map((t) => ({ ...t, limite: typeof limites[t.codigo] === "number" ? limites[t.codigo] : null })),
+    };
+  },
+
+  /**
+   * Grava o comparativo: o cenário comparado (nulo desliga o comparativo; as variações máximas ficam guardadas) e as
+   * variações máximas dos totais. Não mexe nos dados do cenário: vale também para o cenário marcado.
+   */
+  async gravarComparativo(id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }, usuario: Usuario) {
+    const antes = await obterOuFalhar(id, usuario);
+    if (dados.comparadoComId === id) throw new CenarioError(400, "Escolha outro cenário para comparar.");
+    if (dados.comparadoComId) await obterOuFalhar(dados.comparadoComId, usuario);
+    const codigos = new Set(totaisDaDRE(await estruturaDRE()).totais.map((t) => t.codigo));
+    const fora = Object.keys(dados.limites).filter((k) => !codigos.has(k));
+    if (fora.length) throw new CenarioError(400, `Não são totais da DRE: ${fora.slice(0, 3).join(", ")}.`);
+    const variacoesMaximas = Object.fromEntries(Object.entries(dados.limites).filter((e): e is [string, number] => e[1] !== null));
+    const depois = await getPrismaClient().cenario.update({ where: { id }, data: { comparadoComId: dados.comparadoComId, variacoesMaximas } });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      antes: { comparadoComId: antes.comparadoComId, variacoesMaximas: antes.variacoesMaximas },
+      depois: { comparadoComId: depois.comparadoComId, variacoesMaximas: depois.variacoesMaximas },
+      metadados: { comparativo: true },
+    });
+    return this.comparativo(id, usuario);
+  },
+
+  /**
+   * As justificativas do comparativo: em cada visão da DRE, as contas (ou os totais sem contas) com algum mês acima da
+   * variação máxima do total delas, os meses (o valor, o comparado e a variação) e a justificativa gravada.
+   */
+  async justificativas(id: string, usuario: Usuario = SISTEMA) {
+    const prisma = getPrismaClient();
+    const c = await obterOuFalhar(id, usuario);
+    const comparado = c.comparadoComId ? await prisma.cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
+    if (!comparado) return { comparadoCom: null, visoes: [] };
+    const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
+    const est = await estruturaDRE();
+    const { verificadas } = totaisDaDRE(est);
+    const dasVisoes = linhasDasVisoes(est);
+    const [valores, comparados, gravadas] = await Promise.all([
+      prisma.cenarioResultado.findMany({ where: { cenarioId: id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
+      prisma.cenarioResultado.findMany({ where: { cenarioId: comparado.id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
+      prisma.cenarioJustificativa.findMany({ where: { cenarioId: id } }),
+    ]);
+    const mapa = (rs: typeof valores) => {
+      const m = new Map<string, Map<number, number>>();
+      for (const r of rs) {
+        const k = `${r.visao}|${r.linhaDREId}`;
+        if (!m.has(k)) m.set(k, new Map());
+        m.get(k)!.set(r.mes, Number(r.valor));
+      }
+      return m;
+    };
+    const doCenario = mapa(valores);
+    const doComparado = mapa(comparados);
+    const vazio = new Map<number, number>();
+    const justificativa = new Map(gravadas.map((j) => [`${j.visao}|${j.linhaDREId}`, j]));
+    return {
+      comparadoCom: comparado,
+      visoes: ABAS_DRE.map(({ visao, nome }) => ({
+        visao,
+        nome,
+        itens: verificadas.flatMap(({ linha, total }) => {
+          const limite = limites[total.codigo];
+          if (typeof limite !== "number" || !dasVisoes.get(visao)!.has(linha.codigo)) return [];
+          const k = `${visao}|${linha.id}`;
+          const meses = mesesAcima(doCenario.get(k) ?? vazio, doComparado.get(k) ?? vazio, limite);
+          if (!meses.length) return [];
+          const j = justificativa.get(k);
+          return [
+            {
+              codigo: linha.codigo,
+              descricao: linha.descricao,
+              total: total.descricao,
+              ehTotal: linha.codigo === total.codigo,
+              limite,
+              meses,
+              justificativa: j ? { texto: j.texto, usuarioNome: j.usuarioNome, atualizadoEm: j.atualizadoEm } : null,
+            },
+          ];
+        }),
+      })),
+    };
+  },
+
+  /** Grava a justificativa de uma linha numa visão; o texto vazio a apaga. Vale também para o cenário marcado. */
+  async gravarJustificativa(id: string, dados: { visao: number; linha: string; texto: string }, usuario: Usuario) {
+    const prisma = getPrismaClient();
+    await obterOuFalhar(id, usuario);
+    const linha = await prisma.linhaDRE.findUnique({ where: { codigo: dados.linha }, select: { id: true, descricao: true } });
+    if (!linha) throw new CenarioError(400, "Conta não encontrada na Estrutura da DRE.");
+    const chave = { cenarioId_visao_linhaDREId: { cenarioId: id, visao: dados.visao, linhaDREId: linha.id } };
+    const antes = await prisma.cenarioJustificativa.findUnique({ where: chave });
+    if (!dados.texto) {
+      if (antes) await prisma.cenarioJustificativa.delete({ where: chave });
+    } else {
+      await prisma.cenarioJustificativa.upsert({
+        where: chave,
+        create: { cenarioId: id, visao: dados.visao, linhaDREId: linha.id, texto: dados.texto, usuarioNome: usuario.nome },
+        update: { texto: dados.texto, usuarioNome: usuario.nome },
+      });
+    }
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      antes: antes ? { texto: antes.texto } : undefined,
+      depois: dados.texto ? { texto: dados.texto } : undefined,
+      metadados: { justificativa: linha.descricao, visao: dados.visao },
+    });
   },
 
   /** Grava os lançamentos manuais de um indicador (os 12 meses; vazio apaga o mês). */

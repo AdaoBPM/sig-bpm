@@ -14,6 +14,8 @@ export type Aba = {
   sinal?: ReactNode;
   /** Com href, a aba é um link (muda a rota); sem, chama onMudar. */
   href?: string;
+  /** A aba vai para a direita da linha (a Comparar dos Resultados de um cenário, 12/10/2026). */
+  aDireita?: boolean;
 };
 
 type Props = { abas: Aba[]; ativa: string; onMudar?: (chave: string) => void; rotulo: string };
@@ -29,7 +31,7 @@ export function Abas({ abas, ativa, onMudar, rotulo }: Props) {
     <div role="tablist" aria-label={rotulo} className="flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
       {abas.map((a) => {
         const atual = a.chave === ativa;
-        const classe = `-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
+        const classe = `${a.aDireita ? "ml-auto" : ""} -mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
           atual ? "border-black font-bold text-gray-900" : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900"
         }`;
         const conteudo = (

@@ -23,9 +23,10 @@ export function ConfiguracoesContent() {
         titulo="Configurações"
         comoUsar={
           <ul>
-            <li>Mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”.</li>
-            <li>A Referência é opcional: importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
+            <li>Na aba Cenário, mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”.</li>
+            <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas Resultados e Indicadores.</li>
+            <li>O comparativo com outro cenário (e a variação máxima de cada total) fica na aba Comparar da tela Resultados.</li>
           </ul>
         }
         sobre={

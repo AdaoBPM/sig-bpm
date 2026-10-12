@@ -27,6 +27,8 @@ export type Cenario = {
   criadoPor: string | null;
   criadoPorId: string | null;
   visualizacao: Visualizacao;
+  /** O cenário com que este se compara (o comparativo, 12/10/2026); com ele, a tela Justificativas aparece. */
+  comparadoComId: string | null;
   /** Quem criou o cenário e o Administrador mudam a visualização. */
   podeMudarVisualizacao: boolean;
   criadoEm: string;
@@ -55,6 +57,25 @@ export type ReajusteDoCenario = {
   somaDepois: number | null;
   descricao: string | null;
 };
+
+/** O comparativo: o cenário comparado, os que se podem escolher e a variação máxima (%) de cada total da DRE (nula: não verifica). */
+export type Comparativo = {
+  comparadoCom: { id: string; nome: string; ano: number } | null;
+  opcoes: Array<{ id: string; nome: string; ano: number; marcacao: MarcacaoCenario | null }>;
+  totais: Array<{ codigo: string; descricao: string; limite: number | null }>;
+};
+/** Uma linha acima da variação máxima: os meses (o valor, o comparado e a variação em %; nula sem base) e a justificativa. */
+export type ItemJustificativa = {
+  codigo: string;
+  descricao: string;
+  total: string;
+  /** O total sem contas embaixo, verificado ele mesmo. */
+  ehTotal: boolean;
+  limite: number;
+  meses: Array<{ mes: number; valor: number; comparado: number; variacao: number | null }>;
+  justificativa: { texto: string; usuarioNome: string; atualizadoEm: string } | null;
+};
+export type Justificativas = { comparadoCom: { id: string; nome: string; ano: number } | null; visoes: Array<{ visao: number; nome: string; itens: ItemJustificativa[] }> };
 
 /** Quantos valores entram, mudam e saem do cenário. */
 export type Mudancas = { novas: number; alteradas: number; removidas: number; semMudanca: boolean };
@@ -122,6 +143,14 @@ export const cenariosService = {
     (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano, ...opcoes })).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
   indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
+  comparativo: async (id: string) => (await api.get<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`)).data.data,
+  gravarComparativo: async (id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }) =>
+    (await api.put<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`, dados)).data.data,
+  justificativas: async (id: string) => (await api.get<{ data: Justificativas }>(`/proxy/cenarios/${id}/justificativas`)).data.data,
+  /** Grava a justificativa de uma linha numa visão; o texto vazio a apaga. */
+  gravarJustificativa: async (id: string, visao: number, linha: string, texto: string) => {
+    await api.put(`/proxy/cenarios/${id}/justificativas`, { visao, linha, texto });
+  },
   salvarManual: async (id: string, nome: string, valores: Array<number | null>) => {
     await api.put(`/proxy/cenarios/${id}/indicadores/manuais`, { nome, valores });
   },

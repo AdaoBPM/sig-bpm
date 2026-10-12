@@ -25,4 +25,9 @@ cenariosRoutes.get("/:id/edicao", autenticacao, editar, asyncHandler(c.edicao));
 cenariosRoutes.put("/:id/edicao/valores", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarValores));
 cenariosRoutes.get("/:id/reajustes", autenticacao, ler, asyncHandler(c.reajustes));
 cenariosRoutes.post("/:id/referencia/realizado", autenticacao, editar, express.json(), asyncHandler(c.referenciaRealizado));
+// O comparativo com outro cenário e as justificativas (12/10/2026).
+cenariosRoutes.get("/:id/comparativo", autenticacao, ler, asyncHandler(c.comparativo));
+cenariosRoutes.put("/:id/comparativo", autenticacao, editar, express.json(), asyncHandler(c.gravarComparativo));
+cenariosRoutes.get("/:id/justificativas", autenticacao, ler, asyncHandler(c.justificativas));
+cenariosRoutes.put("/:id/justificativas", autenticacao, editar, express.json(), asyncHandler(c.gravarJustificativa));
 cenariosRoutes.put("/:id/indicadores/manuais", autenticacao, editar, express.json(), asyncHandler(c.salvarManual));

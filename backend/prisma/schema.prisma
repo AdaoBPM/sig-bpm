@@ -496,6 +496,7 @@ model LinhaDRE {
   lancamentosManuais   LancamentoManual[]
   resultadosApurados   ResultadoApurado[]
   cenariosResultados   CenarioResultado[]
+  cenariosJustificativas CenarioJustificativa[]
 
   @@index([grupoSigla])
   @@map("linhas_dre")
@@ -1909,12 +1910,20 @@ model Cenario {
   criadoPorId  String?          @map("criado_por_id")
   /// Particular ou pública; um cenário marcado é sempre público (o Orçamento Empresarial dá o orçado a todos).
   visualizacao VisualizacaoCenario @default(PUBLICA)
+  /// O comparativo (12/10/2026): o cenário com que este se compara; com ele, as contas que variam acima da variação
+  /// máxima do total delas pedem justificativa (tela Justificativas).
+  comparadoComId   String?  @map("comparado_com_id")
+  /// A variação máxima (em %) de cada total da DRE no comparativo: { código do total: percentual }.
+  variacoesMaximas Json?    @map("variacoes_maximas")
   criadoEm     DateTime         @default(now()) @map("criado_em")
   atualizadoEm DateTime         @updatedAt @map("atualizado_em")
 
-  resultados  CenarioResultado[]
-  indicadores CenarioIndicador[]
-  reajustes   CenarioReajuste[]
+  comparadoCom   Cenario?  @relation("ComparativoDoCenario", fields: [comparadoComId], references: [id], onDelete: SetNull)
+  comparadoPor   Cenario[] @relation("ComparativoDoCenario")
+  resultados     CenarioResultado[]
+  indicadores    CenarioIndicador[]
+  reajustes      CenarioReajuste[]
+  justificativas CenarioJustificativa[]
 
   @@unique([marcacao])
   @@map("cenarios")
@@ -1950,6 +1959,24 @@ model CenarioIndicador {
 
   @@id([cenarioId, nome, mes])
   @@map("cenarios_indicadores")
+}
+
+/// A justificativa de uma conta que varia acima da variação máxima do comparativo (12/10/2026), numa visão da DRE
+/// (0 Consolidado, 1 a 5 as unidades).
+model CenarioJustificativa {
+  cenarioId    String   @map("cenario_id")
+  visao        Int
+  linhaDREId   String   @map("linha_dre_id")
+  texto        String
+  usuarioNome  String   @map("usuario_nome")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  cenario  Cenario  @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+  linhaDRE LinhaDRE @relation(fields: [linhaDREId], references: [id])
+
+  @@id([cenarioId, visao, linhaDREId])
+  @@index([linhaDREId])
+  @@map("cenarios_justificativas")
 }
 
 /// O histórico de reajustes de um cenário (12/10/2026): cada gravação de valores da DRE (o reajuste dos marcados ou a

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { LinhaPlanilha, ValorCelula } from "../src/lib/xlsx.js";
+import { mesesAcima, totaisDaDRE } from "../src/services/cenarios/comparativoCenario.js";
 import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
@@ -78,5 +79,37 @@ describe("leitura do cenário sintético", () => {
     assert.equal(classe.get("Atingimento da MC Acumulada"), "IMPORTADO");
     const contagem = [...classe.values()].reduce<Record<string, number>>((m, c) => ({ ...m, [c]: (m[c] ?? 0) + 1 }), {});
     assert.deepEqual(contagem, { RESULTADO: 49, MANUAL: 33, CALCULADO: 25, IMPORTADO: 7 });
+  });
+});
+
+describe("comparativo entre cenários", () => {
+  const linha = (codigo: string, tipo: "SECAO" | "ITEM" | "SUBTOTAL" | "TOTAL", descricao = codigo) => ({ id: codigo, codigo, tipo, grupo: "", grupoSigla: "", atribuicao: null, descricao, expressao: null, unidades: [] });
+  it("os totais são os do nível Totais; cada conta fica sob o último total, e o total sem contas se verifica ele mesmo", () => {
+    const { totais, verificadas } = totaisDaDRE([
+      linha("PS.PRODUCAO", "SECAO"),
+      linha("P.PISTAS", "ITEM"),
+      linha("RO.ROL", "TOTAL"),
+      linha("ROB.ROB", "SUBTOTAL"),
+      linha("ROB.RBPF", "ITEM"),
+      linha("CPP.CPP", "SUBTOTAL"),
+      linha("CPP.MOD.MAO", "SUBTOTAL"),
+      linha("CPP.MOD.CLT", "ITEM"),
+      linha("MB.MB", "TOTAL"),
+    ]);
+    assert.deepEqual(totais.map((t) => t.codigo), ["RO.ROL", "ROB.ROB", "CPP.CPP", "MB.MB"]);
+    assert.deepEqual(
+      verificadas.map((v) => `${v.total.codigo}:${v.linha.codigo}`),
+      ["RO.ROL:RO.ROL", "ROB.ROB:ROB.RBPF", "CPP.CPP:CPP.MOD.CLT", "MB.MB:MB.MB"],
+    );
+  });
+  it("os meses acima da variação máxima, para mais ou para menos; sem base quando o comparado é zero", () => {
+    const valores = new Map([[1, 110], [2, 89], [3, 50], [4, 100]]);
+    const comparados = new Map([[1, 100], [2, 100], [4, 100]]);
+    assert.deepEqual(mesesAcima(valores, comparados, 10), [
+      { mes: 2, valor: 89, comparado: 100, variacao: -11 },
+      { mes: 3, valor: 50, comparado: 0, variacao: null },
+    ]);
+    // O comparado negativo (um custo): a variação é sobre o valor absoluto.
+    assert.equal(mesesAcima(new Map([[1, -130]]), new Map([[1, -100]]), 10)[0].variacao, -30);
   });
 });

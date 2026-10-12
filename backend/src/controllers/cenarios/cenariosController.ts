@@ -160,6 +160,38 @@ export const cenariosController = {
     return responder(response, () => cenariosService.referenciaRealizado(c, ano, usuario(request), opcoes));
   },
 
+  /** O comparativo do cenário: o comparado, as opções e as variações máximas dos totais. */
+  comparativo(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.comparativo(c, usuario(request))) : undefined;
+  },
+
+  /** Grava o comparativo: { comparadoComId (nulo desliga), limites: { código do total: % ou nulo } }. */
+  gravarComparativo(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z
+      .object({ comparadoComId: idSchema.nullable(), limites: z.record(z.string(), z.number().finite().min(0, "A variação máxima não pode ser negativa.").max(100000).nullable()) })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Comparativo inválido." });
+    return responder(response, () => cenariosService.gravarComparativo(c, corpo.data, usuario(request)));
+  },
+
+  /** As contas acima da variação máxima do comparativo, por visão, com as justificativas. */
+  justificativas(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.justificativas(c, usuario(request))) : undefined;
+  },
+
+  /** Grava a justificativa: { visao, linha (código), texto } (o texto vazio apaga). */
+  gravarJustificativa(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z.object({ visao: visaoSchema, linha: z.string().min(1).max(200), texto: z.string().trim().max(2000) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Justificativa inválida." });
+    return responder(response, () => cenariosService.gravarJustificativa(c, corpo.data, usuario(request)));
+  },
+
   salvarManual(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;
