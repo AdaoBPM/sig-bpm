@@ -6,11 +6,11 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { CampoSenha } from "@/components/shared/CampoSenha";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
 
-/** Troca da própria senha, pelo menu do usuário (Passo 22). */
+/** Troca da própria senha, pelo menu do usuário (Passo 22); cada campo com o olho para ver o que se digita (11/10/2026). */
 export function TrocarSenhaDialog({ onFechar }: { onFechar: () => void }) {
   const [atual, setAtual] = useState("");
   const [nova, setNova] = useState("");
@@ -34,15 +34,15 @@ export function TrocarSenhaDialog({ onFechar }: { onFechar: () => void }) {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="s-atual">Senha atual</Label>
-            <Input id="s-atual" type="password" value={atual} onChange={(e) => setAtual(e.target.value)} className="rounded-sm" />
+            <CampoSenha id="s-atual" autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} className="rounded-sm" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-nova">Senha nova</Label>
-            <Input id="s-nova" type="password" value={nova} onChange={(e) => setNova(e.target.value)} className="rounded-sm" />
+            <CampoSenha id="s-nova" value={nova} onChange={(e) => setNova(e.target.value)} className="rounded-sm" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-confirma">Repita a senha nova</Label>
-            <Input id="s-confirma" type="password" value={confirma} onChange={(e) => setConfirma(e.target.value)} className="rounded-sm" />
+            <CampoSenha id="s-confirma" value={confirma} onChange={(e) => setConfirma(e.target.value)} className="rounded-sm" />
             {confirma && nova !== confirma ? <p className="text-xs text-red-700">As duas senhas novas não são iguais.</p> : null}
           </div>
         </div>
