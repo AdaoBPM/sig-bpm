@@ -110,24 +110,27 @@ export function TabelaResultados({
     const pp = (r.pct - o.pct) * 100;
     return `${comSinal(pp, formato.umaCasa(pp))} p.p.`;
   };
-  const LARGURAS_DO_ORCADO = [136, 64, 84];
-  const LARGURAS_DA_VARIACAO = [124, 108, 104];
-  const th = "px-2 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
+  // Colunas estreitas (12/10/2026): numa tela de 1920 px, o mês de referência, o orçado dele, os totais, o orçado
+  // total e as variações cabem juntos; os rótulos do orçado quebram em duas linhas (ORÇADO / MAR/26).
+  const LARGURAS_DO_ORCADO = [100, 52, 64];
+  const LARGURAS_DA_VARIACAO = [96, 96, 84];
+  const th = "px-1.5 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
-  // A descrição sem quebra de linha: a mais longa (RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+)) ocupa 412 px.
+  // A descrição sem quebra de linha, em 400 px: as poucas mais longas (RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+))
+  // terminam em reticências, com o nome inteiro na dica.
   const larguras = [
-    440,
-    ...dados.meses.flatMap((_, i) => (i === referencia ? [112, 64, 84, ...(comOrcado ? LARGURAS_DO_ORCADO : [])] : [112, 64])),
-    124,
+    400,
+    ...dados.meses.flatMap((_, i) => (i === referencia ? [96, 52, 64, ...(comOrcado ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
+    104,
+    52,
     64,
-    84,
-    ...(comOrcado ? [156, ...LARGURAS_DO_ORCADO.slice(1), ...LARGURAS_DA_VARIACAO] : []),
+    ...(comOrcado ? [104, ...LARGURAS_DO_ORCADO.slice(1), ...LARGURAS_DA_VARIACAO] : []),
   ];
   /** Os rótulos do orçado (pretos) e, nos totais, da variação (amarelo-ouro, como os demais). */
   const rotulosDoOrcado = (rotulo: string, variacao: boolean) => (
     <>
-      <th className={`${th} ${ROTULO_DO_ORCADO}`}>{rotulo}</th>
+      <th className={`${th} ${ROTULO_DO_ORCADO} !whitespace-normal leading-tight`}>{rotulo}</th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>%</th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th>
       {variacao ? (
@@ -171,7 +174,7 @@ export function TabelaResultados({
         corpo={niveis.linhas.filter(niveis.visivel).map((l) => {
             const destaque = l.tipo !== "ITEM";
             const fundo = fundoDaLinha(l);
-            const td = "px-2 py-1.5 text-right whitespace-nowrap";
+            const td = "px-1.5 py-1.5 text-right whitespace-nowrap";
             const pct = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
             const clicavel = abre(l);
             const pctOrcado = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
@@ -194,14 +197,16 @@ export function TabelaResultados({
             return (
               <tr key={l.codigo} className={destaque ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"}>
                 <td
-                  className={`sticky left-0 z-10 py-1.5 pr-3 whitespace-nowrap ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
+                  className={`sticky left-0 z-10 overflow-hidden py-1.5 pr-3 whitespace-nowrap ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
                   onClick={clicavel && ultimoApurado ? () => setConsulta({ linha: l, mes: ultimoApurado }) : undefined}
                   title={clicavel && ultimoApurado ? dica(ultimoApurado) : undefined}
                 >
-                  <span className="inline-flex items-center gap-1">
+                  <span className="flex min-w-0 items-center gap-1">
                     <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />
-                    {clicavel ? <Search className="size-3.5 text-gray-400" /> : null}
-                    {l.descricao}
+                    {clicavel ? <Search className="size-3.5 shrink-0 text-gray-400" /> : null}
+                    <span className="truncate" title={l.descricao}>
+                      {l.descricao}
+                    </span>
                   </span>
                 </td>
                 {l.meses.map((c, i) => {
@@ -415,6 +420,7 @@ export function ResultadosContent() {
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
             <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código).</li>
             <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). As obras não têm exportação.</li>
+            <li>Role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. O mês de referência (o último) e o total do exercício trazem também o valor por m³.</li>
             <li>
