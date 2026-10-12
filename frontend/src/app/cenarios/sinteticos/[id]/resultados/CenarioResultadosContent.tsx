@@ -6,11 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { TabelaResultados } from "@/app/relatorios/resultados/ResultadosContent";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
+import { EdicaoDRE } from "../../../components/EdicaoDRE";
 import { cenariosService } from "../../../services/cenariosService";
 
 /** As visões da DRE do cenário: as de Resultados Realizados, sem os centros de custo. */
@@ -55,6 +57,10 @@ export function CenarioResultadosContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/resultados`);
   const [visao, setVisao] = useState("0");
+  // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
+  const { hasPermission } = usePermissions();
+  const podeEditar = hasPermission("cenarios:editar");
+  const nome = VISOES.find((v) => v.chave === visao)!.nome;
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -66,14 +72,23 @@ export function CenarioResultadosContent() {
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses antes de dezembro; a escolha fica guardada neste navegador.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. Dezembro e o total do exercício trazem também o valor por m³.</li>
+            {podeEditar ? (
+              <>
+                <li>Edição (para quem edita os cenários): nas abas Matriz, Filial, Serviços, Despesas e Extra e RN, só os valores mensais das contas se editam; os totais, os percentuais e os valores por m³ são calculados. O Consolidado soma as unidades e não se edita.</li>
+                <li>Para reajustar vários valores: marque as contas (a caixa de um total ou de uma atribuição marca as contas dele) e os meses (a caixa no rótulo de cada mês, ou “Marcar Todos os Meses”). Os valores marcados ficam contornados. Clique numa linha (ou em “Reajustar Marcados”) e informe o reajuste, percentual ou absoluto: ele vale para todos os marcados.</li>
+                <li>Para editar um valor: clique nele. O modal mostra o valor atual, o reajuste (percentual ou absoluto) e o valor recalculado, que também se digita direto. A chave “Replicar aos meses posteriores” copia o valor recalculado aos meses seguintes. Essa edição não olha as caixas marcadas.</li>
+                <li>Cada gravação recalcula os totais da unidade e o Consolidado. Nome, descrição, visualização e a referência (arquivo ou resultado realizado) ficam na tela Configurações, na barra do topo.</li>
+              </>
+            ) : null}
           </ul>
         }
         sobre={
           <>
             <p>
               A DRE do cenário mês a mês no exercício, como as abas de Resultados Realizados (sem os centros de custo): o valor e a participação (%)
-              de cada mês e o total do exercício, com o valor unitário (R$/m³) em dezembro e no total. Os valores são os do arquivo importado no
-              cenário (as abas Consolidado, Matriz, Filial, Serviços, Desp.+Extra e RN), ligados às linhas da Estrutura da DRE pela descrição.
+              de cada mês e o total do exercício, com o valor unitário (R$/m³) em dezembro e no total. Os valores são os digitados na ferramenta ou os da
+              referência do cenário (um arquivo importado, ligado às linhas da Estrutura da DRE pela descrição, ou o resultado realizado); os totais são
+              calculados pela Estrutura da DRE, e o Consolidado soma as unidades.
             </p>
             <p>
               A participação e o valor unitário seguem as bases de Resultados Realizados: a ROB nas receitas e nos impostos; a Receita Líquida do
@@ -84,7 +99,7 @@ export function CenarioResultadosContent() {
         }
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
-      <Visao id={id} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} />
+      {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
     </div>
   );
 }

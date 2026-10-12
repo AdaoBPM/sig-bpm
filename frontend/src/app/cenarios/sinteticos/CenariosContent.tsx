@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Bookmark, Globe, Lock, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Bookmark, Globe, Lock, Plus, Settings, Trash2, Upload } from "lucide-react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -37,7 +37,7 @@ const COLUNAS: Coluna<Cenario>[] = [
   { chave: "acoes", rotulo: "", semFiltro: true },
 ];
 
-type Dialogo = { tipo: "novo" } | { tipo: "editar"; c: Cenario } | { tipo: "excluir"; c: Cenario } | { tipo: "importar"; c: Cenario | null } | { tipo: "marcar"; c: Cenario } | null;
+type Dialogo = { tipo: "novo" } | { tipo: "excluir"; c: Cenario } | { tipo: "importar"; c: Cenario | null } | { tipo: "marcar"; c: Cenario } | null;
 
 export function CenariosContent() {
   useRegistrarAcessoTela("/cenarios/sinteticos");
@@ -67,7 +67,7 @@ export function CenariosContent() {
               em “Gravar Marcação”; a coluna Marcação mostra a atual. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
-            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar (a tela Editar: as configurações — nome, descrição, visualização e referência — e a DRE de cada unidade, sem precisar de planilha), e excluir. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
+            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), configurações (nome, descrição, visualização e referência: um arquivo ou o resultado realizado), e excluir. A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário ou Importar Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
               têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). Embaixo do nome, a
@@ -175,8 +175,8 @@ export function CenariosContent() {
                     <button type="button" className={acao} title="Importar um arquivo neste cenário" aria-label={`Importar arquivo em ${c.nome}`} onClick={() => setDialogo({ tipo: "importar", c })}>
                       <Upload className="size-4" />
                     </button>
-                    <button type="button" className={acao} title="Editar o cenário (configurações e DRE)" aria-label={`Editar ${c.nome}`} onClick={() => router.push(`/cenarios/sinteticos/${c.id}/editar`)}>
-                      <Pencil className="size-4" />
+                    <button type="button" className={acao} title="Configurações do cenário (nome, descrição, visualização e referência)" aria-label={`Configurações de ${c.nome}`} onClick={() => router.push(`/cenarios/sinteticos/${c.id}/configuracoes`)}>
+                      <Settings className="size-4" />
                     </button>
                     {/* O cenário marcado não se exclui: o ícone fica apagado, com o motivo na dica. */}
                     <button
@@ -198,7 +198,6 @@ export function CenariosContent() {
       </QuadroTabela>
 
       {dialogo?.tipo === "novo" ? <CenarioDialog cenario={null} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
-      {dialogo?.tipo === "editar" ? <CenarioDialog cenario={dialogo.c} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
       {dialogo?.tipo === "excluir" ? <ExcluirCenarioDialog cenario={dialogo.c} onFechar={() => setDialogo(null)} /> : null}
       {dialogo?.tipo === "importar" ? <ImportarCenarioDialog cenario={dialogo.c} onFechar={() => setDialogo(null)} /> : null}
       {dialogo?.tipo === "marcar" ? <MarcarCenarioDialog cenario={dialogo.c} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}

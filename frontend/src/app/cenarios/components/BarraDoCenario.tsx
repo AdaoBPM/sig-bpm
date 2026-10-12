@@ -12,10 +12,10 @@ import { cenariosService, rotuloMarcacao } from "../services/cenariosService";
 
 /** As telas de um cenário sintético, como as abas de Resultados Realizados. */
 export const TELAS_DO_CENARIO = [
+  // As configurações do cenário (12/10/2026): só para quem edita os cenários; a DRE se edita em Resultados.
+  { caminho: "configuracoes", rotulo: "Configurações", permissao: "cenarios:editar" },
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
-  // A edição do cenário pela ferramenta (12/10/2026): só para quem edita os cenários.
-  { caminho: "editar", rotulo: "Editar", permissao: "cenarios:editar" },
 ];
 
 /** A rota de uma tela de cenário: o id e a tela. */
@@ -26,7 +26,7 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 
 /**
  * A barra de um cenário, no formato da barra de etapas do mês: o cenário em amarelo-ouro no início (com a troca
- * de cenário, que mantém a tela) e as telas Resultados e Indicadores, com a atual em destaque.
+ * de cenário, que mantém a tela) e as telas Configurações (para quem edita), Resultados e Indicadores, com a atual em destaque.
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();
