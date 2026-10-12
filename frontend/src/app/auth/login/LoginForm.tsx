@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { BpmLogo } from "@/components/layout/BpmLogo";
+import { CampoSenha } from "@/components/shared/CampoSenha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,9 +57,9 @@ export function LoginForm() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Senha</Label>
-          <Input
+          {/* Com o olho à direita, para ver a senha digitada (11/10/2026). */}
+          <CampoSenha
             id="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
