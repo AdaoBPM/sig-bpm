@@ -62,9 +62,9 @@ export function departamentoDaLinha(l: { grupoSigla: string; descricao: string }
 
 /**
  * Grupos da DRE com as movimentações abertas a todos os gestores, de qualquer departamento (11/10/2026): a Receita
- * Operacional Bruta (ROB).
+ * Operacional Bruta (ROB) e os Impostos sobre a Receita Bruta (IRB).
  */
-const ABERTOS_A_TODOS = new Set(["ROB"]);
+const ABERTOS_A_TODOS = new Set(["ROB", "IRB"]);
 
 /** O usuário pode consultar as movimentações desta linha? */
 export function podeVerMovimentos(acesso: Acesso, l: { grupoSigla: string; descricao: string }) {

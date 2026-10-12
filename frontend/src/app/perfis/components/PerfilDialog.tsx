@@ -99,7 +99,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
             <label className="flex items-center gap-2 text-sm text-gray-900">
               <input type="checkbox" checked={recorteDepartamento} onChange={(e) => setRecorteDepartamento(e.target.checked)} className="size-4 accent-black" />
               <span>
-                Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele (as movimentações da Receita Bruta ficam abertas a todos)</span>
+                Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele (as movimentações da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos)</span>
               </span>
             </label>
           </div>
