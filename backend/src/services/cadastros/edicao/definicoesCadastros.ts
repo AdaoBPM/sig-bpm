@@ -584,6 +584,15 @@ const unidades: DefinicaoCadastro = {
  */
 const UNIDADES_DAS_LINHAS = [1, 2, 3];
 const tipoDaLinha = (codigoUnidade: number) => (codigoUnidade === 3 ? "OBRA" : "PRODUTO");
+/** As unidades de medida das linhas (12/10/2026), para os Cenários Analíticos. */
+const UNIDADES_DE_MEDIDA = ["m³", "m³ e pistas", "kg", "m", "m²", "dia", "%"];
+function unidadeDeMedida(v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  const u = String(v);
+  if (!UNIDADES_DE_MEDIDA.includes(u)) throw new RegraCadastroError(400, `Unidade de medida inválida: ${u}. Use ${UNIDADES_DE_MEDIDA.join(", ")}.`);
+  return u;
+}
+
 const linhas: DefinicaoCadastro = {
   entidade: "linhas",
   titulo: "Linha",
@@ -603,6 +612,13 @@ const linhas: DefinicaoCadastro = {
         (await db.unidadeNegocio.findMany({ where: { codigo: { in: UNIDADES_DAS_LINHAS } }, orderBy: { codigo: "asc" } })).map((u) => ({ valor: u.id, rotulo: u.nome })),
     },
     { nome: "nome", rotulo: "Linha", tipo: "texto", obrigatorio: true, travaComMovimento: true, ajuda: "O nome com que as planilhas das Listas citam a linha (sem diferença de maiúsculas)." },
+    {
+      nome: "unidadeMedida",
+      rotulo: "Und. de Medida",
+      tipo: "opcao",
+      ajuda: "Em que se mede a linha (para os Cenários Analíticos).",
+      opcoes: async () => UNIDADES_DE_MEDIDA.map((u) => ({ valor: u, rotulo: u })),
+    },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
   listar: async (db, busca) =>
@@ -641,6 +657,7 @@ const linhas: DefinicaoCadastro = {
       unidadeNegocioId: unidade.id,
       ordem: inteiro(v.ordem, "A ordem") ?? undefined,
       ativo: v.ativo === undefined ? true : booleano(v.ativo),
+      unidadeMedida: unidadeDeMedida(v.unidadeMedida),
     };
   },
   async gravar(db, d, id) {
