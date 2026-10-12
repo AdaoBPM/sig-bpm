@@ -14,6 +14,7 @@ const usuarioSchema = z.object({
   departamentos: z.array(z.enum(Object.values(DepartamentoAcesso) as [string, ...string[]])).default([]),
   gestao: z.enum(Object.values(DepartamentoAcesso) as [string, ...string[]]).nullable().default(null),
   centros: z.array(z.string().uuid()).default([]),
+  veObras: z.boolean().default(false),
 });
 const perfilSchema = z.object({
   nome: z.string().trim().min(2).max(80),

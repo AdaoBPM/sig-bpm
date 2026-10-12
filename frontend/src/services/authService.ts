@@ -10,7 +10,17 @@ export type AuthUser = {
   perfil: { codigo: string; nome: string };
   permissions: string[];
   /** Recortes por dado: setores (listas) e departamentos (movimentações e centros de custo). */
-  acesso: { recorteSetor: boolean; setores: string[]; recorteDepartamento: boolean; departamentos: DepartamentoAcesso[] };
+  acesso: {
+    recorteSetor: boolean;
+    setores: string[];
+    recorteDepartamento: boolean;
+    departamentos: DepartamentoAcesso[];
+    /** Recorte por centro de custo (Coordenador): a gestão, os centros e se vê os resultados das obras. */
+    recorteCentro?: boolean;
+    gestao?: DepartamentoAcesso | null;
+    centros?: string[];
+    veObras?: boolean;
+  };
   /** Divergências abertas que o usuário alcança: o aviso ao entrar (Passo 24). */
   divergenciasAbertas?: number;
 };

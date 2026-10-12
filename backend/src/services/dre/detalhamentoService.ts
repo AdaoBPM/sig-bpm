@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import type { Composicao, OrigemValor, ParcelaRateio } from "./apuracaoUnidades.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerCentro, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
 import { CENTRO_DE_OBRA, sinalDaLinha } from "./obrasService.js";
 
@@ -211,7 +211,9 @@ export const detalhamentoService = {
     if (!linha) throw new RegraDREError(404, `A linha ${codigo} não está na estrutura da DRE.`);
     // Recorte do Gestor (Passo 22): só as movimentações das linhas dos seus departamentos. O do Coordenador: nas
     // unidades, só as linhas abertas a todos; nos centros de custo, as dos seus centros.
-    if (!("grupo" in visao ? podeVerLinhaNoCentro(acesso, linha) : podeVerMovimentos(acesso, linha))) {
+    // Nas obras, as linhas que o usuário vê nelas (o Coordenador com a opção: as da gestão dele).
+    const pode = "grupo" in visao ? podeVerLinhaNoCentro(acesso, linha) : "obra" in visao ? podeVerLinhaNaObra(acesso, linha) : podeVerMovimentos(acesso, linha);
+    if (!pode) {
       throw new RegraDREError(403, `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
     }
 

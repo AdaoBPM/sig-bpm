@@ -1,7 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerLinhaNaObra } from "../acesso/recorteDepartamento.js";
 import type { LinhaEstrutura } from "./apuracaoUnidades.js";
 import { avaliarEstrutura, soSoma } from "./consolidacao.js";
 import { estrutura, RegraDREError } from "./dreService.js";
@@ -33,7 +33,8 @@ const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${
  * resultado da obra no mês — o valor na lista das obras. A tabela da obra não
  * mostra esses totais calculados (pedido de 09/10/2026): a primeira ROL, o CPV,
  * a MB, a MC, o EBITDA, o EBIT, o NOPAT e o RL (CALCULADOS). No recorte do Gestor por departamento, só as
- * linhas dos departamentos dele, com os totais que só somam (como nos centros).
+ * linhas dos departamentos dele, com os totais que só somam (como nos centros); no do Coordenador (com a opção de
+ * ver as obras, 11/10/2026), as da gestão dele, também com os totais que só somam.
  */
 
 export const CENTRO_DE_OBRA = /^1\.9[89]\./;
@@ -115,7 +116,7 @@ async function movimentos(competenciaId: string, linhas: LinhaEstrutura[], acess
     where: { competenciaId, linhaDREId: { not: null }, ...(obra ? { codigoCentroCusto: obra } : { OR: [{ codigoCentroCusto: { startsWith: "1.98." } }, { codigoCentroCusto: { startsWith: "1.99." } }] }) },
     select: { codigoCentroCusto: true, nomeCentroCusto: true, linhaDREId: true, valorMovimento: true },
   });
-  const porId = new Map(linhas.filter((l) => podeVerMovimentos(acesso, l)).map((l) => [l.id, l]));
+  const porId = new Map(linhas.filter((l) => podeVerLinhaNaObra(acesso, l)).map((l) => [l.id, l]));
   const obras = new Map<string, { nomes: Map<string, number>; itens: Map<string, { valor: Decimal; n: number }> }>();
   for (const m of ls) {
     if (!ehCentroDeObra(m.codigoCentroCusto)) continue;
@@ -147,7 +148,7 @@ export const obrasService = {
     const ap = await apuracao(c.id);
     const linhas = await estrutura();
     const obras = ap ? await movimentos(c.id, linhas, acesso) : [];
-    const completa = !acesso.recorteDepartamento;
+    const completa = !acesso.recorteDepartamento && !acesso.recorteCentro;
     return {
       competencia: { ano, mes, status: c.status },
       apuradoEm: ap?.apuradoEm ?? null,
@@ -171,7 +172,7 @@ export const obrasService = {
       obra: { codigo: o.codigo, nome: o.nome },
       apuradoEm: ap.apuradoEm,
       congelado: ap.congelado,
-      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento).filter((l) => !CALCULADOS.has(l.codigo)),
+      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento && !acesso.recorteCentro).filter((l) => !CALCULADOS.has(l.codigo)),
     };
   },
 };

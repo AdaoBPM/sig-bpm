@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { CENTRO_DE_OBRA } from "./obrasService.js";
 import { RegraDREError } from "./dreService.js";
 
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
@@ -24,7 +25,9 @@ export const documentosService = {
       !!filtro.centro &&
       podeVerLinhaNoCentro(acesso, linha) &&
       !!(await prisma.centroCusto.findFirst({ where: { codigoRM: filtro.centro, id: { in: acesso.centros } }, select: { id: true } }));
-    if (!podeVerMovimentos(acesso, linha) && !doCentroDele) {
+    // E, com a opção das obras, numa obra (centro 1.98 ou 1.99), nas linhas que ele vê nas obras.
+    const daObra = acesso.recorteCentro && !!filtro.centro && CENTRO_DE_OBRA.test(filtro.centro) && podeVerLinhaNaObra(acesso, linha);
+    if (!podeVerMovimentos(acesso, linha) && !doCentroDele && !daObra) {
       throw new RegraDREError(403, acesso.recorteCentro ? "Só as movimentações dos seus centros de custo: marque o Centro de Custo do Lançamento." : `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
     }
     const where = {

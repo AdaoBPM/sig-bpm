@@ -1,8 +1,9 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerLinhaNaObra, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { cenarioMarcado } from "../cenarios/indicadoresDoCenario.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
+import { obrasService } from "../dre/obrasService.js";
 import { linhasDoCentro } from "../dre/recorteCentros.js";
 import { baseDoPercentual, baseDoUnitario, basesDoConsolidado, COD, GRUPOS_DE_VOLUME, type VisaoResultados } from "./basesResultados.js";
 
@@ -143,7 +144,7 @@ export function montar(
         descricao: l.descricao,
         volume,
         /** O usuário alcança os lançamentos da linha (o recorte do Gestor por departamento), como na DRE. */
-        podeDetalhar: visao === "centros" || podeVerMovimentos(acesso, l),
+        podeDetalhar: visao === "centros" || (visao === "obras" ? podeVerLinhaNaObra(acesso, l) : podeVerMovimentos(acesso, l)),
         meses,
         total: {
           valor: total,
@@ -185,6 +186,59 @@ export const resultadosService = {
         /** O orçado do mês de referência e o acumulado de janeiro até ele, com o % e o R$/m³ (zero sem o cenário ou sem a linha nele). */
         orcado: l.tipo === "SECAO" ? null : { mes: celulaOrcada(porCodigo.get(l.codigo)!, "mes"), total: celulaOrcada(porCodigo.get(l.codigo)!, "total") },
       })),
+    };
+  },
+
+  /**
+   * As obras (centros 1.98 e 1.99) com lançamento em algum mês, com o total do exercício: o Resultado Líquido; no
+   * recorte, a soma das linhas que o usuário vê (11/10/2026). O nome é o do último mês.
+   */
+  async listarObras(ano: number, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
+    const obras = new Map<string, { nome: string; total: number }>();
+    for (const m of meses) {
+      if (!m.competenciaId) continue;
+      for (const o of (await obrasService.listar(ano, m.mes, acesso)).obras) {
+        const x = obras.get(o.codigo) ?? { nome: o.nome, total: 0 };
+        obras.set(o.codigo, { nome: o.nome, total: x.total + Number(o.total) });
+      }
+    }
+    return {
+      ano,
+      ate: ultimo,
+      obras: [...obras]
+        .map(([codigo, o]) => ({ codigo, nome: o.nome, total: o.total.toFixed(2) }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || a.codigo.localeCompare(b.codigo)),
+    };
+  },
+
+  /** Uma obra mês a mês (a DRE da obra de cada mês, como na aba Obras da DRE); o % sobre a receita da própria obra. */
+  async obra(ano: number, codigo: string, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
+    const linhas = await estrutura();
+    let nome = codigo;
+    const valores = await Promise.all(
+      meses.map(async (m) => {
+        const mapa = new Map<string, number>();
+        if (!m.competenciaId) return mapa;
+        try {
+          const dre = await obrasService.consultar(ano, m.mes, codigo, acesso);
+          nome = dre.obra.nome;
+          for (const l of dre.linhas) if (l.valor !== null && l.tipo !== "SECAO") mapa.set(l.codigo, Number(l.valor));
+        } catch (error) {
+          if (!(error instanceof RegraDREError && error.status === 404)) throw error; // sem lançamento no mês
+        }
+        return mapa;
+      }),
+    );
+    if (valores.every((m) => m.size === 0)) throw new RelatorioError(404, `Nenhum lançamento da obra ${codigo} em ${ano}.`);
+    const apurado = meses.map((m) => m.competenciaId !== null);
+    return {
+      ano,
+      ate: ultimo,
+      obra: { codigo, nome },
+      meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
+      linhas: montar(linhas, "obras", apurado, valores, valores, acesso).filter((l) => l.tipo !== "SECAO"),
     };
   },
 

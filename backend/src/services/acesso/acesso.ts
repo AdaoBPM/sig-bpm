@@ -25,6 +25,8 @@ export type Acesso = {
   gestao: DepartamentoAcesso | null;
   /** Os ids dos centros de custo do usuário. */
   centros: string[];
+  /** Com recorte por centro de custo: vê os resultados das obras, nas linhas da gestão dele. */
+  veObras: boolean;
 };
 
 export type UsuarioAutenticado = {
@@ -90,6 +92,7 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
       setores: { select: { tipoLista: true } },
       departamentos: { select: { departamento: true } },
       gestao: true,
+      veObras: true,
       centros: { select: { centroCustoId: true } },
       perfil: {
         select: {
@@ -120,12 +123,13 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
       recorteCentro: usuario.perfil.recorteCentro,
       gestao: usuario.gestao,
       centros: usuario.centros.map((c) => c.centroCustoId),
+      veObras: usuario.veObras,
     },
   };
 }
 
 /** Acesso irrestrito: o de quem não tem recorte nenhum (o Contábil). Para scripts e chamadas internas. */
-export const ACESSO_TOTAL: Acesso = { recorteSetor: false, setores: [], recorteDepartamento: false, departamentos: [], recorteCentro: false, gestao: null, centros: [] };
+export const ACESSO_TOTAL: Acesso = { recorteSetor: false, setores: [], recorteDepartamento: false, departamentos: [], recorteCentro: false, gestao: null, centros: [], veObras: false };
 
 /** O usuário alcança esta lista operacional? */
 export const alcancaLista = (acesso: Acesso, tipo: string) => !acesso.recorteSetor || acesso.setores.includes(tipo as TipoImportacao);

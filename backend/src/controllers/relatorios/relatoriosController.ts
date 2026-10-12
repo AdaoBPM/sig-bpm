@@ -6,10 +6,12 @@ import { exportacaoRelatoriosService, type EscopoResultados } from "../../servic
 import { indicadoresService } from "../../services/relatorios/indicadoresService.js";
 import { painelService } from "../../services/relatorios/painelService.js";
 import { RelatorioError, resultadosService } from "../../services/relatorios/resultadosService.js";
+import { veObras } from "../../services/acesso/recorteDepartamento.js";
 
 const anoSchema = z.coerce.number().int().min(2025).max(2100);
 const ateSchema = z.coerce.number().int().min(1).max(12).optional();
-const visaoSchema = z.union([z.literal("centros"), z.coerce.number().int().min(0).max(5)]);
+const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.coerce.number().int().min(0).max(5)]);
+const obraSchema = z.string().trim().regex(/^1.9[89]./, "Obra inválida").max(40).optional();
 const grupoSchema = z.string().trim().min(1).max(200).optional();
 
 async function responder(response: Response, fn: () => Promise<unknown>) {
@@ -62,7 +64,10 @@ function periodo(request: Request, response: Response) {
 }
 
 export const relatoriosController = {
-  /** ?visao=0..5 (0 Consolidado) ou ?visao=centros: sem ?grupo, a lista dos agrupamentos; com ele, o agrupamento. */
+  /**
+   * ?visao=0..5 (0 Consolidado) ou ?visao=centros: sem ?grupo, a lista dos agrupamentos; com ele, o agrupamento. Ou
+   * ?visao=obras: sem ?obra, a lista das obras; com ela (o código do centro 1.98 ou 1.99), a obra.
+   */
   async resultados(request: Request, response: Response) {
     const p = periodo(request, response);
     if (!p) return;
@@ -70,6 +75,13 @@ export const relatoriosController = {
     const g = grupoSchema.safeParse(request.query.grupo);
     if (!v.success || !g.success) return response.status(400).json({ error: "Visão inválida" });
     const acesso = request.user!.acesso;
+    if (v.data === "obras") {
+      const o = obraSchema.safeParse(request.query.obra || undefined);
+      if (!o.success) return response.status(400).json({ error: "Obra inválida" });
+      // O Coordenador vê as obras só com a opção marcada no cadastro dele.
+      if (!veObras(acesso)) return response.status(403).json({ error: "O seu usuário não inclui os resultados das obras." });
+      return responder(response, () => (o.data ? resultadosService.obra(p.ano, o.data, p.ate, acesso, true) : resultadosService.listarObras(p.ano, p.ate, acesso, true)));
+    }
     if (v.data === "centros") {
       return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso, true) : resultadosService.listarCentros(p.ano, p.ate, acesso, true)));
     }
@@ -93,7 +105,7 @@ export const relatoriosController = {
     if (escopo === "unidades") e = { tipo: "unidades" };
     else if (escopo === "centros") e = { tipo: "centros" };
     else if (g.success && g.data) e = { tipo: "centro", grupo: g.data };
-    else if (v.success && v.data !== "centros") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
+    else if (v.success && v.data !== "centros" && v.data !== "obras") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
     else return response.status(400).json({ error: "Visão inválida: use ?visao=0..5, ?grupo= ou ?escopo=unidades|centros." });
     return enviarArquivo(request, response, "resultados", () =>
       exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, request.user!.acesso),

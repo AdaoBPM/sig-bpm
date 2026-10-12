@@ -94,6 +94,23 @@ export function podeVerCentro(acesso: Acesso, centro: { id: string; departamento
 }
 
 /**
+ * O usuário alcança os resultados das obras? Com recorte por centro de custo (Coordenador), só com a opção marcada no
+ * cadastro dele (11/10/2026); os demais, sempre (o Gestor, nas linhas dos seus departamentos).
+ */
+export const veObras = (acesso: Acesso) => !acesso.recorteCentro || acesso.recorteDepartamento || acesso.veObras;
+
+/**
+ * Nas obras, as linhas que o usuário vê: o Coordenador com a opção, as da gestão dele e as abertas a todos (como um
+ * Gestor daquele departamento); os demais, as das movimentações (`podeVerMovimentos`).
+ */
+export function podeVerLinhaNaObra(acesso: Acesso, l: { grupoSigla: string; descricao: string }) {
+  if (acesso.recorteCentro && !acesso.recorteDepartamento) {
+    return acesso.veObras && (ABERTOS_A_TODOS.has(l.grupoSigla) || (acesso.gestao !== null && departamentoDaLinha(l) === acesso.gestao));
+  }
+  return podeVerMovimentos(acesso, l);
+}
+
+/**
  * Nas visões por centro de custo, as linhas cujas movimentações o usuário consulta: o Gestor, as dos departamentos
  * dele (como nas unidades); o Coordenador, todas as dos seus centros (o centro já recorta).
  */

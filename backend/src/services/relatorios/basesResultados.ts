@@ -35,7 +35,7 @@ export const COD = {
 } as const;
 
 /** 0 Consolidado, 1 Matriz, 2 Filial, 3 Serviços, 4 Despesas e Extra, 5 RN, ou os centros de custo. */
-export type VisaoResultados = 0 | 1 | 2 | 3 | 4 | 5 | "centros";
+export type VisaoResultados = 0 | 1 | 2 | 3 | 4 | 5 | "centros" | "obras";
 type Linha = { codigo: string; grupoSigla: string };
 
 /** Os grupos das linhas de volume (m³, kg, pistas, dias): sem % nem R$/m³. */
@@ -44,6 +44,8 @@ export const GRUPOS_DE_VOLUME = new Set(["PS", "P", "S"]);
 /** A linha cujo valor é a base do % da linha; null quando a linha não tem %. */
 export function baseDoPercentual(visao: VisaoResultados, l: Linha): string | null {
   if (GRUPOS_DE_VOLUME.has(l.grupoSigla)) return null;
+  // Nas obras (11/10/2026), sobre a receita da própria obra: a ROB nas receitas e nos impostos, a ROL (ROB − IRB) no resto.
+  if (visao === "obras") return l.grupoSigla === "ROB" || l.grupoSigla === "IRB" ? COD.ROB : COD.ROL;
   if (l.codigo === COD.RO || l.codigo === COD.ROL) return l.codigo;
   if (l.grupoSigla === "ROB" || l.grupoSigla === "IRB" || l.grupoSigla === "ROL") return COD.ROB;
   if (l.grupoSigla === "CPP") return COD.RLPF;

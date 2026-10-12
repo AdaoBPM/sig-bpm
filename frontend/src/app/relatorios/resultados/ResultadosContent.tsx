@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { CampoBusca } from "@/components/shared/Filtros";
+import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { DetalheDialog } from "../../competencias/[anoMes]/dre/components/DetalheDialog";
@@ -28,6 +29,8 @@ const VISOES = [
   { chave: "4", nome: "Despesas e Extra" },
   { chave: "5", nome: "RN" },
   { chave: "centros", nome: "Centros de Custo" },
+  // As obras (centros 1.98 e 1.99), como a aba Obras da DRE (11/10/2026).
+  { chave: "obras", nome: "Obras" },
 ];
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
@@ -315,6 +318,58 @@ function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: n
   );
 }
 
+/** As obras: a lista à esquerda (nome, código e o total do exercício), como os centros de custo, e a tabela da escolhida. */
+function VisaoObras({ ano, ate }: { ano: number; ate: number }) {
+  const [busca, setBusca] = useState("");
+  const [escolhida, setEscolhida] = useState<string | null>(null);
+  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "obras"], queryFn: () => relatoriosService.obras(ano, ate) });
+  const obras = lista.data?.obras ?? [];
+  const codigo = (escolhida && obras.some((o) => o.codigo === escolhida) ? escolhida : obras[0]?.codigo) ?? null;
+  const obra = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "obras", codigo], queryFn: () => relatoriosService.obra(ano, ate, codigo!), enabled: codigo !== null });
+  if (lista.isError) return <Erro erro={lista.error} padrao="Erro ao carregar as obras." />;
+  if (lista.isPending) return <Carregando />;
+  if (obras.length === 0) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma obra com lançamento no período.</p>;
+  const t = busca.trim().toLowerCase();
+  const filtradas = obras.filter((o) => !t || o.nome.toLowerCase().includes(t) || o.codigo.includes(t));
+  const nome = obras.find((o) => o.codigo === codigo)?.nome ?? codigo ?? "";
+  return (
+    <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+      <div className="rounded-sm border border-gray-200 bg-white">
+        <div className="border-b border-gray-200 p-2">
+          <CampoBusca rotulo="Buscar obra" valor={busca} onMudar={setBusca} placeholder="Obra ou código…" largura="w-full" />
+        </div>
+        <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Obras">
+          {filtradas.map((o) => (
+            <li key={o.codigo}>
+              <button
+                type="button"
+                onClick={() => setEscolhida(o.codigo)}
+                aria-current={o.codigo === codigo ? "true" : undefined}
+                className={`block w-full px-3 py-1.5 text-left text-sm ${o.codigo === codigo ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+              >
+                <span className="block truncate" title={o.nome}>
+                  {o.nome}
+                </span>
+                <span className={`block text-xs ${o.codigo === codigo ? "text-white/70" : "text-gray-500"}`}>{o.codigo}</span>
+              </button>
+            </li>
+          ))}
+          {filtradas.length === 0 ? <li className="px-3 py-2 text-sm text-gray-500">Nenhuma obra com esse nome.</li> : null}
+        </ul>
+      </div>
+      <div className="min-w-0">
+        {obra.isError ? (
+          <Erro erro={obra.error} padrao="Erro ao carregar a obra." />
+        ) : obra.isPending ? (
+          <Carregando />
+        ) : (
+          <TabelaResultados key={codigo ?? ""} dados={obra.data} titulo={`${nome} (${codigo})`} visao={{ obra: codigo! }} nomeVisao={nome} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function VisaoUnidade({ ano, ate, visao, nome }: { ano: number; ate: number; visao: number; nome: string }) {
   const consulta = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "visao", visao], queryFn: () => relatoriosService.resultados(ano, ate, visao) });
   if (consulta.isError) return <Erro erro={consulta.error} padrao="Erro ao carregar os resultados." />;
@@ -325,6 +380,10 @@ function VisaoUnidade({ ano, ate, visao, nome }: { ano: number; ate: number; vis
 export function ResultadosContent() {
   useRegistrarAcessoTela("/relatorios/resultados");
   const exercicios = useExercicios();
+  // O Coordenador (recorte por centro de custo) vê a aba Obras só com a opção marcada no cadastro dele.
+  const { user } = useAuth();
+  const comObras = !user?.acesso.recorteCentro || user.acesso.recorteDepartamento || !!user.acesso.veObras;
+  const visoes = VISOES.filter((v) => v.chave !== "obras" || comObras);
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [visao, setVisao] = useState("0");
@@ -354,7 +413,8 @@ export function ResultadosContent() {
         comoUsar={
           <ul>
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade ou Centros de Custo (com a lista dos centros à esquerda).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código).</li>
+            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). As obras não têm exportação.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. O mês de referência (o último) e o total do exercício trazem também o valor por m³.</li>
             <li>
@@ -413,12 +473,15 @@ export function ResultadosContent() {
         <>
           <div className="flex items-end gap-3">
             <div className="min-w-0 flex-1">
-              <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
+              <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
             </div>
-            {visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
+            {/* As obras não têm exportação (ainda). */}
+            {visao === "obras" ? null : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
           </div>
           {visao === "centros" ? (
             <VisaoCentros ano={ano} ate={ate} escolhido={escolhido} onEscolher={setEscolhido} />
+          ) : visao === "obras" ? (
+            <VisaoObras ano={ano} ate={ate} />
           ) : (
             <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} />
           )}
