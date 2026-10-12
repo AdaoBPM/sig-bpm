@@ -58,7 +58,7 @@ export function PerfisContent() {
         comoUsar={
           <ul>
             <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis de sistema só se inativam).</li>
-            <li>No perfil, marque por recurso o que ele pode: Ver, Ler ou Editar.</li>
+            <li>No perfil, as telas aparecem como no menu: o grupo do menu lateral, o item e as telas da barra do topo. Marque em cada tela o que o perfil pode: Ver, Ler ou Editar. A coluna Permissão mostra o recurso que controla a tela; as telas do mesmo recurso (por exemplo, as dos Cadastros) mudam juntas.</li>
             <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam.</li>
           </ul>
         }
