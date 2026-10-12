@@ -6,6 +6,9 @@ const monorepoRoot = path.join(__dirname, "..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Acesso pela rede local (11/10/2026): no modo de desenvolvimento, o Next bloqueia os arquivos da tela para quem
+  // não entra por localhost — a tela de login abre, mas não funciona. Liberados os endereços das redes internas.
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*"],
   reactCompiler: true,
   cacheComponents: true,
   experimental: {
