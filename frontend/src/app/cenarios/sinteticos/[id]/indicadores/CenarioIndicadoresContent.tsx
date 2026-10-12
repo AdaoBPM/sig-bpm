@@ -22,10 +22,11 @@ import { botaoPrimario, Erro } from "../../../components/CenarioDialog";
 import { cenariosService, type IndicadorDoCenario } from "../../../services/cenariosService";
 
 /** As abas: os indicadores da DRE de Produção e Serviços, os lançamentos manuais e as metas orçadas (todos). */
+// As Metas primeiro (12/10/2026): o compilado dos indicadores, como o Consolidado nos Resultados.
 const ABAS = [
+  { chave: "metas", rotulo: "Metas" },
   { chave: "resultados", rotulo: "Indicadores de Resultados" },
-  { chave: "manuais", rotulo: "Lançamentos Manuais" },
-  { chave: "metas", rotulo: "Metas Orçadas" },
+  { chave: "manuais", rotulo: "Indicadores Manuais" },
 ];
 const DA_ABA: Record<string, (i: IndicadorDoCenario) => boolean> = {
   resultados: (i) => i.classe === "RESULTADO" && (i.grupo === "Produção" || i.grupo === "Serviços"),
@@ -104,7 +105,7 @@ export function CenarioIndicadoresContent() {
   useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/indicadores`);
   const { hasPermission } = usePermissions();
   const podeEditar = hasPermission("cenarios:editar");
-  const [aba, setAba] = useState("resultados");
+  const [aba, setAba] = useState("metas");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   const dados = consulta.data;
@@ -119,12 +120,12 @@ export function CenarioIndicadoresContent() {
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados.</li>
+            <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
             <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
             <li>
-              Lançamentos Manuais: os quadros de lotação e os indicadores do Comercial e do Administrativo, que não saem da DRE. Vêm da aba das metas
+              Indicadores Manuais: os quadros de lotação e os indicadores do Comercial e do Administrativo, que não saem da DRE. Vêm da aba das metas
               do arquivo importado{podeEditar ? "; clique numa linha para digitar os meses (as células digitadas ficam em amarelo)" : ""}.
             </li>
-            <li>Metas Orçadas: todos os indicadores juntos, com as eficiências calculadas — é o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial.</li>
             <li>Use os filtros nos rótulos das colunas; as colunas Indicador, Sent. e Und. ficam fixas.</li>
           </ul>
         }
@@ -136,13 +137,20 @@ export function CenarioIndicadoresContent() {
               nas razões, a média ponderada; os de posição valem o último mês.
             </p>
             <p>
-              As eficiências (volume ou receita por colaborador) juntam a DRE e os quadros de lotação, e só aparecem nas Metas Orçadas. A liberação
+              As eficiências (volume ou receita por colaborador) juntam a DRE e os quadros de lotação, e só aparecem nas Metas. A liberação
               de projetos (que vem das Listas) e os GME 4 e 8 o cenário não tem como calcular: ficam com o valor da aba das metas importada.
             </p>
           </>
         }
       />
       <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={ABAS.map((a) => ({ chave: a.chave, rotulo: a.rotulo, contagem: contagem(a.chave) }))} />
+      {aba === "metas" ? (
+        <p className="rounded-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+          As Metas são o compilado dos indicadores: os Indicadores de Resultados (que saem da DRE do cenário) e os Indicadores Manuais, com as
+          eficiências calculadas e os importados (liberação de projetos, GME). Não se editam aqui: mudam com a DRE, na tela Resultados, e com os
+          Indicadores Manuais.
+        </p>
+      ) : null}
       {consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os indicadores do cenário.")}</p>

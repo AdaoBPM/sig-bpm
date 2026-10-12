@@ -88,7 +88,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               último mês — como as linhas 112 a 115 da aba Realizado do INDICADORES DE RESULTADO.
             </p>
             <p>
-              O orçado (o gráfico do indicador) vem das Metas Orçadas do cenário marcado como Orçamento Empresarial no exercício (Criação de
+              O orçado (o gráfico do indicador) vem das Metas do cenário marcado como Orçamento Empresarial no exercício (Criação de
               Cenários / Cenários Sintéticos){dados?.cenarioOrcado ? ` — hoje, ${dados.cenarioOrcado}` : ""}. Sem cenário marcado no
               exercício, ou sem o valor no cenário, o orçado é zero.
             </p>

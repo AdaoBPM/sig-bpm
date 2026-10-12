@@ -257,7 +257,7 @@ export function PainelContent() {
             </p>
             <p>
               O realizado sai dos mesmos valores da tela Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
-              digitados nas Listas Operacionais). O orçado sai das Metas Orçadas do cenário marcado como Orçamento Empresarial no exercício
+              digitados nas Listas Operacionais). O orçado sai das Metas do cenário marcado como Orçamento Empresarial no exercício
               (Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem cenário marcado no
               exercício, ou sem o valor no cenário, o orçado é zero.
             </p>
