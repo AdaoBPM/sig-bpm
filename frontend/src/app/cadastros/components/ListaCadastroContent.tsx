@@ -42,13 +42,17 @@ function valorDoCampo(c: Campo, v: unknown): string | number | null {
   return textoDoCampo(c, v);
 }
 
+/** Os números à direita (12/10/2026), como nas demais tabelas: o rótulo e as células. */
+const ehNumero = (c: Campo) => c.tipo === "inteiro" || c.tipo === "decimal";
+
 function colunaDoCampo(c: Campo): Coluna<Registro> {
   return {
     chave: c.nome,
     rotulo: c.rotuloColuna ?? c.rotulo,
     valor: (r) => valorDoCampo(c, r[c.nome]),
     texto: (r) => textoDoCampo(c, r[c.nome]),
-    tipo: c.tipo === "inteiro" || c.tipo === "decimal" ? "numero" : c.tipo === "data" ? "data" : "texto",
+    tipo: ehNumero(c) ? "numero" : c.tipo === "data" ? "data" : "texto",
+    ...(ehNumero(c) ? { alinhamento: "direita" as const } : {}),
   };
 }
 
@@ -108,7 +112,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
             {campos.map((c) => (
-              <td key={c.nome} className="px-4 py-3 text-sm text-gray-900">
+              <td key={c.nome} className={`px-4 py-3 text-sm text-gray-900 ${ehNumero(c) ? "text-right whitespace-nowrap" : ""}`}>
                 {formatar(c, r[c.nome])}
               </td>
             ))}
