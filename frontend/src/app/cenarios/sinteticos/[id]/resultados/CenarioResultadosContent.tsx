@@ -71,7 +71,7 @@ export function CenarioResultadosContent() {
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses antes de dezembro; a escolha fica guardada neste navegador.</li>
-            <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. Dezembro e o total do exercício trazem também o valor por m³.</li>
+            <li>A tabela rola para os lados: a descrição e os rótulos ficam presos, e a barra de rolagem fica no pé da janela, sempre à vista. Dezembro e o total do exercício trazem também o valor por m³.</li>
             {podeEditar ? (
               <>
                 <li>Edição (para quem edita os cenários): nas abas Matriz, Filial, Serviços, Despesas e Extra e RN, só os valores mensais das contas se editam; os totais, os percentuais e os valores por m³ são calculados. O Consolidado soma as unidades e não se edita.</li>

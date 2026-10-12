@@ -138,6 +138,20 @@ export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soU
     return () => obs.disconnect();
   }, [colunas]);
 
+  // A área cabe na janela (12/10/2026): a altura vai do alto dela, com a página no topo, até o pé da janela, para a
+  // barra de rolagem lateral (no pé da área) ficar sempre à vista. Nunca menos que 320 px.
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    const ajustar = () => {
+      const alto = el.getBoundingClientRect().top + window.scrollY;
+      el.style.maxHeight = `${Math.max(320, window.innerHeight - alto - 12)}px`;
+    };
+    ajustar();
+    window.addEventListener("resize", ajustar);
+    return () => window.removeEventListener("resize", ajustar);
+  }, []);
+
   const clicavel = !!onClicar;
   return (
     <>
