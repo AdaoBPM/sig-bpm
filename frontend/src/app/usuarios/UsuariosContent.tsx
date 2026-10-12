@@ -11,6 +11,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CampoSenha } from "@/components/shared/CampoSenha";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -50,7 +51,7 @@ function RedefinirSenhaDialog({ usuario, onFechar }: { usuario: Usuario; onFecha
             Nova senha de {usuario.nome} ({usuario.email}). Passe a ele por um canal seguro; ele pode trocá-la depois, no menu do usuário.
           </DialogDescription>
         </DialogHeader>
-        <Input type="password" aria-label="Nova senha" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="ao menos 8 caracteres" className="rounded-sm" />
+        <CampoSenha aria-label="Nova senha" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="ao menos 8 caracteres" className="rounded-sm" />
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
@@ -96,7 +97,7 @@ export function UsuariosContent() {
         comoUsar={
           <ul>
             <li>Use “Novo Usuário” para cadastrar; o lápis edita o nome, o perfil, os setores, os departamentos e a situação.</li>
-            <li>Use “Redefinir Senha” para dar uma senha nova (ao menos 8 caracteres).</li>
+            <li>Use “Redefinir Senha” para dar uma senha nova (ao menos 8 caracteres). No campo da senha (aqui e na senha inicial do Novo Usuário), o olho à direita mostra o que foi digitado; clique de novo para ocultar.</li>
             <li>O que cada um pode fazer vem do perfil, na tela Perfis.</li>
           </ul>
         }

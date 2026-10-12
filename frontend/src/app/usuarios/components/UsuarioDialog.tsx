@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CampoSenha } from "@/components/shared/CampoSenha";
 import { Label } from "@/components/ui/label";
 import type { DepartamentoAcesso } from "@/services/authService";
 
@@ -72,7 +73,7 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
             {!editando ? (
               <div className="space-y-1.5">
                 <Label htmlFor="u-senha">Senha inicial</Label>
-                <Input id="u-senha" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="rounded-sm" placeholder="ao menos 8 caracteres" />
+                <CampoSenha id="u-senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="rounded-sm" placeholder="ao menos 8 caracteres" />
               </div>
             ) : (
               <label className="flex items-center gap-2 self-end pb-2 text-sm text-gray-900">
