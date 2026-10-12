@@ -14,10 +14,18 @@ import { competenciasService } from "@/app/competencias/services/competenciasSer
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, type Cenario, type Visualizacao } from "../services/cenariosService";
+import { AvisoMarcado } from "./AvisoMarcado";
 import { botaoPrimario, CampoVisualizacao, classeSelect, Erro } from "./CenarioDialog";
 import { ImportarCenarioDialog } from "./ImportarCenarioDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+/** "Fechadas de Janeiro a Agosto." (12/10/2026; os meses seguidos, pelo primeiro e o último); fora de sequência, a lista. */
+function descreverFechadas(ms: number[]) {
+  if (ms.length === 0) return "Nenhuma fechada.";
+  if (ms.length === 1) return `Fechada: ${MESES[ms[0] - 1]}.`;
+  const seguidos = ms.every((m, k) => k === 0 || m === ms[k - 1] + 1);
+  return seguidos ? `Fechadas de ${MESES[ms[0] - 1]} a ${MESES[ms[ms.length - 1] - 1]}.` : `Fechadas: ${ms.map((m) => MESES[m - 1]).join(", ")}.`;
+}
 const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : null);
 
 /** As configurações do cenário: nome, descrição, visualização e a referência (um arquivo ou o resultado realizado de um ano). */
@@ -135,7 +143,9 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
             </label>
           ))}
         </fieldset>
-        {referencia === "arquivo" ? (
+        {cenario.marcacao ? (
+          <AvisoMarcado marcacao={cenario.marcacao} oQue="a referência" />
+        ) : referencia === "arquivo" ? (
           <div className="flex justify-end">
             <Button type="button" className={botaoPrimario} onClick={() => setImportando(true)}>
               <Upload className="size-4" />
@@ -157,7 +167,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
                   ))}
                 </select>
               </div>
-              <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">Fechadas: {mesesFechados.map((m) => MESES[m - 1]).join(", ")}.</p>
+              <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">{descreverFechadas(mesesFechados)}</p>
             </div>
             <fieldset className="grid gap-2 sm:grid-cols-2">
               <legend className="mb-1.5 text-sm leading-none font-medium">Importação</legend>

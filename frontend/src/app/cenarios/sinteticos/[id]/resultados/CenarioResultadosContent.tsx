@@ -12,6 +12,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { TabelaResultados } from "@/app/relatorios/resultados/ResultadosContent";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
+import { AvisoMarcado } from "../../../components/AvisoMarcado";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
 import { cenariosService } from "../../../services/cenariosService";
 
@@ -59,7 +60,10 @@ export function CenarioResultadosContent() {
   const [visao, setVisao] = useState("0");
   // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
   const { hasPermission } = usePermissions();
-  const podeEditar = hasPermission("cenarios:editar");
+  // O cenário marcado não se edita (12/10/2026): a tabela fica só para leitura, com o aviso.
+  const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
+  const marcacao = cenario.data?.marcacao ?? null;
+  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !marcacao;
   const nome = VISOES.find((v) => v.chave === visao)!.nome;
   return (
     <div className="space-y-6">
@@ -99,6 +103,7 @@ export function CenarioResultadosContent() {
         }
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
+      {marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="a DRE" /> : null}
       {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
     </div>
   );

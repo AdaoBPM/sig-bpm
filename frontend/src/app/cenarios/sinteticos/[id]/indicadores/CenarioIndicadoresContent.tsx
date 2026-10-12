@@ -19,6 +19,7 @@ import { TabelaIndicadores } from "@/app/relatorios/indicadores/TabelaIndicadore
 import { mensagemDeErro, type MesRelatorio } from "@/app/relatorios/services/relatoriosService";
 
 import { botaoPrimario, Erro } from "../../../components/CenarioDialog";
+import { AvisoMarcado } from "../../../components/AvisoMarcado";
 import { cenariosService, type IndicadorDoCenario } from "../../../services/cenariosService";
 
 /** As abas: os indicadores da DRE de Produção e Serviços, os lançamentos manuais e as metas orçadas (todos). */
@@ -104,7 +105,10 @@ export function CenarioIndicadoresContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/indicadores`);
   const { hasPermission } = usePermissions();
-  const podeEditar = hasPermission("cenarios:editar");
+  // O cenário marcado não se edita (12/10/2026): os Indicadores Manuais ficam só para leitura, com o aviso.
+  const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
+  const marcacao = cenario.data?.marcacao ?? null;
+  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !marcacao;
   const [aba, setAba] = useState("metas");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
@@ -151,6 +155,7 @@ export function CenarioIndicadoresContent() {
           Indicadores Manuais.
         </p>
       ) : null}
+      {manuais && marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="os Indicadores Manuais" /> : null}
       {consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os indicadores do cenário.")}</p>

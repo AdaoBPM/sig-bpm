@@ -58,6 +58,15 @@ const LOTE = 500;
 const MANUAIS = new Set(INDICADORES_DAS_LISTAS);
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano).slice(2)}`;
 
+/**
+ * A trava dos cenários marcados (12/10/2026): um cenário com marcação (Orçamento Empresarial, Resultados Anteriores ou
+ * Resultados Vendidos) não muda de dados — a DRE, os indicadores manuais e a referência (arquivo ou realizado). O nome
+ * e a descrição continuam editáveis.
+ */
+function exigirSemMarcacao(c: { nome: string; marcacao: MarcacaoCenario | null }) {
+  if (c.marcacao) throw new CenarioError(409, `O cenário ${c.nome} está marcado como ${MARCACOES[c.marcacao]} e não se edita: tire a marcação (ou marque outro cenário) antes de editá-lo.`);
+}
+
 /** O cenário, se o usuário o alcança; o particular de outro usuário é "não encontrado". */
 async function obterOuFalhar(id: string, usuario: Usuario) {
   const c = await getPrismaClient().cenario.findUnique({ where: { id } });
@@ -148,6 +157,7 @@ function comparar(novos: Map<string, number>, atuais: Map<string, number>) {
 async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: string | null, usuario: Usuario) {
   const prisma = getPrismaClient();
   const existente = cenarioId ? await obterOuFalhar(cenarioId, usuario) : null;
+  if (existente) exigirSemMarcacao(existente);
   const [resultados, metasAtuais] = existente
     ? await Promise.all([
         prisma.cenarioResultado.findMany({ where: { cenarioId: existente.id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
@@ -473,6 +483,7 @@ export const cenariosService = {
    */
   async gravarValores(id: string, visao: number, alteracoes: Alteracao[], usuario: Usuario, origem?: OrigemDaGravacao) {
     const c = await obterOuFalhar(id, usuario);
+    exigirSemMarcacao(c);
     let r: Awaited<ReturnType<typeof gravarValores>>;
     try {
       r = await gravarValores(id, visao, alteracoes);
@@ -518,6 +529,7 @@ export const cenariosService = {
    */
   async referenciaRealizado(id: string, ano: number, usuario: Usuario, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) {
     const c = await obterOuFalhar(id, usuario);
+    exigirSemMarcacao(c);
     const prisma = getPrismaClient();
     const todas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
     if (todas.length === 0) throw new CenarioError(400, `Nenhuma competência de ${ano} está fechada.`);
@@ -599,7 +611,7 @@ export const cenariosService = {
 
   /** Grava os lançamentos manuais de um indicador (os 12 meses; vazio apaga o mês). */
   async salvarManual(id: string, nome: string, valores: Array<number | null>, usuario: Usuario) {
-    await obterOuFalhar(id, usuario);
+    exigirSemMarcacao(await obterOuFalhar(id, usuario));
     if (!MANUAIS.has(nome)) throw new CenarioError(400, `${nome} não é um lançamento manual: sai da DRE do cenário.`);
     const prisma = getPrismaClient();
     const antes = await prisma.cenarioIndicador.findMany({ where: { cenarioId: id, nome }, orderBy: { mes: "asc" } });
