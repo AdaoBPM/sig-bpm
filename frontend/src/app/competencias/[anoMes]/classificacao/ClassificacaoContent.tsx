@@ -214,7 +214,7 @@ export function ClassificacaoContent() {
         selo={fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
         comoUsar={
           <ul>
-            <li>Comece pela aba Pendências; as abas seguintes separam cada tipo de pendência.</li>
+            <li>A aba Todos, a primeira, mostra todos os lançamentos. Comece pela aba Pendências (a que abre); as abas seguintes separam cada tipo de pendência.</li>
             <li>Use os filtros nos rótulos das colunas (centro de custo, conta, classificação…) para achar os lançamentos.</li>
             <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>
             <li>Sem pendências, siga para a DRE e apure a competência.</li>
@@ -282,6 +282,8 @@ export function ClassificacaoContent() {
             ativa={situacao}
             onMudar={(c) => filtrar(c as Situacao)}
             abas={[
+              // Todos antes das Pendências (12/10/2026); a tela continua abrindo nas Pendências.
+              { chave: "TODOS", rotulo: "Todos", contagem: r?.total ?? 0 },
               {
                 chave: "PENDENCIAS",
                 rotulo: "Pendências",
@@ -293,7 +295,6 @@ export function ClassificacaoContent() {
                 rotulo: VALIDACOES[v].codigo.startsWith("<") ? VALIDACOES[v].codigo : VALIDACOES[v].rotulo,
                 contagem: quantidade(v),
               })),
-              { chave: "TODOS", rotulo: "Todos", contagem: r?.total ?? 0 },
             ]}
           />
           <QuadroTabela

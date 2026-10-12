@@ -17,6 +17,7 @@ export default function TabelaEstacasPage() {
               <li>Use os filtros nos rótulos das colunas.</li>
               <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>Para mudar um preço a partir de uma data, inclua um registro com a nova vigência.</li>
+              <li>Os preços bruto e líquido (por m³) aparecem em R$, com duas casas decimais.</li>
             </ul>
           }
           descricao="Os preços das estacas por seção e grupo, com vigência (aba Tabela de Estacas do UNIDADES E CENTROS DE CUSTO), que valoram a variação do estoque de estacas."

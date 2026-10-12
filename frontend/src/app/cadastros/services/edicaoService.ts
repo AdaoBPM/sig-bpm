@@ -18,6 +18,8 @@ export type Campo = {
   filtradoPor?: string;
   /** Ocupa as duas colunas do formulário de edição. */
   larguraInteira?: boolean;
+  /** Um valor em reais: "R$" e duas casas na tabela, duas casas no formulário. */
+  moeda?: boolean;
   /** Fora da tabela (só no formulário) ou fora do formulário (só na tabela). */
   naTabela?: boolean;
   noFormulario?: boolean;

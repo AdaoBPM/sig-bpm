@@ -28,6 +28,7 @@ const paraTela = (c: Campo, v: unknown) => {
   if (c.tipo === "multipla") return Array.isArray(v) ? v.map(String) : [];
   if (v === null || v === undefined) return "";
   // O decimal com vírgula, sem o resíduo de ponto flutuante da planilha (1298,1919999999998).
+  if (c.tipo === "decimal" && c.moeda) return Number(v).toFixed(2).replace(".", ",");
   return c.tipo === "decimal" ? String(Number(Number(v).toFixed(6))).replace(".", ",") : String(v);
 };
 

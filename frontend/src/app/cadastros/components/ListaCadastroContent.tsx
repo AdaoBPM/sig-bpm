@@ -20,6 +20,8 @@ function textoDoCampo(c: Campo, v: unknown): string | null {
   if (v === null || v === undefined || v === "") return null;
   if (c.tipo === "booleano") return v ? "Sim" : "Não";
   if (c.tipo === "opcao") return c.opcoes?.find((o) => o.valor === String(v))?.rotulo ?? String(v);
+  // Os valores em reais com "R$" e duas casas (os preços da Tabela de Estacas, 12/10/2026).
+  if (c.tipo === "decimal" && c.moeda) return `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (c.tipo === "decimal") return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
   if (c.tipo === "data") return String(v).split("-").reverse().join("/");
   return String(v);

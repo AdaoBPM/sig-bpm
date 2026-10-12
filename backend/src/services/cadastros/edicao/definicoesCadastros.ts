@@ -51,6 +51,8 @@ export type Campo = {
   filtradoPor?: string;
   /** Ocupa as duas colunas do formulário de edição. */
   larguraInteira?: boolean;
+  /** Um valor em reais: a tabela mostra "R$" e duas casas, e o formulário, duas casas (12/10/2026). */
+  moeda?: boolean;
   /** Fora da tabela (só no formulário) ou fora do formulário (só na tabela). */
   naTabela?: boolean;
   noFormulario?: boolean;
@@ -976,8 +978,8 @@ const estacas: DefinicaoCadastro = {
     { nome: "secao", rotulo: "Seção", tipo: "texto", obrigatorio: true },
     { nome: "grupo", rotulo: "Grupo", tipo: "texto", obrigatorio: true },
     { nome: "peca", rotulo: "Peça", tipo: "texto", obrigatorio: true },
-    { nome: "precoUnitario", rotulo: "Preço bruto (m³)", tipo: "decimal", obrigatorio: true },
-    { nome: "precoLiquido", rotulo: "Preço líquido (m³)", tipo: "decimal", obrigatorio: true },
+    { nome: "precoUnitario", rotulo: "Preço bruto (m³)", tipo: "decimal", obrigatorio: true, moeda: true },
+    { nome: "precoLiquido", rotulo: "Preço líquido (m³)", tipo: "decimal", obrigatorio: true, moeda: true },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
     { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
   ],
