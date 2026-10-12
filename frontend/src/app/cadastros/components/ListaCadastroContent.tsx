@@ -58,7 +58,7 @@ function colunaDoCampo(c: Campo): Coluna<Registro> {
   };
 }
 
-const EDITAR: Coluna<Registro> = { chave: "editar", rotulo: "", semFiltro: true };
+const EDITAR: Coluna<Registro> = { chave: "editar", rotulo: "", semFiltro: true, classe: "w-12" };
 
 type Props = {
   entidade: string;
@@ -118,7 +118,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
                 {formatar(c, r[c.nome])}
               </td>
             ))}
-            {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(r.id)}</td> : null}
+            {edicao.pode ? <td className="w-12 px-2 py-3">{edicao.botaoEditar(r.id)}</td> : null}
           </tr>
         )}
       />

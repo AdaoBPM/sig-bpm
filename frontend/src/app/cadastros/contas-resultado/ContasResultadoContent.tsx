@@ -38,7 +38,7 @@ const COLUNAS: Coluna<ContaResultado>[] = [
   },
   { chave: "balde", rotulo: "Balde", valor: (c) => c.balde },
 ];
-const EDITAR: Coluna<ContaResultado> = { chave: "editar", rotulo: "", semFiltro: true };
+const EDITAR: Coluna<ContaResultado> = { chave: "editar", rotulo: "", semFiltro: true, classe: "w-12" };
 
 export function ContasResultadoContent() {
   useRegistrarAcessoTela("/cadastros/contas-resultado");
@@ -142,7 +142,7 @@ export function ContasResultadoContent() {
               <td className="px-4 py-3 text-sm">
                 <BaldeBadge balde={item.balde} />
               </td>
-              {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(item.id)}</td> : null}
+              {edicao.pode ? <td className="w-12 px-2 py-3">{edicao.botaoEditar(item.id)}</td> : null}
             </tr>
           );
         }}

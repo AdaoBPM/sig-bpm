@@ -50,7 +50,7 @@ const COLUNAS: Coluna<LinhaDRE>[] = [
   // Sem conta a célula mostra "—": no filtro, entra como vazia.
   { chave: "contas", rotulo: "Contas", valor: (l) => l._count.contas || null, tipo: "numero" },
 ];
-const EDITAR: Coluna<LinhaDRE> = { chave: "editar", rotulo: "", semFiltro: true };
+const EDITAR: Coluna<LinhaDRE> = { chave: "editar", rotulo: "", semFiltro: true, classe: "w-12" };
 
 export function EstruturaDreContent() {
   useRegistrarAcessoTela("/cadastros/estrutura-dre");
@@ -157,7 +157,7 @@ export function EstruturaDreContent() {
               {item._count.contas > 0 ? item._count.contas : "—"}
             </td>
             {edicao.pode ? (
-              <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+              <td className="w-12 px-2 py-3" onClick={(e) => e.stopPropagation()}>
                 {edicao.botaoEditar(item.id)}
               </td>
             ) : null}

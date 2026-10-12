@@ -34,7 +34,7 @@ const COLUNAS: Coluna<Reclassificacao>[] = [
   { chave: "destino", rotulo: "Conta adotada", valor: (r) => conta(r.contaDestino) },
   { chave: "motivo", rotulo: "Origem do registro", valor: (r) => r.motivo },
 ];
-const EDITAR: Coluna<Reclassificacao> = { chave: "editar", rotulo: "", semFiltro: true };
+const EDITAR: Coluna<Reclassificacao> = { chave: "editar", rotulo: "", semFiltro: true, classe: "w-12" };
 
 export function ReclassificacoesContent() {
   useRegistrarAcessoTela("/cadastros/reclassificacoes");
@@ -120,7 +120,7 @@ export function ReclassificacoesContent() {
                 {r.motivo ?? "—"}
               </div>
             </td>
-            {edicao.pode ? <td className="px-2 py-3">{edicao.botaoEditar(r.id)}</td> : null}
+            {edicao.pode ? <td className="w-12 px-2 py-3">{edicao.botaoEditar(r.id)}</td> : null}
           </tr>
         )}
       />
