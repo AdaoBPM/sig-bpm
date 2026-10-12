@@ -264,6 +264,22 @@ export const apuracaoService = {
     if (mudou.length) motivosNaoFechar.push("As entradas mudaram depois da apuração: reapure antes de fechar.");
     if (pendentes) motivosNaoFechar.push(`Há ${pendentes} lançamento(s) com pendência de classificação.`);
     if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} lançamento(s) sem classificação.`);
+    // Fecha-se em ordem (11/10/2026): com uma competência anterior em aberto, esta não se fecha.
+    if (c.status !== "FECHADA") {
+      const abertas = await getPrismaClient().competencia.findMany({
+        where: { status: { not: "FECHADA" }, OR: [{ ano: { lt: ano } }, { ano, mes: { lt: mes } }] },
+        select: { ano: true, mes: true },
+        orderBy: [{ ano: "asc" }, { mes: "asc" }],
+      });
+      if (abertas.length) {
+        const lista = abertas.map((x) => rotulo(x.ano, x.mes));
+        motivosNaoFechar.push(
+          abertas.length === 1
+            ? `A competência anterior ${lista[0]} está em aberto: feche-a antes.`
+            : `As competências anteriores ${lista.join(", ")} estão em aberto: feche-as antes, em ordem.`,
+        );
+      }
+    }
     return {
       competencia: { ano, mes, status: c.status },
       apurada,
