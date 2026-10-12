@@ -2,6 +2,7 @@
 
 import { Fragment, useLayoutEffect, useMemo, useRef, type ComponentType } from "react";
 
+import { BarraDeRolagem } from "@/components/shared/BarraDeRolagem";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
@@ -126,9 +127,11 @@ export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soU
   const total = larguras.reduce((s, w) => s + w, 0);
 
   // A largura real da coluna Indicador posiciona as outras duas colunas presas.
-  const area = useRef<HTMLDivElement>(null);
+  const moldura = useRef<HTMLDivElement>(null);
+  const topo = useRef<HTMLDivElement>(null);
+  const corpo = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    const el = area.current;
+    const el = moldura.current;
     const th = el?.querySelector("thead th");
     if (!el || !th) return;
     const medir = () => el.style.setProperty("--largura-indicador", `${th.getBoundingClientRect().width}px`);
@@ -138,21 +141,17 @@ export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soU
     return () => obs.disconnect();
   }, [colunas]);
 
-  // A área cabe na janela (12/10/2026): a altura vai do alto dela, com a página no topo, até o pé da janela, para a
-  // barra de rolagem lateral (no pé da área) ficar sempre à vista. Nunca menos que 320 px.
-  useLayoutEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    const ajustar = () => {
-      const alto = el.getBoundingClientRect().top + window.scrollY;
-      el.style.maxHeight = `${Math.max(320, window.innerHeight - alto - 12)}px`;
-    };
-    ajustar();
-    window.addEventListener("resize", ajustar);
-    return () => window.removeEventListener("resize", ajustar);
-  }, []);
 
   const clicavel = !!onClicar;
+  const colgroup = (
+    <colgroup>
+      {/* A coluna Indicador sem largura: fica com o que sobra quando a tabela é mais estreita que a área. */}
+      <col style={{ minWidth: LARGURA.indicador }} />
+      {larguras.slice(1).map((w, k) => (
+        <col key={k} style={{ width: w }} />
+      ))}
+    </colgroup>
+  );
   return (
     <>
       {tabela.ativos ? (
@@ -162,17 +161,27 @@ export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soU
           </button>
         </div>
       ) : null}
-      {/* Uma tabela só (rótulos e valores alinhados), com rolagem própria: os rótulos presos no alto da área e as três primeiras colunas à esquerda. */}
-      <div ref={area} className="max-h-[calc(100vh-14rem)] overflow-auto rounded-sm border border-gray-200 bg-white [--largura-indicador:400px] [--topo-tabela:0px]">
+      {/*
+        Como a tabela de Resultados (12/10/2026; antes, uma caixa com rolagem própria): a página rola, os rótulos ficam
+        presos logo abaixo do título da tela, as três primeiras colunas à esquerda, e a barra de rolagem lateral no pé
+        da janela. Os rótulos e o corpo são duas tabelas com as mesmas colunas; os rótulos acompanham o corpo.
+      */}
+      <div ref={moldura} className="rounded-sm border border-gray-200 bg-white [--largura-indicador:400px]">
+        <div ref={topo} className="sticky top-[var(--topo-tabela,0px)] z-30 overflow-hidden">
+          <table className="tabela-sig table-fixed border-collapse text-sm [--topo-tabela:0px]" style={{ width: total, minWidth: "100%" }}>
+            {colgroup}
+            {tabela.cabecalho}
+          </table>
+        </div>
+        <div
+          ref={corpo}
+          className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onScroll={(e) => {
+            if (topo.current && topo.current.scrollLeft !== e.currentTarget.scrollLeft) topo.current.scrollLeft = e.currentTarget.scrollLeft;
+          }}
+        >
         <table className="tabela-sig table-fixed border-collapse text-sm" style={{ width: total, minWidth: "100%" }}>
-          <colgroup>
-            {/* A coluna Indicador sem largura: fica com o que sobra quando a tabela é mais estreita que a área. */}
-            <col style={{ minWidth: LARGURA.indicador }} />
-            {larguras.slice(1).map((w, k) => (
-              <col key={k} style={{ width: w }} />
-            ))}
-          </colgroup>
-          {tabela.cabecalho}
+          {colgroup}
           <tbody>
             {tabela.visiveis.length === 0 ? (
               <SemResultado colunas={colunas.length} onLimpar={tabela.limpar} />
@@ -239,6 +248,8 @@ export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soU
             )}
           </tbody>
         </table>
+        </div>
+        <BarraDeRolagem area={corpo} />
       </div>
     </>
   );

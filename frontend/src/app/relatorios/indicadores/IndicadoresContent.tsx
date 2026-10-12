@@ -57,7 +57,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             {periodoFixo ? null : (
               <li>As colunas de rótulo preto trazem o orçado (o cenário Orçamento Empresarial do exercício; zero sem ele): o do último mês, depois dele, e o acumulado, depois do Acumulado.</li>
             )}
-            <li>As colunas Indicador, Sent. e Und. ficam fixas; role a tabela para os lados e para baixo na barra dela.</li>
+            <li>As colunas Indicador, Sent. e Und. ficam fixas à esquerda; ao rolar a página, os rótulos ficam presos logo abaixo do título, como em Resultados, e a barra de rolagem lateral fica no pé da janela.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
             {periodoFixo ? null : (
               <>
