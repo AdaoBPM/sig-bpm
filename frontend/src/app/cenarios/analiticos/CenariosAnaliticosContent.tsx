@@ -12,7 +12,7 @@ export function CenariosAnaliticosContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Cenários Analíticos"
-        sobre={<p>Os cenários analíticos, montados a partir das premissas da operação, ainda vão ser criados. Por enquanto, os cenários são os sintéticos.</p>}
+        sobre={<p>Os cenários analíticos, montados a partir das premissas da operação: tela em desenvolvimento. Por enquanto, os cenários são os sintéticos.</p>}
         comoUsar={
           <ul>
             <li>Use Cenários Sintéticos para importar ou criar um cenário.</li>
@@ -20,7 +20,7 @@ export function CenariosAnaliticosContent() {
         }
       />
       <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 text-sm text-gray-700">
-        Os cenários analíticos ainda vão ser criados. Por enquanto, use{" "}
+        Tela em desenvolvimento. Por enquanto, use{" "}
         <Link href="/cenarios/sinteticos" className="font-medium text-gray-900 underline underline-offset-2">
           Cenários Sintéticos
         </Link>
