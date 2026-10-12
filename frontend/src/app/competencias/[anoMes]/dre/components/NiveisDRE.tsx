@@ -175,6 +175,8 @@ export function useNiveisDRE<L extends Linha>(todas: L[], chave: string) {
     /** O recuo da descrição da linha. */
     recuo: (l: L) => RECUO[nivel.get(l.codigo) ?? 0],
     grupo: (l: L) => comFilhos.has(l.codigo),
+    /** As linhas abaixo da linha (as do grupo dela, de nível inferior): a marcação de um total marca as contas dele. */
+    abaixo: (l: L) => linhas.filter((x) => (acima.get(x.codigo) ?? []).includes(l.codigo)),
     fechado: (l: L) => fechados.has(l.codigo),
     alternar,
   };

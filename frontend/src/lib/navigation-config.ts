@@ -159,6 +159,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/relatorios(\/|$)/, "resultados:ler"],
   [/^\/cenarios\/analiticos(\/|$)/, "cenarios_analiticos:ler"],
+  [/^\/cenarios\/sinteticos\/[^/]+\/editar/, "cenarios:editar"],
   [/^\/cenarios(\/|$)/, "cenarios:ler"],
   [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ler"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ler"],
@@ -231,7 +232,10 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
   }
   // As telas de um cenário: "Cenários Sintéticos › Resultados".
   const cenario = pathname.match(/^\/cenarios\/sinteticos\/[^/]+\/([^/]+)/);
-  if (cenario) return [{ rotulo: "Cenários Sintéticos", href: "/cenarios/sinteticos" }, { rotulo: cenario[1] === "indicadores" ? "Indicadores" : "Resultados" }];
+  if (cenario) {
+    const tela = cenario[1] === "indicadores" ? "Indicadores" : cenario[1] === "editar" ? "Editar" : "Resultados";
+    return [{ rotulo: "Cenários Sintéticos", href: "/cenarios/sinteticos" }, { rotulo: tela }];
+  }
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];
   return [{ rotulo: getPageTitle(pathname) }];

@@ -20,4 +20,8 @@ cenariosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));
 cenariosRoutes.put("/:id/marcacao", autenticacao, editar, express.json(), asyncHandler(c.marcar));
 cenariosRoutes.get("/:id/resultados", autenticacao, ler, asyncHandler(c.resultados));
 cenariosRoutes.get("/:id/indicadores", autenticacao, ler, asyncHandler(c.indicadores));
+// A edição da DRE do cenário pela ferramenta (12/10/2026).
+cenariosRoutes.get("/:id/edicao", autenticacao, editar, asyncHandler(c.edicao));
+cenariosRoutes.put("/:id/edicao/valores", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarValores));
+cenariosRoutes.post("/:id/referencia/realizado", autenticacao, editar, express.json(), asyncHandler(c.referenciaRealizado));
 cenariosRoutes.put("/:id/indicadores/manuais", autenticacao, editar, express.json(), asyncHandler(c.salvarManual));

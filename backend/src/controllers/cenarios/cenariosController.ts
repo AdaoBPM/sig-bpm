@@ -111,6 +111,38 @@ export const cenariosController = {
     return c ? responder(response, () => cenariosService.indicadores(c, usuario(request))) : undefined;
   },
 
+  /** A visão da DRE para a edição: ?visao=0..5. */
+  edicao(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const visao = visaoSchema.safeParse(request.query.visao ?? 0);
+    if (!visao.success) return response.status(400).json({ error: "Visão inválida." });
+    return responder(response, () => cenariosService.edicao(c, visao.data as 0 | 1 | 2 | 3 | 4 | 5, usuario(request)));
+  },
+
+  /** Valores mensais de contas de uma unidade: { visao: 1..5, alteracoes: [{ linha, mes, valor }] }. */
+  gravarValores(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z
+      .object({
+        visao: z.number().int().min(1).max(5),
+        alteracoes: z.array(z.object({ linha: z.string().min(1).max(200), mes: z.number().int().min(1).max(12), valor: z.number().finite() })).min(1).max(5000),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Valores inválidos." });
+    return responder(response, () => cenariosService.gravarValores(c, corpo.data.visao, corpo.data.alteracoes, usuario(request)));
+  },
+
+  /** A referência pelo resultado realizado: { ano } (as competências fechadas dele). */
+  referenciaRealizado(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z.object({ ano: anoSchema }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Exercício inválido." });
+    return responder(response, () => cenariosService.referenciaRealizado(c, corpo.data.ano, usuario(request)));
+  },
+
   salvarManual(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;

@@ -108,6 +108,39 @@ function BotaoMeses({ recolhido, onAlternar }: { recolhido: boolean; onAlternar:
   );
 }
 
+/**
+ * O modo de edição da tabela (os cenários, 12/10/2026): a caixa de cada linha (a de um total marca as contas dele) e
+ * a de cada mês; os valores marcados são os das contas e meses marcados. Clicar numa linha abre o reajuste dos
+ * marcados; clicar no valor de uma conta, a edição daquele valor.
+ */
+export type EdicaoDaTabela = {
+  editavel: (l: LinhaResultado) => boolean;
+  linhasMarcadas: Set<string>;
+  mesesMarcados: Set<number>;
+  onMarcarLinhas: (codigos: string[], marcar: boolean) => void;
+  onMarcarMes: (i: number, marcar: boolean) => void;
+  onCelula: (l: LinhaResultado, i: number) => void;
+  onConta: (l: LinhaResultado) => void;
+};
+
+/** Uma caixa de marcação com o estado "alguns" (traço). */
+function Caixa({ marcada, alguns, rotulo, onMudar }: { marcada: boolean; alguns?: boolean; rotulo: string; onMudar: () => void }) {
+  return (
+    <input
+      type="checkbox"
+      aria-label={rotulo}
+      title={rotulo}
+      checked={marcada}
+      ref={(el) => {
+        if (el) el.indeterminate = !!alguns && !marcada;
+      }}
+      onChange={onMudar}
+      onClick={(e) => e.stopPropagation()}
+      className="size-3.5 shrink-0 cursor-pointer accent-black"
+    />
+  );
+}
+
 export function TabelaResultados({
   dados,
   titulo,
@@ -115,6 +148,7 @@ export function TabelaResultados({
   nomeVisao,
   aoLadoDoTitulo,
   consultas = true,
+  edicao,
 }: {
   dados: Resultados;
   titulo: string;
@@ -123,15 +157,19 @@ export function TabelaResultados({
   /** Conteúdo logo depois do título (o botão de informação do centro de custo), como na DRE. */
   aoLadoDoTitulo?: ReactNode;
   consultas?: boolean;
+  /** O modo de edição (os cenários). */
+  edicao?: EdicaoDaTabela;
 }) {
   const niveis = useNiveisDRE(dados.linhas, "sig.resultados.nivel");
+  // Na edição, as contas da linha que a caixa dela marca: ela mesma (se se edita) e as editáveis abaixo dela.
+  const contasDaLinha = (l: LinhaResultado) => (edicao ? [l, ...niveis.abaixo(l)].filter(edicao.editavel).map((x) => x.codigo) : []);
   const [consulta, setConsulta] = useState<{ linha: LinhaResultado; mes: MesRelatorio } | null>(null);
   const temPct = (l: LinhaResultado) => !l.volume && (l.meses.some((c) => c.pct !== null) || l.total.pct !== null);
   const ano = String(dados.ano).slice(2);
   const referencia = dados.meses.length - 1;
   // Recolhidos, só o mês de referência fica (com o orçado dele), antes dos totais.
   const [recolhido, alternarMeses] = useMesesRecolhidos();
-  const mostra = (i: number) => !recolhido || i === referencia;
+  const mostra = (i: number) => !recolhido || !!edicao || i === referencia;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
@@ -201,7 +239,7 @@ export function TabelaResultados({
               <span className="flex items-center gap-3">
                 <span className="flex shrink-0 items-center gap-1.5">
                   <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
-                  {dados.meses.length > 1 ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
+                  {dados.meses.length > 1 && !edicao ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
                 </span>
                 <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>
                   {titulo}
@@ -212,7 +250,20 @@ export function TabelaResultados({
             {dados.meses.map((m, i) =>
               !mostra(i) ? null : (
               <Fragment key={m.mes}>
-                <th className={`${th} border-l border-gray-300`}>{m.rotulo}</th>
+                <th className={`${th} border-l border-gray-300`}>
+                  {edicao ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Caixa
+                        marcada={edicao.mesesMarcados.has(i)}
+                        rotulo={`Marcar ${m.rotulo}`}
+                        onMudar={() => edicao.onMarcarMes(i, !edicao.mesesMarcados.has(i))}
+                      />
+                      {m.rotulo}
+                    </span>
+                  ) : (
+                    m.rotulo
+                  )}
+                </th>
                 <th className={th}>%</th>
                 {i === referencia ? <th className={th}>R$/m³</th> : null}
                 {i === referencia && comOrcado ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
@@ -231,6 +282,8 @@ export function TabelaResultados({
             const td = "px-1.5 py-1.5 text-right whitespace-nowrap";
             const pct = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
             const clicavel = abre(l);
+            const contas = contasDaLinha(l);
+            const marcadas = contas.filter((c) => edicao?.linhasMarcadas.has(c)).length;
             const pctOrcado = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
             // O orçado (valor, % e R$/m³, no cinza) e, nos totais, a variação contra o realizado (no amarelo da linha).
             const celulasDoOrcado = (l: LinhaResultado, r: Celula, o: Celula | undefined, variacao: boolean) => (
@@ -251,11 +304,25 @@ export function TabelaResultados({
             return (
               <tr key={l.codigo} className={destaque ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"}>
                 <td
-                  className={`sticky left-0 z-10 overflow-hidden py-1.5 pr-3 whitespace-nowrap ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${clicavel && ultimoApurado ? "cursor-pointer hover:bg-gray-100" : ""}`}
-                  onClick={clicavel && ultimoApurado ? () => setConsulta({ linha: l, mes: ultimoApurado }) : undefined}
-                  title={clicavel && ultimoApurado ? dica(ultimoApurado) : undefined}
+                  className={`sticky left-0 z-10 overflow-hidden py-1.5 pr-3 whitespace-nowrap ${fundo} ${niveis.recuo(l)} ${destaque ? "text-gray-900" : "text-gray-700"} ${(edicao ? contas.length > 0 : clicavel && ultimoApurado) ? "cursor-pointer hover:bg-gray-100" : ""}`}
+                  onClick={
+                    edicao ? (contas.length ? () => edicao.onConta(l) : undefined) : clicavel && ultimoApurado ? () => setConsulta({ linha: l, mes: ultimoApurado }) : undefined
+                  }
+                  title={edicao ? (contas.length ? "Reajustar os valores marcados" : undefined) : clicavel && ultimoApurado ? dica(ultimoApurado) : undefined}
                 >
                   <span className="flex min-w-0 items-center gap-1">
+                    {edicao ? (
+                      contas.length ? (
+                        <Caixa
+                          marcada={marcadas === contas.length}
+                          alguns={marcadas > 0}
+                          rotulo={`Marcar ${l.descricao}`}
+                          onMudar={() => edicao.onMarcarLinhas(contas, marcadas < contas.length)}
+                        />
+                      ) : (
+                        <span aria-hidden className="inline-block size-3.5 shrink-0" />
+                      )
+                    ) : null}
                     <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />
                     {clicavel ? <Search className="size-3.5 shrink-0 text-gray-400" /> : null}
                     <span className="truncate" title={l.descricao}>
@@ -267,12 +334,15 @@ export function TabelaResultados({
                   if (!mostra(i)) return null;
                   const m = dados.meses[i];
                   const abreMes = clicavel && m.apurado && c.valor !== null;
+                  // Na edição, o valor de uma conta abre a edição dele; o marcado (conta e mês) fica contornado.
+                  const editaMes = !!edicao && edicao.editavel(l);
+                  const marcado = editaMes && edicao!.linhasMarcadas.has(l.codigo) && edicao!.mesesMarcados.has(i);
                   return (
                     <Fragment key={i}>
                       <td
-                        className={`${td} border-l border-gray-100 ${fundo} ${abreMes ? "cursor-pointer hover:bg-gray-100" : ""}`}
-                        onClick={abreMes ? () => setConsulta({ linha: l, mes: m }) : undefined}
-                        title={abreMes ? dica(m) : undefined}
+                        className={`${td} border-l border-gray-100 ${fundo} ${abreMes || editaMes ? "cursor-pointer hover:bg-gray-100" : ""} ${marcado ? "shadow-[inset_0_0_0_2px_rgba(0,0,0,0.55)]" : ""}`}
+                        onClick={editaMes ? () => edicao!.onCelula(l, i) : abreMes ? () => setConsulta({ linha: l, mes: m }) : undefined}
+                        title={editaMes ? `Editar ${m.rotulo}` : abreMes ? dica(m) : undefined}
                       >
                         {valorDa(l, c)}
                       </td>

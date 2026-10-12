@@ -10,6 +10,8 @@ import { caminhoDoArquivo, diretorioUploads } from "../importacoes/arquivosImpor
 import { INDICADORES_DAS_LISTAS } from "../relatorios/catalogoIndicadores.js";
 import { basesDoConsolidado, COD } from "../relatorios/basesResultados.js";
 import { estrutura, montar } from "../relatorios/resultadosService.js";
+import { estrutura as estruturaDRE } from "../dre/dreService.js";
+import { contasDaUnidade, ErroEdicao, gravarValores, linhasDaUnidade, linhasDoConsolidado, recalcular, UNIDADES, type Alteracao } from "./edicaoCenario.js";
 import { calcularCenario } from "./indicadoresDoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 
@@ -353,6 +355,8 @@ export const cenariosService = {
           await tx.cenarioResultado.deleteMany({ where: { cenarioId: c.id, visao: d.visao } });
           await gravarEmLotes(d.valores, (lote) => tx.cenarioResultado.createMany({ data: lote.map((v) => ({ cenarioId: c.id, visao: d.visao, ...v })) }));
         }
+        // Os totais das unidades e o Consolidado são calculados (12/10/2026), como na edição pela ferramenta.
+        if (dre.length) await recalcular(tx, c.id, Array.from({ length: 12 }, (_, k) => k + 1), UNIDADES);
         if (metas) {
           await tx.cenarioIndicador.deleteMany({ where: { cenarioId: c.id } });
           await gravarEmLotes(metas.valores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((v) => ({ cenarioId: c.id, ...v, origem: "IMPORTADO" })) }));
@@ -422,6 +426,93 @@ export const cenariosService = {
         totalOrcado: null,
       })),
     };
+  },
+
+  /**
+   * Uma visão da DRE do cenário para a edição (12/10/2026): como `resultados`, mas com todas as linhas da visão
+   * (também as vazias, para editar) e os doze meses; `editaveis` são as contas que se editam (nenhuma no
+   * Consolidado, que soma as unidades).
+   */
+  async edicao(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    const visoes = basesDoConsolidado(visao) ? [visao, 0] : [visao];
+    const [linhas, est, rs] = await Promise.all([
+      estrutura(),
+      estruturaDRE(),
+      getPrismaClient().cenarioResultado.findMany({ where: { cenarioId: id, visao: { in: visoes } }, select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } } }),
+    ]);
+    const mapas = (v: number) => {
+      const porMes = Array.from({ length: 12 }, () => new Map<string, number>());
+      for (const r of rs) if (r.visao === v) porMes[r.mes - 1].set(r.linhaDRE.codigo, Number(r.valor));
+      return porMes;
+    };
+    const valores = mapas(visao);
+    const consolidado = basesDoConsolidado(visao) ? mapas(0) : valores;
+    if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
+    const todas = visao === 0 ? linhasDoConsolidado(est) : linhasDaUnidade(est, visao);
+    const meses = Array.from({ length: 12 }, () => true);
+    return {
+      ano: c.ano,
+      ate: 12,
+      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1), apurado: true })),
+      linhas: montar(linhas, visao, meses, valores, consolidado, ACESSO_TOTAL, todas).map((l) => ({ ...l, podeDetalhar: false })),
+      editaveis: visao === 0 ? [] : [...contasDaUnidade(est, visao)],
+    };
+  },
+
+  /** Grava valores mensais de contas de uma unidade e recalcula os totais e o Consolidado (12/10/2026). */
+  async gravarValores(id: string, visao: number, alteracoes: Alteracao[], usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    let r: Awaited<ReturnType<typeof gravarValores>>;
+    try {
+      r = await gravarValores(id, visao, alteracoes);
+    } catch (error) {
+      if (error instanceof ErroEdicao) throw new CenarioError(400, error.message);
+      throw error;
+    }
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      metadados: { cenario: c.nome, visao, valores: r.alteradas, meses: r.meses, linhas: [...new Set(alteracoes.map((a) => a.linha))].slice(0, 50) },
+    });
+    return r;
+  },
+
+  /**
+   * A referência do cenário pelo resultado realizado (12/10/2026): a DRE das competências fechadas de um exercício
+   * (o Consolidado e as cinco unidades, mês a mês) substitui a DRE do cenário; os meses sem competência fechada
+   * ficam vazios. As metas (indicadores) não mudam.
+   */
+  async referenciaRealizado(id: string, ano: number, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    const prisma = getPrismaClient();
+    const fechadas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
+    if (fechadas.length === 0) throw new CenarioError(400, `Nenhuma competência de ${ano} está fechada.`);
+    const mesDe = new Map(fechadas.map((f) => [f.id, f.mes]));
+    const rs = await prisma.resultadoApurado.findMany({
+      where: { competenciaId: { in: fechadas.map((f) => f.id) }, centroCustoId: null },
+      select: { competenciaId: true, linhaDREId: true, valor: true, unidadeNegocio: { select: { codigo: true } } },
+    });
+    const meses = fechadas.map((f) => String(f.mes).padStart(2, "0"));
+    const nomeArquivo = `Resultado realizado de ${ano} (${meses.length === 1 ? meses[0] : `${meses[0]} a ${meses[meses.length - 1]}`})`;
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.cenarioResultado.deleteMany({ where: { cenarioId: id } });
+        await gravarEmLotes(rs, (lote) =>
+          tx.cenarioResultado.createMany({
+            data: lote.map((r) => ({ cenarioId: id, visao: r.unidadeNegocio?.codigo ?? 0, linhaDREId: r.linhaDREId, mes: mesDe.get(r.competenciaId)!, valor: r.valor })),
+          }),
+        );
+        await recalcular(tx, id, fechadas.map((f) => f.mes), UNIDADES);
+        await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
+      },
+      { timeout: 120_000 },
+    );
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: "realizado", ano, meses } });
+    return this.obter(id, usuario);
   },
 
   /** Grava os lançamentos manuais de um indicador (os 12 meses; vazio apaga o mês). */

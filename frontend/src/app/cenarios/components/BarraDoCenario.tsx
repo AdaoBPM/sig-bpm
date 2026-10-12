@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 
+import { usePermissions } from "@/context/PermissionContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { cenariosService, rotuloMarcacao } from "../services/cenariosService";
@@ -13,6 +14,8 @@ import { cenariosService, rotuloMarcacao } from "../services/cenariosService";
 export const TELAS_DO_CENARIO = [
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
+  // A edição do cenário pela ferramenta (12/10/2026): só para quem edita os cenários.
+  { caminho: "editar", rotulo: "Editar", permissao: "cenarios:editar" },
 ];
 
 /** A rota de uma tela de cenário: o id e a tela. */
@@ -27,6 +30,7 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const lista = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
   const atual = lista.data?.find((c) => c.id === id);
   const marcacao = rotuloMarcacao(atual?.marcacao ?? null);
@@ -57,7 +61,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
         {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
-        {TELAS_DO_CENARIO.map((t) => {
+        {TELAS_DO_CENARIO.filter((t) => !t.permissao || hasPermission(t.permissao)).map((t) => {
           const ativa = t.caminho === tela;
           return (
             <li key={t.caminho} className="flex shrink-0 items-center">

@@ -67,7 +67,7 @@ export function CenariosContent() {
               em “Gravar Marcação”; a coluna Marcação mostra a atual. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
-            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome, a descrição e a visualização, e excluir. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
+            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar (a tela Editar: as configurações — nome, descrição, visualização e referência — e a DRE de cada unidade, sem precisar de planilha), e excluir. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário ou Importar Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
               têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). Embaixo do nome, a
@@ -175,7 +175,7 @@ export function CenariosContent() {
                     <button type="button" className={acao} title="Importar um arquivo neste cenário" aria-label={`Importar arquivo em ${c.nome}`} onClick={() => setDialogo({ tipo: "importar", c })}>
                       <Upload className="size-4" />
                     </button>
-                    <button type="button" className={acao} title="Editar o nome e a descrição" aria-label={`Editar ${c.nome}`} onClick={() => setDialogo({ tipo: "editar", c })}>
+                    <button type="button" className={acao} title="Editar o cenário (configurações e DRE)" aria-label={`Editar ${c.nome}`} onClick={() => router.push(`/cenarios/sinteticos/${c.id}/editar`)}>
                       <Pencil className="size-4" />
                     </button>
                     {/* O cenário marcado não se exclui: o ícone fica apagado, com o motivo na dica. */}

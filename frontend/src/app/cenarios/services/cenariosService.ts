@@ -88,6 +88,14 @@ export const cenariosService = {
         ...destino,
       })
     ).data.data,
+  /** Uma visão da DRE para a edição: todas as linhas e os doze meses; `editaveis` são as contas que se editam. */
+  edicao: async (id: string, visao: number) =>
+    (await api.get<{ data: Resultados & { editaveis: string[] } }>(`/proxy/cenarios/${id}/edicao`, { params: { visao } })).data.data,
+  /** Grava valores mensais de contas de uma unidade (1 a 5); os totais e o Consolidado se recalculam. */
+  gravarValores: async (id: string, visao: number, alteracoes: Array<{ linha: string; mes: number; valor: number }>) =>
+    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/edicao/valores`, { visao, alteracoes })).data.data,
+  /** A referência pelo resultado realizado: a DRE das competências fechadas do exercício substitui a do cenário. */
+  referenciaRealizado: async (id: string, ano: number) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano })).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
   indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
   salvarManual: async (id: string, nome: string, valores: Array<number | null>) => {
