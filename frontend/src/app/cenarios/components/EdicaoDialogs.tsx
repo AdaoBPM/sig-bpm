@@ -66,7 +66,7 @@ export function ReajusteDialog({
   rotulo: string;
   gravando: boolean;
   erro: string | null;
-  onAplicar: (novos: Array<{ linha: string; mes: number; valor: number }>) => void;
+  onAplicar: (novos: Array<{ linha: string; mes: number; valor: number }>, reajuste: { modo: Reajuste; valor: number }) => void;
   onFechar: () => void;
 }) {
   const [tipo, setTipo] = useState<Reajuste>("PERCENTUAL");
@@ -111,7 +111,7 @@ export function ReajusteDialog({
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={!ok || gravando} onClick={() => onAplicar(novos)}>
+          <Button type="button" className={botaoPrimario} disabled={!ok || gravando} onClick={() => onAplicar(novos, { modo: tipo, valor: x as number })}>
             {gravando ? "Aplicando…" : "Aplicar Reajuste"}
           </Button>
         </DialogFooter>
@@ -142,7 +142,8 @@ export function ValorDialog({
   atual: number;
   gravando: boolean;
   erro: string | null;
-  onGravar: (valor: number, replicar: boolean) => void;
+  /** O valor e, para o histórico, o reajuste informado (sem ele, o valor foi digitado direto). */
+  onGravar: (valor: number, replicar: boolean, reajuste: { modo: Reajuste; valor: number } | null) => void;
   onFechar: () => void;
 }) {
   const [tipo, setTipo] = useState<Reajuste>("PERCENTUAL");
@@ -233,7 +234,11 @@ export function ValorDialog({
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={!ok || gravando} onClick={() => onGravar(valorNovo as number, replicar)}>
+          <Button type="button" className={botaoPrimario} disabled={!ok || gravando} onClick={() => {
+              const r = lerNumero(reajuste);
+              onGravar(valorNovo as number, replicar, typeof r === "number" ? { modo: tipo, valor: r } : null);
+            }}
+          >
             {gravando ? "Gravando…" : "Gravar"}
           </Button>
         </DialogFooter>

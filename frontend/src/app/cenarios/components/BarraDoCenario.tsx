@@ -16,6 +16,8 @@ export const TELAS_DO_CENARIO = [
   { caminho: "configuracoes", rotulo: "Configurações", permissao: "cenarios:editar" },
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
+  // O histórico de reajustes do cenário (12/10/2026).
+  { caminho: "reajustes", rotulo: "Reajustes" },
 ];
 
 /** A rota de uma tela de cenário: o id e a tela. */

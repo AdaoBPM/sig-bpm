@@ -145,7 +145,7 @@ export function CenarioIndicadoresContent() {
       />
       <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={ABAS.map((a) => ({ chave: a.chave, rotulo: a.rotulo, contagem: contagem(a.chave) }))} />
       {aba === "metas" ? (
-        <p className="rounded-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+        <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           As Metas são o compilado dos indicadores: os Indicadores de Resultados (que saem da DRE do cenário) e os Indicadores Manuais, com as
           eficiências calculadas e os importados (liberação de projetos, GME). Não se editam aqui: mudam com a DRE, na tela Resultados, e com os
           Indicadores Manuais.

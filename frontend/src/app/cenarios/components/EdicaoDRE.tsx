@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import { TabelaResultados } from "@/app/relatorios/resultados/ResultadosContent";
 import { mensagemDeErro, type LinhaResultado } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService } from "../services/cenariosService";
+import { cenariosService, type OrigemDaGravacao } from "../services/cenariosService";
 import { botaoPrimario, Erro } from "./CenarioDialog";
 import { ReajusteDialog, ValorDialog } from "./EdicaoDialogs";
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
+/** Os botões da barra de marcação (12/10/2026): cinza-claro, discretos ao lado do Reajustar Marcados. */
+const botaoCinza = "rounded-sm border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-900 hover:bg-gray-200";
 
 /**
  * Uma aba da DRE do cenário. Nas unidades, as contas se editam: a caixa de cada linha e de cada mês marca valores, e
@@ -27,7 +29,8 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
   const [reajuste, setReajuste] = useState<string | null>(null);
   const [valor, setValor] = useState<{ l: LinhaResultado; i: number } | null>(null);
   const gravar = useMutation({
-    mutationFn: (alteracoes: Array<{ linha: string; mes: number; valor: number }>) => cenariosService.gravarValores(id, visao, alteracoes),
+    mutationFn: ({ alteracoes, origem }: { alteracoes: Array<{ linha: string; mes: number; valor: number }>; origem: OrigemDaGravacao }) =>
+      cenariosService.gravarValores(id, visao, alteracoes, origem),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios", id] });
       // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Realizados muda.
@@ -52,28 +55,28 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
   return (
     <div className="space-y-3">
       {consolidado ? (
-        <p className="rounded-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+        <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           O Consolidado soma as contas das unidades, e os totais saem da Estrutura da DRE: edite os valores nas abas Matriz, Filial, Serviços, Despesas +
           Extra e RN.
         </p>
       ) : (
-        <div className="flex flex-wrap items-center gap-3 rounded-sm border border-gray-200 bg-white px-4 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm">
           <span className="text-gray-700">
             <span className="font-bold text-gray-900">{marcados.length}</span> valor(es) marcado(s) · {linhas.size} conta(s) × {meses.size} mês(es)
           </span>
-          <button type="button" className="text-xs font-medium text-gray-900 underline underline-offset-2" onClick={() => setMeses(todosOsMeses ? new Set() : new Set(dados.meses.map((_, i) => i)))}>
+          <button type="button" className={botaoCinza} onClick={() => setMeses(todosOsMeses ? new Set() : new Set(dados.meses.map((_, i) => i)))}>
             {todosOsMeses ? "Desmarcar os Meses" : "Marcar Todos os Meses"}
           </button>
           {linhas.size || meses.size ? (
             <button
               type="button"
-              className="text-xs font-medium text-gray-900 underline underline-offset-2"
+              className={botaoCinza}
               onClick={() => {
                 setLinhas(new Set());
                 setMeses(new Set());
               }}
             >
-              Limpar Marcação
+              Limpar Seleção
             </button>
           ) : null}
           <Button type="button" className={`${botaoPrimario} ml-auto`} disabled={marcados.length === 0} onClick={() => setReajuste(nome)}>
@@ -120,7 +123,7 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
           rotulo={`${reajuste}. O reajuste vale para todas as contas e meses marcados.`}
           gravando={gravar.isPending}
           erro={erroGravar}
-          onAplicar={(novos) => gravar.mutate(novos)}
+          onAplicar={(novos, r) => gravar.mutate({ alteracoes: novos, origem: { tipo: "MARCADOS", modo: r.modo, reajuste: r.valor, replicado: false } })}
           onFechar={() => {
             setReajuste(null);
             gravar.reset();
@@ -135,8 +138,11 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
           atual={valor.l.meses[valor.i]?.valor ?? 0}
           gravando={gravar.isPending}
           erro={erroGravar}
-          onGravar={(v, replicar) =>
-            gravar.mutate(dados.meses.slice(valor.i, replicar ? dados.meses.length : valor.i + 1).map((m) => ({ linha: valor.l.codigo, mes: m.mes, valor: v })))
+          onGravar={(v, replicar, r) =>
+            gravar.mutate({
+              alteracoes: dados.meses.slice(valor.i, replicar ? dados.meses.length : valor.i + 1).map((m) => ({ linha: valor.l.codigo, mes: m.mes, valor: v })),
+              origem: { tipo: "VALOR", modo: r ? r.modo : "DIGITADO", reajuste: r ? r.valor : null, replicado: replicar },
+            })
           }
           onFechar={() => {
             setValor(null);

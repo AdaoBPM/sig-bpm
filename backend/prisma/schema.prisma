@@ -1912,6 +1912,7 @@ model Cenario {
 
   resultados  CenarioResultado[]
   indicadores CenarioIndicador[]
+  reajustes   CenarioReajuste[]
 
   @@unique([marcacao])
   @@map("cenarios")
@@ -1947,6 +1948,42 @@ model CenarioIndicador {
 
   @@id([cenarioId, nome, mes])
   @@map("cenarios_indicadores")
+}
+
+/// O histórico de reajustes de um cenário (12/10/2026): cada gravação de valores da DRE (o reajuste dos marcados ou a
+/// edição de um valor) e cada carga de referência (arquivo ou resultado realizado), com quem, quando, o quê e as somas
+/// antes e depois. A tela Reajustes do cenário mostra o histórico.
+model CenarioReajuste {
+  id          String   @id @default(uuid())
+  cenarioId   String   @map("cenario_id")
+  criadoEm    DateTime @default(now()) @map("criado_em")
+  usuarioId   String?  @map("usuario_id")
+  usuarioNome String   @map("usuario_nome")
+  /// MARCADOS (o reajuste dos valores marcados), VALOR (a edição de um valor) ou REFERENCIA (a carga de um arquivo ou
+  /// do resultado realizado).
+  tipo        String
+  /// PERCENTUAL, ABSOLUTO ou DIGITADO (o valor digitado direto); nulo na referência.
+  modo        String?
+  /// O reajuste informado: o percentual (5 = 5%) ou o valor somado; nulo no valor digitado e na referência.
+  reajuste    Decimal?
+  /// A visão da DRE (1 a 5); nula na referência.
+  visao       Int?
+  /// A edição de um valor replicada aos meses seguintes.
+  replicado   Boolean  @default(false)
+  /// As contas alteradas: [{ codigo, descricao }].
+  contas      Json?
+  /// Os meses alterados (1 a 12).
+  meses       Json?
+  valores     Int      @default(0)
+  somaAntes   Decimal? @map("soma_antes")
+  somaDepois  Decimal? @map("soma_depois")
+  /// A descrição da referência carregada (o arquivo, ou o realizado e o período).
+  descricao   String?
+
+  cenario Cenario @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+
+  @@index([cenarioId, criadoEm])
+  @@map("cenarios_reajustes")
 }
 
 /// Um item de requisição do mês (aba Requisições (Lista) do LISTAS REALIZADO (RESULTADOS), 11/10/2026): o extrato de

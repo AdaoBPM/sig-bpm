@@ -43,6 +43,8 @@ export const MARCACOES: Record<MarcacaoCenario, string> = {
 
 /** Quem pede: `admin` é o Administrador (Editar no Controle de Usuários), que vê também os cenários particulares. */
 type Usuario = { id: string; nome: string; admin?: boolean };
+/** O que a tela fez numa gravação de valores (o histórico de reajustes, 12/10/2026). */
+export type OrigemDaGravacao = { tipo: "MARCADOS" | "VALOR"; modo: "PERCENTUAL" | "ABSOLUTO" | "DIGITADO"; reajuste: number | null; replicado: boolean };
 /** As chamadas internas (testes, scripts) veem todos os cenários. */
 const SISTEMA: Usuario = { id: "", nome: "Sistema", admin: true };
 
@@ -375,6 +377,9 @@ export const cenariosService = {
       entidadeId: cenario.id,
       metadados: { arquivo: dados.nomeArquivo, hash: dados.hash, novo: !p.cenario, visoes: p.visoes.map((v) => v.aba), metas: p.metas?.aba ?? null },
     });
+    await prisma.cenarioReajuste.create({
+      data: { cenarioId: cenario.id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: `Arquivo ${dados.nomeArquivo}` },
+    });
     return { cenario: await this.obter(cenario.id, usuario), previa: { hash: dados.hash, nomeArquivo: dados.nomeArquivo, ...p } };
   },
 
@@ -462,8 +467,11 @@ export const cenariosService = {
     };
   },
 
-  /** Grava valores mensais de contas de uma unidade e recalcula os totais e o Consolidado (12/10/2026). */
-  async gravarValores(id: string, visao: number, alteracoes: Alteracao[], usuario: Usuario) {
+  /**
+   * Grava valores mensais de contas de uma unidade e recalcula os totais e o Consolidado (12/10/2026). `origem` diz o
+   * que a tela fez — o reajuste dos marcados ou a edição de um valor, com o reajuste — para o histórico de reajustes.
+   */
+  async gravarValores(id: string, visao: number, alteracoes: Alteracao[], usuario: Usuario, origem?: OrigemDaGravacao) {
     const c = await obterOuFalhar(id, usuario);
     let r: Awaited<ReturnType<typeof gravarValores>>;
     try {
@@ -472,15 +480,32 @@ export const cenariosService = {
       if (error instanceof ErroEdicao) throw new CenarioError(400, error.message);
       throw error;
     }
+    await getPrismaClient().cenarioReajuste.create({
+      data: {
+        cenarioId: id,
+        usuarioId: usuario.id || null,
+        usuarioNome: usuario.nome,
+        tipo: origem?.tipo ?? "VALOR",
+        modo: origem?.modo ?? "DIGITADO",
+        reajuste: origem?.reajuste ?? null,
+        visao,
+        replicado: !!origem?.replicado,
+        contas: r.contas,
+        meses: r.meses,
+        valores: r.alteradas,
+        somaAntes: r.somaAntes,
+        somaDepois: r.somaDepois,
+      },
+    });
     await auditar({
       usuarioId: usuario.id,
       usuarioNome: usuario.nome,
       acao: "ALTERACAO",
       entidade: "cenario",
       entidadeId: id,
-      metadados: { cenario: c.nome, visao, valores: r.alteradas, meses: r.meses, linhas: [...new Set(alteracoes.map((a) => a.linha))].slice(0, 50) },
+      metadados: { cenario: c.nome, visao, valores: r.alteradas, meses: r.meses, linhas: r.contas.map((x) => x.codigo).slice(0, 50), origem: origem ?? null },
     });
-    return r;
+    return { alteradas: r.alteradas, meses: r.meses };
   },
 
   /**
@@ -554,7 +579,22 @@ export const cenariosService = {
       { timeout: 120_000 },
     );
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: media ? "media do realizado" : "realizado", ano, meses, indicadores: indicadores.length } });
+    await prisma.cenarioReajuste.create({ data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: nomeArquivo } });
     return this.obter(id, usuario);
+  },
+
+  /** O histórico de reajustes do cenário (12/10/2026), do mais recente ao mais antigo. */
+  async reajustes(id: string, usuario: Usuario = SISTEMA) {
+    await obterOuFalhar(id, usuario);
+    const rs = await getPrismaClient().cenarioReajuste.findMany({ where: { cenarioId: id }, orderBy: { criadoEm: "desc" } });
+    return rs.map((r) => ({
+      ...r,
+      reajuste: r.reajuste === null ? null : Number(r.reajuste),
+      somaAntes: r.somaAntes === null ? null : Number(r.somaAntes),
+      somaDepois: r.somaDepois === null ? null : Number(r.somaDepois),
+      contas: (r.contas ?? []) as Array<{ codigo: string; descricao: string }>,
+      meses: (r.meses ?? []) as number[],
+    }));
   },
 
   /** Grava os lançamentos manuais de um indicador (os 12 meses; vazio apaga o mês). */

@@ -100,6 +100,17 @@ export async function gravarValores(cenarioId: string, visao: number, alteracoes
   // A última alteração de cada conta e mês vale.
   const finais = new Map(alteracoes.map((a) => [`${a.linha}|${a.mes}`, a]));
   const meses = [...new Set([...finais.values()].map((a) => a.mes))].sort((a, b) => a - b);
+  // Os valores de antes, para o histórico de reajustes (a soma antes e depois).
+  const ids = [...new Set([...finais.values()].map((a) => porCodigo.get(a.linha)!.id))];
+  const anteriores = await getPrismaClient().cenarioResultado.findMany({ where: { cenarioId, visao, mes: { in: meses }, linhaDREId: { in: ids } }, select: { linhaDREId: true, mes: true, valor: true } });
+  const antes = new Map(anteriores.map((r) => [`${r.linhaDREId}|${r.mes}`, Number(r.valor)]));
+  let somaAntes = 0;
+  let somaDepois = 0;
+  for (const a of finais.values()) {
+    somaAntes += antes.get(`${porCodigo.get(a.linha)!.id}|${a.mes}`) ?? 0;
+    somaDepois += a.valor;
+  }
+  const contasAlteradas = [...new Set([...finais.values()].map((a) => a.linha))].map((c) => ({ codigo: c, descricao: porCodigo.get(c)!.descricao }));
   await getPrismaClient().$transaction(
     async (tx) => {
       for (const a of finais.values()) {
@@ -115,7 +126,7 @@ export async function gravarValores(cenarioId: string, visao: number, alteracoes
     },
     { timeout: 60_000 },
   );
-  return { alteradas: finais.size, meses };
+  return { alteradas: finais.size, meses, contas: contasAlteradas, somaAntes, somaDepois };
 }
 
 export class ErroEdicao extends Error {}

@@ -128,10 +128,24 @@ export const cenariosController = {
       .object({
         visao: z.number().int().min(1).max(5),
         alteracoes: z.array(z.object({ linha: z.string().min(1).max(200), mes: z.number().int().min(1).max(12), valor: z.number().finite() })).min(1).max(5000),
+        origem: z
+          .object({
+            tipo: z.enum(["MARCADOS", "VALOR"]),
+            modo: z.enum(["PERCENTUAL", "ABSOLUTO", "DIGITADO"]),
+            reajuste: z.number().finite().nullable(),
+            replicado: z.boolean(),
+          })
+          .optional(),
       })
       .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Valores inválidos." });
-    return responder(response, () => cenariosService.gravarValores(c, corpo.data.visao, corpo.data.alteracoes, usuario(request)));
+    return responder(response, () => cenariosService.gravarValores(c, corpo.data.visao, corpo.data.alteracoes, usuario(request), corpo.data.origem));
+  },
+
+  /** O histórico de reajustes do cenário. */
+  reajustes(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.reajustes(c, usuario(request))) : undefined;
   },
 
   /** A referência pelo resultado realizado: { ano, modo: MES_A_MES | MEDIA, de?, ate? } (as competências fechadas dele). */

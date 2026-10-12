@@ -36,6 +36,26 @@ export type Cenario = {
   indicadores: number;
 };
 
+/** O que a tela fez numa gravação de valores (o histórico de reajustes). */
+export type OrigemDaGravacao = { tipo: "MARCADOS" | "VALOR"; modo: "PERCENTUAL" | "ABSOLUTO" | "DIGITADO"; reajuste: number | null; replicado: boolean };
+/** Uma linha do histórico de reajustes. */
+export type ReajusteDoCenario = {
+  id: string;
+  criadoEm: string;
+  usuarioNome: string;
+  tipo: "MARCADOS" | "VALOR" | "REFERENCIA";
+  modo: "PERCENTUAL" | "ABSOLUTO" | "DIGITADO" | null;
+  reajuste: number | null;
+  visao: number | null;
+  replicado: boolean;
+  contas: Array<{ codigo: string; descricao: string }>;
+  meses: number[];
+  valores: number;
+  somaAntes: number | null;
+  somaDepois: number | null;
+  descricao: string | null;
+};
+
 /** Quantos valores entram, mudam e saem do cenário. */
 export type Mudancas = { novas: number; alteradas: number; removidas: number; semMudanca: boolean };
 /** A prévia da importação: o que o arquivo traz, aba por aba, e o que muda no cenário. */
@@ -92,8 +112,10 @@ export const cenariosService = {
   edicao: async (id: string, visao: number) =>
     (await api.get<{ data: Resultados & { editaveis: string[] } }>(`/proxy/cenarios/${id}/edicao`, { params: { visao } })).data.data,
   /** Grava valores mensais de contas de uma unidade (1 a 5); os totais e o Consolidado se recalculam. */
-  gravarValores: async (id: string, visao: number, alteracoes: Array<{ linha: string; mes: number; valor: number }>) =>
-    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/edicao/valores`, { visao, alteracoes })).data.data,
+  gravarValores: async (id: string, visao: number, alteracoes: Array<{ linha: string; mes: number; valor: number }>, origem?: OrigemDaGravacao) =>
+    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/edicao/valores`, { visao, alteracoes, origem })).data.data,
+  /** O histórico de reajustes do cenário, do mais recente ao mais antigo. */
+  reajustes: async (id: string) => (await api.get<{ data: ReajusteDoCenario[] }>(`/proxy/cenarios/${id}/reajustes`)).data.data,
   /** A referência pelo resultado realizado: a DRE das competências fechadas do exercício substitui a do cenário. */
   /** Mês a mês (os meses fechados) ou a média de um período (de–ate) replicada nos doze meses. */
   referenciaRealizado: async (id: string, ano: number, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) =>
