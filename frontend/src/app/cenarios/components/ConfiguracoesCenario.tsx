@@ -220,11 +220,28 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
           <DialogContent className="rounded-sm sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Carregar Resultado Realizado</DialogTitle>
-              <DialogDescription>
-                {modo === "MEDIA"
-                  ? `A DRE do cenário (todas as abas e os doze meses) é substituída pela média do realizado de ${ano}, de ${MESES[de - 1]} a ${MESES[ate - 1]} (${periodo.length} mês(es)), replicada em todos os meses. Os indicadores do cenário também ficam com as médias realizadas do período em todos os meses (os que saem da DRE se recalculam das contas médias).`
-                  : `A DRE do cenário (todas as abas e os doze meses) é substituída pela das competências fechadas de ${ano} (${mesesFechados.map(abrev).join(", ")}), cada uma no seu mês. Os indicadores do cenário também são substituídos pelos realizados desses meses.`}{" "}
-                Os valores editados e os lançamentos manuais do cenário se perdem.
+              {/* Uma frase por item, com a bolinha, como nos painéis explicativos (12/10/2026). */}
+              <DialogDescription render={<div />}>
+                <ul className="list-disc space-y-1.5 pl-5">
+                  {modo === "MEDIA" ? (
+                    <>
+                      <li>
+                        A DRE do cenário (todas as abas e os doze meses) é substituída pela média do realizado de {ano}, de {MESES[de - 1]} a {MESES[ate - 1]} (
+                        {periodo.length} mês(es)), replicada em todos os meses.
+                      </li>
+                      <li>Os indicadores do cenário também ficam com as médias realizadas do período em todos os meses (os que saem da DRE se recalculam das contas médias).</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        A DRE do cenário (todas as abas e os doze meses) é substituída pela das competências fechadas de {ano} ({mesesFechados.map(abrev).join(", ")}), cada uma
+                        no seu mês.
+                      </li>
+                      <li>Os indicadores do cenário também são substituídos pelos realizados desses meses.</li>
+                    </>
+                  )}
+                  <li>Os valores editados e os lançamentos manuais do cenário se perdem.</li>
+                </ul>
               </DialogDescription>
             </DialogHeader>
             <Erro erro={carregar.isError ? mensagemDeErro(carregar.error, "Não foi possível carregar o realizado.") : null} />
