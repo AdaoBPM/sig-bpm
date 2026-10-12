@@ -44,6 +44,12 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
   }
 }
 
+/**
+ * Resultados Realizados mostra só as competências fechadas (11/10/2026). A etapa Indicadores do Fechamento Mensal usa
+ * as mesmas rotas com ?etapa=1 e vê o mês aberto, se o usuário tem o Fechamento Mensal (dre:ler).
+ */
+const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && request.user!.permissions.includes("dre:ler"));
+
 /** ?ano= e ?ate= (o último mês; sem ele, o último apurado). */
 function periodo(request: Request, response: Response) {
   const ano = anoSchema.safeParse(request.query.ano);
@@ -65,10 +71,10 @@ export const relatoriosController = {
     if (!v.success || !g.success) return response.status(400).json({ error: "Visão inválida" });
     const acesso = request.user!.acesso;
     if (v.data === "centros") {
-      return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso) : resultadosService.listarCentros(p.ano, p.ate, acesso)));
+      return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso, true) : resultadosService.listarCentros(p.ano, p.ate, acesso, true)));
     }
     const visao = v.data as 0 | 1 | 2 | 3 | 4 | 5;
-    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso));
+    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso, true));
   },
 
   /**
@@ -101,19 +107,19 @@ export const relatoriosController = {
     if (!formato.success) return response.status(400).json({ error: "Formato inválido: use xlsx ou pdf." });
     // ?escopo=mes: só o mês ?ate= (a etapa Indicadores do Fechamento Mensal).
     const apenasMes = request.query.escopo === "mes";
-    return enviarArquivo(request, response, "indicadores", () => exportacaoRelatoriosService.indicadores(p.ano, p.ate, formato.data, request.user!.nome, apenasMes));
+    return enviarArquivo(request, response, "indicadores", () => exportacaoRelatoriosService.indicadores(p.ano, p.ate, formato.data, request.user!.nome, apenasMes, somenteFechadas(request)));
   },
 
   async indicadores(request: Request, response: Response) {
     const p = periodo(request, response);
     if (!p) return;
-    return responder(response, () => indicadoresService.listar(p.ano, p.ate));
+    return responder(response, () => indicadoresService.listar(p.ano, p.ate, somenteFechadas(request)));
   },
 
   /** O Painel de Bordo do mês ?ate= (sem ele, o último apurado). */
   async painel(request: Request, response: Response) {
     const p = periodo(request, response);
     if (!p) return;
-    return responder(response, () => painelService.painel(p.ano, p.ate));
+    return responder(response, () => painelService.painel(p.ano, p.ate, true));
   },
 };

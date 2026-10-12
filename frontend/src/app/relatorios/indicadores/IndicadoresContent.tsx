@@ -24,7 +24,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
   useRegistrarAcessoTela(
     periodoFixo ? `/competencias/${periodoFixo.ano}-${String(periodoFixo.mes).padStart(2, "0")}/indicadores` : "/relatorios/indicadores",
   );
-  const exercicios = useExercicios();
+  const exercicios = useExercicios(!periodoFixo);
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const ano = periodoFixo?.ano ?? anoEscolhido ?? exercicios.anos[0];
@@ -32,7 +32,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
   const ate = periodoFixo ? periodoFixo.mes : ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
   const consulta = useQuery({
     queryKey: ["relatorios", "indicadores", ano, ate],
-    queryFn: () => relatoriosService.indicadores(ano!, ate),
+    queryFn: () => relatoriosService.indicadores(ano!, ate, !!periodoFixo),
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
@@ -51,7 +51,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             <li>
               {periodoFixo
                 ? "Os valores do mês desta competência; troque o mês no seletor da barra de etapas. Num mês não apurado, os indicadores da DRE ficam sem valor."
-                : "Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora."}
+                : "Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora)."}
             </li>
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
             {periodoFixo ? null : (
@@ -75,7 +75,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               INDICADORES DE RESULTADO (aba Realizado (SIG)). O catálogo — grupo, numeração, nome, comportamento, unidade, a fórmula de cada indicador e a forma do acumulado — fica em Cadastros da Controladoria / Estrutura dos Indicadores, onde se edita.
             </p>
             <p>
-              Os valores saem da DRE apurada (congelada) de cada competência, dos volumes da apuração (projetos liberados) e dos indicadores
+              Os valores saem da DRE apurada (congelada) de cada competência{periodoFixo ? "" : " fechada (as abertas e em conferência não entram em Resultados Realizados)"}, dos volumes da apuração (projetos liberados) e dos indicadores
               importados no fechamento: a aba Indicadores (Admin.) do LISTAS REALIZADO (OPERAÇÃO) — quadro de lotação, fluxo de caixa,
               inadimplência, turnover, vagas e acidentes — e a aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL — vendas, receita
               vendida, margem, demanda e mix. O acumulado soma os meses ou, nos indicadores de razão (%, R$/m³, eficiências, margem das vendas,
@@ -124,7 +124,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                     chave: "todos",
                     excel: "Todos os Indicadores",
                     pdf: "Todos os Indicadores",
-                    params: periodoFixo ? { ano, ate, escopo: "mes" } : { ano, ate },
+                    params: periodoFixo ? { ano, ate, escopo: "mes", etapa: 1 } : { ano, ate },
                   },
                 ]}
               />
@@ -136,7 +136,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
       {!periodoFixo && exercicios.carregando ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : !ano || !ate ? (
-        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">{periodoFixo ? "Nenhuma competência apurada ainda." : "Nenhuma competência fechada ainda."}</p>
       ) : consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os indicadores.")}</p>

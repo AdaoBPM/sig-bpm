@@ -57,11 +57,17 @@ export function encadearMeses<T extends DadosDoMes | null>(dados: T[]): T[] {
 }
 
 export const indicadoresService = {
-  /** Os indicadores do exercício, mês a mês até `ate`, com o acumulado. */
-  async listar(ano: number, ate?: number) {
-    const { ultimo, meses } = await mesesDoExercicio(ano, ate);
+  /**
+   * Os indicadores do exercício, mês a mês até `ate`, com o acumulado. Com `somenteFechadas` (Resultados Realizados),
+   * só os meses de competência fechada têm valor.
+   */
+  async listar(ano: number, ate?: number, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
+    const fechados = new Set(meses.filter((m) => m.competenciaId !== null).map((m) => m.mes));
     const competencias = new Map(
-      (await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } })).map((c) => [c.mes, c.id]),
+      (await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } }))
+        .filter((c) => !somenteFechadas || fechados.has(c.mes))
+        .map((c) => [c.mes, c.id]),
     );
     // O orçado de cada mês, para o gráfico do indicador, como no Painel de Bordo: o cenário Orçamento Empresarial (sem ele, zero).
     const orcamento = await orcamentoDoExercicio(ano);

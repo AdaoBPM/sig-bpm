@@ -29,15 +29,19 @@ const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano)
 export type LinhaEstrutura = { id: string; codigo: string; tipo: string; grupo: string; grupoSigla: string; descricao: string };
 type Celula = { valor: number | null; pct: number | null; unitario: number | null };
 
-/** Os meses do exercício até `ate`, com a competência apurada de cada um (ou nenhuma). */
-export async function mesesDoExercicio(ano: number, ate?: number) {
+/**
+ * Os meses do exercício até `ate`, com a competência apurada de cada um (ou nenhuma). Com `somenteFechadas` (as telas
+ * de Resultados Realizados, 11/10/2026), só as competências fechadas contam: os meses abertos ou em conferência ficam
+ * vazios, e sem `ate` o último mês é o último fechado.
+ */
+export async function mesesDoExercicio(ano: number, ate?: number, somenteFechadas = false) {
   const competencias = await getPrismaClient().competencia.findMany({
     where: { ano },
-    select: { id: true, mes: true, apuradaEm: true },
+    select: { id: true, mes: true, apuradaEm: true, status: true },
     orderBy: { mes: "asc" },
   });
-  const apuradas = competencias.filter((c) => c.apuradaEm !== null);
-  if (apuradas.length === 0) throw new RelatorioError(404, `Nenhuma competência de ${ano} foi apurada.`);
+  const apuradas = competencias.filter((c) => c.apuradaEm !== null && (!somenteFechadas || c.status === "FECHADA"));
+  if (apuradas.length === 0) throw new RelatorioError(404, `Nenhuma competência de ${ano} foi ${somenteFechadas ? "fechada" : "apurada"}.`);
   const ultimo = ate ?? apuradas[apuradas.length - 1].mes;
   return {
     ultimo,
@@ -152,8 +156,8 @@ export function montar(
 
 export const resultadosService = {
   /** Uma visão da DRE (0 Consolidado, 1..5 as unidades) mês a mês, até o mês `ate`. */
-  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL) {
-    const { ultimo, meses } = await mesesDoExercicio(ano, ate);
+  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const competencias = meses.map((m) => m.competenciaId);
     const [linhas, valores] = await Promise.all([estrutura(), valoresDaVisao(competencias, visao)]);
     const consolidado = basesDoConsolidado(visao) ? await valoresDaVisao(competencias, 0) : valores;
@@ -185,8 +189,8 @@ export const resultadosService = {
   },
 
   /** Os agrupamentos de centros de custo com valor em algum mês, com o total do exercício (o da tabela de cada um). */
-  async listarCentros(ano: number, ate?: number, acesso: Acesso = ACESSO_TOTAL) {
-    const { ultimo, meses } = await mesesDoExercicio(ano, ate);
+  async listarCentros(ano: number, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const grupos = new Map<string, { departamentos: Set<string>; total: number }>();
     for (const m of meses) {
       if (!m.competenciaId) continue;
@@ -211,8 +215,8 @@ export const resultadosService = {
    * Um agrupamento de centros de custo mês a mês: em cada mês, o recorte da
    * tela da DRE (linhasDoCentro); as bases do % e do R$/m³ são as do Consolidado.
    */
-  async centros(ano: number, grupo: string, ate?: number, acesso: Acesso = ACESSO_TOTAL) {
-    const { ultimo, meses } = await mesesDoExercicio(ano, ate);
+  async centros(ano: number, grupo: string, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const competencias = meses.map((m) => m.competenciaId);
     const [linhas, consolidado] = await Promise.all([estrutura(), valoresDaVisao(competencias, 0)]);
     // Os centros do agrupamento com lançamento em algum mês (o painel explicativo, como na DRE).

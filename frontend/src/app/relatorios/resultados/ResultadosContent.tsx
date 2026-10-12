@@ -353,7 +353,7 @@ export function ResultadosContent() {
         titulo="Resultados"
         comoUsar={
           <ul>
-            <li>Escolha o exercício e o mês até onde ver; os meses seguintes e os não apurados ficam de fora.</li>
+            <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
             <li>Escolha a visão nas abas: Consolidado, cada unidade ou Centros de Custo (com a lista dos centros à esquerda).</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. O mês de referência (o último) e o total do exercício trazem também o valor por m³.</li>
@@ -377,7 +377,7 @@ export function ResultadosContent() {
             <p>
               As visões da DRE mês a mês no exercício, como as abas Resultados do BASE REALIZADO (RESULTADOS): o valor e a participação (%) de
               cada mês e o total do exercício; o mês de referência e o total trazem também o valor unitário (R$/m³). Os valores são os apurados (congelados) de cada
-              competência.
+              competência fechada: as abertas e em conferência não entram em Resultados Realizados.
             </p>
             <p>
               A participação é sobre a ROB nas receitas e nos impostos; sobre a Receita Líquida do Pré-Fabricado nos custos de produção
@@ -408,7 +408,7 @@ export function ResultadosContent() {
       {exercicios.carregando ? (
         <Carregando />
       ) : !ano || !ate ? (
-        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência fechada ainda.</p>
       ) : (
         <>
           <div className="flex items-end gap-3">

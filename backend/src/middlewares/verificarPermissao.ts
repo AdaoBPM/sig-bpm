@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { getPrismaClient } from "../config/prisma.js";
+
 export function verificarPermissao(permission: string) {
   return (request: Request, response: Response, next: NextFunction) => {
     const permissions = request.user?.permissions ?? [];
@@ -28,6 +30,25 @@ export function verificarAlgumaPermissao(...permissoes: string[]) {
  * (com o extrato das contas) mostram os mesmos números; basta um dos dois grupos.
  */
 export const lerResultados = verificarAlgumaPermissao("dre:ler", "resultados:ler");
+
+/**
+ * A DRE de um mês (/competencias/:anoMes/dre…): com o Fechamento Mensal (dre:ler), qualquer mês; só com os Resultados
+ * Realizados, só as competências fechadas, que é o que aquelas telas mostram (11/10/2026).
+ */
+export async function lerDREDoMes(request: Request, response: Response, next: NextFunction) {
+  const tem = request.user?.permissions ?? [];
+  if (tem.includes("dre:ler")) return next();
+  if (!tem.includes("resultados:ler")) return response.status(403).json({ error: "Sem permissão para esta ação" });
+  const m = /^(\d{4})-(\d{2})$/.exec(String(request.params.anoMes ?? ""));
+  if (!m) return response.status(400).json({ error: "Competência inválida." });
+  try {
+    const c = await getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano: Number(m[1]), mes: Number(m[2]) } }, select: { status: true } });
+    if (c?.status !== "FECHADA") return response.status(403).json({ error: "Os Resultados Realizados mostram só as competências fechadas." });
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
 
 /**
  * O grupo do menu de cada cadastro (11/10/2026): os Cadastros da Apuração e os da Controladoria têm permissões

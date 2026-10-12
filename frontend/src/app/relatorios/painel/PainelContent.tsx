@@ -230,7 +230,7 @@ export function PainelContent() {
         comoUsar={
           <ul>
             <li>
-              Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência; o acumulado vai de janeiro até ele), o Tipo
+              Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o acumulado vai de janeiro até ele), o Tipo
               dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador (o Tipo vale também para o gráfico do indicador em Indicadores).
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
@@ -256,7 +256,7 @@ export function PainelContent() {
               BPM 2026 - INDICADORES DE RESULTADO, com os gráficos mês a mês no padrão dos da planilha (realizado em amarelo-ouro, meta em preto).
             </p>
             <p>
-              O realizado sai dos mesmos valores da tela Indicadores: a DRE apurada, os volumes da apuração e os indicadores importados (ou
+              O realizado sai dos mesmos valores da tela Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
               digitados nas Listas Operacionais). O orçado sai das Metas Orçadas do cenário marcado como Orçamento Empresarial no exercício
               (Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem cenário marcado no
               exercício, ou sem o valor no cenário, o orçado é zero.
@@ -310,7 +310,7 @@ export function PainelContent() {
       {exercicios.carregando ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : !ano || !ate ? (
-        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência fechada ainda.</p>
       ) : consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar o painel.")}</p>

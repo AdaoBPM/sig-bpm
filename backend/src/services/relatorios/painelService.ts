@@ -45,9 +45,13 @@ export const painelService = {
    * 11/10/2026). O acumulado vai de janeiro ao mês; os meses que o cenário não
    * tem vão em `mesesSemMeta`.
    */
-  async painel(ano: number, ate?: number) {
-    const { ultimo, meses } = await mesesDoExercicio(ano, ate);
-    const competencias = await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } });
+  async painel(ano: number, ate?: number, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
+    // Com `somenteFechadas` (Resultados Realizados), só os meses de competência fechada têm valor.
+    const fechados = new Set(meses.filter((m) => m.competenciaId !== null).map((m) => m.mes));
+    const competencias = (await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } })).filter(
+      (c) => !somenteFechadas || fechados.has(c.mes),
+    );
     const porMes = new Map(competencias.map((c) => [c.mes, c]));
     const orcamento = await orcamentoDoExercicio(ano);
     const dados = encadearMeses(

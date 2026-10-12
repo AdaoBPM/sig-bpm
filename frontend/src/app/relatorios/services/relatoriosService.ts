@@ -95,8 +95,9 @@ export const relatoriosService = {
     (await api.get<{ data: CentrosResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros" } })).data.data,
   centro: async (ano: number, ate: number | undefined, grupo: string) =>
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros", grupo } })).data.data,
-  indicadores: async (ano: number, ate: number | undefined) =>
-    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: periodo(ano, ate) })).data.data,
+  /** `etapa`: a etapa Indicadores do Fechamento Mensal, que vê o mês aberto; sem ela, só as competências fechadas. */
+  indicadores: async (ano: number, ate: number | undefined, etapa = false) =>
+    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: { ...periodo(ano, ate), ...(etapa ? { etapa: 1 } : {}) } })).data.data,
   painel: async (ano: number, ate: number | undefined) =>
     (await api.get<{ data: Painel }>("/proxy/relatorios/painel", { params: periodo(ano, ate) })).data.data,
 };

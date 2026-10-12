@@ -51,15 +51,16 @@ async function identificar(ano: number, ate: number, usuarioNome: string) {
 }
 type Identificacao = Awaited<ReturnType<typeof identificar>>;
 
+// A exportação de Resultados é a tela de Resultados Realizados: só as competências fechadas (11/10/2026).
 async function blocos(ano: number, ate: number | undefined, escopo: EscopoResultados, acesso: Acesso): Promise<Bloco[]> {
   if (escopo.tipo === "visao") {
     const v = VISOES.find((x) => x.visao === escopo.visao)!;
-    return [{ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate) }];
+    return [{ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) }];
   }
-  if (escopo.tipo === "unidades") return Promise.all(VISOES.map(async (v) => ({ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate) })));
-  const grupos = escopo.tipo === "centro" ? [escopo.grupo] : (await resultadosService.listarCentros(ano, ate, acesso)).grupos.map((g) => g.grupo);
+  if (escopo.tipo === "unidades") return Promise.all(VISOES.map(async (v) => ({ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) })));
+  const grupos = escopo.tipo === "centro" ? [escopo.grupo] : (await resultadosService.listarCentros(ano, ate, acesso, true)).grupos.map((g) => g.grupo);
   const r: Bloco[] = [];
-  for (const g of grupos) r.push({ nome: g, titulo: `Centro de Custo ${g}`, dados: await resultadosService.centros(ano, g, ate, acesso) });
+  for (const g of grupos) r.push({ nome: g, titulo: `Centro de Custo ${g}`, dados: await resultadosService.centros(ano, g, ate, acesso, true) });
   return r;
 }
 
@@ -315,9 +316,12 @@ export const exportacaoRelatoriosService = {
     return { nomeArquivo, tipo: "application/pdf", conteudo: doc.gerar(titulo), visoes: bs.map((b) => b.nome) };
   },
 
-  /** `apenasMes`: só o mês `ate` (a etapa Indicadores do Fechamento Mensal), sem os anteriores nem o acumulado. */
-  async indicadores(ano: number, ate: number | undefined, formato: Formato, usuarioNome: string, apenasMes = false) {
-    const todos = await indicadoresService.listar(ano, ate);
+  /**
+   * `apenasMes`: só o mês `ate` (a etapa Indicadores do Fechamento Mensal), sem os anteriores nem o acumulado.
+   * `somenteFechadas`: só as competências fechadas (Resultados Realizados).
+   */
+  async indicadores(ano: number, ate: number | undefined, formato: Formato, usuarioNome: string, apenasMes = false, somenteFechadas = false) {
+    const todos = await indicadoresService.listar(ano, ate, somenteFechadas);
     const dados = apenasMes ? soOMes(todos) : todos;
     const id = await identificar(ano, dados.ate, usuarioNome);
     const mm = String(dados.ate).padStart(2, "0");

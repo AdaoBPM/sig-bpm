@@ -9,11 +9,13 @@ import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
 /**
  * O exercício e o último mês do relatório (como o mês escolhido no topo das
- * abas da planilha). Só os meses apurados; sem escolha, o último apurado.
+ * abas da planilha). Resultados Realizados: só as competências fechadas
+ * (11/10/2026); sem escolha, a última fechada. `somenteFechadas` falso: as
+ * apuradas (a etapa Indicadores do Fechamento Mensal).
  */
-export function useExercicios() {
+export function useExercicios(somenteFechadas = true) {
   const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar() });
-  const apuradas = (competencias.data?.itens ?? []).filter((c) => c.apuradaEm !== null);
+  const apuradas = (competencias.data?.itens ?? []).filter((c) => c.apuradaEm !== null && (!somenteFechadas || c.status === "FECHADA"));
   const anos = [...new Set(apuradas.map((c) => c.ano))].sort((a, b) => b - a);
   return { carregando: competencias.isPending, anos, mesesDe: (ano: number) => apuradas.filter((c) => c.ano === ano).map((c) => c.mes).sort((a, b) => a - b) };
 }
