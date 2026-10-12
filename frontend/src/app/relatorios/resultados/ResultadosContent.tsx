@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { CampoBusca } from "@/components/shared/Filtros";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
@@ -63,6 +64,50 @@ const listavel = (l: LinhaResultado, visao: VisaoDetalhe) => l.volume && l.tipo 
  * descrição, a do mês de referência. Sem `consultas` (os cenários, que não têm
  * lançamentos), nada abre.
  */
+/**
+ * Os meses anteriores ao de referência recolhidos ou não (12/10/2026): a escolha fica guardada neste navegador e vale
+ * em todas as tabelas de Resultados. Começa expandido; sem armazenamento (janela privada), só não é lembrada.
+ */
+function useMesesRecolhidos(): [boolean, () => void] {
+  const CHAVE = "sig.resultados.mesesRecolhidos";
+  const [recolhido, setRecolhido] = useState(false);
+  useEffect(() => {
+    try {
+      setRecolhido(window.localStorage.getItem(CHAVE) === "1");
+    } catch {
+      // sem armazenamento
+    }
+  }, []);
+  const alternar = () =>
+    setRecolhido((r) => {
+      try {
+        window.localStorage.setItem(CHAVE, r ? "0" : "1");
+      } catch {
+        // sem armazenamento
+      }
+      return !r;
+    });
+  return [recolhido, alternar];
+}
+
+/** O botão ao lado dos níveis: a seta para a direita expande os meses anteriores; para a esquerda, recolhe. */
+function BotaoMeses({ recolhido, onAlternar }: { recolhido: boolean; onAlternar: () => void }) {
+  const rotulo = recolhido ? "Expandir os meses anteriores" : "Recolher os meses anteriores";
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onAlternar}
+      aria-label={rotulo}
+      aria-pressed={recolhido}
+      title={rotulo}
+      className="size-8 shrink-0 rounded-sm border-black/30 bg-white p-0"
+    >
+      {recolhido ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+    </Button>
+  );
+}
+
 export function TabelaResultados({
   dados,
   titulo,
@@ -84,6 +129,9 @@ export function TabelaResultados({
   const temPct = (l: LinhaResultado) => !l.volume && (l.meses.some((c) => c.pct !== null) || l.total.pct !== null);
   const ano = String(dados.ano).slice(2);
   const referencia = dados.meses.length - 1;
+  // Recolhidos, só o mês de referência fica (com o orçado dele), antes dos totais.
+  const [recolhido, alternarMeses] = useMesesRecolhidos();
+  const mostra = (i: number) => !recolhido || i === referencia;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
@@ -117,11 +165,12 @@ export function TabelaResultados({
   const th = "px-1.5 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
-  // A descrição sem quebra de linha, em 400 px: as poucas mais longas (RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+))
-  // terminam em reticências, com o nome inteiro na dica.
+  // A descrição sem quebra de linha, em 420 px: com os meses anteriores recolhidos, a descrição, o mês, o orçado dele,
+  // os totais, o orçado total e as variações enchem uma tela de 1920 px. As poucas mais longas (RECEITAS FINANCERIAS
+  // NÃO CORRENTES (RFNC) (+)) terminam em reticências, com o nome inteiro na dica.
   const larguras = [
-    400,
-    ...dados.meses.flatMap((_, i) => (i === referencia ? [96, 52, 64, ...(comOrcado ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
+    420,
+    ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, 64, ...(comOrcado ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
     104,
     52,
     64,
@@ -150,21 +199,26 @@ export function TabelaResultados({
           <tr className="border-b border-gray-300">
             <th className="left-0 !z-20 px-3 py-2 text-left">
               <span className="flex items-center gap-3">
-                <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
+                  {dados.meses.length > 1 ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
+                </span>
                 <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>
                   {titulo}
                 </span>
                 {aoLadoDoTitulo}
               </span>
             </th>
-            {dados.meses.map((m, i) => (
+            {dados.meses.map((m, i) =>
+              !mostra(i) ? null : (
               <Fragment key={m.mes}>
                 <th className={`${th} border-l border-gray-300`}>{m.rotulo}</th>
                 <th className={th}>%</th>
                 {i === referencia ? <th className={th}>R$/m³</th> : null}
                 {i === referencia && comOrcado ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
               </Fragment>
-            ))}
+              ),
+            )}
             <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
             <th className={th}>%</th>
             <th className={th}>R$/m³</th>
@@ -210,6 +264,7 @@ export function TabelaResultados({
                   </span>
                 </td>
                 {l.meses.map((c, i) => {
+                  if (!mostra(i)) return null;
                   const m = dados.meses[i];
                   const abreMes = clicavel && m.apurado && c.valor !== null;
                   return (
@@ -420,7 +475,8 @@ export function ResultadosContent() {
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
             <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código).</li>
             <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). As obras não têm exportação.</li>
-            <li>Role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
+            <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
+            <li>Expandida, role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. O mês de referência (o último) e o total do exercício trazem também o valor por m³.</li>
             <li>

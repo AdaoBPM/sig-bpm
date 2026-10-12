@@ -64,6 +64,7 @@ export function CenarioResultadosContent() {
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
+            <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses antes de dezembro; a escolha fica guardada neste navegador.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. Dezembro e o total do exercício trazem também o valor por m³.</li>
           </ul>
         }
