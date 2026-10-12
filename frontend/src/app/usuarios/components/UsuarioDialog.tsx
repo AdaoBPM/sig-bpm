@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { CampoSenha } from "@/components/shared/CampoSenha";
+import { useAuth } from "@/context/AuthContext";
 import { Label } from "@/components/ui/label";
 import type { DepartamentoAcesso } from "@/services/authService";
 
@@ -23,6 +24,7 @@ type Props = { opcoes: OpcoesUsuarios; editando: Usuario | null; onFechar: () =>
  */
 export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
   const queryClient = useQueryClient();
+  const { user: eu, refresh } = useAuth();
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
   const [perfilId, setPerfilId] = useState(editando?.perfil.id ?? opcoes.perfis.find((p) => p.ativo)?.id ?? "");
@@ -45,6 +47,8 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
     onSuccess: () => {
       toast.success(editando ? "Usuário atualizado." : "Usuário criado.");
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
+      // O próprio cadastro: o nome e o e-mail do topo da tela (e os recortes) vêm de novo do servidor (12/10/2026).
+      if (editando && editando.id === eu?.id) void refresh();
       onFechar();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível salvar o usuário.")),
