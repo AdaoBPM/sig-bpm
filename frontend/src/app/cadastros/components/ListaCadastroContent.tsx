@@ -53,6 +53,8 @@ function colunaDoCampo(c: Campo): Coluna<Registro> {
     texto: (r) => textoDoCampo(c, r[c.nome]),
     tipo: ehNumero(c) ? "numero" : c.tipo === "data" ? "data" : "texto",
     ...(ehNumero(c) ? { alinhamento: "direita" as const } : {}),
+    // A ordem e o código (Unidades, Linhas) em colunas estreitas (12/10/2026).
+    ...(c.estreita ? { classe: "w-28" } : {}),
   };
 }
 
@@ -112,7 +114,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
         renderRow={(r) => (
           <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
             {campos.map((c) => (
-              <td key={c.nome} className={`px-4 py-3 text-sm text-gray-900 ${ehNumero(c) ? "text-right whitespace-nowrap" : ""}`}>
+              <td key={c.nome} className={`px-4 py-3 text-sm text-gray-900 ${ehNumero(c) ? "text-right whitespace-nowrap" : ""} ${c.estreita ? "w-28" : ""}`}>
                 {formatar(c, r[c.nome])}
               </td>
             ))}

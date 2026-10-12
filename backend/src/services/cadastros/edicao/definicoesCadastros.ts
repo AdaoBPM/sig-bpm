@@ -51,6 +51,8 @@ export type Campo = {
   filtradoPor?: string;
   /** Ocupa as duas colunas do formulário de edição. */
   larguraInteira?: boolean;
+  /** Uma coluna estreita na tabela (a ordem e o código, 12/10/2026): o nome fica com o resto. */
+  estreita?: boolean;
   /** Um valor em reais: a tabela mostra "R$" e duas casas, e o formulário, duas casas (12/10/2026). */
   moeda?: boolean;
   /** Fora da tabela (só no formulário) ou fora do formulário (só na tabela). */
@@ -551,8 +553,8 @@ const unidades: DefinicaoCadastro = {
   criar: false,
   excluir: false,
   campos: [
-    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
-    { nome: "codigo", rotulo: "Código", tipo: "inteiro", derivado: true },
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro", estreita: true },
+    { nome: "codigo", rotulo: "Código", tipo: "inteiro", derivado: true, estreita: true },
     { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, travaComMovimento: true },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
@@ -589,7 +591,7 @@ const linhas: DefinicaoCadastro = {
   criar: true,
   excluir: true,
   campos: [
-    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro" },
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro", estreita: true },
     {
       nome: "unidadeNegocioId",
       rotulo: "Unidade",
