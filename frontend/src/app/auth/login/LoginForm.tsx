@@ -11,8 +11,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { getSafeInternalPath } from "@/lib/navigation";
 
-const isDev = process.env.NODE_ENV === "development";
-
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,7 +69,6 @@ export function LoginForm() {
         <Button type="submit" disabled={isSubmitting} className="bg-bpm-primary hover:bg-bpm-primary-hover w-full rounded-sm font-bold text-black">
           {isSubmitting ? "Entrando…" : "Entrar"}
         </Button>
-        {isDev ? <p className="text-center text-xs text-gray-500">Desenvolvimento: admin@bpm.com / admin123</p> : null}
       </form>
     </div>
   );
