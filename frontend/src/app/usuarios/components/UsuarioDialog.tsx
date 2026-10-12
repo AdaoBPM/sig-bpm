@@ -13,6 +13,8 @@ import type { DepartamentoAcesso } from "@/services/authService";
 
 import { classeSelect, mensagemDeErro, usuariosService, type OpcoesUsuarios, type Usuario } from "../services/usuariosService";
 
+const SEM_AGRUPAMENTO = "Sem Agrupamento";
+
 type Props = { opcoes: OpcoesUsuarios; editando: Usuario | null; onFechar: () => void };
 
 /**
@@ -52,6 +54,14 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
   // Os centros ativos da gestão escolhida.
   const daGestao = opcoes.centros.filter((c) => c.gestao === gestao);
   const todosMarcados = daGestao.length > 0 && daGestao.every((c) => centros.includes(c.id));
+  // Os centros da gestão pelo agrupamento da controladoria (o do cadastro de centros), em ordem de nome; os sem
+  // agrupamento no fim (11/10/2026).
+  const agrupados = [...Map.groupBy(daGestao, (c) => c.agrupamento?.trim() || SEM_AGRUPAMENTO)].sort(
+    ([a], [b]) => Number(a === SEM_AGRUPAMENTO) - Number(b === SEM_AGRUPAMENTO) || a.localeCompare(b, "pt-BR"),
+  );
+  // Marca ou desmarca todos os centros de um agrupamento.
+  const alternarAgrupamento = (doGrupo: string[], marcar: boolean) =>
+    setCentros(marcar ? [...new Set([...centros, ...doGrupo])] : centros.filter((id) => !doGrupo.includes(id)));
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -165,16 +175,37 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
                       {centros.length} de {daGestao.length}
                     </span>
                   </label>
-                  <div className="max-h-64 space-y-0.5 overflow-y-auto px-3 py-1.5">
-                    {daGestao.map((c) => (
-                      <label key={c.id} className="flex items-start gap-2 py-0.5 text-sm text-gray-700">
-                        <input type="checkbox" checked={centros.includes(c.id)} onChange={() => setCentros(alternar(centros, c.id))} className="mt-0.5 size-4 shrink-0 accent-black" />
-                        <span>
-                          <span>{c.codigoRM ? `${c.codigoRM} · ` : ""}{c.nome}</span>
-                          {c.agrupamento ? <span className="text-xs text-gray-500"> · {c.agrupamento}</span> : null}
-                        </span>
-                      </label>
-                    ))}
+                  <div className="max-h-72 overflow-y-auto py-1">
+                    {agrupados.map(([agrupamento, doGrupo]) => {
+                      const ids = doGrupo.map((c) => c.id);
+                      const marcados = ids.filter((id) => centros.includes(id)).length;
+                      return (
+                        <div key={agrupamento} className="py-0.5">
+                          {/* O agrupamento: a caixa marca ou desmarca todos os centros dele (traço quando só alguns). */}
+                          <label className="flex items-center gap-2 px-3 py-1 text-xs font-bold tracking-wide text-gray-900 uppercase">
+                            <input
+                              type="checkbox"
+                              checked={marcados === ids.length}
+                              ref={(el) => {
+                                if (el) el.indeterminate = marcados > 0 && marcados < ids.length;
+                              }}
+                              onChange={() => alternarAgrupamento(ids, marcados < ids.length)}
+                              className="size-4 shrink-0 accent-black"
+                            />
+                            {agrupamento}
+                            <span className="ml-auto font-normal tracking-normal text-gray-500 normal-case">
+                              {marcados} de {ids.length}
+                            </span>
+                          </label>
+                          {doGrupo.map((c) => (
+                            <label key={c.id} className="flex items-start gap-2 py-0.5 pr-3 pl-9 text-sm text-gray-700">
+                              <input type="checkbox" checked={centros.includes(c.id)} onChange={() => setCentros(alternar(centros, c.id))} className="mt-0.5 size-4 shrink-0 accent-black" />
+                              <span>{c.codigoRM ? `${c.codigoRM} · ` : ""}{c.nome}</span>
+                            </label>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}
