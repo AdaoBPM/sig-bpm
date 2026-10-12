@@ -91,8 +91,8 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
       <section className="space-y-4 rounded-sm border border-gray-200 bg-white p-5">
         <h2 className="text-sm font-bold tracking-wide text-gray-900 uppercase">Referência</h2>
         <p className="text-sm text-gray-600">
-          Opcional: uma base para a DRE do cenário, que depois se edita nas abas. A referência substitui a DRE do cenário (as metas dos indicadores
-          só mudam com um arquivo que tenha a aba delas).
+          Opcional: uma base para a DRE do cenário, que depois se edita na tela Resultados. A referência substitui a DRE do cenário; os indicadores
+          mudam com o resultado realizado (os realizados dos meses fechados) ou com um arquivo que tenha a aba das metas.
         </p>
         <p className="text-sm text-gray-700">
           Referência atual:{" "}
@@ -110,7 +110,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
           {(
             [
               ["arquivo", "Arquivo", "Uma planilha como o ORÇAMENTO BPM (abas Consolidado, Matriz, Filial, Serviços, Desp.+Extra, RN e Metas).", FileSpreadsheet],
-              ["realizado", "Resultado Realizado", "A DRE das competências fechadas de um exercício, mês a mês.", History],
+              ["realizado", "Resultado Realizado", "A DRE e os indicadores das competências fechadas de um exercício, mês a mês.", History],
             ] as const
           ).map(([v, rotulo, detalhe, Icone]) => (
             <label key={v} className={`flex cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 text-sm ${referencia === v ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}>
@@ -165,7 +165,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
               <DialogTitle>Carregar Resultado Realizado</DialogTitle>
               <DialogDescription>
                 A DRE do cenário (todas as abas e os doze meses) é substituída pela das competências fechadas de {ano} ({mesesFechados.map((m) => MESES[m - 1].slice(0, 3)).join(", ")}
-                ). Os valores editados no cenário se perdem; as metas dos indicadores ficam como estão.
+                ). Os indicadores do cenário também são substituídos pelos realizados desses meses. Os valores editados e os lançamentos manuais do cenário se perdem.
               </DialogDescription>
             </DialogHeader>
             <Erro erro={carregar.isError ? mensagemDeErro(carregar.error, "Não foi possível carregar o realizado.") : null} />

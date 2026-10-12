@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 
 import { getPrismaClient } from "../../config/prisma.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import type { MarcacaoCenario, VisualizacaoCenario } from "../../generated/prisma/enums.js";
 import { ArquivoInvalidoError, lerAba, listarAbas } from "../../lib/xlsx.js";
 import { ACESSO_TOTAL } from "../acesso/acesso.js";
@@ -12,6 +13,7 @@ import { basesDoConsolidado, COD } from "../relatorios/basesResultados.js";
 import { estrutura, montar } from "../relatorios/resultadosService.js";
 import { estrutura as estruturaDRE } from "../dre/dreService.js";
 import { contasDaUnidade, ErroEdicao, gravarValores, linhasDaUnidade, linhasDoConsolidado, recalcular, UNIDADES, type Alteracao } from "./edicaoCenario.js";
+import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { calcularCenario } from "./indicadoresDoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 
@@ -484,7 +486,9 @@ export const cenariosService = {
   /**
    * A referência do cenário pelo resultado realizado (12/10/2026): a DRE das competências fechadas de um exercício
    * (o Consolidado e as cinco unidades, mês a mês) substitui a DRE do cenário; os meses sem competência fechada
-   * ficam vazios. As metas (indicadores) não mudam.
+   * ficam vazios. Os indicadores realizados desses meses (os de Resultados Realizados) substituem os do cenário, como
+   * a aba das metas de um arquivo (12/10/2026): os que saem da DRE o cenário recalcula; os das listas, os
+   * lançamentos manuais e os GME ficam com o realizado.
    */
   async referenciaRealizado(id: string, ano: number, usuario: Usuario) {
     const c = await obterOuFalhar(id, usuario);
@@ -497,6 +501,11 @@ export const cenariosService = {
       select: { competenciaId: true, linhaDREId: true, valor: true, unidadeNegocio: { select: { codigo: true } } },
     });
     const meses = fechadas.map((f) => String(f.mes).padStart(2, "0"));
+    // Os indicadores realizados dos meses fechados (os demais meses vêm vazios).
+    const realizados = await indicadoresService.listar(ano, fechadas[fechadas.length - 1].mes, true);
+    const indicadores = realizados.indicadores.flatMap((i) =>
+      i.meses.flatMap((v, k) => (v === null || !Number.isFinite(v) || !fechadas.some((f) => f.mes === k + 1) ? [] : [{ nome: i.nome, mes: k + 1, valor: new Prisma.Decimal(v.toFixed(8)) }])),
+    );
     const nomeArquivo = `Resultado realizado de ${ano} (${meses.length === 1 ? meses[0] : `${meses[0]} a ${meses[meses.length - 1]}`})`;
     await prisma.$transaction(
       async (tx) => {
@@ -507,11 +516,13 @@ export const cenariosService = {
           }),
         );
         await recalcular(tx, id, fechadas.map((f) => f.mes), UNIDADES);
+        await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id } });
+        await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((v) => ({ cenarioId: id, ...v, origem: "IMPORTADO" as const })) }));
         await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
       },
       { timeout: 120_000 },
     );
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: "realizado", ano, meses } });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: "realizado", ano, meses, indicadores: indicadores.length } });
     return this.obter(id, usuario);
   },
 
