@@ -13,8 +13,8 @@ import { Label } from "@/components/ui/label";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type Cenario, type Mudancas, type PreviaCenario } from "../services/cenariosService";
-import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
+import { cenariosService, type Cenario, type Mudancas, type PreviaCenario, type Visualizacao } from "../services/cenariosService";
+import { botaoPrimario, CampoVisualizacao, classeSelect, Erro } from "./CenarioDialog";
 
 const ICONES = {
   importar: <ArrowDownToLine className="size-4 text-gray-900" />,
@@ -148,6 +148,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [visualizacao, setVisualizacao] = useState<Visualizacao>("PUBLICA");
   const atual = new Date().getFullYear();
   const [ano, setAno] = useState(String(atual));
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -159,7 +160,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
     },
   });
   const importar = useMutation({
-    mutationFn: () => cenariosService.importar(analisar.data!, cenario ? { cenarioId: cenario.id } : { nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null }),
+    mutationFn: () => cenariosService.importar(analisar.data!, cenario ? { cenarioId: cenario.id } : { nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null, visualizacao }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
@@ -212,6 +213,9 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="importar-descricao">Descrição (opcional)</Label>
               <Input id="importar-descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={500} className="rounded-sm" />
+            </div>
+            <div className="sm:col-span-2">
+              <CampoVisualizacao valor={visualizacao} onMudar={setVisualizacao} bloqueio={importar.isPending ? "Importando…" : null} />
             </div>
           </div>
         )}

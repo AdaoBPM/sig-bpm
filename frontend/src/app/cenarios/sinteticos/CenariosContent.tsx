@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Bookmark, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Bookmark, Globe, Lock, Pencil, Plus, Trash2, Upload } from "lucide-react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -19,7 +19,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { botaoPrimario, CenarioDialog, ExcluirCenarioDialog } from "../components/CenarioDialog";
 import { ImportarCenarioDialog } from "../components/ImportarCenarioDialog";
 import { MarcarCenarioDialog } from "../components/MarcarCenarioDialog";
-import { cenariosService, rotuloMarcacao, type Cenario } from "../services/cenariosService";
+import { cenariosService, rotuloMarcacao, ROTULO_VISUALIZACAO, type Cenario } from "../services/cenariosService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
 
@@ -67,7 +67,13 @@ export function CenariosContent() {
               em “Gravar Marcação”; a coluna Marcação mostra a atual. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
-            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome e a descrição, e excluir. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
+            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), editar o nome, a descrição e a visualização, e excluir. Um cenário marcado não se exclui: tire a marcação (ou marque outro cenário) antes.</li>
+            <li>
+              Ao criar (Novo Cenário ou Importar Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
+              têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). Embaixo do nome, a
+              lista mostra a de cada cenário. Só quem criou o cenário ou o Administrador muda a visualização, e um cenário marcado fica sempre público
+              (a marcação vale para todos).
+            </li>
             <li>Use os filtros nos rótulos das colunas.</li>
           </ul>
         }
@@ -131,6 +137,11 @@ export function CenariosContent() {
                 <div className="text-xs text-gray-400">
                   Criado em {dataCurta(c.criadoEm)}
                   {c.criadoPor ? ` por ${c.criadoPor}` : ""}
+                </div>
+                {/* A visualização: particular (só quem criou e o Administrador) ou pública. */}
+                <div className={`inline-flex items-center gap-1 text-xs ${c.visualizacao === "PARTICULAR" ? "font-medium text-gray-700" : "text-gray-400"}`}>
+                  {c.visualizacao === "PARTICULAR" ? <Lock className="size-3" /> : <Globe className="size-3" />}
+                  {ROTULO_VISUALIZACAO[c.visualizacao]}
                 </div>
               </td>
               <td className="px-4 text-sm">{c.ano}</td>

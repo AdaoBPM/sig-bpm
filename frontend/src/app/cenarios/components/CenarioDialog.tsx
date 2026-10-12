@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type Cenario } from "../services/cenariosService";
+import { cenariosService, type Cenario, type Visualizacao } from "../services/cenariosService";
 
 export const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 export const classeSelect = "h-9 w-full rounded-sm border border-gray-300 bg-white px-3 text-sm";
@@ -28,8 +28,56 @@ export function Erro({ erro }: { erro: string | null }) {
 }
 
 /**
- * Novo cenário (vazio, num exercício, ou a cópia de outro, com a DRE e as metas dele) ou a edição do nome e da
- * descrição de um cenário.
+ * A Visualização do cenário (11/10/2026): Particular (só quem criou e o Administrador) ou Pública (todos com
+ * permissão). `bloqueio` desabilita a escolha, com o motivo; `semParticular`, só a opção Particular (cenário marcado).
+ */
+export function CampoVisualizacao({
+  valor,
+  onMudar,
+  bloqueio,
+  semParticular,
+}: {
+  valor: Visualizacao;
+  onMudar: (v: Visualizacao) => void;
+  bloqueio?: string | null;
+  semParticular?: string | null;
+}) {
+  const opcoes: Array<{ v: Visualizacao; rotulo: string; detalhe: string; Icone: typeof Lock; motivo?: string | null }> = [
+    { v: "PARTICULAR", rotulo: "Particular", detalhe: "Apenas você (quem criou) e o Administrador têm acesso.", Icone: Lock, motivo: semParticular },
+    { v: "PUBLICA", rotulo: "Pública", detalhe: "Todos os usuários com permissão nos Cenários Sintéticos têm acesso.", Icone: Globe },
+  ];
+  return (
+    <fieldset className="space-y-1.5" disabled={!!bloqueio}>
+      <legend className="text-sm leading-none font-medium">Visualização</legend>
+      <div className="grid gap-2 pt-1.5 sm:grid-cols-2">
+        {opcoes.map(({ v, rotulo, detalhe, Icone, motivo }) => {
+          const desabilitada = !!bloqueio || (!!motivo && valor !== v);
+          return (
+            <label
+              key={v}
+              title={bloqueio ?? (desabilitada ? motivo! : undefined)}
+              className={`flex items-start gap-2 rounded-sm border px-3 py-2 text-sm ${valor === v ? "border-gray-900 bg-gray-50" : "border-gray-200"} ${desabilitada ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-gray-50"}`}
+            >
+              <input type="radio" name="visualizacao" className="mt-1 accent-black" checked={valor === v} disabled={desabilitada} onChange={() => onMudar(v)} />
+              <span className="min-w-0">
+                <span className="inline-flex items-center gap-1.5 font-medium text-gray-900">
+                  <Icone className="size-3.5" />
+                  {rotulo}
+                </span>
+                <span className="block text-xs text-gray-600">{detalhe}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      {bloqueio ? <p className="text-xs text-gray-500">{bloqueio}</p> : semParticular && valor === "PUBLICA" ? <p className="text-xs text-gray-500">{semParticular}</p> : null}
+    </fieldset>
+  );
+}
+
+/**
+ * Novo cenário (vazio, num exercício, ou a cópia de outro, com a DRE e as metas dele) ou a edição do nome, da
+ * descrição e da visualização de um cenário.
  */
 export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenario | null; cenarios: Cenario[]; onFechar: () => void }) {
   const queryClient = useQueryClient();
@@ -38,13 +86,14 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
   const [descricao, setDescricao] = useState(cenario?.descricao ?? "");
   const [ano, setAno] = useState(String(cenario?.ano ?? atual));
   const [copiarDe, setCopiarDe] = useState("");
+  const [visualizacao, setVisualizacao] = useState<Visualizacao>(cenario?.visualizacao ?? "PUBLICA");
   const origem = cenarios.find((c) => c.id === copiarDe);
 
   const salvar = useMutation({
     mutationFn: () =>
       cenario
-        ? cenariosService.atualizar(cenario.id, { nome: nome.trim(), descricao: descricao.trim() || null })
-        : cenariosService.criar({ nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null, copiarDe: copiarDe || null }),
+        ? cenariosService.atualizar(cenario.id, { nome: nome.trim(), descricao: descricao.trim() || null, visualizacao })
+        : cenariosService.criar({ nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null, copiarDe: copiarDe || null, visualizacao }),
     onSuccess: (c) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       toast.success(cenario ? "Cenário alterado." : `Cenário ${c.nome} criado.`);
@@ -59,7 +108,7 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
           <DialogTitle>{cenario ? "Editar Cenário" : "Novo Cenário"}</DialogTitle>
           <DialogDescription>
             {cenario
-              ? "O nome e a descrição do cenário. A DRE e as metas mudam pela importação de um arquivo e pelos lançamentos manuais."
+              ? "O nome, a descrição e a visualização do cenário. A DRE e as metas mudam pela importação de um arquivo e pelos lançamentos manuais."
               : "Um cenário vazio, num exercício, ou a cópia de outro cenário, com a DRE e as metas dele. Depois, importe um arquivo no cenário ou ajuste os lançamentos manuais."}
           </DialogDescription>
         </DialogHeader>
@@ -97,6 +146,14 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
               </div>
             </>
           )}
+          <div className="sm:col-span-2">
+            <CampoVisualizacao
+              valor={visualizacao}
+              onMudar={setVisualizacao}
+              bloqueio={cenario && !cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou o Administrador muda a visualização." : null}
+              semParticular={cenario?.marcacao ? "Um cenário marcado fica público: tire a marcação antes de torná-lo particular." : null}
+            />
+          </div>
         </div>
         <Erro erro={salvar.isError ? mensagemDeErro(salvar.error, "Não foi possível gravar o cenário.") : null} />
         <DialogFooter>

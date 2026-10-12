@@ -39,6 +39,8 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
     },
   });
   const opcoes: Array<{ valor: MarcacaoCenario | ""; rotulo: string }> = [...MARCACOES, { valor: "", rotulo: "Sem Marcação" }];
+  // A marcação vale para todos os usuários: um cenário particular não se marca (11/10/2026).
+  const particular = cenario.visualizacao === "PARTICULAR";
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -49,6 +51,11 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
             {cenario.nome} ({cenario.ano}). Cada marcação fica ativa em um cenário só: marcar este tira a marcação do cenário que a tinha.
           </DialogDescription>
         </DialogHeader>
+        {particular ? (
+          <p className="rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
+            O cenário é particular, e a marcação vale para todos os usuários: torne-o público (lápis, Visualização) antes de marcá-lo.
+          </p>
+        ) : null}
         <fieldset className="space-y-2">
           <legend className="sr-only">Marcação</legend>
           {opcoes.map((o) => {
@@ -58,7 +65,14 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
                 key={o.valor || "nenhuma"}
                 className={`flex cursor-pointer items-start gap-3 rounded-sm border px-3 py-2 text-sm ${escolha === o.valor ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}
               >
-                <input type="radio" name="marcacao" className="mt-1 accent-black" checked={escolha === o.valor} onChange={() => setEscolha(o.valor)} />
+                <input
+                  type="radio"
+                  name="marcacao"
+                  className="mt-1 accent-black"
+                  checked={escolha === o.valor}
+                  disabled={particular && !!o.valor}
+                  onChange={() => setEscolha(o.valor)}
+                />
                 <span className="min-w-0">
                   <span className="font-medium text-gray-900">{o.rotulo}</span>
                   {cenario.marcacao === (o.valor || null) ? <span className="ml-2 text-xs text-gray-500">(a atual)</span> : null}

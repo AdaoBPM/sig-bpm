@@ -11,6 +11,10 @@ export const MARCACOES: Array<{ valor: MarcacaoCenario; rotulo: string }> = [
 ];
 export const rotuloMarcacao = (m: MarcacaoCenario | null) => MARCACOES.find((x) => x.valor === m)?.rotulo ?? null;
 
+/** Particular: só quem criou e o Administrador; Pública: todos com permissão nos Cenários Sintéticos (11/10/2026). */
+export type Visualizacao = "PARTICULAR" | "PUBLICA";
+export const ROTULO_VISUALIZACAO: Record<Visualizacao, string> = { PARTICULAR: "Particular", PUBLICA: "Pública" };
+
 export type Cenario = {
   id: string;
   nome: string;
@@ -21,6 +25,10 @@ export type Cenario = {
   nomeArquivo: string | null;
   importadoEm: string | null;
   criadoPor: string | null;
+  criadoPorId: string | null;
+  visualizacao: Visualizacao;
+  /** Quem criou o cenário e o Administrador mudam a visualização. */
+  podeMudarVisualizacao: boolean;
   criadoEm: string;
   /** As visões da DRE com valor (0 Consolidado, 1 a 5 as unidades). */
   visoes: number[];
@@ -53,8 +61,8 @@ export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelator
 export const cenariosService = {
   listar: async () => (await api.get<{ data: Cenario[] }>("/proxy/cenarios")).data.data,
   obter: async (id: string) => (await api.get<{ data: Cenario }>(`/proxy/cenarios/${id}`)).data.data,
-  criar: async (dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null }) => (await api.post<{ data: Cenario }>("/proxy/cenarios", dados)).data.data,
-  atualizar: async (id: string, dados: { nome: string; descricao: string | null }) => (await api.patch<{ data: Cenario }>(`/proxy/cenarios/${id}`, dados)).data.data,
+  criar: async (dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao: Visualizacao }) => (await api.post<{ data: Cenario }>("/proxy/cenarios", dados)).data.data,
+  atualizar: async (id: string, dados: { nome: string; descricao: string | null; visualizacao: Visualizacao }) => (await api.patch<{ data: Cenario }>(`/proxy/cenarios/${id}`, dados)).data.data,
   excluir: async (id: string) => {
     await api.delete(`/proxy/cenarios/${id}`);
   },
@@ -72,7 +80,7 @@ export const cenariosService = {
       })
     ).data.data,
   /** Importação, passo 2: grava o que a prévia mostrou, no cenário ou num cenário novo (nome e descrição). */
-  importar: async (previa: PreviaCenario, destino: { cenarioId: string } | { nome: string; ano: number; descricao: string | null }) =>
+  importar: async (previa: PreviaCenario, destino: { cenarioId: string } | { nome: string; ano: number; descricao: string | null; visualizacao: Visualizacao }) =>
     (
       await api.post<{ data: { cenario: Cenario; previa: PreviaCenario } }>("/proxy/cenarios/importar", {
         hash: previa.hash,

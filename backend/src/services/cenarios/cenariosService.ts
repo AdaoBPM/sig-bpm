@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 
 import { getPrismaClient } from "../../config/prisma.js";
-import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
+import type { MarcacaoCenario, VisualizacaoCenario } from "../../generated/prisma/enums.js";
 import { ArquivoInvalidoError, lerAba, listarAbas } from "../../lib/xlsx.js";
 import { ACESSO_TOTAL } from "../acesso/acesso.js";
 import { auditar } from "../auditoriaService.js";
@@ -17,6 +17,9 @@ import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type Aba
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
  * de outro), a importação de um arquivo, a marcação (Orçamento Empresarial, Resultados Anteriores, Resultados
  * Vendidos — cada uma ativa em um cenário só por vez) e as telas Resultados e Indicadores de cada cenário.
+ *
+ * A visualização (11/10/2026): o cenário particular só aparece para quem o criou e para o Administrador (Editar no
+ * Controle de Usuários); para os demais, ele não existe (404). O público aparece para todos com permissão.
  */
 
 export class CenarioError extends Error {
@@ -34,14 +37,25 @@ export const MARCACOES: Record<MarcacaoCenario, string> = {
   RESULTADOS_VENDIDOS: "Resultados Vendidos",
 };
 
-type Usuario = { id: string; nome: string };
+/** Quem pede: `admin` é o Administrador (Editar no Controle de Usuários), que vê também os cenários particulares. */
+type Usuario = { id: string; nome: string; admin?: boolean };
+/** As chamadas internas (testes, scripts) veem todos os cenários. */
+const SISTEMA: Usuario = { id: "", nome: "Sistema", admin: true };
+
+export const VISUALIZACOES: Record<VisualizacaoCenario, string> = { PARTICULAR: "Particular", PUBLICA: "Pública" };
+/** O usuário alcança o cenário? */
+const alcanca = (c: { visualizacao: VisualizacaoCenario; criadoPorId: string | null }, u: Usuario) =>
+  c.visualizacao === "PUBLICA" || !!u.admin || (!!c.criadoPorId && c.criadoPorId === u.id);
+/** Quem muda a visualização de um cenário: quem o criou e o Administrador. */
+const mudaVisualizacao = (c: { criadoPorId: string | null }, u: Usuario) => !!u.admin || (!!c.criadoPorId && c.criadoPorId === u.id);
 const LOTE = 500;
 const MANUAIS = new Set(INDICADORES_DAS_LISTAS);
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano).slice(2)}`;
 
-async function obterOuFalhar(id: string) {
+/** O cenário, se o usuário o alcança; o particular de outro usuário é "não encontrado". */
+async function obterOuFalhar(id: string, usuario: Usuario) {
   const c = await getPrismaClient().cenario.findUnique({ where: { id } });
-  if (!c) throw new CenarioError(404, "Cenário não encontrado.");
+  if (!c || !alcanca(c, usuario)) throw new CenarioError(404, "Cenário não encontrado.");
   return c;
 }
 
@@ -125,9 +139,9 @@ function comparar(novos: Map<string, number>, atuais: Map<string, number>) {
  * A prévia da importação: o que o arquivo traz, aba por aba, e, num cenário que já existe, o que muda nele. O
  * bloqueio (o exercício do arquivo diferente do do cenário) impede a importação.
  */
-async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: string | null) {
+async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: string | null, usuario: Usuario) {
   const prisma = getPrismaClient();
-  const existente = cenarioId ? await obterOuFalhar(cenarioId) : null;
+  const existente = cenarioId ? await obterOuFalhar(cenarioId, usuario) : null;
   const [resultados, metasAtuais] = existente
     ? await Promise.all([
         prisma.cenarioResultado.findMany({ where: { cenarioId: existente.id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
@@ -181,25 +195,34 @@ async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: s
 export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 
 export const cenariosService = {
-  async listar() {
-    const cenarios = await getPrismaClient().cenario.findMany({ orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] });
+  async listar(usuario: Usuario = SISTEMA) {
+    const cenarios = (await getPrismaClient().cenario.findMany({ orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((c) => alcanca(c, usuario));
     const doCenario = await conteudo(cenarios.map((c) => c.id));
-    return cenarios.map((c) => ({ ...c, ...doCenario(c.id) }));
+    return cenarios.map((c) => ({ ...c, ...doCenario(c.id), podeMudarVisualizacao: mudaVisualizacao(c, usuario) }));
   },
 
-  async obter(id: string) {
-    const c = await obterOuFalhar(id);
-    return { ...c, ...(await conteudo([id]))(id) };
+  async obter(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    return { ...c, ...(await conteudo([id]))(id), podeMudarVisualizacao: mudaVisualizacao(c, usuario) };
   },
 
   /** Um cenário novo: vazio, no exercício dado, ou a cópia de outro (com a DRE e as metas dele, no exercício dele). */
-  async criar(dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null }, usuario: Usuario) {
+  async criar(dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao?: VisualizacaoCenario }, usuario: Usuario) {
     const prisma = getPrismaClient();
-    const origem = dados.copiarDe ? await obterOuFalhar(dados.copiarDe) : null;
+    const origem = dados.copiarDe ? await obterOuFalhar(dados.copiarDe, usuario) : null;
     const cenario = await prisma.$transaction(
       async (tx) => {
         const c = await tx.cenario.create({
-          data: { nome: dados.nome, ano: origem?.ano ?? dados.ano, descricao: dados.descricao, criadoPor: usuario.nome, nomeArquivo: origem?.nomeArquivo ?? null, importadoEm: origem?.importadoEm ?? null },
+          data: {
+            nome: dados.nome,
+            ano: origem?.ano ?? dados.ano,
+            descricao: dados.descricao,
+            visualizacao: dados.visualizacao ?? "PUBLICA",
+            criadoPor: usuario.nome,
+            criadoPorId: usuario.id || null,
+            nomeArquivo: origem?.nomeArquivo ?? null,
+            importadoEm: origem?.importadoEm ?? null,
+          },
         });
         if (origem) {
           const resultados = await tx.cenarioResultado.findMany({ where: { cenarioId: origem.id } });
@@ -212,19 +235,31 @@ export const cenariosService = {
       { timeout: 60_000 },
     );
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "CRIACAO", entidade: "cenario", entidadeId: cenario.id, depois: cenario, metadados: origem ? { copiaDe: origem.nome } : undefined });
-    return this.obter(cenario.id);
+    return this.obter(cenario.id, usuario);
   },
 
-  async atualizar(id: string, dados: { nome: string; descricao: string | null }, usuario: Usuario) {
-    const antes = await obterOuFalhar(id);
-    const depois = await getPrismaClient().cenario.update({ where: { id }, data: dados });
+  /**
+   * O nome, a descrição e a visualização. A visualização só muda por quem criou o cenário ou pelo Administrador, e um
+   * cenário marcado não fica particular (a marcação vale para todos: o Orçamento Empresarial dá o orçado de Resultados
+   * Realizados).
+   */
+  async atualizar(id: string, dados: { nome: string; descricao: string | null; visualizacao?: VisualizacaoCenario }, usuario: Usuario) {
+    const antes = await obterOuFalhar(id, usuario);
+    const visualizacao = dados.visualizacao ?? antes.visualizacao;
+    if (visualizacao !== antes.visualizacao) {
+      if (!mudaVisualizacao(antes, usuario)) throw new CenarioError(409, "Só quem criou o cenário ou o Administrador muda a visualização dele.");
+      if (visualizacao === "PARTICULAR" && antes.marcacao) {
+        throw new CenarioError(409, `O cenário está marcado como ${MARCACOES[antes.marcacao]}: um cenário marcado fica público. Tire a marcação antes de torná-lo particular.`);
+      }
+    }
+    const depois = await getPrismaClient().cenario.update({ where: { id }, data: { nome: dados.nome, descricao: dados.descricao, visualizacao } });
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "cenario", entidadeId: id, antes, depois });
-    return this.obter(id);
+    return this.obter(id, usuario);
   },
 
   /** Exclui o cenário; um cenário marcado (Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos) não se exclui. */
   async excluir(id: string, usuario: Usuario) {
-    const antes = await obterOuFalhar(id);
+    const antes = await obterOuFalhar(id, usuario);
     if (antes.marcacao) {
       throw new CenarioError(409, `O cenário ${antes.nome} está marcado como ${MARCACOES[antes.marcacao]}: tire a marcação (ou marque outro cenário) antes de excluí-lo.`);
     }
@@ -235,7 +270,10 @@ export const cenariosService = {
   /** Marca o cenário (ou tira a marcação); a marcação sai do outro cenário que a tinha (de qualquer exercício). */
   async marcar(id: string, marcacao: MarcacaoCenario | null, usuario: Usuario) {
     const prisma = getPrismaClient();
-    const antes = await obterOuFalhar(id);
+    const antes = await obterOuFalhar(id, usuario);
+    if (marcacao && antes.visualizacao === "PARTICULAR") {
+      throw new CenarioError(409, `O cenário ${antes.nome} é particular: a marcação vale para todos os usuários. Torne-o público (Editar) antes de marcá-lo.`);
+    }
     const anterior = marcacao ? await prisma.cenario.findFirst({ where: { marcacao, id: { not: id } }, select: { id: true, nome: true } }) : null;
     await prisma.$transaction(async (tx) => {
       if (anterior) await tx.cenario.update({ where: { id: anterior.id }, data: { marcacao: null } });
@@ -258,7 +296,7 @@ export const cenariosService = {
    * Importação, passo 1: guarda o arquivo (pelo hash) e devolve a prévia — o que cada aba traz e o que muda no
    * cenário (`cenarioId`) ou, sem ele, no cenário novo. Nada é gravado no cenário.
    */
-  async analisar(dados: { cenarioId: string | null; nomeArquivo: string; conteudo: Buffer }) {
+  async analisar(dados: { cenarioId: string | null; nomeArquivo: string; conteudo: Buffer }, usuario: Usuario = SISTEMA) {
     const lido = await lerArquivo(dados.conteudo);
     const hash = createHash("sha256").update(dados.conteudo).digest("hex");
     await mkdir(diretorioUploads(), { recursive: true });
@@ -268,7 +306,7 @@ export const cenariosService = {
     } catch {
       await writeFile(caminho, dados.conteudo);
     }
-    return { hash, nomeArquivo: dados.nomeArquivo, ...(await previa(lido, dados.cenarioId)) };
+    return { hash, nomeArquivo: dados.nomeArquivo, ...(await previa(lido, dados.cenarioId, usuario)) };
   },
 
   /**
@@ -276,7 +314,10 @@ export const cenariosService = {
    * visões do cenário, e a aba das metas substitui as metas (inclusive as digitadas). Sem `cenarioId`, cria o
    * cenário no exercício escolhido (`ano`), que precisa ser o dos meses do arquivo.
    */
-  async importar(dados: { hash: string; cenarioId: string | null; nome: string | null; ano: number | null; descricao: string | null; nomeArquivo: string }, usuario: Usuario) {
+  async importar(
+    dados: { hash: string; cenarioId: string | null; nome: string | null; ano: number | null; descricao: string | null; nomeArquivo: string; visualizacao?: VisualizacaoCenario },
+    usuario: Usuario,
+  ) {
     const prisma = getPrismaClient();
     let conteudo: Buffer;
     try {
@@ -285,7 +326,7 @@ export const cenariosService = {
       throw new CenarioError(404, "O arquivo analisado não foi encontrado. Escolha o arquivo de novo.");
     }
     const lido = await lerArquivo(conteudo);
-    const p = await previa(lido, dados.cenarioId);
+    const p = await previa(lido, dados.cenarioId, usuario);
     if (p.bloqueio) throw new CenarioError(400, p.bloqueio);
     if (!p.cenario && !dados.nome) throw new CenarioError(400, "Dê um nome ao cenário.");
     if (!p.cenario && dados.ano !== null && dados.ano !== lido.ano) throw new CenarioError(400, `O arquivo é de ${lido.ano}, e o exercício escolhido, ${dados.ano}.`);
@@ -296,7 +337,18 @@ export const cenariosService = {
       async (tx) => {
         const c = p.cenario
           ? await tx.cenario.update({ where: { id: p.cenario.id }, data: { nomeArquivo: dados.nomeArquivo, importadoEm: agora } })
-          : await tx.cenario.create({ data: { nome: dados.nome!, ano, descricao: dados.descricao, criadoPor: usuario.nome, nomeArquivo: dados.nomeArquivo, importadoEm: agora } });
+          : await tx.cenario.create({
+              data: {
+                nome: dados.nome!,
+                ano,
+                descricao: dados.descricao,
+                visualizacao: dados.visualizacao ?? "PUBLICA",
+                criadoPor: usuario.nome,
+                criadoPorId: usuario.id || null,
+                nomeArquivo: dados.nomeArquivo,
+                importadoEm: agora,
+              },
+            });
         for (const d of dre) {
           await tx.cenarioResultado.deleteMany({ where: { cenarioId: c.id, visao: d.visao } });
           await gravarEmLotes(d.valores, (lote) => tx.cenarioResultado.createMany({ data: lote.map((v) => ({ cenarioId: c.id, visao: d.visao, ...v })) }));
@@ -317,12 +369,12 @@ export const cenariosService = {
       entidadeId: cenario.id,
       metadados: { arquivo: dados.nomeArquivo, hash: dados.hash, novo: !p.cenario, visoes: p.visoes.map((v) => v.aba), metas: p.metas?.aba ?? null },
     });
-    return { cenario: await this.obter(cenario.id), previa: { hash: dados.hash, nomeArquivo: dados.nomeArquivo, ...p } };
+    return { cenario: await this.obter(cenario.id, usuario), previa: { hash: dados.hash, nomeArquivo: dados.nomeArquivo, ...p } };
   },
 
   /** Uma visão da DRE do cenário (0 Consolidado, 1 a 5 as unidades), mês a mês, como as abas de Resultados Realizados. */
-  async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
-    const c = await obterOuFalhar(id);
+  async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
     const visoes = basesDoConsolidado(visao) ? [visao, 0] : [visao];
     const [linhas, rs] = await Promise.all([
       estrutura(),
@@ -347,8 +399,8 @@ export const cenariosService = {
   },
 
   /** Os indicadores do cenário, mês a mês e acumulados, com a classe de cada um (as abas da tela). */
-  async indicadores(id: string) {
-    const c = await obterOuFalhar(id);
+  async indicadores(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
     const calculo = await calcularCenario(id);
     return {
       ano: c.ano,
@@ -374,7 +426,7 @@ export const cenariosService = {
 
   /** Grava os lançamentos manuais de um indicador (os 12 meses; vazio apaga o mês). */
   async salvarManual(id: string, nome: string, valores: Array<number | null>, usuario: Usuario) {
-    await obterOuFalhar(id);
+    await obterOuFalhar(id, usuario);
     if (!MANUAIS.has(nome)) throw new CenarioError(400, `${nome} não é um lançamento manual: sai da DRE do cenário.`);
     const prisma = getPrismaClient();
     const antes = await prisma.cenarioIndicador.findMany({ where: { cenarioId: id, nome }, orderBy: { mes: "asc" } });

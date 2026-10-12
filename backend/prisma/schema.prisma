@@ -1857,6 +1857,13 @@ enum MarcacaoCenario {
   RESULTADOS_VENDIDOS
 }
 
+/// Quem vê o cenário (11/10/2026): PARTICULAR, só quem o criou e o Administrador (Editar no Controle de Usuários);
+/// PUBLICA, todos os usuários com permissão nos Cenários Sintéticos.
+enum VisualizacaoCenario {
+  PARTICULAR
+  PUBLICA
+}
+
 model Cenario {
   id           String           @id @default(uuid())
   nome         String
@@ -1872,6 +1879,10 @@ model Cenario {
   nomeArquivo  String?          @map("nome_arquivo")
   importadoEm  DateTime?        @map("importado_em")
   criadoPor    String?          @map("criado_por")
+  /// O usuário que criou o cenário: com ele, o Administrador vê o cenário particular.
+  criadoPorId  String?          @map("criado_por_id")
+  /// Particular ou pública; um cenário marcado é sempre público (o Orçamento Empresarial dá o orçado a todos).
+  visualizacao VisualizacaoCenario @default(PUBLICA)
   criadoEm     DateTime         @default(now()) @map("criado_em")
   atualizadoEm DateTime         @updatedAt @map("atualizado_em")
 
