@@ -1,7 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerCentro, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { apurarUnidades, type LinhaEstrutura } from "./apuracaoUnidades.js";
 import { atribuicoesDoCentro, prefixoDaAtribuicao } from "./recorteCentros.js";
@@ -194,7 +194,7 @@ export const dreService = {
     const grupos = new Map<string, Grupo>();
     for (const v of valores) {
       const cc = v.centroCusto!;
-      if (!podeVerCentro(acesso, cc.departamento)) continue; // recorte do Gestor
+      if (!podeVerCentro(acesso, cc)) continue; // recorte do Gestor e do Coordenador
       const g = grupoDoCentro(cc);
       const x = grupos.get(g) ?? { departamentos: new Set<string>(), centros: new Set<string>(), atribuicoes: new Map<string, Prisma.Decimal>() };
       if (cc.departamento) x.departamentos.add(cc.departamento);
@@ -236,11 +236,9 @@ export const dreService = {
         },
       }),
     ]);
-    // Recorte do Gestor: só os centros e as linhas dos departamentos dele.
-    const permitidas = new Set(linhas.filter((l) => podeVerMovimentos(acesso, l)).map((l) => l.id));
-    const doGrupo = valores.filter(
-      (v) => grupoDoCentro(v.centroCusto!) === grupo && podeVerCentro(acesso, v.centroCusto!.departamento) && permitidas.has(v.linhaDREId),
-    );
+    // Recorte do Gestor: só os centros e as linhas dos departamentos dele; do Coordenador, só os centros dele.
+    const permitidas = new Set(linhas.filter((l) => podeVerLinhaNoCentro(acesso, l)).map((l) => l.id));
+    const doGrupo = valores.filter((v) => grupoDoCentro(v.centroCusto!) === grupo && podeVerCentro(acesso, v.centroCusto!) && permitidas.has(v.linhaDREId));
     if (doGrupo.length === 0) throw new RegraDREError(404, `Nenhum valor apurado para o centro de custo ${grupo} em ${rotulo(ano, mes)}.`);
     type Parte = { codigoRM: string | null; nome: string; valor: string };
     const porLinha = new Map<string, { valor: Prisma.Decimal; centros: Parte[] }>();

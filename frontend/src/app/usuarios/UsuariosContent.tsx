@@ -82,6 +82,7 @@ export function UsuariosContent() {
         [
           u.perfil.recorteSetor ? `Setores: ${u.setores.map((s) => rotuloSetor.get(s) ?? s).join(", ") || "nenhum"}` : null,
           u.perfil.recorteDepartamento ? `Departamentos: ${u.departamentos.map((d) => rotuloDep.get(d) ?? d).join(", ") || "nenhum"}` : null,
+          u.perfil.recorteCentro ? `Gestão ${u.gestao ? (rotuloDep.get(u.gestao) ?? u.gestao) : "não definida"}: ${u.centros.length} centro(s) de custo` : null,
         ]
           .filter(Boolean)
           .join(" · ") || null,
@@ -96,7 +97,8 @@ export function UsuariosContent() {
         titulo="Usuários"
         comoUsar={
           <ul>
-            <li>Use “Novo Usuário” para cadastrar; o lápis edita o nome, o perfil, os setores, os departamentos e a situação.</li>
+            <li>Use “Novo Usuário” para cadastrar; o lápis edita o nome, o perfil, os setores, os departamentos, os centros de custo e a situação.</li>
+            <li>Num perfil com recorte por centro de custo (o Coordenador), escolha a Gestão do usuário: a lista mostra só os centros ativos dela, com uma caixa para marcar todos. Trocar a gestão limpa os centros marcados.</li>
             <li>Use “Redefinir Senha” para dar uma senha nova (ao menos 8 caracteres). No campo da senha (aqui e na senha inicial do Novo Usuário), o olho à direita mostra o que foi digitado; clique de novo para ocultar.</li>
             <li>O que cada um pode fazer vem do perfil, na tela Perfis.</li>
           </ul>

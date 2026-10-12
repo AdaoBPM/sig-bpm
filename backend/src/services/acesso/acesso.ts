@@ -20,6 +20,11 @@ export type Acesso = {
   /** Só as movimentações e os centros de custo dos departamentos do usuário. */
   recorteDepartamento: boolean;
   departamentos: DepartamentoAcesso[];
+  /** Só os centros de custo marcados no usuário (da gestão dele), e as movimentações só dentro deles (11/10/2026). */
+  recorteCentro: boolean;
+  gestao: DepartamentoAcesso | null;
+  /** Os ids dos centros de custo do usuário. */
+  centros: string[];
 };
 
 export type UsuarioAutenticado = {
@@ -49,6 +54,7 @@ const AREAS_DO_GRUPO: Record<RecursoSistema, string[]> = {
  * O recorte por departamento (Gestor) vale na DRE, nos centros de custo e nas divergências. A classificação, os
  * lançamentos manuais, a apuração (receita, rateios, estoque, conferência) e a auditoria mostram lançamentos de todos
  * os departamentos: quem tem o recorte não as alcança, mesmo com o grupo liberado, senão o recorte seria contornado.
+ * O mesmo vale para o recorte por centro de custo (Coordenador).
  */
 const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "apuracao", "auditoria"]);
 /** O recorte por setor (Alimentador) é o das listas operacionais: no Fechamento Mensal, só Importações e Listas. */
@@ -57,12 +63,12 @@ const DENTRO_DO_RECORTE_DE_SETOR = new Set(["fechamento", "importacao", "listas_
 /** Grupo × ação do perfil → a lista "área:acao" das rotas, com Editar implicando Ler e os recortes aplicados. */
 export function permissoesDasRotas(
   permissoes: Array<{ recurso: RecursoSistema; acao: AcaoPermissao }>,
-  recortes: { recorteSetor: boolean; recorteDepartamento: boolean },
+  recortes: { recorteSetor: boolean; recorteDepartamento: boolean; recorteCentro?: boolean },
 ): string[] {
   const lista = new Set<string>();
   for (const p of permissoes) {
     for (const area of AREAS_DO_GRUPO[p.recurso] ?? []) {
-      if (recortes.recorteDepartamento && FORA_DO_RECORTE_DE_DEPARTAMENTO.has(area)) continue;
+      if ((recortes.recorteDepartamento || recortes.recorteCentro) && FORA_DO_RECORTE_DE_DEPARTAMENTO.has(area)) continue;
       if (recortes.recorteSetor && p.recurso === "FECHAMENTO_MENSAL" && !DENTRO_DO_RECORTE_DE_SETOR.has(area)) continue;
       lista.add(`${area}:ler`);
       if (p.acao === "EDITAR") lista.add(`${area}:editar`);
@@ -83,6 +89,8 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
       ativo: true,
       setores: { select: { tipoLista: true } },
       departamentos: { select: { departamento: true } },
+      gestao: true,
+      centros: { select: { centroCustoId: true } },
       perfil: {
         select: {
           codigo: true,
@@ -90,6 +98,7 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
           ativo: true,
           recorteSetor: true,
           recorteDepartamento: true,
+          recorteCentro: true,
           permissoes: { select: { recurso: true, acao: true } },
         },
       },
@@ -108,12 +117,15 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
       setores: usuario.setores.map((s) => s.tipoLista),
       recorteDepartamento: usuario.perfil.recorteDepartamento,
       departamentos: usuario.departamentos.map((d) => d.departamento),
+      recorteCentro: usuario.perfil.recorteCentro,
+      gestao: usuario.gestao,
+      centros: usuario.centros.map((c) => c.centroCustoId),
     },
   };
 }
 
 /** Acesso irrestrito: o de quem não tem recorte nenhum (o Contábil). Para scripts e chamadas internas. */
-export const ACESSO_TOTAL: Acesso = { recorteSetor: false, setores: [], recorteDepartamento: false, departamentos: [] };
+export const ACESSO_TOTAL: Acesso = { recorteSetor: false, setores: [], recorteDepartamento: false, departamentos: [], recorteCentro: false, gestao: null, centros: [] };
 
 /** O usuário alcança esta lista operacional? */
 export const alcancaLista = (acesso: Acesso, tipo: string) => !acesso.recorteSetor || acesso.setores.includes(tipo as TipoImportacao);

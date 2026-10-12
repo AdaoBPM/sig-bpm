@@ -4,7 +4,7 @@ import type { DepartamentoAcesso } from "@/services/authService";
 export type Acao = "LER" | "EDITAR";
 export type Permissao = { recurso: string; acao: Acao };
 
-export type PerfilResumo = { id: string; codigo: string; nome: string; ativo: boolean; recorteSetor: boolean; recorteDepartamento: boolean };
+export type PerfilResumo = { id: string; codigo: string; nome: string; ativo: boolean; recorteSetor: boolean; recorteDepartamento: boolean; recorteCentro: boolean };
 
 export type Usuario = {
   id: string;
@@ -15,7 +15,13 @@ export type Usuario = {
   perfil: PerfilResumo;
   setores: string[];
   departamentos: DepartamentoAcesso[];
+  /** O recorte por centro de custo (Coordenador): a gestão e os ids dos centros dela que o usuário alcança. */
+  gestao: DepartamentoAcesso | null;
+  centros: string[];
 };
+
+/** Um centro de custo ativo, com a gestão dele (o departamento do cadastro). */
+export type CentroDaGestao = { id: string; codigoRM: string | null; nome: string; agrupamento: string | null; gestao: DepartamentoAcesso };
 
 export type Perfil = PerfilResumo & {
   descricao: string | null;
@@ -31,6 +37,8 @@ export type OpcoesUsuarios = {
   acoes: Acao[];
   setores: Array<{ tipo: string; rotulo: string }>;
   departamentos: Array<{ departamento: DepartamentoAcesso; rotulo: string }>;
+  gestoes: Array<{ gestao: DepartamentoAcesso; rotulo: string }>;
+  centros: CentroDaGestao[];
 };
 
 export type DadosUsuario = {
@@ -40,6 +48,8 @@ export type DadosUsuario = {
   ativo: boolean;
   setores: string[];
   departamentos: DepartamentoAcesso[];
+  gestao: DepartamentoAcesso | null;
+  centros: string[];
   senha?: string;
 };
 
@@ -50,6 +60,7 @@ export type DadosPerfil = {
   ativo: boolean;
   recorteSetor: boolean;
   recorteDepartamento: boolean;
+  recorteCentro: boolean;
   permissoes: Permissao[];
 };
 

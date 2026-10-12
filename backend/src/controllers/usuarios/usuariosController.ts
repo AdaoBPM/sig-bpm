@@ -12,6 +12,8 @@ const usuarioSchema = z.object({
   ativo: z.boolean().default(true),
   setores: z.array(z.enum(Object.values(TipoImportacao) as [string, ...string[]])).default([]),
   departamentos: z.array(z.enum(Object.values(DepartamentoAcesso) as [string, ...string[]])).default([]),
+  gestao: z.enum(Object.values(DepartamentoAcesso) as [string, ...string[]]).nullable().default(null),
+  centros: z.array(z.string().uuid()).default([]),
 });
 const perfilSchema = z.object({
   nome: z.string().trim().min(2).max(80),
@@ -19,6 +21,7 @@ const perfilSchema = z.object({
   ativo: z.boolean().default(true),
   recorteSetor: z.boolean().default(false),
   recorteDepartamento: z.boolean().default(false),
+  recorteCentro: z.boolean().default(false),
   permissoes: z
     .array(
       z.object({

@@ -15,7 +15,10 @@ import { classeSelect, mensagemDeErro, usuariosService, type OpcoesUsuarios, typ
 
 type Props = { opcoes: OpcoesUsuarios; editando: Usuario | null; onFechar: () => void };
 
-/** Cadastro e edição de um usuário: perfil, situação, setores (Alimentador) e departamentos (Gestor). */
+/**
+ * Cadastro e edição de um usuário: perfil, situação, setores, departamentos (Gestor) e, no recorte por centro de custo
+ * (Coordenador, 11/10/2026), a gestão e os centros dela que o usuário alcança.
+ */
 export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState(editando?.nome ?? "");
@@ -24,12 +27,16 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
   const [setores, setSetores] = useState<string[]>(editando?.setores ?? []);
   const [departamentos, setDepartamentos] = useState<DepartamentoAcesso[]>(editando?.departamentos ?? []);
+  const [gestao, setGestao] = useState<DepartamentoAcesso | "">(editando?.gestao ?? "");
+  const [centros, setCentros] = useState<string[]>(editando?.centros ?? []);
   const [senha, setSenha] = useState("");
   const perfil = opcoes.perfis.find((p) => p.id === perfilId);
 
   const salvar = useMutation({
     mutationFn: () => {
-      const d = { nome, email, perfilId, ativo, setores, departamentos };
+      // Sem o recorte por centro de custo no perfil, a gestão e os centros não valem: vão vazios.
+      const doCoordenador = !!perfil?.recorteCentro;
+      const d = { nome, email, perfilId, ativo, setores, departamentos, gestao: doCoordenador ? gestao || null : null, centros: doCoordenador ? centros : [] };
       return editando ? usuariosService.atualizar(editando.id, d) : usuariosService.criar({ ...d, senha });
     },
     onSuccess: () => {
@@ -41,13 +48,16 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
   });
   const alternar = <T,>(lista: T[], item: T) => (lista.includes(item) ? lista.filter((x) => x !== item) : [...lista, item]);
   const podeSalvar = nome.trim().length >= 2 && email.includes("@") && perfilId && (editando || senha.length >= 8);
+  // Os centros ativos da gestão escolhida.
+  const daGestao = opcoes.centros.filter((c) => c.gestao === gestao);
+  const todosMarcados = daGestao.length > 0 && daGestao.every((c) => centros.includes(c.id));
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{editando ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
-          <DialogDescription>O que o usuário pode fazer vem do perfil. Setores e departamentos só valem se o perfil recorta por eles.</DialogDescription>
+          <DialogDescription>O que o usuário pode fazer vem do perfil. Setores, departamentos e centros de custo só valem se o perfil recorta por eles.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -113,6 +123,64 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
                 ))}
               </div>
               <p className="text-xs text-gray-500">A DRE é inteira para todos; sem departamento marcado, o usuário não vê movimentações nem centros de custo.</p>
+            </fieldset>
+          ) : null}
+          {perfil?.recorteCentro ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-gray-900">
+                Centros de Custo<span className="font-normal text-gray-500">: os que o usuário alcança, da gestão dele</span>
+              </legend>
+              <div className="space-y-1.5">
+                <Label htmlFor="u-gestao">Gestão</Label>
+                <select
+                  id="u-gestao"
+                  value={gestao}
+                  onChange={(e) => {
+                    // Trocar a gestão limpa os centros: eles são da gestão.
+                    setGestao(e.target.value as DepartamentoAcesso | "");
+                    setCentros([]);
+                  }}
+                  className={classeSelect}
+                >
+                  <option value="">Escolha a gestão do usuário</option>
+                  {opcoes.gestoes.map((g) => (
+                    <option key={g.gestao} value={g.gestao}>
+                      {g.rotulo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {gestao ? (
+                <div className="rounded-sm border border-gray-200">
+                  <label className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-900">
+                    <input
+                      type="checkbox"
+                      checked={todosMarcados}
+                      onChange={() => setCentros(todosMarcados ? [] : daGestao.map((c) => c.id))}
+                      className="size-4 accent-black"
+                    />
+                    Todos os Centros da Gestão
+                    <span className="ml-auto text-xs font-normal text-gray-500">
+                      {centros.length} de {daGestao.length}
+                    </span>
+                  </label>
+                  <div className="max-h-64 space-y-0.5 overflow-y-auto px-3 py-1.5">
+                    {daGestao.map((c) => (
+                      <label key={c.id} className="flex items-start gap-2 py-0.5 text-sm text-gray-700">
+                        <input type="checkbox" checked={centros.includes(c.id)} onChange={() => setCentros(alternar(centros, c.id))} className="mt-0.5 size-4 shrink-0 accent-black" />
+                        <span>
+                          <span>{c.codigoRM ? `${c.codigoRM} · ` : ""}{c.nome}</span>
+                          {c.agrupamento ? <span className="text-xs text-gray-500"> · {c.agrupamento}</span> : null}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <p className="text-xs text-gray-500">
+                A DRE é inteira para todos; o usuário vê só os centros marcados na visão por centro de custo, com as movimentações deles. Sem centro marcado,
+                não vê centros nem movimentações (salvo as da Receita Bruta e dos Impostos, abertas a todos).
+              </p>
             </fieldset>
           ) : null}
         </div>

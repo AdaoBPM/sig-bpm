@@ -54,6 +54,11 @@ const POR_DEPARTAMENTO_DO_CENTRO: Record<string, DepartamentoAcesso> = {
 
 const n = (s: string | null | undefined) => (s ?? "").trim().toUpperCase();
 
+/** A gestão (departamento do recorte) de um centro de custo, pelo campo DEPARTAMENTO do cadastro; nula se não é de uma. */
+export function gestaoDoCentro(departamentoDoCentro: string | null): DepartamentoAcesso | null {
+  return POR_DEPARTAMENTO_DO_CENTRO[n(departamentoDoCentro)] ?? null;
+}
+
 /** O departamento de uma linha da DRE; nulo para receitas, margens e resultados, que não são de nenhum. */
 export function departamentoDaLinha(l: { grupoSigla: string; descricao: string }): DepartamentoAcesso | null {
   if (l.grupoSigla === "DVV") return DVV_POR_LINHA[n(l.descricao)] ?? null;
@@ -66,16 +71,32 @@ export function departamentoDaLinha(l: { grupoSigla: string; descricao: string }
  */
 const ABERTOS_A_TODOS = new Set(["ROB", "IRB"]);
 
-/** O usuário pode consultar as movimentações desta linha? */
+/**
+ * O usuário pode consultar as movimentações desta linha (nas visões das unidades)? Com recorte por centro de custo
+ * (Coordenador), só as abertas a todos: as demais ele consulta dentro dos seus centros (`podeVerLinhaNoCentro`).
+ */
 export function podeVerMovimentos(acesso: Acesso, l: { grupoSigla: string; descricao: string }) {
-  if (!acesso.recorteDepartamento || ABERTOS_A_TODOS.has(l.grupoSigla)) return true;
+  if ((!acesso.recorteDepartamento && !acesso.recorteCentro) || ABERTOS_A_TODOS.has(l.grupoSigla)) return true;
+  if (!acesso.recorteDepartamento) return false;
   const d = departamentoDaLinha(l);
   return d !== null && acesso.departamentos.includes(d);
 }
 
-/** O usuário pode ver este centro de custo? Almoxarifado, investimento e requisição: só sem recorte. */
-export function podeVerCentro(acesso: Acesso, departamentoDoCentro: string | null) {
+/**
+ * O usuário pode ver este centro de custo? Almoxarifado, investimento e requisição: só sem recorte. Com recorte por
+ * centro de custo, só os centros marcados no usuário.
+ */
+export function podeVerCentro(acesso: Acesso, centro: { id: string; departamento: string | null }) {
+  if (acesso.recorteCentro && !acesso.centros.includes(centro.id)) return false;
   if (!acesso.recorteDepartamento) return true;
-  const d = POR_DEPARTAMENTO_DO_CENTRO[n(departamentoDoCentro)];
+  const d = POR_DEPARTAMENTO_DO_CENTRO[n(centro.departamento)];
   return d !== undefined && acesso.departamentos.includes(d);
+}
+
+/**
+ * Nas visões por centro de custo, as linhas cujas movimentações o usuário consulta: o Gestor, as dos departamentos
+ * dele (como nas unidades); o Coordenador, todas as dos seus centros (o centro já recorta).
+ */
+export function podeVerLinhaNoCentro(acesso: Acesso, l: { grupoSigla: string; descricao: string }) {
+  return acesso.recorteDepartamento ? podeVerMovimentos(acesso, l) : true;
 }

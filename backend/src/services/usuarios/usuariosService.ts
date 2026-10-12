@@ -2,7 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { AcaoPermissao, DepartamentoAcesso, RecursoSistema, TipoImportacao } from "../../generated/prisma/enums.js";
 import { hashSenha } from "../../lib/senha.js";
-import { ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
+import { gestaoDoCentro, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { DEFINICOES_LISTAS } from "../importacoes/listas/definicoesListas.js";
 import { auditar } from "../auditoriaService.js";
 
@@ -69,6 +69,9 @@ export type DadosUsuario = {
   ativo: boolean;
   setores: TipoImportacao[];
   departamentos: DepartamentoAcesso[];
+  /** O recorte por centro de custo (Coordenador): a gestão e os centros dela que o usuário alcança. */
+  gestao?: DepartamentoAcesso | null;
+  centros?: string[];
 };
 export type DadosPerfil = {
   nome: string;
@@ -76,6 +79,7 @@ export type DadosPerfil = {
   ativo: boolean;
   recorteSetor: boolean;
   recorteDepartamento: boolean;
+  recorteCentro?: boolean;
   permissoes: Permissao[];
 };
 
@@ -97,16 +101,34 @@ const selecaoUsuario = {
   email: true,
   ativo: true,
   ordem: true,
-  perfil: { select: { id: true, codigo: true, nome: true, recorteSetor: true, recorteDepartamento: true, ativo: true } },
+  perfil: { select: { id: true, codigo: true, nome: true, recorteSetor: true, recorteDepartamento: true, recorteCentro: true, ativo: true } },
   setores: { select: { tipoLista: true } },
   departamentos: { select: { departamento: true } },
+  gestao: true,
+  centros: { select: { centroCusto: { select: { id: true, codigoRM: true, nomeRM: true } } } },
 } satisfies Prisma.UsuarioSelect;
 type UsuarioLido = Prisma.UsuarioGetPayload<{ select: typeof selecaoUsuario }>;
 const paraTela = (u: UsuarioLido) => ({
   ...u,
   setores: u.setores.map((s) => s.tipoLista),
   departamentos: u.departamentos.map((d) => d.departamento),
+  centros: u.centros.map((c) => c.centroCusto.id),
 });
+
+/**
+ * Os centros de custo do Coordenador: precisam ser ativos e da gestão escolhida (o campo DEPARTAMENTO do cadastro).
+ * Sem gestão, nenhum centro.
+ */
+async function exigirCentros(gestao: DepartamentoAcesso | null, centros: string[]) {
+  const ids = [...new Set(centros)];
+  if (ids.length === 0) return [];
+  if (!gestao) throw new RegraUsuarioError(400, "Escolha a gestão do usuário antes dos centros de custo.");
+  const achados = await getPrismaClient().centroCusto.findMany({ where: { id: { in: ids } }, select: { id: true, nomeRM: true, departamento: true, ativo: true } });
+  const fora = achados.filter((c) => !c.ativo || gestaoDoCentro(c.departamento) !== gestao);
+  if (achados.length !== ids.length) throw new RegraUsuarioError(400, "Centro de custo inexistente.");
+  if (fora.length) throw new RegraUsuarioError(400, `Centros fora da gestão ${ROTULO_DEPARTAMENTO[gestao]} ou inativos: ${fora.map((c) => c.nomeRM).join(", ")}.`);
+  return ids;
+}
 
 async function perfilExistente(id: string) {
   const p = await getPrismaClient().perfil.findUnique({ where: { id }, select: { id: true, ativo: true } });
@@ -119,7 +141,21 @@ export const usuariosService = {
   async opcoes() {
     const perfis = await getPrismaClient().perfil.findMany({
       orderBy: [{ ordem: "asc" }, { nome: "asc" }],
-      select: { id: true, codigo: true, nome: true, ativo: true, recorteSetor: true, recorteDepartamento: true },
+      select: { id: true, codigo: true, nome: true, ativo: true, recorteSetor: true, recorteDepartamento: true, recorteCentro: true },
+    });
+    // Os centros ativos de cada gestão, para o recorte por centro de custo (Coordenador).
+    const centros = (
+      await getPrismaClient().centroCusto.findMany({
+        where: { ativo: true },
+        orderBy: [{ codigoRM: "asc" }],
+        select: { id: true, codigoRM: true, nomeRM: true, nomeControladoria: true, departamento: true },
+      })
+    )
+      // Os com código RM primeiro, na ordem do código; os sem código no fim, pelo nome.
+      .sort((a, b) => (a.codigoRM ?? "￿").localeCompare(b.codigoRM ?? "￿") || a.nomeRM.localeCompare(b.nomeRM))
+      .flatMap((c) => {
+      const gestao = gestaoDoCentro(c.departamento);
+      return gestao ? [{ id: c.id, codigoRM: c.codigoRM, nome: c.nomeRM, agrupamento: c.nomeControladoria, gestao }] : [];
     });
     return {
       perfis,
@@ -127,6 +163,9 @@ export const usuariosService = {
       acoes: ACOES,
       setores: SETORES,
       departamentos: DEPARTAMENTOS.map((d) => ({ departamento: d, rotulo: ROTULO_DEPARTAMENTO[d] })),
+      /** As gestões com centros de custo, e os centros de cada uma. */
+      gestoes: DEPARTAMENTOS.filter((d) => centros.some((c) => c.gestao === d)).map((d) => ({ gestao: d, rotulo: ROTULO_DEPARTAMENTO[d] })),
+      centros,
     };
   },
 
@@ -137,6 +176,7 @@ export const usuariosService = {
 
   async criar(d: DadosUsuario & { senha: string }, quem: string) {
     exigirSetores(d.setores);
+    const centros = await exigirCentros(d.gestao ?? null, d.centros ?? []);
     const prisma = getPrismaClient();
     await perfilExistente(d.perfilId);
     const email = d.email.trim().toLowerCase();
@@ -151,6 +191,8 @@ export const usuariosService = {
         ordem: (await prisma.usuario.count()) + 1,
         setores: { create: [...new Set(d.setores)].map((tipoLista) => ({ tipoLista })) },
         departamentos: { create: [...new Set(d.departamentos)].map((departamento) => ({ departamento })) },
+        gestao: d.gestao ?? null,
+        centros: { create: centros.map((centroCustoId) => ({ centroCustoId })) },
       },
       select: selecaoUsuario,
     });
@@ -161,6 +203,7 @@ export const usuariosService = {
 
   async atualizar(id: string, d: DadosUsuario, quemEdita: string) {
     exigirSetores(d.setores);
+    const centros = await exigirCentros(d.gestao ?? null, d.centros ?? []);
     const prisma = getPrismaClient();
     const atual = await prisma.usuario.findUnique({ where: { id }, select: { id: true, perfilId: true } });
     if (!atual) throw new RegraUsuarioError(404, "Usuário não encontrado.");
@@ -174,6 +217,7 @@ export const usuariosService = {
     const u = await prisma.$transaction(async (tx) => {
       await tx.usuarioSetor.deleteMany({ where: { usuarioId: id } });
       await tx.usuarioDepartamento.deleteMany({ where: { usuarioId: id } });
+      await tx.usuarioCentro.deleteMany({ where: { usuarioId: id } });
       return tx.usuario.update({
         where: { id },
         data: {
@@ -183,6 +227,8 @@ export const usuariosService = {
           ativo: d.ativo,
           setores: { create: [...new Set(d.setores)].map((tipoLista) => ({ tipoLista })) },
           departamentos: { create: [...new Set(d.departamentos)].map((departamento) => ({ departamento })) },
+          gestao: d.gestao ?? null,
+          centros: { create: centros.map((centroCustoId) => ({ centroCustoId })) },
         },
         select: selecaoUsuario,
       });
@@ -216,6 +262,7 @@ export const usuariosService = {
         ordem: true,
         recorteSetor: true,
         recorteDepartamento: true,
+        recorteCentro: true,
         permissoes: { select: { recurso: true, acao: true } },
         _count: { select: { usuarios: true } },
       },
@@ -235,6 +282,7 @@ export const usuariosService = {
         ativo: d.ativo,
         recorteSetor: d.recorteSetor,
         recorteDepartamento: d.recorteDepartamento,
+        recorteCentro: d.recorteCentro ?? false,
         ordem: (await prisma.perfil.count()) + 1,
         permissoes: { create: normalizarPermissoes(d.permissoes) },
       },
@@ -266,6 +314,7 @@ export const usuariosService = {
           ativo: d.ativo,
           recorteSetor: d.recorteSetor,
           recorteDepartamento: d.recorteDepartamento,
+          recorteCentro: d.recorteCentro ?? false,
           permissoes: { create: permissoes },
         },
       }),

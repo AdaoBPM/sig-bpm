@@ -31,6 +31,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
   const [recorteSetor, setRecorteSetor] = useState(editando?.recorteSetor ?? false);
   const [recorteDepartamento, setRecorteDepartamento] = useState(editando?.recorteDepartamento ?? false);
+  const [recorteCentro, setRecorteCentro] = useState(editando?.recorteCentro ?? false);
   const [nivel, setNivel] = useState<Record<string, number>>(() => {
     const m: Record<string, number> = {};
     for (const p of editando?.permissoes ?? []) m[p.recurso] = Math.max(m[p.recurso] ?? 0, NIVEL[p.acao]);
@@ -41,7 +42,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
     Object.entries(nivel).flatMap(([recurso, n]) => opcoes.acoes.filter((a) => NIVEL[a] <= n).map((acao) => ({ recurso, acao })));
   const salvar = useMutation({
     mutationFn: () => {
-      const d = { nome, descricao: descricao || null, ativo, recorteSetor, recorteDepartamento, permissoes: permissoes() };
+      const d = { nome, descricao: descricao || null, ativo, recorteSetor, recorteDepartamento, recorteCentro, permissoes: permissoes() };
       return editando ? usuariosService.atualizarPerfil(editando.id, d) : usuariosService.criarPerfil({ ...d, codigo });
     },
     onSuccess: () => {
@@ -102,6 +103,12 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
                 Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele (as movimentações da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos)</span>
               </span>
             </label>
+            <label className="flex items-center gap-2 text-sm text-gray-900">
+              <input type="checkbox" checked={recorteCentro} onChange={(e) => setRecorteCentro(e.target.checked)} className="size-4 accent-black" />
+              <span>
+                Recorta por Centro de Custo<span className="text-gray-500">: o usuário só vê os centros de custo marcados nele (de uma gestão), com as movimentações deles</span>
+              </span>
+            </label>
           </div>
           <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
@@ -149,7 +156,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
           </table>
           <p className="text-xs text-gray-500">
             Ler: o grupo aparece no menu e as telas dele mostram os dados. Editar: pode alterar (importar, apurar, fechar, editar cadastros…). Os
-            recortes valem por cima dos grupos: com recorte por departamento, o Fechamento Mensal não mostra Classificação, Lançamentos, Receita,
+            recortes valem por cima dos grupos: com recorte por departamento (ou por centro de custo), o Fechamento Mensal não mostra Classificação, Lançamentos, Receita,
             Rateios, Estoque e Conferência, nem o Controle de Usuários a Auditoria (essas telas mostram lançamentos de todos os departamentos); com
             recorte por setor, o Fechamento Mensal mostra só Importações e Listas.
           </p>

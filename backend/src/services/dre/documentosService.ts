@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { RegraDREError } from "./dreService.js";
 
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
@@ -18,7 +18,15 @@ export const documentosService = {
     if (!c) throw new RegraDREError(404, `A competência ${rotulo(ano, mes)} não existe.`);
     const linha = await prisma.linhaDRE.findUnique({ where: { codigo: filtro.linha }, select: { descricao: true, grupoSigla: true } });
     if (!linha) throw new RegraDREError(404, `A linha ${filtro.linha} não está na estrutura da DRE.`);
-    if (!podeVerMovimentos(acesso, linha)) throw new RegraDREError(403, `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
+    // O Coordenador (recorte por centro de custo) consulta as linhas fechadas a ele só num centro seu.
+    const doCentroDele =
+      acesso.recorteCentro &&
+      !!filtro.centro &&
+      podeVerLinhaNoCentro(acesso, linha) &&
+      !!(await prisma.centroCusto.findFirst({ where: { codigoRM: filtro.centro, id: { in: acesso.centros } }, select: { id: true } }));
+    if (!podeVerMovimentos(acesso, linha) && !doCentroDele) {
+      throw new RegraDREError(403, acesso.recorteCentro ? "Só as movimentações dos seus centros de custo: marque o Centro de Custo do Lançamento." : `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
+    }
     const where = {
       competenciaId: c.id,
       contaContabil: filtro.conta,

@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import type { Composicao, OrigemValor, ParcelaRateio } from "./apuracaoUnidades.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerCentro, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
 import { CENTRO_DE_OBRA, sinalDaLinha } from "./obrasService.js";
 
@@ -209,8 +209,9 @@ export const detalhamentoService = {
     if (!c) throw new RegraDREError(404, `A competência ${rotulo(ano, mes)} não existe.`);
     const linha = await prisma.linhaDRE.findUnique({ where: { codigo }, select: { id: true, codigo: true, descricao: true, tipo: true, grupoSigla: true } });
     if (!linha) throw new RegraDREError(404, `A linha ${codigo} não está na estrutura da DRE.`);
-    // Recorte do Gestor (Passo 22): só as movimentações das linhas dos seus departamentos.
-    if (!podeVerMovimentos(acesso, linha)) {
+    // Recorte do Gestor (Passo 22): só as movimentações das linhas dos seus departamentos. O do Coordenador: nas
+    // unidades, só as linhas abertas a todos; nos centros de custo, as dos seus centros.
+    if (!("grupo" in visao ? podeVerLinhaNoCentro(acesso, linha) : podeVerMovimentos(acesso, linha))) {
       throw new RegraDREError(403, `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
     }
 
@@ -243,7 +244,7 @@ export const detalhamentoService = {
     } else if ("grupo" in visao) {
       titulo = `Centro de custo ${visao.grupo}`;
       const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true, departamento: true } });
-      const ids = centros.filter((x) => grupoDoCentro(x) === visao.grupo && podeVerCentro(acesso, x.departamento)).map((x) => x.id);
+      const ids = centros.filter((x) => grupoDoCentro(x) === visao.grupo && podeVerCentro(acesso, x)).map((x) => x.id);
       if (ids.length === 0) throw new RegraDREError(403, `O centro de custo ${visao.grupo} não é de um departamento seu.`);
       const [gravados, ls] = await Promise.all([
         prisma.resultadoApurado.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: { valor: true, composicao: true } }),

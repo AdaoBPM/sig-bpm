@@ -72,6 +72,9 @@ model Perfil {
   /// inteira para todos que têm a permissão DRE.
   recorteSetor        Boolean @default(false) @map("recorte_setor")
   recorteDepartamento Boolean @default(false) @map("recorte_departamento")
+  /// Recorte por centro de custo (Coordenador, 11/10/2026): o usuário só vê os
+  /// centros marcados nele (da gestão dele), e as movimentações só dentro deles.
+  recorteCentro       Boolean @default(false) @map("recorte_centro")
 
   /// LISTA: o que este perfil pode fazer, por recurso e ação.
   permissoes PerfilPermissao[]
@@ -117,6 +120,12 @@ model Usuario {
   /// LISTA: departamentos cujas movimentações o usuário pode consultar, quando
   /// o perfil tem recorte por departamento.
   departamentos UsuarioDepartamento[]
+  /// A gestão (departamento) sob a qual o usuário está, quando o perfil tem
+  /// recorte por centro de custo: os centros dele são dessa gestão.
+  gestao        DepartamentoAcesso?
+  /// LISTA: os centros de custo que o usuário alcança, quando o perfil tem
+  /// recorte por centro de custo.
+  centros       UsuarioCentro[]
 
   competenciasAbertas   Competencia[] @relation("CompetenciaAberta")
   competenciasApuradas  Competencia[] @relation("CompetenciaApurada")
@@ -141,6 +150,17 @@ enum DepartamentoAcesso {
   COMERCIAL
   ADMINISTRATIVO
   EXTRA_OPERACIONAL
+}
+
+model UsuarioCentro {
+  usuarioId     String @map("usuario_id")
+  centroCustoId String @map("centro_custo_id")
+
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  centroCusto CentroCusto @relation(fields: [centroCustoId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, centroCustoId])
+  @@map("usuario_centros")
 }
 
 model UsuarioDepartamento {
@@ -395,6 +415,7 @@ model CentroCusto {
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
   resultadosApurados   ResultadoApurado[]
+  usuarios             UsuarioCentro[]
 
   @@index([nomeControladoria])
   @@index([balde])
