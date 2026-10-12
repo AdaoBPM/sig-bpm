@@ -7,7 +7,7 @@ import { EstruturaDreContent } from "./EstruturaDreContent";
 export default function EstruturaDrePage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastros_controladoria:ler" fallback={<SemLeitura />}>
         <EstruturaDreContent />
       </PermissionGuard>
     </ProtectedLayout>

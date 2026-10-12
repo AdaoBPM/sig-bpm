@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import type { DepartamentoAcesso } from "@/services/authService";
 
-export type Acao = "VER" | "LER" | "EDITAR";
+export type Acao = "LER" | "EDITAR";
 export type Permissao = { recurso: string; acao: Acao };
 
 export type PerfilResumo = { id: string; codigo: string; nome: string; ativo: boolean; recorteSetor: boolean; recorteDepartamento: boolean };

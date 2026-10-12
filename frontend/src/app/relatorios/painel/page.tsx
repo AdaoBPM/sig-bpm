@@ -7,7 +7,7 @@ import { PainelContent } from "./PainelContent";
 export default function PainelPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="dre:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="resultados:ler" fallback={<SemLeitura />}>
         <PainelContent />
       </PermissionGuard>
     </ProtectedLayout>

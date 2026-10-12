@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -8,55 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { etapasDoMes } from "@/lib/etapasDoMes";
 import { navGrupos } from "@/lib/navigation-config";
 
 import { mensagemDeErro, usuariosService, type Acao, type OpcoesUsuarios, type Perfil, type Permissao } from "../../usuarios/services/usuariosService";
 
 type Props = { opcoes: OpcoesUsuarios; editando: Perfil | null; onFechar: () => void };
 
-const ROTULO_ACAO: Record<Acao, string> = { VER: "Ver", LER: "Ler", EDITAR: "Editar" };
-const NIVEL: Record<Acao, number> = { VER: 1, LER: 2, EDITAR: 3 };
-
-/** "cadastros:ver" → "CADASTROS": o recurso da permissão de uma tela. */
-const recursoDe = (permissao?: string) => (permissao ? permissao.split(":")[0].toUpperCase() : null);
-type TelaDoMenu = { tela: string; recurso: string };
-type ItemDoMenu = { item: string; telas: TelaDoMenu[] };
+const ROTULO_ACAO: Record<Acao, string> = { LER: "Ler", EDITAR: "Editar" };
+const NIVEL: Record<Acao, number> = { LER: 1, EDITAR: 2 };
 
 /**
- * As telas como o menu as mostra (11/10/2026): os grupos do menu lateral, cada item dele e as telas da barra do
- * topo (no Fechamento Mensal, as etapas do mês e o abrir, fechar e reabrir), com o recurso que dá a permissão de
- * cada uma. Os recursos que nenhuma tela usa vão no fim, em Outros.
- */
-function telasDoMenu(recursos: string[]): Array<{ grupo: string; itens: ItemDoMenu[] }> {
-  const blocos = navGrupos.map((g) => ({
-    grupo: g.titulo,
-    itens: g.itens
-      .map((item): ItemDoMenu => {
-        if (item.telas) return { item: item.title, telas: item.telas.flatMap((t) => (recursoDe(t.permission) ? [{ tela: t.title, recurso: recursoDe(t.permission)! }] : [])) };
-        if (item.href === "/competencias") {
-          return {
-            item: item.title,
-            telas: [
-              { tela: "Abrir, Fechar e Reabrir Competências", recurso: "COMPETENCIA" },
-              ...etapasDoMes(() => true, undefined).map((e) => ({ tela: e.rotulo, recurso: recursoDe(e.permissao)! })),
-            ],
-          };
-        }
-        return { item: item.title, telas: recursoDe(item.permission) ? [{ tela: item.title, recurso: recursoDe(item.permission)! }] : [] };
-      })
-      .filter((i) => i.telas.length > 0),
-  }));
-  const usados = new Set(blocos.flatMap((b) => b.itens.flatMap((i) => i.telas.map((t) => t.recurso))));
-  const outros = recursos.filter((r) => !usados.has(r));
-  return outros.length ? [...blocos, { grupo: "Outros", itens: [{ item: "Outros", telas: outros.map((r) => ({ tela: r, recurso: r })) }] }] : blocos;
-}
-
-/**
- * Tipo de usuário: nome, situação, recortes e as permissões, por grupo do menu e tela (cada tela segue o recurso dela;
- * as telas do mesmo recurso mudam juntas).
- * Marcar "Editar" marca também "Ler" e "Ver"; desmarcar "Ver" desmarca o resto
- * — a mesma coerência que o backend grava.
+ * Tipo de usuário: nome, situação, recortes e as permissões em cada grupo de telas do menu lateral (11/10/2026),
+ * sob o título do menu (Criação de Cenários, Apuração dos Resultados, Controladoria). Cada grupo tem Ler e Editar
+ * próprios. Marcar "Editar" marca também "Ler"; desmarcar "Ler" desmarca "Editar" — a mesma coerência que o
+ * backend grava.
  */
 export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
   const queryClient = useQueryClient();
@@ -89,24 +54,14 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
   });
   const marcar = (recurso: string, a: Acao, marcado: boolean) =>
     setNivel((m) => ({ ...m, [recurso]: marcado ? NIVEL[a] : NIVEL[a] - 1 }));
-  const rotuloRecurso = useMemo(() => new Map(opcoes.recursos.map((r) => [r.recurso, r.rotulo])), [opcoes.recursos]);
-  const blocos = useMemo(() => telasDoMenu(opcoes.recursos.map((r) => r.recurso)), [opcoes.recursos]);
-  const caixas = (recurso: string, rotulo: string) =>
-    opcoes.acoes.map((a) => (
-      <td key={a} className="px-3 py-1.5 text-center">
-        <input
-          type="checkbox"
-          aria-label={`${rotulo}: ${ROTULO_ACAO[a]}`}
-          checked={(nivel[recurso] ?? 0) >= NIVEL[a]}
-          onChange={(e) => marcar(recurso, a, e.target.checked)}
-          className="size-4 accent-black"
-        />
-      </td>
-    ));
+  // Os itens do menu com grupo de permissão, sob o título do menu.
+  const blocos = navGrupos
+    .map((g) => ({ titulo: g.titulo, itens: g.itens.filter((i) => i.recurso && opcoes.recursos.some((r) => r.recurso === i.recurso)) }))
+    .filter((b) => b.itens.length > 0);
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editando ? `Perfil ${editando.nome}` : "Novo Perfil"}</DialogTitle>
           <DialogDescription>
@@ -151,10 +106,9 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
           <table className="tabela-sig w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900">
-                <th className="px-3 py-2">Tela</th>
-                <th className="px-3 py-2">Permissão</th>
+                <th className="px-3 py-2">Grupo de Telas</th>
                 {opcoes.acoes.map((a) => (
-                  <th key={a} className="px-3 py-2 text-center">
+                  <th key={a} className="w-24 px-3 py-2 text-center">
                     {ROTULO_ACAO[a]}
                   </th>
                 ))}
@@ -162,44 +116,42 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
             </thead>
             <tbody>
               {blocos.map((b) => (
-                <Fragment key={b.grupo}>
+                <Fragment key={b.titulo}>
                   <tr className="border-y border-gray-300">
-                    <td colSpan={2 + opcoes.acoes.length} className="bg-yellow-50 px-3 py-1.5 text-xs font-bold tracking-wide text-gray-900 uppercase">
-                      {b.grupo}
+                    <td colSpan={1 + opcoes.acoes.length} className="bg-yellow-50 px-3 py-1.5 text-xs font-bold tracking-wide text-gray-900 uppercase">
+                      {b.titulo}
                     </td>
                   </tr>
-                  {b.itens.map((i) => {
-                    // O item sem barra de telas (Cenários Sintéticos, por exemplo) é uma tela só: uma linha, sem subtítulo.
-                    const unico = i.telas.length === 1 && i.telas[0].tela === i.item;
-                    return (
-                      <Fragment key={i.item}>
-                        {unico ? null : (
-                          <tr className="border-b border-gray-100">
-                            <td colSpan={2 + opcoes.acoes.length} className="px-3 pt-2 pb-1 text-sm font-bold text-gray-900">
-                              {i.item}
-                            </td>
-                          </tr>
-                        )}
-                        {i.telas.map((t) => {
-                          const rotulo = rotuloRecurso.get(t.recurso) ?? t.recurso;
-                          return (
-                            <tr key={t.tela} className="border-b border-gray-100">
-                              <td className={`py-1.5 pr-3 text-gray-900 ${unico ? "pl-3 font-bold" : "pl-7"}`}>{t.tela === t.recurso ? rotulo : t.tela}</td>
-                              <td className="px-3 py-1.5 text-xs text-gray-500">{rotulo}</td>
-                              {caixas(t.recurso, t.tela)}
-                            </tr>
-                          );
-                        })}
-                      </Fragment>
-                    );
-                  })}
+                  {b.itens.map((i) => (
+                    <tr key={i.recurso} className="border-b border-gray-100">
+                      <td className="px-3 py-1.5 text-gray-900">
+                        <span className="inline-flex items-center gap-2">
+                          <i.icon className="size-4 text-gray-500" />
+                          {i.title}
+                        </span>
+                      </td>
+                      {opcoes.acoes.map((a) => (
+                        <td key={a} className="px-3 py-1.5 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label={`${i.title}: ${ROTULO_ACAO[a]}`}
+                            checked={(nivel[i.recurso!] ?? 0) >= NIVEL[a]}
+                            onChange={(e) => marcar(i.recurso!, a, e.target.checked)}
+                            className="size-4 accent-black"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </Fragment>
               ))}
             </tbody>
           </table>
           <p className="text-xs text-gray-500">
-            Ver: a tela aparece. Ler: os dados carregam. Editar: pode alterar. A permissão é a do recurso da coluna Permissão: as telas do mesmo recurso
-            (por exemplo, as dos Cadastros) mudam juntas.
+            Ler: o grupo aparece no menu e as telas dele mostram os dados. Editar: pode alterar (importar, apurar, fechar, editar cadastros…). Os
+            recortes valem por cima dos grupos: com recorte por departamento, o Fechamento Mensal não mostra Classificação, Lançamentos, Receita,
+            Rateios, Estoque e Conferência, nem o Controle de Usuários a Auditoria (essas telas mostram lançamentos de todos os departamentos); com
+            recorte por setor, o Fechamento Mensal mostra só Importações e Listas.
           </p>
         </div>
         <DialogFooter>

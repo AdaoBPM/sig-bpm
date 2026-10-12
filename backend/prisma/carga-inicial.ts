@@ -101,21 +101,18 @@ async function carregarUnidades() {
 // usuários e a autenticação real entram no Passo 22.
 // -----------------------------------------------------------------------------
 
+// Os grupos de telas do menu lateral (11/10/2026).
 const RECURSOS: RecursoSistema[] = [
-  "CADASTROS",
-  "USUARIOS",
-  "COMPETENCIA",
-  "IMPORTACAO",
-  "LISTAS_OPERACIONAIS",
-  "LANCAMENTOS_MANUAIS",
-  "CLASSIFICACAO",
-  "APURACAO",
-  "DRE",
-  "DIVERGENCIA",
-  "AUDITORIA",
+  "CENARIOS_SINTETICOS",
+  "CENARIOS_ANALITICOS",
+  "RESULTADOS_REALIZADOS",
+  "FECHAMENTO_MENSAL",
+  "CADASTROS_APURACAO",
+  "CADASTROS_CONTROLADORIA",
+  "CONTROLE_USUARIOS",
 ];
 
-const ACOES: AcaoPermissao[] = ["VER", "LER", "EDITAR"];
+const ACOES: AcaoPermissao[] = ["LER", "EDITAR"];
 
 const PERFIS: Array<{
   codigo: string;
@@ -139,10 +136,8 @@ const PERFIS: Array<{
     descricao: "Digita e importa as listas operacionais dos seus setores",
     ordem: 2,
     recorteSetor: true,
-    // A importação dele fica restrita às listas dos seus setores (recorteSetor).
-    permissoes: (["LISTAS_OPERACIONAIS", "IMPORTACAO"] as RecursoSistema[]).flatMap((recurso) =>
-      (["VER", "LER", "EDITAR"] as AcaoPermissao[]).map((acao) => ({ recurso, acao })),
-    ),
+    // O recorte por setor deixa, no Fechamento Mensal, só Importações e Listas, e nas listas dos seus setores.
+    permissoes: (["LER", "EDITAR"] as AcaoPermissao[]).map((acao) => ({ recurso: "FECHAMENTO_MENSAL" as RecursoSistema, acao })),
   },
   {
     codigo: "GESTAO",
@@ -150,9 +145,11 @@ const PERFIS: Array<{
     descricao: "Consulta a DRE apurada, os fechamentos e as divergências",
     ordem: 3,
     recorteDepartamento: true,
-    permissoes: (["DRE", "DIVERGENCIA"] as RecursoSistema[]).flatMap((recurso) =>
-      (["VER", "LER"] as AcaoPermissao[]).map((acao) => ({ recurso, acao })),
-    ),
+    // O recorte por departamento tira as telas que mostram lançamentos de todos os departamentos.
+    permissoes: (["RESULTADOS_REALIZADOS", "FECHAMENTO_MENSAL", "CENARIOS_SINTETICOS", "CENARIOS_ANALITICOS"] as RecursoSistema[]).map((recurso) => ({
+      recurso,
+      acao: "LER" as AcaoPermissao,
+    })),
   },
 ];
 

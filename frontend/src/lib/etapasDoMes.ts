@@ -29,20 +29,20 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
   const rateio = acesso?.recorteSetor ? LISTAS_RATEIO.find((t) => acesso.setores.includes(t)) : "PROJETO";
   const primeiraLista = rateio ? slugDaLista(rateio) : LISTAS_INDICADORES.find(([t]) => acesso?.setores.includes(t))?.[1];
   const todas: Etapa[] = [
-    { caminho: "importar", chave: "importar", rotulo: "Importações", icone: Upload, permissao: "importacao:ver" },
-    { caminho: "classificacao", chave: "classificacao", rotulo: "Classificação", icone: ListChecks, permissao: "classificacao:ver" },
-    { caminho: "lancamentos-manuais", chave: "lancamentos-manuais", rotulo: "Lançamentos", icone: NotebookPen, permissao: "lancamentos_manuais:ver" },
+    { caminho: "importar", chave: "importar", rotulo: "Importações", icone: Upload, permissao: "importacao:ler" },
+    { caminho: "classificacao", chave: "classificacao", rotulo: "Classificação", icone: ListChecks, permissao: "classificacao:ler" },
+    { caminho: "lancamentos-manuais", chave: "lancamentos-manuais", rotulo: "Lançamentos", icone: NotebookPen, permissao: "lancamentos_manuais:ler" },
     ...(primeiraLista
-      ? [{ caminho: `listas/${primeiraLista}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ver" }]
+      ? [{ caminho: `listas/${primeiraLista}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ler" }]
       : []),
     // Os indicadores do exercício até o mês, como a tela Indicadores (Resultados Realizados).
-    { caminho: "indicadores", chave: "indicadores", rotulo: "Indicadores", icone: Gauge, permissao: "dre:ver" },
-    { caminho: "receita-previa", chave: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ver" },
-    { caminho: "rateios", chave: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ver" },
-    { caminho: "estoque", chave: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ver" },
-    { caminho: "dre", chave: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ver" },
-    { caminho: "conferencia-planilha", chave: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "apuracao:ver" },
-    { caminho: "divergencias", chave: "divergencias", rotulo: "Divergências", icone: TriangleAlert, permissao: "divergencia:ver" },
+    { caminho: "indicadores", chave: "indicadores", rotulo: "Indicadores", icone: Gauge, permissao: "dre:ler" },
+    { caminho: "receita-previa", chave: "receita-previa", rotulo: "Receita", icone: Calculator, permissao: "apuracao:ler" },
+    { caminho: "rateios", chave: "rateios", rotulo: "Rateios", icone: Percent, permissao: "apuracao:ler" },
+    { caminho: "estoque", chave: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "apuracao:ler" },
+    { caminho: "dre", chave: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ler" },
+    { caminho: "conferencia-planilha", chave: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "apuracao:ler" },
+    { caminho: "divergencias", chave: "divergencias", rotulo: "Divergências", icone: TriangleAlert, permissao: "divergencia:ler" },
   ];
   return todas.filter((e) => hasPermission(e.permissao));
 }

@@ -8,8 +8,8 @@ import { auditar } from "../auditoriaService.js";
 
 /**
  * Usuários e perfis (Passo 22). O perfil é cadastro, não código: a empresa
- * cria tipos novos, inativa os existentes e define a matriz recurso × ação de
- * cada um. Os recortes por dado (setores do Alimentador, departamentos do
+ * cria tipos novos, inativa os existentes e define, em cada grupo de telas do
+ * menu lateral, se o perfil lê ou edita (11/10/2026). Os recortes por dado (setores do Alimentador, departamentos do
  * Gestor) ficam no usuário e só valem se o perfil recorta.
  *
  * Travas contra se trancar para fora: ninguém inativa a si mesmo, troca o
@@ -25,35 +25,26 @@ export class RegraUsuarioError extends Error {
   }
 }
 
+/** Os grupos de telas do menu lateral, na ordem do menu (11/10/2026). */
 export const RECURSOS: RecursoSistema[] = [
-  "CADASTROS",
-  "USUARIOS",
-  "COMPETENCIA",
-  "IMPORTACAO",
-  "LISTAS_OPERACIONAIS",
-  "LANCAMENTOS_MANUAIS",
-  "CLASSIFICACAO",
-  "APURACAO",
-  "DRE",
-  "DIVERGENCIA",
-  "AUDITORIA",
-  "CENARIOS",
+  "CENARIOS_SINTETICOS",
+  "CENARIOS_ANALITICOS",
+  "RESULTADOS_REALIZADOS",
+  "FECHAMENTO_MENSAL",
+  "CADASTROS_APURACAO",
+  "CADASTROS_CONTROLADORIA",
+  "CONTROLE_USUARIOS",
 ];
 const ROTULO_RECURSO: Record<RecursoSistema, string> = {
-  CADASTROS: "Cadastros",
-  USUARIOS: "Usuários e perfis",
-  COMPETENCIA: "Competências (abrir, fechar, reabrir)",
-  IMPORTACAO: "Importação de arquivos",
-  LISTAS_OPERACIONAIS: "Listas operacionais",
-  LANCAMENTOS_MANUAIS: "Lançamentos manuais",
-  CLASSIFICACAO: "Classificação",
-  APURACAO: "Apuração",
-  DRE: "DRE",
-  DIVERGENCIA: "Divergências",
-  AUDITORIA: "Auditoria",
-  CENARIOS: "Cenários (criação de cenários)",
+  CENARIOS_SINTETICOS: "Cenários Sintéticos",
+  CENARIOS_ANALITICOS: "Cenários Analíticos",
+  RESULTADOS_REALIZADOS: "Resultados Realizados",
+  FECHAMENTO_MENSAL: "Fechamento Mensal",
+  CADASTROS_APURACAO: "Cadastros da Apuração",
+  CADASTROS_CONTROLADORIA: "Cadastros da Controladoria",
+  CONTROLE_USUARIOS: "Controle de Usuários",
 };
-const ACOES: AcaoPermissao[] = ["VER", "LER", "EDITAR"];
+const ACOES: AcaoPermissao[] = ["LER", "EDITAR"];
 const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [
   ...Object.values(DEFINICOES_LISTAS).map((d) => ({ tipo: d.tipo as TipoImportacao, rotulo: d.rotulo })),
   { tipo: "DEVOLUCAO", rotulo: "Devoluções" },
@@ -69,23 +60,6 @@ function exigirSetores(setores: TipoImportacao[]) {
   if (fora.length) throw new RegraUsuarioError(400, `Setor inválido: ${fora.join(", ")}. Os setores são as listas operacionais.`);
 }
 
-/**
- * O recorte por departamento (Gestor) vale na DRE, nos centros de custo e nas
- * divergências. As telas de classificação, lançamentos manuais, apuração e
- * auditoria mostram lançamentos de todos os departamentos: um perfil com recorte
- * não pode lê-las, senão o recorte seria contornado.
- */
-const SEM_RECORTE_DE_DEPARTAMENTO: RecursoSistema[] = ["CLASSIFICACAO", "LANCAMENTOS_MANUAIS", "APURACAO", "AUDITORIA"];
-function exigirCoerencia(recorteDepartamento: boolean, permissoes: Permissao[]) {
-  if (!recorteDepartamento) return;
-  const conflito = [...new Set(permissoes.filter((p) => p.acao !== "VER" && SEM_RECORTE_DE_DEPARTAMENTO.includes(p.recurso)).map((p) => ROTULO_RECURSO[p.recurso] ?? p.recurso))];
-  if (conflito.length) {
-    throw new RegraUsuarioError(
-      400,
-      `Perfil com recorte por departamento não pode ler ${conflito.join(", ")}: essas telas mostram lançamentos de todos os departamentos.`,
-    );
-  }
-}
 
 export type Permissao = { recurso: RecursoSistema; acao: AcaoPermissao };
 export type DadosUsuario = {
@@ -105,9 +79,13 @@ export type DadosPerfil = {
   permissoes: Permissao[];
 };
 
-/** EDITAR implica LER, e LER implica VER: a matriz gravada é sempre coerente. */
+/**
+ * EDITAR implica LER: a matriz gravada é sempre coerente. Os recortes não conflitam com os grupos: o que um perfil
+ * recortado não pode ler (as telas de todos os departamentos, ou as fora das listas do setor) sai na hora de montar
+ * as permissões das rotas (permissoesDasRotas, em acesso.ts).
+ */
 function normalizarPermissoes(ps: Permissao[]): Permissao[] {
-  const nivel = { VER: 1, LER: 2, EDITAR: 3 } as const;
+  const nivel = { LER: 1, EDITAR: 2 } as const;
   const maior = new Map<RecursoSistema, number>();
   for (const p of ps) maior.set(p.recurso, Math.max(maior.get(p.recurso) ?? 0, nivel[p.acao]));
   return [...maior].flatMap(([recurso, n]) => ACOES.filter((a) => nivel[a] <= n).map((acao) => ({ recurso, acao })));
@@ -246,7 +224,6 @@ export const usuariosService = {
   },
 
   async criarPerfil(d: DadosPerfil & { codigo: string }, quem: string) {
-    exigirCoerencia(d.recorteDepartamento, normalizarPermissoes(d.permissoes));
     const prisma = getPrismaClient();
     const codigo = d.codigo.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
     if (await prisma.perfil.findUnique({ where: { codigo }, select: { id: true } })) throw new RegraUsuarioError(409, `Já existe um perfil com o código ${codigo}.`);
@@ -269,7 +246,6 @@ export const usuariosService = {
   },
 
   async atualizarPerfil(id: string, d: DadosPerfil, quemEdita: string) {
-    exigirCoerencia(d.recorteDepartamento, normalizarPermissoes(d.permissoes));
     const prisma = getPrismaClient();
     const atual = await prisma.perfil.findUnique({ where: { id }, select: { id: true } });
     if (!atual) throw new RegraUsuarioError(404, "Perfil não encontrado.");
@@ -277,8 +253,8 @@ export const usuariosService = {
     const permissoes = normalizarPermissoes(d.permissoes);
     const meu = (await prisma.usuario.findUniqueOrThrow({ where: { id: quemEdita }, select: { perfilId: true } })).perfilId === id;
     if (meu && !d.ativo) throw new RegraUsuarioError(409, "Você não pode inativar o seu próprio perfil.");
-    if (meu && !permissoes.some((p) => p.recurso === "USUARIOS" && p.acao === "EDITAR")) {
-      throw new RegraUsuarioError(409, "Você não pode tirar do seu próprio perfil a edição de usuários e perfis.");
+    if (meu && !permissoes.some((p) => p.recurso === "CONTROLE_USUARIOS" && p.acao === "EDITAR")) {
+      throw new RegraUsuarioError(409, "Você não pode tirar do seu próprio perfil a edição do Controle de Usuários.");
     }
     await prisma.$transaction([
       prisma.perfilPermissao.deleteMany({ where: { perfilId: id } }),

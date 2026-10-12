@@ -7,7 +7,7 @@ import { ListaCadastroContent } from "../components/ListaCadastroContent";
 export default function RegrasRateioPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastros_controladoria:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="regras-rateio"
           rota="/cadastros/regras-rateio"

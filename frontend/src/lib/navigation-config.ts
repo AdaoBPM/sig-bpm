@@ -33,6 +33,11 @@ export type NavItem = {
   /** Permissão para o item aparecer no menu (e para a tela abrir). */
   permission?: string;
   /**
+   * O grupo de permissão do item do menu lateral (o RecursoSistema do backend): cada item tem Ler e Editar
+   * próprios no perfil (11/10/2026).
+   */
+  recurso?: string;
+  /**
    * Um grupo de telas da mesma finalidade: o menu mostra só o grupo, que abre
    * na primeira tela que o perfil alcança, e a barra no topo troca de tela.
    */
@@ -46,8 +51,8 @@ export const navGrupos: NavGrupo[] = [
     // Criação de Cenários (11/10/2026): por enquanto, os sintéticos; os analíticos virão depois.
     titulo: "Criação de Cenários",
     itens: [
-      { title: "Cenários Sintéticos", href: "/cenarios/sinteticos", icon: Layers, permission: "cenarios:ver" },
-      { title: "Cenários Analíticos", href: "/cenarios/analiticos", icon: Workflow, permission: "cenarios:ver" },
+      { title: "Cenários Sintéticos", href: "/cenarios/sinteticos", icon: Layers, permission: "cenarios:ler", recurso: "CENARIOS_SINTETICOS" },
+      { title: "Cenários Analíticos", href: "/cenarios/analiticos", icon: Workflow, permission: "cenarios_analiticos:ler", recurso: "CENARIOS_ANALITICOS" },
     ],
   },
   {
@@ -57,22 +62,24 @@ export const navGrupos: NavGrupo[] = [
         title: "Resultados Realizados",
         href: "/relatorios/resultados",
         icon: FileBarChart,
+        recurso: "RESULTADOS_REALIZADOS",
         telas: [
-          { title: "Resultados", href: "/relatorios/resultados", icon: ListOrdered, permission: "dre:ver" },
-          { title: "Indicadores", href: "/relatorios/indicadores", icon: Gauge, permission: "dre:ver" },
-          { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "dre:ver" },
+          { title: "Resultados", href: "/relatorios/resultados", icon: ListOrdered, permission: "resultados:ler" },
+          { title: "Indicadores", href: "/relatorios/indicadores", icon: Gauge, permission: "resultados:ler" },
+          { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "resultados:ler" },
         ],
       },
-      { title: "Fechamento Mensal", href: "/competencias", icon: CalendarDays },
+      { title: "Fechamento Mensal", href: "/competencias", icon: CalendarDays, permission: "fechamento:ler", recurso: "FECHAMENTO_MENSAL" },
       {
         title: "Cadastros da Apuração",
         href: "/cadastros/reclassificacoes",
         icon: ClipboardList,
+        recurso: "CADASTROS_APURACAO",
         telas: [
-          { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros:ver" },
-          { title: "Preços do Contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros:ver" },
-          { title: "Tipos de Movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros:ver" },
-          { title: "Tabela de Estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros:ver" },
+          { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastros_apuracao:ler" },
+          { title: "Preços do Contrato", href: "/cadastros/precos-contrato", icon: BadgeDollarSign, permission: "cadastros_apuracao:ler" },
+          { title: "Tipos de Movimento", href: "/cadastros/tipos-movimento", icon: ArrowLeftRight, permission: "cadastros_apuracao:ler" },
+          { title: "Tabela de Estacas", href: "/cadastros/tabela-estacas", icon: Columns3, permission: "cadastros_apuracao:ler" },
         ],
       },
     ],
@@ -84,24 +91,26 @@ export const navGrupos: NavGrupo[] = [
         title: "Cadastros da Controladoria",
         href: "/cadastros/unidades",
         icon: Database,
+        recurso: "CADASTROS_CONTROLADORIA",
         telas: [
-          { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros:ver" },
-          { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastros:ver" },
-          { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros:ver" },
-          { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros:ver" },
-          { title: "Estrutura dos Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastros:ver" },
-          { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros:ver" },
-          { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros:ver" },
+          { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastros_controladoria:ler" },
+          { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastros_controladoria:ler" },
+          { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastros_controladoria:ler" },
+          { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastros_controladoria:ler" },
+          { title: "Estrutura dos Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastros_controladoria:ler" },
+          { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastros_controladoria:ler" },
+          { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastros_controladoria:ler" },
         ],
       },
       {
         title: "Controle de Usuários",
         href: "/usuarios",
         icon: UserCog,
+        recurso: "CONTROLE_USUARIOS",
         telas: [
-          { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ver" },
-          { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "usuarios:ver" },
-          { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ver" },
+          { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ler" },
+          { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "usuarios:ler" },
+          { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ler" },
         ],
       },
     ],
@@ -137,29 +146,50 @@ export function itemAtivo(pathname: string, item: NavItem): boolean {
 }
 
 /**
- * Permissão de cada tela (Passo 22). O menu esconde o que o usuário não
- * alcança, e o layout recusa a tela aberta pela URL; a segurança de fato é a
- * do backend, que recusa os dados. A primeira regra que casar vale.
+ * Permissão de cada tela (Passo 22; por grupo do menu desde 11/10/2026). O menu esconde o que o usuário não
+ * alcança, e o layout recusa a tela aberta pela URL; a segurança de fato é a do backend, que recusa os dados.
+ * As etapas do mês seguem as permissões que o backend deriva do Fechamento Mensal e dos recortes do perfil.
+ * A primeira regra que casar vale.
  */
 const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
-  [/^\/cadastros(\/|$)/, "cadastros:ver"],
-  [/^\/(usuarios|perfis)(\/|$)/, "usuarios:ver"],
-  [/^\/auditoria(\/|$)/, "auditoria:ver"],
-  [/^\/divergencias(\/|$)/, "divergencia:ver"],
-  [/^\/relatorios(\/|$)/, "dre:ver"],
-  [/^\/cenarios(\/|$)/, "cenarios:ver"],
-  [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ver"],
-  [/^\/competencias\/[^/]+\/importar/, "importacao:ver"],
-  [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ver"],
-  [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ver"],
-  [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ver"],
-  [/^\/competencias\/[^/]+\/(receita-previa|rateios|estoque|conferencia-planilha)/, "apuracao:ver"],
-  [/^\/competencias\/[^/]+\/dre/, "dre:ver"],
-  [/^\/competencias\/[^/]+\/indicadores/, "dre:ver"],
+  [/^\/cadastros\/(reclassificacoes|precos-contrato|tipos-movimento|tabela-estacas)(\/|$)/, "cadastros_apuracao:ler"],
+  [/^\/cadastros(\/|$)/, "cadastros_controladoria:ler"],
+  [/^\/(usuarios|perfis)(\/|$)/, "usuarios:ler"],
+  [/^\/auditoria(\/|$)/, "auditoria:ler"],
+  [/^\/divergencias(\/|$)/, "divergencia:ler"],
+  [/^\/relatorios(\/|$)/, "resultados:ler"],
+  [/^\/cenarios\/analiticos(\/|$)/, "cenarios_analiticos:ler"],
+  [/^\/cenarios(\/|$)/, "cenarios:ler"],
+  [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ler"],
+  [/^\/competencias\/[^/]+\/importar/, "importacao:ler"],
+  [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ler"],
+  [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ler"],
+  [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ler"],
+  [/^\/competencias\/[^/]+\/(receita-previa|rateios|estoque|conferencia-planilha)/, "apuracao:ler"],
+  [/^\/competencias\/[^/]+\/dre/, "dre:ler"],
+  [/^\/competencias\/[^/]+\/indicadores/, "dre:ler"],
+  [/^\/competencias(\/|$)/, "fechamento:ler"],
 ];
 
 export function permissaoDaTela(pathname: string): string | null {
   return PERMISSAO_DA_TELA.find(([r]) => r.test(pathname))?.[1] ?? null;
+}
+
+/** A primeira tela do menu que o perfil alcança: o início de quem não tem o Fechamento Mensal. */
+export function primeiraTelaPermitida(pode: (p: string) => boolean): string | null {
+  for (const g of navGrupos) {
+    for (const item of g.itens) {
+      const permitido = itemPermitido(item, pode);
+      if (permitido) return permitido.href;
+    }
+  }
+  return null;
+}
+
+/** "unidades", "editar" → "cadastros_controladoria:editar": a permissão do grupo do menu de um cadastro. */
+export function permissaoDoCadastro(entidade: string, acao: "ler" | "editar"): string {
+  const tela = permissaoDaTela(`/cadastros/${entidade}`) ?? "cadastros_controladoria:ler";
+  return tela.replace(/:ler$/, `:${acao}`);
 }
 
 export const pageTitles: Record<string, string> = {

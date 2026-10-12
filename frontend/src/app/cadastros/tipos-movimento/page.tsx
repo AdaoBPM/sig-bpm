@@ -7,7 +7,7 @@ import { ListaCadastroContent } from "../components/ListaCadastroContent";
 export default function TiposMovimentoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastros_apuracao:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="tipos-movimento"
           rota="/cadastros/tipos-movimento"

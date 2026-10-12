@@ -24,27 +24,23 @@ datasource db {
 // Usuário e auditoria (herdados do molde repositorio-padrao-bpm)
 // -----------------------------------------------------------------------------
 
-/// ENUM: recurso do sistema sobre o qual se concede permissão.
-/// Corresponde a um módulo ou tela — é o "o quê" da permissão.
+/// ENUM: o grupo de telas do menu lateral sobre o qual se concede permissão
+/// (11/10/2026; antes, um recurso por área de dados). Cada grupo tem Ler e
+/// Editar próprios; as regras finas das rotas derivam do grupo e dos recortes
+/// do perfil (services/acesso/acesso.ts).
 enum RecursoSistema {
-  CADASTROS
-  USUARIOS
-  COMPETENCIA
-  IMPORTACAO
-  LISTAS_OPERACIONAIS
-  LANCAMENTOS_MANUAIS
-  CLASSIFICACAO
-  APURACAO
-  DRE
-  DIVERGENCIA
-  AUDITORIA
-  /// Criação de Cenários (11/10/2026).
-  CENARIOS
+  CENARIOS_SINTETICOS
+  CENARIOS_ANALITICOS
+  RESULTADOS_REALIZADOS
+  FECHAMENTO_MENSAL
+  CADASTROS_APURACAO
+  CADASTROS_CONTROLADORIA
+  CONTROLE_USUARIOS
 }
 
-/// ENUM: ação permitida sobre um recurso — é o "pode fazer o quê".
+/// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
+/// carregam) ou Editar (pode alterar; implica Ler).
 enum AcaoPermissao {
-  VER
   LER
   EDITAR
 }

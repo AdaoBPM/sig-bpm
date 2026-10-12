@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 
 import { env } from "../../config/env.js";
-import { verificarPermissao } from "../../middlewares/verificarPermissao.js";
+import { verificarAlgumaPermissao, verificarPermissao } from "../../middlewares/verificarPermissao.js";
 
 import { cadastrosController } from "../../controllers/cadastros/cadastrosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
@@ -14,15 +14,15 @@ export const cadastrosRoutes = Router();
 cadastrosRoutes.get(
   "/resumo",
   autenticacao,
-  verificarPermissao("cadastros:ler"),
+  verificarAlgumaPermissao("cadastros_apuracao:ler", "cadastros_controladoria:ler"),
   asyncHandler(cadastrosController.resumo),
 );
 
-// Recarga a partir da planilha, para o período de paralelo.
+// Recarga a partir da planilha, para o período de paralelo (nas telas dos Cadastros da Controladoria).
 cadastrosRoutes.post(
   "/recarga/previa",
   autenticacao,
-  verificarPermissao("cadastros:editar"),
+  verificarPermissao("cadastros_controladoria:editar"),
   express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }),
   asyncHandler(cadastrosController.recargaPrevia),
 );
@@ -30,41 +30,41 @@ cadastrosRoutes.post(
 cadastrosRoutes.post(
   "/recarga/confirmar",
   autenticacao,
-  verificarPermissao("cadastros:editar"),
+  verificarPermissao("cadastros_controladoria:editar"),
   asyncHandler(cadastrosController.recargaConfirmar),
 );
 
 cadastrosRoutes.get(
   "/centros-custo",
   autenticacao,
-  verificarPermissao("cadastros:ler"),
+  verificarPermissao("cadastros_controladoria:ler"),
   asyncHandler(cadastrosController.listarCentrosCusto),
 );
 
 cadastrosRoutes.get(
   "/contas-resultado",
   autenticacao,
-  verificarPermissao("cadastros:ler"),
+  verificarPermissao("cadastros_controladoria:ler"),
   asyncHandler(cadastrosController.listarContasResultado),
 );
 
 cadastrosRoutes.get(
   "/reclassificacoes",
   autenticacao,
-  verificarPermissao("cadastros:ler"),
+  verificarPermissao("cadastros_apuracao:ler"),
   asyncHandler(cadastrosController.listarReclassificacoes),
 );
 
 cadastrosRoutes.get(
   "/precos-contrato",
   autenticacao,
-  verificarPermissao("cadastros:ler"),
+  verificarPermissao("cadastros_apuracao:ler"),
   asyncHandler(cadastrosController.listarPrecosContrato),
 );
 
 cadastrosRoutes.get(
   "/linhas-dre",
   autenticacao,
-  verificarPermissao("cadastros:ler"),
+  verificarPermissao("cadastros_controladoria:ler"),
   asyncHandler(cadastrosController.listarLinhasDRE),
 );

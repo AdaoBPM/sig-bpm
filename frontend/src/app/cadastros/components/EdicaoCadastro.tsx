@@ -5,16 +5,18 @@ import { Pencil, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/PermissionContext";
+import { permissaoDoCadastro } from "@/lib/navigation-config";
 
 import { EditarRegistroDialog } from "./EditarRegistroDialog";
 
 /**
  * A edição de um cadastro numa tela de consulta (Passo 25): o botão Novo, o
- * lápis de cada linha e o diálogo. Sem cadastros:editar, nada aparece.
+ * lápis de cada linha e o diálogo. Sem Editar no grupo do menu do cadastro (Cadastros da Apuração ou da
+ * Controladoria), nada aparece.
  */
 export function useEdicaoCadastro(entidade: string, { criar = true }: { criar?: boolean } = {}) {
   const { hasPermission } = usePermissions();
-  const pode = hasPermission("cadastros:editar");
+  const pode = hasPermission(permissaoDoCadastro(entidade, "editar"));
   // undefined: fechado; null: novo registro; string: o registro em edição.
   const [aberto, setAberto] = useState<string | null | undefined>(undefined);
 

@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, ShieldOff } from "lucide-react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -14,22 +14,24 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { lerRotaDoMes } from "@/lib/etapasDoMes";
-import { grupoDaTela, permissaoDaTela } from "@/lib/navigation-config";
+import { grupoDaTela, permissaoDaTela, primeiraTelaPermitida } from "@/lib/navigation-config";
 
 type ProtectedLayoutProps = {
   children: ReactNode;
 };
 
 /** A tela aberta pela URL sem a permissão dela: aviso, sem carregar nada (o backend também recusa os dados). */
-function SemAcesso() {
+function SemAcesso({ inicio }: { inicio: string | null }) {
   return (
     <div className="mx-auto mt-10 max-w-lg space-y-3 rounded-sm border border-gray-200 bg-white p-6 text-center">
       <ShieldOff className="mx-auto size-8 text-gray-400" />
       <h1 className="text-lg font-bold text-gray-900">Sem acesso a esta tela</h1>
       <p className="text-sm text-gray-600">O seu perfil de usuário não inclui esta tela. Se precisar dela, fale com o setor Contábil.</p>
-      <Link href="/competencias" className="inline-block text-sm font-medium text-gray-900 underline underline-offset-2">
-        Voltar às competências
-      </Link>
+      {inicio ? (
+        <Link href={inicio} className="inline-block text-sm font-medium text-gray-900 underline underline-offset-2">
+          Ir para uma tela do seu perfil
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -40,6 +42,12 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const { hasPermission } = usePermissions();
   const exigida = permissaoDaTela(pathname);
   const bloqueada = !isLoading && exigida !== null && !hasPermission(exigida);
+  const router = useRouter();
+  const inicio = primeiraTelaPermitida(hasPermission);
+  // O início (as competências) sem o Fechamento Mensal: vai para a primeira tela do menu que o perfil alcança.
+  useEffect(() => {
+    if (bloqueada && pathname === "/competencias" && inicio) router.replace(inicio);
+  }, [bloqueada, pathname, inicio, router]);
   // Nas telas de um mês, a barra de etapas fica no topo do conteúdo.
   const doMes = lerRotaDoMes(pathname);
   // Nas telas de um grupo (cadastros, usuários), a barra do grupo.
@@ -69,7 +77,7 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
           {doMes && user ? <EtapasDoMes anoMes={doMes.anoMes} chave={doMes.chave} resto={doMes.resto} /> : null}
           {doGrupo && user ? <BarraDeTelas grupo={doGrupo.grupo} atual={doGrupo.tela.href} /> : null}
           {doCenario && user && !bloqueada ? <BarraDoCenario id={doCenario.id} tela={doCenario.tela} /> : null}
-          {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso /> : children}
+          {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso inicio={inicio} /> : children}
         </div>
       </SidebarInset>
     </SidebarProvider>

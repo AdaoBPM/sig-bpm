@@ -7,7 +7,7 @@ import { ResultadosContent } from "./ResultadosContent";
 export default function ResultadosPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="dre:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="resultados:ler" fallback={<SemLeitura />}>
         <ResultadosContent />
       </PermissionGuard>
     </ProtectedLayout>

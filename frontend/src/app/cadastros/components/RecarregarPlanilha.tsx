@@ -129,7 +129,7 @@ export function RecarregarPlanilha() {
     : 0;
 
   return (
-    <PermissionGuard permission="cadastros:editar">
+    <PermissionGuard permission="cadastros_controladoria:editar">
       <Button
         type="button"
         onClick={() => setAberto(true)}

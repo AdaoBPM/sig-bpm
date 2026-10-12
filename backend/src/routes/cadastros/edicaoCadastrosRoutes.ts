@@ -2,11 +2,12 @@ import { Router } from "express";
 
 import { edicaoCadastrosController as c } from "../../controllers/cadastros/edicaoCadastrosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
-import { verificarPermissao } from "../../middlewares/verificarPermissao.js";
+import { verificarPermissaoDoCadastro } from "../../middlewares/verificarPermissao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
-const ler = verificarPermissao("cadastros:ler");
-const editar = verificarPermissao("cadastros:editar");
+// Cada cadastro segue o grupo do menu dele: Cadastros da Apuração ou da Controladoria.
+const ler = verificarPermissaoDoCadastro("ler");
+const editar = verificarPermissaoDoCadastro("editar");
 
 /**
  * Edição dos cadastros (Passo 25): montado em /cadastros/edicao. A entidade é

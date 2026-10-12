@@ -17,11 +17,11 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { mensagemDeErro, usuariosService, type Perfil } from "../usuarios/services/usuariosService";
 import { PerfilDialog } from "./components/PerfilDialog";
 
-/** Quantos recursos o perfil alcança, e com que ação máxima. */
+/** Quantos grupos de telas do menu o perfil lê, e quantos edita. */
 function resumoPermissoes(p: Perfil) {
   const editar = new Set(p.permissoes.filter((x) => x.acao === "EDITAR").map((x) => x.recurso));
   const ler = new Set(p.permissoes.filter((x) => x.acao === "LER").map((x) => x.recurso));
-  return `${ler.size} recurso(s) com leitura, ${editar.size} com edição`;
+  return `${ler.size} grupo(s) com leitura, ${editar.size} com edição`;
 }
 
 const recorte = (p: Perfil) => [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ");
@@ -58,13 +58,13 @@ export function PerfisContent() {
         comoUsar={
           <ul>
             <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis de sistema só se inativam).</li>
-            <li>No perfil, as telas aparecem como no menu: o grupo do menu lateral, o item e as telas da barra do topo. Marque em cada tela o que o perfil pode: Ver, Ler ou Editar. A coluna Permissão mostra o recurso que controla a tela; as telas do mesmo recurso (por exemplo, as dos Cadastros) mudam juntas.</li>
-            <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam.</li>
+            <li>No perfil, os grupos de telas aparecem como no menu lateral, sob o título dele (Criação de Cenários, Apuração dos Resultados, Controladoria). Marque em cada grupo o que o perfil pode: Ler (o grupo aparece no menu e as telas mostram os dados) ou Editar (pode alterar; marca o Ler junto). Cada grupo tem permissões próprias: por exemplo, ler os Resultados Realizados sem acesso ao Fechamento Mensal.</li>
+            <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam, por cima dos grupos: com recorte por departamento, o Fechamento Mensal não mostra as etapas com lançamentos de todos os departamentos (Classificação, Lançamentos, Receita, Rateios, Estoque, Conferência), nem o Controle de Usuários a Auditoria; com recorte por setor, o Fechamento Mensal mostra só Importações e Listas.</li>
           </ul>
         }
         sobre={
           <p>
-            Os tipos de usuário e o que cada um pode fazer, por recurso e ação. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser
+            Os tipos de usuário e o que cada um pode fazer: Ler ou Editar em cada grupo de telas do menu lateral. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser
             editados e inativados, mas não excluídos.
           </p>
         }
