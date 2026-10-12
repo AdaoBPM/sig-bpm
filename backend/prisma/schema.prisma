@@ -610,6 +610,10 @@ enum TipoImportacao {
   INDICADORES_COMERCIAL
   /// Metas do orçamento do mês: aba Metas (Orçamento) do INDICADORES DE RESULTADO.
   METAS_ORCAMENTO
+  /// Os itens das requisições do mês: aba Requisições (Lista) do LISTAS REALIZADO (RESULTADOS) (11/10/2026).
+  REQUISICOES
+  /// Os itens das notas fiscais do mês: aba Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS) (11/10/2026).
+  NOTAS_FISCAIS
 }
 
 /// ENUM: estado do processamento de uma importação.
@@ -672,6 +676,8 @@ model Competencia {
   estoqueIniciais      EstoqueSaldoInicial[]
   indicadoresImportados IndicadorImportado[]
   metasImportadas       MetaImportada[]
+  requisicoes           RequisicaoItem[]
+  notasFiscais          NotaFiscalItem[]
   indicadoresDigitados  IndicadorDigitado[]
 
   projetos            Projeto[]
@@ -763,6 +769,8 @@ model Importacao {
   estoqueIniciais EstoqueSaldoInicial[]
   indicadores     IndicadorImportado[]
   metas           MetaImportada[]
+  requisicoes     RequisicaoItem[]
+  notasFiscais    NotaFiscalItem[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -1908,4 +1916,79 @@ model CenarioIndicador {
 
   @@id([cenarioId, nome, mes])
   @@map("cenarios_indicadores")
+}
+
+/// Um item de requisição do mês (aba Requisições (Lista) do LISTAS REALIZADO (RESULTADOS), 11/10/2026): o extrato de
+/// uma conta na DRE abre as requisições e as notas fiscais da conta no mês. Não entra na apuração.
+model RequisicaoItem {
+  id                   String    @id @default(uuid())
+  competenciaId        String    @map("competencia_id")
+  importacaoId         String    @map("importacao_id")
+  identificador        String?
+  tipoMovimento        String?   @map("tipo_movimento")
+  nomeTipoMovimento    String?   @map("nome_tipo_movimento")
+  dataBaixa            DateTime? @map("data_baixa")
+  filial               Int?
+  /// O centro de custo pelo código RM, e o nome, como vieram.
+  codigoCentroCusto    String?   @map("codigo_centro_custo")
+  nomeCentroCusto      String?   @map("nome_centro_custo")
+  projeto              String?
+  tarefa               String?
+  nomeTarefa           String?   @map("nome_tarefa")
+  naturezaOrcamentaria String?   @map("natureza_orcamentaria")
+  /// A conta contábil pelo código reduzido (o da Conta de Resultado).
+  contaContabil        String    @map("conta_contabil")
+  descricaoConta       String?   @map("descricao_conta")
+  codigoProduto        String?   @map("codigo_produto")
+  descricaoItem        String?   @map("descricao_item")
+  quantidade           Decimal?
+  contaEstoque         String?   @map("conta_estoque")
+  valorUnitario        Decimal?  @map("valor_unitario")
+  valorTotal           Decimal   @map("valor_total")
+  linhaArquivo         Int       @map("linha_arquivo")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+
+  @@index([competenciaId, contaContabil])
+  @@index([importacaoId])
+  @@map("requisicoes_itens")
+}
+
+/// Um item de nota fiscal do mês (aba Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), 11/10/2026).
+model NotaFiscalItem {
+  id                   String    @id @default(uuid())
+  competenciaId        String    @map("competencia_id")
+  importacaoId         String    @map("importacao_id")
+  identificador        String?
+  dataEmissao          DateTime? @map("data_emissao")
+  dataSaida            DateTime? @map("data_saida")
+  numero               String?
+  filial               Int?
+  codigoCentroCusto    String?   @map("codigo_centro_custo")
+  nomeCentroCusto      String?   @map("nome_centro_custo")
+  projeto              String?
+  tarefa               String?
+  nomeTarefa           String?   @map("nome_tarefa")
+  codigoFornecedor     String?   @map("codigo_fornecedor")
+  fornecedor           String?
+  codigoProduto        String?   @map("codigo_produto")
+  descricaoItem        String?   @map("descricao_item")
+  quantidade           Decimal?
+  subtotal             Decimal?
+  desconto             Decimal?
+  valorTotal           Decimal   @map("valor_total")
+  cfop                 String?
+  tipoMovimento        String?   @map("tipo_movimento")
+  nomeTipoMovimento    String?   @map("nome_tipo_movimento")
+  naturezaOrcamentaria String?   @map("natureza_orcamentaria")
+  contaContabil        String    @map("conta_contabil")
+  linhaArquivo         Int       @map("linha_arquivo")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+
+  @@index([competenciaId, contaContabil])
+  @@index([importacaoId])
+  @@map("notas_fiscais_itens")
 }

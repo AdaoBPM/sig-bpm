@@ -28,7 +28,7 @@ import { dataHora, inteiro, lerAnoMes, ROTULO_TIPO } from "../utils/formatacao";
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 
 /** Os arquivos de todo mês, na ordem do fechamento. A DRE do Comercial e o saldo inicial só aparecem quando importados no mês. */
-const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL"];
+const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL", "REQUISICOES", "NOTAS_FISCAIS"];
 const TIPOS_EVENTUAIS = ["DRE_COMERCIAL", "ESTOQUE_INICIAL"];
 
 const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }> = {
@@ -188,7 +188,7 @@ export function ImportarContent() {
             <p>
               O balancete (LISTAS REALIZADO (RESULTADOS)), as listas operacionais — as abas (Resumo), Produção (Armaduras), Produção
               (Metalúrgica) e as demais do LISTAS REALIZADO (OPERAÇÃO) —, os indicadores do Administrativo e do Comercial, a DRE do Comercial
-              e o saldo inicial do estoque entram por aqui (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
+              o saldo inicial do estoque e as requisições e notas fiscais do mês (abas Requisições (Lista) e Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), que o extrato de uma conta na DRE abre) entram por aqui (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
               lote anterior por inteiro.
             </p>
             <p>

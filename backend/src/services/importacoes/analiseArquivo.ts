@@ -12,6 +12,7 @@ import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { localizarCabecalho } from "./listas/leituraListas.js";
 import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
 import { escolherAba } from "./statusImportacao.js";
+import { DEFINICOES_DOCUMENTOS, lerDocumentos, type TipoDocumentos } from "./documentos/leituraDocumentos.js";
 
 /**
  * A leitura prévia de um arquivo com várias abas (importação em lote): associa
@@ -111,6 +112,24 @@ const indicadores: Tipo[] = (Object.keys(DEFINICOES_INDICADORES) as TipoIndicado
   },
 }));
 
+/** As requisições e as notas fiscais do mês (abas Requisições (Lista) e Notas Fiscais (Lista), 11/10/2026). */
+const documentos: Tipo[] = (Object.keys(DEFINICOES_DOCUMENTOS) as TipoDocumentos[]).map((tipo) => ({
+  tipo,
+  rotulo: DEFINICOES_DOCUMENTOS[tipo].rotulo,
+  abas: [DEFINICOES_DOCUMENTOS[tipo].aba],
+  alcance: "POR_MES",
+  ler(linhas, ano, mes) {
+    const l = tipo === "REQUISICOES" ? lerDocumentos("REQUISICOES", linhas, ano, mes) : lerDocumentos("NOTAS_FISCAIS", linhas, ano, mes);
+    if (!l.ok) throw new AbaInvalida(l.motivo);
+    if (l.itens.length === 0) return null;
+    return {
+      registros: l.itens.length,
+      assinatura: assinar([...l.itens, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+    };
+  },
+}));
+
 /** Os tipos que a importação em lote reconhece, na ordem em que entram na fila. */
 const TIPOS: Tipo[] = [
   {
@@ -133,6 +152,7 @@ const TIPOS: Tipo[] = [
   },
   ...listas,
   ...indicadores,
+  ...documentos,
   {
     tipo: "DRE_COMERCIAL",
     rotulo: "DRE do Comercial",

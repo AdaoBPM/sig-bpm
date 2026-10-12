@@ -10,6 +10,8 @@ import { processarDreComercial } from "./dreComercial/processarDreComercial.js";
 import { processarEstoqueInicial } from "./estoqueInicial/processarEstoqueInicial.js";
 import { DEFINICOES_INDICADORES, ehTipoIndicadores } from "./indicadores/leituraIndicadores.js";
 import { processarIndicadores } from "./indicadores/processarIndicadores.js";
+import { DEFINICOES_DOCUMENTOS, ehTipoDocumentos } from "./documentos/leituraDocumentos.js";
+import { processarDocumentos } from "./documentos/processarDocumentos.js";
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
@@ -46,6 +48,8 @@ const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   ...(Object.keys(DEFINICOES_INDICADORES) as TipoImportacao[]).filter((t) => t !== "METAS_ORCAMENTO"),
   ...(Object.keys(DEFINICOES_LISTAS) as TipoImportacao[]),
   ...(Object.keys(DEFINICOES_LISTAS_RECEITA) as TipoImportacao[]),
+  // As requisições e as notas fiscais do mês (11/10/2026): o extrato das contas na DRE.
+  ...(Object.keys(DEFINICOES_DOCUMENTOS) as TipoImportacao[]),
 ];
 
 function rotulo(ano: number, mes: number) {
@@ -212,7 +216,9 @@ export const importacoesService = {
               ? processarEstoqueInicial(importacao.id)
               : ehTipoIndicadores(importacao.tipo)
                 ? processarIndicadores(importacao.id)
-                : processarBalancete(importacao.id));
+                : ehTipoDocumentos(importacao.tipo)
+                  ? processarDocumentos(importacao.id)
+                  : processarBalancete(importacao.id));
       } finally {
         // Auditoria (Passo 23): o arquivo, o que ele substituiu e o resultado do processamento.
         const fim = await getPrismaClient().importacao.findUnique({

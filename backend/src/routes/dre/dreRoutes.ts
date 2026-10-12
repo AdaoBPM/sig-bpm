@@ -12,6 +12,7 @@ dreRoutes.get("/consolidado", autenticacao, verificarPermissao("dre:ler"), async
 dreRoutes.get("/centros", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.centros));
 dreRoutes.get("/obras", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.obras));
 dreRoutes.get("/detalhe", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.detalhe));
+dreRoutes.get("/documentos", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.documentos));
 dreRoutes.get("/volumes", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.volumes));
 dreRoutes.get("/exportar", autenticacao, verificarPermissao("dre:ler"), asyncHandler(c.exportar));
 dreRoutes.post("/apurar", autenticacao, verificarPermissao("apuracao:editar"), asyncHandler(c.apurar));

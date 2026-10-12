@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { detalhamentoService } from "../../services/dre/detalhamentoService.js";
+import { documentosService } from "../../services/dre/documentosService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
 import { exportacaoService, type VisaoExportacao } from "../../services/dre/exportacaoService.js";
 import { obrasService } from "../../services/dre/obrasService.js";
@@ -84,6 +85,24 @@ export const dreController = {
       visao = { unidade: u.data };
     }
     return responder(response, () => detalhamentoService.detalhar(c.ano, c.mes, linha.data, visao, request.user!.acesso));
+  },
+
+  /** As requisições e as notas fiscais de uma conta no mês: ?linha= (o recorte), ?conta= (reduzido), ?centro= (código RM) e ?filial=. */
+  async documentos(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    const q = z
+      .object({
+        linha: z.string().trim().min(1).max(200),
+        conta: z.string().trim().min(1).max(50),
+        centro: z.string().trim().max(50).optional(),
+        filial: z.coerce.number().int().min(1).max(99).optional(),
+      })
+      .safeParse(request.query);
+    if (!q.success) return response.status(400).json({ error: "Dados inválidos." });
+    return responder(response, () =>
+      documentosService.listar(c.ano, c.mes, { linha: q.data.linha, conta: q.data.conta, centro: q.data.centro || null, filial: q.data.filial ?? null }, request.user!.acesso),
+    );
   },
 
   /** As listas que formam uma linha de volume, por obra: ?linha=código e ?unidade=1..3 (sem ela, o consolidado). */

@@ -63,6 +63,32 @@ export type LancamentoDetalhe = {
   parcela: string;
 };
 
+/** Um item de requisição ou de nota fiscal do mês (abas Requisições (Lista) e Notas Fiscais (Lista)). */
+type ItemDocumento = {
+  id: string;
+  identificador: string | null;
+  filial: number | null;
+  codigoCentroCusto: string | null;
+  nomeCentroCusto: string | null;
+  contaContabil: string;
+  codigoProduto: string | null;
+  descricaoItem: string | null;
+  quantidade: string | null;
+  valorTotal: string;
+  tipoMovimento: string | null;
+  nomeTipoMovimento: string | null;
+  naturezaOrcamentaria: string | null;
+  linhaArquivo: number;
+};
+export type RequisicaoDocumento = ItemDocumento & { dataBaixa: string | null; descricaoConta: string | null; valorUnitario: string | null };
+export type NotaFiscalDocumento = ItemDocumento & { dataEmissao: string | null; numero: string | null; fornecedor: string | null; cfop: string | null };
+export type DocumentosConta = {
+  conta: { reduzido: string; descricao: string };
+  importadas: { requisicoes: boolean; notas: boolean };
+  requisicoes: RequisicaoDocumento[];
+  notas: NotaFiscalDocumento[];
+};
+
 export type BlocoDetalhe =
   | {
       tipo: "CONTABIL" | "RATEIO" | "MANUAL";
@@ -103,6 +129,13 @@ export type LinhaVolume = {
 export type VolumesDaLinha = { linha: string; medida: string | null; destinos: string[]; total: string; linhas: LinhaVolume[] };
 
 export const dreService = {
+  /** As requisições e as notas fiscais de uma conta no mês (o extrato de uma conta): a linha (o recorte), a conta e, quando vêm, o centro e a filial. */
+  documentos: async (anoMes: string, filtro: { linha: string; conta: string; centro?: string | null; filial?: number | null }): Promise<DocumentosConta> => {
+    const params = { linha: filtro.linha, conta: filtro.conta, ...(filtro.centro ? { centro: filtro.centro } : {}), ...(filtro.filial ? { filial: filtro.filial } : {}) };
+    const { data } = await api.get<{ data: DocumentosConta }>(`/proxy/competencias/${anoMes}/dre/documentos`, { params });
+    return data.data;
+  },
+
   detalhe: async (anoMes: string, linha: string, visao: VisaoDetalhe): Promise<DetalheDRE> => {
     const params = {
       linha,

@@ -592,6 +592,27 @@ const valorIndicador = (nome: string, v: number) =>
     ? `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
     : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
+/** As requisições ou as notas fiscais do mês (abas Requisições (Lista) e Notas Fiscais (Lista), 11/10/2026). */
+function ConcluidaDocumentos({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as { aba: string; itens: number; contas: number; total: string; foraDoMes: number } | null;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Itens do mês" valor={imp.linhasAceitas} destaque="ok" detalhe={resumo ? `${resumo.contas.toLocaleString("pt-BR")} conta(s)` : undefined} />
+        <Contador rotulo="Rejeitados" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
+        <Contador rotulo="De outros meses" valor={imp.linhasIgnoradas} />
+      </div>
+      {resumo ? (
+        <p className="text-sm text-gray-600">
+          Aba lida: {resumo.aba}. Total dos itens do mês: <span className="font-bold text-gray-900">{moeda(resumo.total)}</span>. Os itens aparecem no extrato
+          das contas na DRE (clique na conta de um lançamento); não entram na apuração.
+        </p>
+      ) : null}
+      <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />
+    </div>
+  );
+}
+
 function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
   const resumo = imp.resumo as ResumoIndicadores | null;
   const metas = imp.tipo === "METAS_ORCAMENTO";
@@ -712,6 +733,8 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
           <ConcluidaEstoqueInicial imp={imp} />
         ) : imp.tipo === "INDICADORES_ADMIN" || imp.tipo === "INDICADORES_COMERCIAL" || imp.tipo === "METAS_ORCAMENTO" ? (
           <ConcluidaIndicadores imp={imp} />
+        ) : imp.tipo === "REQUISICOES" || imp.tipo === "NOTAS_FISCAIS" ? (
+          <ConcluidaDocumentos imp={imp} />
         ) : (
           <ConcluidaLista imp={imp} />
         )

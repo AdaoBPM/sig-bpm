@@ -232,7 +232,7 @@ const ARQUIVOS_DE_IMPORTACAO = [
       "Estoque (2025)",
     ],
   },
-  { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)"] },
+  { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)", "Requisições (Lista)", "Notas Fiscais (Lista)"] },
   { arquivo: "CONTROLE DAS VENDAS - COMERCIAL", abas: ["DRE", "Indicadores (Comercial)"] },
 ];
 
