@@ -49,8 +49,9 @@ export function CenarioPainelContent() {
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
-              Cada card traz o Atual (o mês de referência) e o Acumulado, com o valor do cenário em destaque, o do cenário comparado e o desvio (vs.
-              Comparado) no selo colorido, e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
+              Cada card traz o nome e a legenda em cima; embaixo, o Cenário (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o
+              valor em destaque e, à direita, o selo do desvio e o valor do cenário comparado (vs. Comparado); e os gráficos dos meses e do
+              acumulado (o cenário em amarelo-ouro, o comparado em preto).
             </li>
             <li>
               O comparado é o cenário escolhido em Configurações / Comparativo; sem ele, essa parte fica vazia (—), e o aviso traz o botão

@@ -125,30 +125,26 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
   i.base ? `${b.base === null ? "—" : `${(i.base.casas === 2 ? n2 : n1).format(b.base * 100)}%`} ${i.base.rotulo}` : null;
 
 /**
- * Um período do card (o Atual ou o Acumulado): o rótulo com o selo do desvio, o realizado em destaque com o orçado e o
- * percentual da base. Os dois períodos têm as mesmas linhas, para ficarem alinhados.
+ * Um período do card (o Atual ou o Acumulado; 13/10/2026): à esquerda, "Realizado (Atual)" (ou "(Acumulado)"; nos
+ * cenários, "Cenário"), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o selo do desvio e,
+ * embaixo dele, "vs. Orçado" (ou "vs. Comparado") com o valor orçado.
  */
-function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNode; subtitulo: ReactNode; b: BlocoPainel; formato: FormatoPainel; base: string | null }) {
+function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b: BlocoPainel; formato: FormatoPainel; base: string | null; dica?: string }) {
   const rotulos = useRotulosDoGrafico();
-  // Os valores no pé do grupo (13/10/2026): com o nome em duas linhas, o Atual e o Acumulado continuam alinhados.
   return (
-    <div className="flex min-w-0 flex-col">
-      <header className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          {titulo}
-          <p className="text-xs text-gray-500">{subtitulo}</p>
-        </div>
-        <SeloDesvio b={b} />
-      </header>
-      {/* O realizado em destaque e, embaixo dele, o orçado (13/10/2026; antes, lado a lado): o grupo cabe em 1/5 do card. */}
-      <div className="mt-auto pt-2">
-        <p className="text-xs text-gray-600">{rotulos.realizado}</p>
-        <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
-        {/* O percentual (/RL) logo abaixo do realizado, antes do orçado (13/10/2026); a linha fica mesmo vazia, para alinhar. */}
-        <p className="h-4 text-xs text-gray-500">{base}</p>
-        <p className="mt-1 text-xs whitespace-nowrap text-gray-600">
-          {rotulos.orcado}: <span className="font-bold text-gray-900">{formatar(b.orcado, formato)}</span>
+    <div className="flex min-w-0 items-start justify-between gap-2" title={dica}>
+      <div className="min-w-0">
+        <p className="text-xs whitespace-nowrap text-gray-600">
+          {rotulos.realizado} ({periodo})
         </p>
+        {/* Um ponto menor até 1536 px, para o valor e o orçado caberem lado a lado em 1/5 do card. */}
+        <p className="text-xl font-extrabold whitespace-nowrap text-gray-900 2xl:text-2xl">{formatar(b.realizado, formato)}</p>
+        <p className="h-4 text-xs text-gray-500">{base}</p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end text-right">
+        <SeloDesvio b={b} />
+        <p className="mt-1.5 text-xs whitespace-nowrap text-gray-600">vs. {rotulos.orcado}</p>
+        <p className="text-sm font-bold whitespace-nowrap text-gray-900">{formatar(b.orcado, formato)}</p>
       </div>
     </div>
   );
@@ -156,8 +152,8 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
 
 /**
  * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado com 2/5 do card, 1/5 cada (1 : 1 : 3, desde 13/10/2026; antes, 1 : 1 : 1,6), e o gráfico com 3/5 (o do acumulado ao lado desde 10/10/2026): o Atual (o mês de referência), o Acumulado e o
- * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
+ * painel-cards-lado-a-lado do git): o título e a legenda em cima do Atual e do Acumulado (2/5 do card, 1/5 cada) e o
+ * gráfico dos meses do exercício, com o do acumulado ao lado (3/5). Em telas estreitas, um embaixo do outro.
  */
 function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   const sentido = (
@@ -165,43 +161,38 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
       {i.sentido}
     </span>
   );
+  const acumulado = rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`;
+  // O espaço entre os blocos menor (12 px), para o rótulo, a tag e os valores caberem em 1/5 do card.
+  const coluna = "lg:border-l lg:border-gray-100 lg:pl-3";
   return (
-    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
-      {/* O nome por extenso quebra a linha, em vez de cortar (13/10/2026). */}
-      <GrupoPeriodo
-        titulo={
-          <h3 className="text-base leading-snug font-bold text-gray-900" title={i.titulo}>
-            {i.titulo}
-          </h3>
-        }
-        subtitulo={
-          <>
-            {i.sigla} {sentido} · {rotuloMes}
-          </>
-        }
-        b={i.mes}
-        formato={i.formato}
-        base={percentualDaBase(i, i.mes)}
-      />
-      <GrupoPeriodo
-        titulo={<h3 className="text-base font-bold text-gray-900">Acumulado</h3>}
-        subtitulo={rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`}
-        b={i.acumulado}
-        formato={i.formatoAcumulado}
-        base={percentualDaBase(i, i.acumulado)}
-      />
-      {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
+    // O leiaute de 13/10/2026: o título e a legenda, maiores, em cima dos dois blocos (o Atual e o Acumulado); o gráfico
+    // na terceira coluna, na altura do card. Em telas estreitas, um embaixo do outro.
+    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2">
+      <header className="min-w-0 lg:col-span-2 lg:pr-5">
+        <h3 className="text-lg leading-snug font-bold text-gray-900" title={i.titulo}>
+          {i.titulo}
+        </h3>
+        <p className="text-sm text-gray-500">
+          {i.sigla} {sentido} · {rotuloMes}
+        </p>
+      </header>
+      <div className="self-end lg:col-start-1 lg:row-start-2 lg:pr-3">
+        <GrupoPeriodo periodo="Atual" b={i.mes} formato={i.formato} base={percentualDaBase(i, i.mes)} dica={`Atual: ${rotuloMes}`} />
+      </div>
+      <div className={`self-end lg:col-start-2 lg:row-start-2 lg:pr-3 ${coluna}`}>
+        <GrupoPeriodo periodo="Acumulado" b={i.acumulado} formato={i.formatoAcumulado} base={percentualDaBase(i, i.acumulado)} dica={`Acumulado: ${acumulado}`} />
+      </div>
       {/*
-        Na altura do card (13/10/2026; antes, centrado): os meses e o ACUM. perto do pé dele. O gráfico fica preso à célula
-        (absolute), para a altura do card vir dos valores; sem isso, o desenho tomava a altura pela largura.
+        O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha, na altura do card: os meses e
+        o ACUM. perto do pé dele. O gráfico fica preso à célula (absolute), para a altura do card vir dos valores.
       */}
-      <div className="relative min-h-32 min-w-0">
-        <div className="absolute inset-0 flex gap-3">
+      <div className="relative min-h-32 min-w-0 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-gray-100">
+        <div className="absolute inset-0 flex gap-3 lg:left-5">
           <div className="min-w-0 flex-1">
             <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} formatarCurto={(v) => formatarCurto(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
           </div>
-          {/* O acumulado também com os rótulos ou com a escala (13/10/2026); com a escala, um pouco mais largo. */}
-          <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title="Acumulado do exercício: realizado × orçado">
+          {/* O acumulado também com os rótulos ou com a escala; com a escala, um pouco mais largo. */}
+          <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title={`Acumulado do exercício (${acumulado}): realizado × orçado`}>
             <MiniGrafico
               dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
               formatar={(v) => formatar(v, i.formatoAcumulado)}
@@ -374,9 +365,10 @@ export function PainelContent() {
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
-              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela, em
-              três partes: o Atual (o mês de referência) e o Acumulado, cada um com o realizado em destaque, o orçado e o desvio (vs. Orçado) no
-              selo colorido; e o gráfico dos meses do exercício, com o realizado em amarelo-ouro e o orçado em preto, e ao lado o gráfico do acumulado (ACUM.), do mesmo tipo.
+              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em
+              cima, o nome e a legenda (a sigla, o sentido e o mês de referência); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
+              um com o valor em destaque e, à direita, o selo do desvio e o orçado (vs. Orçado); e, ao lado, o gráfico dos meses do exercício, com
+              o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
             <li>
               Tipo: Barras (colunas do realizado e do orçado, como na planilha) ou Área (o realizado numa área amarela, mais forte no máximo do
