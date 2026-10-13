@@ -294,7 +294,6 @@ export function ConferenciaPlanilhaContent() {
                   chave: String(v.unidade),
                   rotulo: v.nome,
                   sinal: v.diferencas === 0 ? <CheckCircle2 className="size-3.5 text-green-600" /> : <AlertTriangle className="size-3.5 text-red-600" />,
-                  contagem: v.diferencas > 0 ? v.diferencas : undefined,
                 }))}
               />
             </div>

@@ -101,8 +101,8 @@ export function ReajustesContent() {
               da referência. Use os filtros nos rótulos das colunas.
             </li>
             <li>
-              Na aba Justificativas (só com um cenário comparado, em Configurações / Comparativo): escolha a aba da DRE (Consolidado ou cada unidade); o
-              número em cada aba é o de contas acima da variação. Cada linha é uma conta com algum mês acima da variação máxima do total dela: os meses
+              Na aba Justificativas (só com um cenário comparado, em Configurações / Comparativo): escolha a aba da DRE (Consolidado ou cada unidade); acima
+              da tabela, quantas contas da aba passam da variação. Cada linha é uma conta com algum mês acima da variação máxima do total dela: os meses
               mostram a variação (passe o mouse para ver o valor do cenário e o do comparado; “sem base”: o comparado é zero no mês). Digite a
               justificativa e clique em “Gravar”; apagar o texto e gravar a apaga. “Só Sem Justificativa” esconde as já justificadas. Uma conta que
               deixa de passar da variação sai da lista (a justificativa fica guardada).

@@ -283,17 +283,15 @@ export function ClassificacaoContent() {
             onMudar={(c) => filtrar(c as Situacao)}
             abas={[
               // Todos antes das Pendências (12/10/2026); a tela continua abrindo nas Pendências.
-              { chave: "TODOS", rotulo: "Todos", contagem: r?.total ?? 0 },
+              { chave: "TODOS", rotulo: "Todos" },
               {
                 chave: "PENDENCIAS",
                 rotulo: "Pendências",
-                contagem: r?.pendentes ?? 0,
                 sinal: (r?.pendentes ?? 0) > 0 ? <span className="size-2 rounded-full bg-red-600" aria-hidden /> : undefined,
               },
               ...pendenciasPorTipo.map((v) => ({
                 chave: v,
                 rotulo: VALIDACOES[v].codigo.startsWith("<") ? VALIDACOES[v].codigo : VALIDACOES[v].rotulo,
-                contagem: quantidade(v),
               })),
             ]}
           />

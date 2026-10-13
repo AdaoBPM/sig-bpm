@@ -214,8 +214,8 @@ export function ImportarContent() {
         ativa={aba}
         onMudar={(c) => setAba(c as "vigor" | "historico")}
         abas={[
-          { chave: "vigor", rotulo: "Em vigor", contagem: data ? importados : undefined },
-          { chave: "historico", rotulo: "Histórico", contagem: data ? itens.length : undefined },
+          { chave: "vigor", rotulo: "Em vigor" },
+          { chave: "historico", rotulo: "Histórico" },
         ]}
       />
 

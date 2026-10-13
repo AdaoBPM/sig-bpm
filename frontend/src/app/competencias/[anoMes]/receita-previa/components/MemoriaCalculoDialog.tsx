@@ -209,7 +209,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = fal
                 rotulo="Origem dos itens"
                 ativa={ativo.origem}
                 onMudar={setEscolhido}
-                abas={grupos.map((g) => ({ chave: g.origem, rotulo: g.rotulo, contagem: g.linhas.length }))}
+                abas={grupos.map((g) => ({ chave: g.origem, rotulo: g.rotulo }))}
               />
             </div>
             <TabelaDoGrupo key={ativo.origem} linhas={ativo.linhas} origem={ativo.origem} unidade={unidade} variacao={variacao} />

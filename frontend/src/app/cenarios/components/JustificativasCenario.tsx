@@ -62,7 +62,7 @@ export function JustificativasCenario({ id, podeEditar }: { id: string; podeEdit
             rotulo="Abas da DRE"
             ativa={visao}
             onMudar={setVisao}
-            abas={dados.visoes.map((v) => ({ chave: String(v.visao), rotulo: v.nome, contagem: v.itens.length }))}
+            abas={dados.visoes.map((v) => ({ chave: String(v.visao), rotulo: v.nome }))}
           />
           <div className="rounded-sm border border-gray-200 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5 text-sm">

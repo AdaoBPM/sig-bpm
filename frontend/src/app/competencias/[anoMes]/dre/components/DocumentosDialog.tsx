@@ -166,8 +166,8 @@ export function DocumentosDialog({
               ativa={aba}
               onMudar={setAba}
               abas={[
-                { chave: "requisicoes", rotulo: "Requisições", contagem: d.requisicoes.length },
-                { chave: "notas", rotulo: "Notas Fiscais", contagem: d.notas.length },
+                { chave: "requisicoes", rotulo: "Requisições" },
+                { chave: "notas", rotulo: "Notas Fiscais" },
               ]}
             />
             </div>
