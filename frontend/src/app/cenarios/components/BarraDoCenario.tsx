@@ -62,15 +62,15 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {/* A versão (13/10/2026), com o cadeado quando salva. */}
+        {/* A versão (13/10/2026), com o cadeado quando congelada. */}
         {atual ? (
           <span
             className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700"
-            title={atual.versaoSalvaEm ? "Versão salva: os dados não se editam (crie uma revisão)" : "Versão aberta para edição"}
+            title={atual.versaoSalvaEm ? "Versão congelada: os dados não se editam (reabra a versão ou crie uma revisão)" : "Versão aberta para edição"}
           >
             {atual.versaoSalvaEm ? <Lock className="size-3" /> : null}
             {rotuloVersao(atual.versao)}
-            {atual.versaoSalvaEm ? " · Salva" : ""}
+            {atual.versaoSalvaEm ? " · Congelada" : ""}
           </span>
         ) : null}
         {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}

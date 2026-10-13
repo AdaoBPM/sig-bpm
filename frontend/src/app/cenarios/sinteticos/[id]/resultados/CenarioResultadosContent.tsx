@@ -61,7 +61,7 @@ export function CenarioResultadosContent() {
   const [visao, setVisao] = useState("0");
   // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
   const { hasPermission } = usePermissions();
-  // O cenário marcado (12/10/2026) ou com a versão salva (13/10/2026) não se edita: a tabela fica só para leitura, com o aviso.
+  // O cenário marcado (12/10/2026) ou com a versão congelada (13/10/2026) não se edita: a tabela fica só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !travado;
@@ -76,9 +76,9 @@ export function CenarioResultadosContent() {
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
             <li>
-              Versões (para quem edita os cenários): “Salvar Versão” congela o cenário na versão atual (VER00, VER01…), como o fechamento de uma
-              competência — a DRE, os Indicadores Manuais e a referência não se editam mais. “Criar Revisão” (só numa versão salva) cria uma cópia na
-              próxima versão, aberta para edição: um cenário novo na lista, com a DRE, os indicadores, o comparativo e as justificativas. A marcação
+              Versões (para quem edita os cenários): “Congelar Versão” trava o cenário na versão atual (VER00, VER01…), como o fechamento de uma
+              competência — a DRE, os Indicadores Manuais e a referência não se editam mais; “Reabrir Versão” a destrava, como a reabertura de uma
+              competência. “Criar Revisão” (só numa versão congelada) cria uma cópia na próxima versão, aberta para edição: um cenário novo na lista, com a DRE, os indicadores, o comparativo e as justificativas. A marcação
               fica na versão de origem: remarque a revisão à mão em Configurações / Cenário.
             </li>
             <li>

@@ -4,15 +4,15 @@ import { rotuloMarcacao, rotuloVersao, type Cenario } from "../services/cenarios
 
 type Travas = Pick<Cenario, "marcacao" | "versao" | "versaoSalvaEm" | "versaoSalvaPor">;
 
-/** O cenário não muda de dados: marcado (12/10/2026) ou com a versão salva (13/10/2026). */
+/** O cenário não muda de dados: marcado (12/10/2026) ou com a versão congelada (13/10/2026). */
 export const estaTravado = (c: Travas) => !!c.marcacao || !!c.versaoSalvaEm;
 
 const data = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 
 /**
- * O aviso das travas do cenário: a versão salva (13/10/2026: Salvar Versão; para mudar, cria-se uma revisão) ou a
- * marcação (12/10/2026: tira-se a marcação, ou marca-se outro cenário, em Configurações / Cenário). A DRE, os
- * indicadores manuais e a referência não se editam.
+ * O aviso das travas do cenário: a versão congelada (13/10/2026: Congelar Versão; para mudar, reabre-se a versão ou
+ * cria-se uma revisão) ou a marcação (12/10/2026: tira-se a marcação, ou marca-se outro cenário, em Configurações /
+ * Cenário). A DRE, os indicadores manuais e a referência não se editam.
  */
 export function AvisoMarcado({ cenario: c, oQue }: { cenario: Travas; oQue: string }) {
   return (
@@ -21,9 +21,9 @@ export function AvisoMarcado({ cenario: c, oQue }: { cenario: Travas; oQue: stri
       <span>
         {c.versaoSalvaEm ? (
           <>
-            A {rotuloVersao(c.versao)} está salva (em {data(c.versaoSalvaEm)}
-            {c.versaoSalvaPor ? `, por ${c.versaoSalvaPor}` : ""}): {oQue} não se edita. Para editar, crie uma revisão (Criar Revisão, na tela
-            Resultados).
+            A {rotuloVersao(c.versao)} está congelada (em {data(c.versaoSalvaEm)}
+            {c.versaoSalvaPor ? `, por ${c.versaoSalvaPor}` : ""}): {oQue} não se edita. Para editar, reabra a versão (Reabrir Versão) ou crie uma
+            revisão (Criar Revisão), na tela Resultados.
           </>
         ) : (
           <>

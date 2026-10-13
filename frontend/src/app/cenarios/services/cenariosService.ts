@@ -33,7 +33,7 @@ export type Cenario = {
   comparadoComId: string | null;
   /**
    * O versionamento (13/10/2026): a versão (0 = VER00), a família (o id da VER00; nulo nela), a versão de origem da
-   * revisão e quando e por quem a versão foi salva (congelada).
+   * revisão e quando e por quem a versão foi congelada (versaoSalva*: o nome antigo, de quando o botão era Salvar Versão).
    */
   versao: number;
   familiaId: string | null;
@@ -158,9 +158,11 @@ export const cenariosService = {
     (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano, ...opcoes })).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
   indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
-  /** Salvar Versão: congela o cenário. */
-  salvarVersao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/versao`)).data.data,
-  /** Criar Revisão: a cópia da versão salva numa versão nova, aberta para edição (devolve o cenário novo). */
+  /** Congelar Versão: trava o cenário. */
+  congelarVersao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/versao`)).data.data,
+  /** Reabrir Versão: destrava a versão congelada. */
+  reabrirVersao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/versao/reabrir`)).data.data,
+  /** Criar Revisão: a cópia da versão congelada numa versão nova, aberta para edição (devolve o cenário novo). */
   criarRevisao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/revisao`)).data.data,
   comparativo: async (id: string) => (await api.get<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`)).data.data,
   gravarComparativo: async (id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }) =>

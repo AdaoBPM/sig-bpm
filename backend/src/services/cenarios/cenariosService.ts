@@ -66,11 +66,11 @@ export const rotuloVersao = (v: number) => `VER${String(v).padStart(2, "0")}`;
  * As travas dos dados do cenário — a DRE, os indicadores manuais e a referência (arquivo ou realizado); o nome, a
  * descrição, o comparativo e as justificativas continuam editáveis:
  * - o cenário marcado (12/10/2026: Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos);
- * - a versão salva (13/10/2026: Salvar Versão congela o cenário, como o fechamento de uma competência; para mudar,
- *   cria-se uma revisão).
+ * - a versão congelada (13/10/2026: Congelar Versão trava o cenário, como o fechamento de uma competência; para mudar,
+ *   reabre-se a versão ou cria-se uma revisão).
  */
 function exigirEditavel(c: { nome: string; marcacao: MarcacaoCenario | null; versao: number; versaoSalvaEm: Date | null }) {
-  if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} está salva e não se edita: crie uma revisão (Criar Revisão, na tela Resultados) para editar.`);
+  if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} está congelada e não se edita: reabra a versão (Reabrir Versão) ou crie uma revisão (Criar Revisão), na tela Resultados.`);
   if (c.marcacao) throw new CenarioError(409, `O cenário ${c.nome} está marcado como ${MARCACOES[c.marcacao]} e não se edita: tire a marcação (ou marque outro cenário) antes de editá-lo.`);
 }
 
@@ -664,12 +664,13 @@ export const cenariosService = {
   },
 
   /**
-   * Salvar Versão (13/10/2026): congela o cenário, como o fechamento de uma competência — a DRE, os indicadores manuais
-   * e a referência não se editam mais. Para mudar, cria-se uma revisão.
+   * Congelar Versão (13/10/2026; antes, Salvar Versão): trava o cenário, como o fechamento de uma competência — a DRE,
+   * os indicadores manuais e a referência não se editam mais. Para mudar, reabre-se a versão ou cria-se uma revisão.
+   * (As colunas seguem com o nome antigo: versao_salva_em e versao_salva_por são o congelamento.)
    */
-  async salvarVersao(id: string, usuario: Usuario) {
+  async congelarVersao(id: string, usuario: Usuario) {
     const c = await obterOuFalhar(id, usuario);
-    if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} já está salva.`);
+    if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} já está congelada.`);
     const depois = await getPrismaClient().cenario.update({ where: { id }, data: { versaoSalvaEm: new Date(), versaoSalvaPor: usuario.nome } });
     await auditar({
       usuarioId: usuario.id,
@@ -679,20 +680,42 @@ export const cenariosService = {
       entidadeId: id,
       antes: { versaoSalvaEm: null },
       depois: { versaoSalvaEm: depois.versaoSalvaEm },
-      metadados: { salvarVersao: rotuloVersao(c.versao) },
+      metadados: { congelarVersao: rotuloVersao(c.versao) },
     });
     return this.obter(id, usuario);
   },
 
   /**
-   * Criar Revisão (13/10/2026): a cópia de uma versão salva numa versão nova da mesma família (a maior + 1: VER01,
+   * Reabrir Versão (13/10/2026): destrava a versão congelada, como a reabertura de uma competência — a DRE, os
+   * indicadores manuais e a referência voltam a se editar (no cenário marcado, a marcação continua travando). As
+   * revisões criadas dela não mudam. Fica no log de auditoria.
+   */
+  async reabrirVersao(id: string, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    if (!c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} não está congelada.`);
+    await getPrismaClient().cenario.update({ where: { id }, data: { versaoSalvaEm: null, versaoSalvaPor: null } });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      antes: { versaoSalvaEm: c.versaoSalvaEm, versaoSalvaPor: c.versaoSalvaPor },
+      depois: { versaoSalvaEm: null },
+      metadados: { reabrirVersao: rotuloVersao(c.versao) },
+    });
+    return this.obter(id, usuario);
+  },
+
+  /**
+   * Criar Revisão (13/10/2026): a cópia de uma versão congelada numa versão nova da mesma família (a maior + 1: VER01,
    * VER02…), aberta para edição — um cenário novo, com a DRE, os indicadores, o comparativo e as justificativas da
    * versão de origem. A marcação não passa: remarca-se à mão.
    */
   async criarRevisao(id: string, usuario: Usuario) {
     const prisma = getPrismaClient();
     const origem = await obterOuFalhar(id, usuario);
-    if (!origem.versaoSalvaEm) throw new CenarioError(409, `Salve a ${rotuloVersao(origem.versao)} (Salvar Versão) antes de criar uma revisão.`);
+    if (!origem.versaoSalvaEm) throw new CenarioError(409, `Congele a ${rotuloVersao(origem.versao)} (Congelar Versão) antes de criar uma revisão.`);
     const familia = origem.familiaId ?? origem.id;
     const ultima = await prisma.cenario.aggregate({ where: { OR: [{ id: familia }, { familiaId: familia }] }, _max: { versao: true } });
     const versao = (ultima._max.versao ?? origem.versao) + 1;

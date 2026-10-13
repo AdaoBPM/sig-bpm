@@ -89,8 +89,8 @@ export function CenariosContent() {
               total da tela Resultados), com os reais abreviados (R$ 86,42M nos milhões, R$ 532,10 mil nos milhares). A coluna ordena e filtra pelo RL.
             </li>
             <li>
-              Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando salva. As versões se salvam e se revisam na tela Resultados de
-              cada cenário (Salvar Versão e Criar Revisão); cada revisão é um cenário próprio na lista, com o mesmo nome e a versão seguinte.
+              Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando congelada. As versões se congelam, se reabrem e se revisam na tela
+              Resultados de cada cenário (Congelar Versão, Reabrir Versão e Criar Revisão); cada revisão é um cenário próprio na lista, com o mesmo nome e a versão seguinte.
             </li>
             <li>Clique na linha para abrir o cenário, com as telas Configurações (para quem edita), Resultados, Indicadores e Reajustes.</li>
             <li>
@@ -160,10 +160,10 @@ export function CenariosContent() {
                 <Link href={`/cenarios/sinteticos/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
                   {c.nome}
                 </Link>
-                {/* A versão (13/10/2026), com o cadeado quando salva. */}
+                {/* A versão (13/10/2026), com o cadeado quando congelada. */}
                 <span
                   className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-1.5 py-px align-middle text-xs font-medium text-gray-700"
-                  title={c.versaoSalvaEm ? "Versão salva: os dados não se editam" : "Versão aberta para edição"}
+                  title={c.versaoSalvaEm ? "Versão congelada: os dados não se editam" : "Versão aberta para edição"}
                 >
                   {c.versaoSalvaEm ? <Lock className="size-3" /> : null}
                   {rotuloVersao(c.versao)}

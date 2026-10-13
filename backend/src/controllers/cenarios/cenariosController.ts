@@ -160,13 +160,19 @@ export const cenariosController = {
     return responder(response, () => cenariosService.referenciaRealizado(c, ano, usuario(request), opcoes));
   },
 
-  /** Salvar Versão: congela o cenário. */
-  salvarVersao(request: Request, response: Response) {
+  /** Congelar Versão: trava o cenário. */
+  congelarVersao(request: Request, response: Response) {
     const c = id(request, response);
-    return c ? responder(response, () => cenariosService.salvarVersao(c, usuario(request))) : undefined;
+    return c ? responder(response, () => cenariosService.congelarVersao(c, usuario(request))) : undefined;
   },
 
-  /** Criar Revisão: a cópia da versão salva numa versão nova, aberta para edição. */
+  /** Reabrir Versão: destrava a versão congelada. */
+  reabrirVersao(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.reabrirVersao(c, usuario(request))) : undefined;
+  },
+
+  /** Criar Revisão: a cópia da versão congelada numa versão nova, aberta para edição. */
   criarRevisao(request: Request, response: Response) {
     const c = id(request, response);
     return c ? responder(response, () => cenariosService.criarRevisao(c, usuario(request)), 201) : undefined;

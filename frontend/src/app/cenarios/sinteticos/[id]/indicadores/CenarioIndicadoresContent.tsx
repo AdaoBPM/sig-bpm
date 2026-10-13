@@ -107,7 +107,7 @@ export function CenarioIndicadoresContent() {
   const { hasPermission } = usePermissions();
   // O cenário marcado não se edita (12/10/2026): os Indicadores Manuais ficam só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
-  // Também a versão salva (13/10/2026) trava os Indicadores Manuais.
+  // Também a versão congelada (13/10/2026) trava os Indicadores Manuais.
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !travado;
   const [aba, setAba] = useState("metas");
