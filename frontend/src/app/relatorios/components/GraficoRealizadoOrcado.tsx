@@ -9,7 +9,8 @@ import { Seletor } from "./SeletorPeriodo";
 
 /** As cores dos gráficos, como os da planilha INDICADORES DE RESULTADO: o realizado em amarelo-ouro e a meta em preto. */
 const OURO = "#ffcc00";
-const PRETO = "#111111";
+// O orçado (e o comparado) em preto; no tema Escuro, cinza-claro (13/10/2026; a variável fica no globals.css).
+const PRETO = "var(--cor-grafico-orcado)";
 const CORES: ChartConfig = {
   realizado: { label: "Realizado", color: OURO },
   orcado: { label: "Orçado", color: PRETO },
@@ -113,7 +114,7 @@ export function GraficoRealizadoOrcado({
             <stop offset="100%" stopColor={OURO} stopOpacity={degrade.base} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="#e5e7eb" />
+        <CartesianGrid vertical={false} stroke="var(--cor-grafico-grade)" />
         {/* A linha do eixo X um pouco mais escura e grossa que as de grade (10/10/2026). */}
         <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} tickMargin={4} fontSize={rotulosDosValores ? 12 : 10} interval={0} padding={area && !umPonto ? (rotulosDosValores ? { left: 44, right: 44 } : { left: 8, right: 8 }) : undefined} />
         <YAxis hide domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} />
@@ -245,7 +246,7 @@ export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico
         {rotulos.realizado}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-bpm-secondary" /> : <span className="inline-block size-3 rounded-[2px] bg-bpm-secondary" />}
+        {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-[var(--cor-grafico-orcado)]" /> : <span className="inline-block size-3 rounded-[2px] bg-[var(--cor-grafico-orcado)]" />}
         {rotulos.orcado}
       </span>
     </>

@@ -124,3 +124,121 @@
 .tabela-sig * {
   font-variant-numeric: normal;
 }
+
+/*
+ * Os temas (13/10/2026; lib/tema.ts): o atributo data-tema do <html>, escolhido no menu do usuário.
+ * As cores fixas das partes do orçado/comparado e dos gráficos vêm destas variáveis, para cada tema decidir.
+ */
+:root {
+  --cor-rotulo-orcado: #000000;
+  --cor-texto-rotulo-orcado: #ffffff;
+  --cor-grafico-orcado: #111111;
+  --cor-grafico-grade: #e5e7eb;
+}
+
+/* Claro: o menu lateral branco, separado das telas por uma sombra cinza clara. */
+[data-tema="claro"] {
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #e5e7eb;
+}
+[data-tema="claro"] [data-slot="sidebar-container"] {
+  box-shadow: 2px 0 10px rgb(0 0 0 / 0.08);
+  border-right-color: #e5e7eb;
+}
+
+/*
+ * Escuro: as telas em cinza escuro. A escala de cinzas se inverte (os textos gray-900 ficam quase brancos, os fundos
+ * brancos ficam cinza escuros), os amarelos claros das linhas de total viram tons escuros de amarelo, e os chips de
+ * cor (vermelho, verde, azul) ganham fundos escuros com o texto claro. O menu lateral continua preto.
+ */
+[data-tema="escuro"] {
+  color-scheme: dark;
+  --background: #1f2226;
+  --foreground: #f3f4f6;
+  --card: #2a2e35;
+  --card-foreground: #f3f4f6;
+  --popover: #2a2e35;
+  --popover-foreground: #f3f4f6;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #363a42;
+  --muted-foreground: #b4bac2;
+  --accent: #363a42;
+  --accent-foreground: #f3f4f6;
+  --border: #42474f;
+  --input: #4f555e;
+  --ring: #ffcc00;
+
+  --color-white: #2a2e35;
+  --color-gray-50: #30343b;
+  --color-gray-100: #363a42;
+  --color-gray-200: #42474f;
+  --color-gray-300: #4f555e;
+  --color-gray-400: #7b828c;
+  --color-gray-500: #9aa1ab;
+  --color-gray-600: #b4bac2;
+  --color-gray-700: #cdd2d8;
+  --color-gray-800: #e2e5e9;
+  --color-gray-900: #f3f4f6;
+  --color-gray-950: #ffffff;
+  --color-yellow-50: #38331c;
+  --color-yellow-100: #4a421d;
+  --color-yellow-200: #5e531f;
+  --color-yellow-300: #7a6a22;
+  --color-yellow-800: #fde68a;
+  --color-yellow-900: #fef3c7;
+  --color-red-50: #3a2124;
+  --color-red-200: #6b2d33;
+  --color-red-700: #f87171;
+  --color-red-800: #fca5a5;
+  --color-green-50: #1f3326;
+  --color-green-200: #2f5a3a;
+  --color-green-600: #4ade80;
+  --color-green-800: #86efac;
+  --color-blue-50: #1e2a3d;
+  --color-blue-200: #2c4366;
+  --color-blue-800: #93c5fd;
+
+  /* As partes pretas e cinzas do orçado e do comparado: brancas e cinza-claras, com o texto preto. */
+  --cor-rotulo-orcado: #f3f4f6;
+  --cor-texto-rotulo-orcado: #111827;
+  --cor-grafico-orcado: #f3f4f6;
+  --cor-grafico-grade: #42474f;
+}
+/* O preto dos destaques (a tela atual nas barras, a escolha nas listas) vira claro; o texto branco dele já ficou escuro. */
+[data-tema="escuro"] .bg-black {
+  background-color: #f3f4f6;
+}
+[data-tema="escuro"] .bg-black.text-bpm-primary {
+  color: #111827;
+}
+/*
+ * Onde o fundo continua claro no Escuro — os rótulos amarelo-ouro das tabelas, os botões e faixas amarelo-ouro e as
+ * células do orçado/comparado —, a escala volta à clara, e o texto fica escuro como no Padrão.
+ */
+[data-tema="escuro"] :is(.tabela-sig th, .bg-bpm-primary, .celula-orcado) {
+  --color-white: #ffffff;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+  --border: #e5e7eb;
+  --foreground: #111827;
+}
+[data-tema="escuro"] .tabela-sig th {
+  color: #111827;
+}
+/* As células do orçado/comparado herdam a cor do texto da linha: no Escuro, o texto delas fica preto. */
+[data-tema="escuro"] .celula-orcado {
+  color: #111827;
+}

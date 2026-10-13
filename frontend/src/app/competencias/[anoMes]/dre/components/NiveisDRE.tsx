@@ -132,9 +132,11 @@ export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_
  * O fundo das colunas do orçado (Resultados Realizados, 11/10/2026): a mesma escala do amarelo, em cinza — os rótulos
  * em preto (no lugar do amarelo-ouro), as linhas de resultado num cinza mais escuro e os totais num mais claro.
  */
-export const fundoDoOrcado = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-gray-300" : l.tipo !== "ITEM" ? "bg-gray-200" : "bg-white");
-/** O rótulo das colunas do orçado: preto, com o texto branco. */
-export const ROTULO_DO_ORCADO = "!bg-black !text-white";
+// A marca celula-orcado (13/10/2026): no tema Escuro, as células do orçado/comparado ficam claras, com o texto preto.
+export const fundoDoOrcado = (l: { codigo: string; tipo: string }) =>
+  `celula-orcado ${LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-gray-300" : l.tipo !== "ITEM" ? "bg-gray-200" : "bg-white"}`;
+/** O rótulo das colunas do orçado: preto, com o texto branco (no tema Escuro, claro com o texto preto; globals.css). */
+export const ROTULO_DO_ORCADO = "!bg-[var(--cor-rotulo-orcado)] !text-[var(--cor-texto-rotulo-orcado)]";
 
 /** O recuo da descrição em cada nível. */
 export const RECUO = ["pl-4", "pl-9", "pl-14"];
