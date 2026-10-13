@@ -57,7 +57,7 @@ export function GraficoIndicadorDialog({
           <DialogHeader className="-mb-2 pb-2">
             <div className="flex items-center gap-2">
               <DialogTitle className="text-lg font-extrabold text-gray-900">
-                {i.numero ? <span className="mr-2 font-normal text-gray-400">{i.numero}</span> : null}
+                {/* Sem a numeração do indicador (13/10/2026): só o nome. */}
                 {i.nome}
               </DialogTitle>
               <CopiarComoImagem alvo={conteudo} nome={i.nome} dica="Copiar o gráfico como imagem" />
