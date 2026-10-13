@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -9,7 +9,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { Erro } from "../../../components/CenarioDialog";
-import { ConfiguracoesCenario } from "../../../components/ConfiguracoesCenario";
+import { ConfiguracoesCenario, type AbaDasConfiguracoes } from "../../../components/ConfiguracoesCenario";
 import { cenariosService } from "../../../services/cenariosService";
 
 /** A tela Configurações de um cenário (12/10/2026; antes, a primeira aba da tela Editar, que deixou de existir). */
@@ -17,6 +17,9 @@ export function ConfiguracoesContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/configuracoes`);
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
+  // ?aba=comparativo (ou referencia) abre direto na aba: os avisos do comparativo levam para cá.
+  const pedida = useSearchParams().get("aba");
+  const abaInicial: AbaDasConfiguracoes = pedida === "comparativo" || pedida === "referencia" ? pedida : "cenario";
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -24,9 +27,21 @@ export function ConfiguracoesContent() {
         comoUsar={
           <ul>
             <li>Na aba Cenário, mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”.</li>
+            <li>
+              Também na aba Cenário: “Marcar Cenário” marca o cenário como Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos (cada
+              marcação fica ativa em um cenário só: marcar este tira a do anterior), e “Excluir Cenário” o exclui (um cenário marcado não se exclui).
+            </li>
             <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas Resultados e Indicadores.</li>
-            <li>O comparativo com outro cenário (e a variação máxima de cada total) fica na tela Comparativo, na barra do topo.</li>
+            <li>
+              Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada total da DRE;
+              em branco, o total não se verifica. “Preencher Todos Com” põe o mesmo percentual em todos. Clique em “Gravar Comparativo”. “Nenhum”
+              desliga o comparativo (as variações ficam guardadas).
+            </li>
+            <li>
+              Com um cenário comparado, as telas Resultados e Indicadores trazem, em preto e cinza depois do total, os totais dele (e, nos Resultados, a
+              Diferença, o Atingimento e a Eficiência), e a tela Reajustes ganha a aba Justificativas, com as contas acima da variação.
+            </li>
           </ul>
         }
         sobre={
@@ -41,7 +56,7 @@ export function ConfiguracoesContent() {
       ) : cenario.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : (
-        <ConfiguracoesCenario key={`${cenario.data.nome}|${cenario.data.descricao}|${cenario.data.visualizacao}`} cenario={cenario.data} />
+        <ConfiguracoesCenario key={`${cenario.data.nome}|${cenario.data.descricao}|${cenario.data.visualizacao}`} cenario={cenario.data} abaInicial={abaInicial} />
       )}
     </div>
   );

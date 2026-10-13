@@ -4,17 +4,20 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
+import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { formato } from "@/app/relatorios/services/relatoriosService";
 
+import { JustificativasCenario } from "../../../components/JustificativasCenario";
 import { cenariosService, type ReajusteDoCenario } from "../../../services/cenariosService";
 
 const ABAS = ["Consolidado", "Matriz", "Filial", "Serviços", "Despesas e Extra", "RN"];
@@ -78,65 +81,97 @@ export function ReajustesContent() {
   const tabela = useTabelaFiltravel(data, COLUNAS);
   // O modal das contas (ou da descrição da referência) de uma linha (13/10/2026; antes, a lista na coluna Contas).
   const [aberto, setAberto] = useState<ReajusteDoCenario | null>(null);
+  // As abas (13/10/2026): Histórico (o log) e, com um cenário comparado, Justificativas (antes, da tela Comparativo).
+  const { hasPermission } = usePermissions();
+  const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
+  const comComparativo = !!cenario.data?.comparadoComId;
+  const [escolhida, setAba] = useState<"historico" | "justificativas">("historico");
+  const aba = comComparativo ? escolhida : "historico";
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Reajustes"
         comoUsar={
           <ul>
-            <li>Cada linha é uma gravação na DRE do cenário (tela Resultados) ou a carga de uma referência (tela Configurações), do mais recente ao mais antigo.</li>
+            <li>Na aba Histórico, cada linha é uma gravação na DRE do cenário (tela Resultados) ou a carga de uma referência (tela Configurações), do mais recente ao mais antigo.</li>
             <li>Tipo: Reajuste dos Marcados (o reajuste aplicado às contas e meses marcados), Edição de Valor (um valor clicado; Replicada quando copiado aos meses seguintes) ou Referência Carregada (um arquivo ou o resultado realizado, que substitui a DRE).</li>
             <li>Reajuste: o percentual ou o valor informado; “Valor digitado” quando o valor recalculado foi digitado direto. As somas são as dos valores alterados, antes e depois.</li>
             <li>
               Na coluna Contas, o botão abre o modal com as contas alteradas (Departamento, Atribuição e Conta) ou, na Referência Carregada, a descrição
               da referência. Use os filtros nos rótulos das colunas.
             </li>
+            <li>
+              Na aba Justificativas (só com um cenário comparado, em Configurações / Comparativo): escolha a aba da DRE (Consolidado ou cada unidade); o
+              número em cada aba é o de contas acima da variação. Cada linha é uma conta com algum mês acima da variação máxima do total dela: os meses
+              mostram a variação (passe o mouse para ver o valor do cenário e o do comparado; “sem base”: o comparado é zero no mês). Digite a
+              justificativa e clique em “Gravar”; apagar o texto e gravar a apaga. “Só Sem Justificativa” esconde as já justificadas. Uma conta que
+              deixa de passar da variação sai da lista (a justificativa fica guardada).
+            </li>
           </ul>
         }
-        sobre={<p>O histórico dos reajustes do cenário: quem, quando, em que aba, que contas e meses, o reajuste e o efeito nas somas dos valores alterados.</p>}
-      />
-      <QuadroTabela
-        barra={
-          tabela.ativos ? (
-            <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-              Limpar Filtros
-            </button>
-          ) : undefined
+        sobre={
+          <>
+            <p>O histórico dos reajustes do cenário: quem, quando, em que aba, que contas e meses, o reajuste e o efeito nas somas dos valores alterados.</p>
+            <p>
+              As justificativas: com um cenário comparado, as contas que variam, num mês, mais do que a variação máxima do total delas em relação ao
+              comparado (a diferença dividida pelo valor do comparado, para mais ou para menos). O total sem contas embaixo (como a Margem Bruta e o
+              EBITDA) se compara ele mesmo.
+            </p>
+          </>
         }
-      >
-        <DataTable<ReajusteDoCenario>
-          data={tabela.visiveis}
-          cabecalho={tabela.cabecalho}
-          filtrosAtivos={tabela.ativos}
-          onLimparFiltros={tabela.limpar}
-          isLoading={isPending}
-          error={isError ? "Erro ao carregar o histórico de reajustes." : null}
-          emptyMessage="Nenhum reajuste ainda"
-          emptyHint="Os reajustes feitos na tela Resultados e as cargas de referência aparecem aqui."
-          columns={COLUNAS.map((c) => c.rotulo)}
-          renderRow={(r) => (
-            <tr key={r.id} className="border-b border-gray-100 align-top">
-              {COLUNAS.map((c) => {
-                const texto = c.texto ? c.texto(r) : c.valor?.(r);
-                return (
-                  <td
-                    key={c.chave}
-                    className={`px-2.5 py-2 text-sm ${c.alinhamento === "direita" || c.chave === "data" || c.chave === "contas" ? "whitespace-nowrap" : ""} ${c.alinhamento === "direita" ? "text-right" : ""}`}
-                  >
-                    {c.chave === "contas" ? (
-                      <button type="button" className={botaoCinza} onClick={() => setAberto(r)}>
-                        {botaoDasContas(r)}
-                      </button>
-                    ) : (
-                      (texto ?? <span className="text-gray-400">—</span>)
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          )}
-        />
-      </QuadroTabela>
+      />
+      <Abas
+        rotulo="Reajustes do cenário"
+        ativa={aba}
+        onMudar={(a) => setAba(a as "historico" | "justificativas")}
+        abas={[{ chave: "historico", rotulo: "Histórico" }, ...(comComparativo ? [{ chave: "justificativas", rotulo: "Justificativas" }] : [])]}
+      />
+      {aba === "justificativas" ? (
+        <JustificativasCenario id={id} podeEditar={hasPermission("cenarios:editar")} />
+      ) : (
+        <QuadroTabela
+          barra={
+            tabela.ativos ? (
+              <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
+                Limpar Filtros
+              </button>
+            ) : undefined
+          }
+        >
+          <DataTable<ReajusteDoCenario>
+            data={tabela.visiveis}
+            cabecalho={tabela.cabecalho}
+            filtrosAtivos={tabela.ativos}
+            onLimparFiltros={tabela.limpar}
+            isLoading={isPending}
+            error={isError ? "Erro ao carregar o histórico de reajustes." : null}
+            emptyMessage="Nenhum reajuste ainda"
+            emptyHint="Os reajustes feitos na tela Resultados e as cargas de referência aparecem aqui."
+            columns={COLUNAS.map((c) => c.rotulo)}
+            renderRow={(r) => (
+              <tr key={r.id} className="border-b border-gray-100 align-top">
+                {COLUNAS.map((c) => {
+                  const texto = c.texto ? c.texto(r) : c.valor?.(r);
+                  return (
+                    <td
+                      key={c.chave}
+                      className={`px-2.5 py-2 text-sm ${c.alinhamento === "direita" || c.chave === "data" || c.chave === "contas" ? "whitespace-nowrap" : ""} ${c.alinhamento === "direita" ? "text-right" : ""}`}
+                    >
+                      {c.chave === "contas" ? (
+                        <button type="button" className={botaoCinza} onClick={() => setAberto(r)}>
+                          {botaoDasContas(r)}
+                        </button>
+                      ) : (
+                        (texto ?? <span className="text-gray-400">—</span>)
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            )}
+          />
+        </QuadroTabela>
+      )}
       {aberto ? <ContasDialog reajuste={aberto} onFechar={() => setAberto(null)} /> : null}
     </div>
   );

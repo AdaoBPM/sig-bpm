@@ -18,9 +18,6 @@ export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissa
   { caminho: "indicadores", rotulo: "Indicadores" },
   // O histórico de reajustes do cenário (12/10/2026).
   { caminho: "reajustes", rotulo: "Reajustes" },
-  // O comparativo com outro cenário (13/10/2026; antes, a tela Justificativas, só com um cenário comparado): as abas
-  // Referência (o cenário comparado e as variações máximas) e Justificativas.
-  { caminho: "comparativo", rotulo: "Comparativo" },
 ];
 
 /** A rota de uma tela de cenário: o id e a tela. */
@@ -31,8 +28,8 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 
 /**
  * A barra de um cenário, no formato da barra de etapas do mês: o cenário em amarelo-ouro no início (com a troca
- * de cenário, que mantém a tela) e as telas Configurações (para quem edita), Resultados, Indicadores, Reajustes e
- * Comparativo, com a atual em destaque.
+ * de cenário, que mantém a tela) e as telas Configurações (para quem edita), Resultados, Indicadores e Reajustes,
+ * com a atual em destaque.
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();

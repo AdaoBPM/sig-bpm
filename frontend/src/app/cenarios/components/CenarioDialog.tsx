@@ -227,12 +227,13 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
   );
 }
 
-/** A exclusão de um cenário, com a confirmação. */
-export function ExcluirCenarioDialog({ cenario, onFechar }: { cenario: Cenario; onFechar: () => void }) {
+/** A exclusão de um cenário, com a confirmação; `aoExcluir` roda antes de recarregar a lista (a tela do cenário sai dele). */
+export function ExcluirCenarioDialog({ cenario, onFechar, aoExcluir }: { cenario: Cenario; onFechar: () => void; aoExcluir?: () => void }) {
   const queryClient = useQueryClient();
   const excluir = useMutation({
     mutationFn: () => cenariosService.excluir(cenario.id),
     onSuccess: () => {
+      aoExcluir?.();
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       toast.success(`Cenário ${cenario.nome} excluído.`);
       onFechar();

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Bookmark, Globe, Lock, Plus, Settings, Trash2, Upload } from "lucide-react";
+import { Globe, Lock, Plus, Upload } from "lucide-react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -12,48 +12,37 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { Button } from "@/components/ui/button";
-import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
-import { botaoPrimario, CenarioDialog, ExcluirCenarioDialog } from "../components/CenarioDialog";
+import { botaoPrimario, CenarioDialog } from "../components/CenarioDialog";
 import { ImportarCenarioDialog } from "../components/ImportarCenarioDialog";
-import { MarcarCenarioDialog } from "../components/MarcarCenarioDialog";
 import { cenariosService, rotuloMarcacao, ROTULO_VISUALIZACAO, type Cenario } from "../services/cenariosService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
 
-/** O que o cenário tem: as visões da DRE (das seis) e os indicadores com meta. */
-const conteudoDe = (c: Cenario) => (c.visoes.length === 0 && c.indicadores === 0 ? "Vazio" : `DRE: ${c.visoes.length}/6 · Metas: ${c.indicadores}`);
-
 const COLUNAS: Coluna<Cenario>[] = [
   { chave: "nome", rotulo: "Cenário", valor: (c) => c.nome },
   { chave: "ano", rotulo: "Exercício", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
-  { chave: "conteudo", rotulo: "Conteúdo", valor: conteudoDe },
-  // O arquivo e, embaixo, quando foi importado (uma coluna só, para a tabela caber na largura da tela).
-  { chave: "arquivo", rotulo: "Arquivo", valor: (c) => c.nomeArquivo },
-  // A marcação logo antes das ações; muda pela ação Marcar (não na tabela, para evitar a troca por engano).
+  // A marcação muda em Configurações / Cenário (Marcar Cenário). Sem as colunas Conteúdo e Arquivo e sem os ícones de
+  // ações (13/10/2026): marcar e excluir ficam nas Configurações, e a importação num cenário, na aba Referência delas.
   { chave: "marcacao", rotulo: "Marcação", valor: (c) => rotuloMarcacao(c.marcacao) },
-  { chave: "acoes", rotulo: "", semFiltro: true },
 ];
 
-type Dialogo = { tipo: "novo" } | { tipo: "excluir"; c: Cenario } | { tipo: "importar"; c: Cenario | null } | { tipo: "marcar"; c: Cenario } | null;
+type Dialogo = { tipo: "novo" } | { tipo: "importar" } | null;
 
 export function CenariosContent() {
   useRegistrarAcessoTela("/cenarios/sinteticos");
   const router = useRouter();
-  const { hasPermission } = usePermissions();
-  const podeEditar = hasPermission("cenarios:editar");
   const { data, isPending, isError } = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
   const tabela = useTabelaFiltravel(data, COLUNAS);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const abrir = (c: Cenario) => router.push(`/cenarios/sinteticos/${c.id}/resultados`);
-  const acao = "inline-flex size-8 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100 hover:text-gray-900";
 
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Cenários Gerados"
+        titulo="Cenários Sintéticos"
         comoUsar={
           <ul>
             <li>Use “Importar Cenário” para criar um cenário a partir de uma planilha (com o nome, o exercício e a descrição), ou “Novo Cenário” para um cenário vazio ou a cópia de outro.</li>
@@ -61,13 +50,14 @@ export function CenariosContent() {
               Na importação, escolha o arquivo: a ferramenta lê e confere as abas e mostra, aba por aba, o que vai entrar e o que muda no cenário
               (valores novos, alterados e removidos; “Sem mudança” quando é igual). Nada é gravado antes de você clicar em “Importar”.
             </li>
-            <li>Clique na linha para abrir o cenário, com as telas Resultados e Indicadores.</li>
+            <li>Clique na linha para abrir o cenário, com as telas Configurações (para quem edita), Resultados, Indicadores e Reajustes.</li>
             <li>
-              Para marcar o cenário como Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos, use o ícone de marcador na linha e confirme
-              em “Gravar Marcação”; a coluna Marcação mostra a atual. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
+              A coluna Marcação mostra se o cenário é o Orçamento Empresarial, os Resultados Anteriores ou os Resultados Vendidos. Para marcar, excluir,
+              importar um arquivo no cenário ou mudar o nome, a descrição, a visualização, a referência e o comparativo, abra o cenário e vá em
+              Configurações. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
-            <li>Nos ícones da linha: marcar, importar um arquivo no cenário (substitui as abas que o arquivo tiver), configurações (nome, descrição, visualização e referência: um arquivo ou o resultado realizado), e excluir. A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui nem se edita (a DRE, os indicadores manuais e a referência; o nome e a descrição, sim): tire a marcação (ou marque outro cenário) antes.</li>
+            <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui nem se edita (a DRE, os indicadores manuais e a referência; o nome e a descrição, sim): tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário ou Importar Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
               têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). Embaixo do nome, a
@@ -94,7 +84,7 @@ export function CenariosContent() {
         acoes={
           <PermissionGuard permission="cenarios:editar">
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "importar", c: null })}>
+              <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "importar" })}>
                 <Upload className="size-4" />
                 Importar Cenário
               </Button>
@@ -125,7 +115,7 @@ export function CenariosContent() {
           error={isError ? "Erro ao carregar os cenários." : null}
           emptyMessage="Nenhum cenário gerado"
           emptyHint="Use Importar Cenário ou Novo Cenário para criar o primeiro."
-          columns={["Cenário", "Exercício", "Conteúdo", "Arquivo", "Marcação", ""]}
+          columns={["Cenário", "Exercício", "Marcação"]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrir(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
               <td className="min-w-48 px-4 py-2 text-sm">
@@ -146,59 +136,11 @@ export function CenariosContent() {
               </td>
               <td className="px-4 text-sm">{c.ano}</td>
               <td className="px-4 text-sm whitespace-nowrap">
-                {c.visoes.length === 0 && c.indicadores === 0 ? (
-                  "Vazio"
-                ) : (
-                  <>
-                    <div>DRE: {c.visoes.length}/6</div>
-                    <div>Metas: {c.indicadores}</div>
-                  </>
-                )}
-              </td>
-              <td className="max-w-44 px-4 text-sm" title={c.nomeArquivo ?? undefined}>
-                <div className="truncate">{c.nomeArquivo ?? "—"}</div>
-                {c.importadoEm ? <div className="text-xs whitespace-nowrap text-gray-500">Importado em {dataCurta(c.importadoEm)}</div> : null}
-              </td>
-              <td className="px-4 text-sm whitespace-nowrap">
                 {c.marcacao ? (
                   <span className="rounded-sm border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-900">{rotuloMarcacao(c.marcacao)}</span>
                 ) : (
                   <span className="text-gray-400">—</span>
                 )}
-              </td>
-              <td className="px-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                {podeEditar ? (
-                  <>
-                    <button type="button" className={acao} title="Marcar o cenário (Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos)" aria-label={`Marcar ${c.nome}`} onClick={() => setDialogo({ tipo: "marcar", c })}>
-                      <Bookmark className="size-4" />
-                    </button>
-                    {/* O cenário marcado não se edita (12/10/2026): o ícone fica apagado, com o motivo na dica. */}
-                    <button
-                      type="button"
-                      className={`${acao} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
-                      disabled={!!c.marcacao}
-                      title={c.marcacao ? `Marcado como ${rotuloMarcacao(c.marcacao)}: tire a marcação antes de importar` : "Importar um arquivo neste cenário"}
-                      aria-label={`Importar arquivo em ${c.nome}`}
-                      onClick={() => setDialogo({ tipo: "importar", c })}
-                    >
-                      <Upload className="size-4" />
-                    </button>
-                    <button type="button" className={acao} title="Configurações do cenário (nome, descrição, visualização e referência)" aria-label={`Configurações de ${c.nome}`} onClick={() => router.push(`/cenarios/sinteticos/${c.id}/configuracoes`)}>
-                      <Settings className="size-4" />
-                    </button>
-                    {/* O cenário marcado não se exclui: o ícone fica apagado, com o motivo na dica. */}
-                    <button
-                      type="button"
-                      className={`${acao} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
-                      disabled={!!c.marcacao}
-                      title={c.marcacao ? `Marcado como ${rotuloMarcacao(c.marcacao)}: tire a marcação antes de excluir` : "Excluir o cenário"}
-                      aria-label={`Excluir ${c.nome}`}
-                      onClick={() => setDialogo({ tipo: "excluir", c })}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </>
-                ) : null}
               </td>
             </tr>
           )}
@@ -206,9 +148,7 @@ export function CenariosContent() {
       </QuadroTabela>
 
       {dialogo?.tipo === "novo" ? <CenarioDialog cenario={null} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
-      {dialogo?.tipo === "excluir" ? <ExcluirCenarioDialog cenario={dialogo.c} onFechar={() => setDialogo(null)} /> : null}
-      {dialogo?.tipo === "importar" ? <ImportarCenarioDialog cenario={dialogo.c} onFechar={() => setDialogo(null)} /> : null}
-      {dialogo?.tipo === "marcar" ? <MarcarCenarioDialog cenario={dialogo.c} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
+      {dialogo?.tipo === "importar" ? <ImportarCenarioDialog cenario={null} onFechar={() => setDialogo(null)} /> : null}
     </div>
   );
 }

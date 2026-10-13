@@ -125,7 +125,7 @@ export function CenarioIndicadoresContent() {
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados.</li>
-            <li>Com um cenário comparado (tela Comparativo), a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele.</li>
+            <li>Com um cenário comparado (Configurações / Comparativo), a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele.</li>
             <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
             <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
             <li>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -18,11 +19,11 @@ const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateSt
 const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
 /**
- * A aba Justificativas da tela Comparativo (12/10/2026; antes, a tela Justificativas): com um cenário comparado (aba
- * Referência), as contas de cada aba da DRE com algum mês acima da variação máxima do total delas, os meses e a
- * justificativa de cada uma.
+ * A aba Justificativas da tela Reajustes (13/10/2026; antes, da tela Comparativo e, antes, uma tela própria): com um
+ * cenário comparado (Configurações / Comparativo), as contas de cada aba da DRE com algum mês acima da variação
+ * máxima do total delas, os meses e a justificativa de cada uma.
  */
-export function JustificativasCenario({ id, podeEditar, onIrParaReferencia }: { id: string; podeEditar: boolean; onIrParaReferencia: () => void }) {
+export function JustificativasCenario({ id, podeEditar }: { id: string; podeEditar: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "justificativas"], queryFn: () => cenariosService.justificativas(id) });
   const [visao, setVisao] = useState("0");
   const [soPendentes, setSoPendentes] = useState(false);
@@ -38,10 +39,14 @@ export function JustificativasCenario({ id, podeEditar, onIrParaReferencia }: { 
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : !dados?.comparadoCom ? (
         <p className={QUADRO}>
-          O cenário não tem comparativo. Escolha um cenário para comparar na aba{" "}
-          <button type="button" onClick={onIrParaReferencia} className="font-medium text-gray-900 underline underline-offset-2">
-            Referência
-          </button>
+          O cenário não tem comparativo. Escolha um cenário para comparar em{" "}
+          {podeEditar ? (
+            <Link href={`/cenarios/sinteticos/${id}/configuracoes?aba=comparativo`} className="font-medium text-gray-900 underline underline-offset-2">
+              Configurações / Comparativo
+            </Link>
+          ) : (
+            "Configurações / Comparativo"
+          )}
           .
         </p>
       ) : (

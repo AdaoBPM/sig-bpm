@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, History, Upload } from "lucide-react";
+import { Bookmark, FileSpreadsheet, History, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Abas } from "@/components/shared/Abas";
@@ -14,9 +15,11 @@ import { Label } from "@/components/ui/label";
 import { competenciasService } from "@/app/competencias/services/competenciasService";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type Cenario, type Visualizacao } from "../services/cenariosService";
+import { cenariosService, rotuloMarcacao, type Cenario, type Visualizacao } from "../services/cenariosService";
 import { AvisoMarcado } from "./AvisoMarcado";
-import { botaoPrimario, CampoVisualizacao, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
+import { botaoPrimario, CampoVisualizacao, classeSelect, Erro, ExcluirCenarioDialog, OpcaoEmLinha } from "./CenarioDialog";
+import { ComparativoCenario } from "./ComparativoCenario";
+import { MarcarCenarioDialog } from "./MarcarCenarioDialog";
 import { ImportarCenarioDialog } from "./ImportarCenarioDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -34,9 +37,15 @@ const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt
  * visualização) e Referência (um arquivo ou o resultado realizado de um ano). Os quadros ocupam a largura da tela, com o
  * destaque amarelo-ouro à esquerda, e as opções ficam uma embaixo da outra, com o texto ao lado (13/10/2026).
  */
-export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
+export type AbaDasConfiguracoes = "cenario" | "referencia" | "comparativo";
+
+export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cenario: Cenario; abaInicial?: AbaDasConfiguracoes }) {
   const queryClient = useQueryClient();
-  const [aba, setAba] = useState<"cenario" | "referencia">("cenario");
+  const router = useRouter();
+  const [aba, setAba] = useState<AbaDasConfiguracoes>(abaInicial);
+  // As ações do cenário (13/10/2026; antes, ícones na lista dos cenários): marcar e excluir.
+  const [acao, setAcao] = useState<"marcar" | "excluir" | null>(null);
+  const lista = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
   const [nome, setNome] = useState(cenario.nome);
   const [descricao, setDescricao] = useState(cenario.descricao ?? "");
   const [visualizacao, setVisualizacao] = useState<Visualizacao>(cenario.visualizacao);
@@ -83,10 +92,12 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
       <Abas
         rotulo="Configurações do cenário"
         ativa={aba}
-        onMudar={(a) => setAba(a as "cenario" | "referencia")}
+        onMudar={(a) => setAba(a as AbaDasConfiguracoes)}
         abas={[
           { chave: "cenario", rotulo: "Cenário" },
           { chave: "referencia", rotulo: "Referência" },
+          // O comparativo com outro cenário (13/10/2026; antes, a aba Referência da tela Comparativo).
+          { chave: "comparativo", rotulo: "Comparativo" },
         ]}
       />
       {aba === "cenario" ? (
@@ -115,12 +126,31 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
             </div>
           </div>
           <Erro erro={salvar.isError ? mensagemDeErro(salvar.error, "Não foi possível gravar as configurações.") : null} />
-          <div className="flex justify-end">
-            <Button type="button" className={botaoPrimario} disabled={!nome.trim() || !mudou || salvar.isPending} onClick={() => salvar.mutate()}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" className="rounded-sm" onClick={() => setAcao("marcar")}>
+              <Bookmark className="size-4" />
+              Marcar Cenário
+            </Button>
+            {/* O cenário marcado não se exclui: o botão fica apagado, com o motivo na dica. */}
+            <span title={cenario.marcacao ? `Marcado como ${rotuloMarcacao(cenario.marcacao)}: tire a marcação antes de excluir` : undefined}>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-sm border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+                disabled={!!cenario.marcacao}
+                onClick={() => setAcao("excluir")}
+              >
+                <Trash2 className="size-4" />
+                Excluir Cenário
+              </Button>
+            </span>
+            <Button type="button" className={`${botaoPrimario} ml-auto`} disabled={!nome.trim() || !mudou || salvar.isPending} onClick={() => salvar.mutate()}>
               {salvar.isPending ? "Gravando…" : "Gravar Configurações"}
             </Button>
           </div>
         </section>
+      ) : aba === "comparativo" ? (
+        <ComparativoCenario id={cenario.id} podeEditar />
       ) : (
         <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <p className="text-sm text-gray-600">
@@ -226,6 +256,8 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
       )}
 
       {importando ? <ImportarCenarioDialog cenario={cenario} onFechar={() => setImportando(false)} /> : null}
+      {acao === "marcar" ? <MarcarCenarioDialog cenario={cenario} cenarios={lista.data ?? []} onFechar={() => setAcao(null)} /> : null}
+      {acao === "excluir" ? <ExcluirCenarioDialog cenario={cenario} onFechar={() => setAcao(null)} aoExcluir={() => router.push("/cenarios/sinteticos")} /> : null}
       {confirmar && ano ? (
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(false) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-md">
