@@ -111,5 +111,8 @@ describe("comparativo entre cenários", () => {
     ]);
     // O comparado negativo (um custo): a variação é sobre o valor absoluto.
     assert.equal(mesesAcima(new Map([[1, -130]]), new Map([[1, -100]]), 10)[0].variacao, -30);
+    // Igual à máxima em duas casas não entra (5% sobre centavos dá 5,0000005%); 5,01% entra.
+    assert.deepEqual(mesesAcima(new Map([[1, 168056.29]]), new Map([[1, 160053.6088]]), 5), []);
+    assert.equal(mesesAcima(new Map([[1, 105.01]]), new Map([[1, 100]]), 5)[0].variacao, 5.01);
   });
 });

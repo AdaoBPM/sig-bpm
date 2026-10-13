@@ -16,7 +16,8 @@ import { botaoPrimario, Erro } from "./CenarioDialog";
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const QUADRO = "rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-700";
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+// A variação e a máxima com duas casas (13/10/2026), como a comparação (só entra o que passa da máxima em duas casas).
+const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
 /**
  * A aba Justificativas da tela Reajustes (13/10/2026; antes, da tela Comparativo e, antes, uma tela própria): com um
@@ -116,7 +117,7 @@ function Linha({ id, visao, item, podeEditar }: { id: string; visao: number; ite
         <span className={item.ehTotal ? "font-bold text-gray-900" : "text-gray-900"}>{item.descricao}</span>
         {item.ehTotal ? null : <span className="block text-xs text-gray-500">{item.total}</span>}
       </td>
-      <td className="px-4 py-2 text-right text-sm whitespace-nowrap">{item.limite.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%</td>
+      <td className="px-4 py-2 text-right text-sm whitespace-nowrap">{item.limite.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</td>
       <td className="px-4 py-2">
         <div className="flex max-w-md flex-wrap gap-1">
           {item.meses.map((m) => (

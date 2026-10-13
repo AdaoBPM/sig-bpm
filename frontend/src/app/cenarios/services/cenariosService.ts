@@ -36,6 +36,8 @@ export type Cenario = {
   visoes: number[];
   /** Os indicadores com meta. */
   indicadores: number;
+  /** O total do exercício no Consolidado (a coluna Resultados da lista, 13/10/2026): o valor e o % como na tela Resultados; null sem DRE. */
+  resultados: Record<"rol" | "cpv" | "ebitda" | "rl", { valor: number; pct: number | null }> | null;
 };
 
 /** O que a tela fez numa gravação de valores (o histórico de reajustes). */

@@ -12,9 +12,11 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloMarcacao, type Comparativo } from "../services/cenariosService";
 import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
-import { lerNumero, paraCampo } from "./EdicaoDialogs";
+import { lerNumero } from "./EdicaoDialogs";
 
 // Os quadros com o destaque amarelo-ouro à esquerda; o título com iniciais maiúsculas (13/10/2026).
+/** A variação máxima no campo: sempre com duas casas (13/10/2026), sem separador de milhar (fácil de editar). */
+const duasCasas = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
 const QUADRO = "space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5";
 const TITULO = "text-sm font-bold text-gray-900";
 
@@ -33,7 +35,7 @@ export function ComparativoCenario({ id, podeEditar }: { id: string; podeEditar:
 function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo; podeEditar: boolean }) {
   const queryClient = useQueryClient();
   const [comparado, setComparado] = useState(dados.comparadoCom?.id ?? "");
-  const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(dados.totais.map((t) => [t.codigo, t.limite === null ? "" : paraCampo(t.limite)])));
+  const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(dados.totais.map((t) => [t.codigo, t.limite === null ? "" : duasCasas(t.limite)])));
   const [todos, setTodos] = useState("");
   const lidos = Object.fromEntries(Object.entries(limites).map(([c, t]) => [c, lerNumero(t)]));
   const invalidos = dados.totais.filter((t) => lidos[t.codigo] === undefined || (lidos[t.codigo] ?? 0) < 0);
@@ -95,7 +97,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                 variant="outline"
                 className="rounded-sm"
                 disabled={typeof valorTodos !== "number" || valorTodos < 0}
-                onClick={() => setLimites(Object.fromEntries(dados.totais.map((t) => [t.codigo, paraCampo(valorTodos as number)])))}
+                onClick={() => setLimites(Object.fromEntries(dados.totais.map((t) => [t.codigo, duasCasas(valorTodos as number)])))}
               >
                 Aplicar
               </Button>
@@ -124,6 +126,11 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                         aria-label={`Variação máxima de ${t.descricao}`}
                         value={limites[t.codigo]}
                         onChange={(e) => setLimites((l) => ({ ...l, [t.codigo]: e.target.value }))}
+                        // Ao sair do campo, o número digitado fica com duas casas.
+                        onBlur={() => {
+                          const v = lerNumero(limites[t.codigo]);
+                          if (typeof v === "number" && v >= 0) setLimites((l) => ({ ...l, [t.codigo]: duasCasas(v) }));
+                        }}
                         disabled={!podeEditar}
                         inputMode="decimal"
                         placeholder="—"

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Globe, Lock, Plus, Upload } from "lucide-react";
+import { Globe, Lock, Plus } from "lucide-react";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
+import { formato } from "@/app/relatorios/services/relatoriosService";
+
 import { botaoPrimario, CenarioDialog } from "../components/CenarioDialog";
-import { ImportarCenarioDialog } from "../components/ImportarCenarioDialog";
 import { cenariosService, rotuloMarcacao, ROTULO_VISUALIZACAO, type Cenario } from "../services/cenariosService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
@@ -24,12 +25,37 @@ const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateStrin
 const COLUNAS: Coluna<Cenario>[] = [
   { chave: "nome", rotulo: "Cenário", valor: (c) => c.nome },
   { chave: "ano", rotulo: "Exercício", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
+  // Os resultados do exercício no Consolidado (13/10/2026): ordena e filtra pelo RL.
+  { chave: "resultados", rotulo: "Resultados", tipo: "numero", valor: (c) => c.resultados?.rl.valor ?? null, texto: (c) => (c.resultados ? `RL ${formato.inteiro(c.resultados.rl.valor)}` : null) },
   // A marcação muda em Configurações / Cenário (Marcar Cenário). Sem as colunas Conteúdo e Arquivo e sem os ícones de
   // ações (13/10/2026): marcar e excluir ficam nas Configurações, e a importação num cenário, na aba Referência delas.
   { chave: "marcacao", rotulo: "Marcação", valor: (c) => rotuloMarcacao(c.marcacao) },
 ];
 
-type Dialogo = { tipo: "novo" } | { tipo: "importar" } | null;
+type Dialogo = { tipo: "novo" } | null;
+
+/** As linhas da coluna Resultados: a ROL em R$; o CPV, o EBITDA e o RL em R$ e em % (como no total da tela Resultados). */
+const RESUMO: Array<{ chave: "rol" | "cpv" | "ebitda" | "rl"; rotulo: string; comPct: boolean }> = [
+  { chave: "rol", rotulo: "ROL", comPct: false },
+  { chave: "cpv", rotulo: "CPV", comPct: true },
+  { chave: "ebitda", rotulo: "EBITDA", comPct: true },
+  { chave: "rl", rotulo: "RL", comPct: true },
+];
+function Resumo({ c }: { c: Cenario }) {
+  if (!c.resultados) return <span className="text-gray-400">—</span>;
+  const r = c.resultados;
+  return (
+    <div className="grid grid-cols-[auto_auto_auto] gap-x-3 text-xs leading-5 whitespace-nowrap">
+      {RESUMO.map((x) => (
+        <div key={x.chave} className="contents">
+          <span className="font-medium text-gray-900">{x.rotulo}</span>
+          <span className="text-right text-gray-700">{formato.inteiro(r[x.chave].valor)}</span>
+          <span className="text-right text-gray-500">{x.comPct && r[x.chave].pct !== null ? formato.pct(r[x.chave].pct!) : ""}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function CenariosContent() {
   useRegistrarAcessoTela("/cenarios/sinteticos");
@@ -45,10 +71,14 @@ export function CenariosContent() {
         titulo="Cenários Sintéticos"
         comoUsar={
           <ul>
-            <li>Use “Importar Cenário” para criar um cenário a partir de uma planilha (com o nome, o exercício e a descrição), ou “Novo Cenário” para um cenário vazio ou a cópia de outro.</li>
             <li>
-              Na importação, escolha o arquivo: a ferramenta lê e confere as abas e mostra, aba por aba, o que vai entrar e o que muda no cenário
-              (valores novos, alterados e removidos; “Sem mudança” quando é igual). Nada é gravado antes de você clicar em “Importar”.
+              Use “Novo Cenário” para um cenário vazio ou a cópia de outro. Para partir de uma planilha, crie o cenário e importe o arquivo em
+              Configurações / Referência: a ferramenta lê e confere as abas e mostra, aba por aba, o que vai entrar e o que muda no cenário antes de
+              gravar.
+            </li>
+            <li>
+              A coluna Resultados traz o total do exercício no Consolidado: a ROL em R$ e o CPV, o EBITDA e o RL em R$ e em % (os mesmos % da coluna do
+              total da tela Resultados). A coluna ordena e filtra pelo RL.
             </li>
             <li>Clique na linha para abrir o cenário, com as telas Configurações (para quem edita), Resultados, Indicadores e Reajustes.</li>
             <li>
@@ -59,7 +89,7 @@ export function CenariosContent() {
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
             <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui nem se edita (a DRE, os indicadores manuais e a referência; o nome e a descrição, sim): tire a marcação (ou marque outro cenário) antes.</li>
             <li>
-              Ao criar (Novo Cenário ou Importar Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
+              Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
               têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). Embaixo do nome, a
               lista mostra a de cada cenário. Só quem criou o cenário ou o Administrador muda a visualização, e um cenário marcado fica sempre público
               (a marcação vale para todos).
@@ -84,10 +114,6 @@ export function CenariosContent() {
         acoes={
           <PermissionGuard permission="cenarios:editar">
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "importar" })}>
-                <Upload className="size-4" />
-                Importar Cenário
-              </Button>
               <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "novo" })}>
                 <Plus className="size-4" />
                 Novo Cenário
@@ -114,8 +140,8 @@ export function CenariosContent() {
           isLoading={isPending}
           error={isError ? "Erro ao carregar os cenários." : null}
           emptyMessage="Nenhum cenário gerado"
-          emptyHint="Use Importar Cenário ou Novo Cenário para criar o primeiro."
-          columns={["Cenário", "Exercício", "Marcação"]}
+          emptyHint="Use Novo Cenário para criar o primeiro."
+          columns={["Cenário", "Exercício", "Resultados", "Marcação"]}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrir(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
               <td className="min-w-48 px-4 py-2 text-sm">
@@ -135,6 +161,9 @@ export function CenariosContent() {
                 </div>
               </td>
               <td className="px-4 text-sm">{c.ano}</td>
+              <td className="px-4 py-2">
+                <Resumo c={c} />
+              </td>
               <td className="px-4 text-sm whitespace-nowrap">
                 {c.marcacao ? (
                   <span className="rounded-sm border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-900">{rotuloMarcacao(c.marcacao)}</span>
@@ -148,7 +177,6 @@ export function CenariosContent() {
       </QuadroTabela>
 
       {dialogo?.tipo === "novo" ? <CenarioDialog cenario={null} cenarios={data ?? []} onFechar={() => setDialogo(null)} /> : null}
-      {dialogo?.tipo === "importar" ? <ImportarCenarioDialog cenario={null} onFechar={() => setDialogo(null)} /> : null}
     </div>
   );
 }

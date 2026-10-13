@@ -106,6 +106,18 @@ async function dreDoCenario(cenarioId: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
   return { valores, consolidado, comValor: valores.map((m) => m.size > 0) };
 }
 
+/**
+ * O resumo dos resultados do cenário (13/10/2026, a coluna Resultados da lista): o total do exercício no Consolidado
+ * da ROL, do CPV, do EBITDA e do RL, com o % de cada um como na coluna do total da tela Resultados. Null sem DRE.
+ */
+async function resumoDoCenario(cenarioId: string, linhas: Awaited<ReturnType<typeof estrutura>>) {
+  const d = await dreDoCenario(cenarioId, 0);
+  if (!d.comValor.some(Boolean)) return null;
+  const totais = new Map(montar(linhas, 0, d.comValor, d.valores, d.consolidado, ACESSO_TOTAL).map((l) => [l.codigo, l.total]));
+  const de = (codigo: string) => ({ valor: totais.get(codigo)?.valor ?? 0, pct: totais.get(codigo)?.pct ?? null });
+  return { rol: de(COD.RO), cpv: de("CPV.CUSTO_DE_PRODUTO_VENDIDO_CPV"), ebitda: de("EBITDA.LUCRO_OPERACIONAL_EBITDA"), rl: de("RL.RESULTADO_LIQUIDO_RL") };
+}
+
 /** O cenário comparado (o comparativo), se houver. */
 async function comparadoDe(c: { comparadoComId: string | null }) {
   return c.comparadoComId ? getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
@@ -252,8 +264,9 @@ export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 export const cenariosService = {
   async listar(usuario: Usuario = SISTEMA) {
     const cenarios = (await getPrismaClient().cenario.findMany({ orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((c) => alcanca(c, usuario));
-    const doCenario = await conteudo(cenarios.map((c) => c.id));
-    return cenarios.map((c) => ({ ...c, ...doCenario(c.id), podeMudarVisualizacao: mudaVisualizacao(c, usuario) }));
+    const [doCenario, linhas] = await Promise.all([conteudo(cenarios.map((c) => c.id)), estrutura()]);
+    const resumos = await Promise.all(cenarios.map((c) => resumoDoCenario(c.id, linhas)));
+    return cenarios.map((c, k) => ({ ...c, ...doCenario(c.id), resultados: resumos[k], podeMudarVisualizacao: mudaVisualizacao(c, usuario) }));
   },
 
   async obter(id: string, usuario: Usuario = SISTEMA) {

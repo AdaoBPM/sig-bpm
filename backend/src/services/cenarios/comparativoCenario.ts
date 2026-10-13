@@ -42,7 +42,9 @@ export type MesComparado = { mes: number; valor: number; comparado: number; vari
 
 /**
  * Os meses de uma linha acima da variação máxima: a variação é (valor − comparado) / |comparado|, em %; com o
- * comparado zero e o valor não, não há base (variação nula) e o mês entra.
+ * comparado zero e o valor não, não há base (variação nula) e o mês entra. A variação se compara arredondada em
+ * duas casas, como a tela a mostra (13/10/2026): um reajuste de 5% sobre valores em centavos dá 5,0000005%, que é
+ * igual à máxima de 5,00%, não maior.
  */
 export function mesesAcima(valores: Map<number, number>, comparados: Map<number, number>, limite: number): MesComparado[] {
   const meses: MesComparado[] = [];
@@ -50,8 +52,8 @@ export function mesesAcima(valores: Map<number, number>, comparados: Map<number,
     const valor = valores.get(mes) ?? 0;
     const comparado = comparados.get(mes) ?? 0;
     if (Math.abs(valor - comparado) < 0.005) continue;
-    const variacao = Math.abs(comparado) < 0.005 ? null : ((valor - comparado) / Math.abs(comparado)) * 100;
-    if (variacao === null || Math.abs(variacao) > limite + 1e-9) meses.push({ mes, valor, comparado, variacao });
+    const variacao = Math.abs(comparado) < 0.005 ? null : Math.round(((valor - comparado) / Math.abs(comparado)) * 10000) / 100;
+    if (variacao === null || Math.abs(variacao) > limite) meses.push({ mes, valor, comparado, variacao });
   }
   return meses;
 }
