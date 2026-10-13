@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 
 import { Seletor } from "./SeletorPeriodo";
 
@@ -110,22 +110,61 @@ export function degradeDoRealizado(dados: MesDoGrafico[]) {
   return { topo: max / maior, zero: max / (max - min), base: -min / maior };
 }
 
+const OURO = "var(--color-bpm-primary)";
+const PRETO = "var(--cor-grafico-orcado)";
+/** O contorno cinza dos quadradinhos (o ring-black/10 de antes), por fora do quadrado. */
+const contorno = <rect x={-0.5} y={-0.5} width={13} height={13} rx={2.5} fill="none" stroke="rgb(0 0 0 / 0.1)" strokeWidth={1} />;
+
+/**
+ * O quadradinho de cor das legendas e dos sinais do painel (13/10/2026): em SVG, e não no fundo de um <span>, porque o
+ * Firefox desenhava a imagem do Copiar como Imagem sem o fundo dos quadradinhos (ficavam em branco); o SVG sai como os
+ * gráficos.
+ */
+export function Quadradinho({ cor, titulo }: { cor: string; titulo?: string }) {
+  return (
+    <svg viewBox="0 0 12 12" className="inline-block size-3 shrink-0 overflow-visible" role={titulo ? "img" : undefined} aria-label={titulo} aria-hidden={titulo ? undefined : true}>
+      {titulo ? <title>{titulo}</title> : null}
+      <rect width={12} height={12} rx={2} style={{ fill: cor }} />
+      {contorno}
+    </svg>
+  );
+}
+
+/** O quadradinho da área: o degradê amarelo, forte em cima e transparente embaixo, com o contorno de cima em amarelo-ouro. */
+function QuadradinhoDaArea() {
+  const id = `legenda-area-${useId().replace(/:/g, "")}`;
+  return (
+    <svg viewBox="0 0 12 12" className="inline-block size-3 shrink-0 overflow-visible" aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" style={{ stopColor: OURO }} />
+          <stop offset="100%" style={{ stopColor: OURO, stopOpacity: 0 }} />
+        </linearGradient>
+      </defs>
+      <rect width={12} height={12} rx={2} fill={`url(#${id})`} />
+      <rect width={12} height={2} style={{ fill: OURO }} />
+      {contorno}
+    </svg>
+  );
+}
+
 /** A legenda das cores: o realizado em amarelo-ouro e o orçado em preto (na Área, a área amarela e a linha preta). */
 export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico }) {
   const rotulos = useRotulosDoGrafico();
   return (
     <>
       <span className="inline-flex items-center gap-1.5">
-        {tipo === "area" ? (
-          <span className="inline-block size-3 rounded-[2px] border-t-2 border-bpm-primary bg-gradient-to-b from-bpm-primary to-transparent ring-1 ring-black/10" />
-        ) : (
-          // O contorno cinza, como o dos sinais (13/10/2026).
-          <span className="inline-block size-3 rounded-[2px] bg-bpm-primary ring-1 ring-black/10" />
-        )}
+        {tipo === "area" ? <QuadradinhoDaArea /> : <Quadradinho cor={OURO} />}
         {rotulos.realizado}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-[var(--cor-grafico-orcado)]" /> : <span className="inline-block size-3 rounded-[2px] bg-[var(--cor-grafico-orcado)] ring-1 ring-black/10" />}
+        {tipo === "area" ? (
+          <svg viewBox="0 0 12 2" className="inline-block h-0.5 w-3 shrink-0" aria-hidden>
+            <rect width={12} height={2} style={{ fill: PRETO }} />
+          </svg>
+        ) : (
+          <Quadradinho cor={PRETO} />
+        )}
         {rotulos.orcado}
       </span>
     </>

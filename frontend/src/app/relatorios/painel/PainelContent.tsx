@@ -13,6 +13,7 @@ import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
+  Quadradinho,
   SeletorRotulos,
   SeletorTipoGrafico,
   useRotulosDosValores,
@@ -84,14 +85,14 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
   padrao: {
-    1: { cor: "bg-[#92D050]", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o" },
-    0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
+    1: { cor: "#92D050", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o" },
+    0: { cor: "#FFFF00", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
+    [-1]: { cor: "#C00000", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
   },
   daltonismo: {
-    1: { cor: "bg-[#0070C0]", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Melhor que o" },
-    0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
+    1: { cor: "#0070C0", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Melhor que o" },
+    0: { cor: "#FFFF00", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
+    [-1]: { cor: "#C00000", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -106,7 +107,8 @@ function Sinal({ s }: { s: BlocoPainel["sinal"] }) {
   const SINAL = useSinais();
   const { orcado } = useRotulosDoGrafico();
   if (s === null) return <span className="inline-block size-3 rounded-[2px] border border-gray-300" title={`Sem ${orcado.toLowerCase()}`} />;
-  return <span className={`inline-block size-3 rounded-[2px] ring-1 ring-black/10 ${SINAL[s].cor}`} title={SINAL[s].texto} aria-label={SINAL[s].texto} />;
+  // Em SVG (13/10/2026), para sair no Copiar como Imagem.
+  return <Quadradinho cor={SINAL[s].cor} titulo={SINAL[s].texto} />;
 }
 
 /** O desvio contra o orçado num selo com a cor do sinal. */
