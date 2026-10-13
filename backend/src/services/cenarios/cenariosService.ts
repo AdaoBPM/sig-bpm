@@ -14,7 +14,9 @@ import { estrutura, montar } from "../relatorios/resultadosService.js";
 import { estrutura as estruturaDRE } from "../dre/dreService.js";
 import { contasDaUnidade, ErroEdicao, gravarValores, linhasDaUnidade, linhasDoConsolidado, recalcular, UNIDADES, type Alteracao } from "./edicaoCenario.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
-import { calcularCenario } from "./indicadoresDoCenario.js";
+import { calcularCenario, type CalculoDoCenario } from "./indicadoresDoCenario.js";
+import { montarPainel } from "../relatorios/painelService.js";
+import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, type Valor } from "../relatorios/painelDeBordo.js";
 import { linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 
@@ -122,6 +124,23 @@ async function resumoDoCenario(cenarioId: string, linhas: Awaited<ReturnType<typ
   const totais = new Map(montar(linhas, 0, d.comValor, d.valores, d.consolidado, ACESSO_TOTAL).map((l) => [l.codigo, l.total]));
   const de = (codigo: string) => ({ valor: totais.get(codigo)?.valor ?? 0, pct: totais.get(codigo)?.pct ?? null });
   return { rol: de(COD.RO), cpv: de("CPV.CUSTO_DE_PRODUTO_VENDIDO_CPV"), ebitda: de("EBITDA.LUCRO_OPERACIONAL_EBITDA"), rl: de("RL.RESULTADO_LIQUIDO_RL") };
+}
+
+/**
+ * As famílias de versões (13/10/2026): por família (o id da VER00), a maior versão e quantas versões há. A vigente é a
+ * maior; com mais de uma versão, o nome fica travado (é o mesmo em todas, para comparar as versões).
+ */
+async function familias() {
+  const porFamilia = new Map<string, { maior: number; versoes: number }>();
+  for (const v of await getPrismaClient().cenario.findMany({ select: { id: true, familiaId: true, versao: true } })) {
+    const f = v.familiaId ?? v.id;
+    const atual = porFamilia.get(f) ?? { maior: 0, versoes: 0 };
+    porFamilia.set(f, { maior: Math.max(atual.maior, v.versao), versoes: atual.versoes + 1 });
+  }
+  return (c: { id: string; familiaId: string | null; versao: number }) => {
+    const f = porFamilia.get(c.familiaId ?? c.id) ?? { maior: c.versao, versoes: 1 };
+    return { vigente: c.versao === f.maior, nomeTravado: f.versoes > 1 };
+  };
 }
 
 /** O cenário comparado (o comparativo), se houver. */
@@ -270,14 +289,14 @@ export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 export const cenariosService = {
   async listar(usuario: Usuario = SISTEMA) {
     const cenarios = (await getPrismaClient().cenario.findMany({ orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((c) => alcanca(c, usuario));
-    const [doCenario, linhas] = await Promise.all([conteudo(cenarios.map((c) => c.id)), estrutura()]);
+    const [doCenario, linhas, daFamilia] = await Promise.all([conteudo(cenarios.map((c) => c.id)), estrutura(), familias()]);
     const resumos = await Promise.all(cenarios.map((c) => resumoDoCenario(c.id, linhas)));
-    return cenarios.map((c, k) => ({ ...c, ...doCenario(c.id), resultados: resumos[k], podeMudarVisualizacao: mudaVisualizacao(c, usuario) }));
+    return cenarios.map((c, k) => ({ ...c, ...doCenario(c.id), ...daFamilia(c), resultados: resumos[k], podeMudarVisualizacao: mudaVisualizacao(c, usuario) }));
   },
 
   async obter(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    return { ...c, ...(await conteudo([id]))(id), podeMudarVisualizacao: mudaVisualizacao(c, usuario) };
+    return { ...c, ...(await conteudo([id]))(id), ...(await familias())(c), podeMudarVisualizacao: mudaVisualizacao(c, usuario) };
   },
 
   /** Um cenário novo: vazio, no exercício dado, ou a cópia de outro (com a DRE e as metas dele, no exercício dele). */
@@ -319,6 +338,10 @@ export const cenariosService = {
    */
   async atualizar(id: string, dados: { nome: string; descricao: string | null; visualizacao?: VisualizacaoCenario }, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
+    // Com revisões criadas, o nome é o mesmo em todas as versões e não muda (13/10/2026).
+    if (dados.nome !== antes.nome && (await familias())(antes).nomeTravado) {
+      throw new CenarioError(409, `O cenário ${antes.nome} tem revisões: o nome é o mesmo em todas as versões e não muda.`);
+    }
     const visualizacao = dados.visualizacao ?? antes.visualizacao;
     if (visualizacao !== antes.visualizacao) {
       if (!mudaVisualizacao(antes, usuario)) throw new CenarioError(409, "Só quem criou o cenário ou o Administrador muda a visualização dele.");
@@ -465,6 +488,44 @@ export const cenariosService = {
       linhas: montar(linhas, visao, d.comValor, d.valores, d.consolidado, ACESSO_TOTAL, totais ? new Set(totais.keys()) : undefined).map((l) =>
         comTotalComparado({ ...l, podeDetalhar: false }, totais),
       ),
+    };
+  },
+
+  /**
+   * O Painel de Bordo do cenário (13/10/2026), como o de Resultados Realizados: os mesmos quadros (Resultados e
+   * Performance), com o cenário no lugar do realizado e o cenário comparado (o comparativo) no lugar do orçado — sem
+   * comparado, essa parte fica vazia. O mês de referência é `ate` (dezembro, sem ele); o acumulado vai de janeiro a ele.
+   */
+  async painel(id: string, ate: number, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    const comparado = await comparadoDe(c);
+    const [doCenario, doComparado] = await Promise.all([calcularCenario(id), comparado ? calcularCenario(comparado.id) : null]);
+    const valores = (k: CalculoDoCenario | null) => {
+      const porNome = new Map((k?.indicadores ?? []).map((i) => [i.indicador.nome, i]));
+      const doMes = (mes: number): Valor => (n) => porNome.get(n)?.partes[mes - 1]?.valor ?? null;
+      const acumulado: Valor = (n) => {
+        const i = porNome.get(n);
+        return k && i ? k.acumulado(i, ate) : null;
+      };
+      return { doMes, acumulado };
+    };
+    const cen = valores(doCenario);
+    const comp = valores(doComparado);
+    const periodos = { mes: [cen.doMes(ate), comp.doMes(ate)] as [Valor, Valor], acumulado: [cen.acumulado, comp.acumulado] as [Valor, Valor] };
+    const serie = Array.from({ length: ate }, (_, k) => ({ rotulo: MESES[k], realizado: cen.doMes(k + 1), orcado: comp.doMes(k + 1) }));
+    return {
+      ano: c.ano,
+      ate,
+      rotuloMes: `${MESES[ate - 1]}/${c.ano}`,
+      rotuloAcumulado: `ACUMULADO/${c.ano}`,
+      mesApurado: true,
+      cenarioOrcado: comparado?.nome ?? null,
+      mesesSemMeta: [],
+      comparado: comparado ? { nome: comparado.nome, ano: comparado.ano } : null,
+      abas: [
+        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(PAINEL_RESULTADOS, periodos, serie) },
+        { chave: "performance", titulo: "Performance", quadros: montarPainel(PAINEL_PERFORMANCE, periodos, serie) },
+      ],
     };
   },
 

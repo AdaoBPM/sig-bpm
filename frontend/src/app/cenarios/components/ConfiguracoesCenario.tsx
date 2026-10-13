@@ -109,7 +109,16 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
             <div className="space-y-1.5">
               <Label htmlFor="cfg-nome">Nome</Label>
-              <Input id="cfg-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} className="rounded-sm" />
+              <Input
+                id="cfg-nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                maxLength={120}
+                disabled={cenario.nomeTravado}
+                className="rounded-sm disabled:bg-gray-50 disabled:text-gray-700 disabled:opacity-100"
+              />
+              {/* Com revisões, o nome é o mesmo em todas as versões (13/10/2026), para comparar as versões. */}
+              {cenario.nomeTravado ? <p className="text-xs text-gray-500">O cenário tem revisões: o nome é o mesmo em todas as versões e não muda.</p> : null}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cfg-ano">Exercício</Label>

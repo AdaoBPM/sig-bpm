@@ -9,9 +9,16 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
-import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, SeletorTipoGrafico, useTipoGrafico, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
+import {
+  GraficoRealizadoOrcado,
+  LegendaRealizadoOrcado,
+  SeletorTipoGrafico,
+  useRotulosDoGrafico,
+  useTipoGrafico,
+  type TipoGrafico,
+} from "../components/GraficoRealizadoOrcado";
 import { Seletor, useExercicios } from "../components/SeletorPeriodo";
-import { mensagemDeErro, relatoriosService, type BlocoPainel, type FormatoPainel, type ItemPainel, type QuadroPainel } from "../services/relatoriosService";
+import { mensagemDeErro, relatoriosService, type BlocoPainel, type FormatoPainel, type ItemPainel, type Painel, type QuadroPainel } from "../services/relatoriosService";
 
 const numero = (casas: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas, signDisplay: "negative" });
 const n0 = numero(0);
@@ -49,34 +56,41 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
  * vermelho); Daltonismo, com azul no lugar do verde (melhor que o orçado), amarelo e vermelho. O selo do desvio fica
  * num tom claro da mesma cor.
  */
-type Cores = "padrao" | "daltonismo";
+export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
   padrao: {
-    1: { cor: "bg-[#92D050]", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o Orçado" },
-    0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do Orçado" },
-    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o Orçado" },
+    1: { cor: "bg-[#92D050]", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o" },
+    0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
+    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
   },
   daltonismo: {
-    1: { cor: "bg-[#0070C0]", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Melhor que o Orçado" },
-    0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do Orçado" },
-    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o Orçado" },
+    1: { cor: "bg-[#0070C0]", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Melhor que o" },
+    0: { cor: "bg-[#FFFF00]", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
+    [-1]: { cor: "bg-[#C00000]", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
-const useSinais = () => SINAIS[useContext(CoresDoPainel)];
+/** Os sinais com o texto completo: "Melhor que o Orçado" (ou "… o Comparado", nos cenários). */
+function useSinais() {
+  const base = SINAIS[useContext(CoresDoPainel)];
+  const { orcado } = useRotulosDoGrafico();
+  return { 1: { ...base[1], texto: `${base[1].texto} ${orcado}` }, 0: { ...base[0], texto: `${base[0].texto} ${orcado}` }, [-1]: { ...base[-1], texto: `${base[-1].texto} ${orcado}` } } as const;
+}
 
 function Sinal({ s }: { s: BlocoPainel["sinal"] }) {
   const SINAL = useSinais();
-  if (s === null) return <span className="inline-block size-3 rounded-[2px] border border-gray-300" title="Sem orçado" />;
+  const { orcado } = useRotulosDoGrafico();
+  if (s === null) return <span className="inline-block size-3 rounded-[2px] border border-gray-300" title={`Sem ${orcado.toLowerCase()}`} />;
   return <span className={`inline-block size-3 rounded-[2px] ring-1 ring-black/10 ${SINAL[s].cor}`} title={SINAL[s].texto} aria-label={SINAL[s].texto} />;
 }
 
 /** O desvio contra o orçado num selo com a cor do sinal. */
 function SeloDesvio({ b }: { b: BlocoPainel }) {
   const SINAL = useSinais();
+  const { orcado } = useRotulosDoGrafico();
   const tom = b.sinal === null ? "bg-gray-50 text-gray-600 ring-gray-200" : SINAL[b.sinal].selo;
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-xs font-bold ring-1 ${tom}`} title={b.sinal === null ? "Sem orçado" : SINAL[b.sinal].texto}>
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-xs font-bold ring-1 ${tom}`} title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}>
       <Sinal s={b.sinal} />
       {desvio(b.vsOrcado)}
     </span>
@@ -92,6 +106,7 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
  * percentual da base. Os dois períodos têm as mesmas linhas, para ficarem alinhados.
  */
 function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNode; subtitulo: ReactNode; b: BlocoPainel; formato: FormatoPainel; base: string | null }) {
+  const rotulos = useRotulosDoGrafico();
   return (
     <div className="min-w-0">
       <header className="flex items-start justify-between gap-2">
@@ -104,11 +119,11 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
       {/* "Realizado" e "Orçado" no mesmo tamanho, cada um acima do valor (09/10/2026). */}
       <div className="mt-2 flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs text-gray-600">Realizado</p>
+          <p className="text-xs text-gray-600">{rotulos.realizado}</p>
           <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
         </div>
         <div className="pb-1 text-right text-xs whitespace-nowrap text-gray-600">
-          <p>Orçado</p>
+          <p>{rotulos.orcado}</p>
           <p className="font-bold text-gray-900">{formatar(b.orcado, formato)}</p>
         </div>
       </div>
@@ -183,6 +198,84 @@ function Secao({ q, rotuloMes, tipo }: { q: QuadroPainel; rotuloMes: string; tip
   );
 }
 
+/**
+ * O corpo do painel (13/10/2026; reaproveitado no Painel de Bordo dos cenários): as abas, o aviso (`aviso`), a legenda
+ * das cores e dos sinais e as seções com os cards. Os nomes das séries vêm do RotulosDoGrafico.
+ */
+export function CorpoDoPainel({
+  dados,
+  aba,
+  onAba,
+  tipo,
+  cores,
+  aviso,
+}: {
+  dados: Painel;
+  aba: string;
+  onAba: (a: string) => void;
+  tipo: TipoGrafico;
+  cores: Cores;
+  aviso?: ReactNode;
+}) {
+  const atual = dados.abas.find((a) => a.chave === aba) ?? dados.abas[0];
+  return (
+    <CoresDoPainel.Provider value={cores}>
+      <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
+      {aviso}
+      <LegendaDoPainel tipo={tipo} />
+      <div className="space-y-6">
+        {atual.quadros.map((q) => (
+          <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} />
+        ))}
+      </div>
+    </CoresDoPainel.Provider>
+  );
+}
+
+/** A legenda: as cores do gráfico à esquerda (sem o texto do mês e do acumulado, 10/10/2026); os sinais (a comparação com o orçado) à direita, na mesma linha (09/10/2026). */
+function LegendaDoPainel({ tipo }: { tipo: TipoGrafico }) {
+  const SINAL = useSinais();
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+      <LegendaRealizadoOrcado tipo={tipo} />
+      <span className="ml-auto inline-flex flex-wrap items-center gap-x-5 gap-y-1">
+        {([1, 0, -1] as const).map((s) => (
+          <span key={s} className="inline-flex items-center gap-1.5">
+            <Sinal s={s} />
+            {SINAL[s].texto}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/** A lista Cores (Padrão ou Daltonismo), guardada neste navegador; a mesma nos dois painéis. */
+export function useCoresDoPainel(): [Cores, (c: Cores) => void] {
+  const [cores, setCores] = useState<Cores>(() => guardado(CHAVE_CORES, ["padrao", "daltonismo"] as const, "padrao"));
+  return [
+    cores,
+    (c) => {
+      setCores(c);
+      guardar(CHAVE_CORES, c);
+    },
+  ];
+}
+export function SeletorCores({ cores, onMudar }: { cores: Cores; onMudar: (c: Cores) => void }) {
+  return (
+    <Seletor
+      rotulo="Cores"
+      valor={cores}
+      onMudar={(v) => onMudar(v === "daltonismo" ? "daltonismo" : "padrao")}
+      largura="w-32"
+      opcoes={[
+        { valor: "padrao", rotulo: "Padrão" },
+        { valor: "daltonismo", rotulo: "Daltonismo" },
+      ]}
+    />
+  );
+}
+
 const CHAVE_CORES = "sig.painel.cores";
 /** Uma escolha guardada neste navegador (o tipo dos gráficos, as cores), ou o padrão. */
 function guardado<T extends string>(chave: string, valores: readonly T[], padrao: T): T {
@@ -210,8 +303,7 @@ export function PainelContent() {
   const [aba, setAba] = useState("resultados");
   // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Daltonismo), lembrados neste navegador.
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
-  const [cores, setCores] = useState<Cores>(() => guardado(CHAVE_CORES, ["padrao", "daltonismo"] as const, "padrao"));
-  const SINAL = SINAIS[cores];
+  const [cores, setCores] = useCoresDoPainel();
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
@@ -288,20 +380,7 @@ export function PainelContent() {
               />
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
-              <Seletor
-                rotulo="Cores"
-                valor={cores}
-                onMudar={(v) => {
-                  const c: Cores = v === "daltonismo" ? "daltonismo" : "padrao";
-                  setCores(c);
-                  guardar(CHAVE_CORES, c);
-                }}
-                largura="w-32"
-                opcoes={[
-                  { valor: "padrao", rotulo: "Padrão" },
-                  { valor: "daltonismo", rotulo: "Daltonismo" },
-                ]}
-              />
+              <SeletorCores cores={cores} onMudar={setCores} />
             </div>
           ) : null
         }
@@ -318,40 +397,26 @@ export function PainelContent() {
       ) : !dados || !atual ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : (
-        <CoresDoPainel.Provider value={cores}>
-          <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={setAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
-
-          {!dados.cenarioOrcado ? (
-            <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-              Nenhum cenário está marcado como Orçamento Empresarial para {dados.ano}: o orçado aparece como zero. Marque um cenário de {dados.ano} em
-              Criação de Cenários / Cenários Sintéticos.
-            </div>
-          ) : dados.mesesSemMeta.length > 0 ? (
-            <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-              O cenário {dados.cenarioOrcado} (Orçamento Empresarial) não tem valores de {dados.mesesSemMeta.join(", ")}: o orçado desses meses aparece
-              como zero. Importe nele um arquivo com esses meses (Cenários Sintéticos).
-            </div>
-          ) : null}
-
-          {/* A legenda: as cores do gráfico à esquerda (sem o texto do mês e do acumulado, 10/10/2026); os sinais (a comparação com o orçado) à direita, na mesma linha (09/10/2026). */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-            <LegendaRealizadoOrcado tipo={tipoGrafico} />
-            <span className="ml-auto inline-flex flex-wrap items-center gap-x-5 gap-y-1">
-              {([1, 0, -1] as const).map((s) => (
-                <span key={s} className="inline-flex items-center gap-1.5">
-                  <Sinal s={s} />
-                  {SINAL[s].texto}
-                </span>
-              ))}
-            </span>
-          </div>
-
-          <div className="space-y-6">
-            {atual.quadros.map((q) => (
-              <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipoGrafico} />
-            ))}
-          </div>
-        </CoresDoPainel.Provider>
+        <CorpoDoPainel
+          dados={dados}
+          aba={atual.chave}
+          onAba={setAba}
+          tipo={tipoGrafico}
+          cores={cores}
+          aviso={
+            !dados.cenarioOrcado ? (
+              <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+                Nenhum cenário está marcado como Orçamento Empresarial para {dados.ano}: o orçado aparece como zero. Marque um cenário de {dados.ano} em
+                Criação de Cenários / Cenários Sintéticos.
+              </div>
+            ) : dados.mesesSemMeta.length > 0 ? (
+              <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+                O cenário {dados.cenarioOrcado} (Orçamento Empresarial) não tem valores de {dados.mesesSemMeta.join(", ")}: o orçado desses meses aparece
+                como zero. Importe nele um arquivo com esses meses (Cenários Sintéticos).
+              </div>
+            ) : null
+          }
+        />
       )}
     </div>
   );

@@ -26,7 +26,7 @@ export function ConfiguracoesContent() {
         titulo="Configurações"
         comoUsar={
           <ul>
-            <li>Na aba Cenário, mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”.</li>
+            <li>Na aba Cenário, mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”. Depois da primeira revisão, o nome fica travado: é o mesmo em todas as versões do cenário.</li>
             <li>
               Também na aba Cenário: “Marcar Cenário” marca o cenário como Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos (cada
               marcação fica ativa em um cenário só: marcar este tira a do anterior), e “Excluir Cenário” o exclui (um cenário marcado não se exclui).

@@ -16,9 +16,10 @@ function bloco(item: ItemPainel, realizado: Valor, orcado: Valor) {
 }
 
 /** Os meses do exercício até o de referência, para os gráficos: o realizado e o orçado de cada um. */
-type MesDaSerie = { rotulo: string; realizado: Valor; orcado: Valor };
+export type MesDaSerie = { rotulo: string; realizado: Valor; orcado: Valor };
 
-function montar(quadros: QuadroPainel[], periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor] }, serie: MesDaSerie[]) {
+/** Os quadros do painel; exportada para o Painel de Bordo dos cenários (13/10/2026: o cenário × o comparado). */
+export function montarPainel(quadros: QuadroPainel[], periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor] }, serie: MesDaSerie[]) {
   return quadros.map((q) => ({
     titulo: q.titulo,
     itens: q.itens.map((i) => ({
@@ -87,8 +88,8 @@ export const painelService = {
       cenarioOrcado: orcamento.cenario?.nome ?? null,
       mesesSemMeta: meses.filter((m) => orcamento.mesesSemValor.includes(m.mes)).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
-        { chave: "resultados", titulo: "Resultados", quadros: montar(PAINEL_RESULTADOS, periodos, serie) },
-        { chave: "performance", titulo: "Performance", quadros: montar(PAINEL_PERFORMANCE, periodos, serie) },
+        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(PAINEL_RESULTADOS, periodos, serie) },
+        { chave: "performance", titulo: "Performance", quadros: montarPainel(PAINEL_PERFORMANCE, periodos, serie) },
       ],
     };
   },

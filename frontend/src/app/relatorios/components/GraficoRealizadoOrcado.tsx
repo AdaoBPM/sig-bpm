@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { createContext, useContext, useId, useMemo, useState } from "react";
 import { Area, Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
@@ -16,6 +16,14 @@ const CORES: ChartConfig = {
 };
 
 export type MesDoGrafico = { mes: string; realizado: number | null; orcado: number | null };
+
+/**
+ * Os nomes das duas séries (13/10/2026): Realizado e Orçado em Resultados Realizados; no Painel de Bordo dos cenários,
+ * Cenário e Comparado. Valem no gráfico (a dica), na legenda e nos cards do painel.
+ */
+export type RotulosDasSeries = { realizado: string; orcado: string };
+export const RotulosDoGrafico = createContext<RotulosDasSeries>({ realizado: "Realizado", orcado: "Orçado" });
+export const useRotulosDoGrafico = () => useContext(RotulosDoGrafico);
 
 /**
  * O tipo dos gráficos (Painel de Bordo, caixa Tipo de Gráficos): Barras, o modelo da planilha (colunas do realizado e
@@ -82,6 +90,8 @@ export function GraficoRealizadoOrcado({
   rotulosDosValores?: boolean;
   tipo?: TipoGrafico;
 }) {
+  const rotulos = useRotulosDoGrafico();
+  const cores = useMemo<ChartConfig>(() => ({ realizado: { ...CORES.realizado, label: rotulos.realizado }, orcado: { ...CORES.orcado, label: rotulos.orcado } }), [rotulos]);
   // O degradê da área: id próprio por gráfico (vários na mesma página).
   const gradiente = `realizado-${useId().replace(/:/g, "")}`;
   // Os valores escritos (o gráfico grande de Indicadores): numa caixa branca com o contorno fino da cor da série (11/10/2026).
@@ -92,7 +102,7 @@ export function GraficoRealizadoOrcado({
   const degrade = degradeDoRealizado(dados);
   const area = tipo === "area";
   return (
-    <ChartContainer config={CORES} className={`aspect-auto w-full ${className}`} initialDimension={{ width: 300, height: 112 }}>
+    <ChartContainer config={cores} className={`aspect-auto w-full ${className}`} initialDimension={{ width: 300, height: 112 }}>
       <ComposedChart data={dados} margin={{ top: rotulosDosValores ? 28 : 4, right: area && !umPonto ? 4 : 0, bottom: 0, left: area && !umPonto ? 4 : 0 }} barGap={1} barCategoryGap="18%">
         <defs>
           {/* Transparente no zero e opaco no maior valor do período (em módulo), nos dois sentidos: a forma vai do maior valor
@@ -118,7 +128,7 @@ export function GraficoRealizadoOrcado({
                 {(["realizado", "orcado"] as const).map((k) => (
                   <p key={k} className="flex items-center gap-1.5 text-gray-700">
                     <span className="inline-block size-2.5 rounded-[2px]" style={{ background: k === "realizado" ? OURO : PRETO }} />
-                    {k === "realizado" ? "Realizado" : "Orçado"}: {formatar(m[k])}
+                    {rotulos[k]}: {formatar(m[k])}
                   </p>
                 ))}
               </div>
@@ -223,6 +233,7 @@ function ColunaDaArea({ x = 0, y = 0, width = 0, height = 0, payload, gradiente 
 
 /** A legenda das cores: o realizado em amarelo-ouro e o orçado em preto (na Área, a área amarela e a linha preta). */
 export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico }) {
+  const rotulos = useRotulosDoGrafico();
   return (
     <>
       <span className="inline-flex items-center gap-1.5">
@@ -231,11 +242,11 @@ export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico
         ) : (
           <span className="inline-block size-3 rounded-[2px] bg-bpm-primary" />
         )}
-        Realizado
+        {rotulos.realizado}
       </span>
       <span className="inline-flex items-center gap-1.5">
         {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-bpm-secondary" /> : <span className="inline-block size-3 rounded-[2px] bg-bpm-secondary" />}
-        Orçado
+        {rotulos.orcado}
       </span>
     </>
   );

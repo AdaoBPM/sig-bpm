@@ -106,6 +106,15 @@ export const cenariosController = {
     return responder(response, () => cenariosService.resultados(c, visao.data as 0 | 1 | 2 | 3 | 4 | 5, usuario(request)));
   },
 
+  /** O Painel de Bordo do cenário: ?ate=1..12 (dezembro, sem ele). */
+  painel(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const ate = z.coerce.number().int().min(1).max(12).default(12).safeParse(request.query.ate);
+    if (!ate.success) return response.status(400).json({ error: "Mês inválido." });
+    return responder(response, () => cenariosService.painel(c, ate.data, usuario(request)));
+  },
+
   indicadores(request: Request, response: Response) {
     const c = id(request, response);
     return c ? responder(response, () => cenariosService.indicadores(c, usuario(request))) : undefined;

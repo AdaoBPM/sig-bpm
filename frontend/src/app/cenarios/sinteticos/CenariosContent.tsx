@@ -22,14 +22,29 @@ import { cenariosService, rotuloMarcacao, rotuloVersao, ROTULO_VISUALIZACAO, typ
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
 
+/** Uma coluna dos resultados do exercício (13/10/2026): o valor em R$ e, embaixo, o %; ordena e filtra pelo valor. */
+const colunaDeResultado = (chave: "rol" | "cpv" | "ebitda" | "rl", rotulo: string): Coluna<Cenario> => ({
+  chave,
+  rotulo,
+  tipo: "numero",
+  alinhamento: "direita",
+  valor: (c) => c.resultados?.[chave].valor ?? null,
+  texto: (c) => (c.resultados ? reaisAbreviados(c.resultados[chave].valor) : null),
+});
+
+// A ordem das colunas (13/10/2026): Exercício, Cenário, Criado Por, Visualização e os resultados (ROL, CPV, EBITDA e RL). Sem
+// as colunas Conteúdo, Arquivo e Marcação e sem os ícones de ações: a marcação é uma etiqueta na coluna Cenário (muda em
+// Configurações / Cenário), e a importação num cenário fica na aba Referência das Configurações.
 const COLUNAS: Coluna<Cenario>[] = [
-  // O nome com a versão (13/10/2026), para o filtro separar as revisões.
-  { chave: "nome", rotulo: "Cenário", valor: (c) => `${c.nome} ${rotuloVersao(c.versao)}` },
   { chave: "ano", rotulo: "Exercício", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
-  // Os resultados do exercício no Consolidado (13/10/2026): ordena e filtra pelo RL.
-  { chave: "resultados", rotulo: "Resultados", tipo: "numero", valor: (c) => c.resultados?.rl.valor ?? null, texto: (c) => (c.resultados ? `RL ${reaisAbreviados(c.resultados.rl.valor)}` : null) },
-  // Sem as colunas Conteúdo, Arquivo e Marcação e sem os ícones de ações (13/10/2026): a marcação é uma etiqueta na
-  // coluna Cenário (muda em Configurações / Cenário), e a importação num cenário fica na aba Referência das Configurações.
+  // O nome com a versão, para o filtro separar as revisões.
+  { chave: "nome", rotulo: "Cenário", valor: (c) => `${c.nome} ${rotuloVersao(c.versao)}` },
+  { chave: "criadoPor", rotulo: "Criado Por", valor: (c) => c.criadoPor },
+  { chave: "visualizacao", rotulo: "Visualização", valor: (c) => ROTULO_VISUALIZACAO[c.visualizacao] },
+  colunaDeResultado("rol", "ROL"),
+  colunaDeResultado("cpv", "CPV"),
+  colunaDeResultado("ebitda", "EBITDA"),
+  colunaDeResultado("rl", "RL"),
 ];
 
 type Dialogo = { tipo: "novo" } | null;
@@ -42,26 +57,15 @@ const reaisAbreviados = (v: number) => {
   return `R$ ${duas(v)}`;
 };
 
-/** As linhas da coluna Resultados: a ROL em R$; o CPV, o EBITDA e o RL em R$ e em % (como no total da tela Resultados). */
-const RESUMO: Array<{ chave: "rol" | "cpv" | "ebitda" | "rl"; rotulo: string; comPct: boolean }> = [
-  { chave: "rol", rotulo: "ROL", comPct: false },
-  { chave: "cpv", rotulo: "CPV", comPct: true },
-  { chave: "ebitda", rotulo: "EBITDA", comPct: true },
-  { chave: "rl", rotulo: "RL", comPct: true },
-];
-function Resumo({ c }: { c: Cenario }) {
+/** A célula de um resultado: o valor em R$ e, embaixo, o % (a ROL, 100%, sem ele), como no total da tela Resultados. */
+function CelulaResultado({ c, chave }: { c: Cenario; chave: "rol" | "cpv" | "ebitda" | "rl" }) {
   if (!c.resultados) return <span className="text-gray-400">—</span>;
-  const r = c.resultados;
-  // Concatenado, sem colunas (13/10/2026): "CPV R$ 86,42M (71,2%)".
+  const r = c.resultados[chave];
   return (
-    <div className="text-xs leading-5 whitespace-nowrap text-gray-700">
-      {RESUMO.map((x) => (
-        <div key={x.chave}>
-          <span className="font-medium text-gray-900">{x.rotulo}</span> {reaisAbreviados(r[x.chave].valor)}
-          {x.comPct && r[x.chave].pct !== null ? ` (${formato.pct(r[x.chave].pct!)})` : ""}
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="text-gray-900">{reaisAbreviados(r.valor)}</div>
+      {chave !== "rol" && r.pct !== null ? <div className="text-xs text-gray-500">{formato.pct(r.pct)}</div> : null}
+    </>
   );
 }
 
@@ -69,7 +73,11 @@ export function CenariosContent() {
   useRegistrarAcessoTela("/cenarios/sinteticos");
   const router = useRouter();
   const { data, isPending, isError } = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
-  const tabela = useTabelaFiltravel(data, COLUNAS);
+  // Os filtros Apenas com Marcação e Apenas Vigentes (13/10/2026; vigente: a versão mais alta de cada cenário).
+  const [soMarcados, setSoMarcados] = useState(false);
+  const [soVigentes, setSoVigentes] = useState(false);
+  const filtrados = data?.filter((c) => (!soMarcados || c.marcacao) && (!soVigentes || c.vigente));
+  const tabela = useTabelaFiltravel(filtrados, COLUNAS);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const abrir = (c: Cenario) => router.push(`/cenarios/sinteticos/${c.id}/resultados`);
 
@@ -102,11 +110,14 @@ export function CenariosContent() {
             <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui nem se edita (a DRE, os indicadores manuais e a referência; o nome e a descrição, sim): tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
-              têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). Embaixo do nome, a
-              lista mostra a de cada cenário. Só quem criou o cenário ou o Administrador muda a visualização, e um cenário marcado fica sempre público
+              têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). A
+              coluna Visualização mostra a de cada cenário. Só quem criou o cenário ou o Administrador muda a visualização, e um cenário marcado fica sempre público
               (a marcação vale para todos).
             </li>
-            <li>Use os filtros nos rótulos das colunas.</li>
+            <li>
+              Use os filtros nos rótulos das colunas. “Apenas com Marcação” mostra só os cenários marcados; “Apenas Vigentes”, só a versão mais alta
+              de cada cenário (as revisões têm o mesmo nome da VER00, que não muda depois da primeira revisão).
+            </li>
           </ul>
         }
         sobre={
@@ -124,14 +135,22 @@ export function CenariosContent() {
           </>
         }
         acoes={
-          <PermissionGuard permission="cenarios:editar">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="accent-black" checked={soMarcados} onChange={(e) => setSoMarcados(e.target.checked)} />
+              Apenas com Marcação
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="accent-black" checked={soVigentes} onChange={(e) => setSoVigentes(e.target.checked)} />
+              Apenas Vigentes
+            </label>
+            <PermissionGuard permission="cenarios:editar">
               <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "novo" })}>
                 <Plus className="size-4" />
                 Novo Cenário
               </Button>
-            </div>
-          </PermissionGuard>
+            </PermissionGuard>
+          </div>
         }
       />
 
@@ -153,9 +172,10 @@ export function CenariosContent() {
           error={isError ? "Erro ao carregar os cenários." : null}
           emptyMessage="Nenhum cenário gerado"
           emptyHint="Use Novo Cenário para criar o primeiro."
-          columns={["Cenário", "Exercício", "Resultados"]}
+          columns={COLUNAS.map((c) => c.rotulo)}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrir(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
+              <td className="px-4 text-sm">{c.ano}</td>
               <td className="min-w-48 px-4 py-2 text-sm">
                 <Link href={`/cenarios/sinteticos/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
                   {c.nome}
@@ -169,27 +189,29 @@ export function CenariosContent() {
                   {rotuloVersao(c.versao)}
                 </span>
                 {c.descricao ? <div className="text-xs text-gray-500">{c.descricao}</div> : null}
-                {/* Quando e por quem foi criado, embaixo do nome (sem coluna própria, para a tabela caber na largura da tela). */}
-                <div className="text-xs text-gray-400">
-                  Criado em {dataCurta(c.criadoEm)}
-                  {c.criadoPor ? ` por ${c.criadoPor}` : ""}
-                </div>
-                {/* A visualização: particular (só quem criou e o Administrador) ou pública. */}
-                <div className={`inline-flex items-center gap-1 text-xs ${c.visualizacao === "PARTICULAR" ? "font-medium text-gray-700" : "text-gray-400"}`}>
-                  {c.visualizacao === "PARTICULAR" ? <Lock className="size-3" /> : <Globe className="size-3" />}
-                  {ROTULO_VISUALIZACAO[c.visualizacao]}
-                </div>
-                {/* A marcação (13/10/2026; antes, uma coluna): uma etiqueta embaixo da visualização. */}
+                {/* A marcação: uma etiqueta embaixo do nome. */}
                 {c.marcacao ? (
                   <div className="mt-1">
                     <span className="rounded-sm border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-900">{rotuloMarcacao(c.marcacao)}</span>
                   </div>
                 ) : null}
               </td>
-              <td className="px-4 text-sm">{c.ano}</td>
-              <td className="px-4 py-2">
-                <Resumo c={c} />
+              {/* Criado Por e Visualização em colunas (13/10/2026; antes, embaixo do nome). */}
+              <td className="px-4 py-2 text-sm whitespace-nowrap">
+                {c.criadoPor ?? <span className="text-gray-400">—</span>}
+                <div className="text-xs text-gray-500">em {dataCurta(c.criadoEm)}</div>
               </td>
+              <td className="px-4 text-sm whitespace-nowrap">
+                <span className={`inline-flex items-center gap-1 ${c.visualizacao === "PARTICULAR" ? "font-medium text-gray-900" : "text-gray-700"}`}>
+                  {c.visualizacao === "PARTICULAR" ? <Lock className="size-3.5" /> : <Globe className="size-3.5" />}
+                  {ROTULO_VISUALIZACAO[c.visualizacao]}
+                </span>
+              </td>
+              {(["rol", "cpv", "ebitda", "rl"] as const).map((k) => (
+                <td key={k} className="px-4 py-2 text-right text-sm whitespace-nowrap">
+                  <CelulaResultado c={c} chave={k} />
+                </td>
+              ))}
             </tr>
           )}
         />

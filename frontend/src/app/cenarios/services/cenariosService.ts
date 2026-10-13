@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-import type { Indicador, MesRelatorio, Resultados } from "@/app/relatorios/services/relatoriosService";
+import type { Indicador, MesRelatorio, Painel, Resultados } from "@/app/relatorios/services/relatoriosService";
 
 export type MarcacaoCenario = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS";
 
@@ -40,6 +40,10 @@ export type Cenario = {
   revisaoDeId: string | null;
   versaoSalvaEm: string | null;
   versaoSalvaPor: string | null;
+  /** A versão mais alta da família (13/10/2026: o filtro Apenas Vigentes). */
+  vigente: boolean;
+  /** Com mais de uma versão na família, o nome não muda (é o mesmo em todas). */
+  nomeTravado: boolean;
   /** Quem criou o cenário e o Administrador mudam a visualização. */
   podeMudarVisualizacao: boolean;
   criadoEm: string;
@@ -158,6 +162,9 @@ export const cenariosService = {
   referenciaRealizado: async (id: string, ano: number, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) =>
     (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano, ...opcoes })).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
+  /** O Painel de Bordo do cenário no mês `ate` (1 a 12): o cenário × o comparado. */
+  painel: async (id: string, ate: number) =>
+    (await api.get<{ data: Painel & { comparado: { nome: string; ano: number } | null } }>(`/proxy/cenarios/${id}/painel`, { params: { ate } })).data.data,
   indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
   /** Congelar Versão: trava o cenário. */
   congelarVersao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/versao`)).data.data,
