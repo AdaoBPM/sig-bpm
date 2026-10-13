@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
-import { TabelaIndicadores } from "@/app/relatorios/indicadores/TabelaIndicadores";
+import { TabelaIndicadores, valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import { mensagemDeErro, type MesRelatorio } from "@/app/relatorios/services/relatoriosService";
 
 import { botaoPrimario, Erro } from "../../../components/CenarioDialog";
@@ -37,23 +37,45 @@ const DA_ABA: Record<string, (i: IndicadorDoCenario) => boolean> = {
 
 // Os percentuais se digitam em % (0,25 = 25%), como nas abas Comercial e Administrativo das Listas.
 const emPct = (i: IndicadorDoCenario) => i.unidade === "%";
-const paraTexto = (i: IndicadorDoCenario, v: number | null) =>
-  v === null ? "" : (emPct(i) ? v * 100 : v).toLocaleString("pt-BR", { maximumFractionDigits: 6, useGrouping: false });
-function lerNumero(texto: string): number | null | undefined {
-  const t = texto.trim().replace(/\./g, "").replace(",", ".");
+/** O valor no campo como a tabela o mostra (13/10/2026): as mesmas casas, o separador de milhar e o %; vazio sem valor. */
+const paraCampo = (i: IndicadorDoCenario, v: number | null) => (v === null ? "" : valor(i, v));
+/** O valor digitado, na unidade gravada: aceita o formato da tabela ("1.234,5", "25,0%") ou só o número; vazio: null; inválido: undefined. */
+function lerValor(i: IndicadorDoCenario, texto: string): number | null | undefined {
+  const t = texto.replace(/R\$|%|\s/g, "").replace(/\./g, "").replace(",", ".");
   if (!t) return null;
   const n = Number(t);
-  return Number.isFinite(n) ? n : undefined;
+  if (!Number.isFinite(n)) return undefined;
+  return emPct(i) ? n / 100 : n;
 }
 
-/** Os 12 meses de um lançamento manual (vazio apaga o mês). */
+/**
+ * Os 12 meses de um lançamento manual (vazio apaga o mês). Os valores aparecem como na tabela (13/10/2026); o mês que
+ * não se mexe fica com o valor gravado (sem o arredondamento da tela). Com "Replicar aos Demais", o valor digitado num
+ * mês vai para os outros onze ao sair do campo (Tab).
+ */
 function LancamentoDialog({ id, indicador, meses, onFechar }: { id: string; indicador: IndicadorDoCenario; meses: MesRelatorio[]; onFechar: () => void }) {
   const queryClient = useQueryClient();
-  const [textos, setTextos] = useState(() => indicador.meses.map((v) => paraTexto(indicador, v)));
-  const valores = textos.map(lerNumero);
+  const [textos, setTextos] = useState(() => indicador.meses.map((v) => paraCampo(indicador, v)));
+  // Os meses mexidos (digitados ou replicados): só eles se leem do campo; os outros ficam com o valor gravado.
+  const [mexidos, setMexidos] = useState<Set<number>>(() => new Set());
+  const [replicar, setReplicar] = useState(false);
+  // O mês digitado desde que o campo ganhou o foco: só ele se replica (passar com Tab por um mês sem digitar não replica).
+  const digitado = useRef<number | null>(null);
+  const valores = indicador.meses.map((v, k) => (mexidos.has(k) ? lerValor(indicador, textos[k]) : v));
   const invalido = valores.some((v) => v === undefined);
+  const aoSair = (k: number) => {
+    if (digitado.current !== k) return;
+    digitado.current = null;
+    const v = lerValor(indicador, textos[k]);
+    if (v === undefined) return;
+    const texto = paraCampo(indicador, v);
+    if (replicar) {
+      setTextos(textos.map(() => texto));
+      setMexidos(new Set(meses.map((_, j) => j)));
+    } else setTextos((t) => t.map((x, j) => (j === k ? texto : x)));
+  };
   const salvar = useMutation({
-    mutationFn: () => cenariosService.salvarManual(id, indicador.nome, valores.map((v) => (v === null || v === undefined ? null : emPct(indicador) ? v / 100 : v))),
+    mutationFn: () => cenariosService.salvarManual(id, indicador.nome, valores.map((v) => (v === undefined ? null : v))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Realizados muda.
@@ -68,8 +90,9 @@ function LancamentoDialog({ id, indicador, meses, onFechar }: { id: string; indi
         <DialogHeader>
           <DialogTitle>{indicador.nome}</DialogTitle>
           <DialogDescription>
-            {indicador.metodologia} · {emPct(indicador) ? "em %" : `em ${indicador.unidade}`}. Um mês vazio fica sem valor. O valor digitado vale até uma
-            nova importação da aba das metas no cenário.
+            {indicador.metodologia} · {emPct(indicador) ? "em %" : `em ${indicador.unidade}`}. Os valores aparecem como na tabela; digite só o número
+            (o separador de milhar e o % são opcionais). Um mês vazio fica sem valor. O valor digitado vale até uma nova importação da aba das metas no
+            cenário.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -80,7 +103,13 @@ function LancamentoDialog({ id, indicador, meses, onFechar }: { id: string; indi
                 id={`lanc-${k}`}
                 inputMode="decimal"
                 value={textos[k]}
-                onChange={(e) => setTextos((t) => t.map((x, j) => (j === k ? e.target.value : x)))}
+                onChange={(e) => {
+                  const texto = e.target.value;
+                  digitado.current = k;
+                  setTextos((t) => t.map((x, j) => (j === k ? texto : x)));
+                  setMexidos((m) => (m.has(k) ? m : new Set(m).add(k)));
+                }}
+                onBlur={() => aoSair(k)}
                 className={`rounded-sm text-right ${valores[k] === undefined ? "border-red-400" : ""}`}
               />
             </div>
@@ -88,6 +117,11 @@ function LancamentoDialog({ id, indicador, meses, onFechar }: { id: string; indi
         </div>
         <Erro erro={invalido ? "Há um mês com um valor que não é número." : salvar.isError ? mensagemDeErro(salvar.error, "Não foi possível gravar.") : null} />
         <DialogFooter>
+          {/* Replicar aos Demais (13/10/2026): à esquerda, na altura dos botões. */}
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 sm:mr-auto" title="O valor digitado num mês vai para os outros onze ao sair do campo (Tab)">
+            <input type="checkbox" className="accent-black" checked={replicar} onChange={(e) => setReplicar(e.target.checked)} />
+            Replicar aos Demais
+          </label>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
