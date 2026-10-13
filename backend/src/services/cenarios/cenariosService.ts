@@ -771,9 +771,15 @@ export const cenariosService = {
     const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
     const { totais } = totaisDaDRE(await estruturaDRE());
     const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
+    // A versão vigente (13/10/2026): a maior da família (o filtro "Apenas Vigentes" do modal de escolha).
+    const ultimas = new Map<string, number>();
+    for (const v of await getPrismaClient().cenario.findMany({ select: { id: true, familiaId: true, versao: true } })) {
+      const familia = v.familiaId ?? v.id;
+      ultimas.set(familia, Math.max(ultimas.get(familia) ?? 0, v.versao));
+    }
     return {
       comparadoCom: comparado,
-      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, marcacao: o.marcacao, versao: o.versao })),
+      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, marcacao: o.marcacao, versao: o.versao, vigente: o.versao === ultimas.get(o.familiaId ?? o.id) })),
       totais: totais.map((t) => ({ ...t, limite: typeof limites[t.codigo] === "number" ? limites[t.codigo] : null })),
     };
   },

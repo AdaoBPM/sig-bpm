@@ -75,7 +75,8 @@ export type ReajusteDoCenario = {
 /** O comparativo: o cenário comparado, os que se podem escolher e a variação máxima (%) de cada total da DRE (nula: não verifica). */
 export type Comparativo = {
   comparadoCom: { id: string; nome: string; ano: number } | null;
-  opcoes: Array<{ id: string; nome: string; ano: number; marcacao: MarcacaoCenario | null; versao: number }>;
+  /** Os cenários que se podem escolher; `vigente`: a versão mais recente da família (13/10/2026). */
+  opcoes: Array<{ id: string; nome: string; ano: number; marcacao: MarcacaoCenario | null; versao: number; vigente: boolean }>;
   totais: Array<{ codigo: string; descricao: string; limite: number | null }>;
 };
 /** Uma linha acima da variação máxima: os meses (o valor, o comparado e a variação em %; nula sem base) e a justificativa. */
