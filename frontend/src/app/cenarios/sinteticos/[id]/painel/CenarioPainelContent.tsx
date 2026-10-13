@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { MESES } from "@/app/competencias/[anoMes]/utils/formatacao";
-import { RotulosDoGrafico, SeletorTipoGrafico, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
+import { RotulosDoGrafico, SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { Seletor } from "@/app/relatorios/components/SeletorPeriodo";
-import { CorpoDoPainel, SeletorCores, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
+import { AVISO_DO_PAINEL, CorpoDoPainel, SeletorCores, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService } from "../../../services/cenariosService";
@@ -30,7 +30,9 @@ export function CenarioPainelContent() {
   const { hasPermission } = usePermissions();
   const [ate, setAte] = useState(12);
   const [aba, setAba] = useState("resultados");
+  const router = useRouter();
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
+  const [comRotulos, setComRotulos] = useRotulosDosValores();
   const [cores, setCores] = useCoresDoPainel();
   const consulta = useQuery({ queryKey: ["cenarios", id, "painel", ate], queryFn: () => cenariosService.painel(id, ate) });
   const dados = consulta.data;
@@ -41,15 +43,19 @@ export function CenarioPainelContent() {
         comoUsar={
           <ul>
             <li>
-              Nas listas à direita do título, escolha o Período (o mês de referência; o acumulado vai de janeiro até ele), o Tipo dos gráficos e as
-              Cores dos sinais (os dois guardados neste navegador, os mesmos do Painel de Bordo de Resultados Realizados).
+              Nas listas à direita do título, escolha o Período (o mês de referência; o acumulado vai de janeiro até ele), os Rótulos (Com: os
+              valores de cada mês escritos nos gráficos, o cenário por cima do comparado), o Tipo dos gráficos e as Cores dos sinais (guardados neste
+              navegador, os mesmos do Painel de Bordo de Resultados Realizados).
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
               Cada card traz o Atual (o mês de referência) e o Acumulado, com o valor do cenário em destaque, o do cenário comparado e o desvio (vs.
               Comparado) no selo colorido, e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
             </li>
-            <li>O comparado é o cenário escolhido em Configurações / Comparativo; sem ele, essa parte fica vazia (—).</li>
+            <li>
+              O comparado é o cenário escolhido em Configurações / Comparativo; sem ele, essa parte fica vazia (—), e o aviso traz o botão
+              “Adicionar Comparativo” (para quem edita os cenários).
+            </li>
           </ul>
         }
         sobre={
@@ -69,6 +75,7 @@ export function CenarioPainelContent() {
         acoes={
           <div className="flex flex-wrap items-center gap-4">
             <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={MESES.map((m, k) => ({ valor: String(k + 1), rotulo: m }))} />
+            <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
             <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
             <SeletorCores cores={cores} onMudar={setCores} />
           </div>
@@ -88,18 +95,19 @@ export function CenarioPainelContent() {
             onAba={setAba}
             tipo={tipoGrafico}
             cores={cores}
+            comRotulos={comRotulos}
             aviso={
+              // Sem comparativo (13/10/2026): o quadro comum, com o destaque vermelho à esquerda e o botão Adicionar Comparativo.
               dados.comparado ? null : (
-                <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-                  O cenário não tem comparativo: o comparado e o desvio ficam vazios. Escolha um cenário em{" "}
+                <div className={`${AVISO_DO_PAINEL} flex flex-wrap items-center justify-between gap-3`}>
+                  <span>O cenário não tem comparativo: o comparado e o desvio ficam vazios.</span>
                   {hasPermission("cenarios:editar") ? (
-                    <Link href={`/cenarios/sinteticos/${id}/configuracoes?aba=comparativo`} className="font-medium underline underline-offset-2">
-                      Configurações / Comparativo
-                    </Link>
+                    <Button type="button" variant="outline" className="rounded-sm" onClick={() => router.push(`/cenarios/sinteticos/${id}/configuracoes?aba=comparativo`)}>
+                      Adicionar Comparativo
+                    </Button>
                   ) : (
-                    "Configurações / Comparativo"
+                    <span className="text-gray-500">Peça a quem edita os cenários para escolher um em Configurações / Comparativo.</span>
                   )}
-                  .
                 </div>
               )
             }

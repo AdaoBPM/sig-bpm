@@ -20,6 +20,7 @@ export type Valor = (nome: string) => number | null;
 export type Formato = "MILHOES" | "MILHARES" | "M3" | "PISTAS" | "PCT" | "PCT_RL" | "RS_M3";
 
 export type ItemPainel = {
+  /** O nome do card, por extenso (13/10/2026; antes, abreviado como na planilha: "Receita Oper. Líquida"). */
   titulo: string;
   /** A sigla da linha de baixo do item, como no painel (▪ ROL). */
   sigla: string;
@@ -104,7 +105,7 @@ const custoPorM3 = (pct: string, receita: string, volume: string) => (x: Valor) 
 /** Despesa fixa em R$: o percentual sobre a receita líquida total, vezes ela. */
 const despesa = (pct: string) => (x: Valor) => mul(x(pct), x(N.RL_TOTAL));
 
-const receita = (nome: string): ItemPainel => ({ titulo: "Receita Oper. Líquida", sigla: "ROL", sentido: "↑", formato: "MILHOES", conta: ind(nome) });
+const receita = (nome: string): ItemPainel => ({ titulo: "Receita Operacional Líquida", sigla: "ROL", sentido: "↑", formato: "MILHOES", conta: ind(nome) });
 const margemBruta = (nome: string, base: string): ItemPainel => ({ titulo: "Margem Bruta", sigla: "MB", sentido: "↑", formato: "MILHOES", conta: ind(nome), base: sobre(nome, base) });
 const volume = (titulo: string, sigla: string, nome: string, formato: Formato = "M3"): ItemPainel => ({ titulo, sigla, sentido: "↑", formato, conta: ind(nome) });
 const fixa = (titulo: string, sigla: string, pct: string): ItemPainel => ({
@@ -126,7 +127,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
       receita(N.RL_TOTAL),
       // A planilha traz "▪ MC" na linha de baixo da Margem Bruta (C12); é a MB.
       margemBruta(N.MB_TOTAL, N.RL_TOTAL),
-      { titulo: "Margem de Contrib.", sigla: "MC", sentido: "↑", formato: "MILHOES", conta: ind(N.MC), base: sobre(N.MC, N.RL_TOTAL) },
+      { titulo: "Margem de Contribuição", sigla: "MC", sentido: "↑", formato: "MILHOES", conta: ind(N.MC), base: sobre(N.MC, N.RL_TOTAL) },
       { titulo: "Lucro Operacional", sigla: "EBITDA", sentido: "↑", formato: "MILHOES", conta: ind(N.EBITDA), base: sobre(N.EBITDA, N.RL_TOTAL) },
       // O percentual é sobre a Margem de Contribuição (I19/I13 na planilha).
       {
@@ -139,7 +140,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
         base: { conta: (x) => div(x(N.RF), x(N.MC)), rotulo: "(/MC)", casas: 1 },
       },
       { titulo: "Resultado Líquido", sigla: "RL", sentido: "↑", formato: "MILHOES", conta: ind(N.RL), base: sobre(N.RL, N.RL_TOTAL) },
-      { titulo: "Fluxo de Caixa Op. Líq.", sigla: "FCOL", sentido: "↑", formato: "MILHOES", conta: ind(N.FCOL), base: sobre(N.FCOL, N.RL_TOTAL) },
+      { titulo: "Fluxo de Caixa Operacional Líquido", sigla: "FCOL", sentido: "↑", formato: "MILHOES", conta: ind(N.FCOL), base: sobre(N.FCOL, N.RL_TOTAL) },
     ],
   },
   {
@@ -188,7 +189,7 @@ const producaoUnitaria = (u: "Matriz" | "Filial"): ItemPainel[] => {
   return [
     volume("Volume Produzido", "V (P)", vol),
     ...(m ? [] : [volume("Pistas Produzidas", "P", N.PISTAS, "PISTAS")]),
-    { titulo: "Rec. Líq. Produção", sigla: "ROL (P)", sentido: "↑", formato: "RS_M3", conta: porM3(rl, vol) },
+    { titulo: "Receita Líquida de Produção", sigla: "ROL (P)", sentido: "↑", formato: "RS_M3", conta: porM3(rl, vol) },
     { titulo: "Custos de Produção", sigla: "CP", sentido: "↓", formato: "RS_M3", conta: custoPorM3(cpp, rl, vol), base: { conta: ind(cpp), rotulo: "(/RL)", casas: 1 } },
     { titulo: "Margem Bruta", sigla: "MB", sentido: "↑", formato: "RS_M3", conta: porM3(mb, vol), base: sobre(mb, rl) },
     { ...unitario(m ? "Mão de Obra +Formas" : "Mão de Obra", m ? "MO+F" : "MO", m ? N.MO_MATRIZ : N.MO_FILIAL), separar: true },
@@ -203,7 +204,7 @@ export const PAINEL_PERFORMANCE: QuadroPainel[] = [
     titulo: "Vendas",
     itens: [
       { titulo: "Venda Total", sigla: "VT", sentido: "↑", formato: "MILHOES", conta: ind(N.VENDA) },
-      { titulo: "MC Vendida", sigla: "MC (V)", sentido: "↑", formato: "PCT", conta: ind(N.MC_VENDAS) },
+      { titulo: "Margem de Contribuição Vendida", sigla: "MC (V)", sentido: "↑", formato: "PCT", conta: ind(N.MC_VENDAS) },
       volume("Demanda: Matriz", "D (M)", N.DEMANDA_MATRIZ),
       volume("Demanda: Filial", "D (F)", N.DEMANDA_FILIAL),
       volume("Demanda: Montagem", "D (S)", N.DEMANDA_MONTAGEM),
@@ -214,17 +215,17 @@ export const PAINEL_PERFORMANCE: QuadroPainel[] = [
   {
     titulo: "Despesas Variáveis de Venda",
     itens: [
-      volume("Vol. Expedido: Matriz", "V (E,M)", N.EXP_MATRIZ),
-      volume("Vol. Expedido: Filial", "V (E,F)", N.EXP_FILIAL),
-      { titulo: "Cst. Frete: Matriz", sigla: "CF (M)", sentido: "↓", formato: "PCT_RL", conta: (x) => div(x(N.FRETE_MATRIZ), x(N.RL_FRETE_MATRIZ)) },
-      { titulo: "Cst. Frete: Filial", sigla: "CF (F)", sentido: "↓", formato: "PCT_RL", conta: (x) => div(x(N.FRETE_FILIAL), x(N.RL_FRETE_FILIAL)) },
+      volume("Volume Expedido: Matriz", "V (E,M)", N.EXP_MATRIZ),
+      volume("Volume Expedido: Filial", "V (E,F)", N.EXP_FILIAL),
+      { titulo: "Custos de Frete: Matriz", sigla: "CF (M)", sentido: "↓", formato: "PCT_RL", conta: (x) => div(x(N.FRETE_MATRIZ), x(N.RL_FRETE_MATRIZ)) },
+      { titulo: "Custos de Frete: Filial", sigla: "CF (F)", sentido: "↓", formato: "PCT_RL", conta: (x) => div(x(N.FRETE_FILIAL), x(N.RL_FRETE_FILIAL)) },
     ],
   },
   {
     titulo: "Serviços",
     itens: [
       volume("Volume Montado", "V (M)", N.RENDIMENTO),
-      { titulo: "Receita Oper. Líquida", sigla: "ROL", sentido: "↑", formato: "RS_M3", conta: porM3(N.RL_MONTAGEM, N.RENDIMENTO) },
+      { titulo: "Receita Operacional Líquida", sigla: "ROL", sentido: "↑", formato: "RS_M3", conta: porM3(N.RL_MONTAGEM, N.RENDIMENTO) },
       {
         titulo: "Custos de Montagem",
         sigla: "CSM",
@@ -234,8 +235,8 @@ export const PAINEL_PERFORMANCE: QuadroPainel[] = [
         base: { conta: ind(N.CSM), rotulo: "(/RL)", casas: 1 },
       },
       { titulo: "Margem Bruta", sigla: "MB", sentido: "↑", formato: "RS_M3", conta: porM3(N.MB_SERVICOS, N.RENDIMENTO), base: sobre(N.MB_SERVICOS, N.RL_MONTAGEM) },
-      { ...unitario("MO Direta +3os", "MOD+3os", N.MOD_MONTAGEM), separar: true },
-      unitario("Manutenção +Loc.", "M+L", N.GUINDASTES),
+      { ...unitario("Mão de Obra Direta + Terceiros", "MOD+3os", N.MOD_MONTAGEM), separar: true },
+      unitario("Manutenção + Locação", "M+L", N.GUINDASTES),
     ],
   },
 ];

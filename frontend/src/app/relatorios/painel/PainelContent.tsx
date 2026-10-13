@@ -12,7 +12,9 @@ import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
+  SeletorRotulos,
   SeletorTipoGrafico,
+  useRotulosDosValores,
   useRotulosDoGrafico,
   useTipoGrafico,
   type TipoGrafico,
@@ -107,8 +109,9 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
  */
 function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNode; subtitulo: ReactNode; b: BlocoPainel; formato: FormatoPainel; base: string | null }) {
   const rotulos = useRotulosDoGrafico();
+  // Os valores no pé do grupo (13/10/2026): com o nome em duas linhas, o Atual e o Acumulado continuam alinhados.
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-col">
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {titulo}
@@ -117,7 +120,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
         <SeloDesvio b={b} />
       </header>
       {/* "Realizado" e "Orçado" no mesmo tamanho, cada um acima do valor (09/10/2026). */}
-      <div className="mt-2 flex items-end justify-between gap-2">
+      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
         <div className="min-w-0">
           <p className="text-xs text-gray-600">{rotulos.realizado}</p>
           <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
@@ -137,7 +140,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
  * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,6; o gráfico com o do acumulado ao lado desde 10/10/2026): o Atual (o mês de referência), o Acumulado e o
  * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
  */
-function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico }) {
+function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   const sentido = (
     <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold text-gray-700">
       {i.sentido}
@@ -145,9 +148,10 @@ function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: strin
   );
   return (
     <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
+      {/* O nome por extenso quebra a linha, em vez de cortar (13/10/2026). */}
       <GrupoPeriodo
         titulo={
-          <h3 className="truncate text-base font-bold text-gray-900" title={i.titulo}>
+          <h3 className="text-base leading-snug font-bold text-gray-900" title={i.titulo}>
             {i.titulo}
           </h3>
         }
@@ -170,7 +174,7 @@ function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: strin
       {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
       <div className="flex min-w-0 items-center gap-3 self-center">
         <div className="min-w-0 flex-1">
-          <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} />
+          <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} comRotulos={comRotulos} />
         </div>
         <div className="w-24 shrink-0 border-l border-gray-100 pl-3" title="Acumulado do exercício: realizado × orçado">
           <MiniGrafico
@@ -185,13 +189,13 @@ function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: strin
 }
 
 /** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção abaixo da outra. */
-function Secao({ q, rotuloMes, tipo }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico }) {
+function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   return (
     <section>
       <h2 className="mb-2 text-base font-bold tracking-wide text-gray-900 uppercase">{q.titulo}</h2>
       <div className="space-y-3">
         {q.itens.map((i) => (
-          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} />
+          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
         ))}
       </div>
     </section>
@@ -209,6 +213,7 @@ export function CorpoDoPainel({
   tipo,
   cores,
   aviso,
+  comRotulos = false,
 }: {
   dados: Painel;
   aba: string;
@@ -216,6 +221,8 @@ export function CorpoDoPainel({
   tipo: TipoGrafico;
   cores: Cores;
   aviso?: ReactNode;
+  /** Os rótulos dos valores mensais nos gráficos (caixa Rótulos). */
+  comRotulos?: boolean;
 }) {
   const atual = dados.abas.find((a) => a.chave === aba) ?? dados.abas[0];
   return (
@@ -232,7 +239,7 @@ export function CorpoDoPainel({
       {aviso}
       <div className="space-y-6">
         {atual.quadros.map((q) => (
-          <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} />
+          <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} />
         ))}
       </div>
     </CoresDoPainel.Provider>
@@ -283,6 +290,9 @@ export function SeletorCores({ cores, onMudar }: { cores: Cores; onMudar: (c: Co
   );
 }
 
+/** O quadro dos avisos do painel (13/10/2026): o quadro comum, com o destaque vermelho à esquerda. */
+export const AVISO_DO_PAINEL = "rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700";
+
 const CHAVE_CORES = "sig.painel.cores";
 /** Uma escolha guardada neste navegador (o tipo dos gráficos, as cores), ou o padrão. */
 function guardado<T extends string>(chave: string, valores: readonly T[], padrao: T): T {
@@ -310,6 +320,7 @@ export function PainelContent() {
   const [aba, setAba] = useState("resultados");
   // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Daltonismo), lembrados neste navegador.
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
+  const [comRotulos, setComRotulos] = useRotulosDosValores();
   const [cores, setCores] = useCoresDoPainel();
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
@@ -329,7 +340,7 @@ export function PainelContent() {
         comoUsar={
           <ul>
             <li>
-              Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o acumulado vai de janeiro até ele), o Tipo
+              Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o acumulado vai de janeiro até ele), os Rótulos (Com: os valores de cada mês escritos nos gráficos, o realizado por cima do orçado), o Tipo
               dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador (o Tipo vale também para o gráfico do indicador em Indicadores).
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
@@ -386,6 +397,7 @@ export function PainelContent() {
                 opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
               />
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
+              <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
               <SeletorCores cores={cores} onMudar={setCores} />
             </div>
@@ -410,14 +422,16 @@ export function PainelContent() {
           onAba={setAba}
           tipo={tipoGrafico}
           cores={cores}
+          comRotulos={comRotulos}
           aviso={
+            // Os avisos como um quadro comum, com o destaque vermelho à esquerda (13/10/2026; antes, amarelos).
             !dados.cenarioOrcado ? (
-              <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+              <div className={AVISO_DO_PAINEL}>
                 Nenhum cenário está marcado como Orçamento Empresarial para {dados.ano}: o orçado aparece como zero. Marque um cenário de {dados.ano} em
                 Criação de Cenários / Cenários Sintéticos.
               </div>
             ) : dados.mesesSemMeta.length > 0 ? (
-              <div className="rounded-sm border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+              <div className={AVISO_DO_PAINEL}>
                 O cenário {dados.cenarioOrcado} (Orçamento Empresarial) não tem valores de {dados.mesesSemMeta.join(", ")}: o orçado desses meses aparece
                 como zero. Importe nele um arquivo com esses meses (Cenários Sintéticos).
               </div>

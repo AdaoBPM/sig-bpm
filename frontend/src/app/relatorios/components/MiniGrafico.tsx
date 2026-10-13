@@ -8,6 +8,8 @@ const OURO = "#ffcc00";
 const PRETO = "var(--cor-grafico-orcado)";
 /** A altura do desenho (o viewBox é 100 × 100, esticado na largura e na altura da caixa). */
 const TOPO = 4;
+/** Com os rótulos, mais espaço em cima para o rótulo do maior valor. */
+const TOPO_COM_ROTULOS = 24;
 const numero = (v: number | null): v is number => v !== null && Number.isFinite(v);
 
 /**
@@ -17,7 +19,18 @@ const numero = (v: number | null): v is number => v !== null && Number.isFinite(
  * redesenhar: o painel tem dezenas de gráficos, e os do Recharts deixavam a rolagem e o menu lateral lentos. Os meses
  * ficam em texto embaixo, e a dica do mês aparece ao passar o mouse.
  */
-export function MiniGrafico({ dados, formatar, tipo = "barras" }: { dados: MesDoGrafico[]; formatar: (v: number | null) => string; tipo?: TipoGrafico }) {
+export function MiniGrafico({
+  dados,
+  formatar,
+  tipo = "barras",
+  comRotulos = false,
+}: {
+  dados: MesDoGrafico[];
+  formatar: (v: number | null) => string;
+  tipo?: TipoGrafico;
+  /** Os valores escritos (caixa Rótulos, 13/10/2026): caixas brancas com o contorno da série; o realizado por cima. */
+  comRotulos?: boolean;
+}) {
   const rotulos = useRotulosDoGrafico();
   const gradiente = `mini-${useId().replace(/:/g, "")}`;
   const [foco, setFoco] = useState<number | null>(null);
@@ -26,7 +39,8 @@ export function MiniGrafico({ dados, formatar, tipo = "barras" }: { dados: MesDo
   const max = Math.max(0, ...valores);
   const min = Math.min(0, ...valores);
   const faixa = max - min || 1;
-  const y = (v: number) => TOPO + ((max - v) / faixa) * (100 - TOPO);
+  const topo = comRotulos ? TOPO_COM_ROTULOS : TOPO;
+  const y = (v: number) => topo + ((max - v) / faixa) * (100 - topo);
   const zero = y(0);
   const faixaX = 100 / n;
   const centro = (i: number) => (i + 0.5) * faixaX;
@@ -53,7 +67,7 @@ export function MiniGrafico({ dados, formatar, tipo = "barras" }: { dados: MesDo
           </defs>
           {/* A grade e a linha do zero (um pouco mais escura e grossa). */}
           {[0.25, 0.5, 0.75].map((f) => (
-            <line key={f} x1={0} x2={100} y1={TOPO + f * (100 - TOPO)} y2={TOPO + f * (100 - TOPO)} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
+            <line key={f} x1={0} x2={100} y1={topo + f * (100 - topo)} y2={topo + f * (100 - topo)} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
           ))}
           {foco !== null ? <rect x={foco * faixaX} y={0} width={faixaX} height={100} style={{ fill: "var(--color-gray-100)" }} /> : null}
           {!area ? (
@@ -87,6 +101,47 @@ export function MiniGrafico({ dados, formatar, tipo = "barras" }: { dados: MesDo
           )}
           <line x1={0} x2={100} y1={zero} y2={zero} stroke="#9ca3af" strokeWidth={1.5} style={traco} />
         </svg>
+        {/* Os losangos dos meses na área (13/10/2026), na cor de cada série, fora do SVG esticado para não se deformarem. */}
+        {area && !umPonto
+          ? (["orcado", "realizado"] as const).flatMap((k) =>
+              dados.map((d, i) =>
+                numero(d[k]) ? (
+                  <span
+                    key={`${k}-${i}`}
+                    className="pointer-events-none absolute size-[7px] -translate-x-1/2 -translate-y-1/2 rotate-45 ring-1 ring-white"
+                    style={{ left: `${centro(i)}%`, top: `${y(d[k] as number)}%`, background: k === "realizado" ? OURO : PRETO }}
+                  />
+                ) : null,
+              ),
+            )
+          : null}
+        {/* Os rótulos dos valores: os do orçado primeiro e os do realizado depois, por cima quando se sobrepõem. */}
+        {comRotulos
+          ? (["orcado", "realizado"] as const).flatMap((k) =>
+              dados.map((d, i) => {
+                const v = d[k];
+                if (!numero(v)) return null;
+                // Nas colunas, sobre a coluna da série (o realizado à esquerda); na área, sobre o ponto.
+                const x = area ? centro(i) : centro(i) + (k === "realizado" ? -coluna / 2 : coluna / 2);
+                const negativo = v < 0;
+                const yv = area ? y(v) : negativo ? Math.max(y(v), zero) : Math.min(y(v), zero);
+                return (
+                  <span
+                    key={`r-${k}-${i}`}
+                    className={`pointer-events-none absolute rounded-[2px] border bg-white px-0.5 text-[9px] leading-[11px] whitespace-nowrap text-gray-900 ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
+                    style={{
+                      left: `${x}%`,
+                      top: `${yv}%`,
+                      transform: negativo ? "translate(-50%, 3px)" : "translate(-50%, calc(-100% - 3px))",
+                      borderColor: k === "realizado" ? OURO : PRETO,
+                    }}
+                  >
+                    {formatar(v)}
+                  </span>
+                );
+              }),
+            )
+          : null}
         {/* A dica: o mês sob o mouse, pela posição dele na largura do gráfico. */}
         <div
           className="absolute inset-0"
@@ -97,7 +152,7 @@ export function MiniGrafico({ dados, formatar, tipo = "barras" }: { dados: MesDo
         />
         {foco !== null ? (
           <div
-            className="pointer-events-none absolute bottom-full z-20 mb-1 rounded-sm border border-gray-200 bg-white px-2.5 py-1.5 text-xs whitespace-nowrap shadow-sm"
+            className="pointer-events-none absolute bottom-full z-30 mb-1 rounded-sm border border-gray-200 bg-white px-2.5 py-1.5 text-xs whitespace-nowrap shadow-sm"
             style={{ left: `${centro(foco)}%`, transform: `translateX(${foco === 0 && n > 1 ? "0" : foco === n - 1 && n > 1 ? "-100%" : "-50%"})` }}
           >
             <p className="font-bold text-gray-900">{dados[foco].mes}</p>

@@ -56,6 +56,53 @@ export function useTipoGrafico() {
 }
 
 /** A lista Tipo, na linha do título (Painel de Bordo e Indicadores). */
+/**
+ * Os rótulos dos valores mensais nos gráficos do Painel de Bordo (caixa Rótulos: Com ou Sem, 13/10/2026), guardados
+ * neste navegador; os mesmos nos dois painéis.
+ */
+const CHAVE_ROTULOS = "sig.painel.rotulos";
+export function useRotulosDosValores() {
+  const [com, setCom] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(CHAVE_ROTULOS) === "com";
+    } catch {
+      return false; // sem armazenamento: Sem
+    }
+  });
+  const escolher = (sim: boolean) => {
+    setCom(sim);
+    try {
+      window.localStorage.setItem(CHAVE_ROTULOS, sim ? "com" : "sem");
+    } catch {
+      // sem armazenamento: a escolha só não é lembrada
+    }
+  };
+  return [com, escolher] as const;
+}
+export function SeletorRotulos({ com, onMudar }: { com: boolean; onMudar: (sim: boolean) => void }) {
+  return (
+    <Seletor
+      rotulo="Rótulos"
+      valor={com ? "com" : "sem"}
+      onMudar={(v) => onMudar(v === "com")}
+      largura="w-24"
+      opcoes={[
+        { valor: "com", rotulo: "Com" },
+        { valor: "sem", rotulo: "Sem" },
+      ]}
+    />
+  );
+}
+
+/** O losango de marcação dos meses nas áreas (13/10/2026), na cor da série. */
+export function losango(cor: string) {
+  return function Losango(p: unknown) {
+    const { cx, cy, key } = p as { cx?: number; cy?: number; key?: string };
+    if (cx === undefined || cy === undefined) return <g key={key} />;
+    return <path key={key} d={`M${cx},${cy - 4.5}L${cx + 4.5},${cy}L${cx},${cy + 4.5}L${cx - 4.5},${cy}Z`} style={{ fill: cor }} stroke="#fff" strokeWidth={1} />;
+  };
+}
+
 export function SeletorTipoGrafico({ tipo, onMudar }: { tipo: TipoGrafico; onMudar: (t: TipoGrafico) => void }) {
   return (
     <Seletor
@@ -157,7 +204,7 @@ export function GraficoRealizadoOrcado({
               strokeWidth={2}
               baseValue={0}
               connectNulls
-              dot={false}
+              dot={losango(OURO)}
               activeDot={{ r: 3, fill: OURO, stroke: "#fff" }}
               isAnimationActive={false}
               label={rotuloDe(OURO)}
@@ -168,7 +215,7 @@ export function GraficoRealizadoOrcado({
               stroke={PRETO}
               strokeWidth={2}
               connectNulls
-              dot={{ r: 2, fill: PRETO, stroke: PRETO }}
+              dot={losango(PRETO)}
               activeDot={{ r: 3, fill: PRETO, stroke: "#fff" }}
               isAnimationActive={false}
               // Na Área, só o realizado leva o valor escrito (o orçado ficaria por cima dele); o orçado está na dica.
@@ -240,14 +287,15 @@ export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico
     <>
       <span className="inline-flex items-center gap-1.5">
         {tipo === "area" ? (
-          <span className="inline-block size-3 rounded-[2px] border-t-2 border-bpm-primary bg-gradient-to-b from-bpm-primary to-transparent" />
+          <span className="inline-block size-3 rounded-[2px] border-t-2 border-bpm-primary bg-gradient-to-b from-bpm-primary to-transparent ring-1 ring-black/10" />
         ) : (
-          <span className="inline-block size-3 rounded-[2px] bg-bpm-primary" />
+          // O contorno cinza, como o dos sinais (13/10/2026).
+          <span className="inline-block size-3 rounded-[2px] bg-bpm-primary ring-1 ring-black/10" />
         )}
         {rotulos.realizado}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-[var(--cor-grafico-orcado)]" /> : <span className="inline-block size-3 rounded-[2px] bg-[var(--cor-grafico-orcado)]" />}
+        {tipo === "area" ? <span className="inline-block h-0.5 w-3 bg-[var(--cor-grafico-orcado)]" /> : <span className="inline-block size-3 rounded-[2px] bg-[var(--cor-grafico-orcado)] ring-1 ring-black/10" />}
         {rotulos.orcado}
       </span>
     </>
