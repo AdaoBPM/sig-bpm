@@ -28,19 +28,62 @@ export function Erro({ erro }: { erro: string | null }) {
 }
 
 /**
+ * Uma opção de rádio numa linha (13/10/2026): o tipo à esquerda, numa coluna fixa, e o texto explicativo ao lado; as
+ * opções ficam uma embaixo da outra (tela Configurações do cenário). Em tela estreita, o texto desce para baixo do tipo.
+ */
+export function OpcaoEmLinha({
+  nome,
+  marcada,
+  onMarcar,
+  rotulo,
+  detalhe,
+  Icone,
+  desabilitada,
+  dica,
+}: {
+  nome: string;
+  marcada: boolean;
+  onMarcar: () => void;
+  rotulo: string;
+  detalhe: string;
+  Icone?: typeof Lock;
+  desabilitada?: boolean;
+  dica?: string;
+}) {
+  return (
+    <label
+      title={dica}
+      className={`flex items-center gap-3 rounded-sm border px-3 py-2 text-sm ${marcada ? "border-gray-900 bg-gray-50" : "border-gray-200"} ${desabilitada ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-gray-50"}`}
+    >
+      <input type="radio" name={nome} className="accent-black" checked={marcada} disabled={desabilitada} onChange={onMarcar} />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
+        <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-gray-900 sm:w-44">
+          {Icone ? <Icone className="size-3.5" /> : null}
+          {rotulo}
+        </span>
+        <span className="min-w-0 text-gray-600">{detalhe}</span>
+      </span>
+    </label>
+  );
+}
+
+/**
  * A Visualização do cenário (11/10/2026): Particular (só quem criou e o Administrador) ou Pública (todos com
  * permissão). `bloqueio` desabilita a escolha, com o motivo; `semParticular`, só a opção Particular (cenário marcado).
+ * `emLinhas`: as opções uma embaixo da outra, com o texto ao lado (tela Configurações, 13/10/2026); sem ele, lado a lado (modal).
  */
 export function CampoVisualizacao({
   valor,
   onMudar,
   bloqueio,
   semParticular,
+  emLinhas,
 }: {
   valor: Visualizacao;
   onMudar: (v: Visualizacao) => void;
   bloqueio?: string | null;
   semParticular?: string | null;
+  emLinhas?: boolean;
 }) {
   const opcoes: Array<{ v: Visualizacao; rotulo: string; detalhe: string; Icone: typeof Lock; motivo?: string | null }> = [
     { v: "PARTICULAR", rotulo: "Particular", detalhe: "Apenas você (quem criou) e o Administrador têm acesso.", Icone: Lock, motivo: semParticular },
@@ -49,9 +92,24 @@ export function CampoVisualizacao({
   return (
     <fieldset className="space-y-1.5" disabled={!!bloqueio}>
       <legend className="text-sm leading-none font-medium">Visualização</legend>
-      <div className="grid gap-2 pt-1.5 sm:grid-cols-2">
+      <div className={emLinhas ? "space-y-2 pt-1.5" : "grid gap-2 pt-1.5 sm:grid-cols-2"}>
         {opcoes.map(({ v, rotulo, detalhe, Icone, motivo }) => {
           const desabilitada = !!bloqueio || (!!motivo && valor !== v);
+          if (emLinhas) {
+            return (
+              <OpcaoEmLinha
+                key={v}
+                nome="visualizacao"
+                marcada={valor === v}
+                onMarcar={() => onMudar(v)}
+                rotulo={rotulo}
+                detalhe={detalhe}
+                Icone={Icone}
+                desabilitada={desabilitada}
+                dica={bloqueio ?? (desabilitada ? motivo! : undefined)}
+              />
+            );
+          }
           return (
             <label
               key={v}

@@ -16,7 +16,7 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, type Cenario, type Visualizacao } from "../services/cenariosService";
 import { AvisoMarcado } from "./AvisoMarcado";
-import { botaoPrimario, CampoVisualizacao, classeSelect, Erro } from "./CenarioDialog";
+import { botaoPrimario, CampoVisualizacao, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
 import { ImportarCenarioDialog } from "./ImportarCenarioDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -31,7 +31,8 @@ const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt
 
 /**
  * As configurações do cenário, em duas abas (12/10/2026; antes, dois quadros lado a lado): Cenário (nome, descrição,
- * visualização) e Referência (um arquivo ou o resultado realizado de um ano).
+ * visualização) e Referência (um arquivo ou o resultado realizado de um ano). Os quadros ocupam a largura da tela, com o
+ * destaque amarelo-ouro à esquerda, e as opções ficam uma embaixo da outra, com o texto ao lado (13/10/2026).
  */
 export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
   const queryClient = useQueryClient();
@@ -89,7 +90,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
         ]}
       />
       {aba === "cenario" ? (
-        <section className="max-w-4xl space-y-4 rounded-sm border border-gray-200 bg-white p-5">
+        <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
             <div className="space-y-1.5">
               <Label htmlFor="cfg-nome">Nome</Label>
@@ -109,6 +110,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
                 onMudar={setVisualizacao}
                 bloqueio={!cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou o Administrador muda a visualização." : null}
                 semParticular={cenario.marcacao ? "Um cenário marcado fica público: tire a marcação antes de torná-lo particular." : null}
+                emLinhas
               />
             </div>
           </div>
@@ -120,7 +122,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
           </div>
         </section>
       ) : (
-        <section className="max-w-4xl space-y-4 rounded-sm border border-gray-200 bg-white p-5">
+        <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <p className="text-sm text-gray-600">
             Opcional: uma base para a DRE do cenário, que depois se edita na tela Resultados. A referência substitui a DRE do cenário; os indicadores
             mudam com o resultado realizado (os realizados dos meses fechados) ou com um arquivo que tenha a aba das metas.
@@ -136,7 +138,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
               <span className="text-gray-500">nenhuma (a DRE é a digitada na ferramenta)</span>
             )}
           </p>
-          <fieldset className="grid gap-2 sm:grid-cols-2">
+          <fieldset className="space-y-2">
             <legend className="sr-only">Tipo da referência</legend>
             {(
               [
@@ -144,16 +146,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
                 ["realizado", "Resultado Realizado", "A DRE e os indicadores das competências fechadas de um exercício: mês a mês ou a média de um período, replicada nos doze meses.", History],
               ] as const
             ).map(([v, rotulo, detalhe, Icone]) => (
-              <label key={v} className={`flex cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 text-sm ${referencia === v ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}>
-                <input type="radio" name="referencia" className="mt-1 accent-black" checked={referencia === v} onChange={() => setReferencia(v)} />
-                <span>
-                  <span className="inline-flex items-center gap-1.5 font-medium text-gray-900">
-                    <Icone className="size-3.5" />
-                    {rotulo}
-                  </span>
-                  <span className="block text-xs text-gray-600">{detalhe}</span>
-                </span>
-              </label>
+              <OpcaoEmLinha key={v} nome="referencia" marcada={referencia === v} onMarcar={() => setReferencia(v)} rotulo={rotulo} detalhe={detalhe} Icone={Icone} />
             ))}
           </fieldset>
           {cenario.marcacao ? (
@@ -182,7 +175,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
                 </div>
                 <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">{descreverFechadas(mesesFechados)}</p>
               </div>
-              <fieldset className="grid gap-2 sm:grid-cols-2">
+              <fieldset className="space-y-2">
                 <legend className="mb-1.5 text-sm leading-none font-medium">Importação</legend>
                 {(
                   [
@@ -190,13 +183,7 @@ export function ConfiguracoesCenario({ cenario }: { cenario: Cenario }) {
                     ["MEDIA", "Média Replicada", "A média de um período do realizado, replicada em todos os doze meses do cenário."],
                   ] as const
                 ).map(([v, rotulo, detalhe]) => (
-                  <label key={v} className={`flex cursor-pointer items-start gap-2 rounded-sm border px-3 py-2 text-sm ${modo === v ? "border-gray-900 bg-gray-50" : "border-gray-200 hover:bg-gray-50"}`}>
-                    <input type="radio" name="modo-realizado" className="mt-1 accent-black" checked={modo === v} onChange={() => setModo(v)} />
-                    <span>
-                      <span className="font-medium text-gray-900">{rotulo}</span>
-                      <span className="block text-xs text-gray-600">{detalhe}</span>
-                    </span>
-                  </label>
+                  <OpcaoEmLinha key={v} nome="modo-realizado" marcada={modo === v} onMarcar={() => setModo(v)} rotulo={rotulo} detalhe={detalhe} />
                 ))}
               </fieldset>
               {modo === "MEDIA" ? (
