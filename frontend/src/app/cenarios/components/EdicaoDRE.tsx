@@ -91,6 +91,7 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
         visao={visao === 0 ? { consolidado: true } : { unidade: visao }}
         nomeVisao={nome}
         consultas={false}
+        doCenario
         edicao={
           consolidado
             ? undefined

@@ -161,6 +161,7 @@ export function TabelaResultados({
   aoLadoDoTitulo,
   consultas = true,
   edicao,
+  doCenario = false,
 }: {
   dados: Resultados;
   titulo: string;
@@ -171,6 +172,11 @@ export function TabelaResultados({
   consultas?: boolean;
   /** O modo de edição (os cenários). */
   edicao?: EdicaoDaTabela;
+  /**
+   * Os Resultados de um cenário (13/10/2026): sem o R$/m³ do último mês (dezembro; o total do exercício o tem), e
+   * recolhidos, sem nenhum mês (dezembro também), só a descrição e os totais — a tabela se estica e enche a tela.
+   */
+  doCenario?: boolean;
 }) {
   const niveis = useNiveisDRE(dados.linhas, "sig.resultados.nivel");
   // Na edição, as contas da linha que a caixa dela marca: ela mesma (se se edita) e as editáveis abaixo dela.
@@ -182,7 +188,9 @@ export function TabelaResultados({
   // Recolhidos, só o mês de referência fica (com o orçado dele), antes dos totais. Na edição dos cenários também
   // (13/10/2026): os meses marcados e escondidos continuam marcados (a barra de marcação mostra quantos).
   const [recolhido, alternarMeses] = useMesesRecolhidos();
-  const mostra = (i: number) => !recolhido || i === referencia;
+  const mostra = (i: number) => !recolhido || (i === referencia && !doCenario);
+  // O R$/m³ do mês de referência (Resultados Realizados); nos cenários, só no total.
+  const unitarioNoMes = !doCenario;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
@@ -224,7 +232,7 @@ export function TabelaResultados({
   // NÃO CORRENTES (RFNC) (+)) terminam em reticências, com o nome inteiro na dica.
   const larguras = [
     420,
-    ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, 64, ...(comOrcadoNoMes ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
+    ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, ...(unitarioNoMes ? [64] : []), ...(comOrcadoNoMes ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
     104,
     52,
     64,
@@ -283,7 +291,7 @@ export function TabelaResultados({
                   )}
                 </th>
                 <th className={th}>%</th>
-                {i === referencia ? <th className={th}>R$/m³</th> : null}
+                {i === referencia && unitarioNoMes ? <th className={th}>R$/m³</th> : null}
                 {i === referencia && comOrcadoNoMes ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
               </Fragment>
               ),
@@ -365,7 +373,7 @@ export function TabelaResultados({
                         {valorDa(l, c)}
                       </td>
                       <td className={`${pct} ${fundo}`}>{fracao(l, c.pct, temPct(l))}</td>
-                      {i === referencia ? <td className={`${pct} ${fundo}`}>{unitario(l, c.unitario)}</td> : null}
+                      {i === referencia && unitarioNoMes ? <td className={`${pct} ${fundo}`}>{unitario(l, c.unitario)}</td> : null}
                       {i === referencia && comOrcadoNoMes ? celulasDoOrcado(l, c, l.orcado?.mes, false) : null}
                     </Fragment>
                   );

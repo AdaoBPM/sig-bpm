@@ -50,6 +50,7 @@ function Visao({ id, visao, nome }: { id: string; visao: number; nome: string })
       visao={visao === 0 ? { consolidado: true } : { unidade: visao }}
       nomeVisao={nome}
       consultas={false}
+      doCenario
     />
   );
 }
@@ -87,8 +88,8 @@ export function CenarioResultadosContent() {
               dos %, em pontos percentuais), como o orçado em Resultados Realizados — sem o mês vigente, porque o cenário se olha nos 12 meses.
             </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
-            <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses antes de dezembro; a escolha fica guardada neste navegador.</li>
-            <li>A tabela rola para os lados: a descrição e os rótulos ficam presos, e a barra de rolagem fica no pé da janela, sempre à vista. Dezembro e o total do exercício trazem também o valor por m³.</li>
+            <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses — todos, dezembro também, deixando a descrição e os totais, que se esticam e enchem a tela; a escolha fica guardada neste navegador.</li>
+            <li>A tabela rola para os lados: a descrição e os rótulos ficam presos, e a barra de rolagem fica no pé da janela, sempre à vista. O total do exercício traz também o valor por m³ (os meses, não).</li>
             {podeEditar ? (
               <>
                 <li>Edição (para quem edita os cenários): nas abas Matriz, Filial, Serviços, Despesas e Extra e RN, só os valores mensais das contas se editam; os totais, os percentuais e os valores por m³ são calculados. O Consolidado soma as unidades e não se edita.</li>
