@@ -51,6 +51,27 @@ function formatar(v: number | null, f: FormatoPainel) {
   }
 }
 
+/**
+ * O valor sem a unidade (13/10/2026: os rótulos e a escala dos gráficos), com as mesmas casas de `formatar`: os
+ * milhões e os milhares sem o R$ e sem o M/K, os percentuais sem o %, os volumes sem o m³/pst, o R$/m³ sem o R$.
+ */
+function formatarCurto(v: number | null, f: FormatoPainel) {
+  if (v === null) return "—";
+  switch (f) {
+    case "MILHOES":
+      return n1.format(v / 1e6);
+    case "MILHARES":
+      return n1.format(v / 1e3);
+    case "M3":
+    case "PISTAS":
+    case "RS_M3":
+      return n0.format(v);
+    case "PCT":
+    case "PCT_RL":
+      return n1.format(v * 100);
+  }
+}
+
 const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${n1.format(v * 100)}%`);
 
 /**
@@ -177,13 +198,14 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
       <div className="relative min-h-32 min-w-0">
         <div className="absolute inset-0 flex gap-3">
           <div className="min-w-0 flex-1">
-            <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
+            <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} formatarCurto={(v) => formatarCurto(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
           </div>
           {/* O acumulado também com os rótulos ou com a escala (13/10/2026); com a escala, um pouco mais largo. */}
           <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title="Acumulado do exercício: realizado × orçado">
             <MiniGrafico
               dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
               formatar={(v) => formatar(v, i.formatoAcumulado)}
+              formatarCurto={(v) => formatarCurto(v, i.formatoAcumulado)}
               tipo={tipo}
               comRotulos={comRotulos}
               comEscala={!comRotulos}

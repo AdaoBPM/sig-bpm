@@ -22,12 +22,16 @@ const numero = (v: number | null): v is number => v !== null && Number.isFinite(
 export function MiniGrafico({
   dados,
   formatar,
+  formatarCurto = formatar,
   tipo = "barras",
   comRotulos = false,
   comEscala = false,
 }: {
   dados: MesDoGrafico[];
+  /** O valor com a unidade (a dica do mês). */
   formatar: (v: number | null) => string;
+  /** O valor sem a unidade, com as mesmas casas (os rótulos e a escala, 13/10/2026). */
+  formatarCurto?: (v: number | null) => string;
   tipo?: TipoGrafico;
   /** Os valores escritos (caixa Rótulos, 13/10/2026): caixas brancas com o contorno da série; o realizado por cima. */
   comRotulos?: boolean;
@@ -72,15 +76,15 @@ export function MiniGrafico({
     // A altura do card (13/10/2026): os meses ficam perto do pé dele; no mínimo, a altura de antes.
     <div className="flex h-full min-h-28 w-full">
       {comEscala ? (
-        <div className="flex w-12 shrink-0 flex-col">
+        <div className="flex w-10 shrink-0 flex-col">
           <div className="relative min-h-0 flex-1">
             {linhasDaEscala.map((l) => (
               <span
                 key={l.topo}
-                className="absolute right-1 -translate-y-1/2 text-[9px] leading-none whitespace-nowrap text-muted-foreground"
+                className="absolute right-1 -translate-y-1/2 text-[10px] leading-none font-bold whitespace-nowrap text-muted-foreground"
                 style={{ top: `${l.topo}%` }}
               >
-                {formatar(Math.abs(l.valor) < faixa * 1e-9 ? 0 : l.valor)}
+                {formatarCurto(Math.abs(l.valor) < faixa * 1e-9 ? 0 : l.valor)}
               </span>
             ))}
           </div>
@@ -163,7 +167,7 @@ export function MiniGrafico({
                   return (
                     <span
                       key={`r-${k}-${i}`}
-                      className={`pointer-events-none absolute rounded-[2px] border bg-white py-0.5 text-[9px] leading-[11px] whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
+                      className={`pointer-events-none absolute rounded-[2px] border bg-white py-0.5 text-[10px] leading-[12px] font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
                       style={{
                         left: `${x}%`,
                         top: `${yv}%`,
@@ -172,7 +176,7 @@ export function MiniGrafico({
                         borderColor: k === "realizado" ? OURO : PRETO,
                       }}
                     >
-                      {formatar(v)}
+                      {formatarCurto(v)}
                     </span>
                   );
                 }),
