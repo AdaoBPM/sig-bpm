@@ -12,6 +12,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { TabelaResultados } from "@/app/relatorios/resultados/ResultadosContent";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
+import { AvisoComparado } from "../../../components/AvisoComparado";
 import { AvisoMarcado } from "../../../components/AvisoMarcado";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
 import { cenariosService } from "../../../services/cenariosService";
@@ -73,6 +74,11 @@ export function CenarioResultadosContent() {
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
+            <li>
+              Com um cenário comparado (tela Comparativo), depois do total do exercício vêm, em preto e cinza, o total do cenário comparado (valor, % e
+              R$/m³) e, no amarelo, a Diferença (o cenário menos o comparado), o Atingimento (o cenário sobre o comparado) e a Eficiência (a diferença
+              dos %, em pontos percentuais), como o orçado em Resultados Realizados — sem o mês vigente, porque o cenário se olha nos 12 meses.
+            </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses antes de dezembro; a escolha fica guardada neste navegador.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos, e a barra de rolagem fica no pé da janela, sempre à vista. Dezembro e o total do exercício trazem também o valor por m³.</li>
@@ -103,6 +109,10 @@ export function CenarioResultadosContent() {
         }
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
+      <AvisoComparado
+        id={id}
+        texto="depois do total do exercício, as colunas em preto e cinza trazem o total dele, e Diferença, Atingimento e Eficiência comparam o cenário com ele."
+      />
       {marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="a DRE" /> : null}
       {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
     </div>

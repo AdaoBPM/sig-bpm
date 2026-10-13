@@ -14,8 +14,9 @@ import { cenariosService, rotuloMarcacao, type Comparativo } from "../services/c
 import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
 import { lerNumero, paraCampo } from "./EdicaoDialogs";
 
-const QUADRO = "space-y-4 rounded-sm border border-gray-200 bg-white p-5";
-const TITULO = "text-sm font-bold tracking-wide text-gray-900 uppercase";
+// Os quadros com o destaque amarelo-ouro à esquerda; o título com iniciais maiúsculas (13/10/2026).
+const QUADRO = "space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5";
+const TITULO = "text-sm font-bold text-gray-900";
 
 /**
  * A aba Referência da tela Comparativo (13/10/2026; antes, a aba Comparar dos Resultados): o cenário com que este se
@@ -55,7 +56,6 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   return (
     <div className="space-y-6">
       <section className={QUADRO}>
-        <h2 className={TITULO}>Comparar Com</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-full max-w-md space-y-1.5">
             <Label htmlFor="cmp-cenario">Cenário Comparado</Label>

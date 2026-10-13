@@ -88,6 +88,44 @@ async function conteudo(ids: string[]) {
   });
 }
 
+/**
+ * A DRE de um cenário numa visão, mês a mês: os valores da visão e as bases (as do Consolidado em Despesas e Extra e no
+ * RN, cuja tabela abre com a ROL do Consolidado, como em Resultados Realizados) e os meses com valor.
+ */
+async function dreDoCenario(cenarioId: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
+  const visoes = basesDoConsolidado(visao) ? [visao, 0] : [visao];
+  const rs = await getPrismaClient().cenarioResultado.findMany({ where: { cenarioId, visao: { in: visoes } }, select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } } });
+  const mapas = (v: number) => {
+    const porMes = Array.from({ length: 12 }, () => new Map<string, number>());
+    for (const r of rs) if (r.visao === v) porMes[r.mes - 1].set(r.linhaDRE.codigo, Number(r.valor));
+    return porMes;
+  };
+  const valores = mapas(visao);
+  const consolidado = basesDoConsolidado(visao) ? mapas(0) : valores;
+  if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
+  return { valores, consolidado, comValor: valores.map((m) => m.size > 0) };
+}
+
+/** O cenário comparado (o comparativo), se houver. */
+async function comparadoDe(c: { comparadoComId: string | null }) {
+  return c.comparadoComId ? getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
+}
+
+type CelulaTotal = { valor: number | null; pct: number | null; unitario: number | null };
+const TOTAL_ZERO: CelulaTotal = { valor: 0, pct: null, unitario: null };
+
+/**
+ * Os totais do exercício do cenário comparado numa visão, por linha (13/10/2026): o valor, o % e o R$/m³ do total,
+ * como a coluna do total da tabela dele. Vão no lugar do orçado dos Resultados Realizados (só o total, sem o mês).
+ */
+async function totaisDoComparado(comparadoId: string, visao: 0 | 1 | 2 | 3 | 4 | 5, linhas: Awaited<ReturnType<typeof estrutura>>) {
+  const d = await dreDoCenario(comparadoId, visao);
+  return new Map(montar(linhas, visao, d.comValor, d.valores, d.consolidado, ACESSO_TOTAL).map((l) => [l.codigo, l.total as CelulaTotal]));
+}
+/** A linha com o total do comparado (no campo do orçado, só o total). */
+const comTotalComparado = <L extends { codigo: string; tipo: string }>(l: L, totais: Map<string, CelulaTotal> | null) =>
+  totais ? { ...l, orcado: l.tipo === "SECAO" ? null : { total: totais.get(l.codigo) ?? TOTAL_ZERO } } : l;
+
 async function gravarEmLotes<T>(itens: T[], gravar: (lote: T[]) => Promise<unknown>) {
   for (let i = 0; i < itens.length; i += LOTE) await gravar(itens.slice(i, i + LOTE));
 }
@@ -397,36 +435,35 @@ export const cenariosService = {
   /** Uma visão da DRE do cenário (0 Consolidado, 1 a 5 as unidades), mês a mês, como as abas de Resultados Realizados. */
   async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    const visoes = basesDoConsolidado(visao) ? [visao, 0] : [visao];
-    const [linhas, rs] = await Promise.all([
-      estrutura(),
-      getPrismaClient().cenarioResultado.findMany({ where: { cenarioId: id, visao: { in: visoes } }, select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } } }),
-    ]);
-    const mapas = (v: number) => {
-      const porMes = Array.from({ length: 12 }, () => new Map<string, number>());
-      for (const r of rs) if (r.visao === v) porMes[r.mes - 1].set(r.linhaDRE.codigo, Number(r.valor));
-      return porMes;
-    };
-    const valores = mapas(visao);
-    const consolidado = basesDoConsolidado(visao) ? mapas(0) : valores;
-    // Em Despesas e Extra e no RN, a ROL do Consolidado abre a tabela, como em Resultados Realizados.
-    if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
-    const comValor = valores.map((m) => m.size > 0);
+    const [linhas, d, comparado] = await Promise.all([estrutura(), dreDoCenario(id, visao), comparadoDe(c)]);
+    // Com um cenário comparado (13/10/2026), cada linha traz o total dele; entram também as linhas que só ele tem.
+    const totais = comparado ? await totaisDoComparado(comparado.id, visao, linhas) : null;
     return {
       ano: c.ano,
       ate: 12,
-      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1), apurado: comValor[k] })),
-      linhas: montar(linhas, visao, comValor, valores, consolidado, ACESSO_TOTAL).map((l) => ({ ...l, podeDetalhar: false })),
+      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1), apurado: d.comValor[k] })),
+      comparado: comparado ? { nome: comparado.nome, ano: comparado.ano } : null,
+      linhas: montar(linhas, visao, d.comValor, d.valores, d.consolidado, ACESSO_TOTAL, totais ? new Set(totais.keys()) : undefined).map((l) =>
+        comTotalComparado({ ...l, podeDetalhar: false }, totais),
+      ),
     };
   },
 
   /** Os indicadores do cenário, mês a mês e acumulados, com a classe de cada um (as abas da tela). */
   async indicadores(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    const calculo = await calcularCenario(id);
+    const comparado = await comparadoDe(c);
+    const [calculo, doComparado] = await Promise.all([calcularCenario(id), comparado ? calcularCenario(comparado.id) : null]);
+    // Com um cenário comparado (13/10/2026), o acumulado dele no lugar do orçado acumulado (pelo nome do indicador).
+    const comparados = new Map((doComparado?.indicadores ?? []).map((i) => [i.indicador.nome, i]));
+    const acumuladoComparado = (nome: string) => {
+      const i = comparados.get(nome);
+      return doComparado && i ? doComparado.acumulado(i, 12) : null;
+    };
     return {
       ano: c.ano,
       ate: 12,
+      comparado: comparado ? { nome: comparado.nome, ano: comparado.ano } : null,
       meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1), apurado: true })),
       indicadores: calculo.indicadores.map((i) => ({
         grupo: i.indicador.grupo,
@@ -441,7 +478,7 @@ export const cenariosService = {
         total: calculo.acumulado(i, 12),
         digitados: i.digitados,
         orcado: [],
-        totalOrcado: null,
+        totalOrcado: acumuladoComparado(i.indicador.nome),
       })),
     };
   },
@@ -453,27 +490,16 @@ export const cenariosService = {
    */
   async edicao(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    const visoes = basesDoConsolidado(visao) ? [visao, 0] : [visao];
-    const [linhas, est, rs] = await Promise.all([
-      estrutura(),
-      estruturaDRE(),
-      getPrismaClient().cenarioResultado.findMany({ where: { cenarioId: id, visao: { in: visoes } }, select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } } }),
-    ]);
-    const mapas = (v: number) => {
-      const porMes = Array.from({ length: 12 }, () => new Map<string, number>());
-      for (const r of rs) if (r.visao === v) porMes[r.mes - 1].set(r.linhaDRE.codigo, Number(r.valor));
-      return porMes;
-    };
-    const valores = mapas(visao);
-    const consolidado = basesDoConsolidado(visao) ? mapas(0) : valores;
-    if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
+    const [linhas, est, d, comparado] = await Promise.all([estrutura(), estruturaDRE(), dreDoCenario(id, visao), comparadoDe(c)]);
+    const totais = comparado ? await totaisDoComparado(comparado.id, visao, linhas) : null;
     const todas = visao === 0 ? linhasDoConsolidado(est) : linhasDaUnidade(est, visao);
     const meses = Array.from({ length: 12 }, () => true);
     return {
       ano: c.ano,
       ate: 12,
       meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1), apurado: true })),
-      linhas: montar(linhas, visao, meses, valores, consolidado, ACESSO_TOTAL, todas).map((l) => ({ ...l, podeDetalhar: false })),
+      comparado: comparado ? { nome: comparado.nome, ano: comparado.ano } : null,
+      linhas: montar(linhas, visao, meses, d.valores, d.consolidado, ACESSO_TOTAL, todas).map((l) => comTotalComparado({ ...l, podeDetalhar: false }, totais)),
       editaveis: visao === 0 ? [] : [...contasDaUnidade(est, visao)],
     };
   },

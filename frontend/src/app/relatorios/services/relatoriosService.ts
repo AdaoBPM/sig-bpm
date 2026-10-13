@@ -16,8 +16,11 @@ export type LinhaResultado = {
   podeDetalhar: boolean;
   meses: Celula[];
   total: Celula;
-  /** Nas visões de Resultados Realizados: o orçado do mês de referência e o acumulado, com o % e o R$/m³ (o cenário Orçamento Empresarial; zero sem ele). */
-  orcado?: { mes: Celula; total: Celula } | null;
+  /**
+   * Nas visões de Resultados Realizados: o orçado do mês de referência e o acumulado, com o % e o R$/m³ (o cenário
+   * Orçamento Empresarial; zero sem ele). Nos cenários com um cenário comparado (13/10/2026): só o total dele.
+   */
+  orcado?: { mes?: Celula; total: Celula } | null;
 };
 
 export type Resultados = {
@@ -25,6 +28,8 @@ export type Resultados = {
   ate: number;
   /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
   cenarioOrcado?: string | null;
+  /** Nos cenários (13/10/2026): o cenário comparado, cujos totais vêm no lugar do orçado. */
+  comparado?: { nome: string; ano: number } | null;
   meses: MesRelatorio[];
   linhas: LinhaResultado[];
   grupo?: string;

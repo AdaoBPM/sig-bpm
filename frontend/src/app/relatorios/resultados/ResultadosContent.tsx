@@ -189,6 +189,9 @@ export function TabelaResultados({
   // O orçado (só nas visões de Resultados Realizados): depois do mês de referência e depois do total, o orçado (valor, % e
   // R$/m³, em cinza); só depois do total, a variação (em amarelo): a diferença, o atingimento e a eficiência.
   const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
+  // Nos cenários (13/10/2026), o cenário comparado no lugar do orçado: só depois do total (os 12 meses se olham inteiros).
+  const comOrcadoNoMes = comOrcado && !dados.comparado;
+  const rotuloDoOrcadoTotal = dados.comparado ? `COMPARADO TOTAL/${String(dados.comparado.ano).slice(2)}` : `ORÇADO TOTAL/${ano}`;
   const orcadoDa = (l: LinhaResultado, v: number | undefined) => (l.tipo === "SECAO" || v === undefined ? "" : l.volume ? formato.valor(v) : formato.inteiro(v));
   /** O texto com o sinal: + nos positivos (o − dos negativos vem do formato); o que arredonda para zero fica sem sinal. */
   const comSinal = (v: number, texto: string) => (v > 0 && /[1-9]/.test(texto) ? `+${texto}` : texto);
@@ -221,7 +224,7 @@ export function TabelaResultados({
   // NÃO CORRENTES (RFNC) (+)) terminam em reticências, com o nome inteiro na dica.
   const larguras = [
     420,
-    ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, 64, ...(comOrcado ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
+    ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, 64, ...(comOrcadoNoMes ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
     104,
     52,
     64,
@@ -230,7 +233,9 @@ export function TabelaResultados({
   /** Os rótulos do orçado (pretos) e, nos totais, da variação (amarelo-ouro, como os demais). */
   const rotulosDoOrcado = (rotulo: string, variacao: boolean) => (
     <>
-      <th className={`${th} ${ROTULO_DO_ORCADO} !whitespace-normal leading-tight`}>{rotulo}</th>
+      <th className={`${th} ${ROTULO_DO_ORCADO} !whitespace-normal leading-tight`} title={dados.comparado && variacao ? `O total de ${dados.comparado.nome}` : undefined}>
+        {rotulo}
+      </th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>%</th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th>
       {variacao ? (
@@ -279,14 +284,14 @@ export function TabelaResultados({
                 </th>
                 <th className={th}>%</th>
                 {i === referencia ? <th className={th}>R$/m³</th> : null}
-                {i === referencia && comOrcado ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
+                {i === referencia && comOrcadoNoMes ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
               </Fragment>
               ),
             )}
             <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
             <th className={th}>%</th>
             <th className={th}>R$/m³</th>
-            {comOrcado ? rotulosDoOrcado(`ORÇADO TOTAL/${ano}`, true) : null}
+            {comOrcado ? rotulosDoOrcado(rotuloDoOrcadoTotal, true) : null}
           </tr>
         }
         corpo={niveis.linhas.filter(niveis.visivel).map((l) => {
@@ -361,7 +366,7 @@ export function TabelaResultados({
                       </td>
                       <td className={`${pct} ${fundo}`}>{fracao(l, c.pct, temPct(l))}</td>
                       {i === referencia ? <td className={`${pct} ${fundo}`}>{unitario(l, c.unitario)}</td> : null}
-                      {i === referencia && comOrcado ? celulasDoOrcado(l, c, l.orcado?.mes, false) : null}
+                      {i === referencia && comOrcadoNoMes ? celulasDoOrcado(l, c, l.orcado?.mes, false) : null}
                     </Fragment>
                   );
                 })}

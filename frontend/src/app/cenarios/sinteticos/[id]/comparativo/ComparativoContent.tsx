@@ -39,6 +39,7 @@ export function ComparativoContent() {
               em branco, o total não se verifica. “Preencher Todos Com” põe o mesmo percentual em todos. Clique em “Gravar Comparativo”.
             </li>
             <li>Com um cenário comparado, aparece a aba Justificativas (e a tela abre nela). “Nenhum” desliga o comparativo; as variações ficam guardadas.</li>
+            <li>Com um cenário comparado, as telas Resultados e Indicadores trazem também, em preto e cinza depois do total, os totais dele (e, nos Resultados, a Diferença, o Atingimento e a Eficiência).</li>
             <li>Nas Justificativas, escolha a aba da DRE (Consolidado ou cada unidade); o número em cada aba é o de contas acima da variação.</li>
             <li>Cada linha é uma conta com algum mês acima da variação máxima do total dela: os meses mostram a variação (passe o mouse para ver o valor do cenário e o do comparado). “Sem base”: o comparado é zero no mês.</li>
             <li>Digite a justificativa e clique em “Gravar”; apagar o texto e gravar apaga a justificativa. “Só Sem Justificativa” esconde as já justificadas.</li>

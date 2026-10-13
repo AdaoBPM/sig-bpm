@@ -41,14 +41,31 @@ const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado
  * A posição das presas segue a largura real da coluna Indicador (--largura-indicador),
  * que cresce quando a tabela é mais estreita que a área.
  */
-function montarColunas<T extends Indicador>(meses: MesRelatorio[], indices: number[], acumulado: boolean, orcado: boolean): Coluna<T>[] {
+function montarColunas<T extends Indicador>(
+  meses: MesRelatorio[],
+  indices: number[],
+  acumulado: boolean,
+  orcado: boolean,
+  comparado: { rotulo: string } | null,
+): Coluna<T>[] {
   const ultimo = meses.length - 1;
-  // O orçado (Resultados Realizados, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado.
-  const orcadoDoMes: Coluna<T>[] = orcado
+  // O orçado (Resultados Realizados, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado. Nos
+  // cenários com um cenário comparado (13/10/2026), só o acumulado dele, depois do acumulado.
+  const orcadoDoMes: Coluna<T>[] = orcado && !comparado
     ? [{ chave: "orcado:mes", rotulo: `Orçado ${meses[ultimo].rotulo}`, tipo: "numero", alinhamento: "direita", valor: (i) => i.orcado[ultimo] ?? null, texto: (i) => valor(i, i.orcado[ultimo] ?? null), classe: ROTULO_DO_ORCADO }]
     : [];
   const orcadoAcumulado: Coluna<T>[] = orcado
-    ? [{ chave: "orcado:acum", rotulo: "Orçado Acum.", tipo: "numero", alinhamento: "direita", valor: (i) => i.totalOrcado, texto: (i) => valor(i, i.totalOrcado), classe: ROTULO_DO_ORCADO }]
+    ? [
+        {
+          chave: "orcado:acum",
+          rotulo: comparado?.rotulo ?? "Orçado Acum.",
+          tipo: "numero",
+          alinhamento: "direita",
+          valor: (i) => i.totalOrcado,
+          texto: (i) => valor(i, i.totalOrcado),
+          classe: ROTULO_DO_ORCADO,
+        },
+      ]
     : [];
   return [
     { chave: "indicador", rotulo: "Indicador", valor: (i) => i.nome, classe: "sticky left-0 !z-30" },
@@ -99,6 +116,8 @@ type Props<T extends Indicador> = {
   iconeDoClique?: ComponentType<{ className?: string }>;
   /** As colunas do orçado (Resultados Realizados): a do último mês e a do acumulado. */
   comOrcado?: boolean;
+  /** Nos cenários (13/10/2026): o cenário comparado, cujo acumulado vem no lugar do orçado (só ele, sem o do mês). */
+  comparado?: { nome: string; ano: number } | null;
   /** A célula do mês em destaque (o valor digitado, nos lançamentos manuais do cenário). */
   destacar?: (i: T, k: number) => boolean;
   dicaDoDestaque?: string;
@@ -108,11 +127,23 @@ type Props<T extends Indicador> = {
  * A tabela dos indicadores (Resultados Realizados / Indicadores e os cenários sintéticos): os grupos em faixas, as
  * colunas Indicador, Sent. e Und. presas à esquerda, os meses e o acumulado, com os filtros nos rótulos.
  */
-export function TabelaIndicadores<T extends Indicador>({ meses, indicadores, soUltimoMes, onClicar, dicaDoClique, iconeDoClique: Icone, comOrcado, destacar, dicaDoDestaque }: Props<T>) {
+export function TabelaIndicadores<T extends Indicador>({
+  meses,
+  indicadores,
+  soUltimoMes,
+  onClicar,
+  dicaDoClique,
+  iconeDoClique: Icone,
+  comOrcado,
+  comparado,
+  destacar,
+  dicaDoDestaque,
+}: Props<T>) {
   const colunas = useMemo(() => {
     const indices = soUltimoMes ? [meses.length - 1] : meses.map((_, k) => k);
-    return montarColunas<T>(meses, indices, !soUltimoMes, !!comOrcado && !soUltimoMes);
-  }, [meses, soUltimoMes, comOrcado]);
+    const doComparado = comparado ? { rotulo: "Comparado Acum." } : null;
+    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado);
+  }, [meses, soUltimoMes, comOrcado, comparado]);
   const tabela = useTabelaFiltravel(indicadores, colunas);
   const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave.startsWith("orcado:") ? LARGURA.orcado : c.chave === "acumulado" ? LARGURA.acumulado : LARGURA.mes))];
   const ehOrcado = (chave: string) => chave.startsWith("orcado:");

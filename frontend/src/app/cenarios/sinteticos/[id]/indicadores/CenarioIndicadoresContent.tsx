@@ -19,6 +19,7 @@ import { TabelaIndicadores } from "@/app/relatorios/indicadores/TabelaIndicadore
 import { mensagemDeErro, type MesRelatorio } from "@/app/relatorios/services/relatoriosService";
 
 import { botaoPrimario, Erro } from "../../../components/CenarioDialog";
+import { AvisoComparado } from "../../../components/AvisoComparado";
 import { AvisoMarcado } from "../../../components/AvisoMarcado";
 import { cenariosService, type IndicadorDoCenario } from "../../../services/cenariosService";
 
@@ -124,6 +125,7 @@ export function CenarioIndicadoresContent() {
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados.</li>
+            <li>Com um cenário comparado (tela Comparativo), a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele.</li>
             <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
             <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
             <li>
@@ -155,6 +157,7 @@ export function CenarioIndicadoresContent() {
           Indicadores Manuais.
         </p>
       ) : null}
+      <AvisoComparado id={id} texto="a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele, como o orçado em Resultados Realizados." />
       {manuais && marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="os Indicadores Manuais" /> : null}
       {consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
@@ -167,6 +170,7 @@ export function CenarioIndicadoresContent() {
           key={aba}
           meses={dados.meses}
           indicadores={daAba}
+          comparado={dados.comparado}
           onClicar={manuais && podeEditar ? setEditando : undefined}
           dicaDoClique="Digitar os lançamentos do indicador"
           iconeDoClique={manuais && podeEditar ? Pencil : undefined}
