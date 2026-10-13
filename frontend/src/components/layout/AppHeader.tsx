@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { useTema, type Tema } from "@/lib/tema";
-import { KeyRound, LogOut } from "lucide-react";
+import { KeyRound, LogOut, Palette } from "lucide-react";
 
 import {
   Avatar,
@@ -50,8 +50,8 @@ function getInitials(name: string) {
 /** Os temas no menu do usuário: Padrão (o círculo dividido, preto | branco), Claro (branco) e Escuro (preto). */
 const TEMAS: Array<{ tema: Tema; rotulo: string; fundo: string }> = [
   { tema: "padrao", rotulo: "Padrão", fundo: "bg-[linear-gradient(90deg,#111111_50%,#ffffff_50%)]" },
-  { tema: "claro", rotulo: "Claro (menu lateral branco)", fundo: "bg-[#ffffff]" },
-  { tema: "escuro", rotulo: "Escuro (telas em cinza escuro)", fundo: "bg-[#111111]" },
+  { tema: "claro", rotulo: "Claro", fundo: "bg-[#ffffff]" },
+  { tema: "escuro", rotulo: "Escuro", fundo: "bg-[#111111]" },
 ];
 
 export function AppHeader() {
@@ -127,8 +127,12 @@ export function AppHeader() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             {/* O tema (13/10/2026): três círculos — Padrão (preto | branco), Claro (branco) e Escuro (preto). */}
-            <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm">
-              <span>Tema</span>
+            <div className="flex items-center justify-between gap-2 px-1.5 py-1 text-sm">
+              {/* O ícone antes de Tema, como os dos demais itens do menu (13/10/2026). */}
+              <span className="flex items-center gap-1.5">
+                <Palette className="size-4 shrink-0" />
+                Tema
+              </span>
               <span className="flex items-center gap-2" role="radiogroup" aria-label="Tema">
                 {TEMAS.map((t) => (
                   <button
@@ -139,7 +143,7 @@ export function AppHeader() {
                     aria-label={t.rotulo}
                     title={t.rotulo}
                     onClick={() => escolherTema(t.tema)}
-                    className={`size-5 rounded-full border border-gray-400 outline-none focus-visible:ring-2 focus-visible:ring-gray-400 ${t.fundo} ${tema === t.tema ? "ring-2 ring-bpm-primary ring-offset-1 ring-offset-[var(--popover)]" : "hover:ring-1 hover:ring-gray-400"}`}
+                    className={`size-5 rounded-full border border-gray-400 outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-gray-400 ${t.fundo} ${tema === t.tema ? "ring-2 ring-bpm-primary ring-offset-1 ring-offset-[var(--popover)]" : "hover:ring-1 hover:ring-gray-400"}`}
                   />
                 ))}
               </span>

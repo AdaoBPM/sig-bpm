@@ -70,13 +70,14 @@
   --chart-4: #9ca3af;
   --chart-5: #d1d5db;
   --radius: 0.125rem;
-  --sidebar: #111111;
+  /* O menu lateral no tema Padrão: cinza escuro, chumbo (13/10/2026; antes, preto #111111). */
+  --sidebar: #2f343b;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffcc00;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #222222;
+  --sidebar-accent: #3e444c;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #222222;
+  --sidebar-border: #3e444c;
   --sidebar-ring: #ffcc00;
 }
 
@@ -211,6 +212,11 @@
   --color-blue-50: #1e2a3d;
   --color-blue-200: #2c4366;
   --color-blue-800: #93c5fd;
+
+  /* O menu lateral continua preto no Escuro, separado das telas em cinza escuro. */
+  --sidebar: #111111;
+  --sidebar-accent: #222222;
+  --sidebar-border: #222222;
 
   /* As partes pretas e cinzas do orçado e do comparado: brancas e cinza-claras, com o texto preto. */
   --cor-rotulo-orcado: #f3f4f6;
