@@ -63,8 +63,8 @@ export function GraficoIndicadorDialog({
             </div>
           </DialogHeader>
 
-          {/* A descrição à esquerda e a legenda à direita, na mesma linha. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1">
+          {/* A descrição à esquerda e a legenda à direita, na mesma linha, num card com o destaque amarelo-ouro à esquerda (13/10/2026). */}
+          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2.5">
             <DialogDescription>
               {i.metodologia}
               {i.unidade ? ` · Und.: ${i.unidade}` : ""}
