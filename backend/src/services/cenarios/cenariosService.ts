@@ -596,16 +596,24 @@ export const cenariosService = {
     return this.obter(id, usuario);
   },
 
-  /** O histórico de reajustes do cenário (12/10/2026), do mais recente ao mais antigo. */
+  /**
+   * O histórico de reajustes do cenário (12/10/2026), do mais recente ao mais antigo. Cada conta vem com o
+   * departamento e a atribuição da linha dela na Estrutura da DRE atual (13/10/2026: o modal das contas).
+   */
   async reajustes(id: string, usuario: Usuario = SISTEMA) {
     await obterOuFalhar(id, usuario);
-    const rs = await getPrismaClient().cenarioReajuste.findMany({ where: { cenarioId: id }, orderBy: { criadoEm: "desc" } });
+    const [rs, est] = await Promise.all([getPrismaClient().cenarioReajuste.findMany({ where: { cenarioId: id }, orderBy: { criadoEm: "desc" } }), estruturaDRE()]);
+    const porCodigo = new Map(est.map((l) => [l.codigo, l]));
     return rs.map((r) => ({
       ...r,
       reajuste: r.reajuste === null ? null : Number(r.reajuste),
       somaAntes: r.somaAntes === null ? null : Number(r.somaAntes),
       somaDepois: r.somaDepois === null ? null : Number(r.somaDepois),
-      contas: (r.contas ?? []) as Array<{ codigo: string; descricao: string }>,
+      contas: ((r.contas ?? []) as Array<{ codigo: string; descricao: string }>).map((c) => ({
+        ...c,
+        departamento: porCodigo.get(c.codigo)?.grupo ?? null,
+        atribuicao: porCodigo.get(c.codigo)?.atribuicao ?? null,
+      })),
       meses: (r.meses ?? []) as number[],
     }));
   },

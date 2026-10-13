@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -7,6 +8,8 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
@@ -38,20 +41,22 @@ const contasDe = (r: ReajusteDoCenario) =>
   r.tipo === "REFERENCIA" ? r.descricao : r.contas.length === 1 ? r.contas[0].descricao : `${r.contas.length} contas: ${r.contas.map((c) => c.descricao).join(", ")}`;
 const diferenca = (r: ReajusteDoCenario) => (r.somaAntes === null || r.somaDepois === null ? null : r.somaDepois - r.somaAntes);
 
+// As 11 colunas cabem na tela com o espaço lateral menor (13/10/2026): o rótulo e as células com 10 px de cada lado.
 const COLUNAS: Coluna<ReajusteDoCenario>[] = [
-  { chave: "data", rotulo: "Data", tipo: "data", valor: (r) => new Date(r.criadoEm).getTime(), texto: (r) => dataHora(r.criadoEm) },
-  { chave: "usuario", rotulo: "Usuário", valor: (r) => r.usuarioNome },
-  { chave: "tipo", rotulo: "Tipo", valor: tipoDe },
-  { chave: "aba", rotulo: "Aba", valor: (r) => (r.visao === null ? null : ABAS[r.visao]) },
-  { chave: "reajuste", rotulo: "Reajuste", valor: reajusteDe },
-  { chave: "contas", rotulo: "Contas", valor: contasDe },
-  { chave: "meses", rotulo: "Meses", valor: (r) => mesesDe(r.meses) },
-  { chave: "valores", rotulo: "Valores", tipo: "numero", alinhamento: "direita", valor: (r) => (r.tipo === "REFERENCIA" ? null : r.valores), texto: (r) => (r.tipo === "REFERENCIA" ? null : String(r.valores)) },
-  { chave: "antes", rotulo: "Soma Antes", tipo: "numero", alinhamento: "direita", valor: (r) => r.somaAntes, texto: (r) => (r.somaAntes === null ? null : formato.valor(r.somaAntes)) },
-  { chave: "depois", rotulo: "Soma Depois", tipo: "numero", alinhamento: "direita", valor: (r) => r.somaDepois, texto: (r) => (r.somaDepois === null ? null : formato.valor(r.somaDepois)) },
+  { chave: "data", rotulo: "Data", classe: "!px-2.5", tipo: "data", valor: (r) => new Date(r.criadoEm).getTime(), texto: (r) => dataHora(r.criadoEm) },
+  { chave: "usuario", rotulo: "Usuário", classe: "!px-2.5", valor: (r) => r.usuarioNome },
+  { chave: "tipo", rotulo: "Tipo", classe: "!px-2.5", valor: tipoDe },
+  { chave: "aba", rotulo: "Aba", classe: "!px-2.5", valor: (r) => (r.visao === null ? null : ABAS[r.visao]) },
+  { chave: "reajuste", rotulo: "Reajuste", classe: "!px-2.5", valor: reajusteDe },
+  { chave: "contas", rotulo: "Contas", classe: "!px-2.5", valor: contasDe },
+  { chave: "meses", rotulo: "Meses", classe: "!px-2.5", valor: (r) => mesesDe(r.meses) },
+  { chave: "valores", rotulo: "Valores", classe: "!px-2.5", tipo: "numero", alinhamento: "direita", valor: (r) => (r.tipo === "REFERENCIA" ? null : r.valores), texto: (r) => (r.tipo === "REFERENCIA" ? null : String(r.valores)) },
+  { chave: "antes", rotulo: "Soma Antes", classe: "!px-2.5", tipo: "numero", alinhamento: "direita", valor: (r) => r.somaAntes, texto: (r) => (r.somaAntes === null ? null : formato.valor(r.somaAntes)) },
+  { chave: "depois", rotulo: "Soma Depois", classe: "!px-2.5", tipo: "numero", alinhamento: "direita", valor: (r) => r.somaDepois, texto: (r) => (r.somaDepois === null ? null : formato.valor(r.somaDepois)) },
   {
     chave: "diferenca",
     rotulo: "Diferença",
+    classe: "!px-2.5",
     tipo: "numero",
     alinhamento: "direita",
     valor: diferenca,
@@ -71,6 +76,8 @@ export function ReajustesContent() {
   useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/reajustes`);
   const { data, isPending, isError } = useQuery({ queryKey: ["cenarios", id, "reajustes"], queryFn: () => cenariosService.reajustes(id) });
   const tabela = useTabelaFiltravel(data, COLUNAS);
+  // O modal das contas (ou da descrição da referência) de uma linha (13/10/2026; antes, a lista na coluna Contas).
+  const [aberto, setAberto] = useState<ReajusteDoCenario | null>(null);
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -80,7 +87,10 @@ export function ReajustesContent() {
             <li>Cada linha é uma gravação na DRE do cenário (tela Resultados) ou a carga de uma referência (tela Configurações), do mais recente ao mais antigo.</li>
             <li>Tipo: Reajuste dos Marcados (o reajuste aplicado às contas e meses marcados), Edição de Valor (um valor clicado; Replicada quando copiado aos meses seguintes) ou Referência Carregada (um arquivo ou o resultado realizado, que substitui a DRE).</li>
             <li>Reajuste: o percentual ou o valor informado; “Valor digitado” quando o valor recalculado foi digitado direto. As somas são as dos valores alterados, antes e depois.</li>
-            <li>Passe o mouse sobre as contas para ler a lista inteira. Use os filtros nos rótulos das colunas.</li>
+            <li>
+              Na coluna Contas, o botão abre o modal com as contas alteradas (Departamento, Atribuição e Conta) ou, na Referência Carregada, a descrição
+              da referência. Use os filtros nos rótulos das colunas.
+            </li>
           </ul>
         }
         sobre={<p>O histórico dos reajustes do cenário: quem, quando, em que aba, que contas e meses, o reajuste e o efeito nas somas dos valores alterados.</p>}
@@ -111,10 +121,15 @@ export function ReajustesContent() {
                 return (
                   <td
                     key={c.chave}
-                    className={`px-4 py-2 text-sm ${c.alinhamento === "direita" ? "text-right whitespace-nowrap" : ""} ${c.chave === "data" ? "whitespace-nowrap" : ""} ${c.chave === "contas" ? "max-w-80" : ""}`}
-                    title={c.chave === "contas" && texto ? String(texto) : undefined}
+                    className={`px-2.5 py-2 text-sm ${c.alinhamento === "direita" || c.chave === "data" || c.chave === "contas" ? "whitespace-nowrap" : ""} ${c.alinhamento === "direita" ? "text-right" : ""}`}
                   >
-                    {c.chave === "contas" ? <span className="line-clamp-2">{texto}</span> : (texto ?? <span className="text-gray-400">—</span>)}
+                    {c.chave === "contas" ? (
+                      <button type="button" className={botaoCinza} onClick={() => setAberto(r)}>
+                        {botaoDasContas(r)}
+                      </button>
+                    ) : (
+                      (texto ?? <span className="text-gray-400">—</span>)
+                    )}
                   </td>
                 );
               })}
@@ -122,6 +137,65 @@ export function ReajustesContent() {
           )}
         />
       </QuadroTabela>
+      {aberto ? <ContasDialog reajuste={aberto} onFechar={() => setAberto(null)} /> : null}
     </div>
+  );
+}
+
+/** O botão da coluna Contas: cinza-claro, como os da barra de marcação dos Resultados. */
+const botaoCinza = "rounded-sm border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-medium text-gray-900 hover:bg-gray-200";
+const botaoDasContas = (r: ReajusteDoCenario) =>
+  r.tipo === "REFERENCIA" ? "Ver Descrição" : r.contas.length === 1 ? "Ver 1 Conta" : `Ver ${r.contas.length.toLocaleString("pt-BR")} Contas`;
+
+/**
+ * O modal de uma linha do histórico (13/10/2026): as contas alteradas, numa tabela com o Departamento e a Atribuição
+ * (da linha da conta na Estrutura da DRE) e a Conta; na Referência Carregada, a descrição da referência.
+ */
+function ContasDialog({ reajuste: r, onFechar }: { reajuste: ReajusteDoCenario; onFechar: () => void }) {
+  const referencia = r.tipo === "REFERENCIA";
+  const meses = mesesDe(r.meses);
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent className={`max-h-[85vh] overflow-y-auto rounded-sm ${referencia ? "sm:max-w-lg" : "sm:max-w-3xl"}`}>
+        <DialogHeader>
+          <DialogTitle>{referencia ? "Referência Carregada" : r.contas.length === 1 ? "Conta Alterada" : "Contas Alteradas"}</DialogTitle>
+          <DialogDescription>
+            {referencia ? null : `${tipoDe(r)} · `}
+            {dataHora(r.criadoEm)} · {r.usuarioNome}
+            {r.visao !== null ? ` · ${ABAS[r.visao]}` : ""}
+            {meses ? ` · ${meses}` : ""}
+          </DialogDescription>
+        </DialogHeader>
+        {referencia ? (
+          <p className="text-sm text-gray-700">{r.descricao ?? "Sem descrição."}</p>
+        ) : (
+          <div className="rounded-sm border border-gray-200">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="px-3 py-2 text-left text-xs font-bold text-gray-600">Departamento</th>
+                  <th className="px-3 py-2 text-left text-xs font-bold text-gray-600">Atribuição</th>
+                  <th className="px-3 py-2 text-left text-xs font-bold text-gray-600">Conta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.contas.map((c) => (
+                  <tr key={c.codigo} className="border-b border-gray-100 align-top last:border-b-0">
+                    <td className="px-3 py-1.5 text-sm">{c.departamento ?? <span className="text-gray-400">—</span>}</td>
+                    <td className="px-3 py-1.5 text-sm">{c.atribuicao ?? <span className="text-gray-400">—</span>}</td>
+                    <td className="px-3 py-1.5 text-sm text-gray-900">{c.descricao}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

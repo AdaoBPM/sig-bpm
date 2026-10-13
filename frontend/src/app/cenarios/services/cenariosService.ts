@@ -50,7 +50,8 @@ export type ReajusteDoCenario = {
   reajuste: number | null;
   visao: number | null;
   replicado: boolean;
-  contas: Array<{ codigo: string; descricao: string }>;
+  /** As contas alteradas, com o departamento e a atribuição da linha delas na Estrutura da DRE. */
+  contas: Array<{ codigo: string; descricao: string; departamento: string | null; atribuicao: string | null }>;
   meses: number[];
   valores: number;
   somaAntes: number | null;
