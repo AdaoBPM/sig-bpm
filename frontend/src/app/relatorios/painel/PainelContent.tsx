@@ -170,19 +170,25 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
         base={percentualDaBase(i, i.acumulado)}
       />
       {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
-      <div className="flex min-w-0 items-center gap-3 self-center">
-        <div className="min-w-0 flex-1">
-          <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
-        </div>
-        {/* O acumulado também com os rótulos ou com a escala (13/10/2026); com a escala, um pouco mais largo. */}
-        <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title="Acumulado do exercício: realizado × orçado">
-          <MiniGrafico
-            dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
-            formatar={(v) => formatar(v, i.formatoAcumulado)}
-            tipo={tipo}
-            comRotulos={comRotulos}
-            comEscala={!comRotulos}
-          />
+      {/*
+        Na altura do card (13/10/2026; antes, centrado): os meses e o ACUM. perto do pé dele. O gráfico fica preso à célula
+        (absolute), para a altura do card vir dos valores; sem isso, o desenho tomava a altura pela largura.
+      */}
+      <div className="relative min-h-32 min-w-0">
+        <div className="absolute inset-0 flex gap-3">
+          <div className="min-w-0 flex-1">
+            <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
+          </div>
+          {/* O acumulado também com os rótulos ou com a escala (13/10/2026); com a escala, um pouco mais largo. */}
+          <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title="Acumulado do exercício: realizado × orçado">
+            <MiniGrafico
+              dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
+              formatar={(v) => formatar(v, i.formatoAcumulado)}
+              tipo={tipo}
+              comRotulos={comRotulos}
+              comEscala={!comRotulos}
+            />
+          </div>
         </div>
       </div>
     </article>

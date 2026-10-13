@@ -8,8 +8,8 @@ const OURO = "#ffcc00";
 const PRETO = "var(--cor-grafico-orcado)";
 /** A altura do desenho (o viewBox é 100 × 100, esticado na largura e na altura da caixa). */
 const TOPO = 4;
-/** Com os rótulos, mais espaço em cima para o rótulo do maior valor. */
-const TOPO_COM_ROTULOS = 24;
+/** Com os rótulos (na vertical, 13/10/2026), mais espaço em cima para o rótulo do maior valor. */
+const TOPO_COM_ROTULOS = 34;
 const numero = (v: number | null): v is number => v !== null && Number.isFinite(v);
 
 /**
@@ -69,7 +69,8 @@ export function MiniGrafico({
     </div>
   );
   return (
-    <div className="flex h-28 w-full">
+    // A altura do card (13/10/2026): os meses ficam perto do pé dele; no mínimo, a altura de antes.
+    <div className="flex h-full min-h-28 w-full">
       {comEscala ? (
         <div className="flex w-12 shrink-0 flex-col">
           <div className="relative min-h-0 flex-1">
@@ -162,11 +163,12 @@ export function MiniGrafico({
                   return (
                     <span
                       key={`r-${k}-${i}`}
-                      className={`pointer-events-none absolute rounded-[2px] border bg-white px-0.5 text-[9px] leading-[11px] whitespace-nowrap text-gray-900 ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
+                      className={`pointer-events-none absolute rounded-[2px] border bg-white py-0.5 text-[9px] leading-[11px] whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
                       style={{
                         left: `${x}%`,
                         top: `${yv}%`,
-                        transform: negativo ? "translate(-50%, 3px)" : "translate(-50%, calc(-100% - 3px))",
+                        // Na vertical, lido de baixo para cima (13/10/2026): o texto em pé, girado meia volta.
+                        transform: negativo ? "translate(-50%, 3px) rotate(180deg)" : "translate(-50%, calc(-100% - 3px)) rotate(180deg)",
                         borderColor: k === "realizado" ? OURO : PRETO,
                       }}
                     >
