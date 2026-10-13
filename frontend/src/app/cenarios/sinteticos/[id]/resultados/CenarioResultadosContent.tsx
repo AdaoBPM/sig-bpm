@@ -16,6 +16,7 @@ import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
 import { BotoesDeVersao } from "../../../components/VersaoCenario";
 import { cenariosService } from "../../../services/cenariosService";
+import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 /** As visões da DRE do cenário: as de Resultados Realizados, sem os centros de custo. */
 const VISOES = [
@@ -29,7 +30,7 @@ const VISOES = [
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
 
-function Visao({ id, visao, nome }: { id: string; visao: number; nome: string }) {
+function Visao({ id, visao, nome, analitico }: { id: string; visao: number; nome: string; analitico: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "resultados", visao], queryFn: () => cenariosService.resultados(id, visao) });
   if (consulta.isError) {
     return (
@@ -40,7 +41,13 @@ function Visao({ id, visao, nome }: { id: string; visao: number; nome: string })
   }
   if (consulta.isPending) return <Carregando />;
   if (consulta.data.linhas.every((l) => l.tipo === "SECAO")) {
-    return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">O cenário não tem a DRE de {nome}. Importe um arquivo com a aba dela na lista dos cenários.</p>;
+    return (
+      <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">
+        {analitico
+          ? `O cenário ainda não tem a DRE de ${nome}: ela é calculada a partir das premissas do cenário.`
+          : `O cenário não tem a DRE de ${nome}. Importe um arquivo com a aba dela em Configurações / Referência.`}
+      </p>
+    );
   }
   return (
     <TabelaResultados
@@ -55,26 +62,33 @@ function Visao({ id, visao, nome }: { id: string; visao: number; nome: string })
   );
 }
 
-/** A tela Resultados de um cenário sintético: as visões da DRE mês a mês no exercício, como em Resultados Realizados. */
+/**
+ * A tela Resultados de um cenário: as visões da DRE mês a mês no exercício, como em Resultados Realizados. No sintético,
+ * quem edita os cenários edita a DRE aqui; no analítico (13/10/2026), a DRE é calculada a partir das premissas e fica
+ * só para leitura.
+ */
 export function CenarioResultadosContent() {
   const { id } = useParams<{ id: string }>();
-  useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/resultados`);
+  const t = useTipoDoCenario();
+  useRegistrarAcessoTela(`${t.base}/${id}/resultados`);
   const [visao, setVisao] = useState("0");
   // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
   const { hasPermission } = usePermissions();
   // O cenário marcado (12/10/2026) ou com a versão congelada (13/10/2026) não se edita: a tabela fica só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const travado = !!cenario.data && estaTravado(cenario.data);
-  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !travado;
+  const analitico = t.tipo === "ANALITICO";
+  const podeEditar = !analitico && hasPermission(t.editar) && !!cenario.data && !travado;
   const nome = VISOES.find((v) => v.chave === visao)!.nome;
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Resultados"
-        acoes={hasPermission("cenarios:editar") && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : undefined}
+        acoes={hasPermission(t.editar) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : undefined}
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
+            {analitico ? <li>No cenário analítico, a DRE é calculada a partir das premissas e não se edita aqui: os valores mudam com as premissas.</li> : null}
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
             <li>
               Versões (para quem edita os cenários): “Congelar Versão” trava o cenário na versão atual (VER00, VER01…), como o fechamento de uma
@@ -117,8 +131,8 @@ export function CenarioResultadosContent() {
         }
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
-      {cenario.data && travado && hasPermission("cenarios:editar") ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
-      {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
+      {cenario.data && travado && hasPermission(t.editar) && !analitico ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
+      {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} analitico={analitico} />}
     </div>
   );
 }

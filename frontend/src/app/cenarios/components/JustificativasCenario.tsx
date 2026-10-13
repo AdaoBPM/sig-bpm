@@ -13,6 +13,7 @@ import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
 import { formato, mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, type ItemJustificativa } from "../services/cenariosService";
+import { useTipoDoCenario } from "./tipoDoCenario";
 import { botaoPrimario, Erro } from "./CenarioDialog";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -27,6 +28,7 @@ const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR"
  * máxima do total delas, os meses e a justificativa de cada uma.
  */
 export function JustificativasCenario({ id, podeEditar }: { id: string; podeEditar: boolean }) {
+  const { base } = useTipoDoCenario();
   const consulta = useQuery({ queryKey: ["cenarios", id, "justificativas"], queryFn: () => cenariosService.justificativas(id) });
   const [visao, setVisao] = useState("0");
   const [soPendentes, setSoPendentes] = useState(false);
@@ -44,7 +46,7 @@ export function JustificativasCenario({ id, podeEditar }: { id: string; podeEdit
         <p className={QUADRO}>
           O cenário não tem comparativo. Escolha um cenário para comparar em{" "}
           {podeEditar ? (
-            <Link href={`/cenarios/sinteticos/${id}/configuracoes?aba=comparativo`} className="font-medium text-gray-900 underline underline-offset-2">
+            <Link href={`${base}/${id}/configuracoes?aba=comparativo`} className="font-medium text-gray-900 underline underline-offset-2">
               Configurações / Comparativo
             </Link>
           ) : (

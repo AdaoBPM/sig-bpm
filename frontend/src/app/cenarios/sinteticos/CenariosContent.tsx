@@ -18,7 +18,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { formato } from "@/app/relatorios/services/relatoriosService";
 
 import { botaoPrimario, CenarioDialog } from "../components/CenarioDialog";
-import { cenariosService, rotuloMarcacao, rotuloVersao, ROTULO_VISUALIZACAO, type Cenario } from "../services/cenariosService";
+import { cenariosService, rotuloMarcacao, rotuloVersao, ROTULO_VISUALIZACAO, type Cenario, DO_TIPO, type TipoCenario } from "../services/cenariosService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
 
@@ -71,23 +71,61 @@ function CelulaResultado({ c, chave }: { c: Cenario; chave: "rol" | "cpv" | "ebi
   );
 }
 
-export function CenariosContent() {
-  useRegistrarAcessoTela("/cenarios/sinteticos");
+/** O que muda na lista dos analíticos (13/10/2026): o Como Usar e o Sobre. */
+const COMO_USAR_ANALITICOS = (
+  <ul>
+    <li>Use “Novo Cenário” para um cenário analítico vazio ou a cópia de outro analítico (os sintéticos ficam na lista deles e não entram aqui).</li>
+    <li>
+      A coluna Resultados traz o total do exercício no Consolidado: a ROL em R$ e o CPV, o EBITDA e o RL em R$ e em %, com os reais abreviados. A
+      coluna ordena e filtra pelo RL.
+    </li>
+    <li>
+      Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando congelada; as versões se congelam, se reabrem e se revisam na tela
+      Resultados de cada cenário, como nos sintéticos.
+    </li>
+    <li>Clique na linha para abrir o cenário, com as telas Configurações (para quem edita), Resultados, Indicadores, Painel de Bordo e Reajustes.</li>
+    <li>
+      Marcação, exclusão, nome, descrição, visualização e comparativo ficam em Configurações, como nos sintéticos. Cada marcação (Orçamento Empresarial,
+      Resultados Anteriores, Resultados Vendidos) fica ativa em um cenário só, sintético ou analítico: marcar um tira a marcação do anterior.
+    </li>
+    <li>Use os filtros nos rótulos das colunas, “Apenas com Marcação” e “Apenas Vigentes” (só a versão mais alta de cada cenário).</li>
+  </ul>
+);
+const SOBRE_ANALITICOS = (
+  <>
+    <p>
+      Os cenários analíticos: versões mais detalhadas dos sintéticos, montadas a partir das premissas — as demandas, os centros de custo, os
+      investimentos e o extra-operacional —, com os resultados (Consolidado, Matriz, Filial, Serviços, Despesas e Extra e RN) calculados a partir
+      delas, pelas relações entre unidades, linhas e centros de custo e pelos rateios do fechamento mensal.
+    </p>
+    <p>
+      Ficam separados dos sintéticos: um cenário analítico só copia, importa e compara com outro analítico. A DRE dele não se edita nem se importa
+      de arquivo: muda com as premissas. As premissas e a referência realizada (com os centros de custo e as Médias de Referência) estão em
+      desenvolvimento; por enquanto, o cenário novo começa vazio.
+    </p>
+  </>
+);
+
+/** A lista dos cenários de um tipo: a tela Cenários Sintéticos ou Cenários Analíticos (13/10/2026). */
+export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) {
+  const t = DO_TIPO[tipo];
+  const analitico = tipo === "ANALITICO";
+  useRegistrarAcessoTela(t.base);
   const router = useRouter();
-  const { data, isPending, isError } = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
+  const { data, isPending, isError } = useQuery({ queryKey: ["cenarios", tipo], queryFn: () => cenariosService.listar(tipo) });
   // Os filtros Apenas com Marcação e Apenas Vigentes (13/10/2026; vigente: a versão mais alta de cada cenário).
   const [soMarcados, setSoMarcados] = useState(false);
   const [soVigentes, setSoVigentes] = useState(false);
   const filtrados = data?.filter((c) => (!soMarcados || c.marcacao) && (!soVigentes || c.vigente));
   const tabela = useTabelaFiltravel(filtrados, COLUNAS);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
-  const abrir = (c: Cenario) => router.push(`/cenarios/sinteticos/${c.id}/resultados`);
+  const abrir = (c: Cenario) => router.push(`${t.base}/${c.id}/resultados`);
 
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Cenários Sintéticos"
-        comoUsar={
+        titulo={t.titulo}
+        comoUsar={analitico ? COMO_USAR_ANALITICOS : (
           <ul>
             <li>
               Use “Novo Cenário” para um cenário vazio ou a cópia de outro. Para partir de uma planilha, crie o cenário e importe o arquivo em
@@ -121,8 +159,8 @@ export function CenariosContent() {
               de cada cenário (as revisões têm o mesmo nome da VER00, que não muda depois da primeira revisão).
             </li>
           </ul>
-        }
-        sobre={
+        )}
+        sobre={analitico ? SOBRE_ANALITICOS : (
           <>
             <p>
               Os cenários sintéticos: cada um é uma DRE por unidade (Consolidado, Matriz, Filial, Serviços, Despesas e Extra e RN), mês a mês no
@@ -135,7 +173,7 @@ export function CenariosContent() {
             </p>
             <p>Os cenários analíticos (montados pelas premissas) ficam em Cenários Analíticos.</p>
           </>
-        }
+        )}
         acoes={
           <div className="flex flex-wrap items-center gap-4">
             <label className="inline-flex items-center gap-2 text-sm text-gray-700">
@@ -146,7 +184,7 @@ export function CenariosContent() {
               <input type="checkbox" className="accent-black" checked={soVigentes} onChange={(e) => setSoVigentes(e.target.checked)} />
               Apenas Vigentes
             </label>
-            <PermissionGuard permission="cenarios:editar">
+            <PermissionGuard permission={t.editar}>
               <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "novo" })}>
                 <Plus className="size-4" />
                 Novo Cenário
@@ -181,7 +219,7 @@ export function CenariosContent() {
               <td className="min-w-48 px-3 py-2 text-sm">
                 {/* O nome, a versão e a marcação numa linha só (13/10/2026). */}
                 <div className="whitespace-nowrap">
-                  <Link href={`/cenarios/sinteticos/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
+                  <Link href={`${t.base}/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
                     {c.nome}
                   </Link>
                   {/* A versão (13/10/2026), com o cadeado quando congelada. */}

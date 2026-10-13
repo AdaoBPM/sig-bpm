@@ -44,6 +44,18 @@ export const MARCACOES: Record<MarcacaoCenario, string> = {
   RESULTADOS_VENDIDOS: "Resultados Vendidos",
 };
 
+/**
+ * O tipo do cenário (13/10/2026): os sintéticos (a DRE importada ou digitada) e os analíticos (a DRE calculada a partir
+ * das premissas). Ficam em listas separadas: um cenário só copia, importa ou compara com outro do mesmo tipo.
+ */
+export type TipoCenario = "SINTETICO" | "ANALITICO";
+export const TIPOS: Record<TipoCenario, string> = { SINTETICO: "Cenários Sintéticos", ANALITICO: "Cenários Analíticos" };
+
+/** O que só os sintéticos fazem: a importação de um arquivo, a edição da DRE e (por enquanto) a referência realizada. */
+function exigirSintetico(c: { nome: string; tipo: string }, oQue: string) {
+  if (c.tipo === "ANALITICO") throw new CenarioError(400, `O cenário ${c.nome} é analítico: ${oQue}.`);
+}
+
 /** Quem pede: `admin` é o Administrador (Editar no Controle de Usuários), que vê também os cenários particulares. */
 type Usuario = { id: string; nome: string; admin?: boolean };
 /** O que a tela fez numa gravação de valores (o histórico de reajustes, 12/10/2026). */
@@ -287,8 +299,8 @@ async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: s
 export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 
 export const cenariosService = {
-  async listar(usuario: Usuario = SISTEMA) {
-    const cenarios = (await getPrismaClient().cenario.findMany({ orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((c) => alcanca(c, usuario));
+  async listar(usuario: Usuario = SISTEMA, tipo: TipoCenario = "SINTETICO") {
+    const cenarios = (await getPrismaClient().cenario.findMany({ where: { tipo }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((c) => alcanca(c, usuario));
     const [doCenario, linhas, daFamilia] = await Promise.all([conteudo(cenarios.map((c) => c.id)), estrutura(), familias()]);
     const resumos = await Promise.all(cenarios.map((c) => resumoDoCenario(c.id, linhas)));
     return cenarios.map((c, k) => ({ ...c, ...doCenario(c.id), ...daFamilia(c), resultados: resumos[k], podeMudarVisualizacao: mudaVisualizacao(c, usuario) }));
@@ -299,15 +311,21 @@ export const cenariosService = {
     return { ...c, ...(await conteudo([id]))(id), ...(await familias())(c), podeMudarVisualizacao: mudaVisualizacao(c, usuario) };
   },
 
-  /** Um cenário novo: vazio, no exercício dado, ou a cópia de outro (com a DRE e as metas dele, no exercício dele). */
-  async criar(dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao?: VisualizacaoCenario }, usuario: Usuario) {
+  /**
+   * Um cenário novo: vazio, no exercício dado, ou a cópia de outro do mesmo tipo (com a DRE e as metas dele, no
+   * exercício dele).
+   */
+  async criar(dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao?: VisualizacaoCenario; tipo?: TipoCenario }, usuario: Usuario) {
     const prisma = getPrismaClient();
+    const tipo = dados.tipo ?? "SINTETICO";
     const origem = dados.copiarDe ? await obterOuFalhar(dados.copiarDe, usuario) : null;
+    if (origem && origem.tipo !== tipo) throw new CenarioError(400, `${TIPOS[tipo]} só copiam de ${TIPOS[tipo]}: ${origem.nome} é de outro tipo.`);
     const cenario = await prisma.$transaction(
       async (tx) => {
         const c = await tx.cenario.create({
           data: {
             nome: dados.nome,
+            tipo,
             ano: origem?.ano ?? dados.ano,
             descricao: dados.descricao,
             visualizacao: dados.visualizacao ?? "PUBLICA",
@@ -394,6 +412,7 @@ export const cenariosService = {
    * cenário (`cenarioId`) ou, sem ele, no cenário novo. Nada é gravado no cenário.
    */
   async analisar(dados: { cenarioId: string | null; nomeArquivo: string; conteudo: Buffer }, usuario: Usuario = SISTEMA) {
+    if (dados.cenarioId) exigirSintetico(await obterOuFalhar(dados.cenarioId, usuario), "a importação de arquivo é só dos cenários sintéticos");
     const lido = await lerArquivo(dados.conteudo);
     const hash = createHash("sha256").update(dados.conteudo).digest("hex");
     await mkdir(diretorioUploads(), { recursive: true });
@@ -416,6 +435,7 @@ export const cenariosService = {
     usuario: Usuario,
   ) {
     const prisma = getPrismaClient();
+    if (dados.cenarioId) exigirSintetico(await obterOuFalhar(dados.cenarioId, usuario), "a importação de arquivo é só dos cenários sintéticos");
     let conteudo: Buffer;
     try {
       conteudo = await readFile(caminhoDoArquivo(dados.hash));
@@ -570,6 +590,7 @@ export const cenariosService = {
    */
   async edicao(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
+    exigirSintetico(c, "a DRE é calculada a partir das premissas e não se edita");
     const [linhas, est, d, comparado] = await Promise.all([estrutura(), estruturaDRE(), dreDoCenario(id, visao), comparadoDe(c)]);
     const totais = comparado ? await totaisDoComparado(comparado.id, visao, linhas) : null;
     const todas = visao === 0 ? linhasDoConsolidado(est) : linhasDaUnidade(est, visao);
@@ -590,6 +611,7 @@ export const cenariosService = {
    */
   async gravarValores(id: string, visao: number, alteracoes: Alteracao[], usuario: Usuario, origem?: OrigemDaGravacao) {
     const c = await obterOuFalhar(id, usuario);
+    exigirSintetico(c, "a DRE é calculada a partir das premissas e não se edita");
     exigirEditavel(c);
     let r: Awaited<ReturnType<typeof gravarValores>>;
     try {
@@ -636,6 +658,8 @@ export const cenariosService = {
    */
   async referenciaRealizado(id: string, ano: number, usuario: Usuario, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) {
     const c = await obterOuFalhar(id, usuario);
+    // A referência dos analíticos (o realizado com os centros de custo e as Médias de Referência das premissas) é outra.
+    exigirSintetico(c, "a referência realizada dele carrega também as premissas e os centros de custo, e ainda está em desenvolvimento");
     exigirEditavel(c);
     const prisma = getPrismaClient();
     const todas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
@@ -828,7 +852,7 @@ export const cenariosService = {
    */
   async comparativo(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id } }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
+    const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id }, tipo: c.tipo }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
     const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
     const { totais } = totaisDaDRE(await estruturaDRE());
     const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
@@ -852,7 +876,10 @@ export const cenariosService = {
   async gravarComparativo(id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
     if (dados.comparadoComId === id) throw new CenarioError(400, "Escolha outro cenário para comparar.");
-    if (dados.comparadoComId) await obterOuFalhar(dados.comparadoComId, usuario);
+    if (dados.comparadoComId) {
+      const outro = await obterOuFalhar(dados.comparadoComId, usuario);
+      if (outro.tipo !== antes.tipo) throw new CenarioError(400, `Compare com um cenário do mesmo tipo (${TIPOS[antes.tipo as TipoCenario]}).`);
+    }
     const codigos = new Set(totaisDaDRE(await estruturaDRE()).totais.map((t) => t.codigo));
     const fora = Object.keys(dados.limites).filter((k) => !codigos.has(k));
     if (fora.length) throw new CenarioError(400, `Não são totais da DRE: ${fora.slice(0, 3).join(", ")}.`);

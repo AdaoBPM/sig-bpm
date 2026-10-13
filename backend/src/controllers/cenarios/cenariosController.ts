@@ -15,6 +15,7 @@ const anoSchema = z.coerce.number().int().min(2020).max(2100);
 const visaoSchema = z.coerce.number().int().min(0).max(5);
 const marcacaoSchema = z.enum(["ORCAMENTO_EMPRESARIAL", "RESULTADOS_ANTERIORES", "RESULTADOS_VENDIDOS"]).nullable();
 const visualizacaoSchema = z.enum(["PARTICULAR", "PUBLICA"]).optional();
+const tipoSchema = z.enum(["SINTETICO", "ANALITICO"]);
 
 /** Quem pede; o Administrador (Editar no Controle de Usuários) vê também os cenários particulares. */
 const usuario = (request: Request) => ({ id: request.user!.sub, nome: request.user!.nome, admin: request.user!.permissions.includes("usuarios:editar") });
@@ -36,7 +37,12 @@ function id(request: Request, response: Response) {
 }
 
 export const cenariosController = {
-  listar: (request: Request, response: Response) => responder(response, () => cenariosService.listar(usuario(request))),
+  /** A lista de um tipo (?tipo=SINTETICO, o padrão, ou ANALITICO). */
+  listar(request: Request, response: Response) {
+    const tipo = tipoSchema.default("SINTETICO").safeParse(request.query.tipo);
+    if (!tipo.success) return response.status(400).json({ error: "Tipo de cenário inválido." });
+    return responder(response, () => cenariosService.listar(usuario(request), tipo.data));
+  },
 
   obter(request: Request, response: Response) {
     const c = id(request, response);
@@ -44,7 +50,9 @@ export const cenariosController = {
   },
 
   criar(request: Request, response: Response) {
-    const corpo = z.object({ nome: nomeSchema, ano: anoSchema, descricao: descricaoSchema, copiarDe: idSchema.nullish().transform((x) => x ?? null), visualizacao: visualizacaoSchema }).safeParse(request.body);
+    const corpo = z
+      .object({ nome: nomeSchema, ano: anoSchema, descricao: descricaoSchema, copiarDe: idSchema.nullish().transform((x) => x ?? null), visualizacao: visualizacaoSchema, tipo: tipoSchema.default("SINTETICO") })
+      .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Dados inválidos." });
     return responder(response, () => cenariosService.criar(corpo.data, usuario(request)), 201);
   },

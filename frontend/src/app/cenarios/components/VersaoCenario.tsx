@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloVersao, type Cenario } from "../services/cenariosService";
+import { useTipoDoCenario } from "./tipoDoCenario";
 import { botaoPrimario, Erro } from "./CenarioDialog";
 
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -30,7 +31,8 @@ export function BotoesDeVersao({ cenario }: { cenario: Cenario }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [dialogo, setDialogo] = useState<Acao | null>(null);
-  const lista = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
+  const t = useTipoDoCenario();
+  const lista = useQuery({ queryKey: ["cenarios", t.tipo], queryFn: () => cenariosService.listar(t.tipo) });
   const familia = cenario.familiaId ?? cenario.id;
   const proxima = Math.max(cenario.versao, ...(lista.data ?? []).filter((c) => (c.familiaId ?? c.id) === familia).map((c) => c.versao)) + 1;
   const versao = rotuloVersao(cenario.versao);
@@ -46,7 +48,7 @@ export function BotoesDeVersao({ cenario }: { cenario: Cenario }) {
     mutationFn: () => cenariosService.criarRevisao(cenario.id),
     onSuccess: (nova) => {
       aoTerminar(`${rotuloVersao(nova.versao)} de ${nova.nome} criada, aberta para edição.`);
-      router.push(`/cenarios/sinteticos/${nova.id}/resultados`);
+      router.push(`${t.base}/${nova.id}/resultados`);
     },
   });
   const mutacao = dialogo === "congelar" ? congelar : dialogo === "reabrir" ? reabrir : revisar;
@@ -104,7 +106,7 @@ export function BotoesDeVersao({ cenario }: { cenario: Cenario }) {
                         Cria a {rotuloVersao(proxima)} de {cenario.nome}: uma cópia da {versao} (a DRE, os indicadores, o comparativo e as justificativas),
                         aberta para edição.
                       </li>
-                      <li>A revisão é um cenário novo, na lista de Cenários Sintéticos; a {versao} continua congelada.</li>
+                      <li>A revisão é um cenário novo, na lista de {t.titulo}; a {versao} continua congelada.</li>
                       {cenario.marcacao ? <li>A marcação fica na {versao}: para passá-la à revisão, remarque em Configurações / Cenário.</li> : null}
                     </>
                   )}

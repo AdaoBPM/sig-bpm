@@ -18,6 +18,7 @@ import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloMarcacao, type Cenario, type Visualizacao } from "../services/cenariosService";
+import { useTipoDoCenario } from "./tipoDoCenario";
 import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
 import { botaoPrimario, CampoVisualizacao, classeSelect, Erro, ExcluirCenarioDialog, OpcaoEmLinha } from "./CenarioDialog";
 import { ComparativoCenario } from "./ComparativoCenario";
@@ -47,7 +48,11 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
   const [aba, setAba] = useState<AbaDasConfiguracoes>(abaInicial);
   // As ações do cenário (13/10/2026; antes, ícones na lista dos cenários): marcar e excluir.
   const [acao, setAcao] = useState<"marcar" | "excluir" | null>(null);
-  const lista = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
+  const t = useTipoDoCenario();
+  const analitico = t.tipo === "ANALITICO";
+  // A marcação vale para os dois tipos (uma só por vez): o diálogo de marcar olha os sintéticos e os analíticos.
+  const sinteticos = useQuery({ queryKey: ["cenarios", "SINTETICO"], queryFn: () => cenariosService.listar("SINTETICO") });
+  const analiticos = useQuery({ queryKey: ["cenarios", "ANALITICO"], queryFn: () => cenariosService.listar("ANALITICO"), retry: false });
   const [nome, setNome] = useState(cenario.nome);
   const [descricao, setDescricao] = useState(cenario.descricao ?? "");
   const [visualizacao, setVisualizacao] = useState<Visualizacao>(cenario.visualizacao);
@@ -164,6 +169,15 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
         </section>
       ) : aba === "comparativo" ? (
         <ComparativoCenario id={cenario.id} podeEditar />
+      ) : analitico ? (
+        // A referência dos analíticos (13/10/2026): outro analítico ou o realizado, com os centros de custo e as Médias de Referência.
+        <section className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5 text-sm text-gray-600">
+          <p className="font-medium text-gray-900">Em desenvolvimento.</p>
+          <p>
+            A referência de um cenário analítico será outro cenário analítico ou o resultado realizado (mês a mês ou a média de um período), que traz
+            também os valores dos centros de custo e as Médias de Referência das premissas (Matriz, Filial e Serviços).
+          </p>
+        </section>
       ) : (
         <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <p className="text-sm text-gray-600">
@@ -269,8 +283,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
       )}
 
       {importando ? <ImportarCenarioDialog cenario={cenario} onFechar={() => setImportando(false)} /> : null}
-      {acao === "marcar" ? <MarcarCenarioDialog cenario={cenario} cenarios={lista.data ?? []} onFechar={() => setAcao(null)} /> : null}
-      {acao === "excluir" ? <ExcluirCenarioDialog cenario={cenario} onFechar={() => setAcao(null)} aoExcluir={() => router.push("/cenarios/sinteticos")} /> : null}
+      {acao === "marcar" ? <MarcarCenarioDialog cenario={cenario} cenarios={[...(sinteticos.data ?? []), ...(analiticos.data ?? [])]} onFechar={() => setAcao(null)} /> : null}
+      {acao === "excluir" ? <ExcluirCenarioDialog cenario={cenario} onFechar={() => setAcao(null)} aoExcluir={() => router.push(t.base)} /> : null}
       {confirmar && ano ? (
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(false) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-md">

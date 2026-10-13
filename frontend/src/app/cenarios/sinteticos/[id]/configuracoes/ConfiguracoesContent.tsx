@@ -11,11 +11,13 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { Erro } from "../../../components/CenarioDialog";
 import { ConfiguracoesCenario, type AbaDasConfiguracoes } from "../../../components/ConfiguracoesCenario";
 import { cenariosService } from "../../../services/cenariosService";
+import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 /** A tela Configurações de um cenário (12/10/2026; antes, a primeira aba da tela Editar, que deixou de existir). */
 export function ConfiguracoesContent() {
   const { id } = useParams<{ id: string }>();
-  useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/configuracoes`);
+  const t = useTipoDoCenario();
+  useRegistrarAcessoTela(`${t.base}/${id}/configuracoes`);
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   // ?aba=comparativo (ou referencia) abre direto na aba: os avisos do comparativo levam para cá.
   const pedida = useSearchParams().get("aba");

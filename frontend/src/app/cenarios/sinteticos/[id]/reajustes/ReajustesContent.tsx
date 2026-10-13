@@ -19,6 +19,7 @@ import { formato } from "@/app/relatorios/services/relatoriosService";
 
 import { JustificativasCenario } from "../../../components/JustificativasCenario";
 import { cenariosService, type ReajusteDoCenario } from "../../../services/cenariosService";
+import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 const ABAS = ["Consolidado", "Matriz", "Filial", "Serviços", "Despesas e Extra", "RN"];
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -76,7 +77,8 @@ const COLUNAS: Coluna<ReajusteDoCenario>[] = [
  */
 export function ReajustesContent() {
   const { id } = useParams<{ id: string }>();
-  useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/reajustes`);
+  const t = useTipoDoCenario();
+  useRegistrarAcessoTela(`${t.base}/${id}/reajustes`);
   const { data, isPending, isError } = useQuery({ queryKey: ["cenarios", id, "reajustes"], queryFn: () => cenariosService.reajustes(id) });
   const tabela = useTabelaFiltravel(data, COLUNAS);
   // O modal das contas (ou da descrição da referência) de uma linha (13/10/2026; antes, a lista na coluna Contas).
@@ -127,7 +129,7 @@ export function ReajustesContent() {
         abas={[{ chave: "historico", rotulo: "Histórico" }, ...(comComparativo ? [{ chave: "justificativas", rotulo: "Justificativas" }] : [])]}
       />
       {aba === "justificativas" ? (
-        <JustificativasCenario id={id} podeEditar={hasPermission("cenarios:editar")} />
+        <JustificativasCenario id={id} podeEditar={hasPermission(t.editar)} />
       ) : (
         <QuadroTabela
           barra={

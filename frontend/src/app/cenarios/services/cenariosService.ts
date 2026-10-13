@@ -16,15 +16,27 @@ export const rotuloVersao = (v: number) => `VER${String(v).padStart(2, "0")}`;
 export const rotuloDoCenario = (c: Pick<Cenario, "ano" | "nome" | "versao" | "marcacao">) =>
   [String(c.ano), c.nome, rotuloVersao(c.versao), rotuloMarcacao(c.marcacao)].filter(Boolean).join(" - ");
 
-/** Particular: só quem criou e o Administrador; Pública: todos com permissão nos Cenários Sintéticos (11/10/2026). */
+/** Particular: só quem criou e o Administrador; Pública: todos com permissão na lista do cenário (11/10/2026). */
 export type Visualizacao = "PARTICULAR" | "PUBLICA";
+
+/**
+ * O tipo do cenário (13/10/2026): os sintéticos (a DRE importada ou digitada) e os analíticos (a DRE calculada a partir
+ * das premissas), em listas separadas, cada uma com a sua permissão; as telas de um cenário são as mesmas nos dois.
+ */
+export type TipoCenario = "SINTETICO" | "ANALITICO";
+export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; ler: string; editar: string }> = {
+  SINTETICO: { base: "/cenarios/sinteticos", titulo: "Cenários Sintéticos", ler: "cenarios:ler", editar: "cenarios:editar" },
+  ANALITICO: { base: "/cenarios/analiticos", titulo: "Cenários Analíticos", ler: "cenarios_analiticos:ler", editar: "cenarios_analiticos:editar" },
+};
+/** O tipo pela rota da tela. */
+export const tipoDaRota = (pathname: string): TipoCenario => (pathname.startsWith("/cenarios/analiticos") ? "ANALITICO" : "SINTETICO");
 export const ROTULO_VISUALIZACAO: Record<Visualizacao, string> = { PARTICULAR: "Particular", PUBLICA: "Pública" };
 
 export type Cenario = {
   id: string;
   nome: string;
   ano: number;
-  tipo: string;
+  tipo: TipoCenario;
   descricao: string | null;
   marcacao: MarcacaoCenario | null;
   nomeArquivo: string | null;
@@ -123,9 +135,9 @@ export type IndicadorDoCenario = Indicador & { classe: ClasseIndicador; digitado
 export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: IndicadorDoCenario[]; comparado?: { nome: string; ano: number } | null };
 
 export const cenariosService = {
-  listar: async () => (await api.get<{ data: Cenario[] }>("/proxy/cenarios")).data.data,
+  listar: async (tipo: TipoCenario = "SINTETICO") => (await api.get<{ data: Cenario[] }>("/proxy/cenarios", { params: { tipo } })).data.data,
   obter: async (id: string) => (await api.get<{ data: Cenario }>(`/proxy/cenarios/${id}`)).data.data,
-  criar: async (dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao: Visualizacao }) => (await api.post<{ data: Cenario }>("/proxy/cenarios", dados)).data.data,
+  criar: async (dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao: Visualizacao; tipo: TipoCenario }) => (await api.post<{ data: Cenario }>("/proxy/cenarios", dados)).data.data,
   atualizar: async (id: string, dados: { nome: string; descricao: string | null; visualizacao: Visualizacao }) => (await api.patch<{ data: Cenario }>(`/proxy/cenarios/${id}`, dados)).data.data,
   excluir: async (id: string) => {
     await api.delete(`/proxy/cenarios/${id}`);

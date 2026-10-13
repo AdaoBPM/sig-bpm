@@ -10,11 +10,12 @@ import { podeSair } from "@/lib/alteracoesPendentes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { cenariosService, rotuloDoCenario, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
+import { useTipoDoCenario } from "./tipoDoCenario";
 
-/** As telas de um cenário sintético, como as abas de Resultados Realizados. */
-export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissao?: string }> = [
-  // As configurações do cenário (12/10/2026): só para quem edita os cenários; a DRE se edita em Resultados.
-  { caminho: "configuracoes", rotulo: "Configurações", permissao: "cenarios:editar" },
+/** As telas de um cenário (sintético ou analítico), como as abas de Resultados Realizados. */
+export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soQuemEdita?: boolean }> = [
+  // As configurações do cenário (12/10/2026): só para quem edita os cenários (do tipo dele); a DRE se edita em Resultados.
+  { caminho: "configuracoes", rotulo: "Configurações", soQuemEdita: true },
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
   // O Painel de Bordo do cenário (13/10/2026): o cenário × o comparado, como o de Resultados Realizados.
@@ -23,9 +24,9 @@ export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissa
   { caminho: "reajustes", rotulo: "Reajustes" },
 ];
 
-/** A rota de uma tela de cenário: o id e a tela. */
+/** A rota de uma tela de cenário (sintético ou analítico, 13/10/2026): o id e a tela. */
 export function lerRotaDoCenario(pathname: string): { id: string; tela: string } | null {
-  const m = pathname.match(/^\/cenarios\/sinteticos\/([0-9a-f-]{36})(?:\/([^/]+))?/);
+  const m = pathname.match(/^\/cenarios\/(?:sinteticos|analiticos)\/([0-9a-f-]{36})(?:\/([^/]+))?/);
   return m ? { id: m[1], tela: m[2] ?? "resultados" } : null;
 }
 
@@ -37,7 +38,9 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();
   const { hasPermission } = usePermissions();
-  const lista = useQuery({ queryKey: ["cenarios"], queryFn: () => cenariosService.listar() });
+  // A lista do tipo do cenário aberto: a troca de cenário fica entre os do mesmo tipo.
+  const t = useTipoDoCenario();
+  const lista = useQuery({ queryKey: ["cenarios", t.tipo], queryFn: () => cenariosService.listar(t.tipo) });
   const atual = lista.data?.find((c) => c.id === id);
   const marcacao = rotuloMarcacao(atual?.marcacao ?? null);
   return (
@@ -55,9 +58,9 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
           />
           <DropdownMenuContent align="start" className="max-h-80 w-auto max-w-[min(40rem,calc(100vw-2rem))] min-w-72 overflow-y-auto">
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Cenários Sintéticos</DropdownMenuLabel>
+              <DropdownMenuLabel>{t.titulo}</DropdownMenuLabel>
               {(lista.data ?? []).map((c) => (
-                <DropdownMenuItem key={c.id} onClick={() => podeSair() && router.push(`/cenarios/sinteticos/${c.id}/${tela}`)} className={`whitespace-nowrap ${c.id === id ? "font-bold" : ""}`}>
+                <DropdownMenuItem key={c.id} onClick={() => podeSair() && router.push(`${t.base}/${c.id}/${tela}`)} className={`whitespace-nowrap ${c.id === id ? "font-bold" : ""}`}>
                   {rotuloDoCenario(c)}
                 </DropdownMenuItem>
               ))}
@@ -66,16 +69,16 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
         </DropdownMenu>
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
-        {TELAS_DO_CENARIO.filter((t) => !t.permissao || hasPermission(t.permissao)).map((t) => {
-          const ativa = t.caminho === tela;
+        {TELAS_DO_CENARIO.filter((x) => !x.soQuemEdita || hasPermission(t.editar)).map((x) => {
+          const ativa = x.caminho === tela;
           return (
-            <li key={t.caminho} className="flex shrink-0 items-center">
+            <li key={x.caminho} className="flex shrink-0 items-center">
               <Link
-                href={`/cenarios/sinteticos/${id}/${t.caminho}`}
+                href={`${t.base}/${id}/${x.caminho}`}
                 aria-current={ativa ? "page" : undefined}
                 className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
               >
-                {t.rotulo}
+                {x.rotulo}
               </Link>
             </li>
           );

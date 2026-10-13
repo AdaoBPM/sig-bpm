@@ -158,6 +158,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/auditoria(\/|$)/, "auditoria:ler"],
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/relatorios(\/|$)/, "resultados:ler"],
+  [/^\/cenarios\/analiticos\/[^/]+\/configuracoes/, "cenarios_analiticos:editar"],
   [/^\/cenarios\/analiticos(\/|$)/, "cenarios_analiticos:ler"],
   [/^\/cenarios\/sinteticos\/[^/]+\/configuracoes/, "cenarios:editar"],
   [/^\/cenarios(\/|$)/, "cenarios:ler"],
@@ -230,11 +231,12 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
     const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
     return [{ rotulo: "Fechamento Mensal", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
   }
-  // As telas de um cenário: "Cenários Sintéticos › Resultados".
-  const cenario = pathname.match(/^\/cenarios\/sinteticos\/[^/]+\/([^/]+)/);
+  // As telas de um cenário: "Cenários Sintéticos › Resultados" (ou "Cenários Analíticos › Resultados", 13/10/2026).
+  const cenario = pathname.match(/^\/cenarios\/(sinteticos|analiticos)\/[^/]+\/([^/]+)/);
   if (cenario) {
-    const tela = cenario[1] === "indicadores" ? "Indicadores" : cenario[1] === "configuracoes" ? "Configurações" : cenario[1] === "reajustes" ? "Reajustes" : cenario[1] === "painel" ? "Painel de Bordo" : "Resultados";
-    return [{ rotulo: "Cenários Sintéticos", href: "/cenarios/sinteticos" }, { rotulo: tela }];
+    const tela = cenario[2] === "indicadores" ? "Indicadores" : cenario[2] === "configuracoes" ? "Configurações" : cenario[2] === "reajustes" ? "Reajustes" : cenario[2] === "painel" ? "Painel de Bordo" : "Resultados";
+    const lista = cenario[1] === "analiticos" ? "Cenários Analíticos" : "Cenários Sintéticos";
+    return [{ rotulo: lista, href: `/cenarios/${cenario[1]}` }, { rotulo: tela }];
   }
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];

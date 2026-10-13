@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloDoCenario, type Cenario, type Visualizacao } from "../services/cenariosService";
+import { useTipoDoCenario } from "./tipoDoCenario";
 
 export const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 export const classeSelect = "h-9 w-full rounded-sm border border-gray-300 bg-white px-3 text-sm";
@@ -85,9 +86,10 @@ export function CampoVisualizacao({
   semParticular?: string | null;
   emLinhas?: boolean;
 }) {
+  const { titulo } = useTipoDoCenario();
   const opcoes: Array<{ v: Visualizacao; rotulo: string; detalhe: string; Icone: typeof Lock; motivo?: string | null }> = [
     { v: "PARTICULAR", rotulo: "Particular", detalhe: "Apenas você (quem criou) e o Administrador têm acesso.", Icone: Lock, motivo: semParticular },
-    { v: "PUBLICA", rotulo: "Pública", detalhe: "Todos os usuários com permissão nos Cenários Sintéticos têm acesso.", Icone: Globe },
+    { v: "PUBLICA", rotulo: "Pública", detalhe: `Todos os usuários com permissão nos ${titulo} têm acesso.`, Icone: Globe },
   ];
   return (
     <fieldset className="space-y-1.5" disabled={!!bloqueio}>
@@ -146,12 +148,14 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
   const [copiarDe, setCopiarDe] = useState("");
   const [visualizacao, setVisualizacao] = useState<Visualizacao>(cenario?.visualizacao ?? "PUBLICA");
   const origem = cenarios.find((c) => c.id === copiarDe);
+  // O cenário novo é do tipo da lista aberta (13/10/2026); "Copiar de" traz só os do mesmo tipo.
+  const { tipo } = useTipoDoCenario();
 
   const salvar = useMutation({
     mutationFn: () =>
       cenario
         ? cenariosService.atualizar(cenario.id, { nome: nome.trim(), descricao: descricao.trim() || null, visualizacao })
-        : cenariosService.criar({ nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null, copiarDe: copiarDe || null, visualizacao }),
+        : cenariosService.criar({ nome: nome.trim(), ano: Number(ano), descricao: descricao.trim() || null, copiarDe: copiarDe || null, visualizacao, tipo }),
     onSuccess: (c) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       toast.success(cenario ? "Cenário alterado." : `Cenário ${c.nome} criado.`);

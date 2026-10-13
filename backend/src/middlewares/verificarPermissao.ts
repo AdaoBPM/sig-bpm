@@ -51,6 +51,28 @@ export async function lerDREDoMes(request: Request, response: Response, next: Ne
 }
 
 /**
+ * A permissão de um cenário pelo tipo dele (13/10/2026): os sintéticos, a de Cenários Sintéticos (cenarios); os
+ * analíticos, a de Cenários Analíticos (cenarios_analiticos). Com :id, o tipo é o do cenário (desconhecido segue
+ * adiante: a rota responde 404); sem ele (a lista e a criação), o pedido em ?tipo= ou no corpo (o padrão, SINTETICO).
+ */
+export function verificarPermissaoDoCenario(acao: "ler" | "editar") {
+  return async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      let tipo: string | undefined;
+      if (request.params.id) {
+        const c = await getPrismaClient().cenario.findUnique({ where: { id: String(request.params.id) }, select: { tipo: true } });
+        if (!c) return next();
+        tipo = c.tipo;
+      } else tipo = String(request.query.tipo ?? (request.body as { tipo?: unknown } | undefined)?.tipo ?? "SINTETICO");
+      const area = tipo === "ANALITICO" ? "cenarios_analiticos" : "cenarios";
+      return verificarPermissao(`${area}:${acao}`)(request, response, next);
+    } catch (error) {
+      return next(error);
+    }
+  };
+}
+
+/**
  * O grupo do menu de cada cadastro (11/10/2026): os Cadastros da Apuração e os da Controladoria têm permissões
  * próprias. A chave é a entidade da rota (/cadastros/edicao/:entidade).
  */

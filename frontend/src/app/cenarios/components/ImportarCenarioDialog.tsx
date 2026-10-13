@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, type Cenario, type Mudancas, type PreviaCenario, type Visualizacao } from "../services/cenariosService";
+import { useTipoDoCenario } from "./tipoDoCenario";
 import { botaoPrimario, CampoVisualizacao, classeSelect, Erro } from "./CenarioDialog";
 
 const ICONES = {
@@ -145,6 +146,7 @@ function TabelaPrevia({ p, importado }: { p: PreviaCenario; importado: boolean }
  * de o usuário clicar em Importar.
  */
 export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario | null; onFechar: () => void }) {
+  const { base } = useTipoDoCenario();
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -267,7 +269,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
               <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
                 Fechar
               </Button>
-              <Link href={`/cenarios/sinteticos/${feito.cenario.id}/resultados`} onClick={onFechar} className={`${botaoPrimario} inline-flex h-9 items-center px-4 text-sm`}>
+              <Link href={`${base}/${feito.cenario.id}/resultados`} onClick={onFechar} className={`${botaoPrimario} inline-flex h-9 items-center px-4 text-sm`}>
                 Abrir o Cenário
               </Link>
             </>

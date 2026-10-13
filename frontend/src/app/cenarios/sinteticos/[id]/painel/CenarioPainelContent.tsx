@@ -16,6 +16,7 @@ import { AVISO_DO_PAINEL, CorpoDoPainel, SeletorCores, useCoresDoPainel } from "
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService } from "../../../services/cenariosService";
+import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 const ROTULOS = { realizado: "Cenário", orcado: "Comparado" };
 
@@ -26,7 +27,8 @@ const ROTULOS = { realizado: "Cenário", orcado: "Comparado" };
  */
 export function CenarioPainelContent() {
   const { id } = useParams<{ id: string }>();
-  useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/painel`);
+  const t = useTipoDoCenario();
+  useRegistrarAcessoTela(`${t.base}/${id}/painel`);
   const { hasPermission } = usePermissions();
   const [ate, setAte] = useState(12);
   const [aba, setAba] = useState("resultados");
@@ -110,8 +112,8 @@ export function CenarioPainelContent() {
               dados.comparado ? null : (
                 <div className={`${AVISO_DO_PAINEL} flex flex-wrap items-center justify-between gap-3`}>
                   <span>O cenário não tem comparativo: o comparado e o desvio ficam vazios.</span>
-                  {hasPermission("cenarios:editar") ? (
-                    <Button type="button" variant="outline" className="rounded-sm" onClick={() => router.push(`/cenarios/sinteticos/${id}/configuracoes?aba=comparativo`)}>
+                  {hasPermission(t.editar) ? (
+                    <Button type="button" variant="outline" className="rounded-sm" onClick={() => router.push(`${t.base}/${id}/configuracoes?aba=comparativo`)}>
                       Adicionar Comparativo
                     </Button>
                   ) : (

@@ -3,17 +3,23 @@ import express, { Router } from "express";
 import { env } from "../../config/env.js";
 import { cenariosController as c } from "../../controllers/cenarios/cenariosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
-import { verificarPermissao } from "../../middlewares/verificarPermissao.js";
+import { verificarPermissao, verificarPermissaoDoCenario } from "../../middlewares/verificarPermissao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
-/** Criação de Cenários (os cenários sintéticos): montado em /cenarios. */
+/**
+ * Criação de Cenários (os sintéticos e os analíticos): montado em /cenarios. A permissão é a do tipo do cenário
+ * (13/10/2026): Cenários Sintéticos (cenarios:*) ou Cenários Analíticos (cenarios_analiticos:*) — pelo cenário da rota,
+ * ou, na lista e na criação, pelo tipo pedido.
+ */
 export const cenariosRoutes = Router();
-const ler = verificarPermissao("cenarios:ler");
-const editar = verificarPermissao("cenarios:editar");
+const ler = verificarPermissaoDoCenario("ler");
+const editar = verificarPermissaoDoCenario("editar");
+// A importação de arquivo é só dos sintéticos.
+const editarSinteticos = verificarPermissao("cenarios:editar");
 cenariosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
-cenariosRoutes.post("/", autenticacao, editar, express.json(), asyncHandler(c.criar));
-cenariosRoutes.post("/importar/analise", autenticacao, editar, express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }), asyncHandler(c.analisar));
-cenariosRoutes.post("/importar", autenticacao, editar, express.json(), asyncHandler(c.importar));
+cenariosRoutes.post("/", autenticacao, express.json(), editar, asyncHandler(c.criar));
+cenariosRoutes.post("/importar/analise", autenticacao, editarSinteticos, express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }), asyncHandler(c.analisar));
+cenariosRoutes.post("/importar", autenticacao, editarSinteticos, express.json(), asyncHandler(c.importar));
 cenariosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 cenariosRoutes.patch("/:id", autenticacao, editar, express.json(), asyncHandler(c.atualizar));
 cenariosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));
