@@ -87,7 +87,11 @@ export function valorCurto(i: Pick<Indicador, "unidade">, v: number | null) {
   return formato.umaCasa(v * 100);
 }
 
-/** O amarelo da faixa dos grupos (o yellow-50) mais fraco, sem transparência (as colunas presas cobrem as que rolam). */
+/** As cores da faixa dos grupos e dos totais (13/10/2026: um pouco mais fortes, antes yellow-50 e gray-200). */
+const FAIXA_DO_REALIZADO = "bg-yellow-100";
+const FAIXA_DO_ORCADO = "celula-orcado bg-gray-300";
+
+/** O amarelo de antes da faixa dos grupos (o yellow-50) mais fraco, para as linhas pares, sem transparência (as colunas presas cobrem as que rolam). */
 const AMARELO_FRACO = "bg-[color-mix(in_srgb,var(--color-yellow-50)_55%,var(--color-white))]";
 
 /**
@@ -96,7 +100,7 @@ const AMARELO_FRACO = "bg-[color-mix(in_srgb,var(--color-yellow-50)_55%,var(--co
  * tom mais fraco das mesmas cores; com numeração ímpar, sem fundo.
  */
 function fundoDoIndicador(i: Indicador, orcado: boolean) {
-  if (i.numero === "") return orcado ? "celula-orcado bg-gray-200" : "bg-yellow-50";
+  if (i.numero === "") return orcado ? FAIXA_DO_ORCADO : FAIXA_DO_REALIZADO;
   const n = Number(/(\d+)\s*$/.exec(i.numero)?.[1]);
   // Nas pares, o cinza do tema (sem a celula-orcado, que no Escuro deixaria a célula quase branca entre as escuras).
   if (n % 2 === 0) return orcado ? "bg-gray-100" : AMARELO_FRACO;
@@ -314,7 +318,7 @@ export function TabelaIndicadores<T extends Indicador>({
                     {!anterior || anterior.grupo !== i.grupo ? (
                       <tr className="border-y border-gray-300">
                         {faixas.map((f, n) => (
-                          <td key={n} colSpan={f.n} className={`${f.orcado ? "celula-orcado bg-gray-200" : "bg-yellow-50"} px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase`}>
+                          <td key={n} colSpan={f.n} className={`${f.orcado ? FAIXA_DO_ORCADO : FAIXA_DO_REALIZADO} px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase`}>
                             {n === 0 ? <span className="sticky left-3">{nomeDoGrupo(i.grupo)}</span> : null}
                           </td>
                         ))}
@@ -350,8 +354,8 @@ export function TabelaIndicadores<T extends Indicador>({
                       {colunas.slice(3).map((c) => {
                         const mes = c.chave.startsWith("mes:") ? Number(c.chave.slice(4)) - 1 : -1;
                         const emDestaque = mes >= 0 && !!destacar?.(i, meses.findIndex((m) => m.mes === mes + 1));
-                        // O valor digitado (lançamentos manuais do cenário) num amarelo mais forte que o das linhas.
-                        const fundo = emDestaque ? "bg-yellow-100" : fundoDoIndicador(i, ehOrcado(c.chave));
+                        // O valor digitado (lançamentos manuais do cenário) num amarelo mais forte que o das linhas e o dos totais.
+                        const fundo = emDestaque ? "bg-yellow-200" : fundoDoIndicador(i, ehOrcado(c.chave));
                         return (
                           <td
                             key={c.chave}
