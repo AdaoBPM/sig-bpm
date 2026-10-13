@@ -9,8 +9,8 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
+import { MiniGrafico } from "../components/MiniGrafico";
 import {
-  GraficoRealizadoOrcado,
   LegendaRealizadoOrcado,
   SeletorTipoGrafico,
   useRotulosDoGrafico,
@@ -170,10 +170,10 @@ function CardIndicador({ i, rotuloMes, tipo }: { i: ItemPainel; rotuloMes: strin
       {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
       <div className="flex min-w-0 items-center gap-3 self-center">
         <div className="min-w-0 flex-1">
-          <GraficoRealizadoOrcado dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} />
+          <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} />
         </div>
         <div className="w-24 shrink-0 border-l border-gray-100 pl-3" title="Acumulado do exercício: realizado × orçado">
-          <GraficoRealizadoOrcado
+          <MiniGrafico
             dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
             formatar={(v) => formatar(v, i.formatoAcumulado)}
             tipo={tipo}
@@ -220,9 +220,16 @@ export function CorpoDoPainel({
   const atual = dados.abas.find((a) => a.chave === aba) ?? dados.abas[0];
   return (
     <CoresDoPainel.Provider value={cores}>
-      <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
+      {/* As legendas à direita, na linha das abas (13/10/2026); o traço de baixo continua até o fim da linha. */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:gap-0">
+        <div className="min-w-0 lg:flex-1">
+          <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
+        </div>
+        <div className="pb-2 lg:border-b lg:border-gray-200 lg:pl-4">
+          <LegendaDoPainel tipo={tipo} />
+        </div>
+      </div>
       {aviso}
-      <LegendaDoPainel tipo={tipo} />
       <div className="space-y-6">
         {atual.quadros.map((q) => (
           <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} />
@@ -232,13 +239,13 @@ export function CorpoDoPainel({
   );
 }
 
-/** A legenda: as cores do gráfico à esquerda (sem o texto do mês e do acumulado, 10/10/2026); os sinais (a comparação com o orçado) à direita, na mesma linha (09/10/2026). */
+/** A legenda: as cores do gráfico e os sinais (a comparação com o orçado), na linha das abas (13/10/2026). */
 function LegendaDoPainel({ tipo }: { tipo: TipoGrafico }) {
   const SINAL = useSinais();
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600 lg:justify-end">
       <LegendaRealizadoOrcado tipo={tipo} />
-      <span className="ml-auto inline-flex flex-wrap items-center gap-x-5 gap-y-1">
+      <span className="inline-flex flex-wrap items-center gap-x-5 gap-y-1">
         {([1, 0, -1] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <Sinal s={s} />

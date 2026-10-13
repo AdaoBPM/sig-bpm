@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ComponentProps } from "react";
+import { createContext, useContext, useId, useMemo, useState } from "react";
 import { Area, Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
@@ -73,24 +73,10 @@ export function SeletorTipoGrafico({ tipo, onMudar }: { tipo: TipoGrafico; onMud
 
 /**
  * O gráfico mês a mês, realizado × orçado (Painel de Bordo e o gráfico do indicador em Indicadores): o padrão dos
- * gráficos da planilha, com a dica do mês ao passar o mouse. Só se desenha perto da área visível (13/10/2026): o Painel
- * de Bordo tem dezenas de gráficos, e desenhar e redesenhar todos (ao abrir a tela, ao abrir e fechar o menu lateral)
- * deixava a tela lenta; fora da vista, fica um espaço do mesmo tamanho.
+ * gráficos da planilha, com a dica do mês ao passar o mouse. Os cards do Painel de Bordo usam o MiniGrafico (um SVG
+ * simples, 13/10/2026); este fica para o gráfico grande do indicador, em Indicadores.
  */
-export function GraficoRealizadoOrcado(props: ComponentProps<typeof Grafico>) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visivel, setVisivel] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observador = new IntersectionObserver(([e]) => setVisivel(e.isIntersecting), { rootMargin: "400px 0px" });
-    observador.observe(el);
-    return () => observador.disconnect();
-  }, []);
-  return <div ref={ref}>{visivel ? <Grafico {...props} /> : <div className={`w-full ${props.className ?? "h-28"}`} />}</div>;
-}
-
-function Grafico({
+export function GraficoRealizadoOrcado({
   dados,
   formatar,
   className = "h-28",
@@ -118,9 +104,7 @@ function Grafico({
   const degrade = degradeDoRealizado(dados);
   const area = tipo === "area";
   return (
-    // Redesenha uma vez só, depois da animação do menu lateral (200 ms), e não a cada passo dela: o Painel de Bordo tem
-    // dezenas de gráficos, e redesenhar todos a cada passo deixava a abertura e o fechamento do menu muito lentos (13/10/2026).
-    <ChartContainer config={cores} className={`aspect-auto w-full ${className}`} initialDimension={{ width: 300, height: 112 }} debounce={250}>
+    <ChartContainer config={cores} className={`aspect-auto w-full ${className}`} initialDimension={{ width: 300, height: 112 }}>
       <ComposedChart data={dados} margin={{ top: rotulosDosValores ? 28 : 4, right: area && !umPonto ? 4 : 0, bottom: 0, left: area && !umPonto ? 4 : 0 }} barGap={1} barCategoryGap="18%">
         <defs>
           {/* Transparente no zero e opaco no maior valor do período (em módulo), nos dois sentidos: a forma vai do maior valor
@@ -201,7 +185,7 @@ function Grafico({
  * As paradas do degradê do realizado, na altura da forma (do maior valor acima do zero ao menor abaixo dele): a
  * opacidade das pontas (o valor sobre o maior em módulo) e onde fica o zero (transparente).
  */
-function degradeDoRealizado(dados: MesDoGrafico[]) {
+export function degradeDoRealizado(dados: MesDoGrafico[]) {
   const valores = dados.map((d) => d.realizado).filter((v): v is number => v !== null);
   const max = Math.max(0, ...valores);
   const min = Math.min(0, ...valores);
