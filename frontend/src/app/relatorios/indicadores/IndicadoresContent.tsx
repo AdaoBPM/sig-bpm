@@ -55,6 +55,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                 ? "Os valores do mês desta competência; troque o mês no seletor da barra de etapas. Num mês não apurado, os indicadores da DRE ficam sem valor."
                 : "Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora)."}
             </li>
+            <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo (Produção, Serviços, Logística, Técnico, Comercial, Administrativo, Geral, Metas Estratégicas (GME)), como a lista dos níveis em Resultados.</li>
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
             {periodoFixo ? null : (
               <li>As colunas de rótulo preto trazem o orçado (o cenário Orçamento Empresarial do exercício; zero sem ele): o do último mês, depois dele, e o acumulado, depois do Acumulado.</li>
@@ -63,7 +64,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
             {periodoFixo ? null : (
               <>
-              <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (do cenário Orçamento Empresarial) em preto, como no Painel de Bordo, e o último mês e o acumulado no alto.</li>
+              <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (do cenário Orçamento Empresarial) em preto, como no Painel de Bordo, e o último mês e o acumulado no alto. O botão ao lado do nome copia o modal (o nome, os valores e o gráfico) como imagem, para colar num e-mail ou numa apresentação; se o navegador não deixar copiar, a imagem é baixada.</li>
               <li>Na lista Tipo, escolha Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, transparente no zero e forte no máximo do período, com o contorno em amarelo-ouro, e o orçado numa linha preta). A escolha vale também para o Painel de Bordo e fica guardada neste navegador.</li>
               <li>Na lista Rótulos, Com escreve os valores de cada mês no gráfico, na vertical, só com o número (o realizado à esquerda do centro do mês, o orçado à direita); Sem mostra a escala à esquerda. Como no Painel de Bordo, a escolha vale para os dois e fica guardada neste navegador.</li>
               </>

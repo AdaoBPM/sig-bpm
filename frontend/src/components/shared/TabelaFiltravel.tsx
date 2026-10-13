@@ -231,8 +231,9 @@ export function useTabelaFiltravel<T>(linhas: T[] | undefined, colunas: Coluna<T
     setPagina(1);
   };
 
-  // Nas colunas sem filtro, a tela pode pôr outro conteúdo no rótulo (a caixa de marcar todas, nas divergências).
-  const montar = (extras: Record<string, ReactNode> = {}): ReactNode => (
+  // Nas colunas sem filtro, a tela pode pôr outro conteúdo no rótulo (a caixa de marcar todas, nas divergências); nas
+  // com filtro, algo antes do rótulo (`antes`: a lista dos grupos, em Indicadores, 13/10/2026).
+  const montar = (extras: Record<string, ReactNode> = {}, antes: Record<string, ReactNode> = {}): ReactNode => (
     <thead>
       {/* Rótulos no cinza do .tabela-sig th, mais escuro que as linhas. */}
       <tr className="border-b border-gray-200">
@@ -245,6 +246,7 @@ export function useTabelaFiltravel<T>(linhas: T[] | undefined, colunas: Coluna<T
               (extras[c.chave] ?? iniciaisMaiusculas(c.rotulo))
             ) : (
               <span className={`inline-flex items-center gap-1 ${c.alinhamento === "direita" ? "flex-row-reverse" : ""}`}>
+                {antes[c.chave]}
                 {iniciaisMaiusculas(c.rotulo)}
                 <FiltroDeColuna coluna={c} linhas={todas} colunas={colunas} estado={estado} onMudar={mudar} />
               </span>
@@ -257,7 +259,7 @@ export function useTabelaFiltravel<T>(linhas: T[] | undefined, colunas: Coluna<T
 
   return {
     cabecalho: montar(),
-    /** O cabeçalho com conteúdo próprio no rótulo de colunas sem filtro, por chave. */
+    /** O cabeçalho com conteúdo próprio no rótulo de colunas sem filtro, por chave (e, no segundo, antes do rótulo das com filtro). */
     cabecalhoCom: montar,
     /** As linhas da página atual, já filtradas e ordenadas. */
     visiveis,

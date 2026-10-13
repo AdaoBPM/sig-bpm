@@ -184,6 +184,7 @@ export function CenarioIndicadoresContent() {
               Indicadores Manuais: os quadros de lotação e os indicadores do Comercial e do Administrativo, que não saem da DRE. Vêm da aba das metas
               do arquivo importado{podeEditar ? "; clique numa linha para digitar os meses (as células digitadas ficam em amarelo)" : ""}.
             </li>
+            <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um dos grupos da aba, como a lista dos níveis em Resultados.</li>
             <li>Use os filtros nos rótulos das colunas; as colunas Indicador, Sent. e Und. ficam fixas.</li>
           </ul>
         }
