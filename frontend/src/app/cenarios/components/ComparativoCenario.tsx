@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, rotuloMarcacao, type Comparativo } from "../services/cenariosService";
+import { cenariosService, rotuloMarcacao, rotuloVersao, type Comparativo } from "../services/cenariosService";
 import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
 import { lerNumero } from "./EdicaoDialogs";
 
@@ -65,7 +65,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
               <option value="">Nenhum (sem comparativo)</option>
               {dados.opcoes.map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.nome} · {o.ano}
+                  {o.nome} · {rotuloVersao(o.versao)} · {o.ano}
                   {o.marcacao ? ` · ${rotuloMarcacao(o.marcacao)}` : ""}
                 </option>
               ))}

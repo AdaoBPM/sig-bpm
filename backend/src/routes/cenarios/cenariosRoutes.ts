@@ -25,6 +25,9 @@ cenariosRoutes.get("/:id/edicao", autenticacao, editar, asyncHandler(c.edicao));
 cenariosRoutes.put("/:id/edicao/valores", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarValores));
 cenariosRoutes.get("/:id/reajustes", autenticacao, ler, asyncHandler(c.reajustes));
 cenariosRoutes.post("/:id/referencia/realizado", autenticacao, editar, express.json(), asyncHandler(c.referenciaRealizado));
+// O versionamento (13/10/2026): Salvar Versão e Criar Revisão.
+cenariosRoutes.post("/:id/versao", autenticacao, editar, asyncHandler(c.salvarVersao));
+cenariosRoutes.post("/:id/revisao", autenticacao, editar, asyncHandler(c.criarRevisao));
 // O comparativo com outro cenário e as justificativas (12/10/2026).
 cenariosRoutes.get("/:id/comparativo", autenticacao, ler, asyncHandler(c.comparativo));
 cenariosRoutes.put("/:id/comparativo", autenticacao, editar, express.json(), asyncHandler(c.gravarComparativo));

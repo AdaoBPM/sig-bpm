@@ -12,9 +12,9 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { TabelaResultados } from "@/app/relatorios/resultados/ResultadosContent";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { AvisoComparado } from "../../../components/AvisoComparado";
-import { AvisoMarcado } from "../../../components/AvisoMarcado";
+import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
+import { BotoesDeVersao } from "../../../components/VersaoCenario";
 import { cenariosService } from "../../../services/cenariosService";
 
 /** As visões da DRE do cenário: as de Resultados Realizados, sem os centros de custo. */
@@ -61,19 +61,26 @@ export function CenarioResultadosContent() {
   const [visao, setVisao] = useState("0");
   // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
   const { hasPermission } = usePermissions();
-  // O cenário marcado não se edita (12/10/2026): a tabela fica só para leitura, com o aviso.
+  // O cenário marcado (12/10/2026) ou com a versão salva (13/10/2026) não se edita: a tabela fica só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
-  const marcacao = cenario.data?.marcacao ?? null;
-  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !marcacao;
+  const travado = !!cenario.data && estaTravado(cenario.data);
+  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !travado;
   const nome = VISOES.find((v) => v.chave === visao)!.nome;
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Resultados"
+        acoes={hasPermission("cenarios:editar") && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : undefined}
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
+            <li>
+              Versões (para quem edita os cenários): “Salvar Versão” congela o cenário na versão atual (VER00, VER01…), como o fechamento de uma
+              competência — a DRE, os Indicadores Manuais e a referência não se editam mais. “Criar Revisão” (só numa versão salva) cria uma cópia na
+              próxima versão, aberta para edição: um cenário novo na lista, com a DRE, os indicadores, o comparativo e as justificativas. A marcação
+              fica na versão de origem: remarque a revisão à mão em Configurações / Cenário.
+            </li>
             <li>
               Com um cenário comparado (Configurações / Comparativo), depois do total do exercício vêm, em preto e cinza, o total do cenário comparado (valor, % e
               R$/m³) e, no amarelo, a Diferença (o cenário menos o comparado), o Atingimento (o cenário sobre o comparado) e a Eficiência (a diferença
@@ -109,11 +116,7 @@ export function CenarioResultadosContent() {
         }
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
-      <AvisoComparado
-        id={id}
-        texto="depois do total do exercício, as colunas em preto e cinza trazem o total dele, e Diferença, Atingimento e Eficiência comparam o cenário com ele."
-      />
-      {marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="a DRE" /> : null}
+      {cenario.data && travado && hasPermission("cenarios:editar") ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
       {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} />}
     </div>
   );

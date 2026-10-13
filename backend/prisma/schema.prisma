@@ -1915,6 +1915,14 @@ model Cenario {
   comparadoComId   String?  @map("comparado_com_id")
   /// A variação máxima (em %) de cada total da DRE no comparativo: { código do total: percentual }.
   variacoesMaximas Json?    @map("variacoes_maximas")
+  /// O versionamento (13/10/2026): a versão do cenário (0 = VER00); a família (o id da VER00; nulo na própria VER00) e
+  /// a versão de que esta é revisão. Salvar Versão congela o cenário (como o fechamento de uma competência): a DRE, os
+  /// indicadores manuais e a referência não se editam mais; Criar Revisão copia o cenário salvo numa versão nova.
+  versao           Int       @default(0)
+  familiaId        String?   @map("familia_id")
+  revisaoDeId      String?   @map("revisao_de_id")
+  versaoSalvaEm    DateTime? @map("versao_salva_em")
+  versaoSalvaPor   String?   @map("versao_salva_por")
   criadoEm     DateTime         @default(now()) @map("criado_em")
   atualizadoEm DateTime         @updatedAt @map("atualizado_em")
 

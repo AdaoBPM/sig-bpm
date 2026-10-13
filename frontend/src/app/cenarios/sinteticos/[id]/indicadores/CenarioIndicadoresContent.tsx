@@ -19,8 +19,7 @@ import { TabelaIndicadores } from "@/app/relatorios/indicadores/TabelaIndicadore
 import { mensagemDeErro, type MesRelatorio } from "@/app/relatorios/services/relatoriosService";
 
 import { botaoPrimario, Erro } from "../../../components/CenarioDialog";
-import { AvisoComparado } from "../../../components/AvisoComparado";
-import { AvisoMarcado } from "../../../components/AvisoMarcado";
+import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { cenariosService, type IndicadorDoCenario } from "../../../services/cenariosService";
 
 /** As abas: os indicadores da DRE de Produção e Serviços, os lançamentos manuais e as metas orçadas (todos). */
@@ -108,8 +107,9 @@ export function CenarioIndicadoresContent() {
   const { hasPermission } = usePermissions();
   // O cenário marcado não se edita (12/10/2026): os Indicadores Manuais ficam só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
-  const marcacao = cenario.data?.marcacao ?? null;
-  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !marcacao;
+  // Também a versão salva (13/10/2026) trava os Indicadores Manuais.
+  const travado = !!cenario.data && estaTravado(cenario.data);
+  const podeEditar = hasPermission("cenarios:editar") && !!cenario.data && !travado;
   const [aba, setAba] = useState("metas");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
@@ -157,8 +157,7 @@ export function CenarioIndicadoresContent() {
           Indicadores Manuais.
         </p>
       ) : null}
-      <AvisoComparado id={id} texto="a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele, como o orçado em Resultados Realizados." />
-      {manuais && marcacao && hasPermission("cenarios:editar") ? <AvisoMarcado marcacao={marcacao} oQue="os Indicadores Manuais" /> : null}
+      {manuais && cenario.data && travado && hasPermission("cenarios:editar") ? <AvisoMarcado cenario={cenario.data} oQue="os Indicadores Manuais" /> : null}
       {consulta.isError ? (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os indicadores do cenário.")}</p>

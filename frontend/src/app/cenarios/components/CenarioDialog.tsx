@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type Cenario, type Visualizacao } from "../services/cenariosService";
+import { cenariosService, rotuloVersao, type Cenario, type Visualizacao } from "../services/cenariosService";
 
 export const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 export const classeSelect = "h-9 w-full rounded-sm border border-gray-300 bg-white px-3 text-sm";
@@ -187,7 +187,7 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
                   <option value="">Nenhum (cenário vazio)</option>
                   {cenarios.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.nome} ({c.ano})
+                      {c.nome} {rotuloVersao(c.versao)} ({c.ano})
                     </option>
                   ))}
                 </select>

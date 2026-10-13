@@ -59,12 +59,18 @@ const LOTE = 500;
 const MANUAIS = new Set(INDICADORES_DAS_LISTAS);
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano).slice(2)}`;
 
+/** O rótulo da versão: VER00, VER01… */
+export const rotuloVersao = (v: number) => `VER${String(v).padStart(2, "0")}`;
+
 /**
- * A trava dos cenários marcados (12/10/2026): um cenário com marcação (Orçamento Empresarial, Resultados Anteriores ou
- * Resultados Vendidos) não muda de dados — a DRE, os indicadores manuais e a referência (arquivo ou realizado). O nome
- * e a descrição continuam editáveis.
+ * As travas dos dados do cenário — a DRE, os indicadores manuais e a referência (arquivo ou realizado); o nome, a
+ * descrição, o comparativo e as justificativas continuam editáveis:
+ * - o cenário marcado (12/10/2026: Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos);
+ * - a versão salva (13/10/2026: Salvar Versão congela o cenário, como o fechamento de uma competência; para mudar,
+ *   cria-se uma revisão).
  */
-function exigirSemMarcacao(c: { nome: string; marcacao: MarcacaoCenario | null }) {
+function exigirEditavel(c: { nome: string; marcacao: MarcacaoCenario | null; versao: number; versaoSalvaEm: Date | null }) {
+  if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} está salva e não se edita: crie uma revisão (Criar Revisão, na tela Resultados) para editar.`);
   if (c.marcacao) throw new CenarioError(409, `O cenário ${c.nome} está marcado como ${MARCACOES[c.marcacao]} e não se edita: tire a marcação (ou marque outro cenário) antes de editá-lo.`);
 }
 
@@ -208,7 +214,7 @@ function comparar(novos: Map<string, number>, atuais: Map<string, number>) {
 async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: string | null, usuario: Usuario) {
   const prisma = getPrismaClient();
   const existente = cenarioId ? await obterOuFalhar(cenarioId, usuario) : null;
-  if (existente) exigirSemMarcacao(existente);
+  if (existente) exigirEditavel(existente);
   const [resultados, metasAtuais] = existente
     ? await Promise.all([
         prisma.cenarioResultado.findMany({ where: { cenarioId: existente.id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
@@ -523,7 +529,7 @@ export const cenariosService = {
    */
   async gravarValores(id: string, visao: number, alteracoes: Alteracao[], usuario: Usuario, origem?: OrigemDaGravacao) {
     const c = await obterOuFalhar(id, usuario);
-    exigirSemMarcacao(c);
+    exigirEditavel(c);
     let r: Awaited<ReturnType<typeof gravarValores>>;
     try {
       r = await gravarValores(id, visao, alteracoes);
@@ -569,7 +575,7 @@ export const cenariosService = {
    */
   async referenciaRealizado(id: string, ano: number, usuario: Usuario, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) {
     const c = await obterOuFalhar(id, usuario);
-    exigirSemMarcacao(c);
+    exigirEditavel(c);
     const prisma = getPrismaClient();
     const todas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
     if (todas.length === 0) throw new CenarioError(400, `Nenhuma competência de ${ano} está fechada.`);
@@ -658,6 +664,81 @@ export const cenariosService = {
   },
 
   /**
+   * Salvar Versão (13/10/2026): congela o cenário, como o fechamento de uma competência — a DRE, os indicadores manuais
+   * e a referência não se editam mais. Para mudar, cria-se uma revisão.
+   */
+  async salvarVersao(id: string, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} já está salva.`);
+    const depois = await getPrismaClient().cenario.update({ where: { id }, data: { versaoSalvaEm: new Date(), versaoSalvaPor: usuario.nome } });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      antes: { versaoSalvaEm: null },
+      depois: { versaoSalvaEm: depois.versaoSalvaEm },
+      metadados: { salvarVersao: rotuloVersao(c.versao) },
+    });
+    return this.obter(id, usuario);
+  },
+
+  /**
+   * Criar Revisão (13/10/2026): a cópia de uma versão salva numa versão nova da mesma família (a maior + 1: VER01,
+   * VER02…), aberta para edição — um cenário novo, com a DRE, os indicadores, o comparativo e as justificativas da
+   * versão de origem. A marcação não passa: remarca-se à mão.
+   */
+  async criarRevisao(id: string, usuario: Usuario) {
+    const prisma = getPrismaClient();
+    const origem = await obterOuFalhar(id, usuario);
+    if (!origem.versaoSalvaEm) throw new CenarioError(409, `Salve a ${rotuloVersao(origem.versao)} (Salvar Versão) antes de criar uma revisão.`);
+    const familia = origem.familiaId ?? origem.id;
+    const ultima = await prisma.cenario.aggregate({ where: { OR: [{ id: familia }, { familiaId: familia }] }, _max: { versao: true } });
+    const versao = (ultima._max.versao ?? origem.versao) + 1;
+    const revisao = await prisma.$transaction(
+      async (tx) => {
+        const c = await tx.cenario.create({
+          data: {
+            nome: origem.nome,
+            ano: origem.ano,
+            tipo: origem.tipo,
+            descricao: origem.descricao,
+            visualizacao: origem.visualizacao,
+            criadoPor: usuario.nome,
+            criadoPorId: usuario.id || null,
+            nomeArquivo: origem.nomeArquivo,
+            importadoEm: origem.importadoEm,
+            comparadoComId: origem.comparadoComId,
+            variacoesMaximas: origem.variacoesMaximas ?? undefined,
+            versao,
+            familiaId: familia,
+            revisaoDeId: origem.id,
+          },
+        });
+        const resultados = await tx.cenarioResultado.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(resultados, (lote) => tx.cenarioResultado.createMany({ data: lote.map((r) => ({ ...r, cenarioId: c.id })) }));
+        const indicadores = await tx.cenarioIndicador.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((r) => ({ ...r, cenarioId: c.id })) }));
+        const justificativas = await tx.cenarioJustificativa.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(justificativas, (lote) => tx.cenarioJustificativa.createMany({ data: lote.map((j) => ({ ...j, cenarioId: c.id })) }));
+        return c;
+      },
+      { timeout: 120_000 },
+    );
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "CRIACAO",
+      entidade: "cenario",
+      entidadeId: revisao.id,
+      depois: revisao,
+      metadados: { revisaoDe: `${origem.nome} ${rotuloVersao(origem.versao)}`, versao: rotuloVersao(versao) },
+    });
+    return this.obter(revisao.id, usuario);
+  },
+
+  /**
    * O comparativo do cenário (12/10/2026): o cenário comparado, os cenários que o usuário pode escolher e os totais da
    * DRE com a variação máxima (em %) de cada um (nula: o total não se verifica).
    */
@@ -669,7 +750,7 @@ export const cenariosService = {
     const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
     return {
       comparadoCom: comparado,
-      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, marcacao: o.marcacao })),
+      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, marcacao: o.marcacao, versao: o.versao })),
       totais: totais.map((t) => ({ ...t, limite: typeof limites[t.codigo] === "number" ? limites[t.codigo] : null })),
     };
   },
@@ -790,7 +871,7 @@ export const cenariosService = {
 
   /** Grava os lançamentos manuais de um indicador (os 12 meses; vazio apaga o mês). */
   async salvarManual(id: string, nome: string, valores: Array<number | null>, usuario: Usuario) {
-    exigirSemMarcacao(await obterOuFalhar(id, usuario));
+    exigirEditavel(await obterOuFalhar(id, usuario));
     if (!MANUAIS.has(nome)) throw new CenarioError(400, `${nome} não é um lançamento manual: sai da DRE do cenário.`);
     const prisma = getPrismaClient();
     const antes = await prisma.cenarioIndicador.findMany({ where: { cenarioId: id, nome }, orderBy: { mes: "asc" } });

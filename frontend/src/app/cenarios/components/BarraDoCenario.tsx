@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 
 import { usePermissions } from "@/context/PermissionContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { cenariosService, rotuloMarcacao } from "../services/cenariosService";
+import { cenariosService, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
 
 /** As telas de um cenário sintético, como as abas de Resultados Realizados. */
 export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissao?: string }> = [
@@ -55,12 +55,23 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
               <DropdownMenuLabel>Cenários Sintéticos</DropdownMenuLabel>
               {(lista.data ?? []).map((c) => (
                 <DropdownMenuItem key={c.id} onClick={() => router.push(`/cenarios/sinteticos/${c.id}/${tela}`)} className={c.id === id ? "font-bold" : ""}>
-                  {c.nome} · {c.ano}
+                  {c.nome} · {rotuloVersao(c.versao)} · {c.ano}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        {/* A versão (13/10/2026), com o cadeado quando salva. */}
+        {atual ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700"
+            title={atual.versaoSalvaEm ? "Versão salva: os dados não se editam (crie uma revisão)" : "Versão aberta para edição"}
+          >
+            {atual.versaoSalvaEm ? <Lock className="size-3" /> : null}
+            {rotuloVersao(atual.versao)}
+            {atual.versaoSalvaEm ? " · Salva" : ""}
+          </span>
+        ) : null}
         {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">

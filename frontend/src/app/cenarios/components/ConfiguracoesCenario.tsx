@@ -16,7 +16,7 @@ import { competenciasService } from "@/app/competencias/services/competenciasSer
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloMarcacao, type Cenario, type Visualizacao } from "../services/cenariosService";
-import { AvisoMarcado } from "./AvisoMarcado";
+import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
 import { botaoPrimario, CampoVisualizacao, classeSelect, Erro, ExcluirCenarioDialog, OpcaoEmLinha } from "./CenarioDialog";
 import { ComparativoCenario } from "./ComparativoCenario";
 import { MarcarCenarioDialog } from "./MarcarCenarioDialog";
@@ -179,8 +179,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
               <OpcaoEmLinha key={v} nome="referencia" marcada={referencia === v} onMarcar={() => setReferencia(v)} rotulo={rotulo} detalhe={detalhe} Icone={Icone} />
             ))}
           </fieldset>
-          {cenario.marcacao ? (
-            <AvisoMarcado marcacao={cenario.marcacao} oQue="a referência" />
+          {estaTravado(cenario) ? (
+            <AvisoMarcado cenario={cenario} oQue="a referência" />
           ) : referencia === "arquivo" ? (
             <div className="flex justify-end">
               <Button type="button" className={botaoPrimario} onClick={() => setImportando(true)}>

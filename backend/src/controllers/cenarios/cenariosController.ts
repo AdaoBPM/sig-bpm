@@ -160,6 +160,18 @@ export const cenariosController = {
     return responder(response, () => cenariosService.referenciaRealizado(c, ano, usuario(request), opcoes));
   },
 
+  /** Salvar Versão: congela o cenário. */
+  salvarVersao(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.salvarVersao(c, usuario(request))) : undefined;
+  },
+
+  /** Criar Revisão: a cópia da versão salva numa versão nova, aberta para edição. */
+  criarRevisao(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.criarRevisao(c, usuario(request)), 201) : undefined;
+  },
+
   /** O comparativo do cenário: o comparado, as opções e as variações máximas dos totais. */
   comparativo(request: Request, response: Response) {
     const c = id(request, response);
