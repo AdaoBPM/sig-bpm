@@ -145,8 +145,18 @@
   --sidebar-border: #e5e7eb;
 }
 [data-tema="claro"] [data-slot="sidebar-container"] {
-  box-shadow: 2px 0 10px rgb(0 0 0 / 0.08);
   border-right-color: #e5e7eb;
+}
+/*
+ * A sombra que separa o menu lateral das telas, em todos os temas (13/10/2026), acima de tudo o que rola nas telas — o
+ * título fixo (z-20) e os rótulos fixos das tabelas (z-30) não a cortam; os menus e os modais (z-50) ficam acima dela.
+ */
+[data-slot="sidebar-container"] {
+  z-index: 40;
+  box-shadow: 2px 0 10px rgb(0 0 0 / 0.08);
+}
+[data-tema="escuro"] [data-slot="sidebar-container"] {
+  box-shadow: 2px 0 12px rgb(0 0 0 / 0.45);
 }
 
 /*
@@ -214,6 +224,10 @@
 }
 [data-tema="escuro"] .bg-black.text-bpm-primary {
   color: #111827;
+}
+/* Os contornos pretos (o destaque embaixo da aba aberta) ficam claros. */
+[data-tema="escuro"] .border-black {
+  border-color: #f3f4f6;
 }
 /*
  * Onde o fundo continua claro no Escuro — os rótulos amarelo-ouro das tabelas, os botões e faixas amarelo-ouro e as

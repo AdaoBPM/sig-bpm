@@ -45,9 +45,12 @@ function ChartContainer({
   children,
   config,
   initialDimension = INITIAL_DIMENSION,
+  debounce,
   ...props
 }: React.ComponentProps<"div"> & {
   config: ChartConfig
+  /** Espera (ms) antes de redesenhar ao mudar de tamanho (13/10/2026: o Painel de Bordo, ao abrir e fechar o menu lateral). */
+  debounce?: number
   children: React.ComponentProps<
     typeof RechartsPrimitive.ResponsiveContainer
   >["children"]
@@ -73,6 +76,7 @@ function ChartContainer({
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer
           initialDimension={initialDimension}
+          debounce={debounce}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>
