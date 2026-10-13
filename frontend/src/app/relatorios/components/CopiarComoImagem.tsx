@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type RefObject } from "react";
-import { toBlob } from "html-to-image";
+import { getFontEmbedCSS, toBlob } from "html-to-image";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,6 +12,16 @@ function fundoAtras(no: HTMLElement) {
     if (cor && cor !== "transparent" && !/^rgba\(.*,\s*0\)$/.test(cor)) return cor;
   }
   return "#ffffff";
+}
+
+/** As fontes da página para a imagem, lidas uma vez (as próximas cópias saem mais rápido); com erro, lê de novo na próxima. */
+let fontes: Promise<string> | null = null;
+function fontesDaPagina(no: HTMLElement) {
+  fontes ??= getFontEmbedCSS(no).catch(() => {
+    fontes = null;
+    return "";
+  });
+  return fontes;
 }
 
 /**
@@ -29,16 +39,23 @@ export function CopiarComoImagem({ alvo, nome, dica = "Copiar como imagem" }: { 
     const margem = 16;
     const largura = no.offsetWidth + 2 * margem;
     const altura = no.offsetHeight + 2 * margem;
-    const imagem = toBlob(no, {
-      width: largura,
-      height: altura,
-      backgroundColor: fundoAtras(no),
-      style: { margin: "0", padding: `${margem}px`, width: `${largura}px`, height: `${altura}px` },
-      filter: (n) => !(n instanceof HTMLElement && (n.dataset.foraDaImagem !== undefined || n.dataset.slot === "dialog-close")),
-    }).then((b) => {
+    const gerar = async () => {
+      const opcoes: Parameters<typeof toBlob>[1] = {
+        width: largura,
+        height: altura,
+        backgroundColor: fundoAtras(no),
+        style: { margin: "0", padding: `${margem}px`, width: `${largura}px`, height: `${altura}px` },
+        filter: (n) => !(n instanceof HTMLElement && (n.dataset.foraDaImagem !== undefined || n.dataset.slot === "dialog-close")),
+        fontEmbedCSS: await fontesDaPagina(no),
+      };
+      // Duas vezes (13/10/2026): a primeira só aquece o navegador, que às vezes desenha a primeira imagem sem uma parte
+      // do conteúdo (a legenda saiu em branco no gráfico do indicador); vale a segunda.
+      await toBlob(no, opcoes);
+      const b = await toBlob(no, opcoes);
       if (!b) throw new Error("Imagem vazia.");
       return b;
-    });
+    };
+    const imagem = gerar();
     try {
       // A promessa vai direto para a área de transferência, para a cópia valer como feita no clique.
       await navigator.clipboard.write([new ClipboardItem({ "image/png": imagem })]);

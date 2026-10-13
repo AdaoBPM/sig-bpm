@@ -53,7 +53,8 @@ export function GraficoIndicadorDialog({
         initialFocus={() => conteudo.current?.closest<HTMLElement>("[data-slot=\"dialog-content\"]") ?? true}
       >
         <div ref={conteudo} className="grid gap-4">
-          <DialogHeader>
+          {/* O título mais perto do card da descrição (13/10/2026): 16 px entre os dois, em vez de 28. */}
+          <DialogHeader className="-mb-2 pb-2">
             <div className="flex items-center gap-2">
               <DialogTitle className="text-lg font-extrabold text-gray-900">
                 {i.numero ? <span className="mr-2 font-normal text-gray-400">{i.numero}</span> : null}
