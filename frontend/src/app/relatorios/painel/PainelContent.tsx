@@ -1,7 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toBlob } from "html-to-image";
+import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -76,8 +79,9 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 
 /**
  * As cores do sinal (lista Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde, amarelo e
- * vermelho); Daltonismo, com azul no lugar do verde (melhor que o orçado), amarelo e vermelho. O selo do desvio fica
- * num tom claro da mesma cor.
+ * vermelho); Acessíveis (antes, Daltonismo; 13/10/2026), com azul no lugar do verde (melhor que o orçado), amarelo e
+ * vermelho. O selo do desvio fica num tom claro da mesma cor. O valor guardado continua "daltonismo", para manter a
+ * escolha já feita nos navegadores.
  */
 export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
@@ -211,19 +215,95 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
 
 /** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção abaixo da outra. */
 function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
+  const secao = useRef<HTMLElement>(null);
   return (
-    <section>
-      {/* O nome do grupo e o mês de referência (13/10/2026; antes, em cada card): o mês em cinza. */}
-      <h2 className="mb-2 text-base font-bold tracking-wide text-gray-900 uppercase">
-        {q.titulo}
-        <span className="font-semibold text-gray-500"> · {rotuloMes}</span>
-      </h2>
+    <section ref={secao}>
+      {/* O nome do grupo e o mês de referência (13/10/2026; antes, em cada card): o mês em cinza; ao lado, o botão de copiar o grupo. */}
+      <div className="mb-2 flex items-center gap-2">
+        <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">
+          {q.titulo}
+          <span className="font-semibold text-gray-500"> · {rotuloMes}</span>
+        </h2>
+        <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} />
+      </div>
       <div className="space-y-3">
         {q.itens.map((i) => (
           <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
         ))}
       </div>
     </section>
+  );
+}
+
+/** O fundo de verdade atrás do elemento (o do primeiro ancestral com cor), para a imagem ter o fundo da tela no tema escolhido. */
+function fundoAtras(no: HTMLElement) {
+  for (let e: HTMLElement | null = no; e; e = e.parentElement) {
+    const cor = getComputedStyle(e).backgroundColor;
+    if (cor && cor !== "transparent" && !/^rgba\(.*,\s*0\)$/.test(cor)) return cor;
+  }
+  return "#ffffff";
+}
+
+/**
+ * O botão Copiar como Imagem (13/10/2026), ao lado do nome do grupo: o grupo inteiro (o título e os cards, sem o botão)
+ * numa imagem PNG, com o fundo da tela e uma margem, na área de transferência, para colar num e-mail ou numa
+ * apresentação. Sem acesso à área de transferência (o endereço sem https, ou o navegador sem suporte), baixa o arquivo.
+ */
+function CopiarComoImagem({ alvo, nome }: { alvo: RefObject<HTMLElement | null>; nome: string }) {
+  const [estado, setEstado] = useState<"livre" | "gerando" | "copiado">("livre");
+  const copiar = async () => {
+    const no = alvo.current;
+    if (!no || estado === "gerando") return;
+    setEstado("gerando");
+    const margem = 16;
+    const largura = no.offsetWidth + 2 * margem;
+    const altura = no.offsetHeight + 2 * margem;
+    const imagem = toBlob(no, {
+      width: largura,
+      height: altura,
+      backgroundColor: fundoAtras(no),
+      style: { margin: "0", padding: `${margem}px`, width: `${largura}px`, height: `${altura}px` },
+      filter: (n) => !(n instanceof HTMLElement && n.dataset.foraDaImagem !== undefined),
+    }).then((b) => {
+      if (!b) throw new Error("Imagem vazia.");
+      return b;
+    });
+    try {
+      // A promessa vai direto para a área de transferência, para a cópia valer como feita no clique.
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": imagem })]);
+      toast.success(`${nome}: copiado como imagem.`);
+      setEstado("copiado");
+      setTimeout(() => setEstado("livre"), 2000);
+      return;
+    } catch {
+      // Sem a área de transferência: baixa a imagem (abaixo).
+    }
+    try {
+      const url = URL.createObjectURL(await imagem);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${nome.replace(/[\\/:*?"<>|]/g, "-")}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${nome}: o navegador não deixou copiar, a imagem foi baixada.`);
+    } catch {
+      toast.error("Não foi possível gerar a imagem do grupo.");
+    }
+    setEstado("livre");
+  };
+  const Icone = estado === "copiado" ? Check : Copy;
+  return (
+    <button
+      type="button"
+      data-fora-da-imagem
+      onClick={copiar}
+      disabled={estado === "gerando"}
+      title="Copiar o grupo como imagem"
+      aria-label={`Copiar ${nome} como imagem`}
+      className="inline-flex size-7 items-center justify-center rounded-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-wait disabled:opacity-60"
+    >
+      <Icone className="size-4" />
+    </button>
   );
 }
 
@@ -289,7 +369,7 @@ function LegendaDoPainel({ tipo }: { tipo: TipoGrafico }) {
   );
 }
 
-/** A lista Cores (Padrão ou Daltonismo), guardada neste navegador; a mesma nos dois painéis. */
+/** A lista Cores (Padrão ou Acessíveis), guardada neste navegador; a mesma nos dois painéis. */
 export function useCoresDoPainel(): [Cores, (c: Cores) => void] {
   const [cores, setCores] = useState<Cores>(() => guardado(CHAVE_CORES, ["padrao", "daltonismo"] as const, "padrao"));
   return [
@@ -309,7 +389,7 @@ export function SeletorCores({ cores, onMudar }: { cores: Cores; onMudar: (c: Co
       largura="w-32"
       opcoes={[
         { valor: "padrao", rotulo: "Padrão" },
-        { valor: "daltonismo", rotulo: "Daltonismo" },
+        { valor: "daltonismo", rotulo: "Acessíveis" },
       ]}
     />
   );
@@ -343,7 +423,7 @@ export function PainelContent() {
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [aba, setAba] = useState("resultados");
-  // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Daltonismo), lembrados neste navegador.
+  // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Acessíveis), lembrados neste navegador.
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
   const [comRotulos, setComRotulos] = useRotulosDosValores();
   const [cores, setCores] = useCoresDoPainel();
@@ -371,17 +451,22 @@ export function PainelContent() {
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em
-              cima, o nome e a legenda (a sigla, o sentido e o mês de referência); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
+              cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
               um com o valor em destaque e, à direita, o selo do desvio e o orçado (vs. Orçado); e, ao lado, o gráfico dos meses do exercício, com
               o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
             <li>
               Tipo: Barras (colunas do realizado e do orçado, como na planilha) ou Área (o realizado numa área amarela, mais forte no máximo do
               período e transparente no zero, com o contorno em amarelo-ouro, e o orçado numa linha preta; no gráfico do acumulado, a coluna do
-              realizado com o mesmo degradê e o orçado como uma linha preta). Cores: Padrão (verde, amarelo e vermelho) ou Daltonismo (azul
-              no lugar do verde, amarelo e vermelho); a legenda acompanha.
+              realizado com o mesmo degradê e o orçado como uma linha preta). Cores: Padrão (verde, amarelo e vermelho) ou Acessíveis (azul
+              no lugar do verde, amarelo e vermelho, para quem não distingue o verde do vermelho); a legenda acompanha.
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
+            <li>
+              Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita. O botão ao lado do
+              nome de cada grupo copia o grupo inteiro (o nome e os cards) como imagem, para colar num e-mail ou numa apresentação; se o navegador não
+              deixar copiar, a imagem é baixada.
+            </li>
             <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, o orçado fica zero.</li>
           </ul>
         }
@@ -399,7 +484,7 @@ export function PainelContent() {
             </p>
             <p>
               O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O sinal fica verde
-              (azul, nas cores para daltonismo) quando o realizado está do lado bom do orçado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%. O lado bom depende
+              (azul, nas cores Acessíveis) quando o realizado está do lado bom do orçado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%. O lado bom depende
               do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
             </p>
             <p>

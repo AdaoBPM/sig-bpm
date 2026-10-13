@@ -13,7 +13,7 @@ const TOPO_COM_ROTULOS = 34;
 const numero = (v: number | null): v is number => v !== null && Number.isFinite(v);
 
 /**
- * O gráfico pequeno dos cards do Painel de Bordo (13/10/2026; antes, o GraficoRealizadoOrcado, do Recharts): o mesmo
+ * O gráfico dos cards do Painel de Bordo e do indicador em Indicadores (13/10/2026; antes, o GraficoRealizadoOrcado, do Recharts): o mesmo
  * desenho — as colunas do realizado (amarelo-ouro) e do orçado (preto), ou a área do realizado com o degradê e a linha
  * do orçado — num SVG simples que se estica com a caixa (viewBox sem proporção fixa), sem medir a largura nem se
  * redesenhar: o painel tem dezenas de gráficos, e os do Recharts deixavam a rolagem e o menu lateral lentos. Os meses
@@ -26,6 +26,7 @@ export function MiniGrafico({
   tipo = "barras",
   comRotulos = false,
   comEscala = false,
+  topoComRotulos = TOPO_COM_ROTULOS,
 }: {
   dados: MesDoGrafico[];
   /** O valor com a unidade (a dica do mês). */
@@ -37,6 +38,8 @@ export function MiniGrafico({
   comRotulos?: boolean;
   /** Os valores da escala à esquerda (sem os rótulos, 13/10/2026), no mesmo formato dos rótulos. */
   comEscala?: boolean;
+  /** O espaço em cima para os rótulos, em % da altura (o gráfico grande de Indicadores precisa de menos). */
+  topoComRotulos?: number;
 }) {
   const rotulos = useRotulosDoGrafico();
   const gradiente = `mini-${useId().replace(/:/g, "")}`;
@@ -46,8 +49,14 @@ export function MiniGrafico({
   const max = Math.max(0, ...valores);
   const min = Math.min(0, ...valores);
   const faixa = max - min || 1;
-  const topo = comRotulos ? TOPO_COM_ROTULOS : TOPO;
-  const y = (v: number) => topo + ((max - v) / faixa) * (100 - topo);
+  // Com os rótulos, o espaço deles em cima dos positivos e, havendo negativos, também embaixo (13/10/2026: os rótulos dos
+  // negativos saíam do gráfico, por cima dos meses).
+  // O espaço cresce com o rótulo mais comprido do lado (o padrão vale para uns 4 caracteres, como "10,2"), até a metade.
+  const espaco = (lado: number[]) => Math.min(50, (topoComRotulos * Math.max(4, ...lado.map((v) => formatarCurto(v).length))) / 4.5);
+  const topo = comRotulos && max > 0 ? espaco(valores.filter((v) => v > 0)) : TOPO;
+  const pe = comRotulos && min < 0 ? espaco(valores.filter((v) => v < 0)) : 0;
+  const util = 100 - topo - pe;
+  const y = (v: number) => topo + ((max - v) / faixa) * util;
   const zero = y(0);
   const faixaX = 100 / n;
   const centro = (i: number) => (i + 0.5) * faixaX;
@@ -62,7 +71,7 @@ export function MiniGrafico({
   const realizados = dados.map((d, i) => ({ i, v: d.realizado })).filter((p): p is { i: number; v: number } => numero(p.v));
   const traco = { vectorEffect: "non-scaling-stroke" as const };
   // A escala: o valor nas linhas da grade (em cima, a cada quarto e embaixo).
-  const linhasDaEscala = [0, 0.25, 0.5, 0.75, 1].map((f) => ({ topo: topo + f * (100 - topo), valor: max - f * faixa }));
+  const linhasDaEscala = [0, 0.25, 0.5, 0.75, 1].map((f) => ({ topo: topo + f * util, valor: max - f * faixa }));
   const meses = (
     <div className="grid pt-1 text-center text-[10px] text-muted-foreground" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
       {dados.map((d, i) => (
@@ -106,7 +115,7 @@ export function MiniGrafico({
             </defs>
             {/* A grade e a linha do zero (um pouco mais escura e grossa). */}
             {[0.25, 0.5, 0.75].map((f) => (
-              <line key={f} x1={0} x2={100} y1={topo + f * (100 - topo)} y2={topo + f * (100 - topo)} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
+              <line key={f} x1={0} x2={100} y1={topo + f * util} y2={topo + f * util} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
             ))}
             {foco !== null ? <rect x={foco * faixaX} y={0} width={faixaX} height={100} style={{ fill: "var(--color-gray-100)" }} /> : null}
             {!area ? (
@@ -154,30 +163,39 @@ export function MiniGrafico({
                 ),
               )
             : null}
-          {/* Os rótulos dos valores: os do orçado primeiro e os do realizado depois, por cima quando se sobrepõem. */}
+          {/*
+            Os rótulos dos valores (13/10/2026): o do realizado à esquerda do centro do mês e o do orçado à direita, sem se
+            cruzarem. Cada um numa faixa de meia coluna (nas Barras, a da coluna da série, com o rótulo no meio dela; na
+            Área, a metade do mês, com o rótulo encostado no centro); o rótulo mais largo que a faixa sai para o lado de fora.
+          */}
           {comRotulos
             ? (["orcado", "realizado"] as const).flatMap((k) =>
                 dados.map((d, i) => {
                   const v = d[k];
                   if (!numero(v)) return null;
-                  // Nas colunas, sobre a coluna da série (o realizado à esquerda); na área, sobre o ponto.
-                  const x = area ? centro(i) : centro(i) + (k === "realizado" ? -coluna / 2 : coluna / 2);
+                  const esquerda = k === "realizado";
+                  const meia = area ? faixaX / 2 : coluna;
                   const negativo = v < 0;
                   const yv = area ? y(v) : negativo ? Math.max(y(v), zero) : Math.min(y(v), zero);
                   return (
-                    <span
+                    <div
                       key={`r-${k}-${i}`}
-                      className={`pointer-events-none absolute rounded-[2px] border bg-white py-0.5 text-[11px] leading-[13px] font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
+                      className={`pointer-events-none absolute flex ${esquerda ? "z-[2] flex-row-reverse pr-0.5" : "z-[1] pl-0.5"}`}
                       style={{
-                        left: `${x}%`,
+                        left: `${esquerda ? centro(i) - meia : centro(i)}%`,
+                        width: `${meia}%`,
                         top: `${yv}%`,
-                        // Na vertical, lido de baixo para cima (13/10/2026): o texto em pé, girado meia volta.
-                        transform: negativo ? "translate(-50%, 3px) rotate(180deg)" : "translate(-50%, calc(-100% - 3px)) rotate(180deg)",
-                        borderColor: k === "realizado" ? OURO : PRETO,
+                        transform: negativo ? "translateY(3px)" : "translateY(calc(-100% - 3px))",
                       }}
                     >
-                      {formatarCurto(v)}
-                    </span>
+                      <span
+                        className={`shrink-0 rounded-[2px] border bg-white py-0.5 text-[12px] leading-[14px] font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${area ? "" : "mx-auto"}`}
+                        // Na vertical, lido de baixo para cima: o texto em pé, girado meia volta.
+                        style={{ transform: "rotate(180deg)", borderColor: esquerda ? OURO : PRETO }}
+                      >
+                        {formatarCurto(v)}
+                      </span>
+                    </div>
                   );
                 }),
               )

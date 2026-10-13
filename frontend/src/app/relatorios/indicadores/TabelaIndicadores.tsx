@@ -32,6 +32,12 @@ export function valor(i: Pick<Indicador, "unidade">, v: number | null) {
   }
 }
 
+/** O valor sem a unidade (os rótulos e a escala do gráfico do indicador, 13/10/2026): as mesmas casas, sem o %. */
+export function valorCurto(i: Pick<Indicador, "unidade">, v: number | null) {
+  if (v === null || i.unidade !== "%") return valor(i, v);
+  return formato.umaCasa(v * 100);
+}
+
 /** As larguras das colunas fixas (Indicador, Sent., Und.) e das de valor. */
 const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado: 124, orcado: 148 };
 

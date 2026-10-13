@@ -3,29 +3,37 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 
-import { GraficoRealizadoOrcado, LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
+import { LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
+import { MiniGrafico } from "../components/MiniGrafico";
 import type { Indicador, MesRelatorio } from "../services/relatoriosService";
 
 const SENTIDO: Record<string, string> = { "↑": "quanto maior, melhor", "↓": "quanto menor, melhor", "=": "acompanhamento", "-": "sem sentido definido" };
 
 /**
  * O gráfico de um indicador (Indicadores, 09/10/2026): os meses do exercício até o escolhido, realizado × orçado, no
- * padrão dos gráficos do Painel de Bordo (realizado em amarelo-ouro, orçado em preto), com os valores no alto das
- * colunas; acima, o último mês e o acumulado.
+ * padrão dos gráficos do Painel de Bordo (realizado em amarelo-ouro, orçado em preto); acima, o último mês e o
+ * acumulado. Desde 13/10/2026, o mesmo gráfico dos cards do painel (MiniGrafico): com os Rótulos, os valores na
+ * vertical (o realizado à esquerda do centro do mês, o orçado à direita); sem eles, a escala à esquerda.
  */
 export function GraficoIndicadorDialog({
   indicador: i,
   meses,
   formatar,
+  formatarCurto = formatar,
   tipo = "barras",
+  comRotulos = false,
   onFechar,
 }: {
   indicador: Indicador;
   meses: MesRelatorio[];
   /** O valor na unidade do indicador, como na tabela. */
   formatar: (v: number | null) => string;
+  /** O valor sem a unidade, com as mesmas casas (os rótulos e a escala). */
+  formatarCurto?: (v: number | null) => string;
   /** Barras ou Área (a lista Tipo da tela). */
   tipo?: TipoGrafico;
+  /** Os valores escritos no gráfico (a lista Rótulos da tela); sem eles, a escala. */
+  comRotulos?: boolean;
   onFechar: () => void;
 }) {
   const dados = meses.map((m, k) => ({ mes: m.rotulo.split("/")[0], realizado: i.meses[k], orcado: i.orcado[k] }));
@@ -54,10 +62,13 @@ export function GraficoIndicadorDialog({
           ]}
         />
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+        {/* A legenda à direita, como no Painel de Bordo. */}
+        <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-1 text-xs text-gray-600">
           <LegendaRealizadoOrcado tipo={tipo} />
         </div>
-        <GraficoRealizadoOrcado dados={dados} formatar={formatar} className="h-80" rotulosDosValores tipo={tipo} />
+        <div className="h-80">
+          <MiniGrafico dados={dados} formatar={formatar} formatarCurto={formatarCurto} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} topoComRotulos={20} />
+        </div>
       </DialogContent>
     </Dialog>
   );

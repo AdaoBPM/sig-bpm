@@ -8,11 +8,11 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
-import { SeletorTipoGrafico, useTipoGrafico } from "../components/GraficoRealizadoOrcado";
+import { SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "../components/GraficoRealizadoOrcado";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { mensagemDeErro, relatoriosService, type Indicador } from "../services/relatoriosService";
 import { GraficoIndicadorDialog } from "./GraficoIndicadorDialog";
-import { TabelaIndicadores, valor } from "./TabelaIndicadores";
+import { TabelaIndicadores, valor, valorCurto } from "./TabelaIndicadores";
 
 /**
  * A tela Indicadores (Resultados Realizados), com o exercício e o mês
@@ -41,6 +41,8 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
   const abreGrafico = !periodoFixo;
   // O tipo do gráfico do indicador (Barras ou Área), o mesmo do Painel de Bordo.
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
+  // Os rótulos dos valores no gráfico (Com ou Sem, 13/10/2026), os mesmos do Painel de Bordo.
+  const [comRotulos, setComRotulos] = useRotulosDosValores();
 
   return (
     <div className="space-y-6">
@@ -63,6 +65,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               <>
               <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (do cenário Orçamento Empresarial) em preto, como no Painel de Bordo, e o último mês e o acumulado no alto.</li>
               <li>Na lista Tipo, escolha Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, transparente no zero e forte no máximo do período, com o contorno em amarelo-ouro, e o orçado numa linha preta). A escolha vale também para o Painel de Bordo e fica guardada neste navegador.</li>
+              <li>Na lista Rótulos, Com escreve os valores de cada mês no gráfico, na vertical, só com o número (o realizado à esquerda do centro do mês, o orçado à direita); Sem mostra a escala à esquerda. Como no Painel de Bordo, a escolha vale para os dois e fica guardada neste navegador.</li>
               </>
             )}
             <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
@@ -115,7 +118,12 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                   onAte={setAte}
                 />
               )}
-              {abreGrafico ? <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} /> : null}
+              {abreGrafico ? (
+                <>
+                  <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
+                  <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
+                </>
+              ) : null}
               <ExportarRelatorio
                 caminho="indicadores"
                 padrao={periodoFixo ? `Indicadores ${ano}-${String(ate).padStart(2, "0")}` : `Indicadores ${ano}`}
@@ -155,7 +163,15 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             comOrcado={!periodoFixo}
           />
           {comGrafico ? (
-            <GraficoIndicadorDialog indicador={comGrafico} meses={dados.meses} formatar={(v) => valor(comGrafico, v)} tipo={tipoGrafico} onFechar={() => setComGrafico(null)} />
+            <GraficoIndicadorDialog
+              indicador={comGrafico}
+              meses={dados.meses}
+              formatar={(v) => valor(comGrafico, v)}
+              formatarCurto={(v) => valorCurto(comGrafico, v)}
+              tipo={tipoGrafico}
+              comRotulos={comRotulos}
+              onFechar={() => setComGrafico(null)}
+            />
           ) : null}
         </>
       )}

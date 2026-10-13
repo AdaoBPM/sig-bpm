@@ -49,9 +49,17 @@ export function CenarioPainelContent() {
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
-              Cada card traz o nome e a legenda em cima; embaixo, o Cenário (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o
-              valor em destaque e, à direita, o selo do desvio e o valor do cenário comparado (vs. Comparado); e os gráficos dos meses e do
-              acumulado (o cenário em amarelo-ouro, o comparado em preto).
+              Cada card traz o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Cenário
+              (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o valor em destaque e, à direita, o selo do desvio e o valor do
+              cenário comparado (vs. Comparado); e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
+            </li>
+            <li>
+              Com os Rótulos, o valor do cenário fica à esquerda do centro de cada mês (e do acumulado) e o do comparado à direita. Cores: Padrão
+              (verde, amarelo e vermelho) ou Acessíveis (azul no lugar do verde, para quem não distingue o verde do vermelho).
+            </li>
+            <li>
+              O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como imagem, para colar num e-mail ou numa
+              apresentação; se o navegador não deixar copiar, a imagem é baixada.
             </li>
             <li>
               O comparado é o cenário escolhido em Configurações / Comparativo; sem ele, essa parte fica vazia (—), e o aviso traz o botão
@@ -67,7 +75,7 @@ export function CenarioPainelContent() {
               no lugar do orçado.
             </p>
             <p>
-              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O sinal fica verde (azul, nas cores para daltonismo) quando
+              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O sinal fica verde (azul, nas cores Acessíveis) quando
               o cenário está do lado bom do comparado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%; o lado bom depende do sentido do
               indicador (↑ ou ↓).
             </p>
