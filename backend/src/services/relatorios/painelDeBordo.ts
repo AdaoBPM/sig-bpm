@@ -140,7 +140,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
         base: { conta: (x) => div(x(N.RF), x(N.MC)), rotulo: "(/MC)", casas: 1 },
       },
       { titulo: "Resultado Líquido", sigla: "RL", sentido: "↑", formato: "MILHOES", conta: ind(N.RL), base: sobre(N.RL, N.RL_TOTAL) },
-      { titulo: "Fluxo de Caixa Operacional Líquido", sigla: "FCOL", sentido: "↑", formato: "MILHOES", conta: ind(N.FCOL), base: sobre(N.FCOL, N.RL_TOTAL) },
+      { titulo: "FCO Líquido", sigla: "FCOL", sentido: "↑", formato: "MILHOES", conta: ind(N.FCOL), base: sobre(N.FCOL, N.RL_TOTAL) },
     ],
   },
   {

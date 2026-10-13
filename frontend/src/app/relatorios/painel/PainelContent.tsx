@@ -119,16 +119,13 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
         </div>
         <SeloDesvio b={b} />
       </header>
-      {/* "Realizado" e "Orçado" no mesmo tamanho, cada um acima do valor (09/10/2026). */}
-      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-        <div className="min-w-0">
-          <p className="text-xs text-gray-600">{rotulos.realizado}</p>
-          <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
-        </div>
-        <div className="pb-1 text-right text-xs whitespace-nowrap text-gray-600">
-          <p>{rotulos.orcado}</p>
-          <p className="font-bold text-gray-900">{formatar(b.orcado, formato)}</p>
-        </div>
+      {/* O realizado em destaque e, embaixo dele, o orçado (13/10/2026; antes, lado a lado): o grupo cabe em 1/5 do card. */}
+      <div className="mt-auto pt-2">
+        <p className="text-xs text-gray-600">{rotulos.realizado}</p>
+        <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
+        <p className="mt-1 text-xs whitespace-nowrap text-gray-600">
+          {rotulos.orcado}: <span className="font-bold text-gray-900">{formatar(b.orcado, formato)}</span>
+        </p>
       </div>
       <p className="h-4 text-xs text-gray-500">{base}</p>
     </div>
@@ -137,7 +134,7 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
 
 /**
  * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado um pouco mais estreitos que o gráfico (1 : 1 : 1,6; o gráfico com o do acumulado ao lado desde 10/10/2026): o Atual (o mês de referência), o Acumulado e o
+ * painel-cards-lado-a-lado do git), em três grupos: o Atual e o Acumulado com 2/5 do card, 1/5 cada (1 : 1 : 3, desde 13/10/2026; antes, 1 : 1 : 1,6), e o gráfico com 3/5 (o do acumulado ao lado desde 10/10/2026): o Atual (o mês de referência), o Acumulado e o
  * Gráfico dos meses do exercício (realizado × orçado, como os da planilha). Em telas estreitas, um grupo abaixo do outro.
  */
 function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
@@ -147,7 +144,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
     </span>
   );
   return (
-    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
+    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:gap-0 lg:divide-x lg:divide-gray-100 lg:[&>*]:px-5 lg:[&>*:first-child]:pl-0 lg:[&>*:last-child]:pr-0">
       {/* O nome por extenso quebra a linha, em vez de cortar (13/10/2026). */}
       <GrupoPeriodo
         titulo={
