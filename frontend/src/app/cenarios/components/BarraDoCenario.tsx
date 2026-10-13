@@ -11,15 +11,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { cenariosService, rotuloMarcacao } from "../services/cenariosService";
 
 /** As telas de um cenário sintético, como as abas de Resultados Realizados. */
-export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissao?: string; soComComparativo?: boolean }> = [
+export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissao?: string }> = [
   // As configurações do cenário (12/10/2026): só para quem edita os cenários; a DRE se edita em Resultados.
   { caminho: "configuracoes", rotulo: "Configurações", permissao: "cenarios:editar" },
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
   // O histórico de reajustes do cenário (12/10/2026).
   { caminho: "reajustes", rotulo: "Reajustes" },
-  // As justificativas do comparativo (12/10/2026): só com um cenário comparado (aba Comparar dos Resultados).
-  { caminho: "justificativas", rotulo: "Justificativas", soComComparativo: true },
+  // O comparativo com outro cenário (13/10/2026; antes, a tela Justificativas, só com um cenário comparado): as abas
+  // Referência (o cenário comparado e as variações máximas) e Justificativas.
+  { caminho: "comparativo", rotulo: "Comparativo" },
 ];
 
 /** A rota de uma tela de cenário: o id e a tela. */
@@ -30,8 +31,8 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 
 /**
  * A barra de um cenário, no formato da barra de etapas do mês: o cenário em amarelo-ouro no início (com a troca
- * de cenário, que mantém a tela) e as telas Configurações (para quem edita), Resultados, Indicadores, Reajustes e, com um
- * cenário comparado, Justificativas, com a atual em destaque.
+ * de cenário, que mantém a tela) e as telas Configurações (para quem edita), Resultados, Indicadores, Reajustes e
+ * Comparativo, com a atual em destaque.
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();
@@ -66,7 +67,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
         {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
-        {TELAS_DO_CENARIO.filter((t) => (!t.permissao || hasPermission(t.permissao)) && (!t.soComComparativo || !!atual?.comparadoComId || t.caminho === tela)).map((t) => {
+        {TELAS_DO_CENARIO.filter((t) => !t.permissao || hasPermission(t.permissao)).map((t) => {
           const ativa = t.caminho === tela;
           return (
             <li key={t.caminho} className="flex shrink-0 items-center">

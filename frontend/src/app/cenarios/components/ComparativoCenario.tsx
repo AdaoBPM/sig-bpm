@@ -18,8 +18,9 @@ const QUADRO = "space-y-4 rounded-sm border border-gray-200 bg-white p-5";
 const TITULO = "text-sm font-bold tracking-wide text-gray-900 uppercase";
 
 /**
- * A aba Comparar dos Resultados de um cenário (12/10/2026): o cenário com que este se compara e a variação máxima (em
- * %) de cada total da DRE. Com um cenário comparado, a tela Justificativas lista as contas que passam da variação.
+ * A aba Referência da tela Comparativo (13/10/2026; antes, a aba Comparar dos Resultados): o cenário com que este se
+ * compara e a variação máxima (em %) de cada total da DRE. Com um cenário comparado, a aba Justificativas lista as
+ * contas que passam da variação.
  */
 export function ComparativoCenario({ id, podeEditar }: { id: string; podeEditar: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "comparativo"], queryFn: () => cenariosService.comparativo(id) });
@@ -70,8 +71,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
           </div>
           <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">
             {comparado
-              ? "Cada conta se compara, mês a mês e em cada aba, com a mesma conta do cenário escolhido. As que passam da variação máxima do total delas aparecem na tela Justificativas."
-              : "Sem cenário comparado, o comparativo fica desligado e a tela Justificativas não aparece. As variações máximas ficam guardadas."}
+              ? "Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima do total delas aparecem na aba Justificativas."
+              : "Sem cenário comparado, o comparativo fica desligado e a aba Justificativas não aparece. As variações máximas ficam guardadas."}
           </p>
         </div>
       </section>

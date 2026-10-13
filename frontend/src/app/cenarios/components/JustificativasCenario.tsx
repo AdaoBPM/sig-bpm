@@ -1,21 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Abas } from "@/components/shared/Abas";
-import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
-import { usePermissions } from "@/context/PermissionContext";
-import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { formato, mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { botaoPrimario, Erro } from "../../../components/CenarioDialog";
-import { cenariosService, type ItemJustificativa } from "../../../services/cenariosService";
+import { cenariosService, type ItemJustificativa } from "../services/cenariosService";
+import { botaoPrimario, Erro } from "./CenarioDialog";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const QUADRO = "rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-700";
@@ -23,14 +18,11 @@ const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateSt
 const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
 /**
- * A tela Justificativas de um cenário (12/10/2026): com um cenário comparado (aba Comparar dos Resultados), as contas
- * de cada aba da DRE com algum mês acima da variação máxima do total delas, os meses e a justificativa de cada uma.
+ * A aba Justificativas da tela Comparativo (12/10/2026; antes, a tela Justificativas): com um cenário comparado (aba
+ * Referência), as contas de cada aba da DRE com algum mês acima da variação máxima do total delas, os meses e a
+ * justificativa de cada uma.
  */
-export function JustificativasContent() {
-  const { id } = useParams<{ id: string }>();
-  useRegistrarAcessoTela(`/cenarios/sinteticos/${id}/justificativas`);
-  const { hasPermission } = usePermissions();
-  const podeEditar = hasPermission("cenarios:editar");
+export function JustificativasCenario({ id, podeEditar, onIrParaReferencia }: { id: string; podeEditar: boolean; onIrParaReferencia: () => void }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "justificativas"], queryFn: () => cenariosService.justificativas(id) });
   const [visao, setVisao] = useState("0");
   const [soPendentes, setSoPendentes] = useState(false);
@@ -40,35 +32,16 @@ export function JustificativasContent() {
   const pendentes = (dados?.visoes ?? []).reduce((s, v) => s + v.itens.filter((i) => !i.justificativa).length, 0);
   return (
     <div className="space-y-6">
-      <CabecalhoDaTela
-        titulo="Justificativas"
-        comoUsar={
-          <ul>
-            <li>A tela aparece quando o cenário tem um cenário comparado (aba Comparar da tela Resultados, onde também se define a variação máxima de cada total).</li>
-            <li>Escolha a aba da DRE: Consolidado ou cada unidade. O número em cada aba é o de contas acima da variação.</li>
-            <li>Cada linha é uma conta com algum mês acima da variação máxima do total dela: os meses mostram a variação (passe o mouse para ver o valor do cenário e o do comparado). “Sem base”: o comparado é zero no mês.</li>
-            <li>Digite a justificativa e clique em “Gravar”; apagar o texto e gravar apaga a justificativa. “Só Sem Justificativa” esconde as já justificadas.</li>
-            <li>A lista se refaz a cada abertura: uma conta que deixa de passar da variação sai da lista (a justificativa fica guardada e volta se ela passar de novo).</li>
-          </ul>
-        }
-        sobre={
-          <p>
-            As contas do cenário que variam, num mês, mais do que a variação máxima do total delas em relação ao cenário comparado: a variação é a
-            diferença para o comparado dividida pelo valor do comparado, para mais ou para menos. O total sem contas embaixo (como a Margem Bruta e o
-            EBITDA) se compara ele mesmo.
-          </p>
-        }
-      />
       {consulta.isError ? (
         <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as justificativas.")} />
       ) : consulta.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
       ) : !dados?.comparadoCom ? (
         <p className={QUADRO}>
-          O cenário não tem comparativo. Escolha um cenário para comparar na aba Comparar da tela{" "}
-          <Link href={`/cenarios/sinteticos/${id}/resultados`} className="font-medium text-gray-900 underline underline-offset-2">
-            Resultados
-          </Link>
+          O cenário não tem comparativo. Escolha um cenário para comparar na aba{" "}
+          <button type="button" onClick={onIrParaReferencia} className="font-medium text-gray-900 underline underline-offset-2">
+            Referência
+          </button>
           .
         </p>
       ) : (

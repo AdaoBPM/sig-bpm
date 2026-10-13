@@ -2,13 +2,13 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { SemLeitura } from "@/components/shared/SemLeitura";
 
-import { JustificativasContent } from "./JustificativasContent";
+import { ComparativoContent } from "./ComparativoContent";
 
-export default function JustificativasDoCenarioPage() {
+export default function ComparativoDoCenarioPage() {
   return (
     <ProtectedLayout>
       <PermissionGuard permission="cenarios:ler" fallback={<SemLeitura />}>
-        <JustificativasContent />
+        <ComparativoContent />
       </PermissionGuard>
     </ProtectedLayout>
   );
