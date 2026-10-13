@@ -115,7 +115,6 @@ export function CenarioIndicadoresContent() {
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   const dados = consulta.data;
   const daAba = useMemo(() => dados?.indicadores.filter(DA_ABA[aba]) ?? [], [dados, aba]);
-  const contagem = (chave: string) => dados?.indicadores.filter(DA_ABA[chave]).length;
   const manuais = aba === "manuais";
 
   return (
@@ -149,7 +148,7 @@ export function CenarioIndicadoresContent() {
           </>
         }
       />
-      <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={ABAS.map((a) => ({ chave: a.chave, rotulo: a.rotulo, contagem: contagem(a.chave) }))} />
+      <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={ABAS.map((a) => ({ chave: a.chave, rotulo: a.rotulo }))} />
       {aba === "metas" ? (
         <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           As Metas são o compilado dos indicadores: os Indicadores de Resultados (que saem da DRE do cenário) e os Indicadores Manuais, com as
