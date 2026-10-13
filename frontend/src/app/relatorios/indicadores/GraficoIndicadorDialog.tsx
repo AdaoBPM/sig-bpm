@@ -3,7 +3,6 @@
 import { useRef } from "react";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
@@ -15,8 +14,9 @@ const SENTIDO: Record<string, string> = { "↑": "Quanto Maior, Melhor", "↓": 
 
 /**
  * O gráfico de um indicador (Indicadores, 09/10/2026): os meses do exercício até o escolhido, realizado × orçado, no
- * padrão dos gráficos do Painel de Bordo (realizado em amarelo-ouro, orçado em preto); acima, o último mês e o
- * acumulado. Desde 13/10/2026, o mesmo gráfico dos cards do painel (MiniGrafico): com os Rótulos, os valores na
+ * padrão dos gráficos do Painel de Bordo (realizado em amarelo-ouro, orçado em preto), e, depois do último mês, o
+ * gráfico do acumulado (ACUM.), como nos cards do painel (13/10/2026; saíram os quadros do último mês e do acumulado, e
+ * a descrição foi para a linha da legenda). Desde 13/10/2026, o mesmo gráfico dos cards do painel (MiniGrafico): com os Rótulos, os valores na
  * vertical (o realizado à esquerda do centro do mês, o orçado à direita); sem eles, a escala à esquerda. Ao lado do
  * nome, o botão de copiar o modal como imagem, como o dos grupos do Painel de Bordo.
  */
@@ -47,7 +47,11 @@ export function GraficoIndicadorDialog({
   const conteudo = useRef<HTMLDivElement>(null);
   return (
     <Dialog open onOpenChange={(aberto) => (aberto ? undefined : onFechar())}>
-      <DialogContent className="w-[min(64rem,calc(100%_-_2rem))] max-w-none gap-4 rounded-sm sm:max-w-none">
+      {/* O foco inicial no próprio modal, não no botão de copiar (o único botão dele). */}
+      <DialogContent
+        className="w-[min(64rem,calc(100%_-_2rem))] max-w-none gap-4 rounded-sm sm:max-w-none"
+        initialFocus={() => conteudo.current?.closest<HTMLElement>("[data-slot=\"dialog-content\"]") ?? true}
+      >
         <div ref={conteudo} className="grid gap-4">
           <DialogHeader>
             <div className="flex items-center gap-2">
@@ -57,28 +61,38 @@ export function GraficoIndicadorDialog({
               </DialogTitle>
               <CopiarComoImagem alvo={conteudo} nome={i.nome} dica="Copiar o gráfico como imagem" />
             </div>
+          </DialogHeader>
+
+          {/* A descrição à esquerda e a legenda à direita, na mesma linha. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1">
             <DialogDescription>
               {i.metodologia}
               {i.unidade ? ` · Und.: ${i.unidade}` : ""}
               {SENTIDO[i.sentido] ? ` · ${i.sentido} ${SENTIDO[i.sentido]}` : ""}
             </DialogDescription>
-          </DialogHeader>
-
-          <FaixaIndicadores
-            itens={[
-              { rotulo: `Realizado ${meses[ultimo]?.rotulo ?? ""}`, valor: formatar(i.meses[ultimo] ?? null), rotuloAntes: true },
-              { rotulo: `Orçado ${meses[ultimo]?.rotulo ?? ""}`, valor: formatar(i.orcado[ultimo] ?? null), rotuloAntes: true },
-              { rotulo: "Realizado Acumulado", valor: formatar(i.total), dica: i.acumulado === "ATUAL" ? "Indicador de posição: o acumulado é o último mês." : undefined, rotuloAntes: true },
-              { rotulo: "Orçado Acumulado", valor: formatar(i.totalOrcado), rotuloAntes: true },
-            ]}
-          />
-
-          {/* A legenda à direita, como no Painel de Bordo. */}
-          <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-1 text-xs text-gray-600">
-            <LegendaRealizadoOrcado tipo={tipo} />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+              <LegendaRealizadoOrcado tipo={tipo} />
+            </div>
           </div>
-          <div className="h-80">
-            <MiniGrafico dados={dados} formatar={formatar} formatarCurto={formatarCurto} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} topoComRotulos={20} />
+          {/* Os meses e, depois do último, o acumulado (realizado × orçado), como nos cards do Painel de Bordo. */}
+          <div className="flex h-80 gap-3">
+            <div className="min-w-0 flex-1">
+              <MiniGrafico dados={dados} formatar={formatar} formatarCurto={formatarCurto} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} topoComRotulos={20} />
+            </div>
+            <div
+              className={`${comRotulos ? "w-28" : "w-40"} shrink-0 border-l border-gray-100 pl-3`}
+              title={i.acumulado === "ATUAL" ? "Indicador de posição: o acumulado é o último mês." : `Acumulado do exercício (até ${meses[ultimo]?.rotulo ?? ""}): realizado × orçado`}
+            >
+              <MiniGrafico
+                dados={[{ mes: "ACUM.", realizado: i.total, orcado: i.totalOrcado }]}
+                formatar={formatar}
+                formatarCurto={formatarCurto}
+                tipo={tipo}
+                comRotulos={comRotulos}
+                comEscala={!comRotulos}
+                topoComRotulos={20}
+              />
+            </div>
           </div>
         </div>
       </DialogContent>
