@@ -87,6 +87,22 @@ export function valorCurto(i: Pick<Indicador, "unidade">, v: number | null) {
   return formato.umaCasa(v * 100);
 }
 
+/** O amarelo da faixa dos grupos (o yellow-50) mais fraco, sem transparência (as colunas presas cobrem as que rolam). */
+const AMARELO_FRACO = "bg-[color-mix(in_srgb,var(--color-yellow-50)_55%,var(--color-white))]";
+
+/**
+ * O fundo da linha do indicador (13/10/2026): sem numeração (os totais, como Custos de Produção: Matriz), a cor da faixa
+ * dos grupos — o amarelo nas colunas do realizado, o cinza nas do orçado; com numeração par (2, 4…, GME 4, GME 8), um
+ * tom mais fraco das mesmas cores; com numeração ímpar, sem fundo.
+ */
+function fundoDoIndicador(i: Indicador, orcado: boolean) {
+  if (i.numero === "") return orcado ? "celula-orcado bg-gray-200" : "bg-yellow-50";
+  const n = Number(/(\d+)\s*$/.exec(i.numero)?.[1]);
+  // Nas pares, o cinza do tema (sem a celula-orcado, que no Escuro deixaria a célula quase branca entre as escuras).
+  if (n % 2 === 0) return orcado ? "bg-gray-100" : AMARELO_FRACO;
+  return "";
+}
+
 /** As larguras das colunas fixas (Indicador, Sent., Und.) e das de valor. */
 const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado: 124, orcado: 148 };
 
@@ -290,6 +306,9 @@ export function TabelaIndicadores<T extends Indicador>({
                 const anterior = tabela.visiveis[k - 1];
                 const principal = i.numero === "";
                 const tom = principal ? "text-gray-900" : "text-gray-700";
+                // As colunas presas precisam de fundo (as outras rolam por baixo): sem destaque, o branco.
+                const fundoPreso = fundoDoIndicador(i, false) || "bg-white";
+                const aoPassar = clicavel ? "group-hover:bg-gray-100" : "";
                 return (
                   <Fragment key={i.nome}>
                     {!anterior || anterior.grupo !== i.grupo ? (
@@ -306,7 +325,7 @@ export function TabelaIndicadores<T extends Indicador>({
                       onClick={onClicar ? () => onClicar(i) : undefined}
                       title={clicavel ? dicaDoClique : undefined}
                     >
-                      <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 ${clicavel ? "group-hover:bg-gray-100" : ""} ${principal ? "pl-4" : "pl-9"} ${tom}`}>
+                      <td className={`sticky left-0 z-10 ${fundoPreso} py-1.5 pr-3 ${aoPassar} ${principal ? "pl-4" : "pl-9"} ${tom}`}>
                         <div className="flex items-baseline gap-2">
                           {i.numero ? <span className="w-10 shrink-0 text-xs font-normal text-gray-400">{i.numero}</span> : null}
                           {Icone ? <Icone className="size-3.5 shrink-0 self-center text-gray-400" /> : null}
@@ -318,23 +337,25 @@ export function TabelaIndicadores<T extends Indicador>({
                         </div>
                       </td>
                       <td
-                        className={`sticky left-[var(--largura-indicador)] z-10 bg-white px-4 py-1.5 font-normal text-gray-600 ${clicavel ? "group-hover:bg-gray-100" : ""}`}
+                        className={`sticky left-[var(--largura-indicador)] z-10 ${fundoPreso} px-4 py-1.5 font-normal text-gray-600 ${aoPassar}`}
                         title={SENTIDO[i.sentido]}
                       >
                         {i.sentido}
                       </td>
                       <td
-                        className={`sticky left-[calc(var(--largura-indicador)+84px)] z-10 bg-white shadow-[inset_-1px_0_0_#d1d5db] px-4 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600 ${clicavel ? "group-hover:bg-gray-100" : ""}`}
+                        className={`sticky left-[calc(var(--largura-indicador)+84px)] z-10 ${fundoPreso} shadow-[inset_-1px_0_0_#d1d5db] px-4 py-1.5 text-xs font-normal whitespace-nowrap text-gray-600 ${aoPassar}`}
                       >
                         {i.unidade}
                       </td>
                       {colunas.slice(3).map((c) => {
                         const mes = c.chave.startsWith("mes:") ? Number(c.chave.slice(4)) - 1 : -1;
                         const emDestaque = mes >= 0 && !!destacar?.(i, meses.findIndex((m) => m.mes === mes + 1));
+                        // O valor digitado (lançamentos manuais do cenário) num amarelo mais forte que o das linhas.
+                        const fundo = emDestaque ? "bg-yellow-100" : fundoDoIndicador(i, ehOrcado(c.chave));
                         return (
                           <td
                             key={c.chave}
-                            className={`px-4 py-1.5 text-right whitespace-nowrap ${tom} ${c.chave === "acumulado" ? "border-l border-gray-300" : ""} ${emDestaque ? "bg-yellow-50" : ""}`}
+                            className={`px-4 py-1.5 text-right whitespace-nowrap ${tom} ${c.chave === "acumulado" ? "border-l border-gray-300" : ""} ${fundo} ${aoPassar}`}
                             title={emDestaque ? dicaDoDestaque : undefined}
                           >
                             {c.texto?.(i)}

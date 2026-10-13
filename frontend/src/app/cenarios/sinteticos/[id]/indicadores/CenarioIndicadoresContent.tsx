@@ -186,6 +186,7 @@ export function CenarioIndicadoresContent() {
             </li>
             <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um dos grupos da aba, como a lista dos níveis em Resultados.</li>
             <li>Use os filtros nos rótulos das colunas; as colunas Indicador, Sent. e Und. ficam fixas.</li>
+            <li>Os indicadores sem numeração (os totais, como Custos de Produção: Matriz) ficam com a cor da faixa do grupo, e os de numeração par num tom mais fraco (amarelo nas colunas do realizado, cinza nas do comparado), para ajudar a seguir a linha. Nos Indicadores Manuais, as células digitadas ficam num amarelo mais forte.</li>
           </ul>
         }
         sobre={

@@ -57,6 +57,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             </li>
             <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo (Produção, Serviços, Logística, Técnico, Comercial, Administrativo, Geral, Metas Estratégicas (GME)), como a lista dos níveis em Resultados.</li>
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
+            <li>Os indicadores sem numeração (os totais, como Custos de Produção: Matriz) ficam com a cor da faixa do grupo, e os de numeração par num tom mais fraco (amarelo nas colunas do realizado, cinza nas do orçado), para ajudar a seguir a linha.</li>
             {periodoFixo ? null : (
               <li>As colunas de rótulo preto trazem o orçado (o cenário Orçamento Empresarial do exercício; zero sem ele): o do último mês, depois dele, e o acumulado, depois do Acumulado.</li>
             )}
