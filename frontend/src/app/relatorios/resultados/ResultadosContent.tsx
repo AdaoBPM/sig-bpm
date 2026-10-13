@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
@@ -66,27 +66,39 @@ const listavel = (l: LinhaResultado, visao: VisaoDetalhe) => l.volume && l.tipo 
  */
 /**
  * Os meses anteriores ao de referência recolhidos ou não (12/10/2026): a escolha fica guardada neste navegador e vale
- * em todas as tabelas de Resultados. Começa expandido; sem armazenamento (janela privada), só não é lembrada.
+ * em todas as tabelas de Resultados. Começa expandido; sem armazenamento (janela privada), só não é lembrada. Lida por
+ * useSyncExternalStore (13/10/2026; antes, um efeito): no servidor, expandido; as tabelas abertas mudam juntas.
  */
+const CHAVE_MESES = "sig.resultados.mesesRecolhidos";
+const ouvintesDosMeses = new Set<() => void>();
+/** A escolha desta visita (vale também sem armazenamento); null: a guardada no navegador. */
+let mesesRecolhidosNaMemoria: boolean | null = null;
+function lerMesesRecolhidos() {
+  if (mesesRecolhidosNaMemoria !== null) return mesesRecolhidosNaMemoria;
+  try {
+    return window.localStorage.getItem(CHAVE_MESES) === "1";
+  } catch {
+    return false; // sem armazenamento
+  }
+}
 function useMesesRecolhidos(): [boolean, () => void] {
-  const CHAVE = "sig.resultados.mesesRecolhidos";
-  const [recolhido, setRecolhido] = useState(false);
-  useEffect(() => {
+  const recolhido = useSyncExternalStore(
+    (avisar) => {
+      ouvintesDosMeses.add(avisar);
+      return () => ouvintesDosMeses.delete(avisar);
+    },
+    lerMesesRecolhidos,
+    () => false,
+  );
+  const alternar = () => {
+    mesesRecolhidosNaMemoria = !recolhido;
     try {
-      setRecolhido(window.localStorage.getItem(CHAVE) === "1");
+      window.localStorage.setItem(CHAVE_MESES, recolhido ? "0" : "1");
     } catch {
       // sem armazenamento
     }
-  }, []);
-  const alternar = () =>
-    setRecolhido((r) => {
-      try {
-        window.localStorage.setItem(CHAVE, r ? "0" : "1");
-      } catch {
-        // sem armazenamento
-      }
-      return !r;
-    });
+    ouvintesDosMeses.forEach((avisar) => avisar());
+  };
   return [recolhido, alternar];
 }
 
@@ -167,9 +179,10 @@ export function TabelaResultados({
   const temPct = (l: LinhaResultado) => !l.volume && (l.meses.some((c) => c.pct !== null) || l.total.pct !== null);
   const ano = String(dados.ano).slice(2);
   const referencia = dados.meses.length - 1;
-  // Recolhidos, só o mês de referência fica (com o orçado dele), antes dos totais.
+  // Recolhidos, só o mês de referência fica (com o orçado dele), antes dos totais. Na edição dos cenários também
+  // (13/10/2026): os meses marcados e escondidos continuam marcados (a barra de marcação mostra quantos).
   const [recolhido, alternarMeses] = useMesesRecolhidos();
-  const mostra = (i: number) => !recolhido || !!edicao || i === referencia;
+  const mostra = (i: number) => !recolhido || i === referencia;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
@@ -239,7 +252,7 @@ export function TabelaResultados({
               <span className="flex items-center gap-3">
                 <span className="flex shrink-0 items-center gap-1.5">
                   <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
-                  {dados.meses.length > 1 && !edicao ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
+                  {dados.meses.length > 1 ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
                 </span>
                 <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>
                   {titulo}
