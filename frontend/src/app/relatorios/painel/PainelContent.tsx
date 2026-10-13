@@ -419,6 +419,11 @@ export function PainelContent() {
               Como na planilha, o resultado financeiro e as despesas fixas aparecem em milhares (K) no mês e em milhões (M) no acumulado. O
               percentual sob o resultado financeiro também é sobre a receita líquida (/RL), como os demais.
             </p>
+            <p>
+              Nos quadros Consolidado, Produção: Matriz, Produção: Filial e Serviços, o card Custos de Produção (▪ CPV) traz o Custo do Produto
+              Vendido da unidade (a linha CPV da DRE), entre a receita e a margem bruta, com o percentual sobre a receita líquida do quadro; quanto
+              menor, melhor.
+            </p>
           </>
         }
         acoes={

@@ -40,8 +40,11 @@ describe("relatório de Resultados: bases do % e do R$/m³ (abas Resultados (…
 });
 
 describe("indicadores (aba Realizado (SIG) e Metas, 08/10/2026)", () => {
-  it("lista os 114 indicadores, na ordem da planilha (com os GME 4 e 8 da aba Realizado)", () => {
-    assert.equal(INDICADORES.length, 114);
+  it("lista os 118 indicadores, na ordem da planilha (com os GME 4 e 8 da aba Realizado e os 4 do CPV, 13/10/2026)", () => {
+    assert.equal(INDICADORES.length, 118);
+    const cpv = INDICADORES.findIndex((i) => i.nome === "Custo do Produto Vendido (CPV): Matriz");
+    assert.equal(INDICADORES[cpv - 1].nome, "Receita Líquida: Total");
+    assert.equal(INDICADORES[cpv + 4].nome, "Margem Bruta (MB): Matriz");
     assert.equal(INDICADORES[0].nome, "Custos de Produção: Matriz (CPP)");
     assert.equal(INDICADORES.at(-1)!.nome, "Atingimento da MC Acumulada");
   });

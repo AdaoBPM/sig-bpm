@@ -1,8 +1,9 @@
 import { COD } from "./basesResultados.js";
 
 /**
- * A carga inicial do cadastro Estrutura dos Indicadores (11/10/2026): os 114 indicadores, na ordem e com os nomes da
- * aba Realizado (SIG) do SIG BPM 2026 - INDICADORES DE RESULTADO (o sentido, a unidade, a descrição da metodologia e
+ * A carga inicial do cadastro Estrutura dos Indicadores (11/10/2026): os 118 indicadores (114 e, desde 13/10/2026, os 4
+ * do Custo do Produto Vendido, no grupo Geral), na ordem e com os nomes da aba Realizado (SIG) do SIG BPM 2026 -
+ * INDICADORES DE RESULTADO (o sentido, a unidade, a descrição da metodologia e
  * o acumulado vêm da aba Metas), e a fórmula de cada um — a mesma conta que a ferramenta fazia até então no código,
  * conferida mês a mês e no acumulado antes da troca.
  *
@@ -48,6 +49,7 @@ export const L = {
   DT: "DT.DESPESAS_TECNICAS_DT",
   DC: "DC.DESPESAS_COMERCIAIS_DC",
   DA: "DA.DESPESAS_ADMINISTRATIVAS_DA",
+  CPV: "CPV.CUSTO_DE_PRODUTO_VENDIDO_CPV",
   MB: "MB.MARGEM_BRUTA_MB",
   MC: "MC.MARGEM_DE_CONTRIBUICAO_MC",
   EBITDA: "EBITDA.LUCRO_OPERACIONAL_EBITDA",
@@ -151,6 +153,11 @@ const CONTAS: Record<string, Conta> = {
   "Receita Líquida: Produção": { formula: `${d(1, COD.RO)} + ${d(2, COD.RO)}` },
   "Receita Líquida: Serviços": { formula: d(3, COD.RO) },
   "Receita Líquida: Total": { formula: d(0, COD.RO) },
+  // O CPV (13/10/2026): a linha da DRE na unidade — na planilha, a receita líquida menos a margem bruta.
+  "Custo do Produto Vendido (CPV): Matriz": { formula: d(1, L.CPV) },
+  "Custo do Produto Vendido (CPV): Filial": { formula: d(2, L.CPV) },
+  "Custo do Produto Vendido (CPV): Serviços": { formula: d(3, L.CPV) },
+  "Custo do Produto Vendido (CPV): Total": { formula: d(0, L.CPV) },
   "Margem Bruta (MB): Matriz": { formula: d(1, L.MB) },
   "Margem Bruta (MB): Filial": { formula: d(2, L.MB) },
   "Margem Bruta (MB): Serviços": { formula: d(3, L.MB) },
@@ -258,27 +265,34 @@ const LISTA: Tupla[] = [
   ["Geral", "", "Receita Líquida: Produção", "↑", "R$", "Receita Operacional Líquida de Produção e Frete", "ACUM"],
   ["Geral", "", "Receita Líquida: Serviços", "↑", "R$", "Receita Operacional Líquida de Montagem e Complementar", "ACUM"],
   ["Geral", "", "Receita Líquida: Total", "↑", "R$", "Receita Operacional Líquida Total", "ACUM"],
-  ["Geral", "1", "Margem Bruta (MB): Matriz", "↑", "R$", "Margem Bruta", "ACUM"],
-  ["Geral", "1", "Margem Bruta (MB): Filial", "↑", "R$", "Margem Bruta", "ACUM"],
-  ["Geral", "1", "Margem Bruta (MB): Serviços", "↑", "R$", "Margem Bruta", "ACUM"],
-  ["Geral", "1", "Margem Bruta (MB): Total", "↑", "R$", "Margem Bruta", "ACUM"],
-  ["Geral", "2", "Margem de Contribuição (MC): Total", "↑", "R$", "Margem de Contribuição", "ACUM"],
-  ["Geral", "3", "Lucro Operacional (EBITDA)", "↑", "R$", "EBITDA", "ACUM"],
-  ["Geral", "4", "Resultado Financeiro (RF)", "↑", "R$", "Receitas Financeiras - Despesas Financeiras", "ACUM"],
-  ["Geral", "5", "Resultado Líquido (RL)", "↑", "R$", "Resultado Líquido", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Direta Matriz", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Direta Filial", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Direta Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Indireta Matriz", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Indireta Filial", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Indireta Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Geral Matriz", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Geral Filial", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "6", "Eficiência da Operação: MO Geral Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "7", "Eficiência da Operação: MO Direta Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "7", "Eficiência da Operação: MO Indireta Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "7", "Eficiência da Operação: MO Geral Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
-  ["Geral", "8", "Eficiência da Operação: Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  // O Custo do Produto Vendido (13/10/2026) entrou como o 1 do grupo; os seguintes subiram um número, como na planilha.
+  // O nome é o da aba Metas ("Custo do Produto Vendido"; a Realizado (SIG) traz "Custo de Produto Vendido"); o sentido,
+  // o da aba Metas (↑; o Painel (Resultados) usa ↓, e o card do painel também).
+  ["Geral", "1", "Custo do Produto Vendido (CPV): Matriz", "↑", "R$", "Custo do Produto Vendido", "ACUM"],
+  ["Geral", "1", "Custo do Produto Vendido (CPV): Filial", "↑", "R$", "Custo do Produto Vendido", "ACUM"],
+  ["Geral", "1", "Custo do Produto Vendido (CPV): Serviços", "↑", "R$", "Custo do Produto Vendido", "ACUM"],
+  ["Geral", "1", "Custo do Produto Vendido (CPV): Total", "↑", "R$", "Custo do Produto Vendido", "ACUM"],
+  ["Geral", "2", "Margem Bruta (MB): Matriz", "↑", "R$", "Margem Bruta", "ACUM"],
+  ["Geral", "2", "Margem Bruta (MB): Filial", "↑", "R$", "Margem Bruta", "ACUM"],
+  ["Geral", "2", "Margem Bruta (MB): Serviços", "↑", "R$", "Margem Bruta", "ACUM"],
+  ["Geral", "2", "Margem Bruta (MB): Total", "↑", "R$", "Margem Bruta", "ACUM"],
+  ["Geral", "3", "Margem de Contribuição (MC): Total", "↑", "R$", "Margem de Contribuição", "ACUM"],
+  ["Geral", "4", "Lucro Operacional (EBITDA)", "↑", "R$", "EBITDA", "ACUM"],
+  ["Geral", "5", "Resultado Financeiro (RF)", "↑", "R$", "Receitas Financeiras - Despesas Financeiras", "ACUM"],
+  ["Geral", "6", "Resultado Líquido (RL)", "↑", "R$", "Resultado Líquido", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Direta Matriz", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Direta Filial", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Direta Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Indireta Matriz", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Indireta Filial", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Indireta Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Geral Matriz", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Geral Filial", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "7", "Eficiência da Operação: MO Geral Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "8", "Eficiência da Operação: MO Direta Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "8", "Eficiência da Operação: MO Indireta Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "8", "Eficiência da Operação: MO Geral Montagem", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
+  ["Geral", "9", "Eficiência da Operação: Total", "↑", "R$ (K)/colab.", "Receita Líquida / Colaboradores", "ACUM"],
   ["GME", "GME 3", "Repres. do Mix Ampliado nas Vendas", "↑", "%", "Venda Complementar / Venda Total", "ACUM"],
   ["GME", "GME 4", "Média Móvel da Demanda Gerada", "↑", "%", "Demanda Gerada / Capacidade de Produção (Global)", "ACUM"],
   ["GME", "GME 4", "Média Móvel da Demanda Expedida", "↑", "%", "Demanda Expedida / Capacidade de Produção (Global)", "ACUM"],

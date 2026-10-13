@@ -78,7 +78,7 @@ describe("leitura do cenário sintético", () => {
     assert.equal(classe.get("Liberação de Projetos: Total"), "IMPORTADO");
     assert.equal(classe.get("Atingimento da MC Acumulada"), "IMPORTADO");
     const contagem = [...classe.values()].reduce<Record<string, number>>((m, c) => ({ ...m, [c]: (m[c] ?? 0) + 1 }), {});
-    assert.deepEqual(contagem, { RESULTADO: 49, MANUAL: 33, CALCULADO: 25, IMPORTADO: 7 });
+    assert.deepEqual(contagem, { RESULTADO: 53, MANUAL: 33, CALCULADO: 25, IMPORTADO: 7 });
   });
 });
 

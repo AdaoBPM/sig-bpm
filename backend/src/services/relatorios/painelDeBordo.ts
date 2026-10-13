@@ -85,6 +85,10 @@ const N = {
   RL_MONTAGEM: "Receita Líquida: Montagem",
   RL_SERVICOS: "Receita Líquida: Serviços",
   RL_TOTAL: "Receita Líquida: Total",
+  CPV_MATRIZ: "Custo do Produto Vendido (CPV): Matriz",
+  CPV_FILIAL: "Custo do Produto Vendido (CPV): Filial",
+  CPV_SERVICOS: "Custo do Produto Vendido (CPV): Serviços",
+  CPV_TOTAL: "Custo do Produto Vendido (CPV): Total",
   MB_MATRIZ: "Margem Bruta (MB): Matriz",
   MB_FILIAL: "Margem Bruta (MB): Filial",
   MB_SERVICOS: "Margem Bruta (MB): Serviços",
@@ -106,6 +110,11 @@ const custoPorM3 = (pct: string, receita: string, volume: string) => (x: Valor) 
 const despesa = (pct: string) => (x: Valor) => mul(x(pct), x(N.RL_TOTAL));
 
 const receita = (nome: string): ItemPainel => ({ titulo: "Receita Operacional Líquida", sigla: "ROL", sentido: "↑", formato: "MILHOES", conta: ind(nome) });
+/**
+ * O Custo do Produto Vendido (13/10/2026), entre a receita e a margem bruta, como a planilha: "Custos de Produção", ▪ CPV,
+ * ↓ (quanto menor, melhor), com o percentual sobre a receita líquida do quadro.
+ */
+const cpv = (nome: string, base: string): ItemPainel => ({ titulo: "Custos de Produção", sigla: "CPV", sentido: "↓", formato: "MILHOES", conta: ind(nome), base: sobre(nome, base) });
 const margemBruta = (nome: string, base: string): ItemPainel => ({ titulo: "Margem Bruta", sigla: "MB", sentido: "↑", formato: "MILHOES", conta: ind(nome), base: sobre(nome, base) });
 const volume = (titulo: string, sigla: string, nome: string, formato: Formato = "M3"): ItemPainel => ({ titulo, sigla, sentido: "↑", formato, conta: ind(nome) });
 const fixa = (titulo: string, sigla: string, pct: string): ItemPainel => ({
@@ -125,6 +134,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
     titulo: "Consolidado",
     itens: [
       receita(N.RL_TOTAL),
+      cpv(N.CPV_TOTAL, N.RL_TOTAL),
       // A planilha traz "▪ MC" na linha de baixo da Margem Bruta (C12); é a MB.
       margemBruta(N.MB_TOTAL, N.RL_TOTAL),
       { titulo: "Margem de Contribuição", sigla: "MC", sentido: "↑", formato: "MILHOES", conta: ind(N.MC), base: sobre(N.MC, N.RL_TOTAL) },
@@ -145,7 +155,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
   },
   {
     titulo: "Produção: Matriz",
-    itens: [volume("Volume Produzido", "V (P)", N.VOL_MATRIZ), receita(N.RL_PROD_MATRIZ), margemBruta(N.MB_MATRIZ, N.RL_PROD_MATRIZ)],
+    itens: [volume("Volume Produzido", "V (P)", N.VOL_MATRIZ), receita(N.RL_PROD_MATRIZ), cpv(N.CPV_MATRIZ, N.RL_PROD_MATRIZ), margemBruta(N.MB_MATRIZ, N.RL_PROD_MATRIZ)],
   },
   {
     titulo: "Produção: Filial",
@@ -153,6 +163,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
       volume("Volume Produzido", "V (P)", N.VOL_FILIAL),
       volume("Pistas Produzidas", "P", N.PISTAS, "PISTAS"),
       receita(N.RL_PROD_FILIAL),
+      cpv(N.CPV_FILIAL, N.RL_PROD_FILIAL),
       margemBruta(N.MB_FILIAL, N.RL_PROD_FILIAL),
     ],
   },
@@ -172,7 +183,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
   },
   {
     titulo: "Serviços",
-    itens: [volume("Volume Montado", "V (M)", N.RENDIMENTO), receita(N.RL_SERVICOS), margemBruta(N.MB_SERVICOS, N.RL_SERVICOS)],
+    itens: [volume("Volume Montado", "V (M)", N.RENDIMENTO), receita(N.RL_SERVICOS), cpv(N.CPV_SERVICOS, N.RL_SERVICOS), margemBruta(N.MB_SERVICOS, N.RL_SERVICOS)],
   },
   {
     titulo: "Despesas Fixas Operacionais",
