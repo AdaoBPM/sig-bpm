@@ -123,11 +123,12 @@ function GrupoPeriodo({ titulo, subtitulo, b, formato, base }: { titulo: ReactNo
       <div className="mt-auto pt-2">
         <p className="text-xs text-gray-600">{rotulos.realizado}</p>
         <p className="text-2xl font-extrabold whitespace-nowrap text-gray-900">{formatar(b.realizado, formato)}</p>
+        {/* O percentual (/RL) logo abaixo do realizado, antes do orçado (13/10/2026); a linha fica mesmo vazia, para alinhar. */}
+        <p className="h-4 text-xs text-gray-500">{base}</p>
         <p className="mt-1 text-xs whitespace-nowrap text-gray-600">
           {rotulos.orcado}: <span className="font-bold text-gray-900">{formatar(b.orcado, formato)}</span>
         </p>
       </div>
-      <p className="h-4 text-xs text-gray-500">{base}</p>
     </div>
   );
 }
@@ -171,13 +172,16 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
       {/* O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha (10/10/2026). */}
       <div className="flex min-w-0 items-center gap-3 self-center">
         <div className="min-w-0 flex-1">
-          <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} comRotulos={comRotulos} />
+          <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
         </div>
-        <div className="w-24 shrink-0 border-l border-gray-100 pl-3" title="Acumulado do exercício: realizado × orçado">
+        {/* O acumulado também com os rótulos ou com a escala (13/10/2026); com a escala, um pouco mais largo. */}
+        <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title="Acumulado do exercício: realizado × orçado">
           <MiniGrafico
             dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
             formatar={(v) => formatar(v, i.formatoAcumulado)}
             tipo={tipo}
+            comRotulos={comRotulos}
+            comEscala={!comRotulos}
           />
         </div>
       </div>
