@@ -64,18 +64,6 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {/* A versão (13/10/2026), com o cadeado quando congelada. */}
-        {atual ? (
-          <span
-            className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700"
-            title={atual.versaoSalvaEm ? "Versão congelada: os dados não se editam (reabra a versão ou crie uma revisão)" : "Versão aberta para edição"}
-          >
-            {atual.versaoSalvaEm ? <Lock className="size-3" /> : null}
-            {rotuloVersao(atual.versao)}
-            {atual.versaoSalvaEm ? " · Congelada" : ""}
-          </span>
-        ) : null}
-        {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
         {TELAS_DO_CENARIO.filter((t) => !t.permissao || hasPermission(t.permissao)).map((t) => {
@@ -93,6 +81,20 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
           );
         })}
       </ol>
+      {/* As etiquetas da versão e da marcação à direita da barra (13/10/2026; antes, ao lado do nome do cenário). */}
+      <div className="flex shrink-0 items-center gap-2 px-1 xl:ml-auto">
+        {atual ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700"
+            title={atual.versaoSalvaEm ? "Versão congelada: os dados não se editam (reabra a versão ou crie uma revisão)" : "Versão aberta para edição"}
+          >
+            {atual.versaoSalvaEm ? <Lock className="size-3" /> : null}
+            {rotuloVersao(atual.versao)}
+            {atual.versaoSalvaEm ? " · Congelada" : ""}
+          </span>
+        ) : null}
+        {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}
+      </div>
     </nav>
   );
 }

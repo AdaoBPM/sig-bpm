@@ -30,17 +30,19 @@ const colunaDeResultado = (chave: "rol" | "cpv" | "ebitda" | "rl", rotulo: strin
   alinhamento: "direita",
   valor: (c) => c.resultados?.[chave].valor ?? null,
   texto: (c) => (c.resultados ? reaisAbreviados(c.resultados[chave].valor) : null),
+  classe: "!px-3",
 });
 
 // A ordem das colunas (13/10/2026): Exercício, Cenário, Criado Por, Visualização e os resultados (ROL, CPV, EBITDA e RL). Sem
 // as colunas Conteúdo, Arquivo e Marcação e sem os ícones de ações: a marcação é uma etiqueta na coluna Cenário (muda em
 // Configurações / Cenário), e a importação num cenário fica na aba Referência das Configurações.
+// As colunas com 12 px de cada lado (13/10/2026), para a tabela caber na largura da tela.
 const COLUNAS: Coluna<Cenario>[] = [
-  { chave: "ano", rotulo: "Exercício", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
+  { chave: "ano", rotulo: "Exercício", classe: "!px-3", tipo: "numero", valor: (c) => c.ano, texto: (c) => String(c.ano) },
   // O nome com a versão, para o filtro separar as revisões.
-  { chave: "nome", rotulo: "Cenário", valor: (c) => `${c.nome} ${rotuloVersao(c.versao)}` },
-  { chave: "criadoPor", rotulo: "Criado Por", valor: (c) => c.criadoPor },
-  { chave: "visualizacao", rotulo: "Visualização", valor: (c) => ROTULO_VISUALIZACAO[c.visualizacao] },
+  { chave: "nome", rotulo: "Cenário", classe: "!px-3", valor: (c) => `${c.nome} ${rotuloVersao(c.versao)}` },
+  { chave: "criadoPor", rotulo: "Criado Por", classe: "!px-3", valor: (c) => c.criadoPor },
+  { chave: "visualizacao", rotulo: "Visualização", classe: "!px-3", valor: (c) => ROTULO_VISUALIZACAO[c.visualizacao] },
   colunaDeResultado("rol", "ROL"),
   colunaDeResultado("cpv", "CPV"),
   colunaDeResultado("ebitda", "EBITDA"),
@@ -175,40 +177,43 @@ export function CenariosContent() {
           columns={COLUNAS.map((c) => c.rotulo)}
           renderRow={(c) => (
             <tr key={c.id} onClick={() => abrir(c)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
-              <td className="px-4 text-sm">{c.ano}</td>
-              <td className="min-w-48 px-4 py-2 text-sm">
-                <Link href={`/cenarios/sinteticos/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
-                  {c.nome}
-                </Link>
-                {/* A versão (13/10/2026), com o cadeado quando congelada. */}
-                <span
-                  className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-1.5 py-px align-middle text-xs font-medium text-gray-700"
-                  title={c.versaoSalvaEm ? "Versão congelada: os dados não se editam" : "Versão aberta para edição"}
-                >
-                  {c.versaoSalvaEm ? <Lock className="size-3" /> : null}
-                  {rotuloVersao(c.versao)}
-                </span>
+              <td className="px-3 text-sm">{c.ano}</td>
+              <td className="min-w-48 px-3 py-2 text-sm">
+                {/* O nome, a versão e a marcação numa linha só (13/10/2026). */}
+                <div className="whitespace-nowrap">
+                  <Link href={`/cenarios/sinteticos/${c.id}/resultados`} onClick={(e) => e.stopPropagation()} className="font-bold text-gray-900">
+                    {c.nome}
+                  </Link>
+                  {/* A versão (13/10/2026), com o cadeado quando congelada. */}
+                  <span
+                    className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gray-300 px-1.5 py-px align-middle text-xs font-medium text-gray-700"
+                    title={c.versaoSalvaEm ? "Versão congelada: os dados não se editam" : "Versão aberta para edição"}
+                  >
+                    {c.versaoSalvaEm ? <Lock className="size-3" /> : null}
+                    {rotuloVersao(c.versao)}
+                  </span>
+                  {/* A marcação logo depois da versão (13/10/2026; antes, embaixo da descrição). */}
+                  {c.marcacao ? (
+                    <span className="ml-1.5 inline-flex rounded-sm border border-gray-300 bg-white px-1.5 py-px align-middle text-xs font-medium text-gray-900">
+                      {rotuloMarcacao(c.marcacao)}
+                    </span>
+                  ) : null}
+                </div>
                 {c.descricao ? <div className="text-xs text-gray-500">{c.descricao}</div> : null}
-                {/* A marcação: uma etiqueta embaixo do nome. */}
-                {c.marcacao ? (
-                  <div className="mt-1">
-                    <span className="rounded-sm border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-900">{rotuloMarcacao(c.marcacao)}</span>
-                  </div>
-                ) : null}
               </td>
               {/* Criado Por e Visualização em colunas (13/10/2026; antes, embaixo do nome). */}
-              <td className="px-4 py-2 text-sm whitespace-nowrap">
+              <td className="px-3 py-2 text-sm whitespace-nowrap">
                 {c.criadoPor ?? <span className="text-gray-400">—</span>}
                 <div className="text-xs text-gray-500">em {dataCurta(c.criadoEm)}</div>
               </td>
-              <td className="px-4 text-sm whitespace-nowrap">
+              <td className="px-3 text-sm whitespace-nowrap">
                 <span className={`inline-flex items-center gap-1 ${c.visualizacao === "PARTICULAR" ? "font-medium text-gray-900" : "text-gray-700"}`}>
                   {c.visualizacao === "PARTICULAR" ? <Lock className="size-3.5" /> : <Globe className="size-3.5" />}
                   {ROTULO_VISUALIZACAO[c.visualizacao]}
                 </span>
               </td>
               {(["rol", "cpv", "ebitda", "rl"] as const).map((k) => (
-                <td key={k} className="px-4 py-2 text-right text-sm whitespace-nowrap">
+                <td key={k} className="px-3 py-2 text-right text-sm whitespace-nowrap">
                   <CelulaResultado c={c} chave={k} />
                 </td>
               ))}
