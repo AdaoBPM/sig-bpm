@@ -12,6 +12,9 @@ export const MARCACOES: Array<{ valor: MarcacaoCenario; rotulo: string }> = [
 export const rotuloMarcacao = (m: MarcacaoCenario | null) => MARCACOES.find((x) => x.valor === m)?.rotulo ?? null;
 /** O rótulo da versão do cenário (13/10/2026): VER00, VER01… */
 export const rotuloVersao = (v: number) => `VER${String(v).padStart(2, "0")}`;
+/** O cenário nas listas de escolha (13/10/2026): "Exercício - Nome - Versão - Marcação" (a marcação, quando há). */
+export const rotuloDoCenario = (c: Pick<Cenario, "ano" | "nome" | "versao" | "marcacao">) =>
+  [String(c.ano), c.nome, rotuloVersao(c.versao), rotuloMarcacao(c.marcacao)].filter(Boolean).join(" - ");
 
 /** Particular: só quem criou e o Administrador; Pública: todos com permissão nos Cenários Sintéticos (11/10/2026). */
 export type Visualizacao = "PARTICULAR" | "PUBLICA";

@@ -9,7 +9,7 @@ import { usePermissions } from "@/context/PermissionContext";
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { cenariosService, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
+import { cenariosService, rotuloDoCenario, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
 
 /** As telas de um cenário sintético, como as abas de Resultados Realizados. */
 export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; permissao?: string }> = [
@@ -53,12 +53,12 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
               </button>
             }
           />
-          <DropdownMenuContent align="start" className="max-h-80 w-72 overflow-y-auto">
+          <DropdownMenuContent align="start" className="max-h-80 w-auto max-w-[min(40rem,calc(100vw-2rem))] min-w-72 overflow-y-auto">
             <DropdownMenuGroup>
               <DropdownMenuLabel>Cenários Sintéticos</DropdownMenuLabel>
               {(lista.data ?? []).map((c) => (
-                <DropdownMenuItem key={c.id} onClick={() => podeSair() && router.push(`/cenarios/sinteticos/${c.id}/${tela}`)} className={c.id === id ? "font-bold" : ""}>
-                  {c.nome} · {rotuloVersao(c.versao)} · {c.ano}
+                <DropdownMenuItem key={c.id} onClick={() => podeSair() && router.push(`/cenarios/sinteticos/${c.id}/${tela}`)} className={`whitespace-nowrap ${c.id === id ? "font-bold" : ""}`}>
+                  {rotuloDoCenario(c)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
