@@ -57,7 +57,7 @@ function DialogoTexto({ titulo, descricao, acao, onConfirmar, onFechar, pendente
   const [texto, setTexto] = useState("");
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{descricao}</DialogDescription>

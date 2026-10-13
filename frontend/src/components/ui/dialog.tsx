@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
+import { MENSAGEM_MODAL, useAlteracoesPendentes } from "@/lib/alteracoesPendentes"
 import { iniciaisMaiusculas } from "@/lib/texto"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -34,8 +35,29 @@ function BotaoFechar() {
   )
 }
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+/**
+ * O vigia das alterações do modal (13/10/2026): no DialogContent com `avisoAoSair`, algo digitado ou marcado deixa o
+ * modal "sujo"; fechá-lo pelo X, pelo Esc ou clicando fora pergunta antes. O Cancelar (uma escolha) e o fechamento
+ * depois de gravar não perguntam. Enquanto sujo, sair da tela ou recarregar também pergunta (alteracoesPendentes).
+ */
+const VigiaDoModal = React.createContext<{ marcarSujo: () => void } | null>(null)
+
+function Dialog({ onOpenChange, ...props }: DialogPrimitive.Root.Props) {
+  const sujoRef = React.useRef(false)
+  const vigia = React.useMemo(() => ({ marcarSujo: () => (sujoRef.current = true) }), [])
+  const aoMudar: DialogPrimitive.Root.Props["onOpenChange"] = (aberto, detalhes) => {
+    if (!aberto && sujoRef.current && !window.confirm(MENSAGEM_MODAL)) {
+      detalhes.cancel()
+      return
+    }
+    if (!aberto) sujoRef.current = false
+    onOpenChange?.(aberto, detalhes)
+  }
+  return (
+    <VigiaDoModal.Provider value={vigia}>
+      <DialogPrimitive.Root data-slot="dialog" onOpenChange={aoMudar} {...props} />
+    </VigiaDoModal.Provider>
+  )
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -74,10 +96,25 @@ function DialogContent({
   children,
   showCloseButton = true,
   initialFocus,
+  avisoAoSair = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /** Os modais de formulário: com algo digitado ou marcado, fechar sem gravar pergunta antes. */
+  avisoAoSair?: boolean
 }) {
+  const vigia = React.useContext(VigiaDoModal)
+  const [sujo, setSujo] = React.useState(false)
+  useAlteracoesPendentes(sujo)
+  const marcarSujo = () => {
+    if (!avisoAoSair || sujo) return
+    setSujo(true)
+    vigia?.marcarSujo()
+  }
+  // As caixas e as listas do Base UI são botões (sem o evento input): o clique nelas também conta.
+  const aoClicar = (e: React.MouseEvent) => {
+    if ((e.target as Element).closest?.('[role="switch"], [role="checkbox"], [role="radio"], [role="option"]')) marcarSujo()
+  }
   const [cabecalhos, setCabecalhos] = React.useState(0)
   const popup = React.useRef<HTMLDivElement>(null)
   const focoInicial = React.useCallback(() => popup.current?.querySelector<HTMLElement>(FOCAVEIS) ?? true, [])
@@ -98,6 +135,8 @@ function DialogContent({
         ref={popup}
         initialFocus={initialFocus ?? focoInicial}
         data-slot="dialog-content"
+        onInputCapture={avisoAoSair ? marcarSujo : undefined}
+        onClickCapture={avisoAoSair ? aoClicar : undefined}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className

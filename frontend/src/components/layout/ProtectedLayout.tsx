@@ -7,6 +7,7 @@ import { AlertTriangle, ShieldOff } from "lucide-react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AvisoDeSaida } from "@/components/layout/AvisoDeSaida";
 import { BarraDeTelas } from "@/components/layout/BarraDeTelas";
 import { EtapasDoMes } from "@/components/layout/EtapasDoMes";
 import { BarraDoCenario, lerRotaDoCenario } from "@/app/cenarios/components/BarraDoCenario";
@@ -57,6 +58,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   return (
     <SidebarProvider>
+      {/* O aviso ao sair com alterações não gravadas (13/10/2026), em todas as telas. */}
+      <AvisoDeSaida />
       <AppSidebar />
       {/* Fundo opaco (a mesma cor de antes), para o título fixo da tela cobrir o que passa por baixo. */}
       <SidebarInset className="min-w-0 bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))]">

@@ -81,7 +81,7 @@ export function LancamentoReceitaDialog({ anoMes, opcoes, editando, onFechar }: 
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editando ? "Alterar Lançamento de Receita" : "Novo Lançamento de Receita"}</DialogTitle>
           <DialogDescription>

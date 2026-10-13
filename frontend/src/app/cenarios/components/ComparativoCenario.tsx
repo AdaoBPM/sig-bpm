@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
+
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloMarcacao, rotuloVersao, type Comparativo } from "../services/cenariosService";
@@ -41,6 +43,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   const invalidos = dados.totais.filter((t) => lidos[t.codigo] === undefined || (lidos[t.codigo] ?? 0) < 0);
   const mudou = comparado !== (dados.comparadoCom?.id ?? "") || dados.totais.some((t) => (lidos[t.codigo] ?? null) !== t.limite);
   const comLimite = dados.totais.filter((t) => typeof lidos[t.codigo] === "number").length;
+  // Sair com o comparativo mudado e não gravado pergunta antes (13/10/2026).
+  useAlteracoesPendentes(mudou);
   const valorTodos = lerNumero(todos);
 
   const gravar = useMutation({

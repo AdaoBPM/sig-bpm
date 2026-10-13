@@ -59,7 +59,7 @@ export function IndicadorDialog({ anoMes, slug, rotuloLista, indicadores, format
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Novo Registro · {rotuloLista}</DialogTitle>
           <DialogDescription>

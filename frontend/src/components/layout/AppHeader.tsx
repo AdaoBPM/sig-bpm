@@ -3,6 +3,8 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+
+import { podeSair } from "@/lib/alteracoesPendentes";
 import { KeyRound, LogOut } from "lucide-react";
 
 import {
@@ -54,6 +56,7 @@ export function AppHeader() {
   const caminho = migalhas(pathname, (chave) => etapas.find((e) => e.chave === chave)?.rotulo ?? null);
 
   async function handleLogout() {
+    if (!podeSair()) return;
     await logout();
     router.push("/auth/login");
     router.refresh();

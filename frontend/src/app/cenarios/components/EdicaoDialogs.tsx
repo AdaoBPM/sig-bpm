@@ -78,7 +78,7 @@ export function ReajusteDialog({
   const somaNova = novos.reduce((s, v) => s + v.valor, 0);
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-md">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Reajustar Valores Marcados</DialogTitle>
           <DialogDescription>{rotulo}</DialogDescription>
@@ -171,7 +171,7 @@ export function ValorDialog({
   const ok = typeof valorNovo === "number";
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-md">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Valor</DialogTitle>
           <DialogDescription>

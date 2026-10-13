@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { competenciasService } from "@/app/competencias/services/competenciasService";
+import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
+
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, rotuloMarcacao, type Cenario, type Visualizacao } from "../services/cenariosService";
@@ -86,6 +88,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
     },
   });
   const mudou = nome.trim() !== cenario.nome || (descricao.trim() || null) !== cenario.descricao || visualizacao !== cenario.visualizacao;
+  // Sair com o nome, a descrição ou a visualização mudados e não gravados pergunta antes (13/10/2026).
+  useAlteracoesPendentes(mudou && !salvar.isPending);
 
   return (
     <div className="space-y-6">

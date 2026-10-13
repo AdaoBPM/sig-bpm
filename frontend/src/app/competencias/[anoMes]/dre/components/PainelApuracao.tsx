@@ -126,7 +126,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
       {historico ? <HistoricoReaberturas reaberturas={s.reaberturas} onFechar={() => setHistorico(false)} /> : null}
 
       <Dialog open={dialogo !== null} onOpenChange={(o) => (!o ? setDialogo(null) : undefined)}>
-        <DialogContent className="rounded-sm sm:max-w-lg">
+        <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{dialogo === "fechar" ? "Fechar a Competência" : "Reabrir a Competência"}</DialogTitle>
             <DialogDescription>

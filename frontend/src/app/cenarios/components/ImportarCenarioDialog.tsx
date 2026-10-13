@@ -180,7 +180,7 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
 
   return (
     <Dialog open onOpenChange={(o) => (!o && !ocupado ? onFechar() : undefined)}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-sm sm:max-w-3xl">
+      <DialogContent avisoAoSair className="flex max-h-[90vh] flex-col overflow-hidden rounded-sm sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{cenario ? `Importar Arquivo no Cenário ${cenario.nome}` : "Importar Cenário"}</DialogTitle>
           <DialogDescription>

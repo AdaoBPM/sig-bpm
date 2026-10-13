@@ -44,7 +44,7 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Marcar Cenário</DialogTitle>
           <DialogDescription>

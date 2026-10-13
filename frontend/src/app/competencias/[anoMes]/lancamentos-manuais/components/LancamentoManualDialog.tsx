@@ -140,7 +140,7 @@ export function LancamentoManualDialog({ anoMes, opcoes, editando, aberto, onFec
 
   return (
     <Dialog open={aberto} onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editando ? "Editar Lançamento" : "Novo Lançamento Manual"}</DialogTitle>
           <DialogDescription>

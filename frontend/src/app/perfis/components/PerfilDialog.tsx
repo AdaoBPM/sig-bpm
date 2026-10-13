@@ -62,7 +62,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
+      <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editando ? `Perfil ${editando.nome}` : "Novo Perfil"}</DialogTitle>
           <DialogDescription>

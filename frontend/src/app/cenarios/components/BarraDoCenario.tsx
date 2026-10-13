@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Lock } from "lucide-react";
 
 import { usePermissions } from "@/context/PermissionContext";
+import { podeSair } from "@/lib/alteracoesPendentes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { cenariosService, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
@@ -54,7 +55,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
             <DropdownMenuGroup>
               <DropdownMenuLabel>Cenários Sintéticos</DropdownMenuLabel>
               {(lista.data ?? []).map((c) => (
-                <DropdownMenuItem key={c.id} onClick={() => router.push(`/cenarios/sinteticos/${c.id}/${tela}`)} className={c.id === id ? "font-bold" : ""}>
+                <DropdownMenuItem key={c.id} onClick={() => podeSair() && router.push(`/cenarios/sinteticos/${c.id}/${tela}`)} className={c.id === id ? "font-bold" : ""}>
                   {c.nome} · {rotuloVersao(c.versao)} · {c.ano}
                 </DropdownMenuItem>
               ))}

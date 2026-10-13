@@ -161,7 +161,7 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{cenario ? "Editar Cenário" : "Novo Cenário"}</DialogTitle>
           <DialogDescription>

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+import { podeSair } from "@/lib/alteracoesPendentes";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Lock } from "lucide-react";
 
@@ -36,7 +38,7 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
   const s = situacao.data;
 
   // Trocar de mês mantém a etapa (e a lista aberta).
-  const irPara = (outro: string) => router.push(`/competencias/${outro}/${resto || etapas[0]?.caminho || ""}`);
+  const irPara = (outro: string) => podeSair() && router.push(`/competencias/${outro}/${resto || etapas[0]?.caminho || ""}`);
 
   const sinal = (k: string) => {
     if (!s) return null;

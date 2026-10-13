@@ -238,7 +238,7 @@ export function EditarRegistroDialog({ entidade, id, onFechar }: Props) {
   const pronto = def.data && (id === null || reg.data);
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
+      <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{def.data ? `${id ? "Editar" : "Novo Registro:"} ${def.data.titulo}` : "Carregando…"}</DialogTitle>
           <DialogDescription>A alteração fica no log de auditoria, com o antes e o depois.</DialogDescription>

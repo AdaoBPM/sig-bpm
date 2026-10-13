@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { Abas } from "@/components/shared/Abas";
 import { Button } from "@/components/ui/button";
 
+import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
+
 import { formato, mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService, type ItemJustificativa } from "../services/cenariosService";
@@ -104,6 +106,8 @@ function Linha({ id, visao, item, podeEditar }: { id: string; visao: number; ite
   const queryClient = useQueryClient();
   const [texto, setTexto] = useState(item.justificativa?.texto ?? "");
   const mudou = texto.trim() !== (item.justificativa?.texto ?? "");
+  // Sair com uma justificativa digitada e não gravada pergunta antes (13/10/2026).
+  useAlteracoesPendentes(mudou);
   const gravar = useMutation({
     mutationFn: () => cenariosService.gravarJustificativa(id, visao, item.codigo, texto.trim()),
     onSuccess: () => {

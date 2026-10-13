@@ -63,7 +63,7 @@ export function RegistroListaDialog({ anoMes, slug, rotuloLista, campos, editand
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="rounded-sm sm:max-w-lg">
+      <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editando ? "Editar Registro" : "Novo Registro"} · {rotuloLista}</DialogTitle>
           <DialogDescription>
