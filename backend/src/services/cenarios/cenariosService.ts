@@ -46,7 +46,8 @@ export const MARCACOES: Record<MarcacaoCenario, string> = {
 
 /**
  * O tipo do cenário (13/10/2026): os sintéticos (a DRE importada ou digitada) e os analíticos (a DRE calculada a partir
- * das premissas). Ficam em listas separadas: um cenário só copia, importa ou compara com outro do mesmo tipo.
+ * das premissas). Ficam em listas separadas: um cenário só copia e importa de outro do mesmo tipo; o comparativo vale
+ * entre os tipos (pela DRE; o que só os analíticos têm, como os centros de custo, só se compara entre analíticos).
  */
 export type TipoCenario = "SINTETICO" | "ANALITICO";
 export const TIPOS: Record<TipoCenario, string> = { SINTETICO: "Cenários Sintéticos", ANALITICO: "Cenários Analíticos" };
@@ -852,7 +853,8 @@ export const cenariosService = {
    */
   async comparativo(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id }, tipo: c.tipo }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
+    // Os dois tipos (13/10/2026): o analítico se compara também com um sintético (o Orçamento Empresarial, por exemplo).
+    const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id } }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
     const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
     const { totais } = totaisDaDRE(await estruturaDRE());
     const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
@@ -864,7 +866,7 @@ export const cenariosService = {
     }
     return {
       comparadoCom: comparado,
-      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, marcacao: o.marcacao, versao: o.versao, vigente: o.versao === ultimas.get(o.familiaId ?? o.id) })),
+      opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, tipo: o.tipo as TipoCenario, marcacao: o.marcacao, versao: o.versao, vigente: o.versao === ultimas.get(o.familiaId ?? o.id) })),
       totais: totais.map((t) => ({ ...t, limite: typeof limites[t.codigo] === "number" ? limites[t.codigo] : null })),
     };
   },
@@ -876,10 +878,7 @@ export const cenariosService = {
   async gravarComparativo(id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
     if (dados.comparadoComId === id) throw new CenarioError(400, "Escolha outro cenário para comparar.");
-    if (dados.comparadoComId) {
-      const outro = await obterOuFalhar(dados.comparadoComId, usuario);
-      if (outro.tipo !== antes.tipo) throw new CenarioError(400, `Compare com um cenário do mesmo tipo (${TIPOS[antes.tipo as TipoCenario]}).`);
-    }
+    if (dados.comparadoComId) await obterOuFalhar(dados.comparadoComId, usuario);
     const codigos = new Set(totaisDaDRE(await estruturaDRE()).totais.map((t) => t.codigo));
     const fora = Object.keys(dados.limites).filter((k) => !codigos.has(k));
     if (fora.length) throw new CenarioError(400, `Não são totais da DRE: ${fora.slice(0, 3).join(", ")}.`);

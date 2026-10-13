@@ -78,6 +78,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                     <span className="shrink-0 text-gray-600">
                       {rotuloVersao(escolhido.versao)} · {escolhido.ano}
                     </span>
+                    <Etiqueta>{ROTULO_DO_TIPO[escolhido.tipo]}</Etiqueta>
                     {escolhido.marcacao ? <Etiqueta>{rotuloMarcacao(escolhido.marcacao)}</Etiqueta> : null}
                   </>
                 ) : (
@@ -189,6 +190,9 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   );
 }
 
+/** O tipo do cenário na etiqueta (13/10/2026: o comparativo vale entre sintéticos e analíticos). */
+const ROTULO_DO_TIPO = { SINTETICO: "Sintético", ANALITICO: "Analítico" } as const;
+
 const Etiqueta = ({ children }: { children: React.ReactNode }) => (
   <span className="shrink-0 rounded-sm border border-gray-300 bg-white px-1.5 py-px text-xs font-medium whitespace-nowrap text-gray-700">{children}</span>
 );
@@ -216,7 +220,7 @@ function EscolherCenarioDialog({
   const [soMarcados, setSoMarcados] = useState(false);
   const [escolha, setEscolha] = useState(atual);
   const termo = paraBusca(busca.trim());
-  const visiveis = opcoes.filter((o) => (!soVigentes || o.vigente) && (!soMarcados || o.marcacao) && (!termo || paraBusca(`${o.nome} ${rotuloVersao(o.versao)} ${o.ano}`).includes(termo)));
+  const visiveis = opcoes.filter((o) => (!soVigentes || o.vigente) && (!soMarcados || o.marcacao) && (!termo || paraBusca(`${o.nome} ${rotuloVersao(o.versao)} ${o.ano} ${ROTULO_DO_TIPO[o.tipo]}`).includes(termo)));
   const linha = (marcada: boolean) =>
     `flex cursor-pointer items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm last:border-b-0 ${marcada ? "bg-gray-100" : "hover:bg-gray-50"}`;
   return (
@@ -224,10 +228,13 @@ function EscolherCenarioDialog({
       <DialogContent className="flex max-h-[85vh] flex-col rounded-sm sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Escolher Cenário Comparado</DialogTitle>
-          <DialogDescription>O cenário com que este se compara, conta a conta e mês a mês. A escolha grava-se em “Gravar Comparativo”.</DialogDescription>
+          <DialogDescription>
+            O cenário com que este se compara, conta a conta e mês a mês: sintético ou analítico. Entre um sintético e um analítico, compara-se a
+            DRE; o que só os analíticos têm (como os centros de custo) só se compara entre analíticos. A escolha grava-se em “Gravar Comparativo”.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <CampoBusca rotulo="Buscar cenário" valor={busca} onMudar={setBusca} placeholder="Nome, versão ou exercício…" largura="w-72" />
+          <CampoBusca rotulo="Buscar cenário" valor={busca} onMudar={setBusca} placeholder="Nome, versão, exercício ou tipo…" largura="w-72" />
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" className="accent-black" checked={soVigentes} onChange={(e) => setSoVigentes(e.target.checked)} />
             Apenas Vigentes
@@ -249,6 +256,7 @@ function EscolherCenarioDialog({
               <span className="shrink-0 text-gray-600">
                 {rotuloVersao(o.versao)} · {o.ano}
               </span>
+              <Etiqueta>{ROTULO_DO_TIPO[o.tipo]}</Etiqueta>
               {o.vigente ? <Etiqueta>Vigente</Etiqueta> : null}
               {o.marcacao ? <Etiqueta>{rotuloMarcacao(o.marcacao)}</Etiqueta> : null}
             </label>
