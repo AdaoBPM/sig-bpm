@@ -167,7 +167,7 @@ export function MiniGrafico({
                   return (
                     <span
                       key={`r-${k}-${i}`}
-                      className={`pointer-events-none absolute rounded-[2px] border bg-white py-0.5 text-[10px] leading-[12px] font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
+                      className={`pointer-events-none absolute rounded-[2px] border bg-white py-0.5 text-[11px] leading-[13px] font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${k === "realizado" ? "z-[2]" : "z-[1]"}`}
                       style={{
                         left: `${x}%`,
                         top: `${yv}%`,

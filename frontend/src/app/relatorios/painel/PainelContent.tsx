@@ -137,8 +137,8 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
         <p className="text-xs whitespace-nowrap text-gray-600">
           {rotulos.realizado} ({periodo})
         </p>
-        {/* Um ponto menor até 1536 px, para o valor e o orçado caberem lado a lado em 1/5 do card. */}
-        <p className="text-xl font-extrabold whitespace-nowrap text-gray-900 2xl:text-2xl">{formatar(b.realizado, formato)}</p>
+        {/* 22 px até 1536 px (26 px acima), para o valor e o orçado caberem lado a lado em 1/5 do card. */}
+        <p className="text-[22px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[26px]">{formatar(b.realizado, formato)}</p>
         <p className="h-4 text-xs text-gray-500">{base}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end text-right">
@@ -168,12 +168,13 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
     // O leiaute de 13/10/2026: o título e a legenda, maiores, em cima dos dois blocos (o Atual e o Acumulado); o gráfico
     // na terceira coluna, na altura do card. Em telas estreitas, um embaixo do outro.
     <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2">
-      <header className="min-w-0 lg:col-span-2 lg:pr-5">
-        <h3 className="text-lg leading-snug font-bold text-gray-900" title={i.titulo}>
+      {/* O nome e, à direita dele, a sigla e o sentido, alinhados ao vs. Orçado do Acumulado; o mês fica no nome do grupo (13/10/2026). */}
+      <header className="flex min-w-0 items-baseline justify-between gap-3 lg:col-span-2 lg:pr-3">
+        <h3 className="text-xl leading-snug font-bold text-gray-900" title={i.titulo}>
           {i.titulo}
         </h3>
-        <p className="text-sm text-gray-500">
-          {i.sigla} {sentido} · {rotuloMes}
+        <p className="shrink-0 text-sm whitespace-nowrap text-gray-500">
+          {i.sigla} {sentido}
         </p>
       </header>
       <div className="self-end lg:col-start-1 lg:row-start-2 lg:pr-3">
@@ -212,7 +213,11 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
 function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   return (
     <section>
-      <h2 className="mb-2 text-base font-bold tracking-wide text-gray-900 uppercase">{q.titulo}</h2>
+      {/* O nome do grupo e o mês de referência (13/10/2026; antes, em cada card): o mês em cinza. */}
+      <h2 className="mb-2 text-base font-bold tracking-wide text-gray-900 uppercase">
+        {q.titulo}
+        <span className="font-semibold text-gray-500"> · {rotuloMes}</span>
+      </h2>
       <div className="space-y-3">
         {q.itens.map((i) => (
           <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
@@ -399,7 +404,7 @@ export function PainelContent() {
             </p>
             <p>
               Como na planilha, o resultado financeiro e as despesas fixas aparecem em milhares (K) no mês e em milhões (M) no acumulado. O
-              percentual sob o resultado financeiro é sobre a margem de contribuição (/MC).
+              percentual sob o resultado financeiro também é sobre a receita líquida (/RL), como os demais.
             </p>
           </>
         }

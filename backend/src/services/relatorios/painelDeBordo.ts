@@ -129,7 +129,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
       margemBruta(N.MB_TOTAL, N.RL_TOTAL),
       { titulo: "Margem de Contribuição", sigla: "MC", sentido: "↑", formato: "MILHOES", conta: ind(N.MC), base: sobre(N.MC, N.RL_TOTAL) },
       { titulo: "Lucro Operacional", sigla: "EBITDA", sentido: "↑", formato: "MILHOES", conta: ind(N.EBITDA), base: sobre(N.EBITDA, N.RL_TOTAL) },
-      // O percentual é sobre a Margem de Contribuição (I19/I13 na planilha).
+      // O percentual é sobre a receita líquida (/RL), como os demais (13/10/2026; antes, sobre a Margem de Contribuição, I19/I13 na planilha).
       {
         titulo: "Resultado Financeiro",
         sigla: "RF",
@@ -137,7 +137,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
         formato: "MILHARES",
         formatoAcumulado: "MILHOES",
         conta: ind(N.RF),
-        base: { conta: (x) => div(x(N.RF), x(N.MC)), rotulo: "(/MC)", casas: 1 },
+        base: sobre(N.RF, N.RL_TOTAL),
       },
       { titulo: "Resultado Líquido", sigla: "RL", sentido: "↑", formato: "MILHOES", conta: ind(N.RL), base: sobre(N.RL, N.RL_TOTAL) },
       { titulo: "FCO Líquido", sigla: "FCOL", sentido: "↑", formato: "MILHOES", conta: ind(N.FCOL), base: sobre(N.FCOL, N.RL_TOTAL) },
