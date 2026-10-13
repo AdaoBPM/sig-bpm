@@ -48,6 +48,16 @@ function lerValor(i: IndicadorDoCenario, texto: string): number | null | undefin
   return emPct(i) ? n / 100 : n;
 }
 
+/** A escolha de Replicar aos Demais, guardada neste navegador (13/10/2026): vale nos próximos modais. */
+const CHAVE_REPLICAR = "sig.cenarios.manuais.replicar";
+function replicarGuardado() {
+  try {
+    return window.localStorage.getItem(CHAVE_REPLICAR) === "1";
+  } catch {
+    return false; // sem armazenamento
+  }
+}
+
 /**
  * Os 12 meses de um lançamento manual (vazio apaga o mês). Os valores aparecem como na tabela (13/10/2026); o mês que
  * não se mexe fica com o valor gravado (sem o arredondamento da tela). Com "Replicar aos Demais", o valor digitado num
@@ -58,7 +68,7 @@ function LancamentoDialog({ id, indicador, meses, onFechar }: { id: string; indi
   const [textos, setTextos] = useState(() => indicador.meses.map((v) => paraCampo(indicador, v)));
   // Os meses mexidos (digitados ou replicados): só eles se leem do campo; os outros ficam com o valor gravado.
   const [mexidos, setMexidos] = useState<Set<number>>(() => new Set());
-  const [replicar, setReplicar] = useState(false);
+  const [replicar, setReplicar] = useState(replicarGuardado);
   // O mês digitado desde que o campo ganhou o foco: só ele se replica (passar com Tab por um mês sem digitar não replica).
   const digitado = useRef<number | null>(null);
   const valores = indicador.meses.map((v, k) => (mexidos.has(k) ? lerValor(indicador, textos[k]) : v));
@@ -119,7 +129,16 @@ function LancamentoDialog({ id, indicador, meses, onFechar }: { id: string; indi
         <DialogFooter>
           {/* Replicar aos Demais (13/10/2026): à esquerda, na altura dos botões. */}
           <label className="inline-flex items-center gap-2 text-sm text-gray-700 sm:mr-auto" title="O valor digitado num mês vai para os outros onze ao sair do campo (Tab)">
-            <input type="checkbox" className="accent-black" checked={replicar} onChange={(e) => setReplicar(e.target.checked)} />
+            <input type="checkbox" className="accent-black" checked={replicar} onChange={(e) => {
+                const sim = e.target.checked;
+                setReplicar(sim);
+                try {
+                  window.localStorage.setItem(CHAVE_REPLICAR, sim ? "1" : "0");
+                } catch {
+                  // sem armazenamento: a escolha só não é lembrada
+                }
+              }}
+            />
             Replicar aos Demais
           </label>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
