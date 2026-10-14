@@ -54,8 +54,6 @@ export type GrupoDeCentros = {
   unidade: 1 | 2;
   destino: string;
   total: number;
-  /** O grupo dos lançamentos sem centro de custo (14/10/2026), pelo balde da conta. */
-  semCentro?: boolean;
 };
 /** Uma correspondência tarefa × linha (14/10/2026): a filial (nula: qualquer), a tarefa e o código da linha. */
 export type CorrespondenciaDeTarefa = { filial: number | null; tarefa: string; linha: string };
@@ -267,8 +265,9 @@ export const cenariosService = {
     (await api.post<{ data: Cenario & { avisos?: string[] } }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano, ...opcoes })).data.data,
   /** A referência de um analítico por outro analítico (14/10/2026). */
   referenciaCenario: async (id: string, origemId: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/cenario`, { origemId })).data.data,
-  correspondencias: async () => (await api.get<{ data: Correspondencias }>("/proxy/cenarios/correspondencias")).data.data,
-  gravarCorrespondencias: async (itens: CorrespondenciaDeTarefa[]) => (await api.put<{ data: Correspondencias }>("/proxy/cenarios/correspondencias", { itens })).data.data,
+  /** A correspondência tarefa × linha (14/10/2026), nos Cadastros da Controladoria / Linhas. */
+  correspondencias: async () => (await api.get<{ data: Correspondencias }>("/proxy/cadastros/linhas/correspondencias")).data.data,
+  gravarCorrespondencias: async (itens: CorrespondenciaDeTarefa[]) => (await api.put<{ data: Correspondencias }>("/proxy/cadastros/linhas/correspondencias", { itens })).data.data,
   resultados: async (id: string, visao: number) => (await api.get<{ data: Resultados }>(`/proxy/cenarios/${id}/resultados`, { params: { visao } })).data.data,
   /** O Painel de Bordo do cenário no mês `ate` (1 a 12): o cenário × o comparado. */
   painel: async (id: string, ate: number) =>

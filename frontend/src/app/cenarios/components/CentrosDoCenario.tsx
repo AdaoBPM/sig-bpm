@@ -24,8 +24,7 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
   const [busca, setBusca] = useState("");
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const lista = useQuery({ queryKey: ["cenarios", id, "centros"], queryFn: () => cenariosService.centros(id) });
-  // Os grupos dos lançamentos sem centro de custo (14/10/2026) ficam no fim da lista.
-  const grupos = [...(lista.data?.grupos ?? [])].sort((a, b) => Number(!!a.semCentro) - Number(!!b.semCentro) || a.grupo.localeCompare(b.grupo, "pt-BR"));
+  const grupos = [...(lista.data?.grupos ?? [])].sort((a, b) => a.grupo.localeCompare(b.grupo, "pt-BR"));
   const grupo = (escolhido && grupos.some((g) => g.grupo === escolhido) ? escolhido : grupos[0]?.grupo) ?? null;
   const contas = useQuery({ queryKey: ["cenarios", id, "centros", grupo], queryFn: () => cenariosService.centro(id, grupo!), enabled: grupo !== null });
   if (lista.isError) return <Erro erro={mensagemDeErro(lista.error, "Erro ao carregar os centros de custo.")} />;
@@ -76,7 +75,7 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
             <TabelaEditavel
               key={grupo ?? ""}
               titulo={contas.data.grupo.grupo}
-              subtitulo={`${contas.data.grupo.semCentro ? "Lançamentos sem centro de custo" : contas.data.grupo.centros.map((c) => c.codigo ?? c.nome).join(", ")} · Balde ${contas.data.grupo.balde ?? "—"} · Vai para: ${contas.data.grupo.destino}`}
+              subtitulo={`${contas.data.grupo.centros.map((c) => c.codigo ?? c.nome).join(", ")} · Balde ${contas.data.grupo.balde ?? "—"} · Vai para: ${contas.data.grupo.destino}`}
               meses={dados.meses}
               linhas={linhasDoCentro(contas.data.contas)}
               editavel={editavel && dados.editavel}
@@ -147,7 +146,7 @@ export function RateiosDoCenario({ id }: { id: string }) {
   return (
     <TabelaEditavel
       titulo="Rateios"
-      subtitulo="Bases das premissas: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda Global; Metalurgia pelo kg das linhas em kg; Armadura pela Armadura por Dia das linhas; Acompanhamento pelos Acompanhamentos por Dia de Serviços. Sem base no mês, o percentual é zero."
+      subtitulo="Bases das premissas: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda Global; Metalurgia e Armadura pelo kg das linhas (o volume × a Metalurgia ou a Armadura por Unidade); Acompanhamento pelos Acompanhamentos por Dia de Serviços. Sem base no mês, o percentual é zero."
       meses={consulta.data.meses}
       linhas={linhasDosRateios(consulta.data.rateios)}
       editavel={false}

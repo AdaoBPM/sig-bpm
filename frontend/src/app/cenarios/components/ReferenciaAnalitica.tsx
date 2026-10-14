@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, History, ListTree } from "lucide-react";
+import { Copy, History } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { cenariosService, rotuloVersao, type Cenario } from "../services/cenariosService";
 import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
 import { botaoPrimario, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
-import { CorrespondenciaDialog } from "./CorrespondenciaDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const abrev = (m: number) => MESES[m - 1].slice(0, 3);
@@ -25,12 +24,12 @@ const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt
  * A aba Referência de um cenário analítico (14/10/2026): outro cenário analítico (as premissas, os centros de custo, os
  * investimentos e os indicadores dele) ou o resultado realizado de um exercício — Mês a Mês ou a Média Replicada de um
  * período —, que carrega as Médias de Referência das premissas (e os doze meses iguais a elas), os grupos de centros de
- * custo, a depreciação base, o extra-operacional e os indicadores. Com o botão da correspondência tarefa × linha.
+ * custo, a depreciação base, o extra-operacional e os indicadores. A correspondência tarefa × linha fica nos Cadastros da
+ * Controladoria / Linhas.
  */
 export function ReferenciaAnalitica({ cenario }: { cenario: Cenario }) {
   const queryClient = useQueryClient();
   const [tipo, setTipo] = useState<"realizado" | "cenario">("realizado");
-  const [correspondencia, setCorrespondencia] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [avisos, setAvisos] = useState<string[] | null>(null);
   // O resultado realizado: o exercício, Mês a Mês ou a média de um período.
@@ -80,16 +79,11 @@ export function ReferenciaAnalitica({ cenario }: { cenario: Cenario }) {
 
   return (
     <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-sm text-gray-600">
-          Opcional: uma base para as premissas do cenário, que depois se editam na tela Premissas. A DRE do cenário analítico é sempre calculada das
-          premissas, dos centros de custo, dos investimentos e do extra-operacional.
-        </p>
-        <Button type="button" variant="outline" className="rounded-sm" onClick={() => setCorrespondencia(true)}>
-          <ListTree className="size-4" />
-          Correspondência Tarefa × Linha
-        </Button>
-      </div>
+      <p className="text-sm text-gray-600">
+        Opcional: uma base para as premissas do cenário, que depois se editam na tela Premissas. A DRE do cenário analítico é sempre calculada das
+        premissas, dos centros de custo, dos investimentos e do extra-operacional. Os custos do realizado vão para as linhas pela Correspondência
+        Tarefa × Linha (Cadastros da Controladoria / Linhas).
+      </p>
       <p className="text-sm text-gray-700">
         Referência atual:{" "}
         {cenario.nomeArquivo ? (
@@ -221,7 +215,6 @@ export function ReferenciaAnalitica({ cenario }: { cenario: Cenario }) {
         </div>
       ) : null}
 
-      {correspondencia ? <CorrespondenciaDialog onFechar={() => setCorrespondencia(false)} /> : null}
       {confirmar ? (
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(false) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-md">

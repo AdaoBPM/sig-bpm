@@ -20,9 +20,6 @@ cenariosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
 cenariosRoutes.post("/", autenticacao, express.json(), editar, asyncHandler(c.criar));
 cenariosRoutes.post("/importar/analise", autenticacao, editarSinteticos, express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }), asyncHandler(c.analisar));
 cenariosRoutes.post("/importar", autenticacao, editarSinteticos, express.json(), asyncHandler(c.importar));
-// A correspondência tarefa × linha da referência realizada dos analíticos (14/10/2026), antes das rotas /:id.
-cenariosRoutes.get("/correspondencias", autenticacao, verificarPermissao("cenarios_analiticos:ler"), asyncHandler(c.correspondencias));
-cenariosRoutes.put("/correspondencias", autenticacao, verificarPermissao("cenarios_analiticos:editar"), express.json(), asyncHandler(c.gravarCorrespondencias));
 cenariosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 cenariosRoutes.patch("/:id", autenticacao, editar, express.json(), asyncHandler(c.atualizar));
 cenariosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));

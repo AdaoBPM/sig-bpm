@@ -68,10 +68,12 @@ type Props = {
   comoUsar?: ReactNode;
   /** A caixa "Apenas Ativas" (as telas dos Cadastros da Controladoria). */
   apenasAtivas?: boolean;
+  /** Botões da tela antes do Novo (14/10/2026: a Correspondência Tarefa × Linha, na tela Linhas). */
+  acoesExtras?: ReactNode;
 };
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
-export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas }: Props) {
+export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras }: Props) {
   useRegistrarAcessoTela(rota);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
@@ -91,7 +93,16 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
       titulo={titulo}
       descricao={descricao}
       comoUsar={comoUsar}
-      acoes={edicao.botaoNovo}
+      acoes={
+        acoesExtras ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {acoesExtras}
+            {edicao.botaoNovo}
+          </div>
+        ) : (
+          edicao.botaoNovo
+        )
+      }
       apenasAtivas={apenasAtivas ? ativas.controle : undefined}
       total={tabela.total}
       pagina={tabela.pagina}

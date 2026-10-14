@@ -1,16 +1,17 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
-import { contasDoGrupo, ehContaDeCentro, grupoSemCentro, gruposDoCadastro, nomeDoGrupo } from "./centrosCenario.js";
+import { contasDoGrupo, ehContaDeCentro, gruposDoCadastro, nomeDoGrupo } from "./centrosCenario.js";
 import { CONTAS_DEPRECIACAO, contasExtra, UNIDADES_EXTRA, VENDA_BASE, VENDA_EXTRA } from "./investimentosCenario.js";
-import { C, contasDaLinha, LIQUIDA_DA_BRUTA, linhasDoCadastro, UNIDADES_PREMISSAS, VENDAS_DA_UNIDADE, type LinhaDoCadastro, type UnidadePremissa, type Venda } from "./premissasCenario.js";
+import { C, contasDaLinha, LINHAS_COM_ARMADURA, LINHAS_COM_METALURGIA, LIQUIDA_DA_BRUTA, linhasDoCadastro, UNIDADES_PREMISSAS, VENDAS_DA_UNIDADE, type LinhaDoCadastro, type UnidadePremissa, type Venda } from "./premissasCenario.js";
 
 /**
  * A referência realizada dos cenários analíticos (14/10/2026, etapa 5): do realizado das competências de um período,
  *
  * - as Médias de Referência das premissas (Matriz, Filial e Serviços, por linha e venda), que também viram os doze
- *   meses: a demanda diária (o volume do período ÷ os dias úteis dele), a receita bruta média e os impostos, e os custos
- *   e as despesas variáveis de venda em R$ por unidade da linha;
+ *   meses: a demanda diária (o volume do período ÷ os dias úteis dele), a armadura e a metalurgia por unidade da linha,
+ *   a receita bruta média (com as devoluções e os inventários) e os impostos, e os custos (com a mão de obra
+ *   terceirizada) e as despesas variáveis de venda em R$ por unidade da linha;
  * - os valores dos grupos de centros de custo, a depreciação de cada unidade e o extra-operacional, mês a mês.
  *
  * Os volumes saem das listas (a produção — em m³, com as pistas nas linhas de pistas —, a metalurgia em kg, a montagem
@@ -26,7 +27,8 @@ import { C, contasDaLinha, LIQUIDA_DA_BRUTA, linhasDoCadastro, UNIDADES_PREMISSA
  * vai pelo volume das linhas (o m³; nas despesas variáveis de venda e em Serviços, pela receita).
  */
 
-const RECEITA_DA_NATUREZA: Record<string, string> = { PRE_FABRICADO: C.RBPF, FRETE: C.RBF, MONTAGEM: C.RBM, COMPLEMENTAR: C.RBC };
+const RECEITA_DA_NATUREZA: Record<string, string> = { PRE_FABRICADO: C.RBPF, FRETE: C.RBF, MONTAGEM: C.RBM, COMPLEMENTAR: C.RBC, DEVOLUCOES_INVENTARIOS: C.RBDI };
+const RECEITAS = [C.RBPF, C.RBF, C.RBM, C.RBC, C.RBDI];
 const PISTAS = "m³ e pistas";
 const emM3 = (l: LinhaDoCadastro) => l.medida === "m³" || l.medida === PISTAS;
 
@@ -99,14 +101,14 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
       where: { ...naComp, centroCustoId: { not: null } },
       select: { competenciaId: true, valor: true, linhaDRE: { select: { codigo: true, tipo: true } }, centroCusto: { select: { nomeControladoria: true, nomeRM: true, codigoRM: true } } },
     }),
-    // Os lançamentos sem centro de custo nas contas de centros (a mão de obra terceirizada…), pelo balde da conta.
+    // Os lançamentos sem centro de custo nas contas de centros: ficam de fora (o aviso).
     prisma.lancamentoContabil.findMany({
-      where: { ...naComp, centroCustoId: null, OR: [".MOD.", ".MOI.", ".MOT.", ".GGD.", ".GGI.", ".GGC."].map((a) => ({ linhaDRE: { codigo: { contains: a } } })) },
-      select: { competenciaId: true, filial: true, balde: true, valorMovimento: true, linhaDRE: { select: { codigo: true, tipo: true } } },
+      where: { ...naComp, centroCustoId: null, OR: [".MOD.", ".MOI.", ".GGD.", ".GGI.", ".GGC."].map((a) => ({ linhaDRE: { codigo: { contains: a } } })) },
+      select: { valorMovimento: true, linhaDRE: { select: { codigo: true, tipo: true } } },
     }),
     prisma.producao.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel, obra, unidadeNegocio: unidadeSel } }),
     prisma.producaoPista.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel, unidadeNegocio: unidadeSel } }),
-    prisma.producaoMetalurgia.findMany({ where: naComp, select: { quantidade: true, unidadeNegocio: unidadeSel } }),
+    prisma.producaoMetalurgia.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel, unidadeNegocio: unidadeSel } }),
     prisma.producaoArmadura.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel, obra, unidadeNegocio: unidadeSel } }),
     prisma.montagem.findMany({ where: naComp, select: { quantidade: true } }),
     prisma.acompanhamento.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel } }),
@@ -141,6 +143,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   const outros = new Map<string, number>();
   const qtdPistas = new Map<string, number>();
   const armadura = new Map<string, number>();
+  const metalurgia = new Map<string, number>();
   const acomp = new Map<string, number>();
   for (const p of producoes) {
     const l = linha(p.unidadeNegocio?.codigo, p.linha?.codigo);
@@ -150,12 +153,16 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
     const l = linha(p.unidadeNegocio?.codigo, p.linha?.codigo);
     if (l) somar(qtdPistas, chave(l), Number(p.quantidade));
   }
-  // A metalurgia: a das fábricas na linha em kg da Matriz; a de Serviços na linha em kg de Serviços.
+  // A metalurgia (14/10/2026): a consumida por linha (a da lista); o volume da Metalúrgica é toda a das fábricas, e o da
+  // linha em kg de Serviços (a Metálica), a dela.
   const kgMatriz = daUnidade(1).find((l) => l.medida === "kg");
   const kgServicos = daUnidade(3).find((l) => l.medida === "kg");
   for (const p of metalurgias) {
-    const l = p.unidadeNegocio?.codigo === 3 ? kgServicos : kgMatriz;
-    if (l) somar(outros, `${chave(l)}|${l.unidade === 3 ? "GLOBAL" : "?"}`, Number(p.quantidade));
+    const u = p.unidadeNegocio?.codigo;
+    const consumidora = linha(u, p.linha?.codigo);
+    if (consumidora) somar(metalurgia, chave(consumidora), Number(p.quantidade));
+    const produtora = u === 3 ? (consumidora === kgServicos ? kgServicos : undefined) : kgMatriz;
+    if (produtora) somar(outros, `${chave(produtora)}|${produtora.unidade === 3 ? "GLOBAL" : "?"}`, Number(p.quantidade));
   }
   const montagem = daUnidade(3).find((l) => l.codigo === "MONTAGEM" && l.medida === "m³");
   if (montagem) for (const p of montagens) somar(outros, `${chave(montagem)}|GLOBAL`, Number(p.quantidade));
@@ -182,9 +189,10 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   }
   const receita = new Map<string, number>();
   for (const u of UNIDADES_PREMISSAS) {
-    for (const conta of [C.RBPF, C.RBF, C.RBM, C.RBC]) {
+    for (const conta of RECEITAS) {
       const total = doPeriodo(`${u}|${conta}`);
       const daConta = [...rbItens].filter(([k]) => k.startsWith(`${u}|`) && k.endsWith(`|${conta}`));
+      if (conta === C.RBDI && u === 3) continue;
       const soma = daConta.reduce((s, [, v]) => s + v, 0);
       if (!soma) {
         if (Math.abs(total) >= 1) avisos.push(`${nomeDaConta(est, conta)} (${NOME_DA_UNIDADE[u]}): ${reais(total)} sem itens na receita prévia por linha, fora das premissas.`);
@@ -193,8 +201,9 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
       for (const [k, v] of daConta) somar(receita, k, (total * v) / soma);
     }
   }
+  // A receita da linha (sem as devoluções, negativas), para dividir os volumes sem obra e os custos pela receita.
   const receitaDaLinha = (l: LinhaDoCadastro, venda?: Venda) =>
-    [...receita].filter(([k]) => k.startsWith(`${chave(l)}|${venda ?? ""}`)).reduce((s, [, v]) => s + v, 0);
+    [...receita].filter(([k]) => k.startsWith(`${chave(l)}|${venda ?? ""}`) && !k.endsWith(`|${C.RBDI}`)).reduce((s, [, v]) => s + v, 0);
 
   // Os volumes por venda: o "?" (sem obra) pela receita da linha em cada venda; em Serviços, tudo Global.
   const parteGlobal = (l: LinhaDoCadastro) => {
@@ -269,8 +278,12 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   for (const u of UNIDADES_PREMISSAS) {
     let realizados = 0;
     let calculados = 0;
-    for (const conta of [C.RBPF, C.RBF, C.RBM, C.RBC]) realizados += doPeriodo(`${u}|${conta}`) - doPeriodo(`${u}|${LIQUIDA_DA_BRUTA[conta]}`);
-    for (const l of daUnidade(u)) for (const venda of VENDAS_DA_UNIDADE[u]) calculados += receitaDaLinha(l, venda) * pctDosItens(`${chave(l)}|${venda}|`);
+    for (const conta of RECEITAS) realizados += doPeriodo(`${u}|${conta}`) - doPeriodo(`${u}|${LIQUIDA_DA_BRUTA[conta]}`);
+    for (const l of daUnidade(u))
+      for (const venda of VENDAS_DA_UNIDADE[u]) {
+        const comDevolucoes = [...receita].filter(([k]) => k.startsWith(`${chave(l)}|${venda}|`)).reduce((s, [, v]) => s + v, 0);
+        calculados += comDevolucoes * pctDosItens(`${chave(l)}|${venda}|`);
+      }
     if (calculados > 0 && realizados > 0) ajusteDosImpostos.set(u, realizados / calculados);
   }
 
@@ -292,7 +305,10 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
           add(u, venda, `DEMANDA:${l.codigo}`, (pistasDaLinha * (volumeTotal(l) ? b / volumeTotal(l) : 0)) / dias);
           add(u, venda, `M3_PISTA:${l.codigo}`, volumeTotal(l) / pistasDaLinha);
         } else add(u, venda, `DEMANDA:${l.codigo}`, b / dias);
-        add(u, venda, `ARMADURA:${l.codigo}`, porVenda(armadura, l, venda) / dias);
+        // A armadura e a metalurgia por unidade da linha: o kg do período ÷ o volume dele.
+        const bt0 = baseTotal(l);
+        if (LINHAS_COM_ARMADURA.has(l.codigo) && bt0) add(u, venda, `ARMADURA:${l.codigo}`, VENDAS_DA_UNIDADE[u].reduce((s, v) => s + porVenda(armadura, l, v), 0) / bt0);
+        if (LINHAS_COM_METALURGIA.has(l.codigo) && bt0) add(u, venda, `METALURGIA:${l.codigo}`, (metalurgia.get(chave(l)) ?? 0) / bt0);
         if (u === 3 && venda === "GLOBAL") add(u, venda, `ACOMPANHAMENTO:${l.codigo}`, (acomp.get(chave(l)) ?? 0) / dias);
         // A receita bruta média de cada conta e os impostos (dos itens: a bruta menos a líquida, sobre a bruta).
         let rb = 0;
@@ -331,8 +347,10 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   // As outras contas dos centros (a receita, as matérias primas, a depreciação…) vêm das premissas, dos investimentos e
   // do extra-operacional.
   for (const r of centros) if (r.linhaDRE.tipo === "ITEM" && ehContaDeCentro(r.linhaDRE.codigo)) noGrupo(nomeDoGrupo(r.centroCusto!), r.linhaDRE.codigo, r.competenciaId, Number(r.valor));
-  for (const r of semCentro) if (r.linhaDRE?.tipo === "ITEM") noGrupo(grupoSemCentro(r.linhaDRE.codigo, r.balde, r.filial), r.linhaDRE.codigo, r.competenciaId, Number(r.valorMovimento));
   if (Math.abs(foraDosCentros) >= 1) avisos.push(`Centros de custo: ${reais(foraDosCentros)} de mão de obra e gastos gerais dos centros de estoque e de investimento, ou em contas fora do grupo da DRE do centro, ficam de fora.`);
+  const semCentroDeCusto = semCentro.filter((r) => r.linhaDRE?.tipo === "ITEM").reduce((s, r) => s + Number(r.valorMovimento), 0);
+  if (Math.abs(semCentroDeCusto) >= 1)
+    avisos.push(`Centros de custo: ${reais(semCentroDeCusto)} de lançamentos sem centro de custo em mão de obra direta e indireta e gastos gerais ficam de fora (a mão de obra terceirizada vai nas premissas).`);
   const centrosDoCenario = [...somaCentros].map(([k, valor]) => {
     const [grupo, codigo, mes] = k.split("|");
     return { grupo, codigo, mes: Number(mes), valor };

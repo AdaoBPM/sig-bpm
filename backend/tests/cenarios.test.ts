@@ -7,7 +7,7 @@ import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
-import { alocarCentros, contasDoGrupo, grupoSemCentro, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
+import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
 import { dividirPorLinhas, linhaDaTarefa, vendaDaObra } from "../src/services/cenarios/referenciaAnalitico.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
 import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
@@ -138,17 +138,43 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
   const EST = [
     item("ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO", [1, 2]),
     item("ROB.RBF.RECEITA_BRUTA_DE_FRETE", [1, 2]),
+    item("ROB.RBDI.RECEITA_BRUTA_DE_DEVOLUCOES_E_INVENTARIO", [1, 2]),
     item("CPP.MP.CIMENTO", [1, 2]),
+    item("CPP.MOT.PROJETOS_TERCEIRIZADOS", [1, 2]),
     item("CPP.GGV.MADEIRAS", [1, 2]),
     item("CPP.MOD.REMUNERACOES_CLT", [1, 2]),
     item("DVV.GGV.FRETE_E_DESCARGA", [1, 2]),
   ];
   const ALVEOLARES = { codigo: "ALVEOLARES", nome: "Alveolares", unidade: 2 as const, medida: "m³ e pistas" };
 
-  it("as linhas da tabela: a demanda em pistas e m³ por pista, as receitas, os impostos, as contas de MP, GGV e DVV (sem a mão de obra)", () => {
-    const chaves = linhasDaTabela(EST, [ALVEOLARES], 2).map((l) => l.chave);
-    for (const c of ["DIAS_UTEIS", "AJUSTE_RECEITA", "AJUSTE_CUSTOS", "DEMANDA:ALVEOLARES", "M3_PISTA:ALVEOLARES", "VOLUME:ALVEOLARES", "IMPOSTOS:ALVEOLARES", "CUSTO:ALVEOLARES:CPP.MP.CIMENTO", "CUSTO:ALVEOLARES:CPP.GGV.MADEIRAS", "CUSTO:ALVEOLARES:DVV.GGV.FRETE_E_DESCARGA"]) assert.ok(chaves.includes(c), c);
+  it("as linhas da tabela: a demanda em pistas e m³ por pista, as receitas (com as devoluções), os impostos, as contas de MP, MOT, GGV e DVV (sem a mão de obra própria)", () => {
+    const linhas = linhasDaTabela(EST, [ALVEOLARES], 2);
+    const chaves = linhas.map((l) => l.chave);
+    for (const c of [
+      "DIAS_UTEIS",
+      "AJUSTE_RECEITA",
+      "AJUSTE_CUSTOS",
+      "DEMANDA:ALVEOLARES",
+      "M3_PISTA:ALVEOLARES",
+      "VOLUME:ALVEOLARES",
+      "ARMADURA:ALVEOLARES",
+      "METALURGIA:ALVEOLARES",
+      "RB:ALVEOLARES:ROB.RBDI.RECEITA_BRUTA_DE_DEVOLUCOES_E_INVENTARIO",
+      "IMPOSTOS:ALVEOLARES",
+      "CUSTO:ALVEOLARES:CPP.MP.CIMENTO",
+      "CUSTO:ALVEOLARES:CPP.MOT.PROJETOS_TERCEIRIZADOS",
+      "CUSTO:ALVEOLARES:CPP.GGV.MADEIRAS",
+      "CUSTO:ALVEOLARES:DVV.GGV.FRETE_E_DESCARGA",
+    ])
+      assert.ok(chaves.includes(c), c);
     assert.ok(!chaves.some((c) => c.includes("CPP.MOD")));
+    // A armadura e a metalurgia em kg por unidade da linha (o m³ nas de pistas).
+    assert.equal(linhas.find((l) => l.chave === "ARMADURA:ALVEOLARES")!.und, "kg/m³");
+    // Só nas linhas que levam armadura e metalurgia: a Metalúrgica tem armadura, mas não consome a metalurgia; a Vedação, nenhuma.
+    const met = linhasDaTabela(EST, [{ codigo: "METALÚRGICA", nome: "Metalúrgica", unidade: 1, medida: "kg" }], 1).map((l) => l.chave);
+    assert.ok(met.includes("ARMADURA:METALÚRGICA") && !met.includes("METALURGIA:METALÚRGICA"));
+    const ved = linhasDaTabela(EST, [{ codigo: "VEDAÇÃO", nome: "Vedação", unidade: 3, medida: "m" }], 3).map((l) => l.chave);
+    assert.ok(!ved.includes("ARMADURA:VEDAÇÃO") && !ved.includes("METALURGIA:VEDAÇÃO"));
   });
 
   it("calcula: pistas × dias, × m³ por pista; a receita × (1 + ajuste) e a líquida × (1 − impostos); os custos × (1 + ajuste)", () => {
@@ -176,20 +202,35 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     assert.equal(valores.get("RL:ALVEOLARES")![0], 1700 * 0.75);
   });
 
-  it("as bases dos rateios: produção e projeto (só Global) pelo m³; armadura e acompanhamentos por dia × dias úteis", () => {
+  it("as bases dos rateios: produção e projeto (só Global) pelo m³; armadura e metalurgia pelo volume × kg por unidade; acompanhamentos por dia × dias úteis", () => {
     const MONTAGEM = { codigo: "MONTAGEM", nome: "Montagem", unidade: 3 as const, medida: "m³" };
     const FUNDACAO = { codigo: "FUNDAÇÃO", nome: "Fundação", unidade: 3 as const, medida: "m³" };
-    const p: Record<string, number> = { "DEMANDA:ALVEOLARES": 2, "M3_PISTA:ALVEOLARES": 10, "ARMADURA:ALVEOLARES": 50, "ACOMPANHAMENTO:MONTAGEM": 3, "ACOMPANHAMENTO:FUNDAÇÃO": 1 };
+    const p: Record<string, number> = {
+      "DEMANDA:ALVEOLARES": 2,
+      "M3_PISTA:ALVEOLARES": 10,
+      "ARMADURA:ALVEOLARES": 50,
+      "METALURGIA:ALVEOLARES": 3,
+      "DEMANDA:MONTAGEM": 5,
+      "METALURGIA:MONTAGEM": 2,
+      "ACOMPANHAMENTO:MONTAGEM": 3,
+      "ACOMPANHAMENTO:FUNDAÇÃO": 1,
+    };
     const ler = (chave: string, mes: number) => (mes === 0 ? undefined : chave === "DIAS_UTEIS" ? 20 : p[chave]);
-    const global = calcularTabela(EST, [ALVEOLARES], 2, 2026, ler, "GLOBAL").bases;
+    const tabela = calcularTabela(EST, [ALVEOLARES], 2, 2026, ler, "GLOBAL");
+    const global = tabela.bases;
     assert.equal(global.get("PRODUCAO|FILIAL")![0], 400);
     assert.equal(global.get("PROJETO|FILIAL")![0], 400);
-    assert.equal(global.get("ARMADURA|FILIAL")![0], 1000);
+    // 400 m³ × 50 kg/m³ de armadura; × 3 kg/m³ de metalurgia, que também é a Produção da Metalurgia (kg) da Filial.
+    assert.equal(global.get("ARMADURA|FILIAL")![0], 20_000);
+    assert.equal(global.get("METALURGIA|FILIAL")![0], 1200);
+    assert.equal(tabela.dre.get("P.PRODUCAO_DA_METALURGIA_KG")![0], 1200);
     assert.equal(calcularTabela(EST, [ALVEOLARES], 2, 2026, ler, "MERCANTIL").bases.get("PROJETO|FILIAL"), undefined);
     const servicos = calcularTabela(EST, [MONTAGEM, FUNDACAO], 3, 2026, ler, "GLOBAL");
     assert.equal(servicos.bases.get("ACOMPANHAMENTO|MONTAGEM")![0], 60);
     assert.equal(servicos.bases.get("ACOMPANHAMENTO|COMPLEMENTAR")![0], 20);
     assert.equal(servicos.dre.get("S.ACOMPANHAMENTO_DE_OBRA_D")![0], 80);
+    // A Montagem: 5 m³/dia × 20 dias × 2 kg/m³ de metalurgia.
+    assert.equal(servicos.bases.get("METALURGIA|MONTAGEM")![0], 200);
   });
 });
 
@@ -329,17 +370,8 @@ describe("referência realizada dos cenários analíticos (14/10/2026)", () => {
     assert.equal(vendaDaObra(null), null);
   });
 
-  it("os lançamentos sem centro de custo vão para os grupos Sem Centro de Custo, pelo balde da conta", () => {
-    assert.equal(grupoSemCentro("CSM.MOT.MONTAGEM", "OBRAS", 1), "Sem Centro de Custo · Obras");
-    assert.equal(grupoSemCentro("CPP.MOT.PROJETOS", "PROJETO", 1), "Sem Centro de Custo · Projeto");
-    assert.equal(grupoSemCentro("CPP.GGI.OUTROS", "UNIDADE", 2), "Sem Centro de Custo · Filial");
-    assert.equal(grupoSemCentro("CSC.MOT.IN_LOCO", "COMPLEMENTAR", 1), "Sem Centro de Custo · Complementar");
-    assert.equal(grupoSemCentro("DC.GGC.FEIRAS", "DESPESAS", 1), "Sem Centro de Custo · Despesas Comerciais");
-    assert.equal(grupoSemCentro("ROB.RBPF.X", "MATRIZ", 1), null);
-    // O Complementar vai direto para Serviços, nas contas da CSC.
-    const est = [{ id: "x", codigo: "CSC.MOT.IN_LOCO", tipo: "ITEM" as const, grupo: "", grupoSigla: "CSC", atribuicao: "MOT", descricao: "In Loco", expressao: null, unidades: [3] }];
-    const g = { grupo: "Sem Centro de Custo · Complementar", centros: [], balde: "COMPLEMENTAR", baldes: ["COMPLEMENTAR"], grupoDRE: "CSC", unidade: 1 as const, destino: "" };
-    assert.deepEqual(contasDoGrupo(est, g).map((l) => l.codigo), ["CSC.MOT.IN_LOCO"]);
-    assert.equal(alocarCentros(est, [g], [{ grupo: g.grupo, codigo: "CSC.MOT.IN_LOCO", mes: 2, valor: 900 }], percentuaisDasBases(new Map())).get("3|CSC.MOT.IN_LOCO")![1], 900);
+  it("a mão de obra terceirizada não é dos centros (vem das premissas)", () => {
+    const est = [{ id: "x", codigo: "CSM.MOT.MONTAGEM", tipo: "ITEM" as const, grupo: "", grupoSigla: "CSM", atribuicao: "MOT", descricao: "Montagem", expressao: null, unidades: [3] }];
+    assert.deepEqual(contasDoGrupo(est, { grupoDRE: "CSM" }), []);
   });
 });

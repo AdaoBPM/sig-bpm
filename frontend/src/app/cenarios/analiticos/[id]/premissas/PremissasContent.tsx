@@ -59,15 +59,15 @@ export function PremissasContent() {
             <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global.</li>
             <li>
               Na aba Centros de Custo, escolha o grupo de centros da Controladoria na lista à esquerda (com a busca e o total do exercício; os centros de
-              estoque e de investimento não entram) e digite, à direita, os valores mensais das contas dele: mão de obra direta, indireta e terceirizada e
-              gastos gerais diretos, indiretos e comerciais (as Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas tabelas das unidades, em R$
-              por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
+              estoque e de investimento não entram) e digite, à direita, os valores mensais das contas dele: mão de obra direta e indireta e gastos
+              gerais diretos, indiretos e comerciais (as Matérias Primas, a Mão de Obra Terceirizada, os Gastos Gerais Variáveis e o Estoque ficam nas
+              tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
               baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum).
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
-              Global; Metalurgia pelo kg das linhas em kg; Armadura pela Armadura por Dia de cada linha; Acompanhamento pelos Acompanhamentos por Dia das linhas
-              de Serviços (as duas × os dias úteis). Sem base no mês, o percentual é zero, e o valor dos grupos daquela chave não entra.
+              Global; Metalurgia e Armadura pelo kg de cada linha (o volume × a Metalurgia ou a Armadura por Unidade); Acompanhamento pelos
+              Acompanhamentos por Dia das linhas de Serviços (× os dias úteis). Sem base no mês, o percentual é zero, e o valor dos grupos daquela chave não entra.
             </li>
             <li>
               Na aba Investimentos, em cima, a Depreciação Base de cada unidade mês a mês (digitada: o maquinário de produção na Matriz e na Filial, o de
@@ -91,11 +91,14 @@ export function PremissasContent() {
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
               Ajustes (o percentual sobre a receita bruta e líquida e o percentual sobre os custos e despesas), a Demanda Diária de cada linha (na
-              unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Receita Bruta Média e os Impostos, os
-              Custos (Matérias Primas, Gastos Gerais Variáveis e Estoque, por conta) e as Despesas Variáveis de Venda, em R$ por unidade da linha.
+              unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Armadura e a Metalurgia por Unidade (em kg por
+              unidade da linha: kg/m³, kg/kg, kg/m²; só nas linhas que as levam), a Receita Bruta Média (na Matriz e na Filial, também a de Devoluções e
+              Inventários, negativa) e os Impostos, os Custos (Matérias Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque, por conta) e
+              as Despesas Variáveis de Venda, em R$ por unidade da linha.
             </li>
             <li>
-              Os cálculos ficam em cinza-escuro e não se editam: o volume do mês (a demanda × os dias úteis), a Receita Líquida Média e, no fim, o
+              Os cálculos ficam em cinza-escuro e não se editam: o volume do mês (a demanda × os dias úteis), a armadura e a metalurgia do mês (o
+              volume × o kg por unidade), a Receita Líquida Média e, no fim, o
               Resultado das Premissas em R$ (o que a tabela leva para a DRE).
             </li>
             {podeEditar ? (
@@ -119,7 +122,7 @@ export function PremissasContent() {
               As premissas do cenário analítico, de onde a DRE dele se calcula: em cada unidade e venda, o volume de cada linha é a demanda diária ×
               os dias úteis (nas linhas de m³ e pistas, as pistas × o volume por pista); cada conta é o volume × o valor unitário × (1 + o ajuste); a
               receita líquida é a bruta × (1 − os impostos). As contas de Global e Mercantil somam-se na DRE da unidade, com os volumes (a produção e a
-              expedição, iguais, a metalurgia e a montagem), e os totais e o Consolidado saem da Estrutura da DRE.
+              expedição, iguais, a metalurgia consumida pelas linhas da unidade e a montagem), e os totais e o Consolidado saem da Estrutura da DRE.
             </p>
             <p>
               Em Serviços, as linhas de Montagem e Vedação levam à receita de montagem e aos custos da CSM; as demais, à receita complementar e à CSC. A
@@ -127,7 +130,7 @@ export function PremissasContent() {
               volume da linha — o m³ produzido (o kg na Metalúrgica), o m³ montado na Montagem e o kg na Metálica; as linhas de Serviços sem volume nas
               listas vão por dia útil (a demanda diária fica 1). A demanda diária é o volume do período ÷ os dias úteis dele, e os doze meses começam
               iguais às médias.
-              A mão de obra, os gastos gerais diretos e indiretos e as despesas vêm dos centros de custo; a depreciação, dos investimentos; o imposto de
+              A mão de obra direta e indireta, os gastos gerais diretos e indiretos e as despesas vêm dos centros de custo; a depreciação, dos investimentos; o imposto de
               renda, a contribuição social e o resultado financeiro, do extra-operacional.
             </p>
             <p>
@@ -138,12 +141,12 @@ export function PremissasContent() {
               Acompanhamentos no Mês somam o Acompanhamento de Obra (d) da DRE.
             </p>
             <p>
-              Na referência realizada, a receita de cada conta (Pré-Fabricado, Frete, Montagem e Complementar) é a da DRE da unidade, dividida entre as
+              Na referência realizada, a receita de cada conta (Pré-Fabricado, Frete, Devoluções e Inventários, Montagem e Complementar) é a da DRE da unidade, dividida entre as
               linhas e as vendas pelos itens da receita prévia, e os impostos são os dos itens, ajustados aos da DRE da unidade. Os custos (Matérias
-              Primas, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
-              linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nas Configurações);
-              o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). Os lançamentos sem centro de
-              custo (a mão de obra terceirizada, entre outros) ficam nos grupos Sem Centro de Custo, no fim da lista dos centros, pelo balde da conta.
+              Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
+              linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nos Cadastros da Controladoria / Linhas);
+              o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). A armadura e a metalurgia por
+              unidade são as das listas de cada linha ÷ o volume dela.
             </p>
             <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil

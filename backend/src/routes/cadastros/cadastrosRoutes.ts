@@ -4,6 +4,7 @@ import { env } from "../../config/env.js";
 import { verificarAlgumaPermissao, verificarPermissao } from "../../middlewares/verificarPermissao.js";
 
 import { cadastrosController } from "../../controllers/cadastros/cadastrosController.js";
+import { cenariosController } from "../../controllers/cenarios/cenariosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
@@ -68,3 +69,8 @@ cadastrosRoutes.get(
   verificarPermissao("cadastros_controladoria:ler"),
   asyncHandler(cadastrosController.listarLinhasDRE),
 );
+
+// A correspondência tarefa × linha (14/10/2026; na tela Linhas): as tarefas das requisições e das notas fiscais e a
+// linha de cada uma, que a referência realizada dos cenários analíticos usa para dividir os custos entre as linhas.
+cadastrosRoutes.get("/linhas/correspondencias", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(cenariosController.correspondencias));
+cadastrosRoutes.put("/linhas/correspondencias", autenticacao, verificarPermissao("cadastros_controladoria:editar"), express.json(), asyncHandler(cenariosController.gravarCorrespondencias));

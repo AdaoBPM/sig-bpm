@@ -42,10 +42,7 @@ export function ConfiguracoesContent() {
                   centros de custo, a depreciação base, o extra-operacional e os indicadores; outro analítico traz as premissas, os centros, os
                   investimentos e os indicadores dele. Depois, tudo se edita na tela Premissas. Os avisos do que não coube aparecem embaixo.
                 </li>
-                <li>
-                  “Correspondência Tarefa × Linha” abre a lista das tarefas das requisições e das notas fiscais e a linha de cada uma (numa filial ou em
-                  qualquer uma): inclua, troque ou exclua e clique em “Gravar”. Vale na próxima carga do realizado.
-                </li>
+                <li>A Correspondência Tarefa × Linha, que leva os custos do realizado às linhas, fica nos Cadastros da Controladoria / Linhas.</li>
               </>
             ) : (
               <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>

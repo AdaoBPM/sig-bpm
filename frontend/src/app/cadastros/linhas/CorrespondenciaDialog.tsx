@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { ListTree, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { usePermissions } from "@/context/PermissionContext";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type CorrespondenciaDeTarefa } from "../services/cenariosService";
-import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
+import { botaoPrimario, classeSelect, Erro } from "@/app/cenarios/components/CenarioDialog";
+import { cenariosService, type CorrespondenciaDeTarefa } from "@/app/cenarios/services/cenariosService";
 
 const FILIAIS: Array<[string, string]> = [
   ["", "Qualquer Filial"],
@@ -20,6 +21,20 @@ const FILIAIS: Array<[string, string]> = [
   ["2", "2 · Filial"],
 ];
 const chaveDe = (i: CorrespondenciaDeTarefa) => `${i.filial ?? ""}|${i.tarefa.trim().replace(/\s+/g, " ").toUpperCase()}`;
+
+/** O botão da tela Linhas (14/10/2026; antes, na aba Referência dos cenários analíticos), na altura do título. */
+export function BotaoCorrespondencia() {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
+        <ListTree className="size-4" />
+        Correspondência Tarefa × Linha
+      </Button>
+      {aberto ? <CorrespondenciaDialog onFechar={() => setAberto(false)} /> : null}
+    </>
+  );
+}
 
 /**
  * A correspondência tarefa × linha (14/10/2026): a tarefa das requisições e das notas fiscais (o nome dela), numa filial
@@ -61,6 +76,8 @@ function Formulario({
   onFechar: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const pode = hasPermission("cadastros_controladoria:editar");
   const [itens, setItens] = useState(inicial);
   const mudar = (k: number, x: Partial<CorrespondenciaDeTarefa>) => setItens((a) => a.map((i, j) => (j === k ? { ...i, ...x } : i)));
   const repetidas = new Set(itens.map(chaveDe).filter((c, k, todas) => todas.indexOf(c) !== k));
@@ -94,6 +111,7 @@ function Formulario({
                     aria-label="Filial"
                     value={i.filial === null ? "" : String(i.filial)}
                     onChange={(e) => mudar(k, { filial: e.target.value ? Number(e.target.value) : null })}
+                    disabled={!pode}
                     className={`${classeSelect} w-40`}
                   >
                     {FILIAIS.map(([v, r]) => (
@@ -108,12 +126,13 @@ function Formulario({
                     aria-label="Tarefa"
                     value={i.tarefa}
                     onChange={(e) => mudar(k, { tarefa: e.target.value })}
+                    disabled={!pode}
                     placeholder="Ex.: PILAR"
                     className={`h-9 rounded-sm ${!i.tarefa.trim() || repetidas.has(chaveDe(i)) ? "border-red-400" : ""}`}
                   />
                 </td>
                 <td className="px-3 py-1">
-                  <select aria-label="Linha" value={i.linha} onChange={(e) => mudar(k, { linha: e.target.value })} className={`${classeSelect} min-w-48`}>
+                  <select aria-label="Linha" value={i.linha} disabled={!pode} onChange={(e) => mudar(k, { linha: e.target.value })} className={`${classeSelect} min-w-48`}>
                     {!i.linha ? <option value="">Escolha a linha</option> : null}
                     {unidades.map((u) => (
                       <optgroup key={u} label={u}>
@@ -129,6 +148,7 @@ function Formulario({
                   </select>
                 </td>
                 <td className="px-2 py-1 text-center">
+                  {pode ? (
                   <button
                     type="button"
                     className="rounded-sm p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-700"
@@ -138,6 +158,7 @@ function Formulario({
                   >
                     <Trash2 className="size-4" />
                   </button>
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -160,18 +181,26 @@ function Formulario({
               : null
         }
       />
-      <DialogFooter>
-        <Button type="button" variant="outline" className="rounded-sm sm:mr-auto" onClick={() => setItens((a) => [...a, { filial: null, tarefa: "", linha: "" }])}>
-          <Plus className="size-4" />
-          Incluir Tarefa
-        </Button>
-        <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-          Cancelar
-        </Button>
-        <Button type="button" className={botaoPrimario} disabled={invalido || gravar.isPending} onClick={() => gravar.mutate()}>
-          {gravar.isPending ? "Gravando…" : "Gravar"}
-        </Button>
-      </DialogFooter>
+      {pode ? (
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm sm:mr-auto" onClick={() => setItens((a) => [...a, { filial: null, tarefa: "", linha: "" }])}>
+            <Plus className="size-4" />
+            Incluir Tarefa
+          </Button>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button type="button" className={botaoPrimario} disabled={invalido || gravar.isPending} onClick={() => gravar.mutate()}>
+            {gravar.isPending ? "Gravando…" : "Gravar"}
+          </Button>
+        </DialogFooter>
+      ) : (
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Fechar
+          </Button>
+        </DialogFooter>
+      )}
     </>
   );
 }

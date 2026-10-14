@@ -257,7 +257,8 @@ export function TabelaEditavel({
           {colgroup}
           <thead>
             <tr className="border-b border-gray-300">
-              <th className="sticky left-0 z-20 px-4 py-2 text-left text-xs font-bold">{cabecalho}</th>
+              {/* !z-20: a regra .tabela-sig th (z-index 1) venceria o z-20, e os meses passariam por cima do rótulo fixo ao correr a tabela. */}
+              <th className="sticky left-0 !z-20 px-4 py-2 text-left text-xs font-bold">{cabecalho}</th>
               <th className="px-3 py-2 text-left text-xs font-bold">Und.</th>
               {comReferencia ? (
                 <th className="border-r border-gray-300 px-3 py-2 text-right text-xs font-bold whitespace-nowrap" title="As médias do realizado da referência do cenário">

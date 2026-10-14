@@ -21,8 +21,8 @@ type Tx = Prisma.TransactionClient;
  *   demanda × os dias úteis;
  * - Receita Operacional: por linha, a receita bruta média de cada conta da ROB (R$ por unidade da linha — o m³, nas
  *   de pistas), os impostos operacionais (%/ROB) e a receita líquida média (calculada);
- * - Custos de Produção / Serviços: por linha, as Matérias Primas e os Gastos Gerais Variáveis (por conta) e o Estoque,
- *   em R$ por unidade da linha;
+ * - Custos de Produção / Serviços: por linha, as Matérias Primas, a Mão de Obra Terceirizada (14/10/2026) e os Gastos
+ *   Gerais Variáveis (por conta) e o Estoque, em R$ por unidade da linha;
  * - Despesas Variáveis de Venda: por linha, os Gastos Gerais Variáveis da DVV (por conta), em R$ por unidade.
  *
  * O valor de cada conta no mês é o volume × o valor unitário × (1 + o ajuste); a receita líquida, a bruta × (1 − os
@@ -45,6 +45,7 @@ export const C = {
   RBF: "ROB.RBF.RECEITA_BRUTA_DE_FRETE",
   RBM: "ROB.RBM.RECEITA_BRUTA_DE_MONTAGEM",
   RBC: "ROB.RBC.RECEITA_BRUTA_COMPLEMENTAR",
+  RBDI: "ROB.RBDI.RECEITA_BRUTA_DE_DEVOLUCOES_E_INVENTARIO",
   PRODUCAO_M3: "P.PRODUCAO_DO_PRE_FABRICADO_M",
   PRODUCAO_PISTAS: "P.PRODUCAO_DO_PRE_FABRICADO_PISTAS",
   METALURGIA_KG: "P.PRODUCAO_DA_METALURGIA_KG",
@@ -58,6 +59,7 @@ export const LIQUIDA_DA_BRUTA: Record<string, string> = {
   [C.RBF]: "ROL.RLF.RECEITA_LIQUIDA_DE_FRETE",
   [C.RBM]: "ROL.RLM.RECEITA_LIQUIDA_DE_MONTAGEM",
   [C.RBC]: "ROL.RLC.RECEITA_LIQUIDA_COMPLEMENTAR",
+  [C.RBDI]: "ROL.RLDI.RECEITA_LIQUIDA_DE_DEVOLUCOES_E_INVENTAR",
 };
 /**
  * Em Serviços, as linhas da receita de montagem (como as medições: Montagem e Vedação), com os custos na CSM; as
@@ -65,6 +67,13 @@ export const LIQUIDA_DA_BRUTA: Record<string, string> = {
  */
 const LINHAS_DE_MONTAGEM = new Set(["MONTAGEM", "VEDAÇÃO"]);
 const PISTAS = "m³ e pistas";
+/**
+ * As linhas com a demanda de armadura (14/10/2026), em kg por unidade da linha (kg/m³, kg/kg, kg/m²…), e as com a
+ * demanda de metalurgia, também em kg por unidade: as que consomem as peças da Metalurgia (a Metalúrgica, que as
+ * produz, não). A metalurgia das linhas dá o rateio de Metalurgia e a Produção da Metalurgia (kg) da DRE de cada unidade.
+ */
+export const LINHAS_COM_ARMADURA = new Set(["ESTRUTURA", "METALÚRGICA", "ALVEOLARES", "ESTACAS", "MONTAGEM", "CAPEAMENTO", "METÁLICA"]);
+export const LINHAS_COM_METALURGIA = new Set(["ESTRUTURA", "ALVEOLARES", "ESTACAS", "MONTAGEM", "CAPEAMENTO", "METÁLICA"]);
 
 /** Uma linha de produto ou de obra do cadastro Linhas, na unidade dela. */
 export type LinhaDoCadastro = { codigo: string; nome: string; unidade: UnidadePremissa; medida: string };
@@ -93,8 +102,11 @@ export function contasDaLinha(est: LinhaEstrutura[], l: LinhaDoCadastro) {
   const daUnidade = (prefixo: string) => est.filter((x) => x.tipo === "ITEM" && x.unidades.includes(l.unidade) && x.codigo.startsWith(prefixo));
   const custo = l.unidade === 3 ? (LINHAS_DE_MONTAGEM.has(l.codigo) ? "CSM" : "CSC") : "CPP";
   return {
-    receitas: l.unidade === 3 ? [LINHAS_DE_MONTAGEM.has(l.codigo) ? C.RBM : C.RBC] : [C.RBPF, C.RBF],
-    custos: [...daUnidade(`${custo}.MP.`), ...daUnidade(`${custo}.GGV.`), ...daUnidade(`${custo}.E.`)],
+    // As devoluções e os inventários (14/10/2026), como receita unitária (negativa) nas linhas da Matriz e da Filial.
+    receitas: l.unidade === 3 ? [LINHAS_DE_MONTAGEM.has(l.codigo) ? C.RBM : C.RBC] : [C.RBPF, C.RBF, C.RBDI],
+    // A mão de obra terceirizada (14/10/2026) é custo unitário da linha: a de produção na Matriz e na Filial, a de
+    // serviços em Serviços (não vem dos centros de custo).
+    custos: [...daUnidade(`${custo}.MP.`), ...daUnidade(`${custo}.MOT.`), ...daUnidade(`${custo}.GGV.`), ...daUnidade(`${custo}.E.`)],
     dvv: daUnidade("DVV.GGV."),
   };
 }
@@ -127,9 +139,15 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
       add("PRODUÇÃO E SERVIÇOS", g, `DEMANDA:${l.codigo}`, "Demanda Diária", `${l.medida}/dia`);
       add("PRODUÇÃO E SERVIÇOS", g, `VOLUME:${l.codigo}`, "Volume no Mês", l.medida, "CALCULO");
     }
-    // As bases dos rateios de armadura e de acompanhamento (13/10/2026), por dia útil como a demanda.
-    add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura por Dia", "kg/dia");
-    add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ARMADURA:${l.codigo}`, "Armadura no Mês", "kg", "CALCULO");
+    // As bases dos rateios de armadura e de metalurgia (14/10/2026), em kg por unidade da linha (o volume × a demanda).
+    if (LINHAS_COM_ARMADURA.has(l.codigo)) {
+      add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura por Unidade", `kg/${undDoValor(l)}`);
+      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ARMADURA:${l.codigo}`, "Armadura no Mês", "kg", "CALCULO");
+    }
+    if (LINHAS_COM_METALURGIA.has(l.codigo)) {
+      add("PRODUÇÃO E SERVIÇOS", g, `METALURGIA:${l.codigo}`, "Metalurgia por Unidade", `kg/${undDoValor(l)}`);
+      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_METALURGIA:${l.codigo}`, "Metalurgia no Mês", "kg", "CALCULO");
+    }
     if (l.unidade === 3) {
       add("PRODUÇÃO E SERVIÇOS", g, `ACOMPANHAMENTO:${l.codigo}`, "Acompanhamentos por Dia", "acomp./dia");
       add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ACOMPANHAMENTO:${l.codigo}`, "Acompanhamentos no Mês", "acomp.", "CALCULO");
@@ -155,19 +173,20 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
   return r;
 }
 
-const rotuloAtribuicao = (codigo: string) => (/\.MP\./.test(codigo) ? "MP" : /\.GGV\./.test(codigo) ? "GGV" : /\.E\./.test(codigo) ? "Estoque" : "");
+const rotuloAtribuicao = (codigo: string) => (/\.MP\./.test(codigo) ? "MP" : /\.MOT\./.test(codigo) ? "MOT" : /\.GGV\./.test(codigo) ? "GGV" : /\.E\./.test(codigo) ? "Estoque" : "");
 
 /** O resultado da tabela em R$, mês a mês (o que ela leva para a DRE), pelos prefixos das contas. */
 const RESULTADOS: Array<[string, string]> = [
   ["RESULTADO:ROB", "Receita Bruta"],
   ["RESULTADO:ROL", "Receita Líquida"],
   ["RESULTADO:MP", "Matérias Primas"],
+  ["RESULTADO:MOT", "Mão de Obra Terceirizada"],
   ["RESULTADO:GGV", "Gastos Gerais Variáveis"],
   ["RESULTADO:E", "Estoque"],
   ["RESULTADO:DVV", "Despesas Variáveis de Venda"],
 ];
 const resultadoDaConta = (codigo: string) =>
-  codigo.startsWith("ROB.") ? "RESULTADO:ROB" : codigo.startsWith("ROL.") ? "RESULTADO:ROL" : codigo.startsWith("DVV.") ? "RESULTADO:DVV" : /\.MP\./.test(codigo) ? "RESULTADO:MP" : /\.GGV\./.test(codigo) ? "RESULTADO:GGV" : /\.E\./.test(codigo) ? "RESULTADO:E" : null;
+  codigo.startsWith("ROB.") ? "RESULTADO:ROB" : codigo.startsWith("ROL.") ? "RESULTADO:ROL" : codigo.startsWith("DVV.") ? "RESULTADO:DVV" : /\.MP\./.test(codigo) ? "RESULTADO:MP" : /\.MOT\./.test(codigo) ? "RESULTADO:MOT" : /\.GGV\./.test(codigo) ? "RESULTADO:GGV" : /\.E\./.test(codigo) ? "RESULTADO:E" : null;
 
 /** Lê uma premissa gravada (o mês 0 é a Média de Referência); sem valor gravado, undefined. */
 export type Leitor = (chave: string, mes: number) => number | undefined;
@@ -176,7 +195,7 @@ export type Leitor = (chave: string, mes: number) => number | undefined;
  * O cálculo de uma tabela: os valores de cada linha mês a mês (a premissa — a gravada ou o padrão — ou o cálculo), a
  * Média de Referência (a gravada; nos cálculos, a conta sobre as médias), as contas da DRE que ela gera e as bases dos
  * rateios dos centros de custo ("CHAVE|DESTINO": Produção pelo m³ produzido; Projeto pelo m³ da venda Global; Metalurgia
- * pelo kg das linhas em kg; Armadura pela armadura das linhas; Acompanhamento pelos acompanhamentos de Serviços).
+ * e Armadura pelo kg das linhas — o volume × a demanda por unidade; Acompanhamento pelos acompanhamentos de Serviços).
  */
 export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[], unidade: UnidadePremissa, ano: number, ler: Leitor, venda: Venda = "GLOBAL") {
   const daUnidade = linhas.filter((l) => l.unidade === unidade);
@@ -215,13 +234,16 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
       volume = demanda.map((d, k) => d * dias[k]);
     }
     valores.set(`VOLUME:${l.codigo}`, volume);
-    const armadura = premissa(`ARMADURA:${l.codigo}`).map((a, k) => a * dias[k]);
-    valores.set(`VOLUME_ARMADURA:${l.codigo}`, armadura);
+    // A armadura e a metalurgia: o volume × o kg por unidade da linha (14/10/2026; antes, a armadura por dia útil).
+    const armadura = LINHAS_COM_ARMADURA.has(l.codigo) ? premissa(`ARMADURA:${l.codigo}`).map((a, k) => a * volume[k]) : Array<number>(12).fill(0);
+    if (LINHAS_COM_ARMADURA.has(l.codigo)) valores.set(`VOLUME_ARMADURA:${l.codigo}`, armadura);
+    const metalurgia = LINHAS_COM_METALURGIA.has(l.codigo) ? premissa(`METALURGIA:${l.codigo}`).map((a, k) => a * volume[k]) : Array<number>(12).fill(0);
+    if (LINHAS_COM_METALURGIA.has(l.codigo)) valores.set(`VOLUME_METALURGIA:${l.codigo}`, metalurgia);
     const acompanhamentos = l.unidade === 3 ? premissa(`ACOMPANHAMENTO:${l.codigo}`).map((a, k) => a * dias[k]) : null;
     if (acompanhamentos) valores.set(`VOLUME_ACOMPANHAMENTO:${l.codigo}`, acompanhamentos);
     const destino = destinoDaLinha(l);
-    // Os volumes da DRE: a produção (m³, e a expedição igual a ela) e a metalurgia nas fábricas; a montagem e os
-    // acompanhamentos em Serviços. E as bases dos rateios dos centros de custo.
+    // Os volumes da DRE: a produção (m³, e a expedição igual a ela) nas fábricas, a metalurgia consumida pelas linhas da
+    // unidade, a montagem e os acompanhamentos em Serviços. E as bases dos rateios dos centros de custo.
     for (const m of meses) {
       const v = volume[m - 1];
       if (l.unidade !== 3 && (l.medida === "m³" || pistas(l))) {
@@ -229,9 +251,9 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
         somar(C.EXPEDICAO_M3, m, v);
         base("PRODUCAO", destino, m, v);
         if (venda === "GLOBAL") base("PROJETO", destino, m, v);
-      } else if (l.unidade !== 3 && l.medida === "kg") somar(C.METALURGIA_KG, m, v);
-      else if (l.unidade === 3 && l.codigo === "MONTAGEM") somar(C.MONTAGEM_M3, m, v);
-      if (l.medida === "kg") base("METALURGIA", destino, m, v);
+      } else if (l.unidade === 3 && l.codigo === "MONTAGEM") somar(C.MONTAGEM_M3, m, v);
+      somar(C.METALURGIA_KG, m, metalurgia[m - 1]);
+      base("METALURGIA", destino, m, metalurgia[m - 1]);
       base("ARMADURA", destino, m, armadura[m - 1]);
       if (acompanhamentos) {
         somar(C.ACOMPANHAMENTO_D, m, acompanhamentos[m - 1]);
