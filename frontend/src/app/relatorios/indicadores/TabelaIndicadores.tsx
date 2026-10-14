@@ -316,9 +316,10 @@ export function TabelaIndicadores<T extends Indicador>({
                 return (
                   <Fragment key={i.nome}>
                     {!anterior || anterior.grupo !== i.grupo ? (
+                      // O nome do grupo em 21 px (14/10/2026; antes, 14), como os títulos dos grupos do Painel de Bordo, 50% maiores.
                       <tr className="border-y border-gray-300">
                         {faixas.map((f, n) => (
-                          <td key={n} colSpan={f.n} className={`${f.orcado ? FAIXA_DO_ORCADO : FAIXA_DO_REALIZADO} px-3 py-2 text-sm font-bold tracking-wide text-gray-900 uppercase`}>
+                          <td key={n} colSpan={f.n} className={`${f.orcado ? FAIXA_DO_ORCADO : FAIXA_DO_REALIZADO} px-3 py-2 text-[21px] font-bold tracking-wide text-gray-900 uppercase`}>
                             {n === 0 ? <span className="sticky left-3">{nomeDoGrupo(i.grupo)}</span> : null}
                           </td>
                         ))}
