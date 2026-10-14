@@ -120,7 +120,7 @@ export function ReceitaPreviaContent() {
         }
         acoes={
           !bloqueada && dados ? (
-            <PermissionGuard permission="apuracao:editar">
+            <PermissionGuard permission="receita:editar">
               <Button
                 type="button"
                 onClick={() => apurar.mutate()}

@@ -7,6 +7,7 @@ import { Bookmark, FileSpreadsheet, History, Trash2, Upload } from "lucide-react
 import { toast } from "sonner";
 
 import { Abas } from "@/components/shared/Abas";
+import { usePermissions } from "@/context/PermissionContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -46,10 +47,15 @@ export type AbaDasConfiguracoes = "cenario" | "referencia" | "comparativo";
 export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cenario: Cenario; abaInicial?: AbaDasConfiguracoes }) {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [aba, setAba] = useState<AbaDasConfiguracoes>(abaInicial);
+  const [escolhida, setAba] = useState<AbaDasConfiguracoes>(abaInicial);
   // As ações do cenário (13/10/2026; antes, ícones na lista dos cenários): marcar e excluir.
   const [acao, setAcao] = useState<"marcar" | "excluir" | null>(null);
   const t = useTipoDoCenario();
+  // As abas que o perfil lê e as que edita (14/10/2026).
+  const { hasPermission } = usePermissions();
+  const pode = (a: AbaDasConfiguracoes, acao: "ler" | "editar" = "ler") => hasPermission(t.perm("configuracoes", acao, a));
+  const abas = (["cenario", "referencia", "comparativo"] as AbaDasConfiguracoes[]).filter((a) => pode(a));
+  const aba: AbaDasConfiguracoes | null = abas.includes(escolhida) ? escolhida : (abas[0] ?? null);
   const analitico = t.tipo === "ANALITICO";
   // A marcação vale para os dois tipos (uma só por vez): o diálogo de marcar olha os sintéticos e os analíticos.
   const sinteticos = useQuery({ queryKey: ["cenarios", "SINTETICO"], queryFn: () => cenariosService.listar("SINTETICO") });
@@ -101,16 +107,18 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
     <div className="space-y-6">
       <Abas
         rotulo="Configurações do cenário"
-        ativa={aba}
+        ativa={aba ?? ""}
         onMudar={(a) => setAba(a as AbaDasConfiguracoes)}
         abas={[
           { chave: "cenario", rotulo: "Cenário" },
           { chave: "referencia", rotulo: "Referência" },
           // O comparativo com outro cenário (13/10/2026; antes, a aba Referência da tela Comparativo).
           { chave: "comparativo", rotulo: "Comparativo" },
-        ]}
+        ].filter((a) => abas.includes(a.chave as AbaDasConfiguracoes))}
       />
-      {aba === "cenario" ? (
+      {aba === null ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
+      ) : aba === "cenario" ? (
         <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
             <div className="space-y-1.5">
@@ -145,6 +153,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
             </div>
           </div>
           <Erro erro={salvar.isError ? mensagemDeErro(salvar.error, "Não foi possível gravar as configurações.") : null} />
+          {!pode("cenario", "editar") ? <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">Seu perfil só lê os dados do cenário.</p> : (
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" className="rounded-sm" onClick={() => setAcao("marcar")}>
               <Bookmark className="size-4" />
@@ -167,12 +176,13 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
               {salvar.isPending ? "Gravando…" : "Gravar Configurações"}
             </Button>
           </div>
+          )}
         </section>
       ) : aba === "comparativo" ? (
-        <ComparativoCenario id={cenario.id} podeEditar />
+        <ComparativoCenario id={cenario.id} podeEditar={pode("comparativo", "editar")} />
       ) : analitico ? (
         // A referência dos analíticos (14/10/2026): o realizado (com as Médias de Referência e os centros de custo) ou outro analítico.
-        <ReferenciaAnalitica cenario={cenario} />
+        <ReferenciaAnalitica cenario={cenario} podeEditar={pode("referencia", "editar")} />
       ) : (
         <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <p className="text-sm text-gray-600">
@@ -201,7 +211,9 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
               <OpcaoEmLinha key={v} nome="referencia" marcada={referencia === v} onMarcar={() => setReferencia(v)} rotulo={rotulo} detalhe={detalhe} Icone={Icone} />
             ))}
           </fieldset>
-          {estaTravado(cenario) ? (
+          {!pode("referencia", "editar") ? (
+            <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">Seu perfil só lê a referência.</p>
+          ) : estaTravado(cenario) ? (
             <AvisoMarcado cenario={cenario} oQue="a referência" />
           ) : referencia === "arquivo" ? (
             <div className="flex justify-end">

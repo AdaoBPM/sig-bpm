@@ -38,25 +38,30 @@ const ABAS = [
 export function PremissasContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela(`/cenarios/analiticos/${id}/premissas`);
-  const [aba, setAba] = useState("1");
+  const [escolhida, setAba] = useState("1");
   const { hasPermission } = usePermissions();
+  // As abas que o perfil lê, e a edição de cada uma (14/10/2026).
+  const abaDaChave = (c: string) => ({ 1: "matriz", 2: "filial", 3: "servicos" })[c] ?? c;
+  const abas = ABAS.filter((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:ler`));
+  const aba = abas.some((a) => a.chave === escolhida) ? escolhida : (abas[0]?.chave ?? "");
+  const editaAba = hasPermission(`cenarios_analiticos_premissas.${abaDaChave(aba)}:editar`);
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const centros = aba === "centros";
   const rateios = aba === "rateios";
   const investimentos = aba === "investimentos";
   const extra = aba === "extra";
   const manuais = aba === "manuais";
-  const deUnidade = !centros && !rateios && !investimentos && !extra && !manuais;
+  const deUnidade = ["1", "2", "3"].includes(aba);
   const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: deUnidade });
   const travado = !!cenario.data && estaTravado(cenario.data);
-  const podeEditar = hasPermission("cenarios_analiticos:editar") && !travado && (!deUnidade || !!consulta.data?.editavel);
+  const podeEditar = editaAba && !travado && (!deUnidade || !!consulta.data?.editavel);
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Premissas"
         comoUsar={
           <ul>
-            <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global.</li>
+            <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
               Na aba Centros de Custo, escolha o grupo de centros da Controladoria na lista à esquerda (com a busca e o total do exercício; os centros de
               estoque e de investimento não entram) e digite, à direita, o Quadro de Lotação dele (os colaboradores de cada mês) e os valores mensais
@@ -166,10 +171,12 @@ export function PremissasContent() {
           </>
         }
       />
-      <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={ABAS} />
-      <AvisoRateiosSemBase id={id} />
-      {cenario.data && travado && hasPermission("cenarios_analiticos:editar") ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
-      {centros ? (
+      <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={abas} />
+      {abas.length ? <AvisoRateiosSemBase id={id} /> : null}
+      {cenario.data && travado && editaAba ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
+      {!abas.length ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
+      ) : centros ? (
         <CentrosDoCenario id={id} editavel={podeEditar} />
       ) : rateios ? (
         <RateiosDoCenario id={id} />

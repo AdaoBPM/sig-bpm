@@ -8,7 +8,7 @@ import { CenariosContent } from "../sinteticos/CenariosContent";
 export default function CenariosAnaliticosPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_lista:ler" fallback={<SemLeitura />}>
         <CenariosContent tipo="ANALITICO" />
       </PermissionGuard>
     </ProtectedLayout>

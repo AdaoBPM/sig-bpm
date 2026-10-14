@@ -268,6 +268,8 @@ export function CorpoDoPainel({
   comRotulos?: boolean;
 }) {
   const atual = dados.abas.find((a) => a.chave === aba) ?? dados.abas[0];
+  // O servidor manda só as abas que o perfil lê (14/10/2026).
+  if (!atual) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>;
   return (
     <CoresDoPainel.Provider value={cores}>
       <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
@@ -388,7 +390,7 @@ export function PainelContent() {
               Tipo e os Rótulos valem também para o gráfico do indicador em Indicadores). As legendas (as cores das séries e os sinais) ficam antes
               do botão.
             </li>
-            <li>Troque entre as abas Resultados e Performance (os unitários).</li>
+            <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em
               cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
@@ -472,8 +474,10 @@ export function PainelContent() {
         <div className="rounded-sm border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar o painel.")}</p>
         </div>
-      ) : !dados || !atual ? (
+      ) : !dados ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
+      ) : !atual ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
       ) : (
         <CorpoDoPainel
           dados={dados}

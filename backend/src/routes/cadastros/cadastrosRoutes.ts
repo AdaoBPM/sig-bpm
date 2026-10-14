@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 
 import { env } from "../../config/env.js";
-import { verificarAlgumaPermissao, verificarPermissao } from "../../middlewares/verificarPermissao.js";
+import { verificarAlgumaPermissao, verificarPermissao, verificarTodasAsPermissoes } from "../../middlewares/verificarPermissao.js";
 
 import { cadastrosController } from "../../controllers/cadastros/cadastrosController.js";
 import { cenariosController } from "../../controllers/cenarios/cenariosController.js";
@@ -24,7 +24,7 @@ cadastrosRoutes.get(
 cadastrosRoutes.post(
   "/recarga/previa",
   autenticacao,
-  verificarPermissao("cadastros_controladoria:editar"),
+  verificarTodasAsPermissoes("cadastro_centros_custo:editar", "cadastro_contas_resultado:editar", "cadastro_estrutura_dre:editar"),
   express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }),
   asyncHandler(cadastrosController.recargaPrevia),
 );
@@ -32,7 +32,7 @@ cadastrosRoutes.post(
 cadastrosRoutes.post(
   "/recarga/confirmar",
   autenticacao,
-  verificarPermissao("cadastros_controladoria:editar"),
+  verificarTodasAsPermissoes("cadastro_centros_custo:editar", "cadastro_contas_resultado:editar", "cadastro_estrutura_dre:editar"),
   asyncHandler(cadastrosController.recargaConfirmar),
 );
 
@@ -73,11 +73,11 @@ cadastrosRoutes.get(
 
 // A correspondência tarefa × linha (14/10/2026; na tela Linhas): as tarefas das requisições e das notas fiscais e a
 // linha de cada uma, que a referência realizada dos cenários analíticos usa para dividir os custos entre as linhas.
-cadastrosRoutes.get("/linhas/correspondencias", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(cenariosController.correspondencias));
-cadastrosRoutes.put("/linhas/correspondencias", autenticacao, verificarPermissao("cadastros_controladoria:editar"), express.json(), asyncHandler(cenariosController.gravarCorrespondencias));
+cadastrosRoutes.get("/linhas/correspondencias", autenticacao, verificarPermissao("cadastro_linhas:ler"), asyncHandler(cenariosController.correspondencias));
+cadastrosRoutes.put("/linhas/correspondencias", autenticacao, verificarPermissao("cadastro_linhas:editar"), express.json(), asyncHandler(cenariosController.gravarCorrespondencias));
 
 // Os percentuais fixos das regras de rateio e a verificação das vigências (14/10/2026; na tela Regras de Rateio).
-cadastrosRoutes.get("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(percentuaisFixosController.listar));
-cadastrosRoutes.put("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastros_controladoria:editar"), express.json(), asyncHandler(percentuaisFixosController.gravar));
-cadastrosRoutes.delete("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastros_controladoria:editar"), asyncHandler(percentuaisFixosController.excluir));
-cadastrosRoutes.get("/regras-rateio/verificacao", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(percentuaisFixosController.verificacao));
+cadastrosRoutes.get("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastro_regras_rateio:ler"), asyncHandler(percentuaisFixosController.listar));
+cadastrosRoutes.put("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastro_regras_rateio:editar"), express.json(), asyncHandler(percentuaisFixosController.gravar));
+cadastrosRoutes.delete("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastro_regras_rateio:editar"), asyncHandler(percentuaisFixosController.excluir));
+cadastrosRoutes.get("/regras-rateio/verificacao", autenticacao, verificarPermissao("cadastro_regras_rateio:ler"), asyncHandler(percentuaisFixosController.verificacao));

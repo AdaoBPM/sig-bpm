@@ -178,7 +178,7 @@ export function CompetenciasContent() {
         }
         acoes={
           todas.data ? (
-            <PermissionGuard permission="competencia:editar">
+            <PermissionGuard permission="competencias:editar">
               <AbrirCompetenciaDialog sugestao={proximoMes(todas.data.itens)} />
             </PermissionGuard>
           ) : null

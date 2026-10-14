@@ -7,7 +7,7 @@ import { ListaCadastroContent } from "../components/ListaCadastroContent";
 export default function TabelaEstacasPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros_apuracao:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_tabela_estacas:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="tabela-estacas"
           rota="/cadastros/tabela-estacas"

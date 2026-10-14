@@ -2,7 +2,11 @@ import { api } from "@/lib/api";
 import type { DepartamentoAcesso } from "@/services/authService";
 
 export type Acao = "LER" | "EDITAR";
-export type Permissao = { recurso: string; acao: Acao };
+/** Uma permissão da matriz do perfil (14/10/2026): a tela ou a aba ("tela.aba") e a ação. */
+export type Permissao = { chave: string; acao: Acao };
+
+/** O catálogo das telas e das abas de cada grupo do menu: as linhas da matriz do perfil. */
+export type GrupoDeTelas = { recurso: string; nome: string; telas: Array<{ codigo: string; nome: string; abas: Array<{ codigo: string; nome: string }> }> };
 
 export type PerfilResumo = { id: string; codigo: string; nome: string; ativo: boolean; recorteSetor: boolean; recorteDepartamento: boolean; recorteCentro: boolean };
 
@@ -36,6 +40,7 @@ export type Perfil = PerfilResumo & {
 export type OpcoesUsuarios = {
   perfis: PerfilResumo[];
   recursos: Array<{ recurso: string; rotulo: string }>;
+  telas: GrupoDeTelas[];
   acoes: Acao[];
   setores: Array<{ tipo: string; rotulo: string }>;
   departamentos: Array<{ departamento: DepartamentoAcesso; rotulo: string }>;

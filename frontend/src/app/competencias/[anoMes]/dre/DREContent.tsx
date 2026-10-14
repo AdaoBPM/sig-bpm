@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, Sigma } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Abas } from "@/components/shared/Abas";
@@ -25,11 +26,12 @@ const volume = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractio
 
 /** Consolidado, uma das unidades (1 a 5), a visão por centro de custo ou a por obra. */
 type Visao = "consolidado" | "centros" | "obras" | number;
-const VISOES: Array<{ visao: Visao; nome: string }> = [
-  { visao: "consolidado", nome: "Consolidado" },
-  ...UNIDADES.map((u) => ({ visao: u.codigo as Visao, nome: u.nome })),
-  { visao: "centros", nome: "Centros de Custo" },
-  { visao: "obras", nome: "Obras" },
+const ABA_DA_UNIDADE = ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"];
+const VISOES: Array<{ visao: Visao; aba: string; nome: string }> = [
+  { visao: "consolidado", aba: "consolidado", nome: "Consolidado" },
+  ...UNIDADES.map((u) => ({ visao: u.codigo as Visao, aba: ABA_DA_UNIDADE[u.codigo], nome: u.nome })),
+  { visao: "centros", aba: "centros", nome: "Centros de Custo" },
+  { visao: "obras", aba: "obras", nome: "Obras" },
 ];
 
 /**
@@ -373,7 +375,12 @@ export function DREContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/dre`);
   const periodo = lerAnoMes(anoMes);
-  const [visao, setVisao] = useState<Visao>("consolidado");
+  // As abas que o perfil lê (14/10/2026).
+  const { hasPermission } = usePermissions();
+  const visoes = VISOES.filter((v) => hasPermission(`dre.${v.aba}:ler`));
+  const [visaoEscolhida, setVisao] = useState<Visao>("consolidado");
+  const visao: Visao | null = visoes.some((v) => v.visao === visaoEscolhida) ? visaoEscolhida : (visoes[0]?.visao ?? null);
+  const leConsolidado = visoes.some((v) => v.visao === "consolidado");
   const [avisos, setAvisos] = useState<string[]>([]);
   // O centro de custo escolhido fica aqui: o Exportar dele vai para a linha das abas, como nas demais visões.
   const [grupo, setGrupo] = useState<string | null>(null);
@@ -391,7 +398,7 @@ export function DREContent() {
   const consolidado = useQuery({
     queryKey: ["dre", anoMes, "consolidado"],
     queryFn: () => dreService.consolidado(anoMes),
-    enabled: periodo !== null,
+    enabled: periodo !== null && leConsolidado,
   });
   const unidade = useQuery({
     // Chave própria ("unidade"): com a aba Consolidado aberta, ["dre", anoMes, visao] seria a mesma chave da consulta
@@ -408,7 +415,8 @@ export function DREContent() {
       </div>
     );
   }
-  const cabecalho = consolidado.data;
+  // Sem a aba Consolidado, a apuração vem da unidade na tela.
+  const cabecalho = leConsolidado ? consolidado.data : unidade.data;
   const consulta = visao === "consolidado" ? consolidado : unidade;
 
   return (
@@ -417,7 +425,7 @@ export function DREContent() {
         titulo="DRE"
         comoUsar={
           <ul>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo ou Obras (com a lista dos centros ou das obras à esquerda).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo ou Obras (com a lista dos centros ou das obras à esquerda). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra.</li>
             <li>
               No extrato, clique na conta de um lançamento contábil para ver as requisições e as notas fiscais dela no mês (das abas Requisições
@@ -456,13 +464,17 @@ export function DREContent() {
         </div>
       ) : null}
 
+      {visao === null ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
+      ) : (
+      <>
       <div className="flex items-end gap-3">
         <div className="min-w-0 flex-1">
           <Abas
             rotulo="Visão da DRE"
             ativa={String(visao)}
             onMudar={(c) => setVisao(VISOES.find((v) => String(v.visao) === c)!.visao)}
-            abas={VISOES.map((v) => ({ chave: String(v.visao), rotulo: v.nome }))}
+            abas={visoes.map((v) => ({ chave: String(v.visao), rotulo: v.nome }))}
           />
         </div>
         {visao === "centros" ? (
@@ -492,6 +504,8 @@ export function DREContent() {
         />
       ) : (
         <SemApuracao />
+      )}
+      </>
       )}
     </div>
   );

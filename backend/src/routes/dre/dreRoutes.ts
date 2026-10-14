@@ -15,4 +15,4 @@ dreRoutes.get("/detalhe", autenticacao, lerDREDoMes, asyncHandler(c.detalhe));
 dreRoutes.get("/documentos", autenticacao, lerDREDoMes, asyncHandler(c.documentos));
 dreRoutes.get("/volumes", autenticacao, lerDREDoMes, asyncHandler(c.volumes));
 dreRoutes.get("/exportar", autenticacao, lerDREDoMes, asyncHandler(c.exportar));
-dreRoutes.post("/apurar", autenticacao, verificarPermissao("apuracao:editar"), asyncHandler(c.apurar));
+dreRoutes.post("/apurar", autenticacao, verificarPermissao("dre:editar"), asyncHandler(c.apurar));

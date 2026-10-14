@@ -218,7 +218,7 @@ export function ConferenciaPlanilhaContent() {
         comoUsar={
           <ul>
             <li>Clique em “Enviar Planilha” e envie o BASE REALIZADO (RESULTADOS) atualizado. A faixa “Planilha em Uso” mostra o arquivo comparado, quando e por quem foi enviado; a faixa seguinte resume as diferenças.</li>
-            <li>Escolha a visão nas abas; marque “Só as Diferenças” e ajuste a “Variação Máx.” (fica guardada neste navegador) para ver só o que importa. Use a seta antes do nome da visão para mostrar só os totais, as atribuições ou todas as contas.</li>
+            <li>Escolha a visão nas abas; marque “Só as Diferenças” e ajuste a “Variação Máx.” (fica guardada neste navegador) para ver só o que importa. Use a seta antes do nome da visão para mostrar só os totais, as atribuições ou todas as contas. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Diferença positiva: a ferramenta está acima da planilha. Corrija a origem e reapure; a conferência se atualiza sem reenviar o arquivo.</li>
           </ul>
         }
@@ -230,7 +230,7 @@ export function ConferenciaPlanilhaContent() {
           </p>
         }
         acoes={
-          hasPermission("apuracao:editar") && consulta.isSuccess ? (
+          hasPermission("conferencia:editar") && consulta.isSuccess ? (
             <Button
               type="button"
               onClick={() => setEnviando(true)}
@@ -282,6 +282,7 @@ export function ConferenciaPlanilhaContent() {
         <div className="rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">A competência ainda não foi apurada: apure-a (tela da DRE) para comparar.</div>
       ) : null}
 
+      {r?.resumo && !r.visoes.length ? <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p> : null}
       {r?.resumo && visao ? (
         <>
           <div className="flex flex-wrap items-end justify-between gap-4">

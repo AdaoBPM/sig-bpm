@@ -13,9 +13,10 @@ import { cenariosService, rotuloDoCenario, rotuloMarcacao, rotuloVersao } from "
 import { useTipoDoCenario } from "./tipoDoCenario";
 
 /** As telas de um cenário (sintético ou analítico), como as abas de Resultados Realizados. */
-export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soQuemEdita?: boolean; soAnaliticos?: boolean }> = [
-  // As configurações do cenário (12/10/2026): só para quem edita os cenários (do tipo dele); a DRE se edita em Resultados.
-  { caminho: "configuracoes", rotulo: "Configurações", soQuemEdita: true },
+export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnaliticos?: boolean }> = [
+  // As configurações do cenário (12/10/2026). Cada tela aparece com a permissão dela (14/10/2026; antes, as Configurações
+  // só para quem editava os cenários).
+  { caminho: "configuracoes", rotulo: "Configurações" },
   // As premissas dos analíticos (13/10/2026), de onde a DRE deles se calcula.
   { caminho: "premissas", rotulo: "Premissas", soAnaliticos: true },
   { caminho: "resultados", rotulo: "Resultados" },
@@ -34,8 +35,8 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 
 /**
  * A barra de um cenário, no formato da barra de etapas do mês: o cenário em amarelo-ouro no início (com a troca
- * de cenário, que mantém a tela) e as telas Configurações (para quem edita), Resultados, Indicadores, Painel de
- * Bordo e Reajustes, com a atual em destaque.
+ * de cenário, que mantém a tela) e as telas Configurações, Resultados, Indicadores, Painel de
+ * Bordo e Reajustes (cada uma com a permissão dela no perfil), com a atual em destaque.
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();
@@ -71,7 +72,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
         </DropdownMenu>
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
-        {TELAS_DO_CENARIO.filter((x) => (!x.soQuemEdita || hasPermission(t.editar)) && (!x.soAnaliticos || t.tipo === "ANALITICO")).map((x) => {
+        {TELAS_DO_CENARIO.filter((x) => hasPermission(t.perm(x.caminho)) && (!x.soAnaliticos || t.tipo === "ANALITICO")).map((x) => {
           const ativa = x.caminho === tela;
           return (
             <li key={x.caminho} className="flex shrink-0 items-center">

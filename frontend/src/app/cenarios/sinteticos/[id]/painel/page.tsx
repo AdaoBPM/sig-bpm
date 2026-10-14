@@ -7,7 +7,7 @@ import { CenarioPainelContent } from "./CenarioPainelContent";
 export default function CenarioPainelPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_painel:ler" fallback={<SemLeitura />}>
         <CenarioPainelContent />
       </PermissionGuard>
     </ProtectedLayout>

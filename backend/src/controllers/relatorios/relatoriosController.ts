@@ -48,9 +48,12 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
 
 /**
  * Resultados Realizados mostra só as competências fechadas (11/10/2026). A etapa Indicadores do Fechamento Mensal usa
- * as mesmas rotas com ?etapa=1 e vê o mês aberto, se o usuário tem o Fechamento Mensal (dre:ler).
+ * as mesmas rotas com ?etapa=1 e vê o mês aberto, se o usuário tem a tela dela (indicadores_mes, 14/10/2026).
  */
-const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && request.user!.permissions.includes("dre:ler"));
+const tem = (request: Request, p: string) => request.user!.permissions.includes(p);
+const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
+/** Os indicadores: a tela Indicadores dos Resultados Realizados ou a etapa do Fechamento Mensal (?etapa=1). */
+const podeIndicadores = (request: Request) => tem(request, "relatorio_indicadores:ler") || (request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
 
 /** ?ano= e ?ate= (o último mês; sem ele, o último apurado). */
 function periodo(request: Request, response: Response) {
@@ -113,6 +116,7 @@ export const relatoriosController = {
   },
 
   async exportarIndicadores(request: Request, response: Response) {
+    if (!podeIndicadores(request)) return response.status(403).json({ error: "Sem permissão para esta ação" });
     const p = periodo(request, response);
     if (!p) return;
     const formato = formatoSchema.safeParse(request.query.formato);
@@ -123,6 +127,7 @@ export const relatoriosController = {
   },
 
   async indicadores(request: Request, response: Response) {
+    if (!podeIndicadores(request)) return response.status(403).json({ error: "Sem permissão para esta ação" });
     const p = periodo(request, response);
     if (!p) return;
     return responder(response, () => indicadoresService.listar(p.ano, p.ate, somenteFechadas(request)));
@@ -132,6 +137,10 @@ export const relatoriosController = {
   async painel(request: Request, response: Response) {
     const p = periodo(request, response);
     if (!p) return;
-    return responder(response, () => painelService.painel(p.ano, p.ate, true));
+    // Só as abas permitidas (Resultados, Performance; 14/10/2026).
+    return responder(response, async () => {
+      const r = await painelService.painel(p.ano, p.ate, true);
+      return { ...r, abas: r.abas.filter((a) => tem(request, `relatorio_painel.${a.chave}:ler`)) };
+    });
   },
 };

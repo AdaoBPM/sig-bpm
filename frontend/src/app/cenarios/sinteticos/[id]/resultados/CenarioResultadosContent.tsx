@@ -21,12 +21,12 @@ import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 /** As visões da DRE do cenário: as de Resultados Realizados, sem os centros de custo. */
 const VISOES = [
-  { chave: "0", nome: "Consolidado" },
-  { chave: "1", nome: "Matriz" },
-  { chave: "2", nome: "Filial" },
-  { chave: "3", nome: "Serviços" },
-  { chave: "4", nome: "Despesas e Extra" },
-  { chave: "5", nome: "RN" },
+  { chave: "0", aba: "consolidado", nome: "Consolidado" },
+  { chave: "1", aba: "matriz", nome: "Matriz" },
+  { chave: "2", aba: "filial", nome: "Filial" },
+  { chave: "3", aba: "servicos", nome: "Serviços" },
+  { chave: "4", aba: "despesas", nome: "Despesas e Extra" },
+  { chave: "5", aba: "rn", nome: "RN" },
 ];
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
@@ -72,27 +72,31 @@ export function CenarioResultadosContent() {
   const { id } = useParams<{ id: string }>();
   const t = useTipoDoCenario();
   useRegistrarAcessoTela(`${t.base}/${id}/resultados`);
-  const [visao, setVisao] = useState("0");
+  const [escolhida, setVisao] = useState("0");
   // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
   const { hasPermission } = usePermissions();
   // O cenário marcado (12/10/2026) ou com a versão congelada (13/10/2026) não se edita: a tabela fica só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const analitico = t.tipo === "ANALITICO";
-  const podeEditar = !analitico && hasPermission(t.editar) && !!cenario.data && !travado;
-  const nome = VISOES.find((v) => v.chave === visao)!.nome;
+  // As visões (abas) que o perfil lê, e a edição de cada uma (14/10/2026).
+  const visoes = VISOES.filter((v) => hasPermission(t.perm("resultados", "ler", v.aba)));
+  const visao = visoes.some((v) => v.chave === escolhida) ? escolhida : (visoes[0]?.chave ?? "");
+  const daVisao = VISOES.find((v) => v.chave === visao);
+  const podeEditar = !analitico && !!daVisao && hasPermission(t.perm("resultados", "editar", daVisao.aba)) && !!cenario.data && !travado;
+  const nome = daVisao?.nome ?? "";
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Resultados"
-        acoes={hasPermission(t.editar) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : undefined}
+        acoes={hasPermission(t.perm("resultados", "editar")) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : undefined}
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             {analitico ? <li>No cenário analítico, a DRE é calculada a partir das premissas e não se edita aqui: os valores mudam com as premissas.</li> : null}
-            <li>Escolha a visão nas abas: Consolidado ou cada unidade.</li>
+            <li>Escolha a visão nas abas: Consolidado ou cada unidade (as que o seu perfil lê).</li>
             <li>
-              Versões (para quem edita os cenários): “Congelar Versão” trava o cenário na versão atual (VER00, VER01…), como o fechamento de uma
+              Versões (para quem edita a tela Resultados): “Congelar Versão” trava o cenário na versão atual (VER00, VER01…), como o fechamento de uma
               competência — a DRE, os Indicadores Manuais e a referência não se editam mais; “Reabrir Versão” a destrava, como a reabertura de uma
               competência. “Criar Revisão” (só numa versão congelada) cria uma cópia na próxima versão, aberta para edição: um cenário novo na lista, com a DRE, os indicadores, o comparativo e as justificativas. A marcação
               fica na versão de origem: remarque a revisão à mão em Configurações / Cenário.
@@ -107,7 +111,7 @@ export function CenarioResultadosContent() {
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos, e a barra de rolagem fica no pé da janela, sempre à vista. O total do exercício traz também o valor por m³ (os meses, não).</li>
             {podeEditar ? (
               <>
-                <li>Edição (para quem edita os cenários): nas abas Matriz, Filial, Serviços, Despesas e Extra e RN, só os valores mensais das contas se editam; os totais, os percentuais e os valores por m³ são calculados. O Consolidado soma as unidades e não se edita.</li>
+                <li>Edição (para quem edita a aba): nas abas Matriz, Filial, Serviços, Despesas e Extra e RN, só os valores mensais das contas se editam; os totais, os percentuais e os valores por m³ são calculados. O Consolidado soma as unidades e não se edita.</li>
                 <li>Para reajustar vários valores: marque as contas (a caixa de um total ou de uma atribuição marca as contas dele) e os meses (a caixa no rótulo de cada mês, ou “Marcar Todos os Meses”). Os valores marcados ficam contornados. Clique numa linha (ou em “Reajustar Marcados”) e informe o reajuste, percentual ou absoluto: ele vale para todos os marcados.</li>
                 <li>Para editar um valor: clique nele. O modal mostra o valor atual, o reajuste (percentual ou absoluto) e o valor recalculado, que também se digita direto. A chave “Replicar aos meses posteriores” copia o valor recalculado aos meses seguintes. Essa edição não olha as caixas marcadas.</li>
                 <li>Cada gravação recalcula os totais da unidade e o Consolidado e fica no histórico (tela Reajustes, na barra do topo). “Limpar Seleção” desmarca as contas e os meses. Com os meses anteriores recolhidos, os meses marcados e escondidos continuam marcados (a barra mostra quantos). Nome, descrição, visualização e a referência (arquivo ou resultado realizado) ficam na tela Configurações, na barra do topo.</li>
@@ -131,11 +135,17 @@ export function CenarioResultadosContent() {
           </>
         }
       />
-      <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
-      {cenario.data && travado && hasPermission(t.editar) && !analitico ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
+      <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
+      {cenario.data && travado && hasPermission(t.perm("resultados", "editar")) && !analitico ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
       {/* No analítico, o aviso dos rateios sem base nas premissas (13/10/2026): esse valor não entra na DRE. */}
       {analitico ? <AvisoRateiosSemBase id={id} /> : null}
-      {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} analitico={analitico} />}
+      {!daVisao ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
+      ) : podeEditar ? (
+        <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} />
+      ) : (
+        <Visao id={id} visao={Number(visao)} nome={nome} analitico={analitico} />
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { ReajustesContent } from "./ReajustesContent";
 export default function ReajustesDoCenarioPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_reajustes:ler" fallback={<SemLeitura />}>
         <ReajustesContent />
       </PermissionGuard>
     </ProtectedLayout>

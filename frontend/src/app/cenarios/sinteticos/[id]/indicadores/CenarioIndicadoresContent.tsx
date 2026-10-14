@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
@@ -43,12 +43,15 @@ export function CenarioIndicadoresContent() {
   const travado = !!cenario.data && estaTravado(cenario.data);
   // No analítico (14/10/2026), os Indicadores Manuais se editam na tela Premissas; aqui ficam só para leitura.
   const analitico = t.tipo === "ANALITICO";
-  const podeEditar = hasPermission(t.editar) && !!cenario.data && !travado && !analitico;
-  const [aba, setAba] = useState("metas");
+  const podeEditar = hasPermission(t.perm("indicadores", "editar", "manuais")) && !!cenario.data && !travado && !analitico;
+  // As abas que o perfil lê (14/10/2026).
+  const abas = ABAS.filter((a) => hasPermission(t.perm("indicadores", "ler", a.chave)));
+  const [escolhida, setAba] = useState("metas");
+  const aba = abas.some((a) => a.chave === escolhida) ? escolhida : (abas[0]?.chave ?? "");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   const dados = consulta.data;
-  const daAba = useMemo(() => dados?.indicadores.filter(DA_ABA[aba]) ?? [], [dados, aba]);
+  const daAba = aba ? (dados?.indicadores.filter(DA_ABA[aba]) ?? []) : [];
   const manuais = aba === "manuais";
 
   return (
@@ -57,7 +60,7 @@ export function CenarioIndicadoresContent() {
         titulo="Indicadores"
         comoUsar={
           <ul>
-            <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados.</li>
+            <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Com um cenário comparado (Configurações / Comparativo), a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele.</li>
             <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
             <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
@@ -84,7 +87,7 @@ export function CenarioIndicadoresContent() {
           </>
         }
       />
-      <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={ABAS.map((a) => ({ chave: a.chave, rotulo: a.rotulo }))} />
+      <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo }))} />
       {aba === "metas" ? (
         <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           As Metas são o compilado dos indicadores: os Indicadores de Resultados (que saem da DRE do cenário) e os Indicadores Manuais, com as
@@ -92,7 +95,7 @@ export function CenarioIndicadoresContent() {
           Indicadores Manuais.
         </p>
       ) : null}
-      {manuais && cenario.data && travado && hasPermission(t.editar) ? <AvisoMarcado cenario={cenario.data} oQue="os Indicadores Manuais" /> : null}
+      {manuais && cenario.data && travado && hasPermission(t.perm("indicadores", "editar", "manuais")) ? <AvisoMarcado cenario={cenario.data} oQue="os Indicadores Manuais" /> : null}
       {manuais && analitico ? (
         <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           No cenário analítico, os Indicadores Manuais se digitam na tela Premissas, aba Indicadores Manuais.

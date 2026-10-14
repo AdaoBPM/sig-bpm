@@ -27,7 +27,7 @@ const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt
  * custo, a depreciação base, o extra-operacional e os indicadores. A correspondência tarefa × linha fica nos Cadastros da
  * Controladoria / Linhas.
  */
-export function ReferenciaAnalitica({ cenario }: { cenario: Cenario }) {
+export function ReferenciaAnalitica({ cenario, podeEditar = true }: { cenario: Cenario; podeEditar?: boolean }) {
   const queryClient = useQueryClient();
   const [tipo, setTipo] = useState<"realizado" | "cenario">("realizado");
   const [confirmar, setConfirmar] = useState(false);
@@ -114,7 +114,9 @@ export function ReferenciaAnalitica({ cenario }: { cenario: Cenario }) {
           Icone={Copy}
         />
       </fieldset>
-      {travado ? (
+      {!podeEditar ? (
+        <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">Seu perfil só lê a referência.</p>
+      ) : travado ? (
         <AvisoMarcado cenario={cenario} oQue="a referência" />
       ) : tipo === "cenario" ? (
         outros.length === 0 ? (

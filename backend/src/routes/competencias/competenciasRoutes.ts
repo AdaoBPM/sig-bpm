@@ -16,6 +16,6 @@ competenciasRoutes.get(
 competenciasRoutes.post(
   "/",
   autenticacao,
-  verificarPermissao("competencia:editar"),
+  verificarPermissao("competencias:editar"),
   asyncHandler(competenciasController.abrir),
 );

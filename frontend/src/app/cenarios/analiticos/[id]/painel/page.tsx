@@ -8,7 +8,7 @@ import { CenarioPainelContent } from "@/app/cenarios/sinteticos/[id]/painel/Cena
 export default function CenarioPainelAnaliticoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_painel:ler" fallback={<SemLeitura />}>
         <CenarioPainelContent />
       </PermissionGuard>
     </ProtectedLayout>

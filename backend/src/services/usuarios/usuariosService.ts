@@ -4,6 +4,7 @@ import type { AcaoPermissao, DepartamentoAcesso, RecursoSistema, TipoImportacao 
 import { hashSenha } from "../../lib/senha.js";
 import { gestaoDoCentro, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { CODIGO_ADMINISTRADOR } from "../acesso/acesso.js";
+import { CATALOGO_DE_TELAS, CHAVES_DA_MATRIZ, chaveValida, MATRIZ_COMPLETA } from "../acesso/telas.js";
 import { DEFINICOES_LISTAS } from "../importacoes/listas/definicoesListas.js";
 import { auditar } from "../auditoriaService.js";
 
@@ -66,7 +67,8 @@ function exigirSetores(setores: TipoImportacao[]) {
 }
 
 
-export type Permissao = { recurso: RecursoSistema; acao: AcaoPermissao };
+/** Uma permissão da matriz (14/10/2026): a tela ou a aba ("tela.aba") do catálogo e a ação. */
+export type Permissao = { chave: string; acao: AcaoPermissao };
 export type DadosUsuario = {
   nome: string;
   email: string;
@@ -96,10 +98,14 @@ export type DadosPerfil = {
  * as permissões das rotas (permissoesDasRotas, em acesso.ts).
  */
 function normalizarPermissoes(ps: Permissao[]): Permissao[] {
+  const fora = [...new Set(ps.map((p) => p.chave).filter((c) => !chaveValida(c)))];
+  if (fora.length) throw new RegraUsuarioError(400, `Tela ou aba inválida: ${fora.slice(0, 3).join(", ")}.`);
   const nivel = { LER: 1, EDITAR: 2 } as const;
-  const maior = new Map<RecursoSistema, number>();
-  for (const p of ps) maior.set(p.recurso, Math.max(maior.get(p.recurso) ?? 0, nivel[p.acao]));
-  return [...maior].flatMap(([recurso, n]) => ACOES.filter((a) => nivel[a] <= n).map((acao) => ({ recurso, acao })));
+  const maior = new Map<string, number>();
+  for (const p of ps) maior.set(p.chave, Math.max(maior.get(p.chave) ?? 0, nivel[p.acao]));
+  // A aba só vale com a tela lida.
+  for (const c of CHAVES_DA_MATRIZ) if (c.aba && !maior.get(c.tela)) maior.delete(c.chave);
+  return [...maior].flatMap(([chave, n]) => ACOES.filter((a) => nivel[a] <= n).map((acao) => ({ chave, acao })));
 }
 
 const selecaoUsuario = {
@@ -178,6 +184,8 @@ export const usuariosService = {
     return {
       perfis,
       recursos: RECURSOS.map((r) => ({ recurso: r, rotulo: ROTULO_RECURSO[r] })),
+      /** O catálogo das telas e das abas de cada grupo (14/10/2026): as linhas da matriz do perfil. */
+      telas: CATALOGO_DE_TELAS.map((g) => ({ recurso: g.recurso, nome: g.nome, telas: g.telas.map((t) => ({ codigo: t.codigo, nome: t.nome, abas: t.abas ?? [] })) })),
       acoes: ACOES,
       setores: SETORES,
       departamentos: DEPARTAMENTOS.map((d) => ({ departamento: d, rotulo: ROTULO_DEPARTAMENTO[d] })),
@@ -299,10 +307,12 @@ export const usuariosService = {
         recorteDepartamento: true,
         recorteCentro: true,
         permissoes: { select: { recurso: true, acao: true } },
+        permissoesTelas: { select: { chave: true, acao: true } },
         _count: { select: { usuarios: true } },
       },
     });
-    return ps.map(({ _count, ...p }) => ({ ...p, usuarios: _count.usuarios }));
+    // A matriz que vale é a por tela e por aba; a por grupo (permissoes) fica só como histórico.
+    return ps.map(({ _count, permissoes: _grupos, permissoesTelas, ...p }) => ({ ...p, permissoes: permissoesTelas, usuarios: _count.usuarios }));
   },
 
   async criarPerfil(d: DadosPerfil & { codigo: string }, quem: string) {
@@ -319,7 +329,7 @@ export const usuariosService = {
         recorteDepartamento: d.recorteDepartamento,
         recorteCentro: d.recorteCentro ?? false,
         ordem: (await prisma.perfil.count()) + 1,
-        permissoes: { create: normalizarPermissoes(d.permissoes) },
+        permissoesTelas: { create: normalizarPermissoes(d.permissoes) },
       },
     });
     const lista = await this.listarPerfis();
@@ -336,17 +346,17 @@ export const usuariosService = {
       exigirAdministrador(await ehAdministrador(quemEdita), "edita o perfil Administrador");
       if (!d.ativo) throw new RegraUsuarioError(409, "O perfil Administrador não pode ser inativado.");
       // Só a descrição muda: o nome, a situação, os recortes e as permissões (todas) são fixos.
-      d = { ...d, nome: atual.nome, ativo: true, recorteSetor: false, recorteDepartamento: false, recorteCentro: false, permissoes: RECURSOS.map((recurso) => ({ recurso, acao: "EDITAR" as AcaoPermissao })) };
+      d = { ...d, nome: atual.nome, ativo: true, recorteSetor: false, recorteDepartamento: false, recorteCentro: false, permissoes: MATRIZ_COMPLETA };
     }
     const antes = (await this.listarPerfis()).find((p) => p.id === id);
     const permissoes = normalizarPermissoes(d.permissoes);
     const meu = (await prisma.usuario.findUniqueOrThrow({ where: { id: quemEdita }, select: { perfilId: true } })).perfilId === id;
     if (meu && !d.ativo) throw new RegraUsuarioError(409, "Você não pode inativar o seu próprio perfil.");
-    if (meu && !permissoes.some((p) => p.recurso === "CONTROLE_USUARIOS" && p.acao === "EDITAR")) {
-      throw new RegraUsuarioError(409, "Você não pode tirar do seu próprio perfil a edição do Controle de Usuários.");
+    if (meu && !permissoes.some((p) => p.chave === "perfis" && p.acao === "EDITAR")) {
+      throw new RegraUsuarioError(409, "Você não pode tirar do seu próprio perfil a edição da tela Perfis.");
     }
     await prisma.$transaction([
-      prisma.perfilPermissao.deleteMany({ where: { perfilId: id } }),
+      prisma.perfilPermissaoTela.deleteMany({ where: { perfilId: id } }),
       prisma.perfil.update({
         where: { id },
         data: {
@@ -356,7 +366,7 @@ export const usuariosService = {
           recorteSetor: d.recorteSetor,
           recorteDepartamento: d.recorteDepartamento,
           recorteCentro: d.recorteCentro ?? false,
-          permissoes: { create: permissoes },
+          permissoesTelas: { create: permissoes },
         },
       }),
     ]);

@@ -48,7 +48,7 @@ describe("POST /auth/login", () => {
 describe("POST /auditoria/acesso", () => {
   it("registra acesso com token válido", async () => {
     // O token do usuário inicial, sem depender da senha dele.
-    const token = signToken({ sub: USUARIO_INICIAL_ID, email: await emailInicial(), permissions: [] });
+    const token = signToken({ sub: USUARIO_INICIAL_ID, email: await emailInicial() });
 
     const response = await request(app)
       .post("/auditoria/acesso")

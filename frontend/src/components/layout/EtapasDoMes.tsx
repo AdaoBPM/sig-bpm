@@ -30,7 +30,7 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const etapas = etapasDoMes(hasPermission, user?.acesso);
-  const veSituacao = ["dre:ler", "classificacao:ler", "apuracao:ler"].some(hasPermission);
+  const veSituacao = ["dre:ler", "classificacao:ler", "receita:ler"].some(hasPermission);
 
   const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar() });
   const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes), enabled: veSituacao });

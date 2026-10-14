@@ -8,7 +8,7 @@ import { PremissasContent } from "./PremissasContent";
 export default function PremissasAnaliticoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_premissas:ler" fallback={<SemLeitura />}>
         <PremissasContent />
       </PermissionGuard>
     </ProtectedLayout>

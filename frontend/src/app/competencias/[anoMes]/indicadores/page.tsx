@@ -7,7 +7,7 @@ import { IndicadoresDoMes } from "./IndicadoresDoMes";
 export default function IndicadoresDoMesPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="dre:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="indicadores_mes:ler" fallback={<SemLeitura />}>
         <IndicadoresDoMes />
       </PermissionGuard>
     </ProtectedLayout>

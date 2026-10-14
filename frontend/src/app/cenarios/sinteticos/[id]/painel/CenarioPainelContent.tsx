@@ -51,7 +51,7 @@ export function CenarioPainelContent() {
               (guardados neste navegador, os mesmos do Painel de Bordo de Resultados Realizados). As legendas (as cores das séries e os sinais)
               ficam antes do botão.
             </li>
-            <li>Troque entre as abas Resultados e Performance (os unitários).</li>
+            <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
               Cada card traz o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Cenário
               (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o valor em destaque e, à direita, o selo do desvio e o valor do
@@ -67,7 +67,7 @@ export function CenarioPainelContent() {
             </li>
             <li>
               O comparado é o cenário escolhido em Configurações / Comparativo; sem ele, essa parte fica vazia (—), e o aviso traz o botão
-              “Adicionar Comparativo” (para quem edita os cenários).
+              “Adicionar Comparativo” (para quem edita a aba Comparativo das Configurações).
             </li>
           </ul>
         }
@@ -120,12 +120,12 @@ export function CenarioPainelContent() {
               dados.comparado ? null : (
                 <div className={`${AVISO_DO_PAINEL} flex flex-wrap items-center justify-between gap-3`}>
                   <span>O cenário não tem comparativo: o comparado e o desvio ficam vazios.</span>
-                  {hasPermission(t.editar) ? (
+                  {hasPermission(t.perm("configuracoes", "editar", "comparativo")) ? (
                     <Button type="button" variant="outline" className="rounded-sm" onClick={() => router.push(`${t.base}/${id}/configuracoes?aba=comparativo`)}>
                       Adicionar Comparativo
                     </Button>
                   ) : (
-                    <span className="text-gray-500">Peça a quem edita os cenários para escolher um em Configurações / Comparativo.</span>
+                    <span className="text-gray-500">Peça a quem edita a aba Comparativo para escolher um em Configurações / Comparativo.</span>
                   )}
                 </div>
               )

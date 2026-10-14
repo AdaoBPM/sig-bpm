@@ -17,11 +17,10 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { mensagemDeErro, usuariosService, type Perfil } from "../usuarios/services/usuariosService";
 import { PerfilDialog } from "./components/PerfilDialog";
 
-/** Quantos grupos de telas do menu o perfil lê, e quantos edita. */
+/** Quantas telas o perfil lê, e quantas edita (as abas contam dentro da tela; 14/10/2026). */
 function resumoPermissoes(p: Perfil) {
-  const editar = new Set(p.permissoes.filter((x) => x.acao === "EDITAR").map((x) => x.recurso));
-  const ler = new Set(p.permissoes.filter((x) => x.acao === "LER").map((x) => x.recurso));
-  return `${ler.size} grupo(s) com leitura, ${editar.size} com edição`;
+  const telas = (acao: string) => new Set(p.permissoes.filter((x) => x.acao === acao && !x.chave.includes(".")).map((x) => x.chave)).size;
+  return `${telas("LER")} tela(s) com leitura, ${telas("EDITAR")} com edição`;
 }
 
 const recorte = (p: Perfil) => [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ");
@@ -63,18 +62,22 @@ export function PerfisContent() {
               nem se inativa, as permissões dele não mudam (só a descrição se edita), não fica sem usuário ativo, e só um Administrador promove outro
               usuário a ele.
             </li>
-            <li>No perfil, os grupos de telas aparecem como no menu lateral, sob o título dele (Criação de Cenários, Apuração dos Resultados, Controladoria). Marque em cada grupo o que o perfil pode: Ler (o grupo aparece no menu e as telas mostram os dados) ou Editar (pode alterar; marca o Ler junto). Cada grupo tem permissões próprias: por exemplo, ler os Resultados Realizados sem acesso ao Fechamento Mensal.</li>
-            <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam, por cima dos grupos. O recorte por departamento limita as movimentações da DRE às linhas dos departamentos do usuário (as da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos) e os centros de custo aos dele; o recorte por centro de custo (o Coordenador) limita a visão por centro de custo aos centros marcados no usuário (de uma gestão), com as movimentações deles, e nas unidades deixa só as movimentações abertas a todos; com recorte por departamento ou por centro de custo, o Fechamento Mensal não mostra as etapas com lançamentos de todos os departamentos (Classificação, Lançamentos, Receita, Rateios, Estoque, Conferência), nem o Controle de Usuários a Auditoria; com recorte por setor, o Fechamento Mensal mostra só Importações e Listas.</li>
+            <li>No perfil, os grupos de telas aparecem como no menu lateral, sob o título dele (Criação de Cenários, Apuração dos Resultados, Controladoria). Clique na seta do grupo para abrir as telas dele, e na seta de uma tela para abrir as abas dela (“Expandir Tudo” abre todos). Marque em cada tela e em cada aba o que o perfil pode: Ler (a tela aparece no menu e mostra os dados; a aba aparece) ou Editar (pode alterar; marca o Ler junto). Por exemplo: ler os Resultados Realizados sem acesso ao Fechamento Mensal, ou ver a DRE só na aba Matriz.</li>
+            <li>A caixa do grupo ou da tela marca (e desmarca) tudo o que está abaixo dela; o traço na caixa mostra que só parte está marcada. A aba só vale com a tela lida: marcar a aba marca a leitura da tela, e desmarcar a leitura da tela desmarca as abas.</li>
+            <li>As permissões valem também no servidor: uma aba sem permissão não aparece e os dados dela não são enviados.</li>
+            <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam, por cima dos grupos. O recorte por departamento limita as movimentações da DRE às linhas dos departamentos do usuário (as da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos) e os centros de custo aos dele; o recorte por centro de custo (o Coordenador) limita a visão por centro de custo aos centros marcados no usuário (de uma gestão), com as movimentações deles, e nas unidades deixa só as movimentações abertas a todos; com recorte por departamento ou por centro de custo, o Fechamento Mensal não mostra as etapas com lançamentos de todos os departamentos (Classificação, Lançamentos, Receita, Rateios, Estoque, Conferência), nem o Controle de Usuários a Auditoria; com recorte por setor, o Fechamento Mensal mostra só Competências, Importações e Listas.</li>
           </ul>
         }
         sobre={
           <p>
-            Os tipos de usuário e o que cada um pode fazer: Ler ou Editar em cada grupo de telas do menu lateral. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser
+            Os tipos de usuário e o que cada um pode fazer: Ler ou Editar em cada tela do menu lateral (e nas etapas do mês) e em cada aba de conteúdo
+            delas (as abas que só filtram a mesma lista, as das Listas e as dos modais seguem a tela). Até 14/10/2026, as permissões eram por grupo de
+            telas; cada tela e cada aba herdou a do grupo dela. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser
             editados e inativados, mas não excluídos.
           </p>
         }
         acoes={
-        <PermissionGuard permission="usuarios:editar">
+        <PermissionGuard permission="perfis:editar">
           <Button
             type="button"
             disabled={!opcoes.data}
@@ -120,7 +123,7 @@ export function PerfisContent() {
               <td className="px-4 py-3 text-sm">{p.usuarios}</td>
               <td className="px-4 py-3 text-sm">{p.ativo ? "Ativo" : "Inativo"}</td>
               <td className="px-4 py-3 text-right whitespace-nowrap">
-                <PermissionGuard permission="usuarios:editar">
+                <PermissionGuard permission="perfis:editar">
                   <Button type="button" variant="ghost" size="icon" aria-label="Editar" disabled={!opcoes.data} onClick={() => setEditando(p)}>
                     <Pencil className="size-4" />
                   </Button>

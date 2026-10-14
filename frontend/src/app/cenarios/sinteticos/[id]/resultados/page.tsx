@@ -7,7 +7,7 @@ import { CenarioResultadosContent } from "./CenarioResultadosContent";
 export default function CenarioResultadosPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_resultados:ler" fallback={<SemLeitura />}>
         <CenarioResultadosContent />
       </PermissionGuard>
     </ProtectedLayout>

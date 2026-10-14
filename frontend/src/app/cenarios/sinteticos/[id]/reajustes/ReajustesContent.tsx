@@ -79,23 +79,26 @@ export function ReajustesContent() {
   const { id } = useParams<{ id: string }>();
   const t = useTipoDoCenario();
   useRegistrarAcessoTela(`${t.base}/${id}/reajustes`);
-  const { data, isPending, isError } = useQuery({ queryKey: ["cenarios", id, "reajustes"], queryFn: () => cenariosService.reajustes(id) });
+  const { hasPermission: pode } = usePermissions();
+  const podeHistorico = pode(t.perm("reajustes", "ler", "historico"));
+  const { data, isPending, isError } = useQuery({ queryKey: ["cenarios", id, "reajustes"], queryFn: () => cenariosService.reajustes(id), enabled: podeHistorico });
   const tabela = useTabelaFiltravel(data, COLUNAS);
   // O modal das contas (ou da descrição da referência) de uma linha (13/10/2026; antes, a lista na coluna Contas).
   const [aberto, setAberto] = useState<ReajusteDoCenario | null>(null);
   // As abas (13/10/2026): Histórico (o log) e, com um cenário comparado, Justificativas (antes, da tela Comparativo).
   const { hasPermission } = usePermissions();
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
-  const comComparativo = !!cenario.data?.comparadoComId;
+  const comComparativo = !!cenario.data?.comparadoComId && hasPermission(t.perm("reajustes", "ler", "justificativas"));
   const [escolhida, setAba] = useState<"historico" | "justificativas">("historico");
-  const aba = comComparativo ? escolhida : "historico";
+  // As abas que o perfil lê (14/10/2026).
+  const aba = comComparativo && (escolhida === "justificativas" || !podeHistorico) ? "justificativas" : podeHistorico ? "historico" : null;
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Reajustes"
         comoUsar={
           <ul>
-            <li>Na aba Histórico, cada linha é uma gravação na DRE do cenário (tela Resultados) ou a carga de uma referência (tela Configurações), do mais recente ao mais antigo.</li>
+            <li>Na aba Histórico, cada linha é uma gravação na DRE do cenário (tela Resultados) ou a carga de uma referência (tela Configurações), do mais recente ao mais antigo. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Tipo: Reajuste dos Marcados (o reajuste aplicado às contas e meses marcados), Edição de Valor (um valor clicado; Replicada quando copiado aos meses seguintes) ou Referência Carregada (um arquivo ou o resultado realizado, que substitui a DRE).</li>
             <li>Reajuste: o percentual ou o valor informado; “Valor digitado” quando o valor recalculado foi digitado direto. As somas são as dos valores alterados, antes e depois.</li>
             <li>
@@ -124,12 +127,14 @@ export function ReajustesContent() {
       />
       <Abas
         rotulo="Reajustes do cenário"
-        ativa={aba}
+        ativa={aba ?? ""}
         onMudar={(a) => setAba(a as "historico" | "justificativas")}
-        abas={[{ chave: "historico", rotulo: "Histórico" }, ...(comComparativo ? [{ chave: "justificativas", rotulo: "Justificativas" }] : [])]}
+        abas={[...(podeHistorico ? [{ chave: "historico", rotulo: "Histórico" }] : []), ...(comComparativo ? [{ chave: "justificativas", rotulo: "Justificativas" }] : [])]}
       />
-      {aba === "justificativas" ? (
-        <JustificativasCenario id={id} podeEditar={hasPermission(t.editar)} />
+      {aba === null ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
+      ) : aba === "justificativas" ? (
+        <JustificativasCenario id={id} podeEditar={hasPermission(t.perm("reajustes", "editar", "justificativas"))} />
       ) : (
         <QuadroTabela
           barra={

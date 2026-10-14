@@ -8,7 +8,7 @@ import { CenarioResultadosContent } from "@/app/cenarios/sinteticos/[id]/resulta
 export default function CenarioResultadosAnaliticoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_resultados:ler" fallback={<SemLeitura />}>
         <CenarioResultadosContent />
       </PermissionGuard>
     </ProtectedLayout>

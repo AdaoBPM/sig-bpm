@@ -98,9 +98,14 @@ export type InvestimentosDoCenario = {
 };
 export type ExtraDoCenario = { ano: number; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: Array<{ unidade: 4 | 5; nome: string; linhas: LinhaDaPremissa[] }> };
 export type PremissasDaUnidade = { ano: number; unidade: 1 | 2 | 3; nome: string; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: TabelaDePremissas[] };
-export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; ler: string; editar: string }> = {
-  SINTETICO: { base: "/cenarios/sinteticos", titulo: "Cenários Sintéticos", ler: "cenarios:ler", editar: "cenarios:editar" },
-  ANALITICO: { base: "/cenarios/analiticos", titulo: "Cenários Analíticos", ler: "cenarios_analiticos:ler", editar: "cenarios_analiticos:editar" },
+/**
+ * O caminho, o nome e as permissões de cada tipo (14/10/2026: por tela e por aba). `area` é o prefixo das áreas das
+ * telas (cenarios_resultados, cenarios_analiticos_premissas.matriz…); `ler` é a leitura do grupo (alguma tela), e
+ * `editar`, a criação de cenários (a edição da Lista de Cenários).
+ */
+export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; area: string; ler: string; editar: string }> = {
+  SINTETICO: { base: "/cenarios/sinteticos", titulo: "Cenários Sintéticos", area: "cenarios", ler: "cenarios:ler", editar: "cenarios_lista:editar" },
+  ANALITICO: { base: "/cenarios/analiticos", titulo: "Cenários Analíticos", area: "cenarios_analiticos", ler: "cenarios_analiticos:ler", editar: "cenarios_analiticos_lista:editar" },
 };
 /** O tipo pela rota da tela. */
 export const tipoDaRota = (pathname: string): TipoCenario => (pathname.startsWith("/cenarios/analiticos") ? "ANALITICO" : "SINTETICO");

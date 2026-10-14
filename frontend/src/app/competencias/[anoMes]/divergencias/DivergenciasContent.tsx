@@ -154,7 +154,7 @@ export function DivergenciasContent() {
           podeTratar ? (
             <>
               {podeResolver ? (
-                <PermissionGuard permission="competencia:editar">
+                <PermissionGuard permission="competencias:editar">
                   <Button type="button" className={botaoPrimario} onClick={() => setDialogo({ tipo: "resolver", competencia: doMes })}>
                     <LockKeyholeOpen className="size-4" />
                     Resolver por Reabertura

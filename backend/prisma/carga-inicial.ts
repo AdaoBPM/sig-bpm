@@ -13,6 +13,7 @@ import { getPrismaClient } from "../src/config/prisma.js";
 import type { AcaoPermissao, RecursoSistema } from "../src/generated/prisma/enums.js";
 import { REGRAS_RATEIO, VIGENCIA_REGRAS } from "../src/services/volumes/regrasRateio.js";
 import { carregarCadastrosDaPasta } from "./cargaCadastros.js";
+import { CHAVES_DA_MATRIZ } from "../src/services/acesso/telas.js";
 import { carregarEstruturaIndicadores } from "../src/services/relatorios/cargaEstruturaIndicadores.js";
 
 const prisma = getPrismaClient();
@@ -188,6 +189,10 @@ async function carregarPerfisEUsuario() {
       await prisma.perfilPermissao.create({
         data: { perfilId: perfil.id, recurso: perm.recurso, acao: perm.acao },
       });
+      // A matriz que vale (14/10/2026): a permissão do grupo em cada tela e aba dele.
+      for (const c of CHAVES_DA_MATRIZ.filter((x) => x.recurso === perm.recurso)) {
+        await prisma.perfilPermissaoTela.create({ data: { perfilId: perfil.id, chave: c.chave, acao: perm.acao } });
+      }
     }
 
     if (p.codigo === "CONTABIL") perfilContabilId = perfil.id;

@@ -7,7 +7,7 @@ import { ListaCadastroContent } from "../components/ListaCadastroContent";
 export default function EstruturaIndicadoresPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros_controladoria:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_estrutura_indicadores:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="estrutura-indicadores"
           rota="/cadastros/estrutura-indicadores"

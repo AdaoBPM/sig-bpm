@@ -8,7 +8,7 @@ import { ReajustesContent } from "@/app/cenarios/sinteticos/[id]/reajustes/Reaju
 export default function ReajustesAnaliticoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_reajustes:ler" fallback={<SemLeitura />}>
         <ReajustesContent />
       </PermissionGuard>
     </ProtectedLayout>

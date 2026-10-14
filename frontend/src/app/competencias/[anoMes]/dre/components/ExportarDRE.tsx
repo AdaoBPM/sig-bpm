@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/context/PermissionContext";
 import { api } from "@/lib/api";
 
 /** A visão na tela: o consolidado, uma unidade (1 a 5), um agrupamento de centros ou uma obra. */
@@ -44,6 +45,12 @@ export async function mensagemDoErro(error: unknown) {
 /** Exportação da DRE apurada em Excel e PDF (Passo 26). */
 export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExportar }) {
   const [gerando, setGerando] = useState(false);
+  // Cada alcance pede as abas que ele toca (14/10/2026): todas as unidades, as seis; os centros e as obras, a deles.
+  const { hasPermission } = usePermissions();
+  const le = (aba: string) => hasPermission(`dre.${aba}:ler`);
+  const opcoes = OPCOES.filter((o) =>
+    o.alcance === "unidades" ? ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"].every(le) : o.alcance === "atual" ? true : le(o.alcance),
+  );
 
   async function baixar(formato: Formato, alcance: Alcance) {
     setGerando(true);
@@ -94,7 +101,7 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
               {formato === "xlsx" ? <FileSpreadsheet className="size-3.5" /> : <FileText className="size-3.5" />}
               {formato === "xlsx" ? "Excel" : "PDF"}
             </DropdownMenuLabel>
-            {OPCOES.map((o) => (
+            {opcoes.map((o) => (
               <DropdownMenuItem key={o.alcance} onClick={() => void baixar(formato, o.alcance)} className="pl-6">
                 {formato === "xlsx" ? o.excel : o.pdf}
               </DropdownMenuItem>

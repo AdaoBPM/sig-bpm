@@ -8,7 +8,7 @@ import { CenarioIndicadoresContent } from "@/app/cenarios/sinteticos/[id]/indica
 export default function CenarioIndicadoresAnaliticoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_indicadores:ler" fallback={<SemLeitura />}>
         <CenarioIndicadoresContent />
       </PermissionGuard>
     </ProtectedLayout>

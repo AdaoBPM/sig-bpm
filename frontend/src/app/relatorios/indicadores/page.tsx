@@ -7,7 +7,7 @@ import { IndicadoresContent } from "./IndicadoresContent";
 export default function IndicadoresPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="resultados:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="relatorio_indicadores:ler" fallback={<SemLeitura />}>
         <IndicadoresContent />
       </PermissionGuard>
     </ProtectedLayout>

@@ -7,7 +7,7 @@ import { ConferenciaPlanilhaContent } from "./ConferenciaPlanilhaContent";
 export default function ConferenciaPlanilhaPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="apuracao:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="conferencia:ler" fallback={<SemLeitura />}>
         <ConferenciaPlanilhaContent />
       </PermissionGuard>
     </ProtectedLayout>

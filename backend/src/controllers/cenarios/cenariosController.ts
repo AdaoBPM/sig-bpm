@@ -236,12 +236,30 @@ export const cenariosController = {
     if (!c) return;
     const ate = z.coerce.number().int().min(1).max(12).default(12).safeParse(request.query.ate);
     if (!ate.success) return response.status(400).json({ error: "Mês inválido." });
-    return responder(response, () => cenariosService.painel(c, ate.data, usuario(request)));
+    // Só as abas permitidas (Resultados, Performance; 14/10/2026).
+    const base = String(response.locals.areaDoCenario ?? "cenarios");
+    return responder(response, async () => {
+      const r = await cenariosService.painel(c, ate.data, usuario(request));
+      return { ...r, abas: r.abas.filter((a) => request.user!.permissions.includes(`${base}_painel.${a.chave}:ler`)) };
+    });
   },
 
+  /**
+   * Os indicadores do cenário, só os das abas permitidas (14/10/2026): as Metas são todos; os Indicadores de Resultados,
+   * os da DRE; os Indicadores Manuais, os manuais (no analítico, também pela aba das Premissas).
+   */
   indicadores(request: Request, response: Response) {
     const c = id(request, response);
-    return c ? responder(response, () => cenariosService.indicadores(c, usuario(request))) : undefined;
+    if (!c) return;
+    const base = String(response.locals.areaDoCenario ?? "cenarios");
+    const tem = (p: string) => request.user!.permissions.includes(`${p}:ler`);
+    const todas = tem(`${base}_indicadores.metas`);
+    const resultados = todas || tem(`${base}_indicadores.resultados`);
+    const manuais = todas || tem(`${base}_indicadores.manuais`) || (base === "cenarios_analiticos" && tem(`${base}_premissas.manuais`));
+    return responder(response, async () => {
+      const r = await cenariosService.indicadores(c, usuario(request));
+      return { ...r, indicadores: todas ? r.indicadores : r.indicadores.filter((i) => (i.classe === "MANUAL" ? manuais : i.classe === "RESULTADO" ? resultados : false)) };
+    });
   },
 
   /** A visão da DRE para a edição: ?visao=0..5. */

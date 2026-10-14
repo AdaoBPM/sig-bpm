@@ -81,7 +81,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
     <>
       <div className="flex flex-wrap gap-2">
         {s.podeApurar ? (
-          <PermissionGuard permission="apuracao:editar">
+          <PermissionGuard permission="dre:editar">
             <Button
               type="button"
               onClick={() => apurar.mutate()}
@@ -95,7 +95,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
           </PermissionGuard>
         ) : null}
         {!fechada ? (
-          <PermissionGuard permission="competencia:editar">
+          <PermissionGuard permission="competencias:editar">
             <Button
               type="button"
               className={botaoPrimario}
@@ -109,7 +109,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
           </PermissionGuard>
         ) : null}
         {s.podeReabrir ? (
-          <PermissionGuard permission="competencia:editar">
+          <PermissionGuard permission="competencias:editar">
             <Button type="button" className={botaoPrimario} onClick={() => setDialogo("reabrir")}>
               <LockKeyholeOpen className="size-4" />
               Reabrir competência

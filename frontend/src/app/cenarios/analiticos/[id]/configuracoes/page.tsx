@@ -10,7 +10,7 @@ import { ConfiguracoesContent } from "@/app/cenarios/sinteticos/[id]/configuraco
 export default function ConfiguracoesAnaliticoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos:editar" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_analiticos_configuracoes:ler" fallback={<SemLeitura />}>
         <Suspense fallback={<div className="h-64 animate-pulse rounded-sm bg-gray-100" />}>
           <ConfiguracoesContent />
         </Suspense>

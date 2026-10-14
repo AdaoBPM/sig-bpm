@@ -7,7 +7,7 @@ import { PerfisContent } from "./PerfisContent";
 export default function PerfisPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="usuarios:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="perfis:ler" fallback={<SemLeitura />}>
         <PerfisContent />
       </PermissionGuard>
     </ProtectedLayout>

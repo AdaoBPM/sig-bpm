@@ -7,5 +7,5 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 
 /** Saldo de estoque de uma competência: montado em /competencias/:anoMes/estoque. */
 export const estoqueRoutes = Router({ mergeParams: true });
-estoqueRoutes.get("/", autenticacao, verificarPermissao("apuracao:ler"), asyncHandler(c.consultar));
-estoqueRoutes.post("/apurar", autenticacao, verificarPermissao("apuracao:editar"), asyncHandler(c.apurar));
+estoqueRoutes.get("/", autenticacao, verificarPermissao("estoque:ler"), asyncHandler(c.consultar));
+estoqueRoutes.post("/apurar", autenticacao, verificarPermissao("estoque:editar"), asyncHandler(c.apurar));

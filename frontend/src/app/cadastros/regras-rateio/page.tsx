@@ -8,7 +8,7 @@ import { AvisoRegrasRateio, BotaoPercentuaisFixos } from "./PercentuaisFixos";
 export default function RegrasRateioPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros_controladoria:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_regras_rateio:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="regras-rateio"
           rota="/cadastros/regras-rateio"

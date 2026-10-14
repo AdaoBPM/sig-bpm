@@ -8,15 +8,15 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 
 /**
  * Conferência da DRE contra a planilha (Passo 27, RF013), do Contábil: ler o
- * relatório exige apuracao:ler; enviar a planilha, apuracao:editar.
+ * relatório exige conferencia:ler (as visões, as abas da tela); enviar a planilha, conferencia:editar.
  * Montado em /competencias/:anoMes/conferencia-planilha.
  */
 export const conferenciaPlanilhaRoutes = Router({ mergeParams: true });
-conferenciaPlanilhaRoutes.get("/", autenticacao, verificarPermissao("apuracao:ler"), asyncHandler(c.relatorio));
+conferenciaPlanilhaRoutes.get("/", autenticacao, verificarPermissao("conferencia:ler"), asyncHandler(c.relatorio));
 conferenciaPlanilhaRoutes.post(
   "/",
   autenticacao,
-  verificarPermissao("apuracao:editar"),
+  verificarPermissao("conferencia:editar"),
   // Corpo cru: o arquivo inteiro, em qualquer content-type.
   express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }),
   asyncHandler(c.receber),

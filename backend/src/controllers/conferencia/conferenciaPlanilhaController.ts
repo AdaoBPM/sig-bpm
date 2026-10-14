@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
+import { ABA_DA_VISAO } from "../../services/acesso/telas.js";
 import { ConferenciaError, conferenciaPlanilhaService, LIMITE_PADRAO } from "../../services/conferencia/conferenciaPlanilhaService.js";
 
 const nomeArquivoSchema = z.string().trim().min(1).max(255);
@@ -24,7 +25,12 @@ export const conferenciaPlanilhaController = {
     if (!c.success) return response.status(400).json({ error: "Competência inválida" });
     const l = limiteSchema.safeParse(request.query.limite ?? LIMITE_PADRAO);
     if (!l.success) return response.status(400).json({ error: "Limite inválido: use um número a partir de zero." });
-    return responder(response, () => conferenciaPlanilhaService.relatorio(c.data.ano, c.data.mes, l.data));
+    // Só as visões (as abas da tela) permitidas (14/10/2026).
+    const permitidas = new Set(ABA_DA_VISAO.flatMap((a, k) => (request.user!.permissions.includes(`conferencia.${a}:ler`) ? [k] : [])));
+    return responder(response, async () => {
+      const r = await conferenciaPlanilhaService.relatorio(c.data.ano, c.data.mes, l.data);
+      return { ...r, visoes: r.visoes.filter((v) => permitidas.has(v.unidade)) };
+    });
   },
 
   async receber(request: Request, response: Response) {

@@ -3,7 +3,9 @@ import express, { Router } from "express";
 import { env } from "../../config/env.js";
 import { cenariosController as c } from "../../controllers/cenarios/cenariosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
-import { verificarPermissao, verificarPermissaoDoCenario } from "../../middlewares/verificarPermissao.js";
+import type { Request } from "express";
+
+import { abaDaVisao, verificarAlgumaPermissao, verificarIndicadoresDoCenario, verificarManuaisDoCenario, verificarPermissaoDoCenario } from "../../middlewares/verificarPermissao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
 /**
@@ -12,50 +14,58 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
  * ou, na lista e na criação, pelo tipo pedido.
  */
 export const cenariosRoutes = Router();
+/** A leitura do grupo do tipo (a lista na barra, o cenário aberto); as telas e as abas, cada rota com a sua (14/10/2026). */
 const ler = verificarPermissaoDoCenario("ler");
-const editar = verificarPermissaoDoCenario("editar");
-// A importação de arquivo é só dos sintéticos.
-const editarSinteticos = verificarPermissao("cenarios:editar");
+const tela = (t: string, acao: "ler" | "editar" = "ler", aba?: string | ((r: Request) => string | null)) => verificarPermissaoDoCenario(acao, t, aba);
+const abaDaVisaoDoCorpo = (r: Request) => abaDaVisao((r.body as { visao?: unknown } | undefined)?.visao);
+const abaDaUnidade = (u: unknown) => ({ 1: "matriz", 2: "filial", 3: "servicos" })[Number(u)] ?? null;
+const abaDosMensais = (r: Request) => ({ BASE: "investimentos", EXTRA: "extra" })[String((r.body as { tipo?: unknown } | undefined)?.tipo)] ?? null;
+// A importação de arquivo é só dos sintéticos: um cenário novo (a lista) ou a referência de um cenário.
+const editarSinteticos = verificarAlgumaPermissao("cenarios_lista:editar", "cenarios_configuracoes.referencia:editar");
 cenariosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
-cenariosRoutes.post("/", autenticacao, express.json(), editar, asyncHandler(c.criar));
+cenariosRoutes.post("/", autenticacao, express.json(), tela("lista", "editar"), asyncHandler(c.criar));
 cenariosRoutes.post("/importar/analise", autenticacao, editarSinteticos, express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }), asyncHandler(c.analisar));
 cenariosRoutes.post("/importar", autenticacao, editarSinteticos, express.json(), asyncHandler(c.importar));
 cenariosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
-cenariosRoutes.patch("/:id", autenticacao, editar, express.json(), asyncHandler(c.atualizar));
-cenariosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));
-cenariosRoutes.put("/:id/marcacao", autenticacao, editar, express.json(), asyncHandler(c.marcar));
-cenariosRoutes.get("/:id/resultados", autenticacao, ler, asyncHandler(c.resultados));
-cenariosRoutes.get("/:id/indicadores", autenticacao, ler, asyncHandler(c.indicadores));
-cenariosRoutes.get("/:id/painel", autenticacao, ler, asyncHandler(c.painel));
+cenariosRoutes.patch("/:id", autenticacao, tela("configuracoes", "editar", "cenario"), express.json(), asyncHandler(c.atualizar));
+cenariosRoutes.delete("/:id", autenticacao, tela("configuracoes", "editar", "cenario"), asyncHandler(c.excluir));
+cenariosRoutes.put("/:id/marcacao", autenticacao, tela("configuracoes", "editar", "cenario"), express.json(), asyncHandler(c.marcar));
+cenariosRoutes.get("/:id/resultados", autenticacao, tela("resultados", "ler", (r: Request) => abaDaVisao(r.query.visao ?? 0)), asyncHandler(c.resultados));
+// Os indicadores: a tela Indicadores (o controlador deixa só as abas permitidas) ou, no analítico, a aba Indicadores
+// Manuais das Premissas.
+cenariosRoutes.get("/:id/indicadores", autenticacao, verificarIndicadoresDoCenario, asyncHandler(c.indicadores));
+cenariosRoutes.get("/:id/painel", autenticacao, tela("painel"), asyncHandler(c.painel));
 // A edição da DRE do cenário pela ferramenta (12/10/2026).
-cenariosRoutes.get("/:id/edicao", autenticacao, editar, asyncHandler(c.edicao));
-cenariosRoutes.put("/:id/edicao/valores", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarValores));
-cenariosRoutes.get("/:id/reajustes", autenticacao, ler, asyncHandler(c.reajustes));
-cenariosRoutes.post("/:id/referencia/realizado", autenticacao, editar, express.json(), asyncHandler(c.referenciaRealizado));
-cenariosRoutes.post("/:id/referencia/cenario", autenticacao, editar, express.json(), asyncHandler(c.referenciaCenario));
+cenariosRoutes.get("/:id/edicao", autenticacao, tela("resultados", "editar", (r: Request) => abaDaVisao(r.query.visao ?? 0)), asyncHandler(c.edicao));
+cenariosRoutes.put("/:id/edicao/valores", autenticacao, express.json({ limit: "2mb" }), tela("resultados", "editar", abaDaVisaoDoCorpo), asyncHandler(c.gravarValores));
+cenariosRoutes.get("/:id/reajustes", autenticacao, tela("reajustes", "ler", "historico"), asyncHandler(c.reajustes));
+cenariosRoutes.post("/:id/referencia/realizado", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaRealizado));
+cenariosRoutes.post("/:id/referencia/cenario", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaCenario));
 // O versionamento (13/10/2026): Congelar Versão, Reabrir Versão e Criar Revisão.
-cenariosRoutes.post("/:id/versao", autenticacao, editar, asyncHandler(c.congelarVersao));
-cenariosRoutes.post("/:id/versao/reabrir", autenticacao, editar, asyncHandler(c.reabrirVersao));
-cenariosRoutes.post("/:id/revisao", autenticacao, editar, asyncHandler(c.criarRevisao));
+cenariosRoutes.post("/:id/versao", autenticacao, tela("resultados", "editar"), asyncHandler(c.congelarVersao));
+cenariosRoutes.post("/:id/versao/reabrir", autenticacao, tela("resultados", "editar"), asyncHandler(c.reabrirVersao));
+cenariosRoutes.post("/:id/revisao", autenticacao, tela("resultados", "editar"), asyncHandler(c.criarRevisao));
 // O comparativo com outro cenário e as justificativas (12/10/2026).
-cenariosRoutes.get("/:id/comparativo", autenticacao, ler, asyncHandler(c.comparativo));
-cenariosRoutes.put("/:id/comparativo", autenticacao, editar, express.json(), asyncHandler(c.gravarComparativo));
-cenariosRoutes.get("/:id/justificativas", autenticacao, ler, asyncHandler(c.justificativas));
-cenariosRoutes.put("/:id/justificativas", autenticacao, editar, express.json(), asyncHandler(c.gravarJustificativa));
+cenariosRoutes.get("/:id/comparativo", autenticacao, tela("configuracoes", "ler", "comparativo"), asyncHandler(c.comparativo));
+cenariosRoutes.put("/:id/comparativo", autenticacao, tela("configuracoes", "editar", "comparativo"), express.json(), asyncHandler(c.gravarComparativo));
+cenariosRoutes.get("/:id/justificativas", autenticacao, tela("reajustes", "ler", "justificativas"), asyncHandler(c.justificativas));
+cenariosRoutes.put("/:id/justificativas", autenticacao, tela("reajustes", "editar", "justificativas"), express.json(), asyncHandler(c.gravarJustificativa));
 // As premissas dos cenários analíticos (13/10/2026).
-cenariosRoutes.get("/:id/premissas", autenticacao, ler, asyncHandler(c.premissas));
-cenariosRoutes.put("/:id/premissas", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarPremissas));
+cenariosRoutes.get("/:id/premissas", autenticacao, tela("premissas", "ler", (r) => abaDaUnidade(r.query.unidade)), asyncHandler(c.premissas));
+cenariosRoutes.put("/:id/premissas", autenticacao, express.json({ limit: "2mb" }), tela("premissas", "editar", (r) => abaDaUnidade((r.body as { unidade?: unknown } | undefined)?.unidade)), asyncHandler(c.gravarPremissas));
 // Os centros de custo dos cenários analíticos (13/10/2026).
-cenariosRoutes.get("/:id/centros", autenticacao, ler, asyncHandler(c.centros));
-cenariosRoutes.get("/:id/centros/contas", autenticacao, ler, asyncHandler(c.centro));
-cenariosRoutes.put("/:id/centros", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarCentro));
-cenariosRoutes.put("/:id/centros/lotacao", autenticacao, editar, express.json(), asyncHandler(c.gravarLotacao));
-cenariosRoutes.get("/:id/rateios", autenticacao, ler, asyncHandler(c.rateios));
+cenariosRoutes.get("/:id/centros", autenticacao, tela("premissas", "ler", "centros"), asyncHandler(c.centros));
+cenariosRoutes.get("/:id/centros/contas", autenticacao, tela("premissas", "ler", "centros"), asyncHandler(c.centro));
+cenariosRoutes.put("/:id/centros", autenticacao, tela("premissas", "editar", "centros"), express.json({ limit: "2mb" }), asyncHandler(c.gravarCentro));
+cenariosRoutes.put("/:id/centros/lotacao", autenticacao, tela("premissas", "editar", "centros"), express.json(), asyncHandler(c.gravarLotacao));
+// Os rateios: a aba Rateios das Premissas; o aviso dos rateios sem base também aparece nas outras abas e nos Resultados.
+cenariosRoutes.get("/:id/rateios", autenticacao, verificarPermissaoDoCenario("ler", "premissas"), asyncHandler(c.rateios));
 // Os investimentos e o extra-operacional dos cenários analíticos (13/10/2026).
-cenariosRoutes.get("/:id/investimentos", autenticacao, ler, asyncHandler(c.investimentos));
-cenariosRoutes.post("/:id/investimentos", autenticacao, editar, express.json(), asyncHandler(c.gravarInvestimento));
-cenariosRoutes.put("/:id/investimentos/:investimentoId", autenticacao, editar, express.json(), asyncHandler(c.gravarInvestimento));
-cenariosRoutes.delete("/:id/investimentos/:investimentoId", autenticacao, editar, asyncHandler(c.gravarInvestimento));
-cenariosRoutes.get("/:id/extra-operacional", autenticacao, ler, asyncHandler(c.extraOperacional));
-cenariosRoutes.put("/:id/mensais", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarMensais));
-cenariosRoutes.put("/:id/indicadores/manuais", autenticacao, editar, express.json(), asyncHandler(c.salvarManual));
+cenariosRoutes.get("/:id/investimentos", autenticacao, tela("premissas", "ler", "investimentos"), asyncHandler(c.investimentos));
+cenariosRoutes.post("/:id/investimentos", autenticacao, tela("premissas", "editar", "investimentos"), express.json(), asyncHandler(c.gravarInvestimento));
+cenariosRoutes.put("/:id/investimentos/:investimentoId", autenticacao, tela("premissas", "editar", "investimentos"), express.json(), asyncHandler(c.gravarInvestimento));
+cenariosRoutes.delete("/:id/investimentos/:investimentoId", autenticacao, tela("premissas", "editar", "investimentos"), asyncHandler(c.gravarInvestimento));
+cenariosRoutes.get("/:id/extra-operacional", autenticacao, tela("premissas", "ler", "extra"), asyncHandler(c.extraOperacional));
+cenariosRoutes.put("/:id/mensais", autenticacao, express.json({ limit: "2mb" }), tela("premissas", "editar", abaDosMensais), asyncHandler(c.gravarMensais));
+// Os Indicadores Manuais: no sintético, a aba da tela Indicadores; no analítico, a das Premissas.
+cenariosRoutes.put("/:id/indicadores/manuais", autenticacao, verificarManuaisDoCenario, express.json(), asyncHandler(c.salvarManual));

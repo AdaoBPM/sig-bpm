@@ -23,13 +23,15 @@ const perfilSchema = z.object({
   recorteSetor: z.boolean().default(false),
   recorteDepartamento: z.boolean().default(false),
   recorteCentro: z.boolean().default(false),
+  // A matriz por tela e por aba (14/10/2026): a chave é a tela ou "tela.aba" do catálogo.
   permissoes: z
     .array(
       z.object({
-        recurso: z.enum(Object.values(RecursoSistema) as [string, ...string[]]),
+        chave: z.string().min(1).max(120),
         acao: z.enum(Object.values(AcaoPermissao) as [string, ...string[]]),
       }),
     )
+    .max(1000)
     .default([]),
 });
 

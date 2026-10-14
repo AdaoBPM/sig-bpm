@@ -75,7 +75,7 @@ export function RateiosContent() {
         }
         acoes={
           !bloqueada && dados ? (
-            <PermissionGuard permission="apuracao:editar">
+            <PermissionGuard permission="rateios:editar">
               <Button
                 type="button"
                 onClick={() => apurar.mutate()}

@@ -8,7 +8,7 @@ import { BotaoCorrespondencia } from "./CorrespondenciaDialog";
 export default function LinhasPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros_controladoria:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_linhas:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="linhas"
           rota="/cadastros/linhas"

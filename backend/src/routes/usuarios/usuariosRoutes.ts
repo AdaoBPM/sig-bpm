@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import { usuariosController as c } from "../../controllers/usuarios/usuariosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
-import { verificarPermissao } from "../../middlewares/verificarPermissao.js";
+import { verificarAlgumaPermissao, verificarPermissao } from "../../middlewares/verificarPermissao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
 const ler = verificarPermissao("usuarios:ler");
@@ -10,7 +10,8 @@ const editar = verificarPermissao("usuarios:editar");
 
 /** Usuários: montado em /usuarios. */
 export const usuariosRoutes = Router();
-usuariosRoutes.get("/opcoes", autenticacao, ler, asyncHandler(c.opcoes));
+// As opções (os perfis, os grupos e as telas) servem às telas Usuários e Perfis.
+usuariosRoutes.get("/opcoes", autenticacao, verificarAlgumaPermissao("usuarios:ler", "perfis:ler"), asyncHandler(c.opcoes));
 usuariosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
 usuariosRoutes.post("/", autenticacao, editar, asyncHandler(c.criar));
 usuariosRoutes.put("/:id", autenticacao, editar, asyncHandler(c.atualizar));
@@ -18,7 +19,8 @@ usuariosRoutes.put("/:id/senha", autenticacao, editar, asyncHandler(c.redefinirS
 
 /** Perfis (tipos de usuário): montado em /perfis. */
 export const perfisRoutes = Router();
-perfisRoutes.get("/", autenticacao, ler, asyncHandler(c.listarPerfis));
-perfisRoutes.post("/", autenticacao, editar, asyncHandler(c.criarPerfil));
-perfisRoutes.put("/:id", autenticacao, editar, asyncHandler(c.atualizarPerfil));
-perfisRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluirPerfil));
+// Os perfis têm a tela própria (14/10/2026); a lista também serve à tela Usuários.
+perfisRoutes.get("/", autenticacao, verificarAlgumaPermissao("perfis:ler", "usuarios:ler"), asyncHandler(c.listarPerfis));
+perfisRoutes.post("/", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.criarPerfil));
+perfisRoutes.put("/:id", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.atualizarPerfil));
+perfisRoutes.delete("/:id", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.excluirPerfil));

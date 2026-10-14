@@ -78,6 +78,8 @@ model Perfil {
 
   /// LISTA: o que este perfil pode fazer, por recurso e ação.
   permissoes PerfilPermissao[]
+  /// A matriz por tela e por aba (14/10/2026): a que vale; a por grupo (permissoes) ficou só como histórico.
+  permissoesTelas PerfilPermissaoTela[]
   usuarios   Usuario[]
 
   @@map("perfis")
@@ -98,6 +100,19 @@ model PerfilPermissao {
   @@id([perfilId, recurso, acao])
   @@index([recurso, acao])
   @@map("perfil_permissoes")
+}
+
+/// A permissão de um perfil numa tela ou numa aba (14/10/2026): a chave é o código da tela (a área das rotas) ou
+/// "tela.aba", do catálogo services/acesso/telas.ts. Editar implica Ler (as duas linhas ficam gravadas).
+model PerfilPermissaoTela {
+  perfilId String        @map("perfil_id")
+  chave    String
+  acao     AcaoPermissao
+
+  perfil Perfil @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+
+  @@id([perfilId, chave, acao])
+  @@map("perfil_permissoes_telas")
 }
 
 model Usuario {

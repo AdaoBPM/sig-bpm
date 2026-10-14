@@ -5,8 +5,8 @@ import { autenticacao } from "../../middlewares/autenticacao.js";
 import { verificarPermissao } from "../../middlewares/verificarPermissao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
-const lerApuracao = verificarPermissao("apuracao:ler");
-const apurar = verificarPermissao("apuracao:editar");
+const lerApuracao = verificarPermissao("receita:ler");
+const apurar = verificarPermissao("receita:editar");
 const lerLancamentos = verificarPermissao("lancamentos_manuais:ler");
 const editarLancamentos = verificarPermissao("lancamentos_manuais:editar");
 

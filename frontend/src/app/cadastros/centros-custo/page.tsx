@@ -7,7 +7,7 @@ import { CentrosCustoContent } from "./CentrosCustoContent";
 export default function CentrosCustoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros_controladoria:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_centros_custo:ler" fallback={<SemLeitura />}>
         <CentrosCustoContent />
       </PermissionGuard>
     </ProtectedLayout>

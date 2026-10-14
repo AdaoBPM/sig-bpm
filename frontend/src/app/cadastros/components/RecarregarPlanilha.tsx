@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, AlertTriangle, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
-import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { usePermissions } from "@/context/PermissionContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -93,6 +93,8 @@ function Secao({ nome, s }: { nome: string; s: SecaoRecarga }) {
  * para o período de paralelo: primeiro mostra o que muda, depois grava.
  */
 export function RecarregarPlanilha() {
+  const { hasPermission } = usePermissions();
+  const pode = ["cadastro_centros_custo:editar", "cadastro_contas_resultado:editar", "cadastro_estrutura_dre:editar"].every(hasPermission);
   const queryClient = useQueryClient();
   const [aberto, setAberto] = useState(false);
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -129,7 +131,9 @@ export function RecarregarPlanilha() {
     : 0;
 
   return (
-    <PermissionGuard permission="cadastros_controladoria:editar">
+    // A recarga mexe nos centros de custo, nas contas e na estrutura da DRE: precisa da edição das três telas (14/10/2026).
+    !pode ? null : (
+    <>
       <Button
         type="button"
         onClick={() => setAberto(true)}
@@ -233,6 +237,7 @@ export function RecarregarPlanilha() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PermissionGuard>
+    </>
+    )
   );
 }

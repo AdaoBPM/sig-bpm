@@ -100,7 +100,7 @@ export function EstoqueContent() {
         }
         acoes={
           !bloqueada && dados ? (
-            <PermissionGuard permission="apuracao:editar">
+            <PermissionGuard permission="estoque:editar">
               <Button
                 type="button"
                 onClick={() => apurar.mutate()}

@@ -7,7 +7,7 @@ import { ReclassificacoesContent } from "./ReclassificacoesContent";
 export default function ReclassificacoesPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastros_apuracao:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_reclassificacoes:ler" fallback={<SemLeitura />}>
         <ReclassificacoesContent />
       </PermissionGuard>
     </ProtectedLayout>

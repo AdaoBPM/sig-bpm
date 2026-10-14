@@ -7,7 +7,7 @@ import { EstoqueContent } from "./EstoqueContent";
 export default function RateiosPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="apuracao:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="estoque:ler" fallback={<SemLeitura />}>
         <EstoqueContent />
       </PermissionGuard>
     </ProtectedLayout>

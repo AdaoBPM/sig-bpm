@@ -9,6 +9,7 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { DetalheDialog } from "../../competencias/[anoMes]/dre/components/DetalheDialog";
@@ -23,15 +24,15 @@ import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResu
 
 /** As visões da DRE, como as abas Resultados (…) da planilha, e os centros de custo. */
 const VISOES = [
-  { chave: "0", nome: "Consolidado" },
-  { chave: "1", nome: "Matriz" },
-  { chave: "2", nome: "Filial" },
-  { chave: "3", nome: "Serviços" },
-  { chave: "4", nome: "Despesas e Extra" },
-  { chave: "5", nome: "RN" },
-  { chave: "centros", nome: "Centros de Custo" },
+  { chave: "0", aba: "consolidado", nome: "Consolidado" },
+  { chave: "1", aba: "matriz", nome: "Matriz" },
+  { chave: "2", aba: "filial", nome: "Filial" },
+  { chave: "3", aba: "servicos", nome: "Serviços" },
+  { chave: "4", aba: "despesas", nome: "Despesas e Extra" },
+  { chave: "5", aba: "rn", nome: "RN" },
+  { chave: "centros", aba: "centros", nome: "Centros de Custo" },
   // As obras (centros 1.98 e 1.99), como a aba Obras da DRE (11/10/2026).
-  { chave: "obras", nome: "Obras" },
+  { chave: "obras", aba: "obras", nome: "Obras" },
 ];
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
@@ -539,10 +540,14 @@ export function ResultadosContent() {
   // O Coordenador (recorte por centro de custo) vê a aba Obras só com a opção marcada no cadastro dele.
   const { user } = useAuth();
   const comObras = !user?.acesso.recorteCentro || user.acesso.recorteDepartamento || !!user.acesso.veObras;
-  const visoes = VISOES.filter((v) => v.chave !== "obras" || comObras);
+  // As abas que o perfil lê (14/10/2026).
+  const { hasPermission } = usePermissions();
+  const le = (aba: string) => hasPermission(`relatorio_resultados.${aba}:ler`);
+  const visoes = VISOES.filter((v) => (v.chave !== "obras" || comObras) && le(v.aba));
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
-  const [visao, setVisao] = useState("0");
+  const [visaoEscolhida, setVisao] = useState("0");
+  const visao = visoes.some((v) => v.chave === visaoEscolhida) ? visaoEscolhida : (visoes[0]?.chave ?? "");
   // O centro escolhido fica aqui: o Exportar dele vai para a linha das abas, como nas demais visões.
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const ano = anoEscolhido ?? exercicios.anos[0];
@@ -560,7 +565,8 @@ export function ResultadosContent() {
     },
     { chave: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)", params: { ...periodo, escopo: "unidades" } },
     { chave: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: "Todos os Centros de Custo (um por página)", params: { ...periodo, escopo: "centros" } },
-  ];
+    // Todas as unidades pedem as seis abas; os centros, a deles.
+  ].filter((o) => (o.chave === "unidades" ? VISOES.slice(0, 6).every((v) => le(v.aba)) : o.chave === "centros" ? le("centros") : true));
 
   return (
     <div className="space-y-6">
@@ -569,7 +575,7 @@ export function ResultadosContent() {
         comoUsar={
           <ul>
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). As obras não têm exportação.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
@@ -630,14 +636,17 @@ export function ResultadosContent() {
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência fechada ainda.</p>
       ) : (
         <>
-          <div className="flex items-end gap-3">
+          {!visoes.length ? (
+            <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
+          ) : null}
+          <div className="flex items-end gap-3" hidden={!visoes.length}>
             <div className="min-w-0 flex-1">
               <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
             </div>
             {/* As obras não têm exportação (ainda). */}
             {visao === "obras" ? null : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
           </div>
-          {visao === "centros" ? (
+          {!visao ? null : visao === "centros" ? (
             <VisaoCentros ano={ano} ate={ate} escolhido={escolhido} onEscolher={setEscolhido} />
           ) : visao === "obras" ? (
             <VisaoObras ano={ano} ate={ate} />

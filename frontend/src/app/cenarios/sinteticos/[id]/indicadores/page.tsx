@@ -7,7 +7,7 @@ import { CenarioIndicadoresContent } from "./CenarioIndicadoresContent";
 export default function CenarioIndicadoresPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cenarios:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cenarios_indicadores:ler" fallback={<SemLeitura />}>
         <CenarioIndicadoresContent />
       </PermissionGuard>
     </ProtectedLayout>

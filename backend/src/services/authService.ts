@@ -37,7 +37,7 @@ export const authService = {
       throw new RegraAuthError(401, "E-mail ou senha inválidos");
     }
     if (!(await compararSenha(input.password, usuario.senhaHash))) throw new RegraAuthError(401, "E-mail ou senha inválidos");
-    const token = signToken({ sub: usuario.sub, email: usuario.email, permissions: usuario.permissions });
+    const token = signToken({ sub: usuario.sub, email: usuario.email });
     return { user: await this.me(usuario), token };
   },
 
