@@ -112,7 +112,9 @@ export function PremissasContent() {
               <>
                 <li>
                   Para editar um valor: clique nele. O modal mostra o valor atual, o reajuste (percentual ou absoluto) e o valor recalculado, que também se
-                  digita direto; a chave “Replicar aos meses posteriores” copia o valor aos meses seguintes.
+                  digita direto; a chave “Replicar aos meses posteriores” copia o valor aos meses seguintes. Nos Ajustes, o reajuste é só percentual (sobre
+                  o ajuste atual), e o percentual do ajuste vale sobre o valor absoluto do mês (o volume × o valor unitário), e não sobre o unitário: as
+                  médias por unidade não mudam; mudam a Receita Bruta e a Receita Líquida (ou os custos e as despesas) do resultado da tabela e a DRE.
                 </li>
                 <li>
                   Para reajustar vários valores: marque as premissas (a caixa de uma seção ou de uma linha de produto marca as premissas dela) e os meses (a

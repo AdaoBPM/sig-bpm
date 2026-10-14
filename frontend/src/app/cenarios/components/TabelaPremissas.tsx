@@ -14,6 +14,11 @@ import { botaoPrimario } from "./CenarioDialog";
 import { ReajusteDialog, ValorDialog } from "./EdicaoDialogs";
 import { plural } from "@/lib/texto";
 
+/** Os Ajustes das premissas (sobre a receita e sobre os custos): já são percentuais, sem o reajuste absoluto (14/10/2026). */
+const ehAjuste = (chave: string) => chave === "AJUSTE_RECEITA" || chave === "AJUSTE_CUSTOS";
+const EXPLICACAO_DO_AJUSTE =
+  "O percentual do ajuste é aplicado sobre o valor absoluto do mês (o volume × o valor unitário, em R$), e não sobre o valor unitário: as médias por unidade (como a Receita Bruta Média) não mudam; mudam a Receita Bruta e a Receita Líquida (ou os custos e as despesas) do resultado da tabela e da DRE.";
+
 /** As larguras das colunas (a premissa, a unidade, a Média de Referência e os meses): as mesmas nos rótulos e no corpo. */
 const LARGURA = { premissa: 340, und: 92, referencia: 116, mes: 104 };
 
@@ -313,6 +318,8 @@ export function TabelaEditavel({
         <ReajusteDialog
           valores={marcados}
           rotulo={`${titulo}. O reajuste vale para todos os valores marcados.`}
+          soPercentual={marcados.length > 0 && marcados.every((m) => ehAjuste(m.linha))}
+          explicacao={marcados.some((m) => ehAjuste(m.linha)) ? EXPLICACAO_DO_AJUSTE : undefined}
           gravando={gravar.isPending}
           erro={erroGravar}
           onAplicar={(novos, r) => gravar.mutate({ alteracoes: novos, origem: { tipo: "MARCADOS", modo: r.modo, reajuste: r.valor, replicado: false } })}
@@ -328,6 +335,8 @@ export function TabelaEditavel({
           rotuloMes={mesesDaTabela[valor.i].rotulo}
           mesesSeguintes={mesesDaTabela.slice(valor.i + 1).map((m) => m.rotulo)}
           atual={valor.l.valores[valor.i] ?? 0}
+          soPercentual={ehAjuste(valor.l.chave)}
+          explicacao={ehAjuste(valor.l.chave) ? EXPLICACAO_DO_AJUSTE : undefined}
           gravando={gravar.isPending}
           erro={erroGravar}
           onGravar={(v, replicar, r) =>
