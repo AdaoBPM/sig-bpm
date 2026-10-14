@@ -22,6 +22,7 @@ export function ConfiguracoesContent() {
   // ?aba=comparativo (ou referencia) abre direto na aba: os avisos do comparativo levam para cá.
   const pedida = useSearchParams().get("aba");
   const abaInicial: AbaDasConfiguracoes = pedida === "comparativo" || pedida === "referencia" ? pedida : "cenario";
+  const analitico = t.tipo === "ANALITICO";
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -33,7 +34,22 @@ export function ConfiguracoesContent() {
               Também na aba Cenário: “Marcar Cenário” marca o cenário como Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos (cada
               marcação fica ativa em um cenário só: marcar este tira a do anterior), e “Excluir Cenário” o exclui (um cenário marcado não se exclui).
             </li>
-            <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
+            {analitico ? (
+              <>
+                <li>
+                  Na aba Referência (opcional): carregue o resultado realizado das competências fechadas de um exercício (Média Replicada, de um período,
+                  ou Mês a Mês) ou outro cenário analítico. O realizado traz as Médias de Referência das premissas, com os doze meses iguais a elas, os
+                  centros de custo, a depreciação base, o extra-operacional e os indicadores; outro analítico traz as premissas, os centros, os
+                  investimentos e os indicadores dele. Depois, tudo se edita na tela Premissas. Os avisos do que não coube aparecem embaixo.
+                </li>
+                <li>
+                  “Correspondência Tarefa × Linha” abre a lista das tarefas das requisições e das notas fiscais e a linha de cada uma (numa filial ou em
+                  qualquer uma): inclua, troque ou exclua e clique em “Gravar”. Vale na próxima carga do realizado.
+                </li>
+              </>
+            ) : (
+              <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
+            )}
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas Resultados e Indicadores.</li>
             <li>
               Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada total da DRE;
@@ -47,10 +63,18 @@ export function ConfiguracoesContent() {
           </ul>
         }
         sobre={
-          <p>
-            Os dados do cenário e a base opcional da DRE dele: um arquivo importado ou o resultado realizado. Sem referência, a DRE se digita inteira na
-            tela Resultados, com os totais calculados pela Estrutura da DRE.
-          </p>
+          analitico ? (
+            <p>
+              Os dados do cenário e a base opcional das premissas dele: o resultado realizado ou outro cenário analítico (os analíticos só importam de
+              analíticos). A DRE do analítico é sempre calculada das premissas, dos centros de custo, dos investimentos e do extra-operacional. Na
+              referência realizada, os custos de cada conta vão para as linhas pela Correspondência Tarefa × Linha; o que não tem tarefa vai pelo volume.
+            </p>
+          ) : (
+            <p>
+              Os dados do cenário e a base opcional da DRE dele: um arquivo importado ou o resultado realizado. Sem referência, a DRE se digita inteira
+              na tela Resultados, com os totais calculados pela Estrutura da DRE.
+            </p>
+          )
         }
       />
       {cenario.isError ? (

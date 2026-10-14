@@ -40,7 +40,7 @@ export const NOME_DA_UNIDADE: Record<UnidadePremissa, string> = { 1: "Matriz", 2
 export const NOME_DA_VENDA: Record<Venda, string> = { GLOBAL: "Global", MERCANTIL: "Mercantil" };
 
 /** As contas da DRE que as premissas usam. */
-const C = {
+export const C = {
   RBPF: "ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO",
   RBF: "ROB.RBF.RECEITA_BRUTA_DE_FRETE",
   RBM: "ROB.RBM.RECEITA_BRUTA_DE_MONTAGEM",
@@ -53,7 +53,7 @@ const C = {
   ACOMPANHAMENTO_D: "S.ACOMPANHAMENTO_DE_OBRA_D",
 } as const;
 /** A receita líquida de cada receita bruta. */
-const LIQUIDA_DA_BRUTA: Record<string, string> = {
+export const LIQUIDA_DA_BRUTA: Record<string, string> = {
   [C.RBPF]: "ROL.RLPF.RECEITA_LIQUIDA_DO_PRE_FABRICADO",
   [C.RBF]: "ROL.RLF.RECEITA_LIQUIDA_DE_FRETE",
   [C.RBM]: "ROL.RLM.RECEITA_LIQUIDA_DE_MONTAGEM",
@@ -89,7 +89,7 @@ export type LinhaPremissa = {
 };
 
 /** As contas de custo e de DVV de uma linha: as da unidade (em Serviços, as da CSM ou da CSC, pela natureza da linha). */
-function contasDaLinha(est: LinhaEstrutura[], l: LinhaDoCadastro) {
+export function contasDaLinha(est: LinhaEstrutura[], l: LinhaDoCadastro) {
   const daUnidade = (prefixo: string) => est.filter((x) => x.tipo === "ITEM" && x.unidades.includes(l.unidade) && x.codigo.startsWith(prefixo));
   const custo = l.unidade === 3 ? (LINHAS_DE_MONTAGEM.has(l.codigo) ? "CSM" : "CSC") : "CPP";
   return {

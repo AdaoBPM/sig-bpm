@@ -15,10 +15,11 @@ import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { AvisoRateiosSemBase, CentrosDoCenario, RateiosDoCenario } from "../../../components/CentrosDoCenario";
 import { Erro } from "../../../components/CenarioDialog";
 import { ExtraDoCenario, InvestimentosDoCenario } from "../../../components/InvestimentosDoCenario";
+import { IndicadoresManuais } from "../../../components/IndicadoresManuais";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
 
-/** As abas das premissas: as unidades, os centros de custo, os rateios, os investimentos e o extra-operacional. */
+/** As abas das premissas: as unidades, os centros de custo, os rateios, os investimentos, o extra-operacional e os indicadores manuais. */
 const ABAS = [
   { chave: "1", rotulo: "Matriz" },
   { chave: "2", rotulo: "Filial" },
@@ -27,6 +28,7 @@ const ABAS = [
   { chave: "rateios", rotulo: "Rateios" },
   { chave: "investimentos", rotulo: "Investimentos" },
   { chave: "extra", rotulo: "Extra-Operacional" },
+  { chave: "manuais", rotulo: "Indicadores Manuais" },
 ];
 
 /**
@@ -43,7 +45,8 @@ export function PremissasContent() {
   const rateios = aba === "rateios";
   const investimentos = aba === "investimentos";
   const extra = aba === "extra";
-  const deUnidade = !centros && !rateios && !investimentos && !extra;
+  const manuais = aba === "manuais";
+  const deUnidade = !centros && !rateios && !investimentos && !extra && !manuais;
   const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: deUnidade });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = hasPermission("cenarios_analiticos:editar") && !travado && (!deUnidade || !!consulta.data?.editavel);
@@ -76,6 +79,14 @@ export function PremissasContent() {
             <li>
               Na aba Extra-Operacional, como nos Lançamentos Manuais do fechamento, os valores mensais do imposto de renda e da contribuição social e das
               receitas e despesas financeiras, em Despesas e Extra e no RN.
+            </li>
+            <li>
+              Na aba Indicadores Manuais, como nos cenários sintéticos, os quadros de lotação e os indicadores do Comercial e do Administrativo, que não
+              saem da DRE{podeEditar ? ": clique numa linha para digitar os doze meses (as células digitadas ficam em amarelo)" : ""}.
+            </li>
+            <li>
+              A base das premissas pode vir da referência (Configurações / Referência): o resultado realizado (as Médias de Referência, os centros de
+              custo, a depreciação, o extra-operacional e os indicadores) ou outro cenário analítico.
             </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
@@ -112,7 +123,10 @@ export function PremissasContent() {
             </p>
             <p>
               Em Serviços, as linhas de Montagem e Vedação levam à receita de montagem e aos custos da CSM; as demais, à receita complementar e à CSC. A
-              Média de Referência é a média realizada da referência do cenário (em desenvolvimento): o valor total ÷ a produção ou o serviço equivalente.
+              Média de Referência é a média realizada da referência do cenário (Configurações / Referência / Resultado Realizado): o total do período ÷ o
+              volume da linha — o m³ produzido (o kg na Metalúrgica), o m³ montado na Montagem e o kg na Metálica; as linhas de Serviços sem volume nas
+              listas vão por dia útil (a demanda diária fica 1). A demanda diária é o volume do período ÷ os dias úteis dele, e os doze meses começam
+              iguais às médias.
               A mão de obra, os gastos gerais diretos e indiretos e as despesas vêm dos centros de custo; a depreciação, dos investimentos; o imposto de
               renda, a contribuição social e o resultado financeiro, do extra-operacional.
             </p>
@@ -122,6 +136,14 @@ export function PremissasContent() {
               Armadura, também entre a Montagem e a Complementar de Serviços; nos custos de montagem, Obras vai para Serviços e Acompanhamento se rateia entre
               a Montagem e a Complementar; as despesas vão para Despesas e Extra. Os percentuais saem das bases das premissas (a aba Rateios). Em Serviços, os
               Acompanhamentos no Mês somam o Acompanhamento de Obra (d) da DRE.
+            </p>
+            <p>
+              Na referência realizada, a receita de cada conta (Pré-Fabricado, Frete, Montagem e Complementar) é a da DRE da unidade, dividida entre as
+              linhas e as vendas pelos itens da receita prévia, e os impostos são os dos itens, ajustados aos da DRE da unidade. Os custos (Matérias
+              Primas, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
+              linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nas Configurações);
+              o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). Os lançamentos sem centro de
+              custo (a mão de obra terceirizada, entre outros) ficam nos grupos Sem Centro de Custo, no fim da lista dos centros, pelo balde da conta.
             </p>
             <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil
@@ -142,6 +164,8 @@ export function PremissasContent() {
         <InvestimentosDoCenario id={id} editavel={podeEditar} />
       ) : extra ? (
         <ExtraDoCenario id={id} editavel={podeEditar} />
+      ) : manuais ? (
+        <IndicadoresManuais id={id} podeEditar={podeEditar} />
       ) : consulta.isError ? (
         <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as premissas.")} />
       ) : consulta.isPending ? (

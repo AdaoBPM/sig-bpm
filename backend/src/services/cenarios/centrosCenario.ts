@@ -27,6 +27,8 @@ import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 
 /** As atribuições das contas dos centros no cenário (o segundo pedaço do código da conta). */
 const ATRIBUICOES = new Set(["MOD", "MOI", "MOT", "GGD", "GGI", "GGC"]);
+/** A conta é de centros no cenário (mão de obra ou gastos gerais diretos, indiretos ou comerciais). */
+export const ehContaDeCentro = (codigo: string) => ATRIBUICOES.has(codigo.split(".")[1] ?? "");
 /** O grupo da DRE de cada departamento; os demais (requisição, sem departamento) são de produção. */
 const GRUPO_DO_DEPARTAMENTO: Record<string, string> = {
   "CUSTOS DE SERVIÇOS: MONTAGEM (CSM)": "CSM",
@@ -45,6 +47,9 @@ const foraDoCenario = (c: { departamento: string | null; codigoRM: string | null
   FORA.has((c.departamento ?? "").trim().toUpperCase()) || /^1.9[67](.|$)/.test(c.codigoRM ?? "");
 const DESPESAS = new Set(["DL", "DT", "DC", "DA"]);
 
+/** O grupo de um centro: o nome da Controladoria; sem ele, o nome do centro (como em Resultados Realizados). */
+export const nomeDoGrupo = (c: { nomeControladoria: string | null; nomeRM: string | null; codigoRM: string | null }) => c.nomeControladoria?.trim() || c.nomeRM?.trim() || c.codigoRM || "Centro";
+
 export type GrupoDoCenario = {
   /** O nome do grupo (o nome da Controladoria; sem ele, o nome do centro). */
   grupo: string;
@@ -59,7 +64,45 @@ export type GrupoDoCenario = {
   unidade: 1 | 2;
   /** Para onde vai o valor, em texto. */
   destino: string;
+  /** O grupo dos lançamentos sem centro de custo (14/10/2026), pelo balde da conta. */
+  semCentro?: boolean;
 };
+
+/**
+ * Os grupos dos lançamentos sem centro de custo (14/10/2026): no realizado, parte da mão de obra e dos gastos gerais
+ * (a mão de obra terceirizada da montagem, dos projetos, das etapas in loco…) não tem centro, e vai pelo balde da conta.
+ * No cenário, esses valores ficam em grupos próprios, um por grupo da DRE e balde, que vão para as unidades como os
+ * demais (o Complementar, direto para Serviços, nas contas da CSC).
+ */
+const SEM_CENTRO: Array<{ nome: string; grupoDRE: string; balde: string; unidade: 1 | 2 }> = [
+  { nome: "Matriz", grupoDRE: "CPP", balde: "MATRIZ", unidade: 1 },
+  { nome: "Filial", grupoDRE: "CPP", balde: "FILIAL", unidade: 2 },
+  { nome: "Produção", grupoDRE: "CPP", balde: "PRODUCAO", unidade: 1 },
+  { nome: "Projeto", grupoDRE: "CPP", balde: "PROJETO", unidade: 1 },
+  { nome: "Metalurgia", grupoDRE: "CPP", balde: "METALURGIA", unidade: 1 },
+  { nome: "Armadura", grupoDRE: "CPP", balde: "ARMADURA", unidade: 1 },
+  { nome: "Obras", grupoDRE: "CSM", balde: "OBRAS", unidade: 1 },
+  { nome: "Acompanhamento", grupoDRE: "CSM", balde: "ACOMPANHAMENTO", unidade: 1 },
+  { nome: "Complementar", grupoDRE: "CSC", balde: "COMPLEMENTAR", unidade: 1 },
+  { nome: "Despesas Técnicas", grupoDRE: "DT", balde: "DESPESAS", unidade: 1 },
+  { nome: "Despesas Comerciais", grupoDRE: "DC", balde: "DESPESAS", unidade: 1 },
+  { nome: "Despesas Administrativas", grupoDRE: "DA", balde: "DESPESAS", unidade: 1 },
+  { nome: "Despesas de Logística", grupoDRE: "DL", balde: "DESPESAS", unidade: 1 },
+];
+const nomeSemCentro = (nome: string) => `Sem Centro de Custo · ${nome}`;
+
+/** O grupo sem centro de um lançamento sem centro de custo: pelo grupo da DRE da conta, o balde e a filial. */
+export function grupoSemCentro(codigo: string, balde: string | null, filial: number) {
+  const sigla = codigo.split(".")[0];
+  const doGrupo = SEM_CENTRO.filter((g) => g.grupoDRE === sigla);
+  if (!doGrupo.length) return null;
+  if (sigla === "CPP") {
+    const b = balde === "UNIDADE" || !doGrupo.some((g) => g.balde === balde) ? (filial === 2 ? "FILIAL" : "MATRIZ") : balde;
+    return nomeSemCentro(doGrupo.find((g) => g.balde === b)!.nome);
+  }
+  if (sigla === "CSM") return nomeSemCentro(balde === "ACOMPANHAMENTO" ? "Acompanhamento" : "Obras");
+  return nomeSemCentro(doGrupo[0].nome);
+}
 
 const maisComum = <T>(xs: T[]) => {
   const n = new Map<T, number>();
@@ -77,10 +120,20 @@ export async function gruposDoCadastro(): Promise<GrupoDoCenario[]> {
   const porGrupo = new Map<string, typeof centros>();
   for (const c of centros) {
     if (foraDoCenario(c)) continue;
-    const g = c.nomeControladoria?.trim() || c.nomeRM?.trim() || c.codigoRM || "Centro";
+    const g = nomeDoGrupo(c);
     porGrupo.set(g, [...(porGrupo.get(g) ?? []), c]);
   }
-  return [...porGrupo].map(([grupo, cs]) => {
+  const semCentro: GrupoDoCenario[] = SEM_CENTRO.map((g) => ({
+    grupo: nomeSemCentro(g.nome),
+    centros: [],
+    balde: g.balde,
+    baldes: [g.balde],
+    grupoDRE: g.grupoDRE,
+    unidade: g.unidade,
+    destino: destinoDoGrupo(g.grupoDRE, g.balde, g.unidade),
+    semCentro: true,
+  }));
+  const comCentro = [...porGrupo].map(([grupo, cs]): GrupoDoCenario => {
     const ids = new Set(cs.map((c) => c.id));
     const lancamentos = new Map<number, number>();
     for (const f of filiais) if (ids.has(f.centroCustoId!)) lancamentos.set(f.filial, (lancamentos.get(f.filial) ?? 0) + f._count._all);
@@ -97,10 +150,12 @@ export async function gruposDoCadastro(): Promise<GrupoDoCenario[]> {
       destino: destinoDoGrupo(grupoDRE, balde, unidade),
     };
   });
+  return [...comCentro, ...semCentro];
 }
 
 function destinoDoGrupo(grupoDRE: string, balde: string | null, unidade: 1 | 2) {
   if (DESPESAS.has(grupoDRE)) return "Despesas e Extra";
+  if (grupoDRE === "CSC") return "Serviços (Complementar)";
   if (grupoDRE === "CSM") return balde === "ACOMPANHAMENTO" ? "Rateio de Acompanhamento (Montagem e Complementar)" : "Serviços";
   switch (balde) {
     case "MATRIZ":
@@ -211,6 +266,9 @@ export function alocarCentros(est: LinhaEstrutura[], grupos: GrupoDoCenario[], v
     const sigla = l.codigo.split(".")[0];
     if (DESPESAS.has(sigla)) {
       somar(4, l.codigo, x.mes, x.valor);
+    } else if (sigla === "CSC") {
+      // Os lançamentos sem centro do Complementar (14/10/2026): direto para Serviços.
+      somar(3, l.codigo, x.mes, x.valor);
     } else if (sigla === "CSM") {
       if (g.balde === "ACOMPANHAMENTO") {
         somar(3, l.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "MONTAGEM"));

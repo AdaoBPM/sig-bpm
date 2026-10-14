@@ -7,7 +7,8 @@ import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
-import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
+import { alocarCentros, contasDoGrupo, grupoSemCentro, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
+import { dividirPorLinhas, linhaDaTarefa, vendaDaObra } from "../src/services/cenarios/referenciaAnalitico.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
 import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
 import { Prisma } from "../src/generated/prisma/client.js";
@@ -292,5 +293,53 @@ describe("investimentos e extra-operacional dos cenários analíticos (13/10/202
     assert.equal(r.get("2|CPP.D.DEPRECIACAO_DO_MAQUINARIO")![6], 76_000 + 25_000);
     assert.equal(r.get("4|DFC.DFC.DESPESAS_BANCARIAS")![0], 2_100);
     assert.equal(r.size, 2);
+  });
+});
+
+describe("referência realizada dos cenários analíticos (14/10/2026)", () => {
+  const CORR = [
+    { filial: 1, tarefa: "LAJE", unidade: 1, linha: "ESTRUTURA" },
+    { filial: 2, tarefa: "LAJE", unidade: 2, linha: "ALVEOLARES" },
+    { filial: null, tarefa: "VEDAÇÃO", unidade: 3, linha: "VEDAÇÃO" },
+  ];
+
+  it("a linha da tarefa: a correspondência da filial do documento; sem ela, a de qualquer filial", () => {
+    assert.equal(linhaDaTarefa(CORR, 1, " laje "), "1|ESTRUTURA");
+    assert.equal(linhaDaTarefa(CORR, 2, "LAJE"), "2|ALVEOLARES");
+    assert.equal(linhaDaTarefa(CORR, 2, "Vedação"), "3|VEDAÇÃO");
+    assert.equal(linhaDaTarefa(CORR, 1, "MATERIAIS"), null);
+    assert.equal(linhaDaTarefa(CORR, 1, null), null);
+  });
+
+  it("divide a conta pelas linhas: a parte dos documentos com tarefa de cada uma, e a sem tarefa pelo volume", () => {
+    // 1.000 na DRE; documentos: 300 da Estrutura, 100 da Metalúrgica e 100 sem tarefa, que vai 3:1 pelo m³.
+    const r = dividirPorLinhas(1000, new Map([["1|ESTRUTURA", 300], ["1|METALÚRGICA", 100], ["2|ALVEOLARES", 999]]), 100, new Map([["1|ESTRUTURA", 3], ["1|METALÚRGICA", 1]]));
+    assert.equal(r.get("1|ESTRUTURA"), (1000 * (300 + 75)) / 500);
+    assert.equal(r.get("1|METALÚRGICA"), (1000 * (100 + 25)) / 500);
+    assert.equal(r.has("2|ALVEOLARES"), false);
+    // Sem documentos, pelo volume; sem volume, em partes iguais.
+    assert.equal(dividirPorLinhas(800, new Map(), 0, new Map([["a", 3], ["b", 1]])).get("a"), 600);
+    assert.equal(dividirPorLinhas(800, new Map(), 0, new Map([["a", 0], ["b", 0]])).get("b"), 400);
+  });
+
+  it("a venda da obra: o tipo dela; sem ele, G… é Global e o resto Mercantil", () => {
+    assert.equal(vendaDaObra({ codigo: "L123", tipoVenda: "GLOBAL" }), "GLOBAL");
+    assert.equal(vendaDaObra({ codigo: "G045", tipoVenda: null }), "GLOBAL");
+    assert.equal(vendaDaObra({ codigo: "E010", tipoVenda: null }), "MERCANTIL");
+    assert.equal(vendaDaObra(null), null);
+  });
+
+  it("os lançamentos sem centro de custo vão para os grupos Sem Centro de Custo, pelo balde da conta", () => {
+    assert.equal(grupoSemCentro("CSM.MOT.MONTAGEM", "OBRAS", 1), "Sem Centro de Custo · Obras");
+    assert.equal(grupoSemCentro("CPP.MOT.PROJETOS", "PROJETO", 1), "Sem Centro de Custo · Projeto");
+    assert.equal(grupoSemCentro("CPP.GGI.OUTROS", "UNIDADE", 2), "Sem Centro de Custo · Filial");
+    assert.equal(grupoSemCentro("CSC.MOT.IN_LOCO", "COMPLEMENTAR", 1), "Sem Centro de Custo · Complementar");
+    assert.equal(grupoSemCentro("DC.GGC.FEIRAS", "DESPESAS", 1), "Sem Centro de Custo · Despesas Comerciais");
+    assert.equal(grupoSemCentro("ROB.RBPF.X", "MATRIZ", 1), null);
+    // O Complementar vai direto para Serviços, nas contas da CSC.
+    const est = [{ id: "x", codigo: "CSC.MOT.IN_LOCO", tipo: "ITEM" as const, grupo: "", grupoSigla: "CSC", atribuicao: "MOT", descricao: "In Loco", expressao: null, unidades: [3] }];
+    const g = { grupo: "Sem Centro de Custo · Complementar", centros: [], balde: "COMPLEMENTAR", baldes: ["COMPLEMENTAR"], grupoDRE: "CSC", unidade: 1 as const, destino: "" };
+    assert.deepEqual(contasDoGrupo(est, g).map((l) => l.codigo), ["CSC.MOT.IN_LOCO"]);
+    assert.equal(alocarCentros(est, [g], [{ grupo: g.grupo, codigo: "CSC.MOT.IN_LOCO", mes: 2, valor: 900 }], percentuaisDasBases(new Map())).get("3|CSC.MOT.IN_LOCO")![1], 900);
   });
 });

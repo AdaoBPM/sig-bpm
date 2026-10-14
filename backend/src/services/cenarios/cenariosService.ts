@@ -43,6 +43,7 @@ import {
   VENDA_BASE,
   VENDA_EXTRA,
 } from "./investimentosCenario.js";
+import { referenciaDoRealizado } from "./referenciaAnalitico.js";
 
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
@@ -692,12 +693,16 @@ export const cenariosService = {
    * a aba das metas de um arquivo (12/10/2026): os que saem da DRE o cenário recalcula; os das listas, os
    * lançamentos manuais e os GME ficam com o realizado. Com `modo` MEDIA (12/10/2026), a média do período `de`–`ate`
    * (todo de competências fechadas) vai para os doze meses do cenário, na DRE e nos indicadores.
+   *
+   * No cenário analítico (14/10/2026), a DRE é calculada: a referência carrega as premissas (as Médias de Referência
+   * do período — todos os meses fechados, no Mês a Mês —, e os doze meses iguais a elas), os grupos de centros de
+   * custo, a depreciação base e o extra-operacional (mês a mês ou a média), e os indicadores; os investimentos ficam.
+   * Devolve também os avisos do que não coube nas premissas.
    */
   async referenciaRealizado(id: string, ano: number, usuario: Usuario, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) {
     const c = await obterOuFalhar(id, usuario);
-    // A referência dos analíticos (o realizado com os centros de custo e as Médias de Referência das premissas) é outra.
-    exigirSintetico(c, "a referência realizada dele carrega também as premissas e os centros de custo, e ainda está em desenvolvimento");
     exigirEditavel(c);
+    const analitico = c.tipo === "ANALITICO";
     const prisma = getPrismaClient();
     const todas = await prisma.competencia.findMany({ where: { ano, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
     if (todas.length === 0) throw new CenarioError(400, `Nenhuma competência de ${ano} está fechada.`);
@@ -747,6 +752,48 @@ export const cenariosService = {
       return doze.map((mes) => ({ nome: i.nome, mes, valor }));
     });
     const nomeArquivo = media ? `Média do realizado de ${ano} (${periodo}), nos 12 meses` : `Resultado realizado de ${ano} (${periodo})`;
+    if (analitico) {
+      const ref = await referenciaDoRealizado(ano, fechadas.map((f) => f.mes));
+      const idDaConta = new Map((await estruturaDRE()).map((l) => [l.codigo, l.id]));
+      // Na média, cada valor mensal vira a soma no período ÷ o número de meses, nos doze meses.
+      const mediar = <T extends { mes: number; valor: number }>(xs: T[], chave: (x: T) => string) => {
+        if (!media) return xs;
+        const somas = new Map<string, { x: T; soma: number }>();
+        for (const x of xs) somas.set(chave(x), { x, soma: (somas.get(chave(x))?.soma ?? 0) + x.valor });
+        return [...somas.values()].flatMap(({ x, soma }) => doze.map((mes) => ({ ...x, mes, valor: soma / fechadas.length })));
+      };
+      const decimal = (v: number) => new Prisma.Decimal(v.toFixed(4));
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.cenarioPremissa.deleteMany({ where: { cenarioId: id } });
+          // As Médias de Referência (o mês 0) e os doze meses, que começam iguais a elas.
+          const premissas = ref.premissas.flatMap((p) => [0, ...doze].map((mes) => ({ cenarioId: id, unidade: p.unidade, venda: p.venda, chave: p.chave, mes, valor: new Prisma.Decimal(p.valor.toFixed(6)) })));
+          const mensais = mediar(ref.mensais, (x) => `${x.venda}|${x.chave}`).map((x) => ({ cenarioId: id, unidade: x.unidade, venda: x.venda, chave: x.chave, mes: x.mes, valor: decimal(x.valor) }));
+          await gravarEmLotes([...premissas, ...mensais], (lote) => tx.cenarioPremissa.createMany({ data: lote }));
+          await tx.cenarioCentro.deleteMany({ where: { cenarioId: id } });
+          const centros = mediar(ref.centros, (x) => `${x.grupo}|${x.codigo}`).flatMap((x) => {
+            const linhaDREId = idDaConta.get(x.codigo);
+            return linhaDREId && Math.abs(x.valor) >= 0.00005 ? [{ cenarioId: id, grupo: x.grupo, linhaDREId, mes: x.mes, valor: decimal(x.valor) }] : [];
+          });
+          await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote }));
+          await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id } });
+          await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((v) => ({ cenarioId: id, ...v, origem: "IMPORTADO" as const })) }));
+          await calcularAnalitico(tx, id);
+          await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
+        },
+        { timeout: 300_000 },
+      );
+      await auditar({
+        usuarioId: usuario.id,
+        usuarioNome: usuario.nome,
+        acao: "IMPORTACAO",
+        entidade: "cenario",
+        entidadeId: id,
+        metadados: { cenario: c.nome, referencia: media ? "media do realizado" : "realizado", ano, meses, premissas: ref.premissas.length, centros: ref.centros.length, avisos: ref.avisos },
+      });
+      await prisma.cenarioReajuste.create({ data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: nomeArquivo } });
+      return { ...(await this.obter(id, usuario)), avisos: ref.avisos };
+    }
     await prisma.$transaction(
       async (tx) => {
         await tx.cenarioResultado.deleteMany({ where: { cenarioId: id } });
@@ -760,7 +807,83 @@ export const cenariosService = {
     );
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: media ? "media do realizado" : "realizado", ano, meses, indicadores: indicadores.length } });
     await prisma.cenarioReajuste.create({ data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: nomeArquivo } });
+    return { ...(await this.obter(id, usuario)), avisos: [] as string[] };
+  },
+
+  /**
+   * A referência de um cenário analítico por outro analítico (14/10/2026; os analíticos só importam de analíticos): as
+   * premissas, os centros de custo, os investimentos e os indicadores da origem substituem os do cenário, e a DRE se
+   * recalcula. As justificativas e o comparativo ficam.
+   */
+  async referenciaCenario(id: string, origemId: string, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    if (origemId === id) throw new CenarioError(400, "Escolha outro cenário: a referência não pode ser o próprio cenário.");
+    const origem = await obterOuFalhar(origemId, usuario);
+    if (origem.tipo !== "ANALITICO") throw new CenarioError(400, `Os cenários analíticos só importam de cenários analíticos: ${origem.nome} é sintético.`);
+    const prisma = getPrismaClient();
+    const nomeArquivo = `Cenário ${origem.nome} ${rotuloVersao(origem.versao)}${origem.ano !== c.ano ? ` (${origem.ano})` : ""}`;
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.cenarioPremissa.deleteMany({ where: { cenarioId: id } });
+        await tx.cenarioCentro.deleteMany({ where: { cenarioId: id } });
+        await tx.cenarioInvestimento.deleteMany({ where: { cenarioId: id } });
+        await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id } });
+        const premissas = await tx.cenarioPremissa.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: id })) }));
+        const centros = await tx.cenarioCentro.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote.map((x) => ({ ...x, cenarioId: id })) }));
+        const investimentos = await tx.cenarioInvestimento.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(investimentos, (lote) => tx.cenarioInvestimento.createMany({ data: lote.map(({ id: _id, criadoEm: _c, atualizadoEm: _a, ...x }) => ({ ...x, cenarioId: id })) }));
+        const indicadores = await tx.cenarioIndicador.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((r) => ({ ...r, cenarioId: id })) }));
+        await calcularAnalitico(tx, id);
+        await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
+      },
+      { timeout: 300_000 },
+    );
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: "cenario", origem: nomeArquivo } });
+    await prisma.cenarioReajuste.create({ data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: nomeArquivo } });
     return this.obter(id, usuario);
+  },
+
+  /** A correspondência tarefa × linha (14/10/2026), da referência realizada dos analíticos, com as linhas possíveis. */
+  async correspondencias() {
+    const prisma = getPrismaClient();
+    const [itens, linhas] = await Promise.all([
+      prisma.correspondenciaTarefa.findMany({ include: { linha: { select: { codigo: true, nome: true } } }, orderBy: [{ tarefa: "asc" }, { filial: "asc" }] }),
+      linhasDoCadastro(),
+    ]);
+    return {
+      itens: itens.map((i) => ({ filial: i.filial, tarefa: i.tarefa, linha: i.linha.codigo })),
+      linhas: linhas.map((l) => ({ codigo: l.codigo, nome: l.nome, unidade: l.unidade, nomeUnidade: NOME_DA_UNIDADE[l.unidade] })),
+    };
+  },
+
+  /** Grava a correspondência inteira (14/10/2026): a lista substitui a anterior. */
+  async gravarCorrespondencias(itens: Array<{ filial: number | null; tarefa: string; linha: string }>, usuario: Usuario) {
+    const prisma = getPrismaClient();
+    const linhas = await prisma.linha.findMany({ where: { tipo: { in: ["PRODUTO", "OBRA"] }, ativo: true }, select: { id: true, codigo: true } });
+    const idDa = new Map(linhas.map((l) => [l.codigo, l.id]));
+    const vistos = new Set<string>();
+    const novos = itens.map((i) => {
+      const tarefa = i.tarefa.trim().replace(/\s+/g, " ").toUpperCase();
+      if (!tarefa) throw new CenarioError(400, "Há uma correspondência sem a tarefa.");
+      const linhaId = idDa.get(i.linha);
+      if (!linhaId) throw new CenarioError(400, `A linha ${i.linha} não existe no cadastro Linhas.`);
+      const k = `${i.filial ?? ""}|${tarefa}`;
+      if (vistos.has(k)) throw new CenarioError(400, `A tarefa ${tarefa} aparece duas vezes ${i.filial ? `na filial ${i.filial}` : "em Qualquer Filial"}.`);
+      vistos.add(k);
+      return { filial: i.filial, tarefa, linhaId };
+    });
+    const antes = await prisma.correspondenciaTarefa.count();
+    await prisma.$transaction(async (tx) => {
+      await tx.correspondenciaTarefa.deleteMany({});
+      for (const n of novos) await tx.correspondenciaTarefa.create({ data: n });
+    });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "correspondencia_tarefa", entidadeId: "todas", antes: { itens: antes }, depois: { itens: novos.length } });
+    return this.correspondencias();
   },
 
   /**

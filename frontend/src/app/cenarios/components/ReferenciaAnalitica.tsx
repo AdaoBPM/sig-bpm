@@ -1,0 +1,272 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Copy, History, ListTree } from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+import { competenciasService } from "@/app/competencias/services/competenciasService";
+import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
+
+import { cenariosService, rotuloVersao, type Cenario } from "../services/cenariosService";
+import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
+import { botaoPrimario, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
+import { CorrespondenciaDialog } from "./CorrespondenciaDialog";
+
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const abrev = (m: number) => MESES[m - 1].slice(0, 3);
+const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : null);
+
+/**
+ * A aba Referência de um cenário analítico (14/10/2026): outro cenário analítico (as premissas, os centros de custo, os
+ * investimentos e os indicadores dele) ou o resultado realizado de um exercício — Mês a Mês ou a Média Replicada de um
+ * período —, que carrega as Médias de Referência das premissas (e os doze meses iguais a elas), os grupos de centros de
+ * custo, a depreciação base, o extra-operacional e os indicadores. Com o botão da correspondência tarefa × linha.
+ */
+export function ReferenciaAnalitica({ cenario }: { cenario: Cenario }) {
+  const queryClient = useQueryClient();
+  const [tipo, setTipo] = useState<"realizado" | "cenario">("realizado");
+  const [correspondencia, setCorrespondencia] = useState(false);
+  const [confirmar, setConfirmar] = useState(false);
+  const [avisos, setAvisos] = useState<string[] | null>(null);
+  // O resultado realizado: o exercício, Mês a Mês ou a média de um período.
+  const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar() });
+  const fechadas = (competencias.data?.itens ?? []).filter((c) => c.status === "FECHADA");
+  const anos = [...new Set(fechadas.map((c) => c.ano))].sort((a, b) => b - a);
+  const [anoEscolhido, setAno] = useState<number | null>(null);
+  const ano = anoEscolhido ?? anos[0] ?? null;
+  const mesesFechados = fechadas.filter((c) => c.ano === ano).map((c) => c.mes).sort((a, b) => a - b);
+  const [modo, setModo] = useState<"MES_A_MES" | "MEDIA">("MEDIA");
+  const [deEscolhido, setDe] = useState<number | null>(null);
+  const [ateEscolhido, setAte] = useState<number | null>(null);
+  const de = deEscolhido !== null && mesesFechados.includes(deEscolhido) ? deEscolhido : mesesFechados[0];
+  const ate = ateEscolhido !== null && mesesFechados.includes(ateEscolhido) ? ateEscolhido : mesesFechados[mesesFechados.length - 1];
+  const periodo = de && ate && de <= ate ? Array.from({ length: ate - de + 1 }, (_, k) => de + k) : [];
+  const abertasNoPeriodo = periodo.filter((m) => !mesesFechados.includes(m));
+  const periodoInvalido = modo === "MEDIA" && (!periodo.length || abertasNoPeriodo.length > 0);
+  // Outro cenário analítico.
+  const analiticos = useQuery({ queryKey: ["cenarios", "ANALITICO"], queryFn: () => cenariosService.listar("ANALITICO") });
+  const outros = (analiticos.data ?? []).filter((c) => c.id !== cenario.id);
+  const [origemEscolhida, setOrigem] = useState<string | null>(null);
+  const origem = outros.find((c) => c.id === origemEscolhida) ?? outros[0] ?? null;
+
+  const aoCarregar = (msg: string, lista: string[]) => {
+    queryClient.invalidateQueries({ queryKey: ["cenarios"] });
+    queryClient.invalidateQueries({ queryKey: ["relatorios"] });
+    toast.success(msg);
+    setAvisos(lista);
+    setConfirmar(false);
+  };
+  const carregar = useMutation({
+    mutationFn: () =>
+      tipo === "cenario"
+        ? cenariosService.referenciaCenario(cenario.id, origem!.id).then(() => [] as string[])
+        : cenariosService.referenciaRealizado(cenario.id, ano!, modo === "MEDIA" ? { modo, de, ate } : { modo }).then((r) => r.avisos ?? []),
+    onSuccess: (lista) =>
+      aoCarregar(
+        tipo === "cenario"
+          ? `${origem!.nome} carregado no cenário; a DRE foi recalculada.`
+          : modo === "MEDIA"
+            ? `Média do realizado de ${ano} (${abrev(de)} a ${abrev(ate)}) carregada; a DRE foi recalculada.`
+            : `Resultado realizado de ${ano} carregado; a DRE foi recalculada.`,
+        lista,
+      ),
+  });
+  const travado = estaTravado(cenario);
+
+  return (
+    <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="min-w-0 flex-1 text-sm text-gray-600">
+          Opcional: uma base para as premissas do cenário, que depois se editam na tela Premissas. A DRE do cenário analítico é sempre calculada das
+          premissas, dos centros de custo, dos investimentos e do extra-operacional.
+        </p>
+        <Button type="button" variant="outline" className="rounded-sm" onClick={() => setCorrespondencia(true)}>
+          <ListTree className="size-4" />
+          Correspondência Tarefa × Linha
+        </Button>
+      </div>
+      <p className="text-sm text-gray-700">
+        Referência atual:{" "}
+        {cenario.nomeArquivo ? (
+          <span className="font-medium text-gray-900">
+            {cenario.nomeArquivo}
+            {cenario.importadoEm ? <span className="font-normal text-gray-500"> · em {dataHora(cenario.importadoEm)}</span> : null}
+          </span>
+        ) : (
+          <span className="text-gray-500">nenhuma (as premissas são as digitadas na ferramenta)</span>
+        )}
+      </p>
+      <fieldset className="space-y-2">
+        <legend className="sr-only">Tipo da referência</legend>
+        <OpcaoEmLinha
+          nome="referencia-analitica"
+          marcada={tipo === "realizado"}
+          onMarcar={() => setTipo("realizado")}
+          rotulo="Resultado Realizado"
+          detalhe="As Médias de Referência das premissas (por linha e venda), os centros de custo, a depreciação, o extra-operacional e os indicadores das competências fechadas de um exercício."
+          Icone={History}
+        />
+        <OpcaoEmLinha
+          nome="referencia-analitica"
+          marcada={tipo === "cenario"}
+          onMarcar={() => setTipo("cenario")}
+          rotulo="Cenário Analítico"
+          detalhe="As premissas, os centros de custo, os investimentos e os indicadores de outro cenário analítico (os analíticos só importam de analíticos)."
+          Icone={Copy}
+        />
+      </fieldset>
+      {travado ? (
+        <AvisoMarcado cenario={cenario} oQue="a referência" />
+      ) : tipo === "cenario" ? (
+        outros.length === 0 ? (
+          <p className="rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">Nenhum outro cenário analítico.</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-64 flex-1 space-y-1.5">
+              <Label htmlFor="ref-cenario">Cenário</Label>
+              <select id="ref-cenario" value={origem?.id ?? ""} onChange={(e) => setOrigem(e.target.value)} className={classeSelect}>
+                {outros.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome} {rotuloVersao(c.versao)} · {c.ano}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button type="button" className={botaoPrimario} onClick={() => setConfirmar(true)}>
+              <Copy className="size-4" />
+              Carregar Cenário
+            </Button>
+          </div>
+        )
+      ) : anos.length === 0 ? (
+        <p className="rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">Nenhuma competência fechada ainda.</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="ref-ano">Exercício</Label>
+              <select id="ref-ano" value={ano ?? ""} onChange={(e) => setAno(Number(e.target.value))} className={`${classeSelect} w-32`}>
+                {anos.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">
+              {mesesFechados.length ? `Fechadas: ${mesesFechados.map((m) => MESES[m - 1]).join(", ")}.` : "Nenhuma fechada."}
+            </p>
+          </div>
+          <fieldset className="space-y-2">
+            <legend className="mb-1.5 text-sm leading-none font-medium">Importação</legend>
+            {(
+              [
+                ["MEDIA", "Média Replicada", "A média de um período: os centros de custo, a depreciação e o extra-operacional, nos doze meses; as premissas, com as médias do período."],
+                ["MES_A_MES", "Mês a Mês", "Os centros de custo, a depreciação e o extra-operacional de cada competência fechada no mês dela; as premissas, com as médias de todos os meses fechados."],
+              ] as const
+            ).map(([v, rotulo, detalhe]) => (
+              <OpcaoEmLinha key={v} nome="modo-realizado-analitico" marcada={modo === v} onMarcar={() => setModo(v)} rotulo={rotulo} detalhe={detalhe} />
+            ))}
+          </fieldset>
+          {modo === "MEDIA" ? (
+            <div className="flex flex-wrap items-end gap-3">
+              {(
+                [
+                  ["ref-de", "De", de, setDe],
+                  ["ref-ate", "Até", ate, setAte],
+                ] as const
+              ).map(([idCampo, rotulo, valor, mudar]) => (
+                <div key={idCampo} className="space-y-1.5">
+                  <Label htmlFor={idCampo}>{rotulo}</Label>
+                  <select id={idCampo} value={valor ?? ""} onChange={(e) => mudar(Number(e.target.value))} className={`${classeSelect} w-36`}>
+                    {mesesFechados.map((m) => (
+                      <option key={m} value={m}>
+                        {MESES[m - 1]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              <p className={`min-w-0 flex-1 pb-2 text-xs ${periodoInvalido ? "text-red-700" : "text-gray-600"}`}>
+                {!periodo.length
+                  ? "O mês inicial vem depois do final."
+                  : abertasNoPeriodo.length
+                    ? `O período tem meses sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
+                    : `A média de ${periodo.length} mês(es), de ${MESES[de - 1]} a ${MESES[ate - 1]}.`}
+              </p>
+            </div>
+          ) : null}
+          <div className="flex justify-end">
+            <Button type="button" className={botaoPrimario} disabled={periodoInvalido} onClick={() => setConfirmar(true)}>
+              <History className="size-4" />
+              Carregar Realizado
+            </Button>
+          </div>
+        </div>
+      )}
+      {/* O que não coube nas premissas na última carga (com o destaque vermelho dos avisos). */}
+      {avisos && avisos.length ? (
+        <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+          <p className="font-medium text-gray-900">Avisos da Referência Carregada</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {correspondencia ? <CorrespondenciaDialog onFechar={() => setCorrespondencia(false)} /> : null}
+      {confirmar ? (
+        <Dialog open onOpenChange={(o) => (!o ? setConfirmar(false) : undefined)}>
+          <DialogContent className="rounded-sm sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{tipo === "cenario" ? "Carregar Cenário Analítico" : "Carregar Resultado Realizado"}</DialogTitle>
+              <DialogDescription render={<div />}>
+                <ul className="list-disc space-y-1.5 pl-5">
+                  {tipo === "cenario" ? (
+                    <>
+                      <li>
+                        As premissas, os centros de custo, os investimentos e os indicadores do cenário são substituídos pelos de {origem?.nome}
+                        {origem && origem.ano !== cenario.ano ? ` (de ${origem.ano}: os meses vão para os mesmos meses de ${cenario.ano})` : ""}.
+                      </li>
+                      <li>A DRE do cenário é recalculada.</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        As premissas são substituídas pelas Médias de Referência do realizado de {ano} (
+                        {modo === "MEDIA" ? `${abrev(de)} a ${abrev(ate)}` : mesesFechados.map(abrev).join(", ")}), por linha e venda, e os doze meses
+                        começam iguais a elas (a demanda diária é o volume médio ÷ os dias úteis). Os dias úteis e os ajustes voltam ao padrão.
+                      </li>
+                      <li>
+                        Os centros de custo, a depreciação base e o extra-operacional são substituídos pelos do realizado
+                        {modo === "MEDIA" ? ", com a média do período nos doze meses" : ", cada mês fechado no seu mês"}; os indicadores, pelos realizados.
+                      </li>
+                      <li>Os investimentos ficam. A DRE do cenário é recalculada.</li>
+                    </>
+                  )}
+                  <li>Os valores digitados nas premissas se perdem.</li>
+                </ul>
+              </DialogDescription>
+            </DialogHeader>
+            <Erro erro={carregar.isError ? mensagemDeErro(carregar.error, "Não foi possível carregar a referência.") : null} />
+            <DialogFooter>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setConfirmar(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" className={botaoPrimario} disabled={carregar.isPending} onClick={() => carregar.mutate()}>
+                {carregar.isPending ? "Carregando…" : "Carregar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </section>
+  );
+}

@@ -20,6 +20,9 @@ cenariosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
 cenariosRoutes.post("/", autenticacao, express.json(), editar, asyncHandler(c.criar));
 cenariosRoutes.post("/importar/analise", autenticacao, editarSinteticos, express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }), asyncHandler(c.analisar));
 cenariosRoutes.post("/importar", autenticacao, editarSinteticos, express.json(), asyncHandler(c.importar));
+// A correspondência tarefa × linha da referência realizada dos analíticos (14/10/2026), antes das rotas /:id.
+cenariosRoutes.get("/correspondencias", autenticacao, verificarPermissao("cenarios_analiticos:ler"), asyncHandler(c.correspondencias));
+cenariosRoutes.put("/correspondencias", autenticacao, verificarPermissao("cenarios_analiticos:editar"), express.json(), asyncHandler(c.gravarCorrespondencias));
 cenariosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 cenariosRoutes.patch("/:id", autenticacao, editar, express.json(), asyncHandler(c.atualizar));
 cenariosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));
@@ -32,6 +35,7 @@ cenariosRoutes.get("/:id/edicao", autenticacao, editar, asyncHandler(c.edicao));
 cenariosRoutes.put("/:id/edicao/valores", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarValores));
 cenariosRoutes.get("/:id/reajustes", autenticacao, ler, asyncHandler(c.reajustes));
 cenariosRoutes.post("/:id/referencia/realizado", autenticacao, editar, express.json(), asyncHandler(c.referenciaRealizado));
+cenariosRoutes.post("/:id/referencia/cenario", autenticacao, editar, express.json(), asyncHandler(c.referenciaCenario));
 // O versionamento (13/10/2026): Congelar Versão, Reabrir Versão e Criar Revisão.
 cenariosRoutes.post("/:id/versao", autenticacao, editar, asyncHandler(c.congelarVersao));
 cenariosRoutes.post("/:id/versao/reabrir", autenticacao, editar, asyncHandler(c.reabrirVersao));

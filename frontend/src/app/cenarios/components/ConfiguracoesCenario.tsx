@@ -24,6 +24,7 @@ import { botaoPrimario, CampoVisualizacao, classeSelect, Erro, ExcluirCenarioDia
 import { ComparativoCenario } from "./ComparativoCenario";
 import { MarcarCenarioDialog } from "./MarcarCenarioDialog";
 import { ImportarCenarioDialog } from "./ImportarCenarioDialog";
+import { ReferenciaAnalitica } from "./ReferenciaAnalitica";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 /** "Fechadas de Janeiro a Agosto." (12/10/2026; os meses seguidos, pelo primeiro e o último); fora de sequência, a lista. */
@@ -170,14 +171,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
       ) : aba === "comparativo" ? (
         <ComparativoCenario id={cenario.id} podeEditar />
       ) : analitico ? (
-        // A referência dos analíticos (13/10/2026): outro analítico ou o realizado, com os centros de custo e as Médias de Referência.
-        <section className="space-y-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5 text-sm text-gray-600">
-          <p className="font-medium text-gray-900">Em desenvolvimento.</p>
-          <p>
-            A referência de um cenário analítico será outro cenário analítico ou o resultado realizado (mês a mês ou a média de um período), que traz
-            também os valores dos centros de custo e as Médias de Referência das premissas (Matriz, Filial e Serviços).
-          </p>
-        </section>
+        // A referência dos analíticos (14/10/2026): o realizado (com as Médias de Referência e os centros de custo) ou outro analítico.
+        <ReferenciaAnalitica cenario={cenario} />
       ) : (
         <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <p className="text-sm text-gray-600">

@@ -342,6 +342,24 @@ export const cenariosController = {
     return responder(response, () => cenariosService.gravarJustificativa(c, corpo.data, usuario(request)));
   },
 
+  referenciaCenario(request: Request, response: Response) {
+    const corpo = z.object({ origemId: z.string().min(1) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ message: "Escolha o cenário de referência." });
+    return responder(response, () => cenariosService.referenciaCenario(String(request.params.id), corpo.data.origemId, usuario(request)));
+  },
+
+  correspondencias(_request: Request, response: Response) {
+    return responder(response, () => cenariosService.correspondencias());
+  },
+
+  gravarCorrespondencias(request: Request, response: Response) {
+    const corpo = z
+      .object({ itens: z.array(z.object({ filial: z.number().int().nullable(), tarefa: z.string().max(120), linha: z.string().min(1) })).max(500) })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ message: "Correspondência inválida." });
+    return responder(response, () => cenariosService.gravarCorrespondencias(corpo.data.itens, usuario(request)));
+  },
+
   salvarManual(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;
