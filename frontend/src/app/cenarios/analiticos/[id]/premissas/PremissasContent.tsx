@@ -12,17 +12,18 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
-import { CentrosDoCenario } from "../../../components/CentrosDoCenario";
+import { CentrosDoCenario, RateiosDoCenario } from "../../../components/CentrosDoCenario";
 import { Erro } from "../../../components/CenarioDialog";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
 
-/** As abas das premissas: as unidades e os centros de custo (os investimentos e o extra-operacional virão depois). */
+/** As abas das premissas: as unidades, os centros de custo e os rateios (os investimentos e o extra-operacional virão depois). */
 const ABAS = [
   { chave: "1", rotulo: "Matriz" },
   { chave: "2", rotulo: "Filial" },
   { chave: "3", rotulo: "Serviços" },
   { chave: "centros", rotulo: "Centros de Custo" },
+  { chave: "rateios", rotulo: "Rateios" },
 ];
 
 /**
@@ -36,7 +37,8 @@ export function PremissasContent() {
   const { hasPermission } = usePermissions();
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const centros = aba === "centros";
-  const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: !centros });
+  const rateios = aba === "rateios";
+  const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: !centros && !rateios });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = hasPermission("cenarios_analiticos:editar") && !travado && (centros || !!consulta.data?.editavel);
   return (
@@ -47,10 +49,16 @@ export function PremissasContent() {
           <ul>
             <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global.</li>
             <li>
-              Na aba Centros de Custo, escolha o centro na lista à esquerda (agrupada como em Resultados Realizados, com a busca e o total do exercício) e digite,
-              à direita, os valores mensais das contas dele: mão de obra direta, indireta e terceirizada e gastos gerais diretos, indiretos e comerciais (as
-              Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos).
-              Embaixo do título do centro, o balde e para onde vai o valor; no fim da aba, os percentuais de rateio de cada mês.
+              Na aba Centros de Custo, escolha o grupo de centros da Controladoria na lista à esquerda (com a busca e o total do exercício; os centros de
+              estoque e de investimento não entram) e digite, à direita, os valores mensais das contas dele: mão de obra direta, indireta e terceirizada e
+              gastos gerais diretos, indiretos e comerciais (as Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas tabelas das unidades, em R$
+              por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
+              baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum).
+            </li>
+            <li>
+              Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
+              Global; Metalurgia pelo kg das linhas em kg; Armadura pela Armadura por Dia de cada linha; Acompanhamento pelos Acompanhamentos por Dia das linhas
+              de Serviços (as duas × os dias úteis). Sem base no mês, o percentual é zero, e o valor dos grupos daquela chave não entra.
             </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
@@ -92,11 +100,11 @@ export function PremissasContent() {
               investimentos e do extra-operacional.
             </p>
             <p>
-              Os valores dos centros de custo vão para as unidades como no fechamento mensal: nos custos de produção, os centros dos baldes Matriz e Filial vão
-              direto para a unidade, os do balde Unidade para a da filial deles, e os de Produção e Projeto se rateiam entre Matriz e Filial; os de
-              Metalurgia e Armadura, também entre a Montagem e a Complementar de Serviços; nos custos de montagem, os de Obras vão para Serviços e os de
-              Acompanhamento se rateiam entre a Montagem e a Complementar; os das despesas vão para Despesas e Extra. Os percentuais: a Produção pelo m³
-              produzido do cenário (Matriz × Filial, mês a mês); as demais chaves, sem premissa do destino, pela média do realizado.
+              Os valores dos grupos de centros de custo vão para as unidades como no fechamento mensal, pelo balde do grupo: nos custos de produção, Matriz e
+              Filial vão direto para a unidade, Unidade para a da filial dos centros, e Produção e Projeto se rateiam entre Matriz e Filial; Metalurgia e
+              Armadura, também entre a Montagem e a Complementar de Serviços; nos custos de montagem, Obras vai para Serviços e Acompanhamento se rateia entre
+              a Montagem e a Complementar; as despesas vão para Despesas e Extra. Os percentuais saem das bases das premissas (a aba Rateios). Em Serviços, os
+              Acompanhamentos no Mês somam o Acompanhamento de Obra (d) da DRE.
             </p>
           </>
         }
@@ -105,6 +113,8 @@ export function PremissasContent() {
       {cenario.data && travado && hasPermission("cenarios_analiticos:editar") ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
       {centros ? (
         <CentrosDoCenario id={id} editavel={podeEditar} />
+      ) : rateios ? (
+        <RateiosDoCenario id={id} />
       ) : consulta.isError ? (
         <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as premissas.")} />
       ) : consulta.isPending ? (

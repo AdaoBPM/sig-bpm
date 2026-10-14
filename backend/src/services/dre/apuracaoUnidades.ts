@@ -185,15 +185,9 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   // --- Volumes (linhas P e S), da aba Totais -------------------------------
   const VOLUMES = VOLUMES_DA_DRE;
 
-  // Guardas das fórmulas: IF(B$4=0,0,…) e, em Serviços, IF(B$6=0,0,…) — a montagem
-  // do mês — nos custos, na receita de montagem, nos impostos e nas comissões
-  // (correção do usuário de 29/09/2026 na aba Realizado (Serviços)).
-  const guarda: Record<number, Decimal> = {
-    1: total("PREFABRICADO_MATRIZ"),
-    2: total("PREFABRICADO_FILIAL"),
-    3: total("METALURGIA_MONTAGEM").plus(total("METALURGIA_COMPLEMENTAR")),
-  };
-  const guardaCustosServicos = total("MONTAGEM");
+  // Sem as guardas das fórmulas da planilha (IF(B$4=0,0,…) na Matriz e na Filial e IF(B$6=0,0,…) em Serviços), que
+  // zeravam a unidade inteira num mês sem produção ou sem montagem: servem só ao Excel (para esconder os meses
+  // vazios), e não à ferramenta (decisão do usuário de 13/10/2026). O mês sem produção mostra os custos que teve.
 
   const itensDa = (u: number) => d.linhas.filter((l) => l.tipo === "ITEM" && l.unidades.includes(u));
   const ehVolume = (l: LinhaEstrutura) => l.grupoSigla === "P" || l.grupoSigla === "S";
@@ -208,7 +202,6 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   // a partir de 06/10/2026).
   for (const u of [UNIDADE.MATRIZ, UNIDADE.FILIAL]) {
     const destino = DESTINO_DA_UNIDADE[u];
-    const semProducao = guarda[u].isZero();
     const receitaFrete = previa(u, "FRETE");
     const paresCusto: ParBalde[] = [{ balde: destino }, { balde: "UNIDADE", filial: u }];
     const paresReceita: ParBalde[] = [...paresCusto, { balde: "DESPESAS", filial: u }];
@@ -220,10 +213,6 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       }
       if (ehComissao(l)) continue; // depois da ROB consolidada
       const desc = n(l.descricao);
-      if (semProducao) {
-        gravar(u, l, zero(), { regra: "Sem produção de pré-fabricado na unidade: zero (IF(B$4=0,0,…))" });
-        continue;
-      }
       if (desc === n("Receita Bruta do Pré-Fabricado")) {
         const contabil = somaPares(l.id, paresReceita);
         gravar(u, l, receitaFrete.receitaBruta.neg().minus(contabil), {
@@ -275,11 +264,11 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     // dos baldes da receita.
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
-      const v = semProducao ? zero() : somaPares(io.id, paresReceita);
+      const v = somaPares(io.id, paresReceita);
       gravar(u, io, v, {
         regra: `Lançamentos contábeis: ${descreverPares(paresReceita)}`,
         direto: v.toFixed(2),
-        origem: semProducao ? undefined : { contabil: { linhaId: io.id, pares: paresReceita } },
+        origem: { contabil: { linhaId: io.id, pares: paresReceita } },
       });
     }
     // Receitas líquidas do pré-fabricado e das devoluções: a bruta menos a
@@ -290,13 +279,13 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     const impostosFrete = receitaFrete.receitaBruta.minus(receitaFrete.receitaLiquida);
     const base = robPre.plus(robDev);
     const fator = base.isZero() ? zero() : irb.minus(impostosFrete).div(base);
-    if (!semProducao && base.isZero() && !irb.minus(impostosFrete).isZero()) {
+    if (base.isZero() && !irb.minus(impostosFrete).isZero()) {
       avisos.push(`Unidade ${u}: receita bruta de pré-fabricado + devoluções é zero; a planilha dá #DIV/0! nas receitas líquidas.`);
     }
     for (const [descricao, rob] of [["Receita Líquida do Pré-Fabricado", robPre], ["Receita Líquida de Devoluções e Inventários", robDev]] as const) {
       const l = linhaPorDescricao(u, descricao);
       if (!l) continue;
-      gravar(u, l, semProducao ? zero() : rob.minus(fator.times(rob)), {
+      gravar(u, l, rob.minus(fator.times(rob)), {
         regra: "Bruta − (IRB − impostos do frete) / (bruta do pré-fabricado + devoluções) × bruta",
         observacao: `Bruta ${rob.toFixed(2)} − (IRB ${irb.toFixed(2)} − impostos do frete ${impostosFrete.toFixed(2)}) / ${base.toFixed(2)} × bruta; fator ${fator.toFixed(10)}`,
       });
@@ -306,7 +295,6 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   // --- Serviços -------------------------------------------------------------
   {
     const u = UNIDADE.SERVICOS;
-    const semMontagem = guardaCustosServicos.isZero();
     const compl = previa(u, "COMPLEMENTAR");
     for (const l of itensDa(u)) {
       const desc = n(l.descricao);
@@ -318,12 +306,10 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       if (ehComissao(l)) continue;
       if (desc === n("Receita Bruta de Montagem")) {
         const c = somaDireto(l.id);
-        gravar(u, l, semMontagem ? zero() : compl.receitaBruta.neg().minus(c), {
+        gravar(u, l, compl.receitaBruta.neg().minus(c), {
           regra: "−(complementar da receita prévia) − (receita contábil, todas as filiais)",
           direto: c.toFixed(2),
-          origem: semMontagem
-            ? undefined
-            : { contabil: { linhaId: l.id, fator: "-1" }, previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "BRUTA", sinal: -1 }] },
+          origem: { contabil: { linhaId: l.id, fator: "-1" }, previa: [{ unidade: u, natureza: "COMPLEMENTAR", componente: "BRUTA", sinal: -1 }] },
         });
       } else if (desc === n("Receita Bruta Complementar")) {
         gravar(u, l, compl.receitaBruta, {
@@ -338,10 +324,6 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       } else if (desc === n("Receita Líquida de Montagem")) {
         continue; // depois dos impostos
       } else if (l.grupoSigla === "CSM" || l.grupoSigla === "CSC") {
-        if (semMontagem) {
-          gravar(u, l, zero(), { regra: "Sem montagem no mês: zero (IF(B$6=0,0,…))" });
-          continue;
-        }
         const montagem = l.grupoSigla === "CSM";
         const destino = montagem ? "MONTAGEM" : "COMPLEMENTAR";
         const dir = somaDireto(l.id, { balde: (b) => b === (montagem ? "OBRAS" : "COMPLEMENTAR") });
@@ -376,16 +358,16 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     }
     const io = linhaPorDescricao(u, "Impostos Operacionais");
     if (io) {
-      const v = semMontagem ? zero() : somaDireto(io.id, { balde: (b) => b === "OBRAS" });
+      const v = somaDireto(io.id, { balde: (b) => b === "OBRAS" });
       gravar(u, io, v, {
         regra: "Lançamentos contábeis do balde OBRAS, todas as filiais",
         direto: v.toFixed(2),
-        origem: semMontagem ? undefined : { contabil: { linhaId: io.id, baldes: ["OBRAS"] } },
+        origem: { contabil: { linhaId: io.id, baldes: ["OBRAS"] } },
       });
       const rlm = linhaPorDescricao(u, "Receita Líquida de Montagem");
       if (rlm) {
         const rbm = itemDe(u, "Receita Bruta de Montagem");
-        gravar(u, rlm, semMontagem ? zero() : rbm.minus(v.minus(compl.receitaBruta.minus(compl.receitaLiquida))), {
+        gravar(u, rlm, rbm.minus(v.minus(compl.receitaBruta.minus(compl.receitaLiquida))), {
           regra: "Bruta de montagem − (IRB − impostos da complementar)",
           observacao: `Bruta de montagem ${rbm.toFixed(2)} − (IRB ${v.toFixed(2)} − impostos da complementar ${compl.receitaBruta.minus(compl.receitaLiquida).toFixed(2)})`,
         });
@@ -446,9 +428,8 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
     for (const l of itensDa(u).filter(ehComissao)) {
       const c = somaDireto(l.id);
       const rob = robDe(u);
-      const semBase = u === UNIDADE.SERVICOS ? guardaCustosServicos.isZero() : guarda[u].isZero();
-      const v = semBase || robConsolidada.isZero() ? zero() : c.div(robConsolidada).times(rob);
-      const fator = semBase || robConsolidada.isZero() ? null : rob.div(robConsolidada);
+      const v = robConsolidada.isZero() ? zero() : c.div(robConsolidada).times(rob);
+      const fator = robConsolidada.isZero() ? null : rob.div(robConsolidada);
       gravar(u, l, v, {
         regra: "Diretos da linha / ROB consolidada × ROB da unidade",
         direto: c.toFixed(2),

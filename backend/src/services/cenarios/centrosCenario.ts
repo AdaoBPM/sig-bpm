@@ -2,30 +2,32 @@ import { getPrismaClient } from "../../config/prisma.js";
 import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 
 /**
- * Os centros de custo dos cenários analíticos (13/10/2026, etapa 3): os valores mensais de cada centro, por conta da
- * DRE, e a alocação deles às unidades com as regras do fechamento mensal (apuracaoUnidades):
+ * Os centros de custo dos cenários analíticos (13/10/2026, etapa 3): os valores mensais de cada grupo de centros da
+ * Controladoria (o nome da Controladoria, como em Resultados Realizados), por conta da DRE, e a alocação deles às
+ * unidades com as regras do fechamento mensal (apuracaoUnidades):
  *
- * - nas contas dos custos de produção (CPP), o balde do centro: MATRIZ e FILIAL vão direto para a unidade; UNIDADE, para
- *   a unidade da filial do centro (a filial em que ele mais lançou no realizado); PRODUCAO e PROJETO se rateiam entre
- *   Matriz e Filial; METALURGIA e ARMADURA, entre Matriz, Filial, Montagem e Complementar (em Serviços, na conta de
- *   mesma atribuição e descrição da CSM ou da CSC);
+ * - nas contas dos custos de produção (CPP), o balde do grupo: MATRIZ e FILIAL vão direto para a unidade; UNIDADE, para
+ *   a unidade da filial do grupo (a filial em que os centros dele mais lançaram no realizado); PRODUCAO e PROJETO se
+ *   rateiam entre Matriz e Filial; METALURGIA e ARMADURA, entre Matriz, Filial, Montagem e Complementar (em Serviços, na
+ *   conta de mesma atribuição e descrição da CSM ou da CSC);
  * - nas contas dos custos de montagem (CSM), o balde OBRAS vai direto para Serviços; ACOMPANHAMENTO se rateia entre a
  *   Montagem (CSM) e a Complementar (na conta equivalente da CSC);
  * - nas despesas (DL, DT, DC e DA), Despesas e Extra.
  *
- * Os percentuais: Produção pelo m³ produzido do cenário (Matriz × Filial, mês a mês); Projeto, Metalurgia, Armadura e
- * Acompanhamento — sem premissa que diga o destino — pela média do realizado (os volumes dos rateios das competências
- * fechadas do último exercício com competência fechada; depois, o período da referência do cenário). Num mês sem
- * produção no cenário, a Produção também usa a média do realizado.
+ * Os percentuais dos rateios saem das premissas (premissasCenario.ts): Produção pelo m³ produzido, Projeto pelo m³
+ * produzido da venda Global, Metalurgia pelo kg das linhas em kg, Armadura pela demanda de armadura das linhas e
+ * Acompanhamento pelos acompanhamentos das linhas de Serviços; numa chave sem base no mês, o percentual é zero (como no
+ * fechamento: o valor dos grupos dela não entra).
  *
- * As contas dos centros no cenário são as de mão de obra (direta, indireta e terceirizada) e de gastos gerais diretos,
+ * Os centros de estoque e de investimento não entram. As
+ * contas dos grupos no cenário são as de mão de obra (direta, indireta e terceirizada) e de gastos gerais diretos,
  * indiretos e comerciais: as Matérias Primas, os Gastos Gerais Variáveis e o Estoque vêm das premissas (R$ por unidade
  * produzida), e a depreciação, dos investimentos.
  */
 
 /** As atribuições das contas dos centros no cenário (o segundo pedaço do código da conta). */
 const ATRIBUICOES = new Set(["MOD", "MOI", "MOT", "GGD", "GGI", "GGC"]);
-/** O grupo da DRE de cada departamento do centro; os demais (almoxarifado, investimento, requisição) são de produção. */
+/** O grupo da DRE de cada departamento; os demais (requisição, sem departamento) são de produção. */
 const GRUPO_DO_DEPARTAMENTO: Record<string, string> = {
   "CUSTOS DE SERVIÇOS: MONTAGEM (CSM)": "CSM",
   "DESPESAS ADMINISTRATIVAS (DA)": "DA",
@@ -33,53 +35,71 @@ const GRUPO_DO_DEPARTAMENTO: Record<string, string> = {
   "DESPESAS DE LOGÍSTICA (DL)": "DL",
   "DESPESAS TÉCNICAS (DT)": "DT",
 };
+/**
+ * O que fica fora do cenário: o estoque e os investimentos — os departamentos Almoxarifado, Requisição e Investimento e
+ * os centros dos códigos 1.96 (Estoque e Almoxarifado) e 1.97 (Investimento). Os almoxarifados das fábricas (a equipe,
+ * departamento Custos de Produção) ficam.
+ */
+const FORA = new Set(["ALMOXARIFADO", "REQUISIÇÃO", "INVESTIMENTO"]);
+const foraDoCenario = (c: { departamento: string | null; codigoRM: string | null }) =>
+  FORA.has((c.departamento ?? "").trim().toUpperCase()) || /^1.9[67](.|$)/.test(c.codigoRM ?? "");
 const DESPESAS = new Set(["DL", "DT", "DC", "DA"]);
 
-export type CentroDoCenario = {
-  id: string;
-  codigo: string | null;
-  nome: string;
+export type GrupoDoCenario = {
+  /** O nome do grupo (o nome da Controladoria; sem ele, o nome do centro). */
   grupo: string;
-  departamento: string | null;
+  centros: Array<{ codigo: string | null; nome: string; balde: string | null }>;
+  /** O balde do grupo: o mais comum entre os centros dele. */
   balde: string | null;
-  /** O grupo da DRE das contas do centro: CPP, CSM, DL, DT, DC ou DA. */
+  /** Os baldes diferentes dos centros (mais de um: o aviso na tela). */
+  baldes: string[];
+  /** O grupo da DRE das contas: CPP, CSM, DL, DT, DC ou DA. */
   grupoDRE: string;
-  /** A unidade do balde UNIDADE (a filial em que o centro mais lançou); 1 sem lançamentos. */
+  /** A unidade do balde UNIDADE (a filial em que os centros mais lançaram); 1 sem lançamentos. */
   unidade: 1 | 2;
-  /** Para onde vai o valor, em texto (Matriz, Filial, Serviços, Despesas e Extra, ou o rateio). */
+  /** Para onde vai o valor, em texto. */
   destino: string;
 };
 
-/** Os centros de custo ativos, com o grupo da DRE das contas e o destino do valor. */
-export async function centrosDoCadastro(): Promise<CentroDoCenario[]> {
+const maisComum = <T>(xs: T[]) => {
+  const n = new Map<T, number>();
+  for (const x of xs) n.set(x, (n.get(x) ?? 0) + 1);
+  return [...n].sort((a, b) => b[1] - a[1])[0]?.[0];
+};
+
+/** Os grupos de centros de custo ativos (sem os de estoque e de investimento), com o balde e o destino. */
+export async function gruposDoCadastro(): Promise<GrupoDoCenario[]> {
   const prisma = getPrismaClient();
   const [centros, filiais] = await Promise.all([
     prisma.centroCusto.findMany({ where: { ativo: true }, orderBy: [{ nomeControladoria: "asc" }, { codigoRM: "asc" }] }),
     prisma.lancamentoContabil.groupBy({ by: ["centroCustoId", "filial"], _count: { _all: true }, where: { centroCustoId: { not: null } } }),
   ]);
-  const filialDe = new Map<string, { filial: number; n: number }>();
-  for (const f of filiais) {
-    const atual = filialDe.get(f.centroCustoId!);
-    if (!atual || f._count._all > atual.n) filialDe.set(f.centroCustoId!, { filial: f.filial, n: f._count._all });
+  const porGrupo = new Map<string, typeof centros>();
+  for (const c of centros) {
+    if (foraDoCenario(c)) continue;
+    const g = c.nomeControladoria?.trim() || c.nomeRM?.trim() || c.codigoRM || "Centro";
+    porGrupo.set(g, [...(porGrupo.get(g) ?? []), c]);
   }
-  return centros.map((c) => {
-    const grupoDRE = GRUPO_DO_DEPARTAMENTO[(c.departamento ?? "").trim().toUpperCase()] ?? "CPP";
-    const unidade = filialDe.get(c.id)?.filial === 2 ? 2 : 1;
+  return [...porGrupo].map(([grupo, cs]) => {
+    const ids = new Set(cs.map((c) => c.id));
+    const lancamentos = new Map<number, number>();
+    for (const f of filiais) if (ids.has(f.centroCustoId!)) lancamentos.set(f.filial, (lancamentos.get(f.filial) ?? 0) + f._count._all);
+    const unidade = (lancamentos.get(2) ?? 0) > (lancamentos.get(1) ?? 0) ? 2 : 1;
+    const balde = maisComum(cs.map((c) => c.balde)) ?? null;
+    const grupoDRE = maisComum(cs.map((c) => GRUPO_DO_DEPARTAMENTO[(c.departamento ?? "").trim().toUpperCase()] ?? "CPP")) ?? "CPP";
     return {
-      id: c.id,
-      codigo: c.codigoRM,
-      nome: c.nomeRM ?? c.nomeControladoria ?? c.codigoRM ?? "Centro",
-      grupo: c.nomeControladoria ?? "Sem Grupo",
-      departamento: c.departamento,
-      balde: c.balde,
+      grupo,
+      centros: cs.map((c) => ({ codigo: c.codigoRM, nome: c.nomeRM ?? c.nomeControladoria ?? c.codigoRM ?? "Centro", balde: c.balde })),
+      balde,
+      baldes: [...new Set(cs.map((c) => c.balde ?? "—"))],
       grupoDRE,
       unidade,
-      destino: destinoDoCentro(grupoDRE, c.balde, unidade),
+      destino: destinoDoGrupo(grupoDRE, balde, unidade),
     };
   });
 }
 
-function destinoDoCentro(grupoDRE: string, balde: string | null, unidade: 1 | 2) {
+function destinoDoGrupo(grupoDRE: string, balde: string | null, unidade: 1 | 2) {
   if (DESPESAS.has(grupoDRE)) return "Despesas e Extra";
   if (grupoDRE === "CSM") return balde === "ACOMPANHAMENTO" ? "Rateio de Acompanhamento (Montagem e Complementar)" : "Serviços";
   switch (balde) {
@@ -102,84 +122,55 @@ function destinoDoCentro(grupoDRE: string, balde: string | null, unidade: 1 | 2)
   }
 }
 
-/** As contas de um centro no cenário: as da atribuição do centro, no grupo da DRE dele. */
-export function contasDoCentro(est: LinhaEstrutura[], c: Pick<CentroDoCenario, "grupoDRE">) {
-  return est.filter((l) => l.tipo === "ITEM" && l.codigo.startsWith(`${c.grupoDRE}.`) && ATRIBUICOES.has(l.codigo.split(".")[1]));
+/** As contas de um grupo no cenário: as da atribuição dos centros, no grupo da DRE dele. */
+export function contasDoGrupo(est: LinhaEstrutura[], g: Pick<GrupoDoCenario, "grupoDRE">) {
+  return est.filter((l) => l.tipo === "ITEM" && l.codigo.startsWith(`${g.grupoDRE}.`) && ATRIBUICOES.has(l.codigo.split(".")[1]));
 }
 
 /** Os percentuais de um mês: a parte de cada destino em cada chave ("PRODUCAO|MATRIZ" → 0,6). */
 export type Percentuais = Map<string, number>;
 
-/**
- * Os percentuais médios do realizado (13/10/2026): por chave, o volume de cada destino sobre o da chave, somados nas
- * competências fechadas do último exercício com competência fechada (a média ponderada pelos volumes dos meses).
- */
-export async function percentuaisDoRealizado(): Promise<{ percentuais: Percentuais; periodo: string | null }> {
-  const prisma = getPrismaClient();
-  const ultima = await prisma.competencia.findFirst({ where: { status: "FECHADA" }, orderBy: [{ ano: "desc" }, { mes: "desc" }], select: { ano: true } });
-  if (!ultima) return { percentuais: new Map(), periodo: null };
-  const comps = await prisma.competencia.findMany({ where: { status: "FECHADA", ano: ultima.ano }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
-  const volumes = await prisma.volumeOperacional.findMany({ where: { competenciaId: { in: comps.map((c) => c.id) } }, include: { regraRateio: { select: { chave: true, destino: true } } } });
-  const porDestino = new Map<string, number>();
-  const porChave = new Map<string, number>();
-  for (const v of volumes) {
-    const q = Number(v.quantidade);
-    porDestino.set(`${v.regraRateio.chave}|${v.regraRateio.destino}`, (porDestino.get(`${v.regraRateio.chave}|${v.regraRateio.destino}`) ?? 0) + q);
-    porChave.set(v.regraRateio.chave, (porChave.get(v.regraRateio.chave) ?? 0) + q);
-  }
-  const percentuais: Percentuais = new Map();
-  for (const [k, q] of porDestino) {
-    const total = porChave.get(k.split("|")[0]) ?? 0;
-    percentuais.set(k, total ? q / total : 0);
-  }
-  const nomes = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
-  const periodo = comps.length ? `${nomes[comps[0].mes - 1]}–${nomes[comps[comps.length - 1].mes - 1]}/${ultima.ano}` : null;
-  return { percentuais, periodo };
-}
-
-/** As chaves e os destinos dos rateios, na ordem da aba Rateios. */
-export const RATEIOS: Array<{ chave: string; destino: string; rotulo: string }> = [
-  { chave: "PRODUCAO", destino: "MATRIZ", rotulo: "Produção: Matriz" },
-  { chave: "PRODUCAO", destino: "FILIAL", rotulo: "Produção: Filial" },
-  { chave: "PROJETO", destino: "MATRIZ", rotulo: "Projeto: Matriz" },
-  { chave: "PROJETO", destino: "FILIAL", rotulo: "Projeto: Filial" },
-  { chave: "METALURGIA", destino: "MATRIZ", rotulo: "Metalurgia: Matriz" },
-  { chave: "METALURGIA", destino: "FILIAL", rotulo: "Metalurgia: Filial" },
-  { chave: "METALURGIA", destino: "MONTAGEM", rotulo: "Metalurgia: Montagem" },
-  { chave: "METALURGIA", destino: "COMPLEMENTAR", rotulo: "Metalurgia: Complementar" },
-  { chave: "ARMADURA", destino: "MATRIZ", rotulo: "Armadura: Matriz" },
-  { chave: "ARMADURA", destino: "FILIAL", rotulo: "Armadura: Filial" },
-  { chave: "ARMADURA", destino: "MONTAGEM", rotulo: "Armadura: Montagem" },
-  { chave: "ARMADURA", destino: "COMPLEMENTAR", rotulo: "Armadura: Complementar" },
-  { chave: "ACOMPANHAMENTO", destino: "MONTAGEM", rotulo: "Acompanhamento: Montagem" },
-  { chave: "ACOMPANHAMENTO", destino: "COMPLEMENTAR", rotulo: "Acompanhamento: Complementar" },
+/** As chaves e os destinos dos rateios, na ordem da aba Rateios, com a base das premissas. */
+export const RATEIOS: Array<{ chave: string; destino: string; rotulo: string; base: string }> = [
+  { chave: "PRODUCAO", destino: "MATRIZ", rotulo: "Produção: Matriz", base: "m³" },
+  { chave: "PRODUCAO", destino: "FILIAL", rotulo: "Produção: Filial", base: "m³" },
+  { chave: "PROJETO", destino: "MATRIZ", rotulo: "Projeto: Matriz", base: "m³" },
+  { chave: "PROJETO", destino: "FILIAL", rotulo: "Projeto: Filial", base: "m³" },
+  { chave: "METALURGIA", destino: "MATRIZ", rotulo: "Metalurgia: Matriz", base: "kg" },
+  { chave: "METALURGIA", destino: "FILIAL", rotulo: "Metalurgia: Filial", base: "kg" },
+  { chave: "METALURGIA", destino: "MONTAGEM", rotulo: "Metalurgia: Montagem", base: "kg" },
+  { chave: "METALURGIA", destino: "COMPLEMENTAR", rotulo: "Metalurgia: Complementar", base: "kg" },
+  { chave: "ARMADURA", destino: "MATRIZ", rotulo: "Armadura: Matriz", base: "kg" },
+  { chave: "ARMADURA", destino: "FILIAL", rotulo: "Armadura: Filial", base: "kg" },
+  { chave: "ARMADURA", destino: "MONTAGEM", rotulo: "Armadura: Montagem", base: "kg" },
+  { chave: "ARMADURA", destino: "COMPLEMENTAR", rotulo: "Armadura: Complementar", base: "kg" },
+  { chave: "ACOMPANHAMENTO", destino: "MONTAGEM", rotulo: "Acompanhamento: Montagem", base: "acomp." },
+  { chave: "ACOMPANHAMENTO", destino: "COMPLEMENTAR", rotulo: "Acompanhamento: Complementar", base: "acomp." },
 ];
 
-/**
- * Os percentuais de cada mês do cenário: a Produção pelo m³ produzido do cenário na Matriz e na Filial (sem produção no
- * mês, a média do realizado); as demais chaves, a média do realizado.
- */
-export function percentuaisDoCenario(realizado: Percentuais, m3Matriz: number[], m3Filial: number[]): Percentuais[] {
+/** Os percentuais de cada mês pelas bases das premissas ("CHAVE|DESTINO" → os doze meses): o destino sobre a chave. */
+export function percentuaisDasBases(bases: Map<string, number[]>): Percentuais[] {
   return Array.from({ length: 12 }, (_, k) => {
-    const p = new Map(realizado);
-    const total = (m3Matriz[k] ?? 0) + (m3Filial[k] ?? 0);
-    if (total > 0) {
-      p.set("PRODUCAO|MATRIZ", (m3Matriz[k] ?? 0) / total);
-      p.set("PRODUCAO|FILIAL", (m3Filial[k] ?? 0) / total);
+    const total = new Map<string, number>();
+    for (const r of RATEIOS) total.set(r.chave, (total.get(r.chave) ?? 0) + (bases.get(`${r.chave}|${r.destino}`)?.[k] ?? 0));
+    const p: Percentuais = new Map();
+    for (const r of RATEIOS) {
+      const t = total.get(r.chave) ?? 0;
+      p.set(`${r.chave}|${r.destino}`, t ? (bases.get(`${r.chave}|${r.destino}`)?.[k] ?? 0) / t : 0);
     }
     return p;
   });
 }
 
 /**
- * Aloca os valores dos centros às unidades (13/10/2026): devolve, por unidade e conta da DRE, os doze meses. `valores`:
- * por centro, conta (código) e mês (1 a 12).
+ * Aloca os valores dos grupos às unidades (13/10/2026): devolve, por unidade e conta da DRE ("u|código"), os doze
+ * meses. `valores`: por grupo, conta (código) e mês (1 a 12).
  */
-export function alocarCentros(est: LinhaEstrutura[], centros: CentroDoCenario[], valores: Array<{ centroId: string; codigo: string; mes: number; valor: number }>, percentuais: Percentuais[]) {
+export function alocarCentros(est: LinhaEstrutura[], grupos: GrupoDoCenario[], valores: Array<{ grupo: string; codigo: string; mes: number; valor: number }>, percentuais: Percentuais[]) {
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
   const porTripla = new Map(est.filter((l) => l.tipo === "ITEM").map((l) => [`${l.grupoSigla}|${(l.atribuicao ?? "").toUpperCase()}|${l.descricao.toUpperCase()}`, l]));
   const equivalente = (l: LinhaEstrutura, grupo: string) => porTripla.get(`${grupo}|${(l.atribuicao ?? "").toUpperCase()}|${l.descricao.toUpperCase()}`);
-  const porCentro = new Map(centros.map((c) => [c.id, c]));
+  const porGrupo = new Map(grupos.map((g) => [g.grupo, g]));
   const r = new Map<string, number[]>();
   const somar = (u: number, codigo: string | undefined, mes: number, v: number) => {
     if (!codigo || !v) return;
@@ -189,20 +180,20 @@ export function alocarCentros(est: LinhaEstrutura[], centros: CentroDoCenario[],
     r.set(k, lista);
   };
   for (const x of valores) {
-    const c = porCentro.get(x.centroId);
+    const g = porGrupo.get(x.grupo);
     const l = porCodigo.get(x.codigo);
-    if (!c || !l) continue;
+    if (!g || !l) continue;
     const pct = (chave: string, destino: string) => percentuais[x.mes - 1]?.get(`${chave}|${destino}`) ?? 0;
-    const grupo = l.codigo.split(".")[0];
-    if (DESPESAS.has(grupo)) {
+    const sigla = l.codigo.split(".")[0];
+    if (DESPESAS.has(sigla)) {
       somar(4, l.codigo, x.mes, x.valor);
-    } else if (grupo === "CSM") {
-      if (c.balde === "ACOMPANHAMENTO") {
+    } else if (sigla === "CSM") {
+      if (g.balde === "ACOMPANHAMENTO") {
         somar(3, l.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "MONTAGEM"));
         somar(3, equivalente(l, "CSC")?.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "COMPLEMENTAR"));
       } else somar(3, l.codigo, x.mes, x.valor);
-    } else if (grupo === "CPP") {
-      switch (c.balde) {
+    } else if (sigla === "CPP") {
+      switch (g.balde) {
         case "MATRIZ":
           somar(1, l.codigo, x.mes, x.valor);
           break;
@@ -211,22 +202,22 @@ export function alocarCentros(est: LinhaEstrutura[], centros: CentroDoCenario[],
           break;
         case "PRODUCAO":
         case "PROJETO":
-          somar(1, l.codigo, x.mes, x.valor * pct(c.balde, "MATRIZ"));
-          somar(2, l.codigo, x.mes, x.valor * pct(c.balde, "FILIAL"));
+          somar(1, l.codigo, x.mes, x.valor * pct(g.balde, "MATRIZ"));
+          somar(2, l.codigo, x.mes, x.valor * pct(g.balde, "FILIAL"));
           break;
         case "METALURGIA":
         case "ARMADURA":
-          somar(1, l.codigo, x.mes, x.valor * pct(c.balde, "MATRIZ"));
-          somar(2, l.codigo, x.mes, x.valor * pct(c.balde, "FILIAL"));
+          somar(1, l.codigo, x.mes, x.valor * pct(g.balde, "MATRIZ"));
+          somar(2, l.codigo, x.mes, x.valor * pct(g.balde, "FILIAL"));
           // Em Serviços, na conta de mesma atribuição e descrição (sem ela, como no fechamento, a parte não entra).
-          somar(3, equivalente(l, "CSM")?.codigo, x.mes, x.valor * pct(c.balde, "MONTAGEM"));
-          somar(3, equivalente(l, "CSC")?.codigo, x.mes, x.valor * pct(c.balde, "COMPLEMENTAR"));
+          somar(3, equivalente(l, "CSM")?.codigo, x.mes, x.valor * pct(g.balde, "MONTAGEM"));
+          somar(3, equivalente(l, "CSC")?.codigo, x.mes, x.valor * pct(g.balde, "COMPLEMENTAR"));
           break;
         case "OBRAS":
           somar(3, equivalente(l, "CSM")?.codigo, x.mes, x.valor);
           break;
         default:
-          somar(c.unidade, l.codigo, x.mes, x.valor);
+          somar(g.unidade, l.codigo, x.mes, x.valor);
       }
     }
   }

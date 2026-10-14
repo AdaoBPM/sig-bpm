@@ -46,6 +46,7 @@ cenariosRoutes.get("/:id/premissas", autenticacao, ler, asyncHandler(c.premissas
 cenariosRoutes.put("/:id/premissas", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarPremissas));
 // Os centros de custo dos cenários analíticos (13/10/2026).
 cenariosRoutes.get("/:id/centros", autenticacao, ler, asyncHandler(c.centros));
-cenariosRoutes.get("/:id/centros/:centroId", autenticacao, ler, asyncHandler(c.centro));
-cenariosRoutes.put("/:id/centros/:centroId", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarCentro));
+cenariosRoutes.get("/:id/centros/contas", autenticacao, ler, asyncHandler(c.centro));
+cenariosRoutes.put("/:id/centros", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarCentro));
+cenariosRoutes.get("/:id/rateios", autenticacao, ler, asyncHandler(c.rateios));
 cenariosRoutes.put("/:id/indicadores/manuais", autenticacao, editar, express.json(), asyncHandler(c.salvarManual));

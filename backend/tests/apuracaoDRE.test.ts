@@ -64,13 +64,14 @@ describe("apuração da DRE por unidade", () => {
     assert.deepEqual(c?.rateios?.map((r) => [r.chave, r.linhaId, r.valor]), [["PRODUCAO", "CLT", "300.00"]]);
   });
 
-  it("sem produção na unidade, os custos dela são zero (IF(B$4=0,0,…))", () => {
+  // Sem a guarda IF(B$4=0,0,…) da planilha (13/10/2026): o mês sem produção mostra os custos que teve.
+  it("sem produção na unidade, os custos dela continuam (a guarda da planilha não vale na ferramenta)", () => {
     const { resultados } = apurarUnidades({
       ...base,
       totais: new Map([["PREFABRICADO_MATRIZ", D(0)], ["PREFABRICADO_FILIAL", D(300)]]),
       lancamentos: [{ filial: 1, linhaDREId: "CLT", balde: "UNIDADE", alocacao: "DIRETO", valor: D(1000) }],
     });
-    assert.equal(resultados.find((r) => r.unidade === 1 && r.codigo === "CLT")?.valor.toString(), "0");
+    assert.equal(resultados.find((r) => r.unidade === 1 && r.codigo === "CLT")?.valor.toString(), "1000");
   });
 });
 

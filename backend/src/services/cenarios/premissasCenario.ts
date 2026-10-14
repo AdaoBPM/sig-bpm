@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
-import { alocarCentros, centrosDoCadastro, percentuaisDoCenario, percentuaisDoRealizado } from "./centrosCenario.js";
+import { alocarCentros, gruposDoCadastro, percentuaisDasBases } from "./centrosCenario.js";
 import { recalcular, UNIDADES } from "./edicaoCenario.js";
 
 type Tx = Prisma.TransactionClient;
@@ -49,6 +49,7 @@ const C = {
   METALURGIA_KG: "P.PRODUCAO_DA_METALURGIA_KG",
   EXPEDICAO_M3: "S.EXPEDICAO_DO_PRE_FABRICADO_M",
   MONTAGEM_M3: "S.MONTAGEM_DO_PRE_FABRICADO_M",
+  ACOMPANHAMENTO_D: "S.ACOMPANHAMENTO_DE_OBRA_D",
 } as const;
 /** A receita líquida de cada receita bruta. */
 const LIQUIDA_DA_BRUTA: Record<string, string> = {
@@ -101,6 +102,8 @@ const pistas = (l: LinhaDoCadastro) => l.medida === PISTAS;
 /** A unidade dos valores da linha: o m³ nas de pistas; a da linha nas demais. */
 const undDoValor = (l: LinhaDoCadastro) => (pistas(l) ? "m³" : l.medida);
 const nomeDaLinha = (l: LinhaDoCadastro) => `${l.nome} (${l.medida})`;
+/** O destino dos rateios de uma linha: a unidade dela (em Serviços, a Montagem ou a Complementar, pela natureza). */
+const destinoDaLinha = (l: LinhaDoCadastro) => (l.unidade === 1 ? "MATRIZ" : l.unidade === 2 ? "FILIAL" : LINHAS_DE_MONTAGEM.has(l.codigo) ? "MONTAGEM" : "COMPLEMENTAR");
 
 /** As linhas de uma tabela (unidade e venda), na ordem da tela. */
 export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[], unidade: UnidadePremissa): LinhaPremissa[] {
@@ -122,6 +125,13 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     } else {
       add("PRODUÇÃO E SERVIÇOS", g, `DEMANDA:${l.codigo}`, "Demanda Diária", `${l.medida}/dia`);
       add("PRODUÇÃO E SERVIÇOS", g, `VOLUME:${l.codigo}`, "Volume no Mês", l.medida, "CALCULO");
+    }
+    // As bases dos rateios de armadura e de acompanhamento (13/10/2026), por dia útil como a demanda.
+    add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura por Dia", "kg/dia");
+    add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ARMADURA:${l.codigo}`, "Armadura no Mês", "kg", "CALCULO");
+    if (l.unidade === 3) {
+      add("PRODUÇÃO E SERVIÇOS", g, `ACOMPANHAMENTO:${l.codigo}`, "Acompanhamentos por Dia", "acomp./dia");
+      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ACOMPANHAMENTO:${l.codigo}`, "Acompanhamentos no Mês", "acomp.", "CALCULO");
     }
   }
   for (const l of daUnidade) {
@@ -163,20 +173,25 @@ export type Leitor = (chave: string, mes: number) => number | undefined;
 
 /**
  * O cálculo de uma tabela: os valores de cada linha mês a mês (a premissa — a gravada ou o padrão — ou o cálculo), a
- * Média de Referência (a gravada; nos cálculos, a conta sobre as médias) e as contas da DRE que ela gera.
+ * Média de Referência (a gravada; nos cálculos, a conta sobre as médias), as contas da DRE que ela gera e as bases dos
+ * rateios dos centros de custo ("CHAVE|DESTINO": Produção pelo m³ produzido; Projeto pelo m³ da venda Global; Metalurgia
+ * pelo kg das linhas em kg; Armadura pela armadura das linhas; Acompanhamento pelos acompanhamentos de Serviços).
  */
-export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[], unidade: UnidadePremissa, ano: number, ler: Leitor) {
+export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[], unidade: UnidadePremissa, ano: number, ler: Leitor, venda: Venda = "GLOBAL") {
   const daUnidade = linhas.filter((l) => l.unidade === unidade);
   const meses = Array.from({ length: 12 }, (_, k) => k + 1);
   const valores = new Map<string, Array<number | null>>();
   const referencia = new Map<string, number | null>();
   const dre = new Map<string, number[]>();
-  const somar = (codigo: string, mes: number, v: number) => {
+  const bases = new Map<string, number[]>();
+  const acumular = (m: Map<string, number[]>, chave: string, mes: number, v: number) => {
     if (!v) return;
-    const lista = dre.get(codigo) ?? Array<number>(12).fill(0);
+    const lista = m.get(chave) ?? Array<number>(12).fill(0);
     lista[mes - 1] += v;
-    dre.set(codigo, lista);
+    m.set(chave, lista);
   };
+  const somar = (codigo: string, mes: number, v: number) => acumular(dre, codigo, mes, v);
+  const base = (chave: string, destino: string, mes: number, v: number) => acumular(bases, `${chave}|${destino}`, mes, v);
   const premissa = (chave: string, padrao: (mes: number) => number = () => 0) => {
     const lista = meses.map((m) => ler(chave, m) ?? padrao(m));
     valores.set(chave, lista);
@@ -199,14 +214,28 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
       volume = demanda.map((d, k) => d * dias[k]);
     }
     valores.set(`VOLUME:${l.codigo}`, volume);
-    // Os volumes da DRE: a produção (m³, e a expedição igual a ela) e a metalurgia nas fábricas; a montagem em Serviços.
+    const armadura = premissa(`ARMADURA:${l.codigo}`).map((a, k) => a * dias[k]);
+    valores.set(`VOLUME_ARMADURA:${l.codigo}`, armadura);
+    const acompanhamentos = l.unidade === 3 ? premissa(`ACOMPANHAMENTO:${l.codigo}`).map((a, k) => a * dias[k]) : null;
+    if (acompanhamentos) valores.set(`VOLUME_ACOMPANHAMENTO:${l.codigo}`, acompanhamentos);
+    const destino = destinoDaLinha(l);
+    // Os volumes da DRE: a produção (m³, e a expedição igual a ela) e a metalurgia nas fábricas; a montagem e os
+    // acompanhamentos em Serviços. E as bases dos rateios dos centros de custo.
     for (const m of meses) {
       const v = volume[m - 1];
       if (l.unidade !== 3 && (l.medida === "m³" || pistas(l))) {
         somar(C.PRODUCAO_M3, m, v);
         somar(C.EXPEDICAO_M3, m, v);
+        base("PRODUCAO", destino, m, v);
+        if (venda === "GLOBAL") base("PROJETO", destino, m, v);
       } else if (l.unidade !== 3 && l.medida === "kg") somar(C.METALURGIA_KG, m, v);
       else if (l.unidade === 3 && l.codigo === "MONTAGEM") somar(C.MONTAGEM_M3, m, v);
+      if (l.medida === "kg") base("METALURGIA", destino, m, v);
+      base("ARMADURA", destino, m, armadura[m - 1]);
+      if (acompanhamentos) {
+        somar(C.ACOMPANHAMENTO_D, m, acompanhamentos[m - 1]);
+        base("ACOMPANHAMENTO", destino, m, acompanhamentos[m - 1]);
+      }
     }
     const contas = contasDaLinha(est, l);
     const impostos = premissa(`IMPOSTOS:${l.codigo}`);
@@ -236,53 +265,56 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     const r = resultadoDaConta(codigo);
     if (r) lista.forEach((v, k) => (valores.get(r)![k]! += v));
   }
-  return { valores, referencia, dre };
+  return { valores, referencia, dre, bases };
+}
+
+/**
+ * As premissas do cenário inteiro (13/10/2026): por unidade e conta da DRE ("u|código"), os doze meses das tabelas (as de
+ * Global e Mercantil somadas) e as bases dos rateios ("CHAVE|DESTINO"), somadas em todas as tabelas.
+ */
+export function calcularPremissas(est: LinhaEstrutura[], linhas: LinhaDoCadastro[], ano: number, gravadas: Array<{ unidade: number; venda: string; chave: string; mes: number; valor: unknown }>) {
+  const dados = new Map(gravadas.map((p) => [`${p.unidade}|${p.venda}|${p.chave}|${p.mes}`, Number(p.valor)]));
+  const somas = new Map<string, number[]>();
+  const bases = new Map<string, number[]>();
+  const juntar = (m: Map<string, number[]>, k: string, lista: number[]) => {
+    const s = m.get(k) ?? Array<number>(12).fill(0);
+    lista.forEach((x, i) => (s[i] += x));
+    m.set(k, s);
+  };
+  for (const u of UNIDADES_PREMISSAS) {
+    for (const v of VENDAS_DA_UNIDADE[u]) {
+      const r = calcularTabela(est, linhas, u, ano, (chave, mes) => dados.get(`${u}|${v}|${chave}|${mes}`), v);
+      for (const [codigo, lista] of r.dre) juntar(somas, `${u}|${codigo}`, lista);
+      for (const [chave, lista] of r.bases) juntar(bases, chave, lista);
+    }
+  }
+  return { somas, bases, juntar };
 }
 
 /**
  * Recalcula a DRE do cenário analítico (13/10/2026): as contas das premissas de cada unidade (as de Global e Mercantil
- * somadas) e as dos centros de custo, alocadas às unidades pelo balde e pelos rateios (centrosCenario.ts), substituem a
- * DRE inteira do cenário, e os totais e o Consolidado se recalculam pela Estrutura da DRE. Como a DRE do analítico não
- * se edita, ela é sempre a soma do que as premissas e os centros dão.
+ * somadas) e as dos grupos de centros de custo, alocadas às unidades pelo balde e pelos rateios — com os percentuais
+ * das bases das premissas (centrosCenario.ts) —, substituem a DRE inteira do cenário, e os totais e o Consolidado se
+ * recalculam pela Estrutura da DRE. Como a DRE do analítico não se edita, ela é sempre a soma das premissas e dos centros.
  */
 export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   const cenario = await tx.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true } });
-  const [est, linhas, gravadas, centros, valoresCentros, realizado] = await Promise.all([
+  const [est, linhas, gravadas, grupos, valoresCentros] = await Promise.all([
     estrutura(),
     linhasDoCadastro(),
     tx.cenarioPremissa.findMany({ where: { cenarioId } }),
-    centrosDoCadastro(),
+    gruposDoCadastro(),
     tx.cenarioCentro.findMany({ where: { cenarioId }, include: { linhaDRE: { select: { codigo: true } } } }),
-    percentuaisDoRealizado(),
   ]);
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
-  const dados = new Map(gravadas.map((p) => [`${p.unidade}|${p.venda}|${p.chave}|${p.mes}`, Number(p.valor)]));
-  // Por unidade, conta e mês.
-  const somas = new Map<string, number[]>();
-  const somar = (u: number, codigo: string, lista: number[]) => {
-    const s = somas.get(`${u}|${codigo}`) ?? Array<number>(12).fill(0);
-    lista.forEach((x, k) => (s[k] += x));
-    somas.set(`${u}|${codigo}`, s);
-  };
-  for (const u of UNIDADES_PREMISSAS) {
-    for (const v of VENDAS_DA_UNIDADE[u]) {
-      const { dre } = calcularTabela(est, linhas, u, cenario.ano, (chave, mes) => dados.get(`${u}|${v}|${chave}|${mes}`));
-      for (const [codigo, lista] of dre) somar(u, codigo, lista);
-    }
-  }
-  // Os centros de custo: a Produção rateada pelo m³ produzido do cenário em cada mês.
-  const m3 = (u: number) => somas.get(`${u}|${C.PRODUCAO_M3}`) ?? Array<number>(12).fill(0);
-  const percentuais = percentuaisDoCenario(realizado.percentuais, m3(1), m3(2));
+  const { somas, bases, juntar } = calcularPremissas(est, linhas, cenario.ano, gravadas);
   const alocados = alocarCentros(
     est,
-    centros,
-    valoresCentros.map((x) => ({ centroId: x.centroCustoId, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
-    percentuais,
+    grupos,
+    valoresCentros.map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
+    percentuaisDasBases(bases),
   );
-  for (const [k, lista] of alocados) {
-    const [u, codigo] = k.split("|");
-    somar(Number(u), codigo, lista);
-  }
+  for (const [k, lista] of alocados) juntar(somas, k, lista);
   const novos: Array<{ cenarioId: string; visao: number; linhaDREId: string; mes: number; valor: Prisma.Decimal }> = [];
   for (const [k, lista] of somas) {
     const [us, codigo] = k.split("|");

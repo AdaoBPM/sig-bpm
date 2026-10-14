@@ -425,7 +425,6 @@ model CentroCusto {
   @@index([nomeControladoria])
   @@index([balde])
   @@map("centros_custo")
-  cenariosCentros CenarioCentro[]
 }
 
 model ContaResultado {
@@ -2015,21 +2014,20 @@ model CenarioPremissa {
 }
 
 /// Os valores dos centros de custo de um cenário analítico (13/10/2026): o valor de cada conta da DRE (mão de obra,
-/// terceirizados e gastos gerais diretos, indiretos e comerciais) de cada centro, mês a mês, alocado às unidades pelo
-/// balde do centro e pelos rateios do fechamento (centrosCenario.ts).
+/// terceirizados e gastos gerais diretos, indiretos e comerciais) de cada grupo de centros da Controladoria (o nome
+/// da Controladoria), mês a mês, alocado às unidades pelo balde do grupo e pelos rateios do fechamento, com as bases
+/// das premissas (centrosCenario.ts).
 model CenarioCentro {
-  cenarioId     String      @map("cenario_id")
-  centroCustoId String      @map("centro_custo_id")
-  linhaDREId    String      @map("linha_dre_id")
-  mes           Int
-  valor         Decimal
+  cenarioId  String   @map("cenario_id")
+  grupo      String
+  linhaDREId String   @map("linha_dre_id")
+  mes        Int
+  valor      Decimal
 
-  cenario     Cenario     @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
-  centroCusto CentroCusto @relation(fields: [centroCustoId], references: [id], onDelete: Cascade)
-  linhaDRE    LinhaDRE    @relation(fields: [linhaDREId], references: [id], onDelete: Cascade)
+  cenario  Cenario  @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+  linhaDRE LinhaDRE @relation(fields: [linhaDREId], references: [id], onDelete: Cascade)
 
-  @@id([cenarioId, centroCustoId, linhaDREId, mes])
-  @@index([centroCustoId])
+  @@id([cenarioId, grupo, linhaDREId, mes])
   @@index([linhaDREId])
   @@map("cenarios_centros")
 }
