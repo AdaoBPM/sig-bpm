@@ -40,6 +40,8 @@ cenariosRoutes.get("/:id/edicao", autenticacao, tela("resultados", "editar", (r:
 cenariosRoutes.put("/:id/edicao/valores", autenticacao, express.json({ limit: "2mb" }), tela("resultados", "editar", abaDaVisaoDoCorpo), asyncHandler(c.gravarValores));
 cenariosRoutes.get("/:id/reajustes", autenticacao, tela("reajustes", "ler", "historico"), asyncHandler(c.reajustes));
 cenariosRoutes.post("/:id/referencia/realizado", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaRealizado));
+// As realocações das movimentações fora dos padrões, na aba Referência (14/10/2026).
+cenariosRoutes.put("/:id/realocacoes", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.gravarRealocacoes));
 cenariosRoutes.post("/:id/referencia/cenario", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaCenario));
 // O versionamento (13/10/2026): Congelar Versão, Reabrir Versão e Criar Revisão.
 cenariosRoutes.post("/:id/versao", autenticacao, tela("resultados", "editar"), asyncHandler(c.congelarVersao));

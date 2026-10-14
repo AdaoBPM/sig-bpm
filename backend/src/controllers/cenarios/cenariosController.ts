@@ -346,6 +346,15 @@ export const cenariosController = {
     return responder(response, () => cenariosService.gravarComparativo(c, corpo.data, usuario(request)));
   },
 
+  /** As realocações das movimentações fora dos padrões (14/10/2026): o grupo de centros de cada conta, ou nulo. */
+  gravarRealocacoes(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z.object({ decisoes: z.record(z.string().max(300), z.string().trim().min(1).max(200).nullable()) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Realocações inválidas." });
+    return responder(response, () => cenariosService.gravarRealocacoes(c, corpo.data.decisoes, usuario(request)));
+  },
+
   /** As contas acima da variação máxima do comparativo, por visão, com as justificativas. */
   justificativas(request: Request, response: Response) {
     const c = id(request, response);

@@ -44,6 +44,7 @@ import {
   VENDA_EXTRA,
 } from "./investimentosCenario.js";
 import { referenciaDoRealizado } from "./referenciaAnalitico.js";
+import { diferencasDasDecisoes, lerRealocacoes, type Realocacoes } from "./realocacoesCenario.js";
 import { distribuirLotacao, QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } from "./lotacaoCenario.js";
 
 /**
@@ -769,7 +770,23 @@ export const cenariosService = {
     });
     const nomeArquivo = media ? `Média do realizado de ${ano} (${periodo}), nos 12 meses` : `Resultado realizado de ${ano} (${periodo})`;
     if (analitico) {
-      const ref = await referenciaDoRealizado(ano, fechadas.map((f) => f.mes));
+      // As decisões de realocação das movimentações fora dos padrões ficam entre as cargas (14/10/2026).
+      const anteriores = lerRealocacoes(c.realocacoes);
+      const ref = await referenciaDoRealizado(ano, fechadas.map((f) => f.mes), anteriores.decisoes);
+      // Os valores de cada movimentação nos doze meses do cenário: mês a mês, ou a média do período em todos.
+      const nosMeses = (meses12: number[]) => (media ? doze.map(() => meses12.reduce((s, v) => s + v, 0) / fechadas.length) : meses12);
+      const movimentacoes = ref.movimentacoes.map(({ meses, ...m }) => ({ ...m, valores: nosMeses(meses) }));
+      const realocacoes: Realocacoes = {
+        ...anteriores,
+        referencia: nomeArquivo,
+        movimentacoes,
+        aplicadas: Object.fromEntries(
+          movimentacoes.flatMap((m) => {
+            const a = ref.aplicadas.get(m.chave);
+            return a ? [[m.chave, { ...a, valores: m.valores }]] : [];
+          }),
+        ),
+      };
       const idDaConta = new Map((await estruturaDRE()).map((l) => [l.codigo, l.id]));
       const grupos = await gruposDoCadastro();
       // Na média, cada valor mensal vira a soma no período ÷ o número de meses, nos doze meses.
@@ -820,7 +837,7 @@ export const cenariosService = {
           const semQuadros = indicadores.filter((v) => !QUADROS_DE_LOTACAO.has(v.nome));
           await gravarEmLotes(semQuadros, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((v) => ({ cenarioId: id, ...v, origem: "IMPORTADO" as const })) }));
           await calcularAnalitico(tx, id);
-          await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
+          await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date(), realocacoes: realocacoes as unknown as Prisma.InputJsonValue } });
         },
         { timeout: 300_000 },
       );
@@ -849,6 +866,62 @@ export const cenariosService = {
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, referencia: media ? "media do realizado" : "realizado", ano, meses, indicadores: indicadores.length } });
     await prisma.cenarioReajuste.create({ data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: nomeArquivo } });
     return { ...(await this.obter(id, usuario)), avisos: [] as string[] };
+  },
+
+  /**
+   * As realocações das movimentações fora dos padrões (14/10/2026): o grupo de centros de cada conta da última carga do
+   * realizado (nulo: fica fora do cenário). A diferença entra nos centros do cenário (e sai do grupo de antes), e a DRE
+   * se recalcula; as decisões valem nas próximas cargas.
+   */
+  async gravarRealocacoes(id: string, decisoes: Record<string, string | null>, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(c, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const r = lerRealocacoes(c.realocacoes);
+    if (!r.movimentacoes.length) throw new CenarioError(400, "Não há movimentações fora dos padrões: carregue o resultado realizado na aba Referência.");
+    for (const [chave, grupo] of Object.entries(decisoes)) {
+      const m = r.movimentacoes.find((x) => x.chave === chave);
+      if (!m) throw new CenarioError(400, "A lista das movimentações mudou: abra o modal de novo.");
+      if (grupo && !m.destinos.some((d) => d.grupo === grupo)) {
+        throw new CenarioError(400, `O grupo ${grupo} não tem a conta ${m.linha.descricao} (${m.linha.atribuicao}): escolha outro centro de custo.`);
+      }
+    }
+    const { diferencas, aplicadas } = diferencasDasDecisoes(r, decisoes);
+    const idDaConta = new Map((await estruturaDRE()).map((l) => [l.codigo, l.id]));
+    const prisma = getPrismaClient();
+    await prisma.$transaction(
+      async (tx) => {
+        for (const [k, v] of diferencas) {
+          const [grupo, conta, mes] = k.split("|");
+          const linhaDREId = idDaConta.get(conta);
+          if (!linhaDREId || Math.abs(v) < 0.00005) continue;
+          const chave = { cenarioId: id, grupo, linhaDREId, mes: Number(mes) };
+          const atual = await tx.cenarioCentro.findUnique({ where: { cenarioId_grupo_linhaDREId_mes: chave } });
+          const valor = new Prisma.Decimal(((atual ? Number(atual.valor) : 0) + v).toFixed(4));
+          if (valor.isZero()) {
+            if (atual) await tx.cenarioCentro.delete({ where: { cenarioId_grupo_linhaDREId_mes: chave } });
+          } else await tx.cenarioCentro.upsert({ where: { cenarioId_grupo_linhaDREId_mes: chave }, create: { ...chave, valor }, update: { valor } });
+        }
+        await calcularAnalitico(tx, id);
+        const novas: Realocacoes = { ...r, decisoes: { ...r.decisoes, ...decisoes }, aplicadas, atualizadoEm: new Date().toISOString(), atualizadoPor: usuario.nome };
+        await tx.cenario.update({ where: { id }, data: { realocacoes: novas as unknown as Prisma.InputJsonValue } });
+      },
+      { timeout: 120_000 },
+    );
+    const realocadas = Object.keys(aplicadas).length;
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario_realocacoes",
+      entidadeId: id,
+      metadados: { cenario: c.nome, contas: r.movimentacoes.length, realocadas },
+    });
+    await prisma.cenarioReajuste.create({
+      data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "REFERENCIA", descricao: `Realocações das movimentações fora dos padrões (${realocadas} de ${r.movimentacoes.length} contas)` },
+    });
+    return this.obter(id, usuario);
   },
 
   /**
@@ -881,7 +954,8 @@ export const cenariosService = {
         const indicadores = await tx.cenarioIndicador.findMany({ where: { cenarioId: origem.id } });
         await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((r) => ({ ...r, cenarioId: id })) }));
         await calcularAnalitico(tx, id);
-        await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date() } });
+        // As realocações da origem vêm junto: os centros copiados já têm o que ela realocou (14/10/2026).
+        await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date(), realocacoes: origem.realocacoes ?? Prisma.DbNull } });
       },
       { timeout: 300_000 },
     );
@@ -1036,6 +1110,7 @@ export const cenariosService = {
             importadoEm: origem.importadoEm,
             comparadoComId: origem.comparadoComId,
             variacoesMaximas: origem.variacoesMaximas ?? undefined,
+            realocacoes: origem.realocacoes ?? undefined,
             versao,
             familiaId: familia,
             revisaoDeId: origem.id,

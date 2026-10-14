@@ -43,6 +43,14 @@ export function ConfiguracoesContent() {
                   investimentos e os indicadores dele. Depois, tudo se edita na tela Premissas. Os avisos do que não coube aparecem embaixo.
                 </li>
                 <li>A Correspondência Tarefa × Linha, que leva os custos do realizado às linhas, fica nos Cadastros da Controladoria / Linhas, no botão “Tarefas”.</li>
+                <li>
+                  Se a carga do realizado encontrar movimentações fora dos padrões das premissas (mão de obra e gastos gerais sem centro de custo, em
+                  centros fora do cenário — estoque, investimento, obras — ou numa conta fora do grupo do centro), o quadro “Movimentações Fora dos
+                  Padrões” aparece na aba Referência. Em “Realocar”, cada conta mostra a alocação na DRE (Departamento, Atribuição e Conta de Resultado),
+                  o valor do período e o centro de custo que a recebe (só os grupos com a mesma atribuição e conta; num centro de outro departamento,
+                  ela entra como do departamento dele). Sem centro, a conta fica fora do cenário, e gravar assim pede confirmação. As realocações ficam
+                  registradas no quadro, entram nos centros do cenário (a DRE se recalcula) e valem nas próximas cargas do realizado, ainda editáveis.
+                </li>
               </>
             ) : (
               <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>

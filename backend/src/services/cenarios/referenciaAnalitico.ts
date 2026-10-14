@@ -3,6 +3,7 @@ import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
 import { contasDoGrupo, ehContaDeCentro, gruposDoCadastro, nomeDoGrupo } from "./centrosCenario.js";
 import { CONTAS_DEPRECIACAO, contasExtra, UNIDADES_EXTRA, VENDA_BASE, VENDA_EXTRA } from "./investimentosCenario.js";
+import type { MovimentacaoForaDoPadrao } from "./realocacoesCenario.js";
 import { C, contasDaLinha, LINHAS_COM_ARMADURA, LINHAS_COM_METALURGIA, LIQUIDA_DA_BRUTA, linhasDoCadastro, UNIDADES_PREMISSAS, VENDAS_DA_UNIDADE, type LinhaDoCadastro, type UnidadePremissa, type Venda } from "./premissasCenario.js";
 
 /**
@@ -72,14 +73,21 @@ export type ReferenciaRealizada = {
   centros: Array<{ grupo: string; codigo: string; mes: number; valor: number }>;
   /** A depreciação (BASE) e o extra-operacional (EXTRA) das unidades, mês a mês ("u|conta"). */
   mensais: Array<{ venda: typeof VENDA_BASE | typeof VENDA_EXTRA; unidade: number; chave: string; mes: number; valor: number }>;
-  /** O que não coube (receita sem volume, custos sem linha, centros fora do cenário). */
+  /** O que não coube (receita sem volume, custos sem linha…). */
   avisos: string[];
+  /**
+   * As movimentações fora dos padrões das premissas (14/10/2026): a mão de obra e os gastos gerais que não caem num
+   * grupo de centros do cenário, por conta, com os valores de cada mês (1 a 12) — no lugar dos avisos de antes.
+   */
+  movimentacoes: Array<Omit<MovimentacaoForaDoPadrao, "valores"> & { meses: number[] }>;
+  /** As decisões que entraram nos centros desta carga (a conta → o grupo e a conta de destino). */
+  aplicadas: Map<string, { grupo: string; conta: string }>;
 };
 
 const reais = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 /** A referência realizada dos meses `meses` do exercício `ano` (os das competências pedidas). */
-export async function referenciaDoRealizado(ano: number, meses: number[]): Promise<ReferenciaRealizada> {
+export async function referenciaDoRealizado(ano: number, meses: number[], decisoes: Record<string, string | null> = {}): Promise<ReferenciaRealizada> {
   const prisma = getPrismaClient();
   const comps = await prisma.competencia.findMany({ where: { ano, mes: { in: meses } }, select: { id: true, mes: true } });
   const ids = comps.map((c) => c.id);
@@ -88,7 +96,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   const obra = { select: { codigo: true, tipoVenda: true } } as const;
   const linhaSel = { select: { codigo: true } } as const;
   const unidadeSel = { select: { codigo: true } } as const;
-  const [est, linhas, grupos, corr, unidades, centros, semCentro, producoes, pistas, metalurgias, armaduras, montagens, acompanhamentos, itens, requisicoes, notas, contas] = await Promise.all([
+  const [est, linhas, grupos, corr, unidades, centros, lancamentosDeCentros, producoes, pistas, metalurgias, armaduras, montagens, acompanhamentos, itens, requisicoes, notas, contas] = await Promise.all([
     estrutura(),
     linhasDoCadastro(),
     gruposDoCadastro(),
@@ -101,10 +109,19 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
       where: { ...naComp, centroCustoId: { not: null } },
       select: { competenciaId: true, valor: true, linhaDRE: { select: { codigo: true, tipo: true } }, centroCusto: { select: { nomeControladoria: true, nomeRM: true, codigoRM: true } } },
     }),
-    // Os lançamentos sem centro de custo nas contas de centros: ficam de fora (o aviso).
+    // Os lançamentos das contas de centros (14/10/2026): os que não caem num grupo do cenário são as movimentações fora
+    // dos padrões, que o usuário realoca.
     prisma.lancamentoContabil.findMany({
-      where: { ...naComp, centroCustoId: null, OR: [".MOD.", ".MOI.", ".GGD.", ".GGI.", ".GGC."].map((a) => ({ linhaDRE: { codigo: { contains: a } } })) },
-      select: { valorMovimento: true, linhaDRE: { select: { codigo: true, tipo: true } } },
+      where: { ...naComp, OR: [".MOD.", ".MOI.", ".GGD.", ".GGI.", ".GGC."].map((a) => ({ linhaDRE: { codigo: { contains: a } } })) },
+      select: {
+        competenciaId: true,
+        valorMovimento: true,
+        codigoCentroCusto: true,
+        nomeCentroCusto: true,
+        linhaDRE: { select: { codigo: true, tipo: true } },
+        contaResultado: { select: { reduzido: true, descricao: true } },
+        centroCusto: { select: { nomeControladoria: true, nomeRM: true, codigoRM: true } },
+      },
     }),
     prisma.producao.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel, obra, unidadeNegocio: unidadeSel } }),
     prisma.producaoPista.findMany({ where: naComp, select: { quantidade: true, linha: linhaSel, unidadeNegocio: unidadeSel } }),
@@ -334,21 +351,63 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   // as contas que o cenário não usa nos centros) fica de fora.
   const porGrupo = new Map(grupos.map((g) => [g.grupo, new Set(contasDoGrupo(est, g).map((l) => l.codigo))]));
   const somaCentros = new Map<string, number>();
-  let foraDosCentros = 0;
+  // O que não cai num grupo do cenário vira movimentação fora dos padrões (abaixo, pelos lançamentos).
   const noGrupo = (grupo: string | null, codigo: string, competenciaId: string, v: number) => {
-    if (!grupo || !porGrupo.get(grupo)?.has(codigo)) {
-      foraDosCentros += v;
-      return;
-    }
+    if (!grupo || !porGrupo.get(grupo)?.has(codigo)) return;
     somar(somaCentros, `${grupo}|${codigo}|${mesDe.get(competenciaId)}`, v);
   };
   // As outras contas dos centros (a receita, as matérias primas, a depreciação…) vêm das premissas, dos investimentos e
   // do extra-operacional.
   for (const r of centros) if (r.linhaDRE.tipo === "ITEM" && ehContaDeCentro(r.linhaDRE.codigo)) noGrupo(nomeDoGrupo(r.centroCusto!), r.linhaDRE.codigo, r.competenciaId, Number(r.valor));
-  if (Math.abs(foraDosCentros) >= 1) avisos.push(`Centros de custo: ${reais(foraDosCentros)} de mão de obra e gastos gerais dos centros de estoque e de investimento, ou em contas fora do grupo da DRE do centro, ficam de fora.`);
-  const semCentroDeCusto = semCentro.filter((r) => r.linhaDRE?.tipo === "ITEM").reduce((s, r) => s + Number(r.valorMovimento), 0);
-  if (Math.abs(semCentroDeCusto) >= 1)
-    avisos.push(`Centros de custo: ${reais(semCentroDeCusto)} de lançamentos sem centro de custo em mão de obra direta e indireta e gastos gerais ficam de fora (a mão de obra terceirizada vai nas premissas).`);
+  // As movimentações fora dos padrões (14/10/2026; antes, dois avisos com os totais): os lançamentos das contas de
+  // centros sem centro de custo, em centros fora do cenário ou em contas fora do grupo do centro, por conta contábil e
+  // conta da DRE. Cada uma pode ir a um grupo que tenha a mesma atribuição e conta no grupo da DRE dele.
+  const daEstrutura = new Map(est.map((l) => [l.codigo, l]));
+  const foraDoPadrao = new Map<string, Omit<MovimentacaoForaDoPadrao, "valores"> & { meses: number[] }>();
+  for (const l of lancamentosDeCentros) {
+    const codigo = l.linhaDRE?.codigo;
+    if (!codigo || l.linhaDRE?.tipo !== "ITEM" || !ehContaDeCentro(codigo)) continue;
+    const grupo = l.centroCusto ? nomeDoGrupo(l.centroCusto) : null;
+    if (grupo && porGrupo.get(grupo)?.has(codigo)) continue;
+    const chaveM = `${l.contaResultado.reduzido}|${codigo}`;
+    let m = foraDoPadrao.get(chaveM);
+    if (!m) {
+      const e = daEstrutura.get(codigo);
+      const [, atrib, conta] = codigo.split(".");
+      m = {
+        chave: chaveM,
+        conta: { reduzido: l.contaResultado.reduzido, descricao: l.contaResultado.descricao },
+        linha: { codigo, departamento: e?.grupo ?? codigo.split(".")[0], atribuicao: e?.atribuicao ?? atrib, descricao: e?.descricao ?? conta },
+        origens: [],
+        total: 0,
+        meses: Array<number>(12).fill(0),
+        destinos: grupos.flatMap((g) => {
+          const destino = `${g.grupoDRE}.${atrib}.${conta}`;
+          return porGrupo.get(g.grupo)?.has(destino) ? [{ grupo: g.grupo, conta: destino, departamento: daEstrutura.get(destino)?.grupo ?? g.grupoDRE }] : [];
+        }),
+      };
+      foraDoPadrao.set(chaveM, m);
+    }
+    const origem = l.centroCusto
+      ? `${[l.centroCusto.codigoRM, grupo].filter(Boolean).join(" ")}${porGrupo.has(grupo!) ? " (conta fora do grupo)" : " (centro fora do cenário)"}`
+      : l.codigoCentroCusto
+        ? `${l.codigoCentroCusto} ${l.nomeCentroCusto ?? ""} (fora do cadastro)`.replace(/\s+/g, " ")
+        : "Sem centro de custo";
+    if (!m.origens.includes(origem)) m.origens.push(origem);
+    const v = Number(l.valorMovimento);
+    m.total += v;
+    m.meses[(mesDe.get(l.competenciaId) ?? 1) - 1] += v;
+  }
+  const movimentacoes = [...foraDoPadrao.values()].filter((m) => m.meses.some((v) => Math.abs(v) >= 0.005)).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  // As decisões gravadas (mantidas entre as cargas) entram nos grupos escolhidos.
+  const aplicadas = new Map<string, { grupo: string; conta: string }>();
+  for (const m of movimentacoes) {
+    const grupo = decisoes[m.chave];
+    const alvo = grupo ? m.destinos.find((d) => d.grupo === grupo) : undefined;
+    if (!alvo) continue;
+    m.meses.forEach((v, k) => v && somar(somaCentros, `${alvo.grupo}|${alvo.conta}|${k + 1}`, v));
+    aplicadas.set(m.chave, alvo);
+  }
   const centrosDoCenario = [...somaCentros].map(([k, valor]) => {
     const [grupo, codigo, mes] = k.split("|");
     return { grupo, codigo, mes: Number(mes), valor };
@@ -388,7 +447,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
   }
   if (fora.length) avisos.push(`Contas do realizado que o cenário não tem (ficam fora da DRE dele): ${fora.join("; ")}.`);
 
-  return { premissas, centros: centrosDoCenario, mensais, avisos };
+  return { premissas, centros: centrosDoCenario, mensais, avisos, movimentacoes, aplicadas };
 }
 
 const NOME_DA_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços" };

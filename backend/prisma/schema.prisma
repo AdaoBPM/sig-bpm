@@ -1935,6 +1935,10 @@ model Cenario {
   comparadoComId   String?  @map("comparado_com_id")
   /// A variação máxima (em %) de cada total da DRE no comparativo: { código do total: percentual }.
   variacoesMaximas Json?    @map("variacoes_maximas")
+  /// As movimentações do realizado fora dos padrões das premissas (cenário analítico, 14/10/2026): as da última carga
+  /// do resultado realizado, as decisões de realocação (o grupo de centros de custo de cada conta; mantidas entre as
+  /// cargas) e o que está somado nos centros por elas. Ver services/cenarios/realocacoesCenario.ts.
+  realocacoes      Json?    @map("realocacoes")
   /// O versionamento (13/10/2026): a versão do cenário (0 = VER00); a família (o id da VER00; nulo na própria VER00) e
   /// a versão de que esta é revisão. Salvar Versão congela o cenário (como o fechamento de uma competência): a DRE, os
   /// indicadores manuais e a referência não se editam mais; Criar Revisão copia o cenário salvo numa versão nova.

@@ -1,0 +1,85 @@
+/**
+ * As movimentações do realizado fora dos padrões das premissas (cenário analítico, 14/10/2026): os lançamentos de mão
+ * de obra e de gastos gerais que a referência realizada não leva aos grupos de centros de custo — sem centro de custo
+ * no balancete (ou num centro fora do cadastro, como os de obra), em centros de estoque e de investimento, ou numa
+ * conta fora do grupo da DRE do centro. A aba Referência lista cada conta (a conta contábil, com a alocação dela na
+ * DRE) e o usuário escolhe o grupo de centros que a recebe; sem grupo, fica fora do cenário.
+ *
+ * As decisões ficam no cenário (`cenarios.realocacoes`) e valem nas próximas cargas do realizado (o modal as mostra,
+ * editáveis). Ao mudar uma decisão depois da carga, a diferença entra (e sai) dos valores dos centros do cenário, sem
+ * mexer no que foi digitado neles.
+ */
+
+/** Uma conta com movimentações fora dos padrões, no período da carga. */
+export type MovimentacaoForaDoPadrao = {
+  /** A conta contábil e a conta da DRE ("reduzido|codigo da linha da DRE"). */
+  chave: string;
+  conta: { reduzido: string; descricao: string };
+  /** A alocação na DRE: o departamento, a atribuição e a conta de resultado. */
+  linha: { codigo: string; departamento: string; atribuicao: string; descricao: string };
+  /** De onde vêm os lançamentos (sem centro de custo, ou os centros fora do cenário). */
+  origens: string[];
+  /** O total movimentado no período. */
+  total: number;
+  /** Os valores que entram nos doze meses do cenário (mês a mês, ou a média replicada). */
+  valores: number[];
+  /** Os grupos de centros que podem recebê-la: os que têm a mesma atribuição e conta no grupo da DRE deles. */
+  destinos: Array<{ grupo: string; conta: string; departamento: string }>;
+};
+
+/** O que está somado nos centros do cenário por uma decisão (para tirar se ela mudar). */
+export type RealocacaoAplicada = { grupo: string; conta: string; valores: number[] };
+
+export type Realocacoes = {
+  /** A carga do realizado que gerou a lista (o nome da referência). */
+  referencia: string | null;
+  movimentacoes: MovimentacaoForaDoPadrao[];
+  /** O grupo escolhido para cada conta (nulo: fica fora do cenário). Valem nas próximas cargas. */
+  decisoes: Record<string, string | null>;
+  aplicadas: Record<string, RealocacaoAplicada>;
+  atualizadoEm: string | null;
+  atualizadoPor: string | null;
+};
+
+export const SEM_REALOCACOES: Realocacoes = { referencia: null, movimentacoes: [], decisoes: {}, aplicadas: {}, atualizadoEm: null, atualizadoPor: null };
+
+/** As realocações gravadas no cenário (o JSON da coluna), com os campos que faltarem. */
+export function lerRealocacoes(json: unknown): Realocacoes {
+  if (!json || typeof json !== "object") return { ...SEM_REALOCACOES };
+  const r = json as Partial<Realocacoes>;
+  return {
+    referencia: r.referencia ?? null,
+    movimentacoes: Array.isArray(r.movimentacoes) ? r.movimentacoes : [],
+    decisoes: r.decisoes && typeof r.decisoes === "object" ? r.decisoes : {},
+    aplicadas: r.aplicadas && typeof r.aplicadas === "object" ? r.aplicadas : {},
+    atualizadoEm: r.atualizadoEm ?? null,
+    atualizadoPor: r.atualizadoPor ?? null,
+  };
+}
+
+/**
+ * As diferenças nos centros do cenário ao trocar as decisões ("grupo|conta|mês" → valor a somar) e as aplicadas novas.
+ * Uma decisão que não muda fica como está; a que muda tira o valor do grupo antigo e põe no novo.
+ */
+export function diferencasDasDecisoes(r: Realocacoes, decisoes: Record<string, string | null>) {
+  const diferencas = new Map<string, number>();
+  const somar = (a: RealocacaoAplicada, sinal: 1 | -1) =>
+    a.valores.forEach((v, k) => v && diferencas.set(`${a.grupo}|${a.conta}|${k + 1}`, (diferencas.get(`${a.grupo}|${a.conta}|${k + 1}`) ?? 0) + sinal * v));
+  const aplicadas: Record<string, RealocacaoAplicada> = {};
+  for (const m of r.movimentacoes) {
+    const grupo = m.chave in decisoes ? decisoes[m.chave] : (r.decisoes[m.chave] ?? null);
+    const alvo = grupo ? m.destinos.find((d) => d.grupo === grupo) : undefined;
+    const antiga = r.aplicadas[m.chave];
+    if (antiga && alvo && antiga.grupo === alvo.grupo && antiga.conta === alvo.conta) {
+      aplicadas[m.chave] = antiga;
+      continue;
+    }
+    if (antiga) somar(antiga, -1);
+    if (alvo) {
+      const nova = { grupo: alvo.grupo, conta: alvo.conta, valores: m.valores };
+      somar(nova, 1);
+      aplicadas[m.chave] = nova;
+    }
+  }
+  return { diferencas, aplicadas };
+}

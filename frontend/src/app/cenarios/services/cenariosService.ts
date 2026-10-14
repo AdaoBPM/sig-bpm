@@ -56,6 +56,28 @@ export type GrupoDeCentros = {
   total: number;
 };
 /** Uma correspondência tarefa × linha (14/10/2026): a filial (nula: qualquer), a tarefa e o código da linha. */
+/** Uma conta com movimentações do realizado fora dos padrões das premissas (14/10/2026). */
+export type MovimentacaoForaDoPadrao = {
+  chave: string;
+  conta: { reduzido: string; descricao: string };
+  /** A alocação na DRE: o departamento, a atribuição e a conta de resultado. */
+  linha: { codigo: string; departamento: string; atribuicao: string; descricao: string };
+  origens: string[];
+  /** O total movimentado no período da carga. */
+  total: number;
+  valores: number[];
+  /** Os grupos de centros que podem recebê-la. */
+  destinos: Array<{ grupo: string; conta: string; departamento: string }>;
+};
+export type Realocacoes = {
+  referencia: string | null;
+  movimentacoes: MovimentacaoForaDoPadrao[];
+  /** O grupo de centros escolhido para cada conta (nulo: fora do cenário); valem nas próximas cargas. */
+  decisoes: Record<string, string | null>;
+  aplicadas: Record<string, { grupo: string; conta: string; valores: number[] }>;
+  atualizadoEm: string | null;
+  atualizadoPor: string | null;
+};
 export type CorrespondenciaDeTarefa = { filial: number | null; tarefa: string; linha: string };
 export type Correspondencias = {
   itens: CorrespondenciaDeTarefa[];
@@ -145,6 +167,8 @@ export type Cenario = {
   nomeTravado: boolean;
   /** Quem criou o cenário e os Administradores mudam a visualização. */
   podeMudarVisualizacao: boolean;
+  /** As movimentações fora dos padrões da última carga do realizado e as realocações delas (analíticos, 14/10/2026). */
+  realocacoes: Realocacoes | null;
   criadoEm: string;
   /** As visões da DRE com valor (0 Consolidado, 1 a 5 as unidades). */
   visoes: number[];
@@ -299,6 +323,9 @@ export const cenariosService = {
   comparativo: async (id: string) => (await api.get<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`)).data.data,
   gravarComparativo: async (id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }) =>
     (await api.put<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`, dados)).data.data,
+  /** Grava as realocações das movimentações fora dos padrões (o grupo de cada conta, ou nulo). */
+  gravarRealocacoes: async (id: string, decisoes: Record<string, string | null>) =>
+    (await api.put<{ data: Cenario }>(`/proxy/cenarios/${id}/realocacoes`, { decisoes })).data.data,
   justificativas: async (id: string) => (await api.get<{ data: Justificativas }>(`/proxy/cenarios/${id}/justificativas`)).data.data,
   /** Grava a justificativa de uma linha numa visão; o texto vazio a apaga. */
   gravarJustificativa: async (id: string, visao: number, linha: string, texto: string) => {

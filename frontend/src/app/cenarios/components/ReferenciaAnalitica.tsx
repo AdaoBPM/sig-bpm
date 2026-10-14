@@ -16,6 +16,7 @@ import { plural } from "@/lib/texto";
 import { cenariosService, rotuloVersao, type Cenario } from "../services/cenariosService";
 import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
 import { descreverFechadas } from "./descreverFechadas";
+import { QuadroDeRealocacoes } from "./RealocacoesDialog";
 import { botaoPrimario, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -218,6 +219,9 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
           </ul>
         </div>
       ) : null}
+
+      {/* As movimentações fora dos padrões da última carga do realizado e as realocações delas (14/10/2026). */}
+      <QuadroDeRealocacoes cenario={cenario} podeEditar={podeEditar && !travado} />
 
       {confirmar ? (
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(false) : undefined)}>
