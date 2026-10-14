@@ -70,14 +70,14 @@
   --chart-4: #9ca3af;
   --chart-5: #d1d5db;
   --radius: 0.125rem;
-  /* O menu lateral no tema Padrão: cinza escuro, chumbo (13/10/2026; antes, preto #111111). */
-  --sidebar: #2f343b;
+  /* O menu lateral no tema Padrão: o mesmo preto do Escuro (14/10/2026; de 13/10 a 14/10, cinza chumbo #2f343b). */
+  --sidebar: #111111;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffcc00;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #3e444c;
+  --sidebar-accent: #222222;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #3e444c;
+  --sidebar-border: #222222;
   --sidebar-ring: #ffcc00;
 }
 
@@ -163,7 +163,7 @@
 /*
  * Escuro: as telas em cinza escuro. A escala de cinzas se inverte (os textos gray-900 ficam quase brancos, os fundos
  * brancos ficam cinza escuros), os amarelos claros das linhas de total viram tons escuros de amarelo, e os chips de
- * cor (vermelho, verde, azul) ganham fundos escuros com o texto claro. O menu lateral continua preto.
+ * cor (vermelho, verde, azul) ganham fundos escuros com o texto claro. O menu lateral é o preto do Padrão.
  */
 [data-tema="escuro"] {
   color-scheme: dark;
@@ -213,10 +213,6 @@
   --color-blue-200: #2c4366;
   --color-blue-800: #93c5fd;
 
-  /* O menu lateral continua preto no Escuro, separado das telas em cinza escuro. */
-  --sidebar: #111111;
-  --sidebar-accent: #222222;
-  --sidebar-border: #222222;
 
   /* As partes pretas e cinzas do orçado e do comparado: brancas e cinza-claras, com o texto preto. */
   --cor-rotulo-orcado: #f3f4f6;
