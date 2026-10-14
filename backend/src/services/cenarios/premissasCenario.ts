@@ -81,7 +81,7 @@ export type LinhaDoCadastro = { codigo: string; nome: string; unidade: UnidadePr
 /**
  * As linhas que prestam serviço às outras (14/10/2026): a Metalúrgica, na Matriz, faz as peças metálicas das demais
  * linhas. Não têm demanda, receita nem custo nas premissas: os custos dela ficam com as linhas da unidade, e a
- * metalurgia que as outras linhas consomem é a Metalurgia por Unidade delas.
+ * metalurgia que as outras linhas consomem é a Metalúrgica (Interno) por Unidade delas.
  */
 export const LINHAS_DE_APOIO = new Set(["METALÚRGICA"]);
 
@@ -149,12 +149,12 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     }
     // As bases dos rateios de armadura e de metalurgia (14/10/2026), em kg por unidade da linha (o volume × a demanda).
     if (LINHAS_COM_ARMADURA.has(l.codigo)) {
-      add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura por Unidade", `kg/${undDoValor(l)}`);
-      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ARMADURA:${l.codigo}`, "Armadura no Mês", "kg", "CALCULO");
+      add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura (Interno) por Unidade", `kg/${undDoValor(l)}`);
+      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ARMADURA:${l.codigo}`, "Armadura (Interno) no Mês", "kg", "CALCULO");
     }
     if (LINHAS_COM_METALURGIA.has(l.codigo)) {
-      add("PRODUÇÃO E SERVIÇOS", g, `METALURGIA:${l.codigo}`, "Metalurgia por Unidade", `kg/${undDoValor(l)}`);
-      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_METALURGIA:${l.codigo}`, "Metalurgia no Mês", "kg", "CALCULO");
+      add("PRODUÇÃO E SERVIÇOS", g, `METALURGIA:${l.codigo}`, "Metalúrgica (Interno) por Unidade", `kg/${undDoValor(l)}`);
+      add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_METALURGIA:${l.codigo}`, "Metalúrgica (Interno) no Mês", "kg", "CALCULO");
     }
     if (l.unidade === 3) {
       add("PRODUÇÃO E SERVIÇOS", g, `ACOMPANHAMENTO:${l.codigo}`, "Acompanhamentos por Dia", "acomp./dia");

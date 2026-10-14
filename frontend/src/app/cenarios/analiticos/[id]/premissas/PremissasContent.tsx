@@ -67,7 +67,7 @@ export function PremissasContent() {
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
-              Global; Metalurgia e Armadura pelo kg de cada linha (o volume × a Metalurgia ou a Armadura por Unidade); Acompanhamento pelos
+              Global; Metalurgia e Armadura pelo kg de cada linha (o volume × a Metalúrgica (Interno) ou a Armadura (Interno) por Unidade); Acompanhamento pelos
               Acompanhamentos por Dia das linhas de Serviços (× os dias úteis). Sem base no mês, o percentual é zero, e o valor dos grupos daquela chave não entra.
             </li>
             <li>
@@ -93,7 +93,7 @@ export function PremissasContent() {
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
               Ajustes (o percentual sobre a receita bruta e líquida e o percentual sobre os custos e despesas), a Demanda Diária de cada linha (na
-              unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Armadura e a Metalurgia por Unidade (em kg por
+              unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Armadura (Interno) e a Metalúrgica (Interno) por Unidade (em kg por
               unidade da linha: kg/m³, kg/kg, kg/m²; só nas linhas que as levam), a Receita Bruta Média (na Matriz e na Filial, também a de Devoluções e
               Inventários, negativa) e os Impostos, os Custos (Matérias Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque, por conta) e
               as Despesas Variáveis de Venda, em R$ por unidade da linha.
@@ -148,7 +148,7 @@ export function PremissasContent() {
               Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
               linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nos Cadastros da Controladoria / Linhas);
               o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). A armadura e a metalurgia por
-              unidade são as das listas de cada linha ÷ o volume dela. A Metalúrgica, na Matriz, presta serviço às outras linhas e não entra nas premissas: os custos dela ficam com a Estrutura, e a metalurgia que as linhas consomem é a Metalurgia por Unidade delas.
+              unidade são as das listas de cada linha ÷ o volume dela. A Metalúrgica, na Matriz, presta serviço às outras linhas e não entra nas premissas: os custos dela ficam com a Estrutura, e a metalurgia que as linhas consomem é a Metalúrgica (Interno) por Unidade delas.
             </p>
             <p>
               Os quadros de lotação dos indicadores saem do Quadro de Lotação dos grupos de centros de custo, pela classificação de cada grupo: Direta
