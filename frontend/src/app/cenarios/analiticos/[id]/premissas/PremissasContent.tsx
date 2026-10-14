@@ -14,16 +14,19 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { AvisoRateiosSemBase, CentrosDoCenario, RateiosDoCenario } from "../../../components/CentrosDoCenario";
 import { Erro } from "../../../components/CenarioDialog";
+import { ExtraDoCenario, InvestimentosDoCenario } from "../../../components/InvestimentosDoCenario";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
 
-/** As abas das premissas: as unidades, os centros de custo e os rateios (os investimentos e o extra-operacional virão depois). */
+/** As abas das premissas: as unidades, os centros de custo, os rateios, os investimentos e o extra-operacional. */
 const ABAS = [
   { chave: "1", rotulo: "Matriz" },
   { chave: "2", rotulo: "Filial" },
   { chave: "3", rotulo: "Serviços" },
   { chave: "centros", rotulo: "Centros de Custo" },
   { chave: "rateios", rotulo: "Rateios" },
+  { chave: "investimentos", rotulo: "Investimentos" },
+  { chave: "extra", rotulo: "Extra-Operacional" },
 ];
 
 /**
@@ -38,9 +41,12 @@ export function PremissasContent() {
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const centros = aba === "centros";
   const rateios = aba === "rateios";
-  const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: !centros && !rateios });
+  const investimentos = aba === "investimentos";
+  const extra = aba === "extra";
+  const deUnidade = !centros && !rateios && !investimentos && !extra;
+  const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: deUnidade });
   const travado = !!cenario.data && estaTravado(cenario.data);
-  const podeEditar = hasPermission("cenarios_analiticos:editar") && !travado && (centros || !!consulta.data?.editavel);
+  const podeEditar = hasPermission("cenarios_analiticos:editar") && !travado && (!deUnidade || !!consulta.data?.editavel);
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -59,6 +65,17 @@ export function PremissasContent() {
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
               Global; Metalurgia pelo kg das linhas em kg; Armadura pela Armadura por Dia de cada linha; Acompanhamento pelos Acompanhamentos por Dia das linhas
               de Serviços (as duas × os dias úteis). Sem base no mês, o percentual é zero, e o valor dos grupos daquela chave não entra.
+            </li>
+            <li>
+              Na aba Investimentos, em cima, a Depreciação Base de cada unidade mês a mês (digitada: o maquinário de produção na Matriz e na Filial, o de
+              serviços em Serviços e o patrimônio em Despesas e Extra), com a depreciação dos investimentos e a total; embaixo, a lista dos investimentos.
+              {podeEditar ? " Clique em “Novo Investimento” para incluir um, ou numa linha da lista para editá-lo ou excluí-lo." : null} Cada investimento
+              tem a unidade (a conta é a de depreciação dela), a descrição, o ganho previsto, a receita bruta prevista, o mês de início, o valor total, o
+              valor pós uso e a vida útil em meses; a lista mostra a depreciação mensal e o ROI.
+            </li>
+            <li>
+              Na aba Extra-Operacional, como nos Lançamentos Manuais do fechamento, os valores mensais do imposto de renda e da contribuição social e das
+              receitas e despesas financeiras, em Despesas e Extra e no RN.
             </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
@@ -96,8 +113,8 @@ export function PremissasContent() {
             <p>
               Em Serviços, as linhas de Montagem e Vedação levam à receita de montagem e aos custos da CSM; as demais, à receita complementar e à CSC. A
               Média de Referência é a média realizada da referência do cenário (em desenvolvimento): o valor total ÷ a produção ou o serviço equivalente.
-              A mão de obra, os gastos gerais diretos e indiretos, a depreciação, as despesas e o extra-operacional virão dos centros de custo, dos
-              investimentos e do extra-operacional.
+              A mão de obra, os gastos gerais diretos e indiretos e as despesas vêm dos centros de custo; a depreciação, dos investimentos; o imposto de
+              renda, a contribuição social e o resultado financeiro, do extra-operacional.
             </p>
             <p>
               Os valores dos grupos de centros de custo vão para as unidades como no fechamento mensal, pelo balde do grupo: nos custos de produção, Matriz e
@@ -105,6 +122,11 @@ export function PremissasContent() {
               Armadura, também entre a Montagem e a Complementar de Serviços; nos custos de montagem, Obras vai para Serviços e Acompanhamento se rateia entre
               a Montagem e a Complementar; as despesas vão para Despesas e Extra. Os percentuais saem das bases das premissas (a aba Rateios). Em Serviços, os
               Acompanhamentos no Mês somam o Acompanhamento de Obra (d) da DRE.
+            </p>
+            <p>
+              A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil
+              por mês, do mês de início até o fim da vida útil (ou do ano). O ROI do investimento é (receita bruta prevista − valor total) ÷ valor total ×
+              100.
             </p>
           </>
         }
@@ -116,6 +138,10 @@ export function PremissasContent() {
         <CentrosDoCenario id={id} editavel={podeEditar} />
       ) : rateios ? (
         <RateiosDoCenario id={id} />
+      ) : investimentos ? (
+        <InvestimentosDoCenario id={id} editavel={podeEditar} />
+      ) : extra ? (
+        <ExtraDoCenario id={id} editavel={podeEditar} />
       ) : consulta.isError ? (
         <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as premissas.")} />
       ) : consulta.isPending ? (

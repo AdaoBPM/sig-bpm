@@ -9,6 +9,7 @@ import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
 import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
+import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
 import { Prisma } from "../src/generated/prisma/client.js";
 import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
 
@@ -261,5 +262,35 @@ describe("centros de custo dos cenários analíticos (13/10/2026)", () => {
       percentuais: new Map([["PRODUCAO|MATRIZ", D(1)], ["ARMADURA|MATRIZ", D(0)], ["ACOMPANHAMENTO|MONTAGEM", D(0)]]),
     });
     assert.deepEqual([...r].map(([k, v]) => [k, v.toNumber()]), [["ARMADURA", 300]]);
+  });
+});
+
+describe("investimentos e extra-operacional dos cenários analíticos (13/10/2026)", () => {
+  const inv = { unidade: 2, conta: "CPP.D.DEPRECIACAO_DO_MAQUINARIO", inicio: 7, valorTotal: 3_100_000, valorPosUso: 100_000, vidaUtil: 120, receitaBrutaPrevista: 4_000_000 };
+
+  it("a depreciação mensal = (valor total − valor pós uso) ÷ vida útil, do mês de início em diante", () => {
+    assert.equal(depreciacaoMensal(inv), 25_000);
+    assert.deepEqual(depreciacaoNosMeses(inv), [0, 0, 0, 0, 0, 0, 25_000, 25_000, 25_000, 25_000, 25_000, 25_000]);
+    // A vida útil curta acaba antes do fim do ano.
+    assert.deepEqual(depreciacaoNosMeses({ ...inv, inicio: 3, vidaUtil: 2, valorPosUso: 0, valorTotal: 1000 }), [0, 0, 500, 500, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("o ROI = (receita bruta prevista − valor total) ÷ valor total × 100; sem a receita, nulo", () => {
+    assert.equal(Math.round(roi(inv)! * 100) / 100, 29.03);
+    assert.equal(roi({ ...inv, receitaBrutaPrevista: null }), null);
+  });
+
+  it("a depreciação base, a dos investimentos e o extra-operacional vão para as contas das unidades", () => {
+    const r = calcularInvestimentosEExtra(
+      [
+        { unidade: 2, venda: "BASE", chave: "2|CPP.D.DEPRECIACAO_DO_MAQUINARIO", mes: 7, valor: 76_000 },
+        { unidade: 4, venda: "EXTRA", chave: "4|DFC.DFC.DESPESAS_BANCARIAS", mes: 1, valor: 2_100 },
+        { unidade: 2, venda: "GLOBAL", chave: "DEMANDA:ALVEOLARES", mes: 1, valor: 4 },
+      ],
+      [inv],
+    );
+    assert.equal(r.get("2|CPP.D.DEPRECIACAO_DO_MAQUINARIO")![6], 76_000 + 25_000);
+    assert.equal(r.get("4|DFC.DFC.DESPESAS_BANCARIAS")![0], 2_100);
+    assert.equal(r.size, 2);
   });
 });

@@ -4,6 +4,7 @@ import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
 import { alocarCentros, gruposDoCadastro, percentuaisDasBases } from "./centrosCenario.js";
+import { calcularInvestimentosEExtra } from "./investimentosCenario.js";
 import { recalcular, UNIDADES } from "./edicaoCenario.js";
 
 type Tx = Prisma.TransactionClient;
@@ -293,18 +294,20 @@ export function calcularPremissas(est: LinhaEstrutura[], linhas: LinhaDoCadastro
 
 /**
  * Recalcula a DRE do cenário analítico (13/10/2026): as contas das premissas de cada unidade (as de Global e Mercantil
- * somadas) e as dos grupos de centros de custo, alocadas às unidades pelo balde e pelos rateios — com os percentuais
- * das bases das premissas (centrosCenario.ts) —, substituem a DRE inteira do cenário, e os totais e o Consolidado se
+ * somadas), as dos grupos de centros de custo, alocadas às unidades pelo balde e pelos rateios — com os percentuais
+ * das bases das premissas (centrosCenario.ts) —, e a depreciação (a base e a dos investimentos) e o extra-operacional
+ * (investimentosCenario.ts) substituem a DRE inteira do cenário, e os totais e o Consolidado se
  * recalculam pela Estrutura da DRE. Como a DRE do analítico não se edita, ela é sempre a soma das premissas e dos centros.
  */
 export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   const cenario = await tx.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true } });
-  const [est, linhas, gravadas, grupos, valoresCentros] = await Promise.all([
+  const [est, linhas, gravadas, grupos, valoresCentros, investimentos] = await Promise.all([
     estrutura(),
     linhasDoCadastro(),
     tx.cenarioPremissa.findMany({ where: { cenarioId } }),
     gruposDoCadastro(),
     tx.cenarioCentro.findMany({ where: { cenarioId }, include: { linhaDRE: { select: { codigo: true } } } }),
+    tx.cenarioInvestimento.findMany({ where: { cenarioId } }),
   ]);
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
   const { somas, bases, juntar } = calcularPremissas(est, linhas, cenario.ano, gravadas);
@@ -315,6 +318,12 @@ export async function calcularAnalitico(tx: Tx, cenarioId: string) {
     percentuaisDasBases(bases),
   );
   for (const [k, lista] of alocados) juntar(somas, k, lista);
+  // A depreciação base, a dos investimentos e o extra-operacional (etapa 4).
+  const outros = calcularInvestimentosEExtra(
+    gravadas,
+    investimentos.map((i) => ({ ...i, valorTotal: Number(i.valorTotal), valorPosUso: Number(i.valorPosUso), receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : Number(i.receitaBrutaPrevista) })),
+  );
+  for (const [k, lista] of outros) juntar(somas, k, lista);
   const novos: Array<{ cenarioId: string; visao: number; linhaDREId: string; mes: number; valor: Prisma.Decimal }> = [];
   for (const [k, lista] of somas) {
     const [us, codigo] = k.split("|");

@@ -78,6 +78,56 @@ export const cenariosController = {
     return responder(response, () => cenariosService.gravarCentro(c, corpo.data.grupo, corpo.data.alteracoes, usuario(request), corpo.data.origem));
   },
 
+  investimentos(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.investimentos(c, usuario(request))) : undefined;
+  },
+
+  extraOperacional(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.extraOperacional(c, usuario(request))) : undefined;
+  },
+
+  /** Os valores mensais da Depreciação Base (tipo BASE) ou do Extra-Operacional (EXTRA). */
+  gravarMensais(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z
+      .object({
+        tipo: z.enum(["BASE", "EXTRA"]),
+        alteracoes: z.array(z.object({ linha: z.string().min(1).max(200), mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() })).min(1).max(5000),
+        origem: z
+          .object({ tipo: z.enum(["MARCADOS", "VALOR"]), modo: z.enum(["PERCENTUAL", "ABSOLUTO", "DIGITADO"]), reajuste: z.number().finite().nullable(), replicado: z.boolean() })
+          .optional(),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Valores inválidos." });
+    return responder(response, () => cenariosService.gravarMensais(c, corpo.data.tipo, corpo.data.alteracoes, usuario(request), corpo.data.origem));
+  },
+
+  /** Novo investimento (POST), alteração (PUT /:investimentoId) ou exclusão (DELETE /:investimentoId). */
+  gravarInvestimento(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const investimentoId = request.params.investimentoId ? idSchema.safeParse(request.params.investimentoId) : null;
+    if (investimentoId && !investimentoId.success) return response.status(400).json({ error: "Investimento inválido." });
+    if (request.method === "DELETE") return responder(response, () => cenariosService.gravarInvestimento(c, investimentoId!.data!, null, usuario(request)));
+    const corpo = z
+      .object({
+        unidade: z.number().int().min(1).max(4),
+        descricao: z.string().trim().min(1, "Descreva o investimento.").max(200),
+        ganhoPrevisto: z.string().trim().max(500).nullish().transform((x) => x || null),
+        receitaBrutaPrevista: z.number().finite().min(0).nullable(),
+        inicio: z.number().int().min(1).max(12),
+        valorTotal: z.number().finite().positive("O valor total precisa ser maior que zero."),
+        valorPosUso: z.number().finite().min(0),
+        vidaUtil: z.number().int().min(1, "A vida útil é de pelo menos 1 mês.").max(600),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Investimento inválido." });
+    return responder(response, () => cenariosService.gravarInvestimento(c, investimentoId?.data ?? null, corpo.data, usuario(request)), investimentoId ? 200 : 201);
+  },
+
   rateios(request: Request, response: Response) {
     const c = id(request, response);
     return c ? responder(response, () => cenariosService.rateios(c, usuario(request))) : undefined;

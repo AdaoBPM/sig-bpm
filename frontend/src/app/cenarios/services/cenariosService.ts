@@ -64,6 +64,31 @@ export type RateiosDoCenario = {
   /** Os valores dos grupos de rateio num mês em que a chave não tem base nas premissas (13/10/2026): ficam fora da DRE. */
   semBase: Array<{ chave: string; nome: string; mes: number; rotuloMes: string; valor: number }>;
 };
+/** Um investimento do cenário analítico (13/10/2026), com a depreciação mensal e o ROI (%) calculados. */
+export type InvestimentoDoCenario = {
+  id: string;
+  unidade: 1 | 2 | 3 | 4;
+  conta: string;
+  descricao: string;
+  ganhoPrevisto: string | null;
+  receitaBrutaPrevista: number | null;
+  inicio: number;
+  valorTotal: number;
+  valorPosUso: number;
+  vidaUtil: number;
+  depreciacaoMensal: number;
+  roi: number | null;
+};
+export type DadosDoInvestimento = Pick<InvestimentoDoCenario, "unidade" | "descricao" | "ganhoPrevisto" | "receitaBrutaPrevista" | "inicio" | "valorTotal" | "valorPosUso" | "vidaUtil">;
+export type InvestimentosDoCenario = {
+  ano: number;
+  meses: Array<{ mes: number; rotulo: string }>;
+  editavel: boolean;
+  contas: Array<{ unidade: 1 | 2 | 3 | 4; nomeUnidade: string; conta: string; rotulo: string }>;
+  depreciacao: LinhaDaPremissa[];
+  investimentos: InvestimentoDoCenario[];
+};
+export type ExtraDoCenario = { ano: number; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: Array<{ unidade: 4 | 5; nome: string; linhas: LinhaDaPremissa[] }> };
 export type PremissasDaUnidade = { ano: number; unidade: 1 | 2 | 3; nome: string; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: TabelaDePremissas[] };
 export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; ler: string; editar: string }> = {
   SINTETICO: { base: "/cenarios/sinteticos", titulo: "Cenários Sintéticos", ler: "cenarios:ler", editar: "cenarios:editar" },
@@ -181,6 +206,14 @@ export const cenariosService = {
   centro: async (id: string, grupo: string) => (await api.get<{ data: ContasDoCentro }>(`/proxy/cenarios/${id}/centros/contas`, { params: { grupo } })).data.data,
   gravarCentro: async (id: string, grupo: string, alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
     (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/centros`, { grupo, alteracoes, origem })).data.data,
+  investimentos: async (id: string) => (await api.get<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos`)).data.data,
+  criarInvestimento: async (id: string, dados: DadosDoInvestimento) => (await api.post<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos`, dados)).data.data,
+  alterarInvestimento: async (id: string, investimentoId: string, dados: DadosDoInvestimento) =>
+    (await api.put<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos/${investimentoId}`, dados)).data.data,
+  excluirInvestimento: async (id: string, investimentoId: string) => (await api.delete<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos/${investimentoId}`)).data.data,
+  extraOperacional: async (id: string) => (await api.get<{ data: ExtraDoCenario }>(`/proxy/cenarios/${id}/extra-operacional`)).data.data,
+  gravarMensais: async (id: string, tipo: "BASE" | "EXTRA", alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
+    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/mensais`, { tipo, alteracoes, origem })).data.data,
   rateios: async (id: string) => (await api.get<{ data: RateiosDoCenario }>(`/proxy/cenarios/${id}/rateios`)).data.data,
   premissas: async (id: string, unidade: 1 | 2 | 3) => (await api.get<{ data: PremissasDaUnidade }>(`/proxy/cenarios/${id}/premissas`, { params: { unidade } })).data.data,
   gravarPremissas: async (id: string, unidade: 1 | 2 | 3, alteracoes: Array<{ venda: "GLOBAL" | "MERCANTIL"; chave: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>

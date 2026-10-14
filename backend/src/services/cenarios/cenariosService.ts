@@ -32,6 +32,17 @@ import {
   type Venda,
 } from "./premissasCenario.js";
 import { contasDoGrupo, gruposDoCadastro, percentuaisDasBases, RATEIOS, rateiosSemBase } from "./centrosCenario.js";
+import {
+  CONTAS_DEPRECIACAO,
+  contaDeDepreciacao,
+  contasExtra,
+  depreciacaoMensal,
+  depreciacaoNosMeses,
+  roi,
+  UNIDADES_EXTRA,
+  VENDA_BASE,
+  VENDA_EXTRA,
+} from "./investimentosCenario.js";
 
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
@@ -364,6 +375,8 @@ export const cenariosService = {
           await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: c.id })) }));
           const centros = await tx.cenarioCentro.findMany({ where: { cenarioId: origem.id } });
           await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote.map((x) => ({ ...x, cenarioId: c.id })) }));
+          const investimentos = await tx.cenarioInvestimento.findMany({ where: { cenarioId: origem.id } });
+          await gravarEmLotes(investimentos, (lote) => tx.cenarioInvestimento.createMany({ data: lote.map(({ id: _id, ...x }) => ({ ...x, cenarioId: c.id })) }));
         }
         return c;
       },
@@ -858,6 +871,8 @@ export const cenariosService = {
         await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: c.id })) }));
         const centros = await tx.cenarioCentro.findMany({ where: { cenarioId: origem.id } });
         await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote.map((x) => ({ ...x, cenarioId: c.id })) }));
+        const investimentos = await tx.cenarioInvestimento.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(investimentos, (lote) => tx.cenarioInvestimento.createMany({ data: lote.map(({ id: _id, ...x }) => ({ ...x, cenarioId: c.id })) }));
         return c;
       },
       { timeout: 120_000 },
@@ -1092,6 +1107,205 @@ export const cenariosService = {
       metadados: { cenario: c.nome, grupo, valores: finais.size, meses, contas: alteradas.map((x) => x.codigo), origem: origem ?? null },
     });
     return { alteradas: finais.size, meses };
+  },
+
+  /**
+   * A aba Investimentos de um cenário analítico (13/10/2026): por unidade, a Depreciação Base (digitada), a dos
+   * investimentos e a total, mês a mês; e a lista dos investimentos, com a depreciação mensal e o ROI.
+   */
+  async investimentos(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const prisma = getPrismaClient();
+    const [base, lista] = await Promise.all([
+      prisma.cenarioPremissa.findMany({ where: { cenarioId: id, venda: VENDA_BASE } }),
+      prisma.cenarioInvestimento.findMany({ where: { cenarioId: id }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] }),
+    ]);
+    const investimentos = lista.map((i) => ({
+      ...i,
+      valorTotal: Number(i.valorTotal),
+      valorPosUso: Number(i.valorPosUso),
+      receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : Number(i.receitaBrutaPrevista),
+    }));
+    const linhas = CONTAS_DEPRECIACAO.flatMap((d) => {
+      const chave = `${d.unidade}|${d.conta}`;
+      const gravado = new Map(base.filter((p) => p.chave === chave).map((p) => [p.mes, Number(p.valor)]));
+      const valoresBase = Array.from({ length: 12 }, (_, k) => gravado.get(k + 1) ?? 0);
+      const dosInvestimentos = Array<number>(12).fill(0);
+      for (const i of investimentos.filter((x) => x.unidade === d.unidade && x.conta === d.conta)) depreciacaoNosMeses(i).forEach((v, k) => (dosInvestimentos[k] += v));
+      const secao = d.nomeUnidade.toUpperCase();
+      const linha = (k: string, rotulo: string, tipo: "PREMISSA" | "CALCULO", valores: number[], gravados: boolean[]) => ({ chave: k, secao, grupo: null, rotulo, und: "R$", tipo, casas: 2, referencia: null, valores, gravados });
+      return [
+        linha(chave, `Depreciação Base (${d.rotulo.replace(/^Depreciação d[oa] /, "")})`, "PREMISSA", valoresBase, valoresBase.map((_, k) => gravado.has(k + 1))),
+        linha(`${chave}|INVESTIMENTOS`, "Depreciação dos Investimentos", "CALCULO", dosInvestimentos, dosInvestimentos.map(() => false)),
+        linha(`${chave}|TOTAL`, "Depreciação Total", "CALCULO", valoresBase.map((v, k) => v + dosInvestimentos[k]), valoresBase.map(() => false)),
+      ];
+    });
+    return {
+      ano: c.ano,
+      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1) })),
+      editavel: !c.marcacao && !c.versaoSalvaEm,
+      contas: CONTAS_DEPRECIACAO,
+      depreciacao: linhas,
+      investimentos: investimentos.map((i) => ({ ...i, depreciacaoMensal: depreciacaoMensal(i), roi: roi(i) })),
+    };
+  },
+
+  /** A aba Extra-Operacional de um cenário analítico (13/10/2026): as contas de Despesas e Extra e do RN, mês a mês. */
+  async extraOperacional(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const [est, gravadas] = await Promise.all([estruturaDRE(), getPrismaClient().cenarioPremissa.findMany({ where: { cenarioId: id, venda: VENDA_EXTRA } })]);
+    const valor = new Map(gravadas.map((p) => [`${p.chave}|${p.mes}`, Number(p.valor)]));
+    return {
+      ano: c.ano,
+      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1) })),
+      editavel: !c.marcacao && !c.versaoSalvaEm,
+      tabelas: UNIDADES_EXTRA.map((u) => ({
+        unidade: u.unidade,
+        nome: u.nome,
+        linhas: contasExtra(est, u.unidade).map((l) => {
+          const chave = `${u.unidade}|${l.codigo}`;
+          const grupo = est.find((t) => t.tipo !== "ITEM" && t.grupoSigla === l.grupoSigla && t.codigo.split(".").length >= 2)?.descricao ?? l.grupoSigla;
+          return {
+            chave,
+            secao: grupo.toUpperCase(),
+            grupo: null,
+            rotulo: l.descricao,
+            und: "R$",
+            tipo: "PREMISSA" as const,
+            casas: 2,
+            referencia: null,
+            valores: Array.from({ length: 12 }, (_, k) => valor.get(`${chave}|${k + 1}`) ?? 0),
+            gravados: Array.from({ length: 12 }, (_, k) => valor.has(`${chave}|${k + 1}`)),
+          };
+        }),
+      })),
+    };
+  },
+
+  /**
+   * Grava valores mensais da Depreciação Base (`tipo` BASE) ou do Extra-Operacional (EXTRA) (13/10/2026): a chave de
+   * cada linha é "unidade|conta"; nulo ou zero apaga. Recalcula a DRE do cenário; vai para o histórico.
+   */
+  async gravarMensais(id: string, tipo: "BASE" | "EXTRA", alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, usuario: Usuario, origem?: OrigemDaGravacao) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const prisma = getPrismaClient();
+    const est = await estruturaDRE();
+    const descricao = new Map(est.map((l) => [l.codigo, l.descricao]));
+    const validas = new Set(
+      tipo === "BASE" ? CONTAS_DEPRECIACAO.map((d) => `${d.unidade}|${d.conta}`) : UNIDADES_EXTRA.flatMap((u) => contasExtra(est, u.unidade).map((l) => `${u.unidade}|${l.codigo}`)),
+    );
+    const fora = [...new Set(alteracoes.filter((a) => !validas.has(a.linha)).map((a) => a.linha))];
+    if (fora.length) throw new CenarioError(400, `Contas inválidas: ${fora.slice(0, 3).join(", ")}.`);
+    const venda = tipo === "BASE" ? VENDA_BASE : VENDA_EXTRA;
+    const finais = new Map(alteracoes.map((a) => [`${a.linha}|${a.mes}`, a]));
+    const anteriores = await prisma.cenarioPremissa.findMany({ where: { cenarioId: id, venda } });
+    const antes = new Map(anteriores.map((p) => [`${p.chave}|${p.mes}`, Number(p.valor)]));
+    let somaAntes = 0;
+    let somaDepois = 0;
+    for (const [k, a] of finais) {
+      somaAntes += antes.get(k) ?? 0;
+      somaDepois += a.valor ?? 0;
+    }
+    await prisma.$transaction(
+      async (tx) => {
+        for (const a of finais.values()) {
+          const chave = { cenarioId: id, unidade: Number(a.linha.split("|")[0]), venda, chave: a.linha, mes: a.mes };
+          if (!a.valor) await tx.cenarioPremissa.deleteMany({ where: chave });
+          else {
+            const valor = new Prisma.Decimal(a.valor.toFixed(4));
+            await tx.cenarioPremissa.upsert({ where: { cenarioId_unidade_venda_chave_mes: chave }, create: { ...chave, valor }, update: { valor } });
+          }
+        }
+        await calcularAnalitico(tx, id);
+      },
+      { timeout: 120_000 },
+    );
+    const meses = [...new Set([...finais.values()].map((a) => a.mes))].sort((x, y) => x - y);
+    const nomeUnidade = (u: string) => ({ 1: "Matriz", 2: "Filial", 3: "Serviços", 4: "Despesas e Extra", 5: "RN" })[Number(u)] ?? u;
+    const contas = [...new Set([...finais.values()].map((a) => a.linha))].map((k) => {
+      const [u, conta] = k.split("|");
+      return { codigo: conta, descricao: `${nomeUnidade(u)} · ${descricao.get(conta) ?? conta}` };
+    });
+    await prisma.cenarioReajuste.create({
+      data: {
+        cenarioId: id,
+        usuarioId: usuario.id || null,
+        usuarioNome: usuario.nome,
+        tipo: origem?.tipo ?? "VALOR",
+        modo: origem?.modo ?? "DIGITADO",
+        reajuste: origem?.reajuste ?? null,
+        replicado: !!origem?.replicado,
+        contas,
+        meses,
+        valores: finais.size,
+        somaAntes,
+        somaDepois,
+        descricao: tipo === "BASE" ? "Investimentos · Depreciação Base" : "Extra-Operacional",
+      },
+    });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, tipo, valores: finais.size, meses } });
+    return { alteradas: finais.size, meses };
+  },
+
+  /**
+   * Cria, altera ou exclui um investimento (13/10/2026) e recalcula a DRE do cenário. A conta é a de depreciação da
+   * unidade; o início, um mês do exercício; a vida útil, em meses (a partir de 1); o valor pós uso não passa do total.
+   */
+  async gravarInvestimento(
+    id: string,
+    investimentoId: string | null,
+    dados: { unidade: number; descricao: string; ganhoPrevisto: string | null; receitaBrutaPrevista: number | null; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number } | null,
+    usuario: Usuario,
+  ) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const prisma = getPrismaClient();
+    const atual = investimentoId ? await prisma.cenarioInvestimento.findFirst({ where: { id: investimentoId, cenarioId: id } }) : null;
+    if (investimentoId && !atual) throw new CenarioError(404, "Investimento não encontrado.");
+    if (dados) {
+      if (!contaDeDepreciacao(dados.unidade)) throw new CenarioError(400, "Unidade inválida.");
+      if (dados.valorPosUso > dados.valorTotal) throw new CenarioError(400, "O valor pós uso não pode passar do valor total.");
+    }
+    await prisma.$transaction(
+      async (tx) => {
+        if (!dados) await tx.cenarioInvestimento.delete({ where: { id: investimentoId! } });
+        else {
+          const valores = {
+            unidade: dados.unidade,
+            conta: contaDeDepreciacao(dados.unidade)!.conta,
+            descricao: dados.descricao,
+            ganhoPrevisto: dados.ganhoPrevisto,
+            receitaBrutaPrevista: dados.receitaBrutaPrevista === null ? null : new Prisma.Decimal(dados.receitaBrutaPrevista.toFixed(2)),
+            inicio: dados.inicio,
+            valorTotal: new Prisma.Decimal(dados.valorTotal.toFixed(2)),
+            valorPosUso: new Prisma.Decimal(dados.valorPosUso.toFixed(2)),
+            vidaUtil: dados.vidaUtil,
+          };
+          if (atual) await tx.cenarioInvestimento.update({ where: { id: atual.id }, data: valores });
+          else await tx.cenarioInvestimento.create({ data: { ...valores, cenarioId: id, ordem: await tx.cenarioInvestimento.count({ where: { cenarioId: id } }) } });
+        }
+        await calcularAnalitico(tx, id);
+      },
+      { timeout: 120_000 },
+    );
+    await prisma.cenarioReajuste.create({
+      data: {
+        cenarioId: id,
+        usuarioId: usuario.id || null,
+        usuarioNome: usuario.nome,
+        tipo: "VALOR",
+        modo: "DIGITADO",
+        contas: [{ codigo: contaDeDepreciacao(dados?.unidade ?? atual!.unidade)!.conta, descricao: dados?.descricao ?? atual!.descricao }],
+        descricao: `Investimentos · ${!dados ? "Excluído" : atual ? "Alterado" : "Novo"}: ${dados?.descricao ?? atual!.descricao}`,
+      },
+    });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: !dados ? "EXCLUSAO" : atual ? "ALTERACAO" : "CRIACAO", entidade: "cenario_investimento", entidadeId: investimentoId ?? id, antes: atual ?? undefined, depois: dados ?? undefined, metadados: { cenario: c.nome } });
+    return this.investimentos(id, usuario);
   },
 
   /**

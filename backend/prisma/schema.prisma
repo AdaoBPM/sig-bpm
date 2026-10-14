@@ -1935,6 +1935,7 @@ model Cenario {
   justificativas CenarioJustificativa[]
   premissas      CenarioPremissa[]
   centros        CenarioCentro[]
+  investimentos  CenarioInvestimento[]
 
   @@unique([marcacao])
   @@map("cenarios")
@@ -2030,6 +2031,35 @@ model CenarioCentro {
   @@id([cenarioId, grupo, linhaDREId, mes])
   @@index([linhaDREId])
   @@map("cenarios_centros")
+}
+
+/// Os investimentos de um cenário analítico (13/10/2026, aba Investimentos das Premissas): cada um deprecia, a partir
+/// do mês de início, (valor total − valor pós uso) ÷ vida útil por mês, na conta de depreciação da unidade, somado à
+/// depreciação base. O ROI = (receita bruta prevista − valor total) ÷ valor total, calculado.
+model CenarioInvestimento {
+  id                   String   @id @default(uuid())
+  cenarioId            String   @map("cenario_id")
+  /// A unidade da DRE: 1 Matriz, 2 Filial, 3 Serviços, 4 Despesas e Extra.
+  unidade              Int
+  /// A conta de depreciação (o código da linha da DRE): a do maquinário de produção, de serviços ou do patrimônio.
+  conta                String
+  descricao            String
+  ganhoPrevisto        String?  @map("ganho_previsto")
+  receitaBrutaPrevista Decimal? @map("receita_bruta_prevista")
+  /// O mês de início da depreciação (1 a 12, no exercício do cenário).
+  inicio               Int
+  valorTotal           Decimal  @map("valor_total")
+  valorPosUso          Decimal  @default(0) @map("valor_pos_uso")
+  /// A vida útil, em meses.
+  vidaUtil             Int      @map("vida_util")
+  ordem                Int      @default(0)
+  criadoEm             DateTime @default(now()) @map("criado_em")
+  atualizadoEm         DateTime @updatedAt @map("atualizado_em")
+
+  cenario Cenario @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+
+  @@index([cenarioId])
+  @@map("cenarios_investimentos")
 }
 
 model CenarioReajuste {
