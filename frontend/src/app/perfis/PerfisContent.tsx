@@ -58,6 +58,11 @@ export function PerfisContent() {
         comoUsar={
           <ul>
             <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis de sistema só se inativam).</li>
+            <li>
+              O Administrador é um perfil de sistema com acesso total a todas as telas, sem recortes (as telas novas entram sozinhas): não se exclui
+              nem se inativa, as permissões dele não mudam (só a descrição se edita), não fica sem usuário ativo, e só um Administrador promove outro
+              usuário a ele.
+            </li>
             <li>No perfil, os grupos de telas aparecem como no menu lateral, sob o título dele (Criação de Cenários, Apuração dos Resultados, Controladoria). Marque em cada grupo o que o perfil pode: Ler (o grupo aparece no menu e as telas mostram os dados) ou Editar (pode alterar; marca o Ler junto). Cada grupo tem permissões próprias: por exemplo, ler os Resultados Realizados sem acesso ao Fechamento Mensal.</li>
             <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam, por cima dos grupos. O recorte por departamento limita as movimentações da DRE às linhas dos departamentos do usuário (as da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos) e os centros de custo aos dele; o recorte por centro de custo (o Coordenador) limita a visão por centro de custo aos centros marcados no usuário (de uma gestão), com as movimentações deles, e nas unidades deixa só as movimentações abertas a todos; com recorte por departamento ou por centro de custo, o Fechamento Mensal não mostra as etapas com lançamentos de todos os departamentos (Classificação, Lançamentos, Receita, Rateios, Estoque, Conferência), nem o Controle de Usuários a Auditoria; com recorte por setor, o Fechamento Mensal mostra só Importações e Listas.</li>
           </ul>

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 
+import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
 import { CenarioError, cenariosService } from "../../services/cenarios/cenariosService.js";
 
 const idSchema = z.string().uuid();
@@ -18,7 +19,7 @@ const visualizacaoSchema = z.enum(["PARTICULAR", "PUBLICA"]).optional();
 const tipoSchema = z.enum(["SINTETICO", "ANALITICO"]);
 
 /** Quem pede; o Administrador (Editar no Controle de Usuários) vê também os cenários particulares. */
-const usuario = (request: Request) => ({ id: request.user!.sub, nome: request.user!.nome, admin: request.user!.permissions.includes("usuarios:editar") });
+const usuario = (request: Request) => ({ id: request.user!.sub, nome: request.user!.nome, admin: request.user!.perfil.codigo === CODIGO_ADMINISTRADOR });
 
 async function responder(response: Response, fn: () => Promise<unknown>, status = 200) {
   try {

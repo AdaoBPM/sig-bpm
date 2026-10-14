@@ -25,6 +25,7 @@ type Props = { opcoes: OpcoesUsuarios; editando: Usuario | null; onFechar: () =>
 export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
   const queryClient = useQueryClient();
   const { user: eu, refresh } = useAuth();
+  const souAdministrador = eu?.perfil.codigo === "ADMINISTRADOR";
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
   const [perfilId, setPerfilId] = useState(editando?.perfil.id ?? opcoes.perfis.find((p) => p.ativo)?.id ?? "");
@@ -87,12 +88,16 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
             <div className="space-y-1.5">
               <Label htmlFor="u-perfil">Perfil</Label>
               <select id="u-perfil" value={perfilId} onChange={(e) => setPerfilId(e.target.value)} className={classeSelect}>
-                {opcoes.perfis.map((p) => (
-                  <option key={p.id} value={p.id} disabled={!p.ativo}>
-                    {p.nome}
-                    {p.ativo ? "" : " (inativo)"}
-                  </option>
-                ))}
+                {opcoes.perfis.map((p) => {
+                  // Só um Administrador promove outro usuário a Administrador (14/10/2026).
+                  const soAdministrador = p.codigo === "ADMINISTRADOR" && !souAdministrador && editando?.perfil.id !== p.id;
+                  return (
+                    <option key={p.id} value={p.id} disabled={!p.ativo || soAdministrador}>
+                      {p.nome}
+                      {!p.ativo ? " (inativo)" : soAdministrador ? " (só um Administrador promove)" : ""}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             {!editando ? (

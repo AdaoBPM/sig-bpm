@@ -69,7 +69,7 @@ export function OpcaoEmLinha({
 }
 
 /**
- * A Visualização do cenário (11/10/2026): Particular (só quem criou e o Administrador) ou Pública (todos com
+ * A Visualização do cenário (11/10/2026): Particular (só quem criou e os Administradores, o perfil Administrador) ou Pública (todos com
  * permissão). `bloqueio` desabilita a escolha, com o motivo; `semParticular`, só a opção Particular (cenário marcado).
  * `emLinhas`: as opções uma embaixo da outra, com o texto ao lado (tela Configurações, 13/10/2026); sem ele, lado a lado (modal).
  */
@@ -88,7 +88,7 @@ export function CampoVisualizacao({
 }) {
   const { titulo } = useTipoDoCenario();
   const opcoes: Array<{ v: Visualizacao; rotulo: string; detalhe: string; Icone: typeof Lock; motivo?: string | null }> = [
-    { v: "PARTICULAR", rotulo: "Particular", detalhe: "Apenas você (quem criou) e o Administrador têm acesso.", Icone: Lock, motivo: semParticular },
+    { v: "PARTICULAR", rotulo: "Particular", detalhe: "Apenas você (quem criou) e os Administradores têm acesso.", Icone: Lock, motivo: semParticular },
     { v: "PUBLICA", rotulo: "Pública", detalhe: `Todos os usuários com permissão nos ${titulo} têm acesso.`, Icone: Globe },
   ];
   return (
@@ -212,7 +212,7 @@ export function CenarioDialog({ cenario, cenarios, onFechar }: { cenario: Cenari
             <CampoVisualizacao
               valor={visualizacao}
               onMudar={setVisualizacao}
-              bloqueio={cenario && !cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou o Administrador muda a visualização." : null}
+              bloqueio={cenario && !cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou um Administrador muda a visualização." : null}
               semParticular={cenario?.marcacao ? "Um cenário marcado fica público: tire a marcação antes de torná-lo particular." : null}
             />
           </div>

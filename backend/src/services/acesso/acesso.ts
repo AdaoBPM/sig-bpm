@@ -13,6 +13,12 @@ import type { AcaoPermissao, DepartamentoAcesso, RecursoSistema, TipoImportacao 
  * um usuário ou um perfil, ou mudar uma permissão, vale na hora.
  */
 
+/**
+ * O perfil Administrador (14/10/2026): acesso total a todas as telas, sem recortes — as permissões vêm do código do
+ * perfil, não da matriz gravada, para as telas novas entrarem sozinhas.
+ */
+export const CODIGO_ADMINISTRADOR = "ADMINISTRADOR";
+
 export type Acesso = {
   /** Só as listas operacionais dos setores do usuário. */
   recorteSetor: boolean;
@@ -108,6 +114,18 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
     },
   });
   if (!usuario || !usuario.ativo || !usuario.perfil.ativo) return null;
+  if (usuario.perfil.codigo === CODIGO_ADMINISTRADOR) {
+    const todas = (Object.keys(AREAS_DO_GRUPO) as RecursoSistema[]).map((recurso) => ({ recurso, acao: "EDITAR" as AcaoPermissao }));
+    return {
+      sub: usuario.id,
+      email: usuario.email,
+      nome: usuario.nome,
+      senhaHash: usuario.senhaHash,
+      perfil: { codigo: usuario.perfil.codigo, nome: usuario.perfil.nome },
+      permissions: permissoesDasRotas(todas, { recorteSetor: false, recorteDepartamento: false, recorteCentro: false }),
+      acesso: ACESSO_TOTAL,
+    };
+  }
   return {
     sub: usuario.id,
     email: usuario.email,

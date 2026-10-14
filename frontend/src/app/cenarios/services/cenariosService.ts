@@ -16,7 +16,7 @@ export const rotuloVersao = (v: number) => `VER${String(v).padStart(2, "0")}`;
 export const rotuloDoCenario = (c: Pick<Cenario, "ano" | "nome" | "versao" | "marcacao">) =>
   [String(c.ano), c.nome, rotuloVersao(c.versao), rotuloMarcacao(c.marcacao)].filter(Boolean).join(" - ");
 
-/** Particular: só quem criou e o Administrador; Pública: todos com permissão na lista do cenário (11/10/2026). */
+/** Particular: só quem criou e os Administradores (o perfil Administrador); Pública: todos com permissão na lista do cenário (11/10/2026). */
 export type Visualizacao = "PARTICULAR" | "PUBLICA";
 
 /**
@@ -133,7 +133,7 @@ export type Cenario = {
   vigente: boolean;
   /** Com mais de uma versão na família, o nome não muda (é o mesmo em todas). */
   nomeTravado: boolean;
-  /** Quem criou o cenário e o Administrador mudam a visualização. */
+  /** Quem criou o cenário e os Administradores mudam a visualização. */
   podeMudarVisualizacao: boolean;
   criadoEm: string;
   /** As visões da DRE com valor (0 Consolidado, 1 a 5 as unidades). */

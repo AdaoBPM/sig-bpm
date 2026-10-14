@@ -149,9 +149,9 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados.</li>
             <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui nem se edita (a DRE, os indicadores manuais e a referência; o nome e a descrição, sim): tire a marcação (ou marque outro cenário) antes.</li>
             <li>
-              Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e o Administrador
+              Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e os Administradores
               têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). A
-              coluna Visualização mostra a de cada cenário. Só quem criou o cenário ou o Administrador muda a visualização, e um cenário marcado fica sempre público
+              coluna Visualização mostra a de cada cenário. Só quem criou o cenário ou um Administrador muda a visualização, e um cenário marcado fica sempre público
               (a marcação vale para todos).
             </li>
             <li>

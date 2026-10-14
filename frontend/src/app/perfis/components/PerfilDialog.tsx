@@ -27,6 +27,8 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
   const queryClient = useQueryClient();
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState(editando?.nome ?? "");
+  // O perfil Administrador (14/10/2026): acesso total e fixo; só a descrição se edita.
+  const admin = editando?.codigo === "ADMINISTRADOR";
   const [descricao, setDescricao] = useState(editando?.descricao ?? "");
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
   const [recorteSetor, setRecorteSetor] = useState(editando?.recorteSetor ?? false);
@@ -70,6 +72,12 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {admin ? (
+            <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-700">
+              O Administrador tem acesso total a todas as telas, sem recortes (as telas novas entram sozinhas). Não se exclui nem se inativa, não
+              fica sem usuário ativo, e só um Administrador promove outro usuário a ele. Só a descrição se edita.
+            </p>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             {!editando ? (
               <div className="space-y-1.5">
@@ -79,7 +87,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
             ) : null}
             <div className="space-y-1.5">
               <Label htmlFor="p-nome">Nome</Label>
-              <Input id="p-nome" value={nome} onChange={(e) => setNome(e.target.value)} className="rounded-sm" />
+              <Input id="p-nome" value={nome} onChange={(e) => setNome(e.target.value)} disabled={admin} className="rounded-sm" />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="p-descricao">Descrição</Label>
@@ -88,23 +96,23 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
           </div>
           <div className="space-y-1.5">
             <label className="flex items-center gap-2 text-sm text-gray-900">
-              <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} className="size-4 accent-black" />
+              <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               Ativo (inativo, os usuários dele não entram)
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-900">
-              <input type="checkbox" checked={recorteSetor} onChange={(e) => setRecorteSetor(e.target.checked)} className="size-4 accent-black" />
+              <input type="checkbox" checked={recorteSetor} onChange={(e) => setRecorteSetor(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               <span>
                 Recorta por Setor<span className="text-gray-500">: o usuário só alcança as listas dos setores marcados nele</span>
               </span>
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-900">
-              <input type="checkbox" checked={recorteDepartamento} onChange={(e) => setRecorteDepartamento(e.target.checked)} className="size-4 accent-black" />
+              <input type="checkbox" checked={recorteDepartamento} onChange={(e) => setRecorteDepartamento(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               <span>
                 Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele (as movimentações da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos)</span>
               </span>
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-900">
-              <input type="checkbox" checked={recorteCentro} onChange={(e) => setRecorteCentro(e.target.checked)} className="size-4 accent-black" />
+              <input type="checkbox" checked={recorteCentro} onChange={(e) => setRecorteCentro(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               <span>
                 Recorta por Centro de Custo<span className="text-gray-500">: o usuário só vê os centros de custo marcados nele (de uma gestão), com as movimentações deles</span>
               </span>
@@ -144,7 +152,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
                             aria-label={`${i.title}: ${ROTULO_ACAO[a]}`}
                             checked={(nivel[i.recurso!] ?? 0) >= NIVEL[a]}
                             onChange={(e) => marcar(i.recurso!, a, e.target.checked)}
-                            className="size-4 accent-black"
+                            disabled={admin} className="size-4 accent-black disabled:opacity-60"
                           />
                         </td>
                       ))}

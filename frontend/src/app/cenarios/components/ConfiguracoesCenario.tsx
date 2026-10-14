@@ -138,7 +138,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
               <CampoVisualizacao
                 valor={visualizacao}
                 onMudar={setVisualizacao}
-                bloqueio={!cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou o Administrador muda a visualização." : null}
+                bloqueio={!cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou um Administrador muda a visualização." : null}
                 semParticular={cenario.marcacao ? "Um cenário marcado fica público: tire a marcação antes de torná-lo particular." : null}
                 emLinhas
               />

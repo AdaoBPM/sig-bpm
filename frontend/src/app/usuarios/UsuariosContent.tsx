@@ -101,6 +101,10 @@ export function UsuariosContent() {
             <li>Num perfil com recorte por centro de custo (o Coordenador), escolha a Gestão do usuário: a lista mostra só os centros ativos dela, agrupados pelo agrupamento da controladoria (o do cadastro de centros), com uma caixa em cada agrupamento para marcar ou desmarcar os centros dele e outra para marcar todos. Trocar a gestão limpa os centros marcados. Marque “Vê os Resultados das Obras” para ele ver a aba Obras de Resultados Realizados, só com as linhas da DRE da gestão dele (e as da Receita Bruta e dos Impostos).</li>
             <li>Use “Redefinir Senha” para dar uma senha nova (ao menos 8 caracteres). No campo da senha (aqui e na senha inicial do Novo Usuário), o olho à direita mostra o que foi digitado; clique de novo para ocultar.</li>
             <li>O que cada um pode fazer vem do perfil, na tela Perfis.</li>
+            <li>
+              O perfil Administrador tem acesso total a todas as telas. Só um Administrador põe alguém nele (a opção aparece apagada para os demais), edita
+              ou redefine a senha de um Administrador; e o último Administrador ativo não troca de perfil nem se inativa: promova outro antes.
+            </li>
           </ul>
         }
         sobre={

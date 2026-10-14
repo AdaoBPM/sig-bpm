@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { AcaoPermissao, DepartamentoAcesso, RecursoSistema, TipoImportacao } from "../../generated/prisma/enums.js";
 import { hashSenha } from "../../lib/senha.js";
 import { gestaoDoCentro, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
+import { CODIGO_ADMINISTRADOR } from "../acesso/acesso.js";
 import { DEFINICOES_LISTAS } from "../importacoes/listas/definicoesListas.js";
 import { auditar } from "../auditoriaService.js";
 
@@ -14,6 +15,10 @@ import { auditar } from "../auditoriaService.js";
  *
  * Travas contra se trancar para fora: ninguém inativa a si mesmo, troca o
  * próprio perfil, inativa o próprio perfil nem tira dele a edição de usuários.
+ *
+ * O perfil Administrador (14/10/2026): acesso total, de sistema (não se exclui nem se inativa, e as permissões e os
+ * recortes não mudam), não fica sem usuário ativo, e só um Administrador põe ou tira alguém dele, ou edita um
+ * Administrador (os dados, a senha).
  */
 
 export class RegraUsuarioError extends Error {
@@ -134,9 +139,19 @@ async function exigirCentros(gestao: DepartamentoAcesso | null, centros: string[
 }
 
 async function perfilExistente(id: string) {
-  const p = await getPrismaClient().perfil.findUnique({ where: { id }, select: { id: true, ativo: true } });
+  const p = await getPrismaClient().perfil.findUnique({ where: { id }, select: { id: true, ativo: true, codigo: true } });
   if (!p) throw new RegraUsuarioError(400, "Perfil inexistente.");
   return p;
+}
+
+const ehPerfilAdministrador = (p: { codigo: string }) => p.codigo === CODIGO_ADMINISTRADOR;
+/** O usuário é Administrador (o perfil dele). */
+async function ehAdministrador(usuarioId: string) {
+  const u = await getPrismaClient().usuario.findUnique({ where: { id: usuarioId }, select: { perfil: { select: { codigo: true } } } });
+  return !!u && ehPerfilAdministrador(u.perfil);
+}
+function exigirAdministrador(quemEhAdministrador: boolean, oQue: string) {
+  if (!quemEhAdministrador) throw new RegraUsuarioError(409, `Só um Administrador ${oQue}.`);
 }
 
 export const usuariosService = {
@@ -181,7 +196,8 @@ export const usuariosService = {
     exigirSetores(d.setores);
     const centros = await exigirCentros(d.gestao ?? null, d.centros ?? []);
     const prisma = getPrismaClient();
-    await perfilExistente(d.perfilId);
+    const perfil = await perfilExistente(d.perfilId);
+    if (ehPerfilAdministrador(perfil)) exigirAdministrador(await ehAdministrador(quem), "cria um usuário Administrador");
     const email = d.email.trim().toLowerCase();
     if (await prisma.usuario.findUnique({ where: { email }, select: { id: true } })) throw new RegraUsuarioError(409, `Já existe um usuário com o e-mail ${email}.`);
     const u = await prisma.usuario.create({
@@ -209,10 +225,22 @@ export const usuariosService = {
     exigirSetores(d.setores);
     const centros = await exigirCentros(d.gestao ?? null, d.centros ?? []);
     const prisma = getPrismaClient();
-    const atual = await prisma.usuario.findUnique({ where: { id }, select: { id: true, perfilId: true } });
+    const atual = await prisma.usuario.findUnique({ where: { id }, select: { id: true, perfilId: true, ativo: true, perfil: { select: { codigo: true } } } });
     if (!atual) throw new RegraUsuarioError(404, "Usuário não encontrado.");
     const antes = paraTela(await prisma.usuario.findUniqueOrThrow({ where: { id }, select: selecaoUsuario }));
-    await perfilExistente(d.perfilId);
+    const novoPerfil = await perfilExistente(d.perfilId);
+    const eraAdministrador = ehPerfilAdministrador(atual.perfil);
+    const seraAdministrador = ehPerfilAdministrador(novoPerfil);
+    if (eraAdministrador || seraAdministrador) {
+      const quemEhAdministrador = await ehAdministrador(quemEdita);
+      if (!eraAdministrador) exigirAdministrador(quemEhAdministrador, "promove outro usuário a Administrador");
+      else exigirAdministrador(quemEhAdministrador, "edita um usuário Administrador");
+    }
+    // O Administrador não fica sem usuário ativo.
+    if (eraAdministrador && atual.ativo && (!seraAdministrador || !d.ativo)) {
+      const outros = await prisma.usuario.count({ where: { id: { not: id }, ativo: true, perfil: { codigo: CODIGO_ADMINISTRADOR } } });
+      if (outros === 0) throw new RegraUsuarioError(409, "Este é o único Administrador ativo: promova outro usuário a Administrador antes de trocar o perfil ou inativar este.");
+    }
     if (id === quemEdita && !d.ativo) throw new RegraUsuarioError(409, "Você não pode inativar o seu próprio usuário.");
     if (id === quemEdita && d.perfilId !== atual.perfilId) throw new RegraUsuarioError(409, "Você não pode trocar o seu próprio perfil.");
     const email = d.email.trim().toLowerCase();
@@ -245,7 +273,9 @@ export const usuariosService = {
 
   async redefinirSenha(id: string, senha: string, quem: string) {
     const prisma = getPrismaClient();
-    if (!(await prisma.usuario.findUnique({ where: { id }, select: { id: true } }))) throw new RegraUsuarioError(404, "Usuário não encontrado.");
+    const alvo = await prisma.usuario.findUnique({ where: { id }, select: { id: true, perfil: { select: { codigo: true } } } });
+    if (!alvo) throw new RegraUsuarioError(404, "Usuário não encontrado.");
+    if (ehPerfilAdministrador(alvo.perfil) && id !== quem) exigirAdministrador(await ehAdministrador(quem), "redefine a senha de um Administrador");
     await prisma.usuario.update({ where: { id }, data: { senhaHash: await hashSenha(senha) } });
     // A senha nunca vai para o log: só o fato.
     const nome = (await prisma.usuario.findUnique({ where: { id }, select: { nome: true } }))?.nome;
@@ -300,8 +330,14 @@ export const usuariosService = {
 
   async atualizarPerfil(id: string, d: DadosPerfil, quemEdita: string) {
     const prisma = getPrismaClient();
-    const atual = await prisma.perfil.findUnique({ where: { id }, select: { id: true } });
+    const atual = await prisma.perfil.findUnique({ where: { id }, select: { id: true, codigo: true, nome: true } });
     if (!atual) throw new RegraUsuarioError(404, "Perfil não encontrado.");
+    if (ehPerfilAdministrador(atual)) {
+      exigirAdministrador(await ehAdministrador(quemEdita), "edita o perfil Administrador");
+      if (!d.ativo) throw new RegraUsuarioError(409, "O perfil Administrador não pode ser inativado.");
+      // Só a descrição muda: o nome, a situação, os recortes e as permissões (todas) são fixos.
+      d = { ...d, nome: atual.nome, ativo: true, recorteSetor: false, recorteDepartamento: false, recorteCentro: false, permissoes: RECURSOS.map((recurso) => ({ recurso, acao: "EDITAR" as AcaoPermissao })) };
+    }
     const antes = (await this.listarPerfis()).find((p) => p.id === id);
     const permissoes = normalizarPermissoes(d.permissoes);
     const meu = (await prisma.usuario.findUniqueOrThrow({ where: { id: quemEdita }, select: { perfilId: true } })).perfilId === id;
@@ -332,8 +368,9 @@ export const usuariosService = {
   /** Exclui um perfil que não é de sistema e não tem usuários. */
   async excluirPerfil(id: string, quem: string) {
     const prisma = getPrismaClient();
-    const p = await prisma.perfil.findUnique({ where: { id }, select: { sistema: true, nome: true, _count: { select: { usuarios: true } } } });
+    const p = await prisma.perfil.findUnique({ where: { id }, select: { sistema: true, nome: true, codigo: true, _count: { select: { usuarios: true } } } });
     if (!p) throw new RegraUsuarioError(404, "Perfil não encontrado.");
+    if (ehPerfilAdministrador(p)) throw new RegraUsuarioError(409, "O perfil Administrador não pode ser excluído nem inativado.");
     if (p.sistema) throw new RegraUsuarioError(409, `O perfil ${p.nome} é de sistema: pode ser inativado, mas não excluído.`);
     if (p._count.usuarios > 0) throw new RegraUsuarioError(409, `O perfil ${p.nome} tem ${p._count.usuarios} usuário(s); troque o perfil deles antes de excluir.`);
     const antes = (await this.listarPerfis()).find((x) => x.id === id);

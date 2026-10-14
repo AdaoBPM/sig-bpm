@@ -88,7 +88,7 @@ function exigirAnalitico(c: { nome: string; tipo: string }) {
   if (c.tipo !== "ANALITICO") throw new CenarioError(400, `O cenário ${c.nome} é sintético: as premissas são só dos cenários analíticos.`);
 }
 
-/** Quem pede: `admin` é o Administrador (Editar no Controle de Usuários), que vê também os cenários particulares. */
+/** Quem pede: `admin` é o Administrador (o perfil Administrador, 14/10/2026; antes, Editar no Controle de Usuários), que vê também os cenários particulares. */
 type Usuario = { id: string; nome: string; admin?: boolean };
 /** O que a tela fez numa gravação de valores (o histórico de reajustes, 12/10/2026). */
 export type OrigemDaGravacao = { tipo: "MARCADOS" | "VALOR"; modo: "PERCENTUAL" | "ABSOLUTO" | "DIGITADO"; reajuste: number | null; replicado: boolean };
