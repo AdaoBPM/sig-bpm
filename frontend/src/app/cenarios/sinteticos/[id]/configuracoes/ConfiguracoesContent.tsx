@@ -49,6 +49,8 @@ export function ConfiguracoesContent() {
             )}
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas Resultados e Indicadores.</li>
             <li>Aparecem só as abas que o seu perfil lê, e os botões de cada aba só com a permissão de editar nela (Controle de Usuários / Perfis); sem ela, a aba se lê, com um aviso.</li>
+            <li>Só quem criou o cenário (ou o Administrador) altera as Configurações: num cenário público de outro usuário, as abas se leem, com um aviso que diz de quem é o cenário.</li>
+            <li>Na Referência, os meses fechados do exercício aparecem resumidos (por exemplo, “Fechada: de Janeiro a Agosto.”).</li>
             <li>
               Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada total da DRE;
               em branco, o total não se verifica. “Preencher Todos Com” põe o mesmo percentual em todos. Clique em “Gravar Comparativo”. “Nenhum”

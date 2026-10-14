@@ -20,6 +20,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { lerAnoMes, moeda } from "../utils/formatacao";
 import { LancamentoManualDialog } from "./components/LancamentoManualDialog";
+import { plural } from "@/lib/texto";
 import {
   lancamentosManuaisService,
   mensagemDeErro,
@@ -68,7 +69,7 @@ export function LancamentosManuaisContent() {
   const copiar = useMutation({
     mutationFn: () => lancamentosManuaisService.copiarAnterior(anoMes),
     onSuccess: (r) => {
-      toast.success(`${r.copiados} lançamento(s) copiados do mês anterior. Confira os valores.`);
+      toast.success(`${r.copiados} ${plural(r.copiados, "lançamento copiado", "lançamentos copiados")} do mês anterior. Confira os valores.`);
       invalidar();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível copiar.")),

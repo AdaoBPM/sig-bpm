@@ -9,6 +9,7 @@ import { formulasPorExtenso, INDICADORES_DAS_LISTAS, TOTALIZADORES_DAS_LISTAS } 
 import { compilarFormula, FormulaInvalidaError } from "../../relatorios/formulaIndicador.js";
 import { CALCULOS_SISTEMA } from "../../relatorios/indicadores.js";
 import { NOMES_DO_PAINEL } from "../../relatorios/painelDeBordo.js";
+import { plural } from "../../../utils/plural.js";
 
 /**
  * Cadastros editáveis pela tela (Passo 25, RF002 e RF003). Cada cadastro
@@ -245,7 +246,7 @@ const centros: DefinicaoCadastro = {
       db.lancamentoManual.count({ where: { centroCustoId: id } }),
       db.resultadoApurado.count({ where: { centroCustoId: id } }),
     ]);
-    return l + m + r > 0 ? `O centro tem ${l} lançamento(s) do balancete, ${m} manual(is) e ${r} valor(es) apurado(s).` : null;
+    return l + m + r > 0 ? `O centro tem ${l} ${plural(l, "lançamento", "lançamentos")} do balancete, ${m} ${plural(m, "manual", "manuais")} e ${r} ${plural(r, "valor apurado", "valores apurados")}.` : null;
   },
   async impedimentoExclusao(db, id) {
     if ((await db.regraRateio.findUnique({ where: { id }, select: { percentualFixo: true } }))?.percentualFixo != null) return "Esta regra é de percentual fixo: exclua-a em “Percentuais Fixos”, com os outros destinos da chave.";
@@ -326,7 +327,7 @@ const contas: DefinicaoCadastro = {
       db.lancamentoManual.count({ where: { contaResultadoId: id } }),
       db.reclassificacaoConta.count({ where: { OR: [{ contaOrigemId: id }, { contaDestinoId: id }] } }),
     ]);
-    return l + a + m + r > 0 ? `A conta é usada por ${l + a} lançamento(s) do balancete, ${m} manual(is) e ${r} reclassificação(ões): inative-a em vez de excluir.` : null;
+    return l + a + m + r > 0 ? `A conta é usada por ${l + a} ${plural(l + a, "lançamento", "lançamentos")} do balancete, ${m} ${plural(m, "manual", "manuais")} e ${r} ${plural(r, "reclassificação", "reclassificações")}: inative-a em vez de excluir.` : null;
   },
   async movimentos(db, id) {
     const [l, a, m] = await Promise.all([
@@ -334,7 +335,7 @@ const contas: DefinicaoCadastro = {
       db.lancamentoContabil.count({ where: { contaAdotadaId: id } }),
       db.lancamentoManual.count({ where: { contaResultadoId: id } }),
     ]);
-    return l + a + m > 0 ? `A conta é usada por ${l + a} lançamento(s) do balancete e ${m} manual(is).` : null;
+    return l + a + m > 0 ? `A conta é usada por ${l + a} ${plural(l + a, "lançamento", "lançamentos")} do balancete e ${m} ${plural(m, "manual", "manuais")}.` : null;
   },
   remover: async (db, id) => void (await db.contaResultado.delete({ where: { id } })),
 };
@@ -471,7 +472,7 @@ const estrutura: DefinicaoCadastro = {
       db.lancamentoContabil.count({ where: { linhaDREId: id } }),
     ]);
     return contasN + resultados + manuais + lancamentos > 0
-      ? `A linha tem ${contasN} conta(s) vinculada(s), ${lancamentos} lançamento(s) do balancete, ${manuais} manual(is) e ${resultados} valor(es) apurado(s).`
+      ? `A linha tem ${contasN} ${plural(contasN, "conta vinculada", "contas vinculadas")}, ${lancamentos} ${plural(lancamentos, "lançamento", "lançamentos")} do balancete, ${manuais} ${plural(manuais, "manual", "manuais")} e ${resultados} ${plural(resultados, "valor apurado", "valores apurados")}.`
       : null;
   },
   async impedimentoExclusao(db, id) {
@@ -484,7 +485,7 @@ const estrutura: DefinicaoCadastro = {
     ]);
     const referencias = await quemReferencia(db, l.codigo);
     if (contasN + resultados + manuais + lancamentos + referencias.length > 0) {
-      return `A linha é usada (${contasN} conta(s), ${lancamentos + manuais} lançamento(s), ${resultados} valor(es) apurado(s)${referencias.length ? `, nas expressões de ${referencias.join(", ")}` : ""}): inative-a em vez de excluir.`;
+      return `A linha é usada (${contasN} ${plural(contasN, "conta", "contas")}, ${lancamentos + manuais} ${plural(lancamentos + manuais, "lançamento", "lançamentos")}, ${resultados} ${plural(resultados, "valor apurado", "valores apurados")}${referencias.length ? `, nas expressões de ${referencias.join(", ")}` : ""}): inative-a em vez de excluir.`;
     }
     return null;
   },
@@ -510,7 +511,7 @@ async function validarExpressao(db: Db, codigo: string, expressao: string) {
   const linhas = await db.linhaDRE.findMany({ select: { codigo: true, expressao: true, ativo: true } });
   const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
   const faltam = citados.filter((c) => !porCodigo.get(c)?.ativo);
-  if (faltam.length) throw new RegraCadastroError(400, `A expressão cita linha(s) inexistente(s) ou inativa(s): ${faltam.join(", ")}.`);
+  if (faltam.length) throw new RegraCadastroError(400, `A expressão cita ${plural(faltam.length, "linha inexistente ou inativa", "linhas inexistentes ou inativas")}: ${faltam.join(", ")}.`);
   // Ciclo: a partir das linhas citadas, alguma chega de volta a esta?
   const grafo = new Map(linhas.map((l) => [l.codigo, l.expressao ? codigosDaExpressao(l.expressao) : []]));
   grafo.set(codigo, citados);
@@ -569,7 +570,7 @@ const unidades: DefinicaoCadastro = {
       select: { _count: { select: { resultadosApurados: true, receitasPrevias: true, volumesOperacionais: true, projetos: true, producoes: true, expedicoes: true, montagens: true, acompanhamentos: true, medicoes: true, devolucoes: true, saidas: true } } },
     });
     const n = u ? Object.values(u._count).reduce((s, x) => s + x, 0) : 0;
-    return n ? `A unidade tem ${n} registro(s) nas listas, nos rateios, na receita prévia e na DRE apurada.` : null;
+    return n ? `A unidade tem ${n} ${plural(n, "registro", "registros")} nas listas, nos rateios, na receita prévia e na DRE apurada.` : null;
   },
   ler: (db, id) => db.unidadeNegocio.findUnique({ where: { id } }),
   async preparar(_db, v) {
@@ -685,7 +686,7 @@ const linhas: DefinicaoCadastro = {
       },
     });
     const n = l ? Object.values(l._count).reduce((s, x) => s + x, 0) : 0;
-    return n ? `A linha está em ${n} registro(s) das listas, do estoque, dos preços ou das obras.` : null;
+    return n ? `A linha está em ${n} ${plural(n, "registro", "registros")} das listas, do estoque, dos preços ou das obras.` : null;
   },
   async impedimentoExclusao(db, id) {
     const m = await this.movimentos!(db, id);
@@ -827,7 +828,7 @@ const estruturaIndicadores: DefinicaoCadastro = {
     ]);
     const noPainel = NOMES_DO_PAINEL().includes(i.nome);
     if (!metas && !digitados && !importados && !noPainel) return null;
-    const partes = [metas ? `${metas} meta(s) de cenários` : null, importados + digitados ? `${importados + digitados} valor(es) importado(s) ou digitado(s)` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
+    const partes = [metas ? `${metas} ${plural(metas, "meta", "metas")} de cenários` : null, importados + digitados ? `${importados + digitados} ${plural(importados + digitados, "valor importado ou digitado", "valores importados ou digitados")}` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
     return `O indicador é usado por ${partes.join(", ")}.`;
   },
   async impedimentoExclusao(db, id) {
@@ -964,7 +965,7 @@ const regras: DefinicaoCadastro = {
   },
   async movimentos(db, id) {
     const n = await db.volumeOperacional.count({ where: { regraRateioId: id } });
-    return n ? `A regra já foi usada em ${n} apuração(ões) de rateio.` : null;
+    return n ? `A regra já foi usada em ${n} ${plural(n, "apuração", "apurações")} de rateio.` : null;
   },
   async impedimentoExclusao(db, id) {
     const m = await this.movimentos!(db, id);
@@ -1000,7 +1001,7 @@ const tipos: DefinicaoCadastro = {
   },
   async impedimentoExclusao(db, id) {
     const [s, d] = await Promise.all([db.saida.count({ where: { tipoMovimentoId: id } }), db.devolucao.count({ where: { tipoMovimentoId: id } })]);
-    return s + d ? `O tipo de movimento está em ${s + d} registro(s) de saídas e devoluções: inative-o em vez de excluir.` : null;
+    return s + d ? `O tipo de movimento está em ${s + d} ${plural(s + d, "registro", "registros")} de saídas e devoluções: inative-o em vez de excluir.` : null;
   },
   remover: async (db, id) => void (await db.tipoMovimento.delete({ where: { id } })),
 };

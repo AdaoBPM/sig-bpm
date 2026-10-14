@@ -12,6 +12,7 @@ import { mensagemDeErro, type LinhaResultado } from "@/app/relatorios/services/r
 import { cenariosService, type OrigemDaGravacao } from "../services/cenariosService";
 import { botaoPrimario, Erro } from "./CenarioDialog";
 import { ReajusteDialog, ValorDialog } from "./EdicaoDialogs";
+import { plural } from "@/lib/texto";
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
 /** Os botões da barra de marcação (12/10/2026): cinza-claro, discretos ao lado do Reajustar Marcados. */
@@ -35,7 +36,7 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
       queryClient.invalidateQueries({ queryKey: ["cenarios", id] });
       // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Realizados muda.
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
-      toast.success(`${r.alteradas} valor(es) gravado(s); totais e Consolidado recalculados.`);
+      toast.success(`${r.alteradas} ${plural(r.alteradas, "valor gravado", "valores gravados")}; totais e Consolidado recalculados.`);
       setReajuste(null);
       setValor(null);
     },
@@ -62,7 +63,7 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
       ) : (
         <div className="flex flex-wrap items-center gap-3 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm">
           <span className="text-gray-700">
-            <span className="font-bold text-gray-900">{marcados.length}</span> valor(es) marcado(s) · {linhas.size} conta(s) × {meses.size} mês(es)
+            <span className="font-bold text-gray-900">{marcados.length}</span> {plural(marcados.length, "valor marcado", "valores marcados")} · {linhas.size} {plural(linhas.size, "conta", "contas")} × {meses.size} {plural(meses.size, "mês", "meses")}
           </span>
           <button type="button" className={botaoCinza} onClick={() => setMeses(todosOsMeses ? new Set() : new Set(dados.meses.map((_, i) => i)))}>
             {todosOsMeses ? "Desmarcar os Meses" : "Marcar Todos os Meses"}

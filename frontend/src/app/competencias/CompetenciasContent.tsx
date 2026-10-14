@@ -20,6 +20,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { AbrirCompetenciaDialog } from "./components/AbrirCompetenciaDialog";
 import { rotuloStatus, StatusCompetenciaBadge } from "./components/StatusCompetenciaBadge";
 import { competenciasService, type Competencia } from "./services/competenciasService";
+import { plural } from "@/lib/texto";
 
 function dataCurta(iso: string | null) {
   if (!iso) return "—";
@@ -52,7 +53,7 @@ function passosDe(c: Competencia): Passo[] {
     a.lancamentos === 0
       ? { rotulo: "Classificado", estado: "falta", dica: "Nenhum lançamento para classificar.", etapa: "classificacao" }
       : pendentes > 0
-        ? { rotulo: `Classificado · ${pendentes}`, estado: "atencao", dica: `${pendentes} lançamento(s) com pendência ou sem classificação.`, etapa: "classificacao" }
+        ? { rotulo: `Classificado · ${pendentes}`, estado: "atencao", dica: `${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} com pendência ou sem classificação.`, etapa: "classificacao" }
         : { rotulo: "Classificado", estado: "feito", dica: `${a.lancamentos.toLocaleString("pt-BR")} lançamentos classificados.`, etapa: "classificacao" },
     c.apuracoes === 0
       ? { rotulo: "Apurado", estado: "falta", dica: "Ainda não apurada.", etapa: "dre" }
@@ -94,7 +95,7 @@ const COLUNAS: Coluna<Competencia>[] = [
     rotulo: "Divergências",
     tipo: "numero",
     valor: (c) => c._count.divergencias,
-    texto: (c) => (c._count.divergencias > 0 ? `${c._count.divergencias} aberta(s)` : null),
+    texto: (c) => (c._count.divergencias > 0 ? `${c._count.divergencias} ${plural(c._count.divergencias, "aberta", "abertas")}` : null),
   },
   {
     chave: "apuracao",
@@ -232,13 +233,13 @@ export function CompetenciasContent() {
               <td className="px-4 text-sm">
                 {c._count.divergencias > 0 ? (
                   <span className="font-medium text-yellow-800" title="Divergências abertas">
-                    {c._count.divergencias} aberta(s)
+                    {c._count.divergencias} {plural(c._count.divergencias, "aberta", "abertas")}
                   </span>
                 ) : (
                   <span className="text-gray-400">—</span>
                 )}
               </td>
-              <td className="px-4 text-sm whitespace-nowrap text-gray-600" title={c.apuracoes ? `${c.apuracoes} apuração(ões)${c.usuarioApuracao ? ` · a última por ${c.usuarioApuracao.nome}` : ""}` : undefined}>
+              <td className="px-4 text-sm whitespace-nowrap text-gray-600" title={c.apuracoes ? `${c.apuracoes} ${plural(c.apuracoes, "apuração", "apurações")}${c.usuarioApuracao ? ` · a última por ${c.usuarioApuracao.nome}` : ""}` : undefined}>
                 {c.apuracoes === 0 ? <span className="text-gray-400">—</span> : dataCurta(c.apuradaEm)}
               </td>
               <td className="px-4 text-sm whitespace-nowrap text-gray-600">

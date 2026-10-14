@@ -10,6 +10,7 @@ import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFilt
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { inteiro } from "../../utils/formatacao";
+import { plural } from "@/lib/texto";
 import {
   GRUPOS_ORIGEM,
   receitaPreviaService,
@@ -179,6 +180,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = fal
   );
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const ativo = grupos.find((g) => g.origem === escolhido) ?? grupos[0];
+  const registros = grupos.reduce((t, g) => t + g.linhas.reduce((n, l) => n + l.registros, 0), 0);
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -195,7 +197,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = fal
             {ROTULO_UNIDADE[unidade]} · {variacao ? "Variação do Estoque" : ROTULO_NATUREZA[natureza]}
           </DialogTitle>
           <DialogDescription>
-            Memória de cálculo: {data ? inteiro(grupos.reduce((t, g) => t + g.linhas.reduce((n, l) => n + l.registros, 0), 0)) : "…"} registro(s), somados por obra como nas abas de receita do BASE PRÉVIAS. Os
+            Memória de cálculo: {data ? inteiro(registros) : "…"} {plural(data ? registros : 0, "registro, somado", "registros, somados")} por obra como nas abas de receita do BASE PRÉVIAS. Os
             valores ficam como foram apurados, com o preço vigente na apuração.
           </DialogDescription>
         </DialogHeader>

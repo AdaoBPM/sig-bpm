@@ -6,6 +6,7 @@ import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { apurarUnidades, type LinhaEstrutura } from "./apuracaoUnidades.js";
 import { atribuicoesDoCentro, prefixoDaAtribuicao } from "./recorteCentros.js";
 import { apurarCentros, consolidar } from "./consolidacao.js";
+import { plural } from "../../utils/plural.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraDREError extends Error {
@@ -107,7 +108,7 @@ export const dreService = {
       prisma.lancamentoContabil.count({ where: { competenciaId: c.id, classificadoEm: null } }),
     ]);
     if (lancamentos.length === 0) throw new RegraDREError(409, `A competência ${rotulo(ano, mes)} não tem balancete importado.`);
-    if (pendentes > 0) throw new RegraDREError(409, `Há ${pendentes} lançamento(s) sem classificação. Classifique a competência antes de apurar.`);
+    if (pendentes > 0) throw new RegraDREError(409, `Há ${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} sem classificação. Classifique a competência antes de apurar.`);
     if (volumes.length === 0) throw new RegraDREError(409, `Os rateios de ${rotulo(ano, mes)} não foram apurados.`);
     if (receitas.length === 0) throw new RegraDREError(409, `A receita prévia de ${rotulo(ano, mes)} não foi apurada.`);
 

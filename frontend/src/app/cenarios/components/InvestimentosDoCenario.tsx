@@ -16,6 +16,7 @@ import { cenariosService, type DadosDoInvestimento, type InvestimentoDoCenario, 
 import { botaoPrimario, classeSelect, Erro } from "./CenarioDialog";
 import { lerNumero } from "./EdicaoDialogs";
 import { TabelaEditavel } from "./TabelaPremissas";
+import { plural } from "@/lib/texto";
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -44,10 +45,10 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
         linhas={dados.depreciacao}
         editavel={pode}
         comReferencia={false}
-        item="conta(s)"
+        item={["conta", "contas"]}
         cabecalho="CONTA"
         aoGravar={(alteracoes, origem) => cenariosService.gravarMensais(id, "BASE", alteracoes, origem)}
-        mensagem={(n) => `${n} valor(es) da depreciação base gravado(s); a DRE do cenário foi recalculada.`}
+        mensagem={(n) => `${n} ${plural(n, "valor", "valores")} da depreciação base ${plural(n, "gravado", "gravados")}; a DRE do cenário foi recalculada.`}
       />
       <section className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -273,10 +274,10 @@ export function ExtraDoCenario({ id, editavel }: { id: string; editavel: boolean
           linhas={t.linhas}
           editavel={editavel && dados.editavel}
           comReferencia={false}
-          item="conta(s)"
+          item={["conta", "contas"]}
           cabecalho="CONTA"
           aoGravar={(alteracoes, origem) => cenariosService.gravarMensais(id, "EXTRA", alteracoes, origem)}
-          mensagem={(n) => `${n} valor(es) do extra-operacional gravado(s); a DRE do cenário foi recalculada.`}
+          mensagem={(n) => `${n} ${plural(n, "valor", "valores")} do extra-operacional ${plural(n, "gravado", "gravados")}; a DRE do cenário foi recalculada.`}
         />
       ))}
     </div>

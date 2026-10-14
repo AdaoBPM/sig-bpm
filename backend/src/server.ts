@@ -2,13 +2,14 @@ import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { importacoesService } from "./services/importacoes/importacoesService.js";
 import { logger } from "./utils/logger.js";
+import { plural } from "./utils/plural.js";
 
 const server = app.listen(env.PORT, () => {
   logger("info", `Backend BPM rodando na porta ${env.PORT}`);
   importacoesService
     .recuperarInterrompidas()
     .then((n) => {
-      if (n > 0) logger("warn", `${n} importação(ões) interrompida(s) marcada(s) como recusada(s)`);
+      if (n > 0) logger("warn", `${n} ${plural(n, "importação interrompida marcada como recusada", "importações interrompidas marcadas como recusadas")}`);
     })
     .catch((error: unknown) => {
       logger("error", "Falha ao recuperar importações interrompidas", {

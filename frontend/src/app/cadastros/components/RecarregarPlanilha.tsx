@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { CampoArquivo } from "@/components/shared/CampoArquivo";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+import { plural } from "@/lib/texto";
 
 import {
   cadastrosService,
@@ -231,7 +232,7 @@ export function RecarregarPlanilha() {
                 disabled={confirmar.isPending || totalMudancas === 0}
                 className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
               >
-                {confirmar.isPending ? "Gravando…" : `Confirmar recarga (${totalMudancas} mudança(s))`}
+                {confirmar.isPending ? "Gravando…" : `Confirmar recarga (${totalMudancas} ${plural(totalMudancas, "mudança", "mudanças")})`}
               </Button>
             ) : null}
           </DialogFooter>

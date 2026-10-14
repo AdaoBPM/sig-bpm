@@ -57,7 +57,7 @@ import { distribuirLotacao, QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } f
 
 export class CenarioError extends Error {
   constructor(
-    readonly status: 400 | 404 | 409,
+    readonly status: 400 | 403 | 404 | 409,
     message: string,
   ) {
     super(message);
@@ -101,6 +101,13 @@ const alcanca = (c: { visualizacao: VisualizacaoCenario; criadoPorId: string | n
   c.visualizacao === "PUBLICA" || !!u.admin || (!!c.criadoPorId && c.criadoPorId === u.id);
 /** Quem muda a visualização de um cenário: quem o criou e o Administrador. */
 const mudaVisualizacao = (c: { criadoPorId: string | null }, u: Usuario) => !!u.admin || (!!c.criadoPorId && c.criadoPorId === u.id);
+/**
+ * As Configurações (o cenário, a referência e o comparativo) só se alteram por quem criou o cenário ou pelo
+ * Administrador (14/10/2026): num cenário público, os demais as leem. É a mesma regra da visualização.
+ */
+function exigirQuemCriou(c: { nome: string; criadoPorId: string | null }, u: Usuario) {
+  if (!mudaVisualizacao(c, u)) throw new CenarioError(403, `O cenário ${c.nome} é de outro usuário: só quem o criou (ou o Administrador) altera as Configurações dele.`);
+}
 const LOTE = 500;
 const MANUAIS = new Set(INDICADORES_DAS_LISTAS);
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano).slice(2)}`;
@@ -395,6 +402,7 @@ export const cenariosService = {
    */
   async atualizar(id: string, dados: { nome: string; descricao: string | null; visualizacao?: VisualizacaoCenario }, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(antes, usuario);
     // Com revisões criadas, o nome é o mesmo em todas as versões e não muda (13/10/2026).
     if (dados.nome !== antes.nome && (await familias())(antes).nomeTravado) {
       throw new CenarioError(409, `O cenário ${antes.nome} tem revisões: o nome é o mesmo em todas as versões e não muda.`);
@@ -414,6 +422,7 @@ export const cenariosService = {
   /** Exclui o cenário; um cenário marcado (Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos) não se exclui. */
   async excluir(id: string, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(antes, usuario);
     if (antes.marcacao) {
       throw new CenarioError(409, `O cenário ${antes.nome} está marcado como ${MARCACOES[antes.marcacao]}: tire a marcação (ou marque outro cenário) antes de excluí-lo.`);
     }
@@ -425,6 +434,7 @@ export const cenariosService = {
   async marcar(id: string, marcacao: MarcacaoCenario | null, usuario: Usuario) {
     const prisma = getPrismaClient();
     const antes = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(antes, usuario);
     if (marcacao && antes.visualizacao === "PARTICULAR") {
       throw new CenarioError(409, `O cenário ${antes.nome} é particular: a marcação vale para todos os usuários. Torne-o público (Editar) antes de marcá-lo.`);
     }
@@ -451,7 +461,11 @@ export const cenariosService = {
    * cenário (`cenarioId`) ou, sem ele, no cenário novo. Nada é gravado no cenário.
    */
   async analisar(dados: { cenarioId: string | null; nomeArquivo: string; conteudo: Buffer }, usuario: Usuario = SISTEMA) {
-    if (dados.cenarioId) exigirSintetico(await obterOuFalhar(dados.cenarioId, usuario), "a importação de arquivo é só dos cenários sintéticos");
+    if (dados.cenarioId) {
+      const alvo = await obterOuFalhar(dados.cenarioId, usuario);
+      exigirQuemCriou(alvo, usuario);
+      exigirSintetico(alvo, "a importação de arquivo é só dos cenários sintéticos");
+    }
     const lido = await lerArquivo(dados.conteudo);
     const hash = createHash("sha256").update(dados.conteudo).digest("hex");
     await mkdir(diretorioUploads(), { recursive: true });
@@ -702,6 +716,7 @@ export const cenariosService = {
    */
   async referenciaRealizado(id: string, ano: number, usuario: Usuario, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) {
     const c = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(c, usuario);
     exigirEditavel(c);
     const analitico = c.tipo === "ANALITICO";
     const prisma = getPrismaClient();
@@ -843,6 +858,7 @@ export const cenariosService = {
    */
   async referenciaCenario(id: string, origemId: string, usuario: Usuario) {
     const c = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(c, usuario);
     exigirAnalitico(c);
     exigirEditavel(c);
     if (origemId === id) throw new CenarioError(400, "Escolha outro cenário: a referência não pode ser o próprio cenário.");
@@ -1601,6 +1617,7 @@ export const cenariosService = {
    */
   async gravarComparativo(id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
+    exigirQuemCriou(antes, usuario);
     if (dados.comparadoComId === id) throw new CenarioError(400, "Escolha outro cenário para comparar.");
     if (dados.comparadoComId) await obterOuFalhar(dados.comparadoComId, usuario);
     const codigos = new Set(totaisDaDRE(await estruturaDRE()).totais.map((t) => t.codigo));

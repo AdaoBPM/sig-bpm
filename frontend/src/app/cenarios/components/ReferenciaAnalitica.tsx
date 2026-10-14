@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label";
 
 import { competenciasService } from "@/app/competencias/services/competenciasService";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
+import { plural } from "@/lib/texto";
 
 import { cenariosService, rotuloVersao, type Cenario } from "../services/cenariosService";
 import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
+import { descreverFechadas } from "./descreverFechadas";
 import { botaoPrimario, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -27,7 +29,7 @@ const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt
  * custo, a depreciação base, o extra-operacional e os indicadores. A correspondência tarefa × linha fica nos Cadastros da
  * Controladoria / Linhas.
  */
-export function ReferenciaAnalitica({ cenario, podeEditar = true }: { cenario: Cenario; podeEditar?: boolean }) {
+export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cenario: Cenario; podeEditar?: boolean; aviso?: string }) {
   const queryClient = useQueryClient();
   const [tipo, setTipo] = useState<"realizado" | "cenario">("realizado");
   const [confirmar, setConfirmar] = useState(false);
@@ -115,7 +117,7 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true }: { cenario: C
         />
       </fieldset>
       {!podeEditar ? (
-        <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">Seu perfil só lê a referência.</p>
+        <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{aviso ?? "Seu perfil só lê a referência."}</p>
       ) : travado ? (
         <AvisoMarcado cenario={cenario} oQue="a referência" />
       ) : tipo === "cenario" ? (
@@ -155,7 +157,7 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true }: { cenario: C
               </select>
             </div>
             <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">
-              {mesesFechados.length ? `Fechadas: ${mesesFechados.map((m) => MESES[m - 1]).join(", ")}.` : "Nenhuma fechada."}
+              {descreverFechadas(mesesFechados)}
             </p>
           </div>
           <fieldset className="space-y-2">
@@ -192,8 +194,8 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true }: { cenario: C
                 {!periodo.length
                   ? "O mês inicial vem depois do final."
                   : abertasNoPeriodo.length
-                    ? `O período tem meses sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
-                    : `A média de ${periodo.length} mês(es), de ${MESES[de - 1]} a ${MESES[ate - 1]}.`}
+                    ? `O período tem ${plural(abertasNoPeriodo.length, "um mês", "meses")} sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
+                    : `A média de ${periodo.length} ${plural(periodo.length, "mês", "meses")}, ${de === ate ? MESES[de - 1] : `de ${MESES[de - 1]} a ${MESES[ate - 1]}`}.`}
               </p>
             </div>
           ) : null}

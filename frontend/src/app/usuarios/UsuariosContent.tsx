@@ -19,6 +19,7 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { UsuarioDialog } from "./components/UsuarioDialog";
 import { mensagemDeErro, usuariosService, type Usuario } from "./services/usuariosService";
+import { plural } from "@/lib/texto";
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 
@@ -82,7 +83,7 @@ export function UsuariosContent() {
         [
           u.perfil.recorteSetor ? `Setores: ${u.setores.map((s) => rotuloSetor.get(s) ?? s).join(", ") || "nenhum"}` : null,
           u.perfil.recorteDepartamento ? `Departamentos: ${u.departamentos.map((d) => rotuloDep.get(d) ?? d).join(", ") || "nenhum"}` : null,
-          u.perfil.recorteCentro ? `Gestão ${u.gestao ? (rotuloDep.get(u.gestao) ?? u.gestao) : "não definida"}: ${u.centros.length} centro(s) de custo${u.veObras ? " e as obras" : ""}` : null,
+          u.perfil.recorteCentro ? `Gestão ${u.gestao ? (rotuloDep.get(u.gestao) ?? u.gestao) : "não definida"}: ${u.centros.length} ${plural(u.centros.length, "centro", "centros")} de custo${u.veObras ? " e as obras" : ""}` : null,
         ]
           .filter(Boolean)
           .join(" · ") || null,

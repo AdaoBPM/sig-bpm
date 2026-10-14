@@ -21,6 +21,7 @@ import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { LancamentoReceitaDialog } from "./components/LancamentoReceitaDialog";
 import { MemoriaCalculoDialog } from "./components/MemoriaCalculoDialog";
 import { QuadroReceita } from "./components/QuadroReceita";
+import { plural } from "@/lib/texto";
 import {
   mensagemDeErro,
   receitaPreviaService,
@@ -146,7 +147,7 @@ export function ReceitaPreviaContent() {
               {avisos.length === 0
                 ? dados?.observacoes.map((o) => (
                     <li key={o.observacao}>
-                      {o.observacao} ({o.itens} item(ns))
+                      {o.observacao} ({o.itens} {plural(o.itens, "item", "itens")})
                     </li>
                   ))
                 : null}

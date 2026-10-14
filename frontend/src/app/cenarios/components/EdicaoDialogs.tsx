@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { botaoPrimario, Erro } from "./CenarioDialog";
+import { plural } from "@/lib/texto";
 
 /** Lê um número digitado em pt-BR: "1.234,56", "-5,5", "10" (vazio: null; inválido: undefined). */
 export function lerNumero(texto: string): number | null | undefined {
@@ -90,7 +91,7 @@ export function ReajusteDialog({
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-gray-700">
-              <span className="font-bold text-gray-900">{valores.length}</span> valor(es) marcado(s), somando <span className="font-bold text-gray-900">{paraTexto(somaAtual)}</span>.
+              <span className="font-bold text-gray-900">{valores.length}</span> {plural(valores.length, "valor marcado", "valores marcados")}, somando <span className="font-bold text-gray-900">{paraTexto(somaAtual)}</span>.
             </p>
             <TipoReajuste tipo={tipo} onMudar={setTipo} />
             <div className="space-y-1.5">

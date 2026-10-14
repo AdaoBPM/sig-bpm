@@ -13,6 +13,7 @@ import { localizarCabecalho } from "./listas/leituraListas.js";
 import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
 import { escolherAba } from "./statusImportacao.js";
 import { DEFINICOES_DOCUMENTOS, lerDocumentos, type TipoDocumentos } from "./documentos/leituraDocumentos.js";
+import { plural } from "../../utils/plural.js";
 
 /**
  * A leitura prévia de um arquivo com várias abas (importação em lote): associa
@@ -85,7 +86,7 @@ const listas: Tipo[] = [...Object.values(DEFINICOES_LISTAS), ...Object.values(DE
     return {
       registros: l.registros.length,
       assinatura: assinar([...l.registros, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
-      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
     };
   },
 }));
@@ -107,7 +108,7 @@ const indicadores: Tipo[] = (Object.keys(DEFINICOES_INDICADORES) as TipoIndicado
     return {
       registros: l.valores.length,
       assinatura: assinar([...l.valores, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
-      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
     };
   },
 }));
@@ -125,7 +126,7 @@ const documentos: Tipo[] = (Object.keys(DEFINICOES_DOCUMENTOS) as TipoDocumentos
     return {
       registros: l.itens.length,
       assinatura: assinar([...l.itens, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
-      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
     };
   },
 }));
@@ -146,7 +147,7 @@ const TIPOS: Tipo[] = [
       return {
         registros: l.lancamentos.length,
         assinatura: assinar([...l.lancamentos, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
-        avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} linha(s) com erro, que não serão gravadas.`] : [],
+        avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
       };
     },
   },

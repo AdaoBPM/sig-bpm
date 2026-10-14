@@ -28,3 +28,11 @@ export function iniciaisMaiusculas(texto: string) {
     })
     .join(" ");
 }
+
+/**
+ * A palavra no singular ou no plural pela quantidade (14/10/2026; no lugar dos "mês(es)", "valor(es)"…):
+ * plural(1, "mês", "meses") → "mês"; plural(3, "mês", "meses") → "meses". Só 1 (e -1) é singular; 0 é plural.
+ */
+export function plural(n: number, singular: string, plural: string) {
+  return Math.abs(n) === 1 ? singular : plural;
+}

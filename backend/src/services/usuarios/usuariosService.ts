@@ -7,6 +7,7 @@ import { CODIGO_ADMINISTRADOR } from "../acesso/acesso.js";
 import { CATALOGO_DE_TELAS, CHAVES_DA_MATRIZ, chaveValida, MATRIZ_COMPLETA } from "../acesso/telas.js";
 import { DEFINICOES_LISTAS } from "../importacoes/listas/definicoesListas.js";
 import { auditar } from "../auditoriaService.js";
+import { plural } from "../../utils/plural.js";
 
 /**
  * Usuários e perfis (Passo 22). O perfil é cadastro, não código: a empresa
@@ -382,7 +383,7 @@ export const usuariosService = {
     if (!p) throw new RegraUsuarioError(404, "Perfil não encontrado.");
     if (ehPerfilAdministrador(p)) throw new RegraUsuarioError(409, "O perfil Administrador não pode ser excluído nem inativado.");
     if (p.sistema) throw new RegraUsuarioError(409, `O perfil ${p.nome} é de sistema: pode ser inativado, mas não excluído.`);
-    if (p._count.usuarios > 0) throw new RegraUsuarioError(409, `O perfil ${p.nome} tem ${p._count.usuarios} usuário(s); troque o perfil deles antes de excluir.`);
+    if (p._count.usuarios > 0) throw new RegraUsuarioError(409, `O perfil ${p.nome} tem ${p._count.usuarios} ${plural(p._count.usuarios, "usuário", "usuários")}; troque o perfil ${plural(p._count.usuarios, "dele", "deles")} antes de excluir.`);
     const antes = (await this.listarPerfis()).find((x) => x.id === id);
     await prisma.perfil.delete({ where: { id } });
     await auditar({ usuarioId: quem, acao: "EXCLUSAO", entidade: "perfil", entidadeId: id, antes, metadados: { nome: antes?.nome } });

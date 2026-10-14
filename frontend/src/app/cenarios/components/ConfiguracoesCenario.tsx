@@ -17,6 +17,7 @@ import { competenciasService } from "@/app/competencias/services/competenciasSer
 import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
+import { plural } from "@/lib/texto";
 
 import { cenariosService, rotuloMarcacao, type Cenario, type Visualizacao } from "../services/cenariosService";
 import { useTipoDoCenario } from "./tipoDoCenario";
@@ -26,15 +27,9 @@ import { ComparativoCenario } from "./ComparativoCenario";
 import { MarcarCenarioDialog } from "./MarcarCenarioDialog";
 import { ImportarCenarioDialog } from "./ImportarCenarioDialog";
 import { ReferenciaAnalitica } from "./ReferenciaAnalitica";
+import { descreverFechadas } from "./descreverFechadas";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-/** "Fechadas de Janeiro a Agosto." (12/10/2026; os meses seguidos, pelo primeiro e o último); fora de sequência, a lista. */
-function descreverFechadas(ms: number[]) {
-  if (ms.length === 0) return "Nenhuma fechada.";
-  if (ms.length === 1) return `Fechada: ${MESES[ms[0] - 1]}.`;
-  const seguidos = ms.every((m, k) => k === 0 || m === ms[k - 1] + 1);
-  return seguidos ? `Fechadas de ${MESES[ms[0] - 1]} a ${MESES[ms[ms.length - 1] - 1]}.` : `Fechadas: ${ms.map((m) => MESES[m - 1]).join(", ")}.`;
-}
 const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : null);
 
 /**
@@ -54,6 +49,12 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
   // As abas que o perfil lê e as que edita (14/10/2026).
   const { hasPermission } = usePermissions();
   const pode = (a: AbaDasConfiguracoes, acao: "ler" | "editar" = "ler") => hasPermission(t.perm("configuracoes", acao, a));
+  // Só quem criou o cenário (ou o Administrador) altera as Configurações (14/10/2026): num cenário público, os demais as
+  // leem. O servidor recusa do mesmo jeito.
+  const dono = cenario.podeMudarVisualizacao;
+  const edita = (a: AbaDasConfiguracoes) => dono && pode(a, "editar");
+  const soLe = (a: AbaDasConfiguracoes, oQue: string) =>
+    !pode(a, "editar") ? `Seu perfil só lê ${oQue}.` : `Este cenário é de ${cenario.criadoPor ?? "outro usuário"}: só quem o criou (ou o Administrador) altera ${oQue}.`;
   const abas = (["cenario", "referencia", "comparativo"] as AbaDasConfiguracoes[]).filter((a) => pode(a));
   const aba: AbaDasConfiguracoes | null = abas.includes(escolhida) ? escolhida : (abas[0] ?? null);
   const analitico = t.tipo === "ANALITICO";
@@ -128,7 +129,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 maxLength={120}
-                disabled={cenario.nomeTravado}
+                disabled={cenario.nomeTravado || !edita("cenario")}
                 className="rounded-sm disabled:bg-gray-50 disabled:text-gray-700 disabled:opacity-100"
               />
               {/* Com revisões, o nome é o mesmo em todas as versões (13/10/2026), para comparar as versões. */}
@@ -140,20 +141,27 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="cfg-descricao">Descrição (opcional)</Label>
-              <Input id="cfg-descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={500} className="rounded-sm" />
+              <Input
+                id="cfg-descricao"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                maxLength={500}
+                disabled={!edita("cenario")}
+                className="rounded-sm disabled:bg-gray-50 disabled:text-gray-700 disabled:opacity-100"
+              />
             </div>
             <div className="sm:col-span-2">
               <CampoVisualizacao
                 valor={visualizacao}
                 onMudar={setVisualizacao}
-                bloqueio={!cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou um Administrador muda a visualização." : null}
+                bloqueio={!cenario.podeMudarVisualizacao ? "Só quem criou o cenário ou um Administrador muda a visualização." : !edita("cenario") ? "Seu perfil só lê os dados do cenário." : null}
                 semParticular={cenario.marcacao ? "Um cenário marcado fica público: tire a marcação antes de torná-lo particular." : null}
                 emLinhas
               />
             </div>
           </div>
           <Erro erro={salvar.isError ? mensagemDeErro(salvar.error, "Não foi possível gravar as configurações.") : null} />
-          {!pode("cenario", "editar") ? <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">Seu perfil só lê os dados do cenário.</p> : (
+          {!edita("cenario") ? <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("cenario", "os dados do cenário")}</p> : (
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" className="rounded-sm" onClick={() => setAcao("marcar")}>
               <Bookmark className="size-4" />
@@ -179,10 +187,13 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
           )}
         </section>
       ) : aba === "comparativo" ? (
-        <ComparativoCenario id={cenario.id} podeEditar={pode("comparativo", "editar")} />
+        <div className="space-y-4">
+          {!edita("comparativo") ? <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("comparativo", "o comparativo")}</p> : null}
+          <ComparativoCenario id={cenario.id} podeEditar={edita("comparativo")} />
+        </div>
       ) : analitico ? (
         // A referência dos analíticos (14/10/2026): o realizado (com as Médias de Referência e os centros de custo) ou outro analítico.
-        <ReferenciaAnalitica cenario={cenario} podeEditar={pode("referencia", "editar")} />
+        <ReferenciaAnalitica cenario={cenario} podeEditar={edita("referencia")} aviso={soLe("referencia", "a referência")} />
       ) : (
         <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
           <p className="text-sm text-gray-600">
@@ -211,8 +222,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
               <OpcaoEmLinha key={v} nome="referencia" marcada={referencia === v} onMarcar={() => setReferencia(v)} rotulo={rotulo} detalhe={detalhe} Icone={Icone} />
             ))}
           </fieldset>
-          {!pode("referencia", "editar") ? (
-            <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">Seu perfil só lê a referência.</p>
+          {!edita("referencia") ? (
+            <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("referencia", "a referência")}</p>
           ) : estaTravado(cenario) ? (
             <AvisoMarcado cenario={cenario} oQue="a referência" />
           ) : referencia === "arquivo" ? (
@@ -273,8 +284,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
                     {!periodo.length
                       ? "O mês inicial vem depois do final."
                       : abertasNoPeriodo.length
-                        ? `O período tem meses sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
-                        : `A média de ${periodo.length} mês(es), de ${MESES[de - 1]} a ${MESES[ate - 1]}, em todos os meses do cenário.`}
+                        ? `O período tem ${plural(abertasNoPeriodo.length, "um mês", "meses")} sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
+                        : `A média de ${periodo.length} ${plural(periodo.length, "mês", "meses")}, ${de === ate ? MESES[de - 1] : `de ${MESES[de - 1]} a ${MESES[ate - 1]}`}, em todos os meses do cenário.`}
                   </p>
                 </div>
               ) : null}
@@ -303,8 +314,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
                   {modo === "MEDIA" ? (
                     <>
                       <li>
-                        A DRE do cenário (todas as abas e os doze meses) é substituída pela média do realizado de {ano}, de {MESES[de - 1]} a {MESES[ate - 1]} (
-                        {periodo.length} mês(es)), replicada em todos os meses.
+                        A DRE do cenário (todas as abas e os doze meses) é substituída pela média do realizado de {ano}, {de === ate ? `em ${MESES[de - 1]}` : `de ${MESES[de - 1]} a ${MESES[ate - 1]}`} (
+                        {periodo.length} {plural(periodo.length, "mês", "meses")}), replicada em todos os meses.
                       </li>
                       <li>Os indicadores do cenário também ficam com as médias realizadas do período em todos os meses (os que saem da DRE se recalculam das contas médias).</li>
                     </>

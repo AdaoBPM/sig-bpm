@@ -10,6 +10,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { inteiro } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, type LinhaVolume } from "../services/dreService";
+import { plural } from "@/lib/texto";
 
 type Props = {
   anoMes: string;
@@ -43,6 +44,7 @@ export function VolumesDialog({ anoMes, linha, unidade, nomeVisao, valorApurado,
   });
   const medida = data?.medida ?? null;
   const difere = data && valorApurado !== null && Math.abs(Number(data.total) - Number(valorApurado)) >= 0.005;
+  const registros = data ? data.linhas.reduce((n, l) => n + l.registros, 0) : 0;
 
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -54,7 +56,7 @@ export function VolumesDialog({ anoMes, linha, unidade, nomeVisao, valorApurado,
             {rotuloMes ? ` · ${rotuloMes}` : ""}
           </DialogTitle>
           <DialogDescription>
-            {data ? `${inteiro(data.linhas.reduce((n, l) => n + l.registros, 0))} registro(s) das listas, ` : ""}somados por obra, pela regra da aba Totais
+            {data ? `${inteiro(registros)} ${plural(registros, "registro", "registros")} das listas, ` : ""}{plural(data ? registros : 0, "somado", "somados")} por obra, pela regra da aba Totais
             {data && data.destinos.length > 0 ? ` (${data.destinos.join("; ")})` : ""}.
           </DialogDescription>
         </DialogHeader>

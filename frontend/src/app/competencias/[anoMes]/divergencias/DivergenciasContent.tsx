@@ -21,6 +21,7 @@ import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFilt
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { dataHora, moeda } from "../utils/formatacao";
+import { plural } from "@/lib/texto";
 import {
   divergenciasService,
   mensagemDeErro,
@@ -112,7 +113,7 @@ export function DivergenciasContent() {
   const justificar = useMutation({
     mutationFn: (texto: string) => divergenciasService.justificar(escolhidas, texto),
     onSuccess: (r) => {
-      toast.success(`${r.justificadas} divergência(s) justificada(s).`);
+      toast.success(`${r.justificadas} ${plural(r.justificadas, "divergência justificada", "divergências justificadas")}.`);
       atualizar();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível justificar.")),
@@ -120,7 +121,7 @@ export function DivergenciasContent() {
   const resolver = useMutation({
     mutationFn: ({ competencia, texto }: { competencia: string; texto: string }) => divergenciasService.resolver(competencia, texto),
     onSuccess: (r) => {
-      toast.success(`Competência reaberta; ${r.resolvidas} divergência(s) resolvida(s). Importe o dado novo e reapure.`);
+      toast.success(`Competência reaberta; ${r.resolvidas} ${plural(r.resolvidas, "divergência resolvida", "divergências resolvidas")}. Importe o dado novo e reapure.`);
       atualizar();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível resolver.")),
@@ -273,7 +274,7 @@ export function DivergenciasContent() {
 
       {dialogo?.tipo === "justificar" ? (
         <DialogoTexto
-          titulo={`Justificar ${escolhidas.length} Divergência(s)`}
+          titulo={`Justificar ${escolhidas.length} ${plural(escolhidas.length, "Divergência", "Divergências")}`}
           descricao="A justificativa fica registrada com o seu nome. A competência continua como está."
           acao="Justificar"
           pendente={justificar.isPending}

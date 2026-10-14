@@ -26,6 +26,7 @@ import {
   type RejeicaoLista,
 } from "./leituraListas.js";
 import { expedicaoDoResumo, montagemDoResumo, producaoDoResumo, projetosDoResumo } from "./leituraResumos.js";
+import { plural } from "../../../utils/plural.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -417,7 +418,7 @@ const expedicao: DefinicaoLista = {
       };
     });
     if (leitura.ok && divergentes > 0) {
-      leitura.avisos.push(`${divergentes} linha(s) com volume adotado diferente da coluna V. Adot. da planilha: ${exemplos.join("; ")}.`);
+      leitura.avisos.push(`${divergentes} ${plural(divergentes, "linha", "linhas")} com volume adotado diferente da coluna V. Adot. da planilha: ${exemplos.join("; ")}.`);
     }
     return leitura;
   },

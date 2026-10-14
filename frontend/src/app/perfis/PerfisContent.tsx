@@ -16,11 +16,13 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 
 import { mensagemDeErro, usuariosService, type Perfil } from "../usuarios/services/usuariosService";
 import { PerfilDialog } from "./components/PerfilDialog";
+import { plural } from "@/lib/texto";
 
 /** Quantas telas o perfil lê, e quantas edita (as abas contam dentro da tela; 14/10/2026). */
 function resumoPermissoes(p: Perfil) {
   const telas = (acao: string) => new Set(p.permissoes.filter((x) => x.acao === acao && !x.chave.includes(".")).map((x) => x.chave)).size;
-  return `${telas("LER")} tela(s) com leitura, ${telas("EDITAR")} com edição`;
+  const leitura = telas("LER");
+  return `${leitura} ${plural(leitura, "tela", "telas")} com leitura, ${telas("EDITAR")} com edição`;
 }
 
 const recorte = (p: Perfil) => [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ");

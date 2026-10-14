@@ -4,6 +4,7 @@ import { ESTILO, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxE
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { indicadoresService } from "./indicadoresService.js";
 import { RelatorioError, resultadosService } from "./resultadosService.js";
+import { plural } from "../../utils/plural.js";
 
 /**
  * Exportação dos relatórios em Excel e PDF, como a tela: os Resultados (uma
@@ -44,8 +45,8 @@ async function identificar(ano: number, ate: number, usuarioNome: string) {
   const apuradas = competencias.filter((c) => c.apuradaEm !== null);
   const abertas = apuradas.filter((c) => c.status !== "FECHADA").length;
   return {
-    periodo: `Exercício ${ano} · de janeiro a ${MESES[ate - 1]} · ${apuradas.length} competência(s) apurada(s)`,
-    avisos: abertas ? [`Valores provisórios: ${abertas} competência(s) do período ainda não está(ão) fechada(s).`] : [],
+    periodo: `Exercício ${ano} · de janeiro a ${MESES[ate - 1]} · ${apuradas.length} ${plural(apuradas.length, "competência apurada", "competências apuradas")}`,
+    avisos: abertas ? [`Valores provisórios: ${abertas} ${plural(abertas, "competência do período ainda não está fechada", "competências do período ainda não estão fechadas")}.`] : [],
     geracao: `Gerado em ${dataHora(new Date())} por ${usuarioNome} · SIG BPM`,
   };
 }

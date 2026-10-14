@@ -14,6 +14,7 @@ import type { Natureza } from "../../receita-previa/services/receitaPreviaServic
 import { moeda } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, UNIDADES, type BlocoDetalhe, type LancamentoDetalhe, type VisaoDetalhe } from "../services/dreService";
 import { DocumentosDialog } from "./DocumentosDialog";
+import { plural } from "@/lib/texto";
 
 type Props = {
   anoMes: string;
@@ -51,7 +52,7 @@ function Bloco({
             {b.filtro}
             {b.fator ? ` · ${fatorTexto(b.fator)}` : ""}
             {b.percentual ? ` · × ${percentual(b.percentual)}` : ""}
-            {` · ${b.lancamentos.length} lançamento(s)`}
+            {` · ${b.lancamentos.length} ${plural(b.lancamentos.length, "lançamento", "lançamentos")}`}
           </p>
         ) : null}
       </div>

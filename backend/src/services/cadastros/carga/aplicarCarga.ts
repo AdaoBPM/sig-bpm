@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../../config/prisma.js";
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import type { CadastrosPreparados } from "./prepararCadastros.js";
+import { plural } from "../../../utils/plural.js";
 
 type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
@@ -146,10 +147,10 @@ function linhasEmUso(codigos: string[], linhas: LinhaComUso[]) {
   return linhas
     .filter((l) => codigos.includes(l.codigo))
     .filter((l) => l._count.contas + l._count.lancamentosContabeis + l._count.lancamentosManuais + l._count.resultadosApurados > 0)
-    .map(
-      (l) =>
-        `A linha da DRE "${l.descricao}" sairia da estrutura, mas está em uso (${l._count.resultadosApurados} valor(es) apurado(s), ${l._count.lancamentosContabeis + l._count.lancamentosManuais} lançamento(s), ${l._count.contas} conta(s)). Mantenha-a na planilha, ou renomeie-a na mesma posição.`,
-    );
+    .map((l) => {
+      const lancamentos = l._count.lancamentosContabeis + l._count.lancamentosManuais;
+      return `A linha da DRE "${l.descricao}" sairia da estrutura, mas está em uso (${l._count.resultadosApurados} ${plural(l._count.resultadosApurados, "valor apurado", "valores apurados")}, ${lancamentos} ${plural(lancamentos, "lançamento", "lançamentos")}, ${l._count.contas} ${plural(l._count.contas, "conta", "contas")}). Mantenha-a na planilha, ou renomeie-a na mesma posição.`;
+    });
 }
 
 /** Grava a planilha preparada. Tudo numa transação: ou entra inteira, ou nada. */

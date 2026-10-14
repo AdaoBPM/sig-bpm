@@ -17,6 +17,7 @@ import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { apuracaoService } from "../../../services/apuracaoService";
 import { dataHora } from "../../utils/formatacao";
 import { mensagemDeErro } from "../services/dreService";
+import { plural } from "@/lib/texto";
 
 type Props = { anoMes: string; onAvisos: (avisos: string[]) => void };
 
@@ -178,7 +179,7 @@ export function TextoApuracao({ anoMes }: { anoMes: string }) {
   const s = situacao.data;
   if (!s) return null;
   return s.apurada
-    ? `Apurada em ${dataHora(s.apuradaEm!)}${s.apuradaPor ? ` por ${s.apuradaPor}` : ""} · ${s.apuracoes} apuração(ões). Valores congelados: cadastros alterados depois só valem se a competência for reapurada.`
+    ? `Apurada em ${dataHora(s.apuradaEm!)}${s.apuradaPor ? ` por ${s.apuradaPor}` : ""} · ${s.apuracoes} ${plural(s.apuracoes, "apuração", "apurações")}. Valores congelados: cadastros alterados depois só valem se a competência for reapurada.`
     : "Ainda não apurada. Apurar refaz, em ordem, a classificação, o estoque, a receita prévia, os rateios e a DRE, e congela os valores.";
 }
 
@@ -266,7 +267,7 @@ function HistoricoReaberturas({ reaberturas, onFechar }: { reaberturas: Reabertu
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Histórico de Reaberturas</DialogTitle>
-          <DialogDescription>{reaberturas.length} reabertura(s) desta competência, com quem reabriu e a justificativa.</DialogDescription>
+          <DialogDescription>{reaberturas.length} {plural(reaberturas.length, "reabertura", "reaberturas")} desta competência, com quem reabriu e a justificativa.</DialogDescription>
         </DialogHeader>
         <table className="tabela-sig w-full border-collapse text-sm">
           {tabela.cabecalho}

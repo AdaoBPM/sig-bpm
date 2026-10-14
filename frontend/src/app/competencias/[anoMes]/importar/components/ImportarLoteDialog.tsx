@@ -12,6 +12,7 @@ import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 import { rotuloDoMes } from "@/lib/etapasDoMes";
 
 import { inteiro } from "../../utils/formatacao";
+import { plural } from "@/lib/texto";
 import {
   importacoesService,
   type AbaLote,
@@ -32,7 +33,7 @@ function avisosDeFechadas(d: ImportacaoDetalhe): string[] {
   const avisos: string[] = [];
   if (r.modo === "COMPARACAO") {
     avisos.push(
-      r.divergencias ? `Competência fechada: ${inteiro(r.divergencias)} divergência(s) com o gravado.` : "Competência fechada: sem diferença com o gravado.",
+      r.divergencias ? `Competência fechada: ${inteiro(r.divergencias)} ${plural(r.divergencias, "divergência", "divergências")} com o gravado.` : "Competência fechada: sem diferença com o gravado.",
     );
   }
   const retro = (r.retroativas ?? []).filter((x) => x.divergencias > 0);
@@ -124,7 +125,7 @@ function MesNaFila({ anoMes, id, onAbrirRelatorio }: { anoMes: string; id: strin
     <Situacao
       icone={fechadas.length ? "aviso" : "ok"}
       texto={data.comparacao ? "Comparada" : "Importada"}
-      detalhe={`${inteiro(data.linhasAceitas)} registro(s) gravado(s)${data.linhasRejeitadas ? `, ${inteiro(data.linhasRejeitadas)} com erro` : ""}.`}
+      detalhe={`${inteiro(data.linhasAceitas)} ${plural(data.linhasAceitas, "registro gravado", "registros gravados")}${data.linhasRejeitadas ? `, ${inteiro(data.linhasRejeitadas)} com erro` : ""}.`}
       avisos={fechadas}
     >
       {relatorio}
@@ -287,6 +288,7 @@ export function ImportarLoteDialog({
   const meses = (previa?.abas ?? []).flatMap((a) => a.meses);
   const aImportar = meses.filter((m) => m.acao === "IMPORTAR" || m.acao === "COMPARAR");
   const anteriores = aImportar.filter((m) => !m.atual);
+  const naFila = (importado?.abas ?? []).flatMap((a) => a.meses).filter((m) => m.importacaoId).length;
   // Nada mudou: "Importar" reimporta assim mesmo o mês do envio das abas sem mudança.
   const aReimportar = aImportar.length === 0 ? meses.filter((m) => m.acao === "SEM_MUDANCA" && m.atual) : [];
   const reimportar = aReimportar.length > 0;
@@ -350,12 +352,12 @@ export function ImportarLoteDialog({
               {exibida.abas.length === 0
                 ? "nenhuma aba que a ferramenta importa."
                 : importado
-                  ? `${(importado.abas ?? []).flatMap((a) => a.meses).filter((m) => m.importacaoId).length} mês(es) na fila de importação.`
+                  ? `${naFila} ${plural(naFila, "mês", "meses")} na fila de importação.`
                   : reimportar
                     ? "nenhuma mudança: o arquivo é igual ao que está importado. “Importar” reimporta o mês atual assim mesmo."
                     : aImportar.length === 0
                     ? "nada a importar: o arquivo é igual ao que está importado."
-                    : `${aImportar.length} mês(es) a importar${anteriores.length ? `, dos quais ${anteriores.length} de meses anteriores ainda abertos` : ""}.`}
+                    : `${aImportar.length} ${plural(aImportar.length, "mês", "meses")} a importar${anteriores.length ? `, dos quais ${anteriores.length} ${plural(anteriores.length, "de mês anterior ainda aberto", "de meses anteriores ainda abertos")}` : ""}.`}
             </p>
             {anteriores.length ? (
               <p className="flex items-center gap-2 text-xs text-gray-600">

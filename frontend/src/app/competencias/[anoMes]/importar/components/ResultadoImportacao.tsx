@@ -25,7 +25,7 @@ import {
 import { SheetHeader } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
-import { iniciaisMaiusculas } from "@/lib/texto";
+import { iniciaisMaiusculas, plural } from "@/lib/texto";
 
 /** Acima disso a tabela de rejeições corta — o relatório completo fica no banco. */
 const MAX_REJEICOES = 200;
@@ -154,7 +154,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
         <p>
           Competência fechada: o balancete foi só comparado com o gravado, e nada foi substituído.{" "}
           {resumo.divergencias
-            ? `${inteiro(resumo.divergencias)} divergência(s) nova(s), somando ${resumo.diferenca} de diferença.`
+            ? `${inteiro(resumo.divergencias)} ${plural(resumo.divergencias, "divergência nova", "divergências novas")}, somando ${resumo.diferenca} de diferença.`
             : "Nenhuma diferença nova em relação ao que está gravado."}{" "}
           <Link href="/divergencias" className="font-medium underline underline-offset-2">
             Ver divergências
@@ -174,7 +174,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
             O arquivo traz meses já fechados que diferem do gravado:{" "}
             {resumo.retroativas
               .filter((r) => r.divergencias > 0)
-              .map((r) => `${r.competencia} (${inteiro(r.divergencias)} divergência(s))`)
+              .map((r) => `${r.competencia} (${inteiro(r.divergencias)} ${plural(r.divergencias, "divergência", "divergências")})`)
               .join(", ")}
             .{" "}
             <Link href="/divergencias" className="font-medium underline underline-offset-2">
@@ -270,7 +270,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-800" />
             <div className="text-sm text-yellow-800">
               <p className="font-medium">
-                {foraDoCadastro.length} centro(s) de custo fora do cadastro
+                {foraDoCadastro.length} {plural(foraDoCadastro.length, "centro", "centros")} de custo fora do cadastro
               </p>
               <p className="mt-0.5">
                 Os lançamentos foram gravados com o código de origem e vão aparecer
@@ -280,7 +280,7 @@ function ConcluidaBalancete({ imp }: { imp: ImportacaoDetalhe }) {
                 {foraDoCadastro.map((c) => (
                   <li key={c.codigo}>
                     <span className="font-medium">{c.codigo}</span> {c.nome ?? ""} —{" "}
-                    {c.linhas} lançamento(s), {moeda(c.valor)}
+                    {c.linhas} {plural(c.linhas, "lançamento", "lançamentos")}, {moeda(c.valor)}
                   </li>
                 ))}
               </ul>
@@ -365,7 +365,7 @@ function ConcluidaLista({ imp }: { imp: ImportacaoDetalhe }) {
             </p>
             <p className="mt-1">
               {resumo.obrasCriadas > 0
-                ? `${inteiro(resumo.obrasCriadas)} obra(s) nova(s) cadastradas a partir desta lista.`
+                ? `${inteiro(resumo.obrasCriadas)} ${plural(resumo.obrasCriadas, "obra nova cadastrada", "obras novas cadastradas")} a partir desta lista.`
                 : "Nenhuma obra nova."}
             </p>
             {resumo.substituiu.length > 0 ? <p className="mt-1">Substituiu o lote anterior desta lista.</p> : null}
@@ -453,11 +453,11 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
             </p>
             <p className="mt-1">
               {resumo.obrasCriadas > 0
-                ? `${inteiro(resumo.obrasCriadas)} obra(s) nova(s) cadastradas a partir da DRE.`
+                ? `${inteiro(resumo.obrasCriadas)} ${plural(resumo.obrasCriadas, "obra nova cadastrada", "obras novas cadastradas")} a partir da DRE.`
                 : "Nenhuma obra nova."}
             </p>
             {resumo.obrasNomeadas ? (
-              <p className="mt-1">{inteiro(resumo.obrasNomeadas)} obra(s) sem nome receberam o nome da aba Pedidos.</p>
+              <p className="mt-1">{inteiro(resumo.obrasNomeadas)} {plural(resumo.obrasNomeadas, "obra sem nome recebeu", "obras sem nome receberam")} o nome da aba Pedidos.</p>
             ) : null}
             <p className="mt-1">
               {resumo.obrasComAditivo.length > 0
@@ -465,7 +465,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
                 : "Nenhuma obra com aditivo."}
             </p>
             <p className="mt-1">
-              {inteiro(resumo.obrasSemContrato)} obra(s) cadastrada(s) sem preço vigente na versão 0
+              {inteiro(resumo.obrasSemContrato)} {plural(resumo.obrasSemContrato, "obra cadastrada", "obras cadastradas")} sem preço vigente na versão 0
               (sem contrato).
             </p>
           </div>
@@ -483,7 +483,7 @@ function ConcluidaDreComercial({ imp }: { imp: ImportacaoDetalhe }) {
                 receita contaria essas linhas em dobro.
               </p>
               <p className="mt-1">
-                {resumo.obrasRepetidas.map((o) => `${o.obra} (${o.linhas} linha(s))`).join(", ")}
+                {resumo.obrasRepetidas.map((o) => `${o.obra} (${o.linhas} ${plural(o.linhas, "linha", "linhas")})`).join(", ")}
               </p>
             </div>
           </div>
@@ -598,7 +598,7 @@ function ConcluidaDocumentos({ imp }: { imp: ImportacaoDetalhe }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Contador rotulo="Itens do mês" valor={imp.linhasAceitas} destaque="ok" detalhe={resumo ? `${resumo.contas.toLocaleString("pt-BR")} conta(s)` : undefined} />
+        <Contador rotulo="Itens do mês" valor={imp.linhasAceitas} destaque="ok" detalhe={resumo ? `${resumo.contas.toLocaleString("pt-BR")} ${plural(resumo.contas, "conta", "contas")}` : undefined} />
         <Contador rotulo="Rejeitados" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
         <Contador rotulo="De outros meses" valor={imp.linhasIgnoradas} />
       </div>

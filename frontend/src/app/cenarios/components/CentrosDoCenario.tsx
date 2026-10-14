@@ -10,6 +10,7 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { cenariosService, type LinhaDaPremissa, type RateiosDoCenario as Rateios } from "../services/cenariosService";
 import { Erro } from "./CenarioDialog";
 import { TabelaEditavel } from "./TabelaPremissas";
+import { plural } from "@/lib/texto";
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
 const reais = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
@@ -94,10 +95,10 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
               ]}
               editavel={editavel && dados.editavel}
               comReferencia={false}
-              item="linha(s)"
+              item={["linha", "linhas"]}
               cabecalho="QUADRO"
               aoGravar={(alteracoes, origem) => cenariosService.gravarLotacao(id, grupo!, alteracoes.map((a) => ({ mes: a.mes, valor: a.valor })), origem)}
-              mensagem={(n) => `${n} mês(es) do quadro de lotação gravado(s); os quadros de lotação dos indicadores foram recalculados.`}
+              mensagem={(n) => `${n} ${plural(n, "mês", "meses")} do quadro de lotação ${plural(n, "gravado", "gravados")}; os quadros de lotação dos indicadores foram recalculados.`}
             />
             <TabelaEditavel
               key={grupo ?? ""}
@@ -107,10 +108,10 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
               linhas={linhasDoCentro(contas.data.contas)}
               editavel={editavel && dados.editavel}
               comReferencia={false}
-              item="conta(s)"
+              item={["conta", "contas"]}
               cabecalho="CONTA"
               aoGravar={(alteracoes, origem) => cenariosService.gravarCentro(id, grupo!, alteracoes, origem)}
-              mensagem={(n) => `${n} valor(es) do centro gravado(s); a DRE do cenário foi recalculada.`}
+              mensagem={(n) => `${n} ${plural(n, "valor", "valores")} do centro ${plural(n, "gravado", "gravados")}; a DRE do cenário foi recalculada.`}
             />
           </>
         )}

@@ -12,6 +12,7 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { cenariosService, type LinhaDaPremissa, type OrigemDaGravacao, type PremissasDaUnidade, type TabelaDePremissas } from "../services/cenariosService";
 import { botaoPrimario } from "./CenarioDialog";
 import { ReajusteDialog, ValorDialog } from "./EdicaoDialogs";
+import { plural } from "@/lib/texto";
 
 /** As larguras das colunas (a premissa, a unidade, a Média de Referência e os meses): as mesmas nos rótulos e no corpo. */
 const LARGURA = { premissa: 340, und: 92, referencia: 116, mes: 104 };
@@ -67,7 +68,7 @@ export function TabelaPremissas({ id, dados, tabela, editavel }: { id: string; d
           origem,
         )
       }
-      mensagem={(n) => `${n} premissa(s) gravada(s); a DRE do cenário foi recalculada.`}
+      mensagem={(n) => `${n} ${plural(n, "premissa gravada", "premissas gravadas")}; a DRE do cenário foi recalculada.`}
     />
   );
 }
@@ -87,7 +88,7 @@ export function TabelaEditavel({
   aoGravar,
   mensagem,
   comReferencia = true,
-  item = "premissa(s)",
+  item = ["premissa", "premissas"],
   cabecalho = "PREMISSA",
 }: {
   titulo: string;
@@ -98,8 +99,8 @@ export function TabelaEditavel({
   aoGravar?: (alteracoes: Array<{ linha: string; mes: number; valor: number }>, origem: OrigemDaGravacao) => Promise<{ alteradas: number }>;
   mensagem?: (alteradas: number) => string;
   comReferencia?: boolean;
-  /** O que se marca, na barra ("premissa(s)", "conta(s)"). */
-  item?: string;
+  /** O que se marca, na barra, no singular e no plural (["premissa", "premissas"], ["conta", "contas"]). */
+  item?: [string, string];
   /** O rótulo da primeira coluna. */
   cabecalho?: string;
 }) {
@@ -113,7 +114,7 @@ export function TabelaEditavel({
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
-      toast.success(mensagem ? mensagem(r.alteradas) : `${r.alteradas} valor(es) gravado(s).`);
+      toast.success(mensagem ? mensagem(r.alteradas) : `${r.alteradas} ${plural(r.alteradas, "valor gravado", "valores gravados")}.`);
       setReajuste(false);
       setValor(null);
     },
@@ -229,7 +230,7 @@ export function TabelaEditavel({
       {editavel ? (
         <div className="flex flex-wrap items-center gap-3 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm">
           <span className="text-gray-700">
-            <span className="font-bold text-gray-900">{marcados.length}</span> valor(es) marcado(s) · {linhas.size} {item} × {meses.size} mês(es)
+            <span className="font-bold text-gray-900">{marcados.length}</span> {plural(marcados.length, "valor marcado", "valores marcados")} · {linhas.size} {plural(linhas.size, ...item)} × {meses.size} {plural(meses.size, "mês", "meses")}
           </span>
           <button type="button" className={botaoCinza} onClick={() => setMeses(todosOsMeses ? new Set() : new Set(mesesDaTabela.map((_, i) => i)))}>
             {todosOsMeses ? "Desmarcar os Meses" : "Marcar Todos os Meses"}

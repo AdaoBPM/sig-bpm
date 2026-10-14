@@ -1,6 +1,7 @@
 import { Prisma } from "../../generated/prisma/client.js";
 import type { Composicao, LinhaEstrutura, ResultadoLinha } from "./apuracaoUnidades.js";
 import { avaliarExpressao } from "./expressao.js";
+import { plural } from "../../utils/plural.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -118,7 +119,7 @@ export function apurarCentros(linhas: LinhaEstrutura[], lancamentos: LancamentoD
           linhaId: l.id,
           codigo: l.codigo,
           valor: d.valor,
-          composicao: { regra: "Lançamentos contábeis do centro, diretos e de rateio, antes do rateio", direto: d.valor.toFixed(2), observacao: `${d.n} lançamento(s)` },
+          composicao: { regra: "Lançamentos contábeis do centro, diretos e de rateio, antes do rateio", direto: d.valor.toFixed(2), observacao: `${d.n} ${plural(d.n, "lançamento", "lançamentos")}` },
         });
         continue;
       }

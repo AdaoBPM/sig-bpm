@@ -8,6 +8,7 @@ import { rateiosService } from "../volumes/rateiosService.js";
 import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
 import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
+import { plural } from "../../utils/plural.js";
 
 /**
  * Apuração congelada, fechamento e reabertura da competência (Passo 21).
@@ -119,7 +120,7 @@ function mudancas(apurado: Retrato | null, atual: Retrato): string[] {
       continue;
     }
     if (a.n !== b.n || a.soma !== b.soma || (a.ultima ?? null) !== (b.ultima ?? null)) {
-      m.push(`A ${a.rotulo.startsWith("lista") ? a.rotulo : `relação de ${a.rotulo}`} mudou depois da apuração (${b.n} → ${a.n} registro(s)).`);
+      m.push(`A ${a.rotulo.startsWith("lista") ? a.rotulo : `relação de ${a.rotulo}`} mudou depois da apuração (${b.n} → ${a.n} ${plural(a.n, "registro", "registros")}).`);
     }
   }
   return m;
@@ -262,8 +263,8 @@ export const apuracaoService = {
     if (c.status === "FECHADA") motivosNaoFechar.push("A competência já está fechada.");
     if (!apurada) motivosNaoFechar.push("A competência ainda não foi apurada.");
     if (mudou.length) motivosNaoFechar.push("As entradas mudaram depois da apuração: reapure antes de fechar.");
-    if (pendentes) motivosNaoFechar.push(`Há ${pendentes} lançamento(s) com pendência de classificação.`);
-    if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} lançamento(s) sem classificação.`);
+    if (pendentes) motivosNaoFechar.push(`Há ${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} com pendência de classificação.`);
+    if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} ${plural(naoClassificados, "lançamento", "lançamentos")} sem classificação.`);
     // Fecha-se em ordem (11/10/2026): com uma competência anterior em aberto, esta não se fecha.
     if (c.status !== "FECHADA") {
       const abertas = await getPrismaClient().competencia.findMany({

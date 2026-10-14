@@ -25,6 +25,7 @@ import { AvisoCongelado } from "../../components/AvisoCongelado";
 import { apuracaoService } from "../../services/apuracaoService";
 import { dataHora, inteiro, lerAnoMes, moeda } from "../utils/formatacao";
 import { VALIDACOES, ValidacaoBadge } from "./components/ValidacaoBadge";
+import { plural } from "@/lib/texto";
 import {
   classificacaoService,
   type LancamentoClassificado,
@@ -258,8 +259,8 @@ export function ClassificacaoContent() {
         <div className="flex items-center gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-4">
           <AlertTriangle className="size-4 shrink-0 text-yellow-800" />
           <p className="text-sm text-yellow-800">
-            {inteiro(r.naoClassificados)} lançamento(s) ainda sem classificação. Use
-            Reclassificar para calculá-los.
+            {inteiro(r.naoClassificados)} {plural(r.naoClassificados, "lançamento", "lançamentos")} ainda sem classificação. Use
+            Reclassificar para {plural(r.naoClassificados, "calculá-lo", "calculá-los")}.
           </p>
         </div>
       ) : null}

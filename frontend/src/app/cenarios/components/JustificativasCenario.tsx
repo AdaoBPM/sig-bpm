@@ -15,6 +15,7 @@ import { formato, mensagemDeErro } from "@/app/relatorios/services/relatoriosSer
 import { cenariosService, type ItemJustificativa } from "../services/cenariosService";
 import { useTipoDoCenario } from "./tipoDoCenario";
 import { botaoPrimario, Erro } from "./CenarioDialog";
+import { plural } from "@/lib/texto";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const QUADRO = "rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-700";
@@ -58,7 +59,7 @@ export function JustificativasCenario({ id, podeEditar }: { id: string; podeEdit
         <>
           <p className={QUADRO}>
             Comparado com <span className="font-bold text-gray-900">{dados.comparadoCom.nome}</span> ({dados.comparadoCom.ano}).{" "}
-            {pendentes ? `${pendentes.toLocaleString("pt-BR")} conta(s) sem justificativa, somando as abas.` : "Todas as contas acima da variação estão justificadas."}
+            {pendentes ? `${pendentes.toLocaleString("pt-BR")} ${plural(pendentes, "conta", "contas")} sem justificativa, somando as abas.` : "Todas as contas acima da variação estão justificadas."}
           </p>
           <Abas
             rotulo="Abas da DRE"
@@ -69,7 +70,7 @@ export function JustificativasCenario({ id, podeEditar }: { id: string; podeEdit
           <div className="rounded-sm border border-gray-200 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5 text-sm">
               <span className="text-gray-600">
-                {atual?.itens.length ?? 0} conta(s) acima da variação em {atual?.nome}; {(atual?.itens ?? []).filter((i) => !i.justificativa).length} sem justificativa.
+                {atual?.itens.length ?? 0} {plural(atual?.itens.length ?? 0, "conta", "contas")} acima da variação em {atual?.nome}; {(atual?.itens ?? []).filter((i) => !i.justificativa).length} sem justificativa.
               </span>
               <label className="inline-flex items-center gap-2 text-gray-700">
                 <input type="checkbox" className="accent-black" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} />

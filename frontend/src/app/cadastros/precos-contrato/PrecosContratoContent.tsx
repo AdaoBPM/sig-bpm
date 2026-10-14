@@ -11,6 +11,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { dataHora, moeda } from "../../competencias/[anoMes]/utils/formatacao";
 import { CadastroShell } from "../components/CadastroShell";
 import { cadastrosService, type PrecoContrato } from "../services/cadastrosService";
+import { plural } from "@/lib/texto";
 
 const POR_PAGINA_INICIAL = 50;
 /** O cadastro inteiro vem de uma vez: o filtro e a ordem das colunas valem para todos os preços. */
@@ -96,7 +97,7 @@ export function PrecosContratoContent() {
             }}
             className="size-4 accent-black"
           />
-          Mostrar Histórico{data ? ` (${data.substituidos} substituído(s))` : ""}
+          Mostrar Histórico{data ? ` (${data.substituidos} ${plural(data.substituidos, "substituído", "substituídos")})` : ""}
         </label>
       }
     >

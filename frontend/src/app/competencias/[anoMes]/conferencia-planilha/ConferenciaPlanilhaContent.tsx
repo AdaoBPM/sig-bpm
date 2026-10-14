@@ -22,6 +22,7 @@ import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
 import { Agrupador, SeletorNivel, useNiveisDRE } from "../dre/components/NiveisDRE";
 import { conferenciaService, mensagemDeErro, type LinhaConferencia, type VisaoConferencia } from "./services/conferenciaService";
+import { plural } from "@/lib/texto";
 
 const MESES_CURTOS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 // As linhas de volume (m³, kg…) são as dos grupos PRODUÇÃO e SERVIÇOS, como na tela da DRE.
@@ -325,7 +326,7 @@ export function ConferenciaPlanilhaContent() {
           <FaixaIndicadores
             itens={[
               {
-                rotulo: `diferença(s) acima de ${moeda(r.limite)}`,
+                rotulo: `${plural(r.resumo.diferencas, "diferença", "diferenças")} acima de ${moeda(r.limite)}`,
                 valor: r.resumo.diferencas === 0 ? <span className="text-green-700">0</span> : r.resumo.diferencas,
                 tom: r.resumo.diferencas > 0 ? "atencao" : undefined,
               },
@@ -338,8 +339,8 @@ export function ConferenciaPlanilhaContent() {
               },
               ...(r.resumo.soNaPlanilha + r.resumo.soNoSistema > 0
                 ? [
-                    { rotulo: "linha(s) só na planilha", valor: r.resumo.soNaPlanilha, tom: "atencao" as const },
-                    { rotulo: "linha(s) só na ferramenta", valor: r.resumo.soNoSistema, tom: "atencao" as const },
+                    { rotulo: `${plural(r.resumo.soNaPlanilha, "linha", "linhas")} só na planilha`, valor: r.resumo.soNaPlanilha, tom: "atencao" as const },
+                    { rotulo: `${plural(r.resumo.soNoSistema, "linha", "linhas")} só na ferramenta`, valor: r.resumo.soNoSistema, tom: "atencao" as const },
                   ]
                 : []),
             ]}
