@@ -25,6 +25,10 @@ export type MovimentacaoForaDoPadrao = {
   valores: number[];
   /** Os grupos de centros que podem recebê-la: os que têm a mesma atribuição e conta no grupo da DRE deles. */
   destinos: Array<{ grupo: string; conta: string; departamento: string }>;
+  /** A filial predominante dos lançamentos (pelo valor). */
+  filial?: number;
+  /** O grupo do padrão (botão Aplicar Padrão), quando ele pode recebê-la; nas cargas antigas, ausente. */
+  padrao?: string | null;
 };
 
 /** O que está somado nos centros do cenário por uma decisão (para tirar se ela mudar). */
@@ -82,4 +86,43 @@ export function diferencasDasDecisoes(r: Realocacoes, decisoes: Record<string, s
     }
   }
   return { diferencas, aplicadas };
+}
+
+/** "Técnico" → "TECNICO": para achar o centro do RM pelo nome, sem acentos e sem caixa. */
+const normalizar = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().trim();
+
+/**
+ * O padrão das realocações (14/10/2026, botão Aplicar Padrão): o centro de custo do RM que recebe cada conta, pelo
+ * departamento da conta na DRE, pela filial (a predominante dos lançamentos) e pela atribuição. Na produção e nos
+ * serviços, a mão de obra direta e os gastos gerais diretos (e variáveis) vão ao centro produtivo; a indireta e os
+ * gastos gerais indiretos, ao de apoio.
+ */
+export function centroPadrao(codigoDaLinha: string, filial: number): string | null {
+  const [departamento, atribuicao] = codigoDaLinha.split(".");
+  const direta = ["MOD", "GGD", "GGV"].includes(atribuicao);
+  const indireta = ["MOI", "GGI"].includes(atribuicao);
+  switch (departamento) {
+    case "CPP":
+      if (filial === 2) return direta ? "ALVEOLARES" : indireta ? "PCP (FOR)" : null;
+      return direta ? "ESTRUTURA" : indireta ? "PCP (CRI)" : null;
+    case "CSM":
+    case "CSC":
+      return direta ? "GUINDASTEIROS" : indireta ? "ADM. DE OBRAS" : null;
+    case "DL":
+      return "LOGISTICA";
+    case "DT":
+      return "TECNICO";
+    case "DC":
+      return "ORCAMENTOS";
+    case "DA":
+      return "FINANCEIRO";
+    default:
+      return null;
+  }
+}
+
+/** O grupo do cenário que tem o centro do RM de nome `nomeRM` (sem acentos e sem caixa). */
+export function grupoDoCentroRM(grupos: Array<{ grupo: string; centros: Array<{ nome: string }> }>, nomeRM: string) {
+  const alvo = normalizar(nomeRM);
+  return grupos.find((g) => g.centros.some((c) => normalizar(c.nome) === alvo))?.grupo ?? null;
 }

@@ -30,6 +30,17 @@ export function RealocacoesDialog({ cenario, podeEditar, onFechar }: { cenario: 
   const inicial: Escolhas = Object.fromEntries(r.movimentacoes.map((m) => [m.chave, r.decisoes[m.chave] ?? ""]));
   const [escolhas, setEscolhas] = useState<Escolhas>(inicial);
   const [confirmar, setConfirmar] = useState(false);
+  const [padraoAplicado, setPadraoAplicado] = useState<string | null>(null);
+  // O padrão (14/10/2026): o centro do RM de cada departamento, filial e atribuição; só preenche, o Gravar grava.
+  const comPadrao = r.movimentacoes.filter((m) => m.padrao);
+  const temPadrao = r.movimentacoes.some((m) => m.padrao !== undefined);
+  const aplicarPadrao = () => {
+    setEscolhas((x) => ({ ...x, ...Object.fromEntries(comPadrao.map((m) => [m.chave, m.padrao!])) }));
+    const sem = r.movimentacoes.length - comPadrao.length;
+    setPadraoAplicado(
+      `Padrão aplicado em ${comPadrao.length} ${plural(comPadrao.length, "conta", "contas")}${sem ? `; ${sem} sem centro padrão ${plural(sem, "ficou", "ficaram")} como ${plural(sem, "estava", "estavam")}` : ""}. Confira e clique em “Gravar”.`,
+    );
+  };
   const mudou = r.movimentacoes.some((m) => escolhas[m.chave] !== inicial[m.chave]);
   const semCentro = r.movimentacoes.filter((m) => !escolhas[m.chave]);
   const realocadas = r.movimentacoes.filter((m) => escolhas[m.chave]);
@@ -123,8 +134,22 @@ export function RealocacoesDialog({ cenario, podeEditar, onFechar }: { cenario: 
           Realocadas: {realocadas.length} {plural(realocadas.length, "conta", "contas")} ({moeda(somaDe(realocadas))}) · Fora do cenário: {semCentro.length}{" "}
           {plural(semCentro.length, "conta", "contas")} ({moeda(somaDe(semCentro))}).
         </p>
+        {padraoAplicado ? <p className="text-sm text-gray-600">{padraoAplicado}</p> : null}
         <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar as realocações.") : null} />
         <DialogFooter>
+          {podeEditar ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-sm sm:mr-auto"
+              disabled={!temPadrao}
+              data-altera
+              title={temPadrao ? "Preenche os centros de custo pelo padrão (Produção Matriz e Filial, Serviços, Logística, Técnico, Comercial e Administrativo)" : "Recarregue o resultado realizado para usar o padrão"}
+              onClick={aplicarPadrao}
+            >
+              Aplicar Padrão
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             {podeEditar ? "Cancelar" : "Fechar"}
           </Button>

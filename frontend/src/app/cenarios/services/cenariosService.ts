@@ -68,6 +68,10 @@ export type MovimentacaoForaDoPadrao = {
   valores: number[];
   /** Os grupos de centros que podem recebê-la. */
   destinos: Array<{ grupo: string; conta: string; departamento: string }>;
+  /** A filial predominante dos lançamentos. */
+  filial?: number;
+  /** O grupo do padrão (Aplicar Padrão), quando ele pode recebê-la; ausente nas cargas antigas. */
+  padrao?: string | null;
 };
 export type Realocacoes = {
   referencia: string | null;

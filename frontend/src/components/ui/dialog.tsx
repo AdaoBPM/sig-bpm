@@ -111,9 +111,10 @@ function DialogContent({
     setSujo(true)
     vigia?.marcarSujo()
   }
-  // As caixas e as listas do Base UI são botões (sem o evento input): o clique nelas também conta.
+  // As caixas e as listas do Base UI são botões (sem o evento input): o clique nelas também conta. Os botões que
+  // preenchem o formulário (como o Aplicar Padrão das realocações, 14/10/2026) levam data-altera.
   const aoClicar = (e: React.MouseEvent) => {
-    if ((e.target as Element).closest?.('[role="switch"], [role="checkbox"], [role="radio"], [role="option"]')) marcarSujo()
+    if ((e.target as Element).closest?.('[role="switch"], [role="checkbox"], [role="radio"], [role="option"], [data-altera]')) marcarSujo()
   }
   const [cabecalhos, setCabecalhos] = React.useState(0)
   const popup = React.useRef<HTMLDivElement>(null)

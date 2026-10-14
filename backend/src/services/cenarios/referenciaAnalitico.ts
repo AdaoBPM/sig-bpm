@@ -3,7 +3,7 @@ import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
 import { contasDoGrupo, ehContaDeCentro, gruposDoCadastro, nomeDoGrupo } from "./centrosCenario.js";
 import { CONTAS_DEPRECIACAO, contasExtra, UNIDADES_EXTRA, VENDA_BASE, VENDA_EXTRA } from "./investimentosCenario.js";
-import type { MovimentacaoForaDoPadrao } from "./realocacoesCenario.js";
+import { centroPadrao, grupoDoCentroRM, type MovimentacaoForaDoPadrao } from "./realocacoesCenario.js";
 import { C, contasDaLinha, LINHAS_COM_ARMADURA, LINHAS_COM_METALURGIA, LIQUIDA_DA_BRUTA, linhasDoCadastro, UNIDADES_PREMISSAS, VENDAS_DA_UNIDADE, type LinhaDoCadastro, type UnidadePremissa, type Venda } from "./premissasCenario.js";
 
 /**
@@ -115,6 +115,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
       where: { ...naComp, OR: [".MOD.", ".MOI.", ".GGD.", ".GGI.", ".GGC."].map((a) => ({ linhaDRE: { codigo: { contains: a } } })) },
       select: {
         competenciaId: true,
+        filial: true,
         valorMovimento: true,
         codigoCentroCusto: true,
         nomeCentroCusto: true,
@@ -364,6 +365,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
   // conta da DRE. Cada uma pode ir a um grupo que tenha a mesma atribuição e conta no grupo da DRE dele.
   const daEstrutura = new Map(est.map((l) => [l.codigo, l]));
   const foraDoPadrao = new Map<string, Omit<MovimentacaoForaDoPadrao, "valores"> & { meses: number[] }>();
+  const porFilial = new Map<string, Map<number, number>>();
   for (const l of lancamentosDeCentros) {
     const codigo = l.linhaDRE?.codigo;
     if (!codigo || l.linhaDRE?.tipo !== "ITEM" || !ehContaDeCentro(codigo)) continue;
@@ -395,10 +397,20 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
         : "Sem centro de custo";
     if (!m.origens.includes(origem)) m.origens.push(origem);
     const v = Number(l.valorMovimento);
+    const f = porFilial.get(chaveM) ?? new Map<number, number>();
+    f.set(l.filial, (f.get(l.filial) ?? 0) + v);
+    porFilial.set(chaveM, f);
     m.total += v;
     m.meses[(mesDe.get(l.competenciaId) ?? 1) - 1] += v;
   }
   const movimentacoes = [...foraDoPadrao.values()].filter((m) => m.meses.some((v) => Math.abs(v) >= 0.005)).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  // O padrão de cada conta (14/10/2026): o centro do RM pela filial predominante, se o grupo dele puder recebê-la.
+  for (const m of movimentacoes) {
+    m.filial = [...(porFilial.get(m.chave) ?? new Map<number, number>())].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0]?.[0] ?? 1;
+    const nomeRM = centroPadrao(m.linha.codigo, m.filial);
+    const grupo = nomeRM ? grupoDoCentroRM(grupos, nomeRM) : null;
+    m.padrao = grupo && m.destinos.some((d) => d.grupo === grupo) ? grupo : null;
+  }
   // As decisões gravadas (mantidas entre as cargas) entram nos grupos escolhidos.
   const aplicadas = new Map<string, { grupo: string; conta: string }>();
   for (const m of movimentacoes) {

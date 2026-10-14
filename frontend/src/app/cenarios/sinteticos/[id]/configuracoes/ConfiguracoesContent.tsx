@@ -51,6 +51,12 @@ export function ConfiguracoesContent() {
                   ela entra como do departamento dele). Sem centro, a conta fica fora do cenário, e gravar assim pede confirmação. As realocações ficam
                   registradas no quadro, entram nos centros do cenário (a DRE se recalcula) e valem nas próximas cargas do realizado, ainda editáveis.
                 </li>
+                <li>
+                  “Aplicar Padrão”, no pé do modal, preenche os centros pelo padrão (pela filial em que a conta mais lançou): Produção Matriz — MOD,
+                  GGD e GGV em Estrutura, MOI e GGI em PCP (CRI); Produção Filial — MOD, GGD e GGV em Alveolares, MOI e GGI em PCP (FOR); Serviços —
+                  MOD, GGD e GGV em Guindasteiros, MOI e GGI em Adm. de Obras; Logística em Logística; Técnico em Técnico; Comercial em Orçamentos;
+                  Administrativo em Financeiro. Ele só preenche: confira e clique em “Gravar”.
+                </li>
               </>
             ) : (
               <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
