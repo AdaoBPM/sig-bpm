@@ -3,6 +3,10 @@ import { calcularPercentuais } from "./percentuaisRateio.js";
 import type { CodigoTotais } from "./totaisOperacao.js";
 import { totaisDaCompetencia } from "./volumesService.js";
 
+/** As chaves de rateio e os nomes delas. */
+export const CHAVES_DE_RATEIO = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA", "ACOMPANHAMENTO"] as const;
+export const NOME_DA_CHAVE: Record<string, string> = { PROJETO: "Projeto", PRODUCAO: "Produção", METALURGIA: "Metalurgia", ARMADURA: "Armadura", ACOMPANHAMENTO: "Acompanhamento" };
+
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraRateioError extends Error {
   constructor(
@@ -30,7 +34,7 @@ async function regrasVigentes(ano: number, mes: number) {
   return getPrismaClient().regraRateio.findMany({
     where: { vigenciaInicio: { lte: inicioMes }, OR: [{ vigenciaFim: null }, { vigenciaFim: { gte: inicioMes } }] },
     orderBy: [{ ordem: "asc" }],
-    select: { id: true, chave: true, destino: true, origemDoVolume: true, baseFisica: true, rotulo: true, unidadeDestinoId: true },
+    select: { id: true, chave: true, destino: true, origemDoVolume: true, baseFisica: true, rotulo: true, unidadeDestinoId: true, percentualFixo: true },
   });
 }
 
@@ -51,7 +55,7 @@ export const rateiosService = {
     if (regras.length === 0) throw new RegraRateioError(409, "Não há regras de rateio vigentes. Carregue o cadastro.");
     const porCodigo = new Map(totais.map((t) => [t.codigo as string, t.quantidade]));
     const calculados = calcularPercentuais(
-      regras.map((r) => ({ id: r.id, chave: r.chave, destino: r.destino, origem: r.origemDoVolume as CodigoTotais })),
+      regras.map((r) => ({ id: r.id, chave: r.chave, destino: r.destino, origem: r.origemDoVolume as CodigoTotais, fixo: r.percentualFixo })),
       porCodigo,
     );
     const unidadePorRegra = new Map(regras.map((r) => [r.id, r.unidadeDestinoId]));
@@ -69,7 +73,11 @@ export const rateiosService = {
         })),
       }),
     ]);
-    return this.consultar(ano, mes);
+    // As chaves sem regra vigente no mês (14/10/2026): os lançamentos de rateio delas não vão para nenhuma unidade.
+    const avisos = CHAVES_DE_RATEIO.filter((k) => !regras.some((r) => r.chave === k)).map(
+      (k) => `Rateio de ${NOME_DA_CHAVE[k]} sem regra vigente em ${rotulo(ano, mes)}: os lançamentos de rateio dele não vão para nenhuma unidade. Cadastre a regra em Cadastros da Controladoria / Regras de Rateio.`,
+    );
+    return { ...(await this.consultar(ano, mes)), avisos };
   },
 
   /**
@@ -89,7 +97,7 @@ export const rateiosService = {
           percentual: true,
           apuradoEm: true,
           congelado: true,
-          regraRateio: { select: { chave: true, destino: true, origemDoVolume: true, baseFisica: true, rotulo: true, ordem: true } },
+          regraRateio: { select: { chave: true, destino: true, origemDoVolume: true, baseFisica: true, rotulo: true, ordem: true, percentualFixo: true } },
         },
         orderBy: { regraRateio: { ordem: "asc" } },
       }),
@@ -104,11 +112,12 @@ export const rateiosService = {
       _sum: { valorMovimento: true },
     });
     const lancadoNaChave = new Map(deRateio.map((x) => [x.balde as string, Number(x._sum.valorMovimento ?? 0)]));
-    const chaves = new Map<string, { chave: string; baseFisica: string; total: number; destinos: unknown[] }>();
+    const chaves = new Map<string, { chave: string; baseFisica: string; total: number; percentual: number; destinos: unknown[] }>();
     for (const v of volumes) {
       const r = v.regraRateio;
-      const k = chaves.get(r.chave) ?? { chave: r.chave, baseFisica: r.baseFisica, total: 0, destinos: [] };
+      const k = chaves.get(r.chave) ?? { chave: r.chave, baseFisica: r.baseFisica, total: 0, percentual: 0, destinos: [] };
       k.total += Number(v.quantidade);
+      k.percentual += Number(v.percentual);
       const atual = totalAtual.get(r.origemDoVolume);
       k.destinos.push({
         destino: r.destino,
@@ -116,6 +125,8 @@ export const rateiosService = {
         origem: r.origemDoVolume,
         quantidade: v.quantidade.toFixed(3),
         percentual: v.percentual.toFixed(10),
+        // O percentual fixo da regra (14/10/2026): o volume aparece, mas não dá o percentual.
+        fixo: r.percentualFixo !== null,
         /**
          * Volume de hoje, se as listas mudaram depois da apuração. Compara com
          * as três casas das listas: as somas guardam resíduo de ponto flutuante
@@ -129,11 +140,12 @@ export const rateiosService = {
       competencia: { ano, mes, status: c.status },
       apuradoEm: volumes[0]?.apuradoEm ?? null,
       congelado: volumes.some((v) => v.congelado),
-      chaves: [...chaves.values()].map((k) => ({
+      chaves: [...chaves.values()].map(({ percentual, ...k }) => ({
         ...k,
         total: k.total.toFixed(3),
-        // A chave sem volume com lançamentos de rateio no mês: o valor que não vai para nenhuma unidade.
-        semVolume: k.total === 0 && lancadoNaChave.get(k.chave) ? lancadoNaChave.get(k.chave)!.toFixed(2) : null,
+        // A chave sem percentual (sem volume, ou sem regra fixa) com lançamentos de rateio no mês: o valor que não vai para
+        // nenhuma unidade.
+        semVolume: percentual === 0 && lancadoNaChave.get(k.chave) ? lancadoNaChave.get(k.chave)!.toFixed(2) : null,
       })),
       totais: totais.map((t) => ({ codigo: t.codigo, rotulo: t.rotulo, medida: t.medida, tipo: t.tipo, quantidade: t.quantidade.toFixed(3) })),
     };

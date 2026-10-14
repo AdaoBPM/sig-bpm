@@ -5,6 +5,7 @@ import { verificarAlgumaPermissao, verificarPermissao } from "../../middlewares/
 
 import { cadastrosController } from "../../controllers/cadastros/cadastrosController.js";
 import { cenariosController } from "../../controllers/cenarios/cenariosController.js";
+import { percentuaisFixosController } from "../../controllers/cadastros/percentuaisFixosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
@@ -74,3 +75,9 @@ cadastrosRoutes.get(
 // linha de cada uma, que a referência realizada dos cenários analíticos usa para dividir os custos entre as linhas.
 cadastrosRoutes.get("/linhas/correspondencias", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(cenariosController.correspondencias));
 cadastrosRoutes.put("/linhas/correspondencias", autenticacao, verificarPermissao("cadastros_controladoria:editar"), express.json(), asyncHandler(cenariosController.gravarCorrespondencias));
+
+// Os percentuais fixos das regras de rateio e a verificação das vigências (14/10/2026; na tela Regras de Rateio).
+cadastrosRoutes.get("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(percentuaisFixosController.listar));
+cadastrosRoutes.put("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastros_controladoria:editar"), express.json(), asyncHandler(percentuaisFixosController.gravar));
+cadastrosRoutes.delete("/regras-rateio/percentuais-fixos", autenticacao, verificarPermissao("cadastros_controladoria:editar"), asyncHandler(percentuaisFixosController.excluir));
+cadastrosRoutes.get("/regras-rateio/verificacao", autenticacao, verificarPermissao("cadastros_controladoria:ler"), asyncHandler(percentuaisFixosController.verificacao));

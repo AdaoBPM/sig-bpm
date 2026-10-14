@@ -1,0 +1,235 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Percent, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { usePermissions } from "@/context/PermissionContext";
+import { api } from "@/lib/api";
+import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
+
+import { botaoPrimario, classeSelect, Erro } from "@/app/cenarios/components/CenarioDialog";
+import { lerNumero } from "@/app/cenarios/components/EdicaoDialogs";
+import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
+
+type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean };
+type Dados = { chaves: Array<{ chave: string; nome: string; destinos: Array<{ destino: string; nome: string }> }>; conjuntos: Conjunto[] };
+
+const servico = {
+  listar: async () => (await api.get<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos")).data.data,
+  gravar: async (d: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number> }) =>
+    (await api.put<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos", d)).data.data,
+  excluir: async (chave: string, inicio: string) => (await api.delete<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos", { params: { chave, inicio } })).data.data,
+  verificacao: async () => (await api.get<{ data: { avisos: string[] } }>("/proxy/cadastros/regras-rateio/verificacao")).data.data,
+};
+
+const dataBR = (iso: string) => iso.split("-").reverse().join("/");
+const pct = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+
+/**
+ * O aviso das regras de rateio (14/10/2026): as chaves com meses sem regra (até dezembro do ano que vem) e os conjuntos
+ * de percentuais fixos que não somam 100%, no quadro com o destaque vermelho. Some quando não há.
+ */
+export function AvisoRegrasRateio() {
+  const consulta = useQuery({ queryKey: ["edicao", "regras-rateio", "verificacao"], queryFn: servico.verificacao });
+  const avisos = consulta.data?.avisos ?? [];
+  if (!avisos.length) return null;
+  return (
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+      <p className="font-medium text-gray-900">Verificação das Vigências</p>
+      <ul className="mt-1 list-disc space-y-1 pl-5">
+        {avisos.map((a) => (
+          <li key={a}>{a}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** O botão Percentuais Fixos, na linha do título da tela Regras de Rateio (14/10/2026). */
+export function BotaoPercentuaisFixos() {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
+        <Percent className="size-4" />
+        Percentuais Fixos
+      </Button>
+      {aberto ? <PercentuaisFixosDialog onFechar={() => setAberto(false)} /> : null}
+    </>
+  );
+}
+
+/**
+ * Os percentuais fixos de uma chave num período (14/10/2026): cada destino que a apuração usa na chave com um
+ * percentual, somando 100%, no lugar dos percentuais dos volumes. Escolha a chave e o conjunto (um já cadastrado, para
+ * editar, ou Novo), a vigência e os percentuais. As regras por volume da chave precisam estar encerradas antes do início.
+ */
+function PercentuaisFixosDialog({ onFechar }: { onFechar: () => void }) {
+  const consulta = useQuery({ queryKey: ["edicao", "regras-rateio", "percentuais-fixos"], queryFn: servico.listar });
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Percentuais Fixos</DialogTitle>
+          <DialogDescription>
+            Os percentuais de cada destino da chave, no lugar dos percentuais dos volumes, somando 100%. Valem de um mês a outro, como as demais
+            regras; as regras por volume da chave precisam ter a vigência encerrada antes do início.
+          </DialogDescription>
+        </DialogHeader>
+        {consulta.isError ? (
+          <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar os percentuais fixos.")} />
+        ) : consulta.isPending ? (
+          <div className="h-48 animate-pulse rounded-sm bg-gray-100" />
+        ) : (
+          <Formulario dados={consulta.data} onFechar={onFechar} />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Formulario({ dados, onFechar }: { dados: Dados; onFechar: () => void }) {
+  const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const pode = hasPermission("cadastros_controladoria:editar");
+  const [chave, setChave] = useState(dados.chaves[0]?.chave ?? "");
+  const [conjunto, setConjunto] = useState("");
+  const [inicio, setInicio] = useState("");
+  const [fim, setFim] = useState("");
+  const [textos, setTextos] = useState<Record<string, string>>({});
+  const [excluir, setExcluir] = useState(false);
+  const daChave = dados.chaves.find((c) => c.chave === chave);
+  const conjuntos = dados.conjuntos.filter((c) => c.chave === chave);
+  const atual = conjuntos.find((c) => c.inicio === conjunto) ?? null;
+  // Escolher a chave ou o conjunto carrega a vigência e os percentuais dele (Novo: vazio).
+  const carregar = (novaChave: string, inicioDoConjunto: string) => {
+    const c = dados.conjuntos.find((x) => x.chave === novaChave && x.inicio === inicioDoConjunto) ?? null;
+    setChave(novaChave);
+    setConjunto(c ? c.inicio : "");
+    setInicio(c?.inicio ?? "");
+    setFim(c?.fim ?? "");
+    setTextos(c ? Object.fromEntries(Object.entries(c.percentuais).map(([d, v]) => [d, v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })])) : {});
+    setExcluir(false);
+  };
+  const valores = (daChave?.destinos ?? []).map((d) => ({ ...d, valor: lerNumero(textos[d.destino] ?? "") }));
+  const soma = valores.reduce((s, v) => s + (typeof v.valor === "number" ? v.valor : 0), 0);
+  const invalido = valores.some((v) => v.valor === undefined || (typeof v.valor === "number" && (v.valor < 0 || v.valor > 100)));
+  const somaCerta = Math.abs(soma - 100) <= 0.005;
+  const pronto = pode && !!inicio && (!fim || fim >= inicio) && !invalido && somaCerta;
+  const concluir = (msg: string) => {
+    queryClient.invalidateQueries({ queryKey: ["edicao", "regras-rateio"] });
+    atualizarCompetencia(queryClient);
+    toast.success(msg);
+    onFechar();
+  };
+  const gravar = useMutation({
+    mutationFn: () =>
+      servico.gravar({
+        chave,
+        inicioAnterior: atual?.inicio ?? null,
+        inicio,
+        fim: fim || null,
+        percentuais: Object.fromEntries(valores.map((v) => [v.destino, typeof v.valor === "number" ? v.valor : 0])),
+      }),
+    onSuccess: () => concluir(`Percentuais fixos de ${daChave?.nome} gravados.`),
+  });
+  const apagar = useMutation({ mutationFn: () => servico.excluir(chave, atual!.inicio), onSuccess: () => concluir(`Percentuais fixos de ${daChave?.nome} excluídos.`) });
+  const erro = gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar.") : apagar.isError ? mensagemDeErro(apagar.error, "Não foi possível excluir.") : null;
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="pf-chave">Chave</Label>
+          <select id="pf-chave" value={chave} onChange={(e) => carregar(e.target.value, "")} className={classeSelect}>
+            {dados.chaves.map((c) => (
+              <option key={c.chave} value={c.chave}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pf-conjunto">Conjunto</Label>
+          <select id="pf-conjunto" value={conjunto} onChange={(e) => carregar(chave, e.target.value)} className={classeSelect}>
+            {pode ? <option value="">Novo</option> : null}
+            {conjuntos.map((c) => (
+              <option key={c.inicio} value={c.inicio}>
+                {c.fim ? `${dataBR(c.inicio)} a ${dataBR(c.fim)}` : `${dataBR(c.inicio)} em diante`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pf-inicio">Vigência: Início</Label>
+          <Input id="pf-inicio" type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} disabled={!pode} className="rounded-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pf-fim">Vigência: Fim (opcional)</Label>
+          <Input id="pf-fim" type="date" value={fim} onChange={(e) => setFim(e.target.value)} disabled={!pode} className={`rounded-sm ${fim && inicio && fim < inicio ? "border-red-400" : ""}`} />
+        </div>
+      </div>
+      <div className="rounded-sm border border-gray-200 bg-white">
+        {valores.map((v) => (
+          <div key={v.destino} className="flex items-center justify-between gap-3 border-b border-gray-100 px-3 py-2 last:border-b-0">
+            <Label htmlFor={`pf-${v.destino}`} className="text-sm text-gray-800">
+              {v.nome}
+            </Label>
+            <div className="flex items-center gap-1.5">
+              <Input
+                id={`pf-${v.destino}`}
+                inputMode="decimal"
+                value={textos[v.destino] ?? ""}
+                placeholder="0"
+                disabled={!pode}
+                onChange={(e) => setTextos((t) => ({ ...t, [v.destino]: e.target.value }))}
+                className={`h-8 w-28 rounded-sm text-right ${v.valor === undefined || (typeof v.valor === "number" && (v.valor < 0 || v.valor > 100)) ? "border-red-400" : ""}`}
+              />
+              <span className="text-sm text-gray-600">%</span>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between gap-3 bg-gray-50 px-3 py-2 text-sm">
+          <span className="font-bold text-gray-900">Soma</span>
+          <span className={`font-bold ${somaCerta ? "text-gray-900" : "text-red-700"}`}>{pct(soma)}</span>
+        </div>
+      </div>
+      {!somaCerta && !invalido ? <p className="text-xs text-red-700">Os percentuais precisam somar 100% (faltam {pct(100 - soma)}).</p> : null}
+      <Erro erro={erro} />
+      <DialogFooter>
+        {pode && atual ? (
+          atual.usado ? (
+            <span className="text-xs text-gray-500 sm:mr-auto" title="Já usado em apurações">
+              Já usado em apurações: encerre a vigência em vez de excluir.
+            </span>
+          ) : excluir ? (
+            <span className="flex items-center gap-2 text-sm text-gray-700 sm:mr-auto">
+              Excluir o conjunto?
+              <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" disabled={apagar.isPending} onClick={() => apagar.mutate()}>
+                Sim, Excluir
+              </Button>
+            </span>
+          ) : (
+            <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50 sm:mr-auto" onClick={() => setExcluir(true)}>
+              <Trash2 className="size-4" />
+              Excluir Conjunto
+            </Button>
+          )
+        ) : null}
+        <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+          {pode ? "Cancelar" : "Fechar"}
+        </Button>
+        {pode ? (
+          <Button type="button" className={botaoPrimario} disabled={!pronto || gravar.isPending} onClick={() => gravar.mutate()}>
+            {gravar.isPending ? "Gravando…" : "Gravar"}
+          </Button>
+        ) : null}
+      </DialogFooter>
+    </>
+  );
+}

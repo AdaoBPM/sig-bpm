@@ -70,10 +70,12 @@ type Props = {
   apenasAtivas?: boolean;
   /** Botões da tela antes do Novo (14/10/2026: a Correspondência Tarefa × Linha, na tela Linhas). */
   acoesExtras?: ReactNode;
+  /** Um aviso acima da tabela (14/10/2026: a verificação das vigências, na tela Regras de Rateio). */
+  aviso?: ReactNode;
 };
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
-export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras }: Props) {
+export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras, aviso }: Props) {
   useRegistrarAcessoTela(rota);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
@@ -112,6 +114,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
       carregando={def.isPending || lista.isPending}
       filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
+      {aviso}
       <DataTable<Registro>
         data={tabela.visiveis}
         cabecalho={tabela.cabecalho}

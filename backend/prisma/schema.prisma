@@ -541,6 +541,9 @@ model RegraRateio {
   origemDoVolume   String      @map("origem_do_volume")
   vigenciaInicio   DateTime    @map("vigencia_inicio")
   vigenciaFim      DateTime?   @map("vigencia_fim")
+  /// O percentual fixo do destino (14/10/2026; 0 a 1): preenchido, substitui o percentual dos volumes. As regras fixas de
+  /// uma chave e de um período somam 100% (a tela Percentuais Fixos grava todas juntas); o volume continua apurado.
+  percentualFixo   Decimal?    @map("percentual_fixo")
   /// ORDEM: posição na tela, reorganizável pelo usuário.
   ordem            Int         @default(0)
   criadoEm         DateTime    @default(now()) @map("criado_em")

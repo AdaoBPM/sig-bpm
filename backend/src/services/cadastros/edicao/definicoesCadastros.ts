@@ -3,6 +3,8 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { avaliarExpressao, codigosDaExpressao } from "../../dre/expressao.js";
 import { chaveDaLinha } from "../../../lib/linhas.js";
 import { LINHAS_TOTAIS } from "../../volumes/totaisOperacao.js";
+import { NOME_DA_CHAVE } from "../../volumes/rateiosService.js";
+import { conflitoDeVigencia } from "../../volumes/vigenciasRateio.js";
 import { formulasPorExtenso, INDICADORES_DAS_LISTAS, TOTALIZADORES_DAS_LISTAS } from "../../relatorios/catalogoIndicadores.js";
 import { compilarFormula, FormulaInvalidaError } from "../../relatorios/formulaIndicador.js";
 import { CALCULOS_SISTEMA } from "../../relatorios/indicadores.js";
@@ -246,6 +248,7 @@ const centros: DefinicaoCadastro = {
     return l + m + r > 0 ? `O centro tem ${l} lançamento(s) do balancete, ${m} manual(is) e ${r} valor(es) apurado(s).` : null;
   },
   async impedimentoExclusao(db, id) {
+    if ((await db.regraRateio.findUnique({ where: { id }, select: { percentualFixo: true } }))?.percentualFixo != null) return "Esta regra é de percentual fixo: exclua-a em “Percentuais Fixos”, com os outros destinos da chave.";
     const m = await this.movimentos!(db, id);
     return m ? `${m} Inative-o em vez de excluir.` : null;
   },
@@ -908,8 +911,14 @@ const regras: DefinicaoCadastro = {
     },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true },
     { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
+    // O percentual fixo (14/10/2026): só na tabela; grava-se em Percentuais Fixos, com os destinos da chave somando 100%.
+    { nome: "percentualFixoTexto", rotulo: "Percentual Fixo", rotuloColuna: "% Fixo", tipo: "texto", derivado: true, noFormulario: false },
   ],
-  listar: async (db) => db.regraRateio.findMany({ orderBy: [{ ordem: "asc" }, { chave: "asc" }] }),
+  listar: async (db) =>
+    (await db.regraRateio.findMany({ orderBy: [{ ordem: "asc" }, { chave: "asc" }, { vigenciaInicio: "asc" }] })).map((r) => ({
+      ...r,
+      percentualFixoTexto: r.percentualFixo === null ? null : `${(Number(r.percentualFixo) * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
+    })),
   ler: (db, id) => db.regraRateio.findUnique({ where: { id } }),
   async preparar(db, v, id) {
     const inicio = data(v.vigenciaInicio, "A vigência inicial", true)!;
@@ -920,8 +929,18 @@ const regras: DefinicaoCadastro = {
     const destino = total.destino;
     const unidade = await db.unidadeNegocio.findUnique({ where: { codigo: UNIDADE_DO_DESTINO[destino] ?? -1 }, select: { id: true } });
     if (!unidade) throw new RegraCadastroError(400, "Destino inválido.");
-    const outra = await db.regraRateio.findFirst({ where: { chave: chave as never, destino: destino as never, vigenciaInicio: inicio }, select: { id: true } });
-    if (outra && outra.id !== id) throw new RegraCadastroError(409, "Já existe uma regra desta chave e deste destino com a mesma vigência.");
+    // A regra de percentual fixo se edita em Percentuais Fixos, com as outras da chave (14/10/2026).
+    if (id && (await db.regraRateio.findUnique({ where: { id }, select: { percentualFixo: true } }))?.percentualFixo != null)
+      throw new RegraCadastroError(409, "Esta regra é de percentual fixo: edite-a em “Percentuais Fixos”, com os outros destinos da chave.");
+    // Duas regras da mesma chave e do mesmo destino não valem no mesmo mês, e as de um mesmo período da chave são todas
+    // por volume ou todas de percentual fixo (14/10/2026).
+    const daChave = await db.regraRateio.findMany({ where: { chave: chave as never }, select: { id: true, chave: true, destino: true, vigenciaInicio: true, vigenciaFim: true, percentualFixo: true } });
+    const conflito = conflitoDeVigencia(
+      { id: id ?? undefined, chave, destino, inicio, fim, fixo: false },
+      daChave.map((r) => ({ id: r.id, chave: r.chave, destino: r.destino, inicio: r.vigenciaInicio, fim: r.vigenciaFim, fixo: r.percentualFixo !== null })),
+      (c) => NOME_DA_CHAVE[c] ?? c,
+    );
+    if (conflito) throw new RegraCadastroError(409, conflito);
     return {
       chave,
       destino,

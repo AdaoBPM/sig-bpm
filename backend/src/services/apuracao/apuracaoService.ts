@@ -343,7 +343,9 @@ export const apuracaoService = {
       etapas.push({ etapa, resumo: r });
       avisos.push(...((r as { avisos?: string[] }).avisos ?? []));
       etapa = "rateios";
-      etapas.push({ etapa, resumo: await rateiosService.apurar(ano, mes) });
+      const ra = await rateiosService.apurar(ano, mes);
+      etapas.push({ etapa, resumo: ra });
+      avisos.push(...ra.avisos);
       etapa = "DRE";
       const d = await dreService.apurar(ano, mes, usuarioId);
       etapas.push({ etapa, resumo: d });
