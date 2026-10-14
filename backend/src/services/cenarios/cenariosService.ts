@@ -19,6 +19,17 @@ import { montarPainel } from "../relatorios/painelService.js";
 import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, type Valor } from "../relatorios/painelDeBordo.js";
 import { linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
+import {
+  calcularAnalitico,
+  calcularTabela,
+  linhasDaTabela,
+  linhasDoCadastro,
+  NOME_DA_UNIDADE,
+  NOME_DA_VENDA,
+  VENDAS_DA_UNIDADE,
+  type UnidadePremissa,
+  type Venda,
+} from "./premissasCenario.js";
 
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
@@ -55,6 +66,11 @@ export const TIPOS: Record<TipoCenario, string> = { SINTETICO: "Cenários Sinté
 /** O que só os sintéticos fazem: a importação de um arquivo, a edição da DRE e (por enquanto) a referência realizada. */
 function exigirSintetico(c: { nome: string; tipo: string }, oQue: string) {
   if (c.tipo === "ANALITICO") throw new CenarioError(400, `O cenário ${c.nome} é analítico: ${oQue}.`);
+}
+
+/** O que só os analíticos têm: as premissas. */
+function exigirAnalitico(c: { nome: string; tipo: string }) {
+  if (c.tipo !== "ANALITICO") throw new CenarioError(400, `O cenário ${c.nome} é sintético: as premissas são só dos cenários analíticos.`);
 }
 
 /** Quem pede: `admin` é o Administrador (Editar no Controle de Usuários), que vê também os cenários particulares. */
@@ -341,6 +357,9 @@ export const cenariosService = {
           await gravarEmLotes(resultados, (lote) => tx.cenarioResultado.createMany({ data: lote.map((r) => ({ ...r, cenarioId: c.id })) }));
           const indicadores = await tx.cenarioIndicador.findMany({ where: { cenarioId: origem.id } });
           await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((r) => ({ ...r, cenarioId: c.id })) }));
+          // As premissas do analítico (13/10/2026).
+          const premissas = await tx.cenarioPremissa.findMany({ where: { cenarioId: origem.id } });
+          await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: c.id })) }));
         }
         return c;
       },
@@ -831,6 +850,8 @@ export const cenariosService = {
         await gravarEmLotes(indicadores, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((r) => ({ ...r, cenarioId: c.id })) }));
         const justificativas = await tx.cenarioJustificativa.findMany({ where: { cenarioId: origem.id } });
         await gravarEmLotes(justificativas, (lote) => tx.cenarioJustificativa.createMany({ data: lote.map((j) => ({ ...j, cenarioId: c.id })) }));
+        const premissas = await tx.cenarioPremissa.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: c.id })) }));
         return c;
       },
       { timeout: 120_000 },
@@ -845,6 +866,119 @@ export const cenariosService = {
       metadados: { revisaoDe: `${origem.nome} ${rotuloVersao(origem.versao)}`, versao: rotuloVersao(versao) },
     });
     return this.obter(revisao.id, usuario);
+  },
+
+  /**
+   * As premissas de uma unidade de um cenário analítico (13/10/2026): as tabelas (Global e Mercantil; em Serviços, só
+   * Global) com as linhas, a Média de Referência e os doze meses — as premissas (as gravadas, ou o padrão) e os
+   * cálculos —, e se o cenário se edita (não marcado nem congelado).
+   */
+  async premissas(id: string, unidade: UnidadePremissa, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const [est, linhas, gravadas] = await Promise.all([estruturaDRE(), linhasDoCadastro(), getPrismaClient().cenarioPremissa.findMany({ where: { cenarioId: id, unidade } })]);
+    const estrutura = linhasDaTabela(est, linhas, unidade);
+    return {
+      ano: c.ano,
+      unidade,
+      nome: NOME_DA_UNIDADE[unidade],
+      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1) })),
+      editavel: !c.marcacao && !c.versaoSalvaEm,
+      tabelas: VENDAS_DA_UNIDADE[unidade].map((venda) => {
+        const daVenda = new Map(gravadas.filter((p) => p.venda === venda).map((p) => [`${p.chave}|${p.mes}`, Number(p.valor)]));
+        const { valores, referencia } = calcularTabela(est, linhas, unidade, c.ano, (chave, mes) => daVenda.get(`${chave}|${mes}`));
+        return {
+          venda,
+          titulo: NOME_DA_VENDA[venda],
+          linhas: estrutura.map((l) => ({
+            ...l,
+            referencia: referencia.get(l.chave) ?? null,
+            valores: valores.get(l.chave) ?? Array(12).fill(null),
+            // Os meses com a premissa gravada (os demais valem o padrão: os dias úteis do calendário, ou zero).
+            gravados: Array.from({ length: 12 }, (_, k) => daVenda.has(`${l.chave}|${k + 1}`)),
+          })),
+        };
+      }),
+    };
+  },
+
+  /**
+   * Grava premissas de uma unidade (13/10/2026): o valor de cada (venda, chave, mês) — nulo volta ao padrão — e
+   * recalcula a DRE do cenário. Só as premissas da tabela se gravam (os cálculos não), nos meses 1 a 12 (a Média de
+   * Referência vem da referência). Vai para o histórico de reajustes, como a edição da DRE dos sintéticos.
+   */
+  async gravarPremissas(
+    id: string,
+    unidade: UnidadePremissa,
+    alteracoes: Array<{ venda: Venda; chave: string; mes: number; valor: number | null }>,
+    usuario: Usuario,
+    origem?: OrigemDaGravacao,
+  ) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const prisma = getPrismaClient();
+    const [est, linhas] = await Promise.all([estruturaDRE(), linhasDoCadastro()]);
+    const daTabela = new Map(linhasDaTabela(est, linhas, unidade).filter((l) => l.tipo === "PREMISSA").map((l) => [l.chave, l]));
+    const vendas = VENDAS_DA_UNIDADE[unidade];
+    const fora = alteracoes.filter((a) => !daTabela.has(a.chave) || !vendas.includes(a.venda));
+    if (fora.length) throw new CenarioError(400, `Não são premissas de ${NOME_DA_UNIDADE[unidade]}: ${[...new Set(fora.map((a) => a.chave))].slice(0, 3).join(", ")}.`);
+    // A última alteração de cada premissa e mês vale.
+    const finais = new Map(alteracoes.map((a) => [`${a.venda}|${a.chave}|${a.mes}`, a]));
+    const anteriores = await prisma.cenarioPremissa.findMany({ where: { cenarioId: id, unidade, mes: { in: [...new Set([...finais.values()].map((a) => a.mes))] } } });
+    const antes = new Map(anteriores.map((p) => [`${p.venda}|${p.chave}|${p.mes}`, Number(p.valor)]));
+    let somaAntes = 0;
+    let somaDepois = 0;
+    for (const [k, a] of finais) {
+      somaAntes += antes.get(k) ?? 0;
+      somaDepois += a.valor ?? 0;
+    }
+    await prisma.$transaction(
+      async (tx) => {
+        for (const a of finais.values()) {
+          const chave = { cenarioId: id, unidade, venda: a.venda, chave: a.chave, mes: a.mes };
+          if (a.valor === null) await tx.cenarioPremissa.deleteMany({ where: chave });
+          else {
+            const valor = new Prisma.Decimal(a.valor.toFixed(4));
+            await tx.cenarioPremissa.upsert({ where: { cenarioId_unidade_venda_chave_mes: chave }, create: { ...chave, valor }, update: { valor } });
+          }
+        }
+        await calcularAnalitico(tx, id);
+      },
+      { timeout: 120_000 },
+    );
+    const meses = [...new Set([...finais.values()].map((a) => a.mes))].sort((x, y) => x - y);
+    const contas = [...new Map([...finais.values()].map((a) => {
+      const l = daTabela.get(a.chave)!;
+      return [`${a.venda}|${a.chave}`, { codigo: a.chave, descricao: [NOME_DA_VENDA[a.venda], l.grupo, l.rotulo].filter(Boolean).join(" · ") }];
+    })).values()];
+    await prisma.cenarioReajuste.create({
+      data: {
+        cenarioId: id,
+        usuarioId: usuario.id || null,
+        usuarioNome: usuario.nome,
+        tipo: origem?.tipo ?? "VALOR",
+        modo: origem?.modo ?? "DIGITADO",
+        reajuste: origem?.reajuste ?? null,
+        visao: unidade,
+        replicado: !!origem?.replicado,
+        contas,
+        meses,
+        valores: finais.size,
+        somaAntes,
+        somaDepois,
+        descricao: `Premissas · ${NOME_DA_UNIDADE[unidade]}`,
+      },
+    });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      metadados: { cenario: c.nome, premissas: NOME_DA_UNIDADE[unidade], valores: finais.size, meses, chaves: contas.map((x) => x.codigo).slice(0, 50), origem: origem ?? null },
+    });
+    return { alteradas: finais.size, meses };
   },
 
   /**

@@ -13,9 +13,11 @@ import { cenariosService, rotuloDoCenario, rotuloMarcacao, rotuloVersao } from "
 import { useTipoDoCenario } from "./tipoDoCenario";
 
 /** As telas de um cenário (sintético ou analítico), como as abas de Resultados Realizados. */
-export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soQuemEdita?: boolean }> = [
+export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soQuemEdita?: boolean; soAnaliticos?: boolean }> = [
   // As configurações do cenário (12/10/2026): só para quem edita os cenários (do tipo dele); a DRE se edita em Resultados.
   { caminho: "configuracoes", rotulo: "Configurações", soQuemEdita: true },
+  // As premissas dos analíticos (13/10/2026), de onde a DRE deles se calcula.
+  { caminho: "premissas", rotulo: "Premissas", soAnaliticos: true },
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
   // O Painel de Bordo do cenário (13/10/2026): o cenário × o comparado, como o de Resultados Realizados.
@@ -69,7 +71,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
         </DropdownMenu>
       </div>
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
-        {TELAS_DO_CENARIO.filter((x) => !x.soQuemEdita || hasPermission(t.editar)).map((x) => {
+        {TELAS_DO_CENARIO.filter((x) => (!x.soQuemEdita || hasPermission(t.editar)) && (!x.soAnaliticos || t.tipo === "ANALITICO")).map((x) => {
           const ativa = x.caminho === tela;
           return (
             <li key={x.caminho} className="flex shrink-0 items-center">

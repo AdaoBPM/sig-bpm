@@ -41,4 +41,7 @@ cenariosRoutes.get("/:id/comparativo", autenticacao, ler, asyncHandler(c.compara
 cenariosRoutes.put("/:id/comparativo", autenticacao, editar, express.json(), asyncHandler(c.gravarComparativo));
 cenariosRoutes.get("/:id/justificativas", autenticacao, ler, asyncHandler(c.justificativas));
 cenariosRoutes.put("/:id/justificativas", autenticacao, editar, express.json(), asyncHandler(c.gravarJustificativa));
+// As premissas dos cenários analíticos (13/10/2026).
+cenariosRoutes.get("/:id/premissas", autenticacao, ler, asyncHandler(c.premissas));
+cenariosRoutes.put("/:id/premissas", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarPremissas));
 cenariosRoutes.put("/:id/indicadores/manuais", autenticacao, editar, express.json(), asyncHandler(c.salvarManual));

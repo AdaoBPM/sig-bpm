@@ -36,7 +36,37 @@ function id(request: Request, response: Response) {
   return r.success ? r.data : null;
 }
 
+const unidadeSchema = z.coerce.number().int().min(1).max(3);
+
 export const cenariosController = {
+  /** As premissas de uma unidade de um cenário analítico (?unidade=1 a 3). */
+  premissas(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const u = unidadeSchema.safeParse(request.query.unidade);
+    if (!u.success) return response.status(400).json({ error: "Unidade inválida." });
+    return responder(response, () => cenariosService.premissas(c, u.data as 1 | 2 | 3, usuario(request)));
+  },
+
+  gravarPremissas(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z
+      .object({
+        unidade: unidadeSchema,
+        alteracoes: z
+          .array(z.object({ venda: z.enum(["GLOBAL", "MERCANTIL"]), chave: z.string().min(1).max(200), mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() }))
+          .min(1)
+          .max(5000),
+        origem: z
+          .object({ tipo: z.enum(["MARCADOS", "VALOR"]), modo: z.enum(["PERCENTUAL", "ABSOLUTO", "DIGITADO"]), reajuste: z.number().finite().nullable(), replicado: z.boolean() })
+          .optional(),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Premissas inválidas." });
+    return responder(response, () => cenariosService.gravarPremissas(c, corpo.data.unidade as 1 | 2 | 3, corpo.data.alteracoes, usuario(request), corpo.data.origem));
+  },
+
   /** A lista de um tipo (?tipo=SINTETICO, o padrão, ou ANALITICO). */
   listar(request: Request, response: Response) {
     const tipo = tipoSchema.default("SINTETICO").safeParse(request.query.tipo);

@@ -1932,6 +1932,7 @@ model Cenario {
   indicadores    CenarioIndicador[]
   reajustes      CenarioReajuste[]
   justificativas CenarioJustificativa[]
+  premissas      CenarioPremissa[]
 
   @@unique([marcacao])
   @@map("cenarios")
@@ -1990,6 +1991,26 @@ model CenarioJustificativa {
 /// O histórico de reajustes de um cenário (12/10/2026): cada gravação de valores da DRE (o reajuste dos marcados ou a
 /// edição de um valor) e cada carga de referência (arquivo ou resultado realizado), com quem, quando, o quê e as somas
 /// antes e depois. A tela Reajustes do cenário mostra o histórico.
+/// As premissas de um cenário analítico (13/10/2026): os valores digitados das tabelas Matriz, Filial e Serviços da
+/// tela Premissas, por unidade (1 a 3), venda (GLOBAL ou MERCANTIL; em Serviços, só GLOBAL), chave e mês (1 a 12; o 0 é
+/// a Média de Referência). A chave diz o que é: DIAS_UTEIS, AJUSTE_RECEITA, AJUSTE_CUSTOS (em %), DEMANDA:<linha>
+/// (por dia útil; nas linhas de m³ e pistas, as pistas), M3_PISTA:<linha>, RB:<linha>:<conta ROB> e
+/// CUSTO:<linha>:<conta> (R$ por unidade da linha) e IMPOSTOS:<linha> (%/ROB). O que não está gravado vale o padrão (os
+/// dias úteis do calendário, zero no resto); a DRE do cenário se calcula a partir daqui (premissasCenario.ts).
+model CenarioPremissa {
+  cenarioId String  @map("cenario_id")
+  unidade   Int
+  venda     String
+  chave     String
+  mes       Int
+  valor     Decimal
+
+  cenario Cenario @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+
+  @@id([cenarioId, unidade, venda, chave, mes])
+  @@map("cenarios_premissas")
+}
+
 model CenarioReajuste {
   id          String   @id @default(uuid())
   cenarioId   String   @map("cenario_id")

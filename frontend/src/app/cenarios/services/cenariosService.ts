@@ -24,6 +24,24 @@ export type Visualizacao = "PARTICULAR" | "PUBLICA";
  * das premissas), em listas separadas, cada uma com a sua permissão; as telas de um cenário são as mesmas nos dois.
  */
 export type TipoCenario = "SINTETICO" | "ANALITICO";
+
+/** Uma linha das premissas de um cenário analítico (13/10/2026): uma premissa (digitada) ou um cálculo. */
+export type LinhaDaPremissa = {
+  chave: string;
+  secao: string;
+  grupo: string | null;
+  rotulo: string;
+  und: string;
+  tipo: "PREMISSA" | "CALCULO";
+  casas: number;
+  /** A Média de Referência (a média realizada da referência do cenário). */
+  referencia: number | null;
+  valores: Array<number | null>;
+  /** Os meses com a premissa gravada; os demais valem o padrão. */
+  gravados: boolean[];
+};
+export type TabelaDePremissas = { venda: "GLOBAL" | "MERCANTIL"; titulo: string; linhas: LinhaDaPremissa[] };
+export type PremissasDaUnidade = { ano: number; unidade: 1 | 2 | 3; nome: string; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: TabelaDePremissas[] };
 export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; ler: string; editar: string }> = {
   SINTETICO: { base: "/cenarios/sinteticos", titulo: "Cenários Sintéticos", ler: "cenarios:ler", editar: "cenarios:editar" },
   ANALITICO: { base: "/cenarios/analiticos", titulo: "Cenários Analíticos", ler: "cenarios_analiticos:ler", editar: "cenarios_analiticos:editar" },
@@ -136,6 +154,9 @@ export type IndicadorDoCenario = Indicador & { classe: ClasseIndicador; digitado
 export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: IndicadorDoCenario[]; comparado?: { nome: string; ano: number } | null };
 
 export const cenariosService = {
+  premissas: async (id: string, unidade: 1 | 2 | 3) => (await api.get<{ data: PremissasDaUnidade }>(`/proxy/cenarios/${id}/premissas`, { params: { unidade } })).data.data,
+  gravarPremissas: async (id: string, unidade: 1 | 2 | 3, alteracoes: Array<{ venda: "GLOBAL" | "MERCANTIL"; chave: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
+    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/premissas`, { unidade, alteracoes, origem })).data.data,
   listar: async (tipo: TipoCenario = "SINTETICO") => (await api.get<{ data: Cenario[] }>("/proxy/cenarios", { params: { tipo } })).data.data,
   obter: async (id: string) => (await api.get<{ data: Cenario }>(`/proxy/cenarios/${id}`)).data.data,
   criar: async (dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao: Visualizacao; tipo: TipoCenario }) => (await api.post<{ data: Cenario }>("/proxy/cenarios", dados)).data.data,
