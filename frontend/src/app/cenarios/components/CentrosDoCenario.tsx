@@ -111,6 +111,31 @@ function linhasDoCentro(contas: Array<{ codigo: string; descricao: string; atrib
 }
 
 /**
+ * O aviso dos rateios sem base (13/10/2026): os grupos de rateio com valor num mês em que a chave não tem base nas
+ * premissas — todo custo e despesa deve ir para algum lugar, e esses ficam fora da DRE do cenário. Some quando não há.
+ */
+export function AvisoRateiosSemBase({ id }: { id: string }) {
+  const consulta = useQuery({ queryKey: ["cenarios", id, "rateios"], queryFn: () => cenariosService.rateios(id) });
+  const sem = consulta.data?.semBase ?? [];
+  if (!sem.length) return null;
+  const porChave = new Map<string, typeof sem>();
+  for (const x of sem) porChave.set(x.nome, [...(porChave.get(x.nome) ?? []), x]);
+  return (
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+      <p className="font-medium text-gray-900">Rateio sem base nas premissas</p>
+      <ul className="mt-1 list-disc pl-5">
+        {[...porChave].map(([nome, xs]) => (
+          <li key={nome}>
+            {nome}: {xs.map((x) => `${x.rotuloMes} (${reais(x.valor)})`).join(", ")} — o valor dos centros de custo desse rateio não vai para nenhuma unidade.
+            Preencha nas premissas a base da chave nesses meses (aba Rateios) ou revise o balde do grupo.
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
  * A aba Rateios das premissas de um cenário analítico (13/10/2026): por chave e destino, a base de cada mês (das
  * premissas) e o percentual, que leva o valor dos grupos de rateio às unidades. Só leitura: muda com as premissas.
  */

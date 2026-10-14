@@ -96,6 +96,14 @@ export const rateiosService = {
       totaisDaCompetencia(c.id),
     ]);
     const totalAtual = new Map(totais.map((t) => [t.codigo as string, t.quantidade]));
+    // Os lançamentos de rateio do mês por chave (13/10/2026): numa chave sem volume, ficam fora de todas as unidades.
+    // As receitas e despesas financeiras do acompanhamento vão inteiras para Despesas e Extra e não contam.
+    const deRateio = await prisma.lancamentoContabil.groupBy({
+      by: ["balde"],
+      where: { competenciaId: c.id, alocacao: "RATEIO", NOT: { AND: [{ balde: "ACOMPANHAMENTO" }, { linhaDRE: { grupoSigla: { in: ["RFC", "RFNC", "DFC", "DFNC"] } } }] } },
+      _sum: { valorMovimento: true },
+    });
+    const lancadoNaChave = new Map(deRateio.map((x) => [x.balde as string, Number(x._sum.valorMovimento ?? 0)]));
     const chaves = new Map<string, { chave: string; baseFisica: string; total: number; destinos: unknown[] }>();
     for (const v of volumes) {
       const r = v.regraRateio;
@@ -121,7 +129,12 @@ export const rateiosService = {
       competencia: { ano, mes, status: c.status },
       apuradoEm: volumes[0]?.apuradoEm ?? null,
       congelado: volumes.some((v) => v.congelado),
-      chaves: [...chaves.values()].map((k) => ({ ...k, total: k.total.toFixed(3) })),
+      chaves: [...chaves.values()].map((k) => ({
+        ...k,
+        total: k.total.toFixed(3),
+        // A chave sem volume com lançamentos de rateio no mês: o valor que não vai para nenhuma unidade.
+        semVolume: k.total === 0 && lancadoNaChave.get(k.chave) ? lancadoNaChave.get(k.chave)!.toFixed(2) : null,
+      })),
       totais: totais.map((t) => ({ codigo: t.codigo, rotulo: t.rotulo, medida: t.medida, tipo: t.tipo, quantidade: t.quantidade.toFixed(3) })),
     };
   },

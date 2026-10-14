@@ -7,7 +7,9 @@ import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
-import { alocarCentros, contasDoGrupo, percentuaisDasBases } from "../src/services/cenarios/centrosCenario.js";
+import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
+import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
+import { Prisma } from "../src/generated/prisma/client.js";
 import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
 
 const planilha = (...linhas: ValorCelula[][]): LinhaPlanilha[] => linhas.map((celulas, i) => ({ numero: i + 1, celulas }));
@@ -237,5 +239,27 @@ describe("centros de custo dos cenários analíticos (13/10/2026)", () => {
     assert.equal(jan("3|CSM.MOD.CLT"), 200 + 700);
     assert.equal(jan("3|CSC.MOD.CLT"), 300 + 300);
     assert.equal(jan("4|DA.MOI.CLT"), 1000);
+  });
+
+  it("avisa o valor dos grupos de rateio num mês sem base (todo custo vai para algum lugar)", () => {
+    // A Armadura não tem base no mês 1: o grupo de armadura fica de fora; a Produção tem base.
+    const grupos = [grupo("arm", "ARMADURA", "CPP"), grupo("p", "PRODUCAO", "CPP")];
+    const sem = rateiosSemBase(grupos, [{ grupo: "arm", codigo: "CPP.MOD.CLT", mes: 1, valor: 500 }, { grupo: "p", codigo: "CPP.MOD.CLT", mes: 1, valor: 800 }], percentuaisDasBases(BASES));
+    assert.deepEqual(sem, [{ chave: "ARMADURA", mes: 1, valor: 500 }]);
+  });
+
+  it("no fechamento, avisa a chave com lançamentos de rateio e sem volume no mês", () => {
+    const D = (v: number) => new Prisma.Decimal(v);
+    const linhas = [{ ...EST[0], id: "L1" }, { ...item("DFC.DFC.JUROS", "DFC", "DFC", "Juros", [4]), id: "L2" }];
+    const r = rateiosSemVolume({
+      linhas,
+      lancamentos: [
+        { filial: 1, linhaDREId: "L1", balde: "ARMADURA", alocacao: "RATEIO", valor: D(300) },
+        { filial: 1, linhaDREId: "L1", balde: "PRODUCAO", alocacao: "RATEIO", valor: D(100) },
+        { filial: 1, linhaDREId: "L2", balde: "ACOMPANHAMENTO", alocacao: "RATEIO", valor: D(50) },
+      ],
+      percentuais: new Map([["PRODUCAO|MATRIZ", D(1)], ["ARMADURA|MATRIZ", D(0)], ["ACOMPANHAMENTO|MONTAGEM", D(0)]]),
+    });
+    assert.deepEqual([...r].map(([k, v]) => [k, v.toNumber()]), [["ARMADURA", 300]]);
   });
 });

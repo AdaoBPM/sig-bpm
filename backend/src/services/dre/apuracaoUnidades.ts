@@ -107,6 +107,32 @@ export const VOLUMES_DA_DRE: Record<number, Record<string, CodigoTotais[]>> = {
   },
 };
 
+/** O nome das chaves de rateio, para os avisos. */
+export const NOME_DA_CHAVE: Record<string, string> = { PROJETO: "Projeto", PRODUCAO: "Produção", METALURGIA: "Metalurgia", ARMADURA: "Armadura", ACOMPANHAMENTO: "Acompanhamento" };
+const FINANCEIRAS = new Set(["RFC", "RFNC", "DFC", "DFNC"]);
+
+/**
+ * As chaves de rateio com lançamentos e sem volume no mês (a soma dos percentuais da chave é zero), com a soma dos
+ * lançamentos que ficam fora de todas as unidades (13/10/2026). Os do acompanhamento nas receitas e despesas
+ * financeiras não contam: vão inteiros para Despesas e Extra.
+ */
+export function rateiosSemVolume(d: Pick<DadosApuracao, "lancamentos" | "percentuais" | "linhas">): Map<string, Decimal> {
+  const porId = new Map(d.linhas.map((l) => [l.id, l]));
+  const soma = new Map<string, Decimal>();
+  for (const l of d.lancamentos) {
+    if (l.alocacao !== "RATEIO" || !l.balde || !l.linhaDREId) continue;
+    if (l.balde === "ACOMPANHAMENTO" && FINANCEIRAS.has(porId.get(l.linhaDREId)?.grupoSigla ?? "")) continue;
+    soma.set(l.balde, (soma.get(l.balde) ?? zero()).plus(l.valor));
+  }
+  const r = new Map<string, Decimal>();
+  for (const [chave, valor] of soma) {
+    if (valor.isZero()) continue;
+    const pcts = [...d.percentuais].filter(([k]) => k.startsWith(`${chave}|`)).reduce((a, [, p]) => a.plus(p), zero());
+    if (pcts.isZero()) r.set(chave, valor);
+  }
+  return r;
+}
+
 /** Chaves de rateio que cada unidade de produção recebe, e o destino dela. */
 const RATEIOS_PRODUCAO = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA"] as const;
 const DESTINO_DA_UNIDADE: Record<number, string> = { 1: "MATRIZ", 2: "FILIAL" };
@@ -376,24 +402,16 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   }
 
   // --- Despesas + Extra ----------------------------------------------------
-  // Guarda: a ROL consolidada (Resultados (Desp.+Extra), linha 2).
-  const rolDe = (u: number) => {
-    const l = porCodigo.get("ROL.RECEITA_OPERACIONAL_LIQUIDA_ROL");
-    return l?.expressao ? avaliarExpressao(l.expressao, (c) => valorDe(u, c)) : zero();
-  };
+  // Sem a guarda da ROL consolidada (Resultados (Desp.+Extra), linha 2), que zerava as despesas num mês sem receita:
+  // como as guardas da produção e da montagem, servia só ao Excel (decisão do usuário de 13/10/2026).
   const robDe = (u: number) => {
     const l = porCodigo.get("ROB.RECEITA_OPERACIONAL_BRUTA_ROB");
     return l?.expressao ? avaliarExpressao(l.expressao, (c) => valorDe(u, c)) : zero();
   };
-  const rolConsolidada = [1, 2, 3].reduce((a, u) => a.plus(rolDe(u)), zero());
   const robConsolidada = [1, 2, 3].reduce((a, u) => a.plus(robDe(u)), zero());
   {
     const u = UNIDADE.DESPESAS;
     for (const l of itensDa(u)) {
-      if (rolConsolidada.isZero()) {
-        gravar(u, l, zero(), { regra: "ROL consolidada zero: zero" });
-        continue;
-      }
       const c = somaDireto(l.id);
       // Receitas financeiras entram com o sinal trocado (linhas 84, 85 e 87).
       const financeira = l.grupoSigla === "RFC" || l.grupoSigla === "RFNC";
@@ -437,6 +455,14 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
         origem: fator ? { contabil: { linhaId: l.id, fator: fator.toString() } } : undefined,
       });
     }
+  }
+
+  // --- Rateios sem volume (13/10/2026) -------------------------------------
+  // Todo custo e despesa vai para algum lugar: uma chave com lançamentos de rateio e sem volume no mês (todos os
+  // percentuais zero) deixa esses lançamentos fora de todas as unidades. O aviso diz quanto ficou de fora. As receitas e
+  // as despesas financeiras do acompanhamento vão inteiras para Despesas e Extra e não dependem dos percentuais.
+  for (const [chave, valor] of rateiosSemVolume(d)) {
+    avisos.push(`Rateio de ${NOME_DA_CHAVE[chave] ?? chave} sem volume no mês: ${valor.toFixed(2)} em lançamentos de rateio não foram para nenhuma unidade.`);
   }
 
   // --- Subtotais e totais, pela estrutura, com os itens da unidade ---------

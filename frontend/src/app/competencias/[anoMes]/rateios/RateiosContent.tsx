@@ -69,7 +69,8 @@ export function RateiosContent() {
         sobre={
           <p>
             Os percentuais de cada chave de rateio, calculados pelos volumes das listas do mês — a versão sistêmica da aba Rateios.{" "}
-            {dados?.apuradoEm ? `Apurados em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurados."}
+            {dados?.apuradoEm ? `Apurados em ${dataHora(dados.apuradoEm)}.` : "Ainda não apurados."} Uma chave sem volume no mês e com lançamentos de
+            rateio deixa esses lançamentos fora de todas as unidades: o aviso no alto da tela mostra quanto (e a apuração também avisa).
           </p>
         }
         acoes={
@@ -88,6 +89,26 @@ export function RateiosContent() {
           ) : null
         }
       />
+
+      {/*
+        O rateio sem volume no mês (13/10/2026): todo custo e despesa vai para algum lugar; uma chave sem volume e com
+        lançamentos de rateio deixa esses lançamentos fora de todas as unidades.
+      */}
+      {dados?.chaves.some((k) => k.semVolume) ? (
+        <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+          <p className="font-medium text-gray-900">Rateio sem volume no mês</p>
+          <ul className="mt-1 list-disc pl-5">
+            {dados.chaves
+              .filter((k) => k.semVolume)
+              .map((k) => (
+                <li key={k.chave}>
+                  {ROTULO_CHAVE[k.chave] ?? k.chave}: {Number(k.semVolume).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em lançamentos de rateio não vão para nenhuma unidade, porque a chave não teve volume
+                  no mês. Confira as listas do mês (os volumes de onde a chave vem) ou o balde dos centros de custo.
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
 
       {/* A legenda da nota "hoje" (E8 do levantamento de layout). */}
       {desatualizado ? (

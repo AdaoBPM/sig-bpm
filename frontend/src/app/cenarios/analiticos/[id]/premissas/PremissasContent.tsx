@@ -12,7 +12,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
-import { CentrosDoCenario, RateiosDoCenario } from "../../../components/CentrosDoCenario";
+import { AvisoRateiosSemBase, CentrosDoCenario, RateiosDoCenario } from "../../../components/CentrosDoCenario";
 import { Erro } from "../../../components/CenarioDialog";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
@@ -110,6 +110,7 @@ export function PremissasContent() {
         }
       />
       <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={ABAS} />
+      <AvisoRateiosSemBase id={id} />
       {cenario.data && travado && hasPermission("cenarios_analiticos:editar") ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
       {centros ? (
         <CentrosDoCenario id={id} editavel={podeEditar} />

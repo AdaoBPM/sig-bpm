@@ -162,6 +162,30 @@ export function percentuaisDasBases(bases: Map<string, number[]>): Percentuais[]
   });
 }
 
+/** As chaves de rateio (os baldes que se rateiam). */
+const CHAVES = new Set(["PRODUCAO", "PROJETO", "METALURGIA", "ARMADURA", "ACOMPANHAMENTO"]);
+
+/**
+ * Os valores dos grupos que ficam fora de todas as unidades (13/10/2026): por chave e mês, a soma dos valores dos grupos
+ * de rateio num mês em que a chave não tem base nas premissas (todo custo e despesa deve ir para algum lugar). O
+ * acompanhamento conta só nas contas da CSM, que são as que ele rateia.
+ */
+export function rateiosSemBase(grupos: GrupoDoCenario[], valores: Array<{ grupo: string; codigo: string; mes: number; valor: number }>, percentuais: Percentuais[]) {
+  const porGrupo = new Map(grupos.map((g) => [g.grupo, g]));
+  const r = new Map<string, { chave: string; mes: number; valor: number }>();
+  for (const x of valores) {
+    const g = porGrupo.get(x.grupo);
+    if (!g?.balde || !CHAVES.has(g.balde) || !x.valor) continue;
+    const sigla = x.codigo.split(".")[0];
+    if (DESPESAS.has(sigla) || (g.balde === "ACOMPANHAMENTO" ? sigla !== "CSM" : sigla !== "CPP")) continue;
+    const soma = [...(percentuais[x.mes - 1] ?? new Map())].filter(([k]) => k.startsWith(`${g.balde}|`)).reduce((a, [, p]) => a + p, 0);
+    if (soma > 0) continue;
+    const k = `${g.balde}|${x.mes}`;
+    r.set(k, { chave: g.balde, mes: x.mes, valor: (r.get(k)?.valor ?? 0) + x.valor });
+  }
+  return [...r.values()].sort((a, b) => a.chave.localeCompare(b.chave) || a.mes - b.mes);
+}
+
 /**
  * Aloca os valores dos grupos às unidades (13/10/2026): devolve, por unidade e conta da DRE ("u|código"), os doze
  * meses. `valores`: por grupo, conta (código) e mês (1 a 12).

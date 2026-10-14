@@ -12,7 +12,8 @@ export type DestinoRateio = {
   quantidadeAtual: string | null;
 };
 
-export type ChaveRateio = { chave: string; baseFisica: string; total: string; destinos: DestinoRateio[] };
+/** `semVolume` (13/10/2026): a chave sem volume no mês com lançamentos de rateio — o valor que não vai para nenhuma unidade. */
+export type ChaveRateio = { chave: string; baseFisica: string; total: string; destinos: DestinoRateio[]; semVolume: string | null };
 
 export type Rateios = {
   competencia: { ano: number; mes: number; status: StatusCompetencia };

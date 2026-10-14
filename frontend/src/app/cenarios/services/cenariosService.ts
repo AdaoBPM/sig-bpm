@@ -61,6 +61,8 @@ export type RateiosDoCenario = {
   ano: number;
   meses: Array<{ mes: number; rotulo: string }>;
   rateios: Array<{ chave: string; destino: string; rotulo: string; base: string; bases: number[]; percentuais: number[] }>;
+  /** Os valores dos grupos de rateio num mês em que a chave não tem base nas premissas (13/10/2026): ficam fora da DRE. */
+  semBase: Array<{ chave: string; nome: string; mes: number; rotuloMes: string; valor: number }>;
 };
 export type PremissasDaUnidade = { ano: number; unidade: 1 | 2 | 3; nome: string; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: TabelaDePremissas[] };
 export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; ler: string; editar: string }> = {

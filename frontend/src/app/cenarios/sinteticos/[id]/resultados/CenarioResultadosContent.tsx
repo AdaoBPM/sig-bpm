@@ -14,6 +14,7 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
+import { AvisoRateiosSemBase } from "../../../components/CentrosDoCenario";
 import { BotoesDeVersao } from "../../../components/VersaoCenario";
 import { cenariosService } from "../../../services/cenariosService";
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
@@ -132,6 +133,8 @@ export function CenarioResultadosContent() {
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={VISOES.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
       {cenario.data && travado && hasPermission(t.editar) && !analitico ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
+      {/* No analítico, o aviso dos rateios sem base nas premissas (13/10/2026): esse valor não entra na DRE. */}
+      {analitico ? <AvisoRateiosSemBase id={id} /> : null}
       {podeEditar ? <EdicaoDRE key={visao} id={id} visao={Number(visao)} nome={nome} /> : <Visao id={id} visao={Number(visao)} nome={nome} analitico={analitico} />}
     </div>
   );

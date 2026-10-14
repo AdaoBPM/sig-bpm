@@ -31,7 +31,7 @@ import {
   type UnidadePremissa,
   type Venda,
 } from "./premissasCenario.js";
-import { contasDoGrupo, gruposDoCadastro, percentuaisDasBases, RATEIOS } from "./centrosCenario.js";
+import { contasDoGrupo, gruposDoCadastro, percentuaisDasBases, RATEIOS, rateiosSemBase } from "./centrosCenario.js";
 
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
@@ -1101,12 +1101,26 @@ export const cenariosService = {
   async rateios(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
-    const [est, linhas, gravadas] = await Promise.all([estruturaDRE(), linhasDoCadastro(), getPrismaClient().cenarioPremissa.findMany({ where: { cenarioId: id } })]);
+    const prisma = getPrismaClient();
+    const [est, linhas, gravadas, grupos, valores] = await Promise.all([
+      estruturaDRE(),
+      linhasDoCadastro(),
+      prisma.cenarioPremissa.findMany({ where: { cenarioId: id } }),
+      gruposDoCadastro(),
+      prisma.cenarioCentro.findMany({ where: { cenarioId: id }, include: { linhaDRE: { select: { codigo: true } } } }),
+    ]);
     const { bases } = calcularPremissas(est, linhas, c.ano, gravadas);
     const percentuais = percentuaisDasBases(bases);
+    const nomes = new Map(RATEIOS.map((r) => [r.chave, r.rotulo.split(":")[0]]));
     return {
       ano: c.ano,
       meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1) })),
+      // Os valores dos grupos que ficam fora de todas as unidades: a chave sem base nas premissas no mês.
+      semBase: rateiosSemBase(
+        grupos,
+        valores.map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
+        percentuais,
+      ).map((x) => ({ ...x, nome: nomes.get(x.chave) ?? x.chave, rotuloMes: rotuloMes(c.ano, x.mes) })),
       rateios: RATEIOS.map((r) => ({
         ...r,
         bases: bases.get(`${r.chave}|${r.destino}`) ?? Array<number>(12).fill(0),
