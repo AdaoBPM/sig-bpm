@@ -69,19 +69,27 @@ const LINHAS_DE_MONTAGEM = new Set(["MONTAGEM", "VEDAÇÃO"]);
 const PISTAS = "m³ e pistas";
 /**
  * As linhas com a demanda de armadura (14/10/2026), em kg por unidade da linha (kg/m³, kg/kg, kg/m²…), e as com a
- * demanda de metalurgia, também em kg por unidade: as que consomem as peças da Metalurgia (a Metalúrgica, que as
- * produz, não). A metalurgia das linhas dá o rateio de Metalurgia e a Produção da Metalurgia (kg) da DRE de cada unidade.
+ * demanda de metalurgia, também em kg por unidade: as que consomem as peças da Metalurgia. A metalurgia das linhas dá o
+ * rateio de Metalurgia e a Produção da Metalurgia (kg) da DRE de cada unidade.
  */
-export const LINHAS_COM_ARMADURA = new Set(["ESTRUTURA", "METALÚRGICA", "ALVEOLARES", "ESTACAS", "MONTAGEM", "CAPEAMENTO", "METÁLICA"]);
+export const LINHAS_COM_ARMADURA = new Set(["ESTRUTURA", "ALVEOLARES", "ESTACAS", "MONTAGEM", "CAPEAMENTO", "METÁLICA"]);
 export const LINHAS_COM_METALURGIA = new Set(["ESTRUTURA", "ALVEOLARES", "ESTACAS", "MONTAGEM", "CAPEAMENTO", "METÁLICA"]);
 
 /** Uma linha de produto ou de obra do cadastro Linhas, na unidade dela. */
 export type LinhaDoCadastro = { codigo: string; nome: string; unidade: UnidadePremissa; medida: string };
 
-export async function linhasDoCadastro(): Promise<LinhaDoCadastro[]> {
+/**
+ * As linhas que prestam serviço às outras (14/10/2026): a Metalúrgica, na Matriz, faz as peças metálicas das demais
+ * linhas. Não têm demanda, receita nem custo nas premissas: os custos dela ficam com as linhas da unidade, e a
+ * metalurgia que as outras linhas consomem é a Metalurgia por Unidade delas.
+ */
+export const LINHAS_DE_APOIO = new Set(["METALÚRGICA"]);
+
+/** As linhas das premissas; com `todas`, também as de apoio (a Correspondência Tarefa × Linha). */
+export async function linhasDoCadastro(todas = false): Promise<LinhaDoCadastro[]> {
   const linhas = await getPrismaClient().linha.findMany({ where: { ativo: true, tipo: { in: ["PRODUTO", "OBRA"] } }, orderBy: { ordem: "asc" }, include: { unidadeNegocio: { select: { codigo: true } } } });
   return linhas
-    .filter((l) => UNIDADES_PREMISSAS.includes(l.unidadeNegocio?.codigo as UnidadePremissa))
+    .filter((l) => UNIDADES_PREMISSAS.includes(l.unidadeNegocio?.codigo as UnidadePremissa) && (todas || !LINHAS_DE_APOIO.has(l.codigo)))
     .map((l) => ({ codigo: l.codigo, nome: l.nome, unidade: l.unidadeNegocio!.codigo as UnidadePremissa, medida: l.unidadeMedida || "und" }));
 }
 

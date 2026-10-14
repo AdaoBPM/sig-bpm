@@ -170,9 +170,7 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     assert.ok(!chaves.some((c) => c.includes("CPP.MOD")));
     // A armadura e a metalurgia em kg por unidade da linha (o m³ nas de pistas).
     assert.equal(linhas.find((l) => l.chave === "ARMADURA:ALVEOLARES")!.und, "kg/m³");
-    // Só nas linhas que levam armadura e metalurgia: a Metalúrgica tem armadura, mas não consome a metalurgia; a Vedação, nenhuma.
-    const met = linhasDaTabela(EST, [{ codigo: "METALÚRGICA", nome: "Metalúrgica", unidade: 1, medida: "kg" }], 1).map((l) => l.chave);
-    assert.ok(met.includes("ARMADURA:METALÚRGICA") && !met.includes("METALURGIA:METALÚRGICA"));
+    // Só nas linhas que levam armadura e metalurgia: a Vedação não leva.
     const ved = linhasDaTabela(EST, [{ codigo: "VEDAÇÃO", nome: "Vedação", unidade: 3, medida: "m" }], 3).map((l) => l.chave);
     assert.ok(!ved.includes("ARMADURA:VEDAÇÃO") && !ved.includes("METALURGIA:VEDAÇÃO"));
   });

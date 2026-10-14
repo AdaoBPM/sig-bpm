@@ -853,7 +853,7 @@ export const cenariosService = {
     const prisma = getPrismaClient();
     const [itens, linhas] = await Promise.all([
       prisma.correspondenciaTarefa.findMany({ include: { linha: { select: { codigo: true, nome: true } } }, orderBy: [{ tarefa: "asc" }, { filial: "asc" }] }),
-      linhasDoCadastro(),
+      linhasDoCadastro(true),
     ]);
     return {
       itens: itens.map((i) => ({ filial: i.filial, tarefa: i.tarefa, linha: i.linha.codigo })),

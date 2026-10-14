@@ -153,16 +153,14 @@ export async function referenciaDoRealizado(ano: number, meses: number[]): Promi
     const l = linha(p.unidadeNegocio?.codigo, p.linha?.codigo);
     if (l) somar(qtdPistas, chave(l), Number(p.quantidade));
   }
-  // A metalurgia (14/10/2026): a consumida por linha (a da lista); o volume da Metalúrgica é toda a das fábricas, e o da
-  // linha em kg de Serviços (a Metálica), a dela.
-  const kgMatriz = daUnidade(1).find((l) => l.medida === "kg");
+  // A metalurgia (14/10/2026): a consumida por linha (a da lista); a da linha em kg de Serviços (a Metálica) também é o
+  // volume dela. A Metalúrgica da Matriz presta serviço às outras linhas e não entra nas premissas.
   const kgServicos = daUnidade(3).find((l) => l.medida === "kg");
   for (const p of metalurgias) {
-    const u = p.unidadeNegocio?.codigo;
-    const consumidora = linha(u, p.linha?.codigo);
-    if (consumidora) somar(metalurgia, chave(consumidora), Number(p.quantidade));
-    const produtora = u === 3 ? (consumidora === kgServicos ? kgServicos : undefined) : kgMatriz;
-    if (produtora) somar(outros, `${chave(produtora)}|${produtora.unidade === 3 ? "GLOBAL" : "?"}`, Number(p.quantidade));
+    const consumidora = linha(p.unidadeNegocio?.codigo, p.linha?.codigo);
+    if (!consumidora) continue;
+    somar(metalurgia, chave(consumidora), Number(p.quantidade));
+    if (consumidora === kgServicos) somar(outros, `${chave(kgServicos)}|GLOBAL`, Number(p.quantidade));
   }
   const montagem = daUnidade(3).find((l) => l.codigo === "MONTAGEM" && l.medida === "m³");
   if (montagem) for (const p of montagens) somar(outros, `${chave(montagem)}|GLOBAL`, Number(p.quantidade));

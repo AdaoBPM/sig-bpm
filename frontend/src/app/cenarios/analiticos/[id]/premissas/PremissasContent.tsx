@@ -127,7 +127,7 @@ export function PremissasContent() {
             <p>
               Em Serviços, as linhas de Montagem e Vedação levam à receita de montagem e aos custos da CSM; as demais, à receita complementar e à CSC. A
               Média de Referência é a média realizada da referência do cenário (Configurações / Referência / Resultado Realizado): o total do período ÷ o
-              volume da linha — o m³ produzido (o kg na Metalúrgica), o m³ montado na Montagem e o kg na Metálica; as linhas de Serviços sem volume nas
+              volume da linha — o m³ produzido, o m³ montado na Montagem e o kg na Metálica; as linhas de Serviços sem volume nas
               listas vão por dia útil (a demanda diária fica 1). A demanda diária é o volume do período ÷ os dias úteis dele, e os doze meses começam
               iguais às médias.
               A mão de obra direta e indireta, os gastos gerais diretos e indiretos e as despesas vêm dos centros de custo; a depreciação, dos investimentos; o imposto de
@@ -146,7 +146,7 @@ export function PremissasContent() {
               Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
               linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nos Cadastros da Controladoria / Linhas);
               o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). A armadura e a metalurgia por
-              unidade são as das listas de cada linha ÷ o volume dela.
+              unidade são as das listas de cada linha ÷ o volume dela. A Metalúrgica, na Matriz, presta serviço às outras linhas e não entra nas premissas: os custos dela ficam com a Estrutura, e a metalurgia que as linhas consomem é a Metalurgia por Unidade delas.
             </p>
             <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil
