@@ -4,14 +4,15 @@ import { useState, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /**
  * O botão Configurar Gráficos (14/10/2026; antes, as listas na linha do título): abre o modal com as opções da tela — o
  * Exercício, o Período, os Rótulos, o Tipo e as Cores —, uma embaixo da outra, com o rótulo à esquerda. Cada escolha
- * vale na hora (as do Tipo, dos Rótulos e das Cores ficam guardadas neste navegador); o modal só fecha.
+ * vale na hora (as do Tipo, dos Rótulos e das Cores ficam guardadas neste navegador); o modal só fecha, sem explicação
+ * embaixo do título (14/10/2026).
  */
-export function ConfigurarGraficos({ children, descricao }: { children: ReactNode; descricao?: string }) {
+export function ConfigurarGraficos({ children }: { children: ReactNode }) {
   const [aberto, setAberto] = useState(false);
   return (
     <>
@@ -24,7 +25,6 @@ export function ConfigurarGraficos({ children, descricao }: { children: ReactNod
           <DialogContent className="rounded-sm sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Configurar Gráficos</DialogTitle>
-              <DialogDescription>{descricao ?? "As escolhas valem na hora; o Tipo, os Rótulos e as Cores ficam guardados neste navegador."}</DialogDescription>
             </DialogHeader>
             {/* As opções uma embaixo da outra: o rótulo à esquerda, a lista à direita. */}
             <div className="grid gap-3 [&_label]:justify-between [&_label>span]:text-sm [&_[data-slot=select-trigger]]:w-40">{children}</div>

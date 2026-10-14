@@ -115,7 +115,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
                     <LegendaRealizadoOrcado tipo={tipoGrafico} />
                   </div>
-                  <ConfigurarGraficos descricao="As escolhas valem na hora; o Tipo e os Rótulos ficam guardados neste navegador (os mesmos do Painel de Bordo).">
+                  <ConfigurarGraficos>
                     <Seletor
                       rotulo="Exercício"
                       valor={String(ano)}

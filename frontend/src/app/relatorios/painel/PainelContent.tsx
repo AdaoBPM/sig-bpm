@@ -227,9 +227,9 @@ function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes:
   const secao = useRef<HTMLElement>(null);
   return (
     <section ref={secao}>
-      {/* O nome do grupo e o mês de referência (13/10/2026; antes, em cada card): o mês em cinza; ao lado, o botão de copiar o grupo. */}
+      {/* O nome do grupo e o mês de referência (13/10/2026; antes, em cada card): o mês em cinza; ao lado, o botão de copiar o grupo. Em 24 px (14/10/2026; antes, 16). */}
       <div className="mb-2 flex items-center gap-2">
-        <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">
+        <h2 className="text-2xl font-bold tracking-wide text-gray-900 uppercase">
           {q.titulo}
           <span className="font-semibold text-gray-500"> · {rotuloMes}</span>
         </h2>
