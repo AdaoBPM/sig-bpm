@@ -75,7 +75,7 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                       {item.href === "/competencias" && algumComDadosNovos ? <SinalDadosNovos titulo="Há meses com entradas alteradas depois da apuração: reapure" /> : null}
                     </SidebarMenuButton>
-                    {item.badge ? <SidebarMenuBadge className="bg-bpm-primary text-black">{item.badge}</SidebarMenuBadge> : null}
+                    {item.badge ? <SidebarMenuBadge className="bg-[color:var(--cor-contador-menu)] text-[color:var(--cor-texto-contador-menu)] peer-data-active/menu-button:text-[color:var(--cor-texto-contador-menu)] peer-hover/menu-button:text-[color:var(--cor-texto-contador-menu)]">{item.badge}</SidebarMenuBadge> : null}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>

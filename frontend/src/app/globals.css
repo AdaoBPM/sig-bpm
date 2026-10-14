@@ -135,10 +135,16 @@
   --cor-texto-rotulo-orcado: #ffffff;
   --cor-grafico-orcado: #111111;
   --cor-grafico-grade: #e5e7eb;
+  /* Os contadores do menu lateral (14/10/2026): brancos com o número preto no Padrão e no Escuro (o menu é preto); pretos
+     com o número branco no Claro (o menu é branco). Não são amarelos, para não sumirem na tela ativa, em amarelo-ouro. */
+  --cor-contador-menu: #ffffff;
+  --cor-texto-contador-menu: #000000;
 }
 
 /* Claro: o menu lateral branco, separado das telas por uma sombra cinza clara. */
 [data-tema="claro"] {
+  --cor-contador-menu: #000000;
+  --cor-texto-contador-menu: #ffffff;
   --sidebar: #ffffff;
   --sidebar-foreground: #111827;
   --sidebar-accent: #f3f4f6;
