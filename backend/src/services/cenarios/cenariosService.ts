@@ -878,19 +878,34 @@ export const cenariosService = {
   async correspondencias() {
     const prisma = getPrismaClient();
     const [itens, linhas] = await Promise.all([
-      prisma.correspondenciaTarefa.findMany({ include: { linha: { select: { codigo: true, nome: true } } }, orderBy: [{ tarefa: "asc" }, { filial: "asc" }] }),
+      prisma.correspondenciaTarefa.findMany({
+        include: { linha: { select: { codigo: true, nome: true, ativo: true, unidadeNegocio: { select: { codigo: true } } } } },
+        orderBy: [{ tarefa: "asc" }, { filial: "asc" }],
+      }),
       linhasDoCadastro(true),
     ]);
+    // As linhas desativadas que ainda têm tarefas (14/10/2026): o modal avisa e as mostra na lista, para trocar.
+    const inativas = new Map(
+      itens
+        .filter((i) => !i.linha.ativo)
+        .map((i) => [i.linha.codigo, { codigo: i.linha.codigo, nome: i.linha.nome, nomeUnidade: NOME_DA_UNIDADE[i.linha.unidadeNegocio?.codigo as UnidadePremissa] ?? "" }]),
+    );
     return {
       itens: itens.map((i) => ({ filial: i.filial, tarefa: i.tarefa, linha: i.linha.codigo })),
       linhas: linhas.map((l) => ({ codigo: l.codigo, nome: l.nome, unidade: l.unidade, nomeUnidade: NOME_DA_UNIDADE[l.unidade] })),
+      inativas: [...inativas.values()],
     };
   },
 
   /** Grava a correspondência inteira (14/10/2026): a lista substitui a anterior. */
   async gravarCorrespondencias(itens: Array<{ filial: number | null; tarefa: string; linha: string }>, usuario: Usuario) {
     const prisma = getPrismaClient();
-    const linhas = await prisma.linha.findMany({ where: { tipo: { in: ["PRODUTO", "OBRA"] }, ativo: true }, select: { id: true, codigo: true } });
+    // As linhas ativas e, para não travar a gravação, as desativadas que já tinham tarefas (o modal avisa delas).
+    const atuais = await prisma.correspondenciaTarefa.findMany({ select: { linhaId: true } });
+    const linhas = await prisma.linha.findMany({
+      where: { tipo: { in: ["PRODUTO", "OBRA"] }, OR: [{ ativo: true }, { id: { in: atuais.map((a) => a.linhaId) } }] },
+      select: { id: true, codigo: true },
+    });
     const idDa = new Map(linhas.map((l) => [l.codigo, l.id]));
     const vistos = new Set<string>();
     const novos = itens.map((i) => {

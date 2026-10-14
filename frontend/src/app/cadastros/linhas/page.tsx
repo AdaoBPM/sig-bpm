@@ -27,7 +27,7 @@ export default function LinhasPage() {
               <li>
                 “Tarefas” abre a Correspondência Tarefa × Linha: a lista das tarefas das requisições e das notas fiscais e a linha dos custos de cada uma, numa filial
                 ou em Qualquer Filial: inclua, troque a linha ou exclua e clique em “Gravar”. Vale na próxima carga do resultado realizado de um cenário
-                analítico.
+                analítico. Os rótulos da tabela ficam fixos ao rolar. Se uma linha desativada ainda tiver tarefas, um aviso vermelho as lista no topo (a linha aparece como Desativada): troque a linha delas ou exclua-as, porque os custos delas não vão para a linha.
               </li>
             </ul>
           }

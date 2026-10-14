@@ -57,7 +57,12 @@ export type GrupoDeCentros = {
 };
 /** Uma correspondência tarefa × linha (14/10/2026): a filial (nula: qualquer), a tarefa e o código da linha. */
 export type CorrespondenciaDeTarefa = { filial: number | null; tarefa: string; linha: string };
-export type Correspondencias = { itens: CorrespondenciaDeTarefa[]; linhas: Array<{ codigo: string; nome: string; unidade: number; nomeUnidade: string }> };
+export type Correspondencias = {
+  itens: CorrespondenciaDeTarefa[];
+  linhas: Array<{ codigo: string; nome: string; unidade: number; nomeUnidade: string }>;
+  /** As linhas desativadas que ainda têm tarefas (14/10/2026). */
+  inativas: Array<{ codigo: string; nome: string; nomeUnidade: string }>;
+};
 export type CentrosDoCenario = { ano: number; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; grupos: GrupoDeCentros[] };
 export type ContasDoCentro = {
   grupo: Omit<GrupoDeCentros, "total">;

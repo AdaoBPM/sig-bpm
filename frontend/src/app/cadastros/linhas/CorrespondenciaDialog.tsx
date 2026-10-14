@@ -49,18 +49,14 @@ export function CorrespondenciaDialog({ onFechar }: { onFechar: () => void }) {
       <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Correspondência Tarefa × Linha</DialogTitle>
-          <DialogDescription>
-            A tarefa das requisições e das notas fiscais e a linha dos custos dela, para as Médias de Referência dos cenários analíticos. A
-            correspondência da filial do documento vale antes da de Qualquer Filial; os documentos sem tarefa, ou com uma tarefa fora da lista, vão pelo
-            volume das linhas.
-          </DialogDescription>
+          <DialogDescription>Relação entre as tarefas de Requisições e Notas Fiscais, com as Linhas de Produção e Serviços.</DialogDescription>
         </DialogHeader>
         {consulta.isError ? (
           <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar a correspondência.")} />
         ) : consulta.isPending ? (
           <div className="h-48 animate-pulse rounded-sm bg-gray-100" />
         ) : (
-          <Formulario inicial={consulta.data.itens} linhas={consulta.data.linhas} onFechar={onFechar} />
+          <Formulario inicial={consulta.data.itens} linhas={consulta.data.linhas} inativas={consulta.data.inativas} onFechar={onFechar} />
         )}
       </DialogContent>
     </Dialog>
@@ -70,10 +66,12 @@ export function CorrespondenciaDialog({ onFechar }: { onFechar: () => void }) {
 function Formulario({
   inicial,
   linhas,
+  inativas,
   onFechar,
 }: {
   inicial: CorrespondenciaDeTarefa[];
   linhas: Array<{ codigo: string; nome: string; unidade: number; nomeUnidade: string }>;
+  inativas: Array<{ codigo: string; nome: string; nomeUnidade: string }>;
   onFechar: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -92,9 +90,31 @@ function Formulario({
     },
   });
   const unidades = [...new Set(linhas.map((l) => l.nomeUnidade))];
+  // As linhas desativadas que ainda têm tarefas na lista (o aviso some quando todas trocam de linha ou saem).
+  const desativada = (codigo: string) => inativas.some((l) => l.codigo === codigo);
+  const comTarefas = inativas
+    .map((l) => ({ ...l, tarefas: itens.filter((i) => i.linha === l.codigo).map((i) => i.tarefa.trim() || "(sem nome)") }))
+    .filter((l) => l.tarefas.length > 0);
   return (
     <>
-      <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white [--topo-tabela:0px]">
+      {comTarefas.length ? (
+        <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+          <p className="font-medium text-gray-900">Linhas Desativadas com Tarefas</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {comTarefas.map((l) => (
+              <li key={l.codigo}>
+                {l.nome}
+                {l.nomeUnidade ? ` (${l.nomeUnidade})` : ""}: {l.tarefas.join(", ")}.
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1">
+            Os custos dessas tarefas não vão para a linha: entram na divisão pelas demais tarefas e pelo volume. Troque a linha ou exclua a tarefa.
+          </p>
+        </div>
+      ) : null}
+      {/* A tabela rola por dentro, com os rótulos fixos no topo (14/10/2026). */}
+      <div className="max-h-[55vh] overflow-auto rounded-sm border border-gray-200 bg-white [--topo-tabela:0px]">
         <table className="tabela-sig w-full border-collapse text-sm">
           <thead>
             <tr>
@@ -133,8 +153,23 @@ function Formulario({
                   />
                 </td>
                 <td className="px-3 py-1">
-                  <select aria-label="Linha" value={i.linha} disabled={!pode} onChange={(e) => mudar(k, { linha: e.target.value })} className={`${classeSelect} min-w-48`}>
+                  <select
+                    aria-label="Linha"
+                    value={i.linha}
+                    disabled={!pode}
+                    onChange={(e) => mudar(k, { linha: e.target.value })}
+                    className={`${classeSelect} min-w-48 ${desativada(i.linha) ? "border-red-400" : ""}`}
+                  >
                     {!i.linha ? <option value="">Escolha a linha</option> : null}
+                    {desativada(i.linha) ? (
+                      <optgroup label="Desativadas">
+                        {inativas.map((l) => (
+                          <option key={l.codigo} value={l.codigo}>
+                            {l.nome} (Desativada)
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
                     {unidades.map((u) => (
                       <optgroup key={u} label={u}>
                         {linhas
