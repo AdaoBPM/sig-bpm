@@ -29,7 +29,8 @@ export function BotaoCorrespondencia() {
     <>
       <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
         <ListTree className="size-4" />
-        Correspondência Tarefa × Linha
+        {/* Nome curto (14/10/2026): o modal se chama Correspondência Tarefa × Linha. */}
+        Tarefas
       </Button>
       {aberto ? <CorrespondenciaDialog onFechar={() => setAberto(false)} /> : null}
     </>

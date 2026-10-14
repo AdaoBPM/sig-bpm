@@ -25,7 +25,7 @@ export default function LinhasPage() {
               <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
               <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Nome e a Unidade e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
               <li>
-                “Correspondência Tarefa × Linha” abre a lista das tarefas das requisições e das notas fiscais e a linha dos custos de cada uma, numa filial
+                “Tarefas” abre a Correspondência Tarefa × Linha: a lista das tarefas das requisições e das notas fiscais e a linha dos custos de cada uma, numa filial
                 ou em Qualquer Filial: inclua, troque a linha ou exclua e clique em “Gravar”. Vale na próxima carga do resultado realizado de um cenário
                 analítico.
               </li>
