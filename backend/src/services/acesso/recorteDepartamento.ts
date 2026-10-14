@@ -67,9 +67,10 @@ export function departamentoDaLinha(l: { grupoSigla: string; descricao: string }
 
 /**
  * Grupos da DRE com as movimentações abertas a todos os gestores, de qualquer departamento (11/10/2026): a Receita
- * Operacional Bruta (ROB) e os Impostos sobre a Receita Bruta (IRB).
+ * Operacional Bruta (ROB) e os Impostos sobre a Receita Bruta (IRB); desde 14/10/2026, também a Receita Operacional
+ * Líquida (ROL), que é a ROB menos os IRB.
  */
-const ABERTOS_A_TODOS = new Set(["ROB", "IRB"]);
+const ABERTOS_A_TODOS = new Set(["ROB", "IRB", "ROL"]);
 
 /**
  * O usuário pode consultar as movimentações desta linha (nas visões das unidades)? Com recorte por centro de custo

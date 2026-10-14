@@ -224,13 +224,13 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
                   Vê os Resultados das Obras
                   <span className="text-gray-500">
                     : a aba Obras de Resultados Realizados, só com as linhas da DRE da gestão
-                    {gestao ? ` (${opcoes.gestoes.find((g) => g.gestao === gestao)?.rotulo ?? gestao})` : ""} e as da Receita Bruta e dos Impostos
+                    {gestao ? ` (${opcoes.gestoes.find((g) => g.gestao === gestao)?.rotulo ?? gestao})` : ""} e as da Receita Bruta, da Receita Líquida e dos Impostos
                   </span>
                 </span>
               </label>
               <p className="text-xs text-gray-500">
                 A DRE é inteira para todos; o usuário vê só os centros marcados na visão por centro de custo, com as movimentações deles. Sem centro marcado,
-                não vê centros nem movimentações (salvo as da Receita Bruta e dos Impostos, abertas a todos).
+                não vê centros nem movimentações (salvo as da Receita Bruta, da Receita Líquida e dos Impostos, abertas a todos).
               </p>
             </fieldset>
           ) : null}

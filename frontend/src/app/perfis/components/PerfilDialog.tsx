@@ -2,11 +2,11 @@
 
 import { Fragment, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { navGrupos } from "@/lib/navigation-config";
@@ -138,9 +138,6 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
       <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{editando ? `Perfil ${editando.nome}` : "Novo Perfil"}</DialogTitle>
-          <DialogDescription>
-            O perfil é o tipo de usuário. As permissões valem para todos os usuários dele, a partir da próxima ação de cada um.
-          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {admin ? (
@@ -179,13 +176,13 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
             <label className="flex items-center gap-2 text-sm text-gray-900">
               <input type="checkbox" checked={recorteDepartamento} onChange={(e) => setRecorteDepartamento(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               <span>
-                Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele (as movimentações da Receita Bruta e dos Impostos sobre a Receita Bruta ficam abertas a todos)</span>
+                Recorta por Departamento<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo dos departamentos marcados nele (Receita Bruta, Líquida e Impostos Operacionais ficam abertos para todos)</span>
               </span>
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-900">
               <input type="checkbox" checked={recorteCentro} onChange={(e) => setRecorteCentro(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               <span>
-                Recorta por Centro de Custo<span className="text-gray-500">: o usuário só vê os centros de custo marcados nele (de uma gestão), com as movimentações deles</span>
+                Recorta por Centro de Custo<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo marcados nele (de uma gestão)</span>
               </span>
             </label>
           </div>
@@ -194,14 +191,18 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
               <tr className="border-b border-gray-200 text-left text-xs font-bold text-gray-900">
                 <th className="px-3 py-2">
                   <span className="inline-flex items-center gap-3">
-                    Grupo, Tela e Aba
-                    <button
+                    {/* Abre ou recolhe todos os grupos e telas (o botão no formato do de níveis da DRE). */}
+                    <Button
                       type="button"
+                      variant="outline"
+                      aria-label={todosAbertos ? "Recolher Tudo" : "Expandir Tudo"}
+                      title={todosAbertos ? "Recolher Tudo" : "Expandir Tudo"}
                       onClick={() => setAbertos(todosAbertos ? new Set() : new Set(opcoes.telas.flatMap((g) => [g.recurso, ...g.telas.filter((t) => t.abas.length).map((t) => t.codigo)])))}
-                      className="text-xs font-normal text-gray-500 underline hover:text-gray-900"
+                      className="size-8 shrink-0 rounded-sm border-black/30 bg-white p-0"
                     >
-                      {todosAbertos ? "Recolher Tudo" : "Expandir Tudo"}
-                    </button>
+                      {todosAbertos ? <ChevronsDownUp className="size-4" /> : <ChevronsUpDown className="size-4" />}
+                    </Button>
+                    Grupo, Tela e Aba
                   </span>
                 </th>
                 {opcoes.acoes.map((a) => (
@@ -261,14 +262,15 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-gray-500">
-            Ler: a tela aparece no menu (ou nas etapas do mês) e mostra os dados; na aba, a aba aparece. Editar: pode alterar (importar, apurar,
-            fechar, editar cadastros…) — na tela, o que é comum a ela; na aba, o que se faz dentro dela. Use as setas para abrir o grupo nas telas e a
-            tela nas abas; a caixa do grupo ou da tela marca e desmarca tudo o que está abaixo, e o traço mostra que só parte está marcada. A aba só
-            vale com a tela lida. Os recortes valem por cima: com recorte por departamento (ou por centro de custo), o Fechamento Mensal não mostra
-            Classificação, Lançamentos, Receita, Rateios, Estoque e Conferência, nem o Controle de Usuários a Auditoria (essas telas mostram
-            lançamentos de todos os departamentos); com recorte por setor, o Fechamento Mensal mostra só Competências, Importações e Listas.
-          </p>
+          <ul className="list-disc space-y-1 pl-5 text-xs text-gray-500">
+            <li>Ler: a tela aparece no menu (ou nas etapas do mês) e mostra os dados; na aba, a aba aparece.</li>
+            <li>
+              Editar: pode alterar (importar, apurar, fechar, editar cadastros…) — na tela, o que é comum a ela; na aba, o que se faz dentro dela. Os
+              recortes valem por cima: com recorte por departamento (ou por centro de custo), o Fechamento Mensal não mostra Classificação,
+              Lançamentos, Receita, Rateios, Estoque e Conferência, nem o Controle de Usuários ou a Auditoria (essas telas mostram lançamentos de
+              todos os departamentos); com recorte por setor, o Fechamento Mensal mostra só Competências, Importações e Listas.
+            </li>
+          </ul>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
