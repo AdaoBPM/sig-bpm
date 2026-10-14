@@ -9,6 +9,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
+import { ConfigurarGraficos } from "../components/ConfigurarGraficos";
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
@@ -79,20 +80,21 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 /**
  * As cores do sinal (lista Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde, amarelo e
  * vermelho); Acessíveis (antes, Daltonismo; 13/10/2026), com azul no lugar do verde (melhor que o orçado), amarelo e
- * vermelho. O selo do desvio fica num tom claro da mesma cor. O valor guardado continua "daltonismo", para manter a
- * escolha já feita nos navegadores.
+ * vermelho. O selo do desvio fica num tom claro da mesma cor (14/10/2026: o fundo em SVG, pelas variáveis --cor-selo-*,
+ * e o contorno como borda: no Firefox do usuário, o fundo em CSS saía em branco na imagem copiada). O valor guardado
+ * continua "daltonismo", para manter a escolha já feita nos navegadores.
  */
 export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
   padrao: {
-    1: { cor: "#92D050", selo: "bg-green-50 text-green-800 ring-green-200", texto: "Melhor que o" },
-    0: { cor: "#FFFF00", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "#C00000", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
+    1: { cor: "#92D050", fundo: "var(--cor-selo-verde)", selo: "text-green-800 border-green-200", texto: "Melhor que o" },
+    0: { cor: "#FFFF00", fundo: "var(--cor-selo-amarelo)", selo: "text-yellow-800 border-yellow-200", texto: "Até 5% do" },
+    [-1]: { cor: "#C00000", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
   },
   daltonismo: {
-    1: { cor: "#0070C0", selo: "bg-blue-50 text-blue-800 ring-blue-200", texto: "Melhor que o" },
-    0: { cor: "#FFFF00", selo: "bg-yellow-50 text-yellow-800 ring-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "#C00000", selo: "bg-red-50 text-red-700 ring-red-200", texto: "Pior que o" },
+    1: { cor: "#0070C0", fundo: "var(--cor-selo-azul)", selo: "text-blue-800 border-blue-200", texto: "Melhor que o" },
+    0: { cor: "#FFFF00", fundo: "var(--cor-selo-amarelo)", selo: "text-yellow-800 border-yellow-200", texto: "Até 5% do" },
+    [-1]: { cor: "#C00000", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -115,11 +117,18 @@ function Sinal({ s }: { s: BlocoPainel["sinal"] }) {
 function SeloDesvio({ b }: { b: BlocoPainel }) {
   const SINAL = useSinais();
   const { orcado } = useRotulosDoGrafico();
-  const tom = b.sinal === null ? "bg-gray-50 text-gray-600 ring-gray-200" : SINAL[b.sinal].selo;
+  const tom = b.sinal === null ? "text-gray-600 border-gray-200" : SINAL[b.sinal].selo;
+  const fundo = b.sinal === null ? "var(--cor-selo-neutro)" : SINAL[b.sinal].fundo;
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-xs font-bold ring-1 ${tom}`} title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}>
-      <Sinal s={b.sinal} />
-      {desvio(b.vsOrcado)}
+    <span className={`relative inline-flex shrink-0 items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-xs font-bold ${tom}`} title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}>
+      {/* O fundo em SVG, atrás do conteúdo, para sair no Copiar como Imagem. */}
+      <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
+        <rect width="100%" height="100%" style={{ fill: fundo }} />
+      </svg>
+      <span className="relative inline-flex items-center gap-1.5">
+        <Sinal s={b.sinal} />
+        {desvio(b.vsOrcado)}
+      </span>
     </span>
   );
 }
@@ -236,8 +245,9 @@ function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes:
 }
 
 /**
- * O corpo do painel (13/10/2026; reaproveitado no Painel de Bordo dos cenários): as abas, o aviso (`aviso`), a legenda
- * das cores e dos sinais e as seções com os cards. Os nomes das séries vêm do RotulosDoGrafico.
+ * O corpo do painel (13/10/2026; reaproveitado no Painel de Bordo dos cenários): as abas, o aviso (`aviso`) e as seções com
+ * os cards (a legenda das cores e dos sinais foi para a linha do título, 14/10/2026). Os nomes das séries vêm do
+ * RotulosDoGrafico.
  */
 export function CorpoDoPainel({
   dados,
@@ -260,15 +270,7 @@ export function CorpoDoPainel({
   const atual = dados.abas.find((a) => a.chave === aba) ?? dados.abas[0];
   return (
     <CoresDoPainel.Provider value={cores}>
-      {/* As legendas à direita, na linha das abas (13/10/2026); o traço de baixo continua até o fim da linha. */}
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:gap-0">
-        <div className="min-w-0 lg:flex-1">
-          <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
-        </div>
-        <div className="pb-2 lg:border-b lg:border-gray-200 lg:pl-4">
-          <LegendaDoPainel tipo={tipo} />
-        </div>
-      </div>
+      <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
       {aviso}
       <div className="space-y-6">
         {atual.quadros.map((q) => (
@@ -279,8 +281,15 @@ export function CorpoDoPainel({
   );
 }
 
-/** A legenda: as cores do gráfico e os sinais (a comparação com o orçado), na linha das abas (13/10/2026). */
-function LegendaDoPainel({ tipo }: { tipo: TipoGrafico }) {
+/** A legenda: as cores do gráfico e os sinais (a comparação com o orçado), na linha do título, antes do Configurar Gráficos (14/10/2026). */
+export function LegendaDoPainel({ tipo, cores }: { tipo: TipoGrafico; cores: Cores }) {
+  return (
+    <CoresDoPainel.Provider value={cores}>
+      <ItensDaLegenda tipo={tipo} />
+    </CoresDoPainel.Provider>
+  );
+}
+function ItensDaLegenda({ tipo }: { tipo: TipoGrafico }) {
   const SINAL = useSinais();
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600 lg:justify-end">
@@ -373,8 +382,11 @@ export function PainelContent() {
         comoUsar={
           <ul>
             <li>
-              Nas listas à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o acumulado vai de janeiro até ele), os Rótulos (Com: os valores de cada mês escritos nos gráficos, o realizado por cima do orçado), o Tipo
-              dos gráficos e as Cores dos sinais. O Tipo e as Cores ficam guardados neste navegador (o Tipo vale também para o gráfico do indicador em Indicadores).
+              Em “Configurar Gráficos”, à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o
+              acumulado vai de janeiro até ele), os Rótulos (Com: os valores de cada mês escritos nos gráficos, o realizado por cima do orçado), o
+              Tipo dos gráficos e as Cores dos sinais; cada escolha vale na hora. O Tipo, os Rótulos e as Cores ficam guardados neste navegador (o
+              Tipo e os Rótulos valem também para o gráfico do indicador em Indicadores). As legendas (as cores das séries e os sinais) ficam antes
+              do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
@@ -427,9 +439,11 @@ export function PainelContent() {
           </>
         }
         acoes={
-          // As listas na linha do título, como em Resultados Realizados (de volta do botão Configurações, 11/10/2026).
+          // As legendas e o botão Configurar Gráficos, com as listas no modal (14/10/2026; antes, as listas na linha do título).
           ano && ate ? (
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center justify-end gap-4">
+              <LegendaDoPainel tipo={tipoGrafico} cores={cores} />
+              <ConfigurarGraficos>
               <Seletor
                 rotulo="Exercício"
                 valor={String(ano)}
@@ -444,6 +458,7 @@ export function PainelContent() {
               <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
               <SeletorCores cores={cores} onMudar={setCores} />
+              </ConfigurarGraficos>
             </div>
           ) : null
         }

@@ -7,9 +7,11 @@ import { ChartColumn } from "lucide-react";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
+import { ConfigurarGraficos } from "../components/ConfigurarGraficos";
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
-import { SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "../components/GraficoRealizadoOrcado";
-import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
+import { LegendaRealizadoOrcado, SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "../components/GraficoRealizadoOrcado";
+import { Seletor, useExercicios } from "../components/SeletorPeriodo";
+import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 import { mensagemDeErro, relatoriosService, type Indicador } from "../services/relatoriosService";
 import { GraficoIndicadorDialog } from "./GraficoIndicadorDialog";
 import { TabelaIndicadores, valor, valorCurto } from "./TabelaIndicadores";
@@ -53,7 +55,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             <li>
               {periodoFixo
                 ? "Os valores do mês desta competência; troque o mês no seletor da barra de etapas. Num mês não apurado, os indicadores da DRE ficam sem valor."
-                : "Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora)."}
+                : "Em “Configurar Gráficos”, à direita do título, escolha o Exercício e o mês até onde ver (só as competências fechadas aparecem; os meses abertos ou em conferência ficam de fora), os Rótulos e o Tipo do gráfico do indicador; cada escolha vale na hora. A legenda (Realizado e Orçado) fica antes do botão."}
             </li>
             <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo (Produção, Serviços, Logística, Técnico, Comercial, Administrativo, Geral, Metas Estratégicas (GME)), como a lista dos níveis em Resultados.</li>
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
@@ -66,8 +68,8 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             {periodoFixo ? null : (
               <>
               <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (do cenário Orçamento Empresarial) em preto, como no Painel de Bordo, e, depois do último mês, o gráfico do acumulado (ACUM.); a descrição do indicador (a metodologia, a unidade e o comportamento) fica na linha da legenda. O botão ao lado do nome copia o modal (o nome, os valores e o gráfico) como imagem, para colar num e-mail ou numa apresentação; se o navegador não deixar copiar, a imagem é baixada.</li>
-              <li>Na lista Tipo, escolha Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, transparente no zero e forte no máximo do período, com o contorno em amarelo-ouro, e o orçado numa linha preta). A escolha vale também para o Painel de Bordo e fica guardada neste navegador.</li>
-              <li>Na lista Rótulos, Com escreve os valores de cada mês no gráfico, na vertical, só com o número (o realizado à esquerda do centro do mês, o orçado à direita); Sem mostra a escala à esquerda. Como no Painel de Bordo, a escolha vale para os dois e fica guardada neste navegador.</li>
+              <li>No Tipo, escolha Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, transparente no zero e forte no máximo do período, com o contorno em amarelo-ouro, e o orçado numa linha preta). A escolha vale também para o Painel de Bordo e fica guardada neste navegador.</li>
+              <li>Nos Rótulos, Com escreve os valores de cada mês no gráfico, na vertical, só com o número (o realizado à esquerda do centro do mês, o orçado à direita); Sem mostra a escala à esquerda. Como no Painel de Bordo, a escolha vale para os dois e fica guardada neste navegador.</li>
               </>
             )}
             <li>Use “Exportar” para baixar em Excel ou PDF (A4 deitada).</li>
@@ -106,24 +108,28 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
         }
         acoes={
           ano && ate ? (
-            <div className="flex flex-wrap items-center gap-4">
-              {periodoFixo ? null : (
-                <SeletorPeriodo
-                  ano={ano}
-                  ate={ate}
-                  anos={exercicios.anos}
-                  meses={meses}
-                  onAno={(a) => {
-                    setAno(a);
-                    setAte(null);
-                  }}
-                  onAte={setAte}
-                />
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-4">
+              {/* A legenda e o botão Configurar Gráficos, com as listas no modal (14/10/2026; antes, as listas na linha do título). */}
               {abreGrafico ? (
                 <>
-                  <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
-                  <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+                    <LegendaRealizadoOrcado tipo={tipoGrafico} />
+                  </div>
+                  <ConfigurarGraficos descricao="As escolhas valem na hora; o Tipo e os Rótulos ficam guardados neste navegador (os mesmos do Painel de Bordo).">
+                    <Seletor
+                      rotulo="Exercício"
+                      valor={String(ano)}
+                      onMudar={(v) => {
+                        setAno(Number(v));
+                        setAte(null);
+                      }}
+                      largura="w-36"
+                      opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
+                    />
+                    <Seletor rotulo="Até o Mês" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
+                    <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
+                    <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
+                  </ConfigurarGraficos>
                 </>
               ) : null}
               <ExportarRelatorio

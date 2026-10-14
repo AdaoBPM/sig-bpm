@@ -139,6 +139,12 @@
      com o número branco no Claro (o menu é branco). Não são amarelos, para não sumirem na tela ativa, em amarelo-ouro. */
   --cor-contador-menu: #ffffff;
   --cor-texto-contador-menu: #000000;
+  /* O fundo dos selos do desvio no Painel de Bordo (14/10/2026; desenhado em SVG, para sair no Copiar como Imagem). */
+  --cor-selo-verde: #dcfce7;
+  --cor-selo-azul: #dbeafe;
+  --cor-selo-amarelo: #fef9c3;
+  --cor-selo-vermelho: #fee2e2;
+  --cor-selo-neutro: #f3f4f6;
 }
 
 /* Claro: o menu lateral branco, separado das telas por uma sombra cinza clara. */
@@ -219,6 +225,13 @@
   --color-blue-200: #2c4366;
   --color-blue-800: #93c5fd;
 
+
+  /* Os selos do desvio, em tons escuros das cores. */
+  --cor-selo-verde: #1f3326;
+  --cor-selo-azul: #1e2a3d;
+  --cor-selo-amarelo: #38331c;
+  --cor-selo-vermelho: #3a2124;
+  --cor-selo-neutro: #30343b;
 
   /* As partes pretas e cinzas do orçado e do comparado: brancas e cinza-claras, com o texto preto. */
   --cor-rotulo-orcado: #f3f4f6;

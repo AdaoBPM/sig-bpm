@@ -12,7 +12,8 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { MESES } from "@/app/competencias/[anoMes]/utils/formatacao";
 import { RotulosDoGrafico, SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { Seletor } from "@/app/relatorios/components/SeletorPeriodo";
-import { AVISO_DO_PAINEL, CorpoDoPainel, SeletorCores, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
+import { AVISO_DO_PAINEL, CorpoDoPainel, LegendaDoPainel, SeletorCores, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
+import { ConfigurarGraficos } from "@/app/relatorios/components/ConfigurarGraficos";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService } from "../../../services/cenariosService";
@@ -45,9 +46,10 @@ export function CenarioPainelContent() {
         comoUsar={
           <ul>
             <li>
-              Nas listas à direita do título, escolha o Período (o mês de referência; o acumulado vai de janeiro até ele), os Rótulos (Com: os
-              valores de cada mês escritos nos gráficos, o cenário por cima do comparado), o Tipo dos gráficos e as Cores dos sinais (guardados neste
-              navegador, os mesmos do Painel de Bordo de Resultados Realizados).
+              Em “Configurar Gráficos”, à direita do título, escolha o Período (o mês de referência; o acumulado vai de janeiro até ele), os Rótulos
+              (Com: os valores de cada mês escritos nos gráficos, o cenário por cima do comparado), o Tipo dos gráficos e as Cores dos sinais
+              (guardados neste navegador, os mesmos do Painel de Bordo de Resultados Realizados). As legendas (as cores das séries e os sinais)
+              ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários).</li>
             <li>
@@ -84,11 +86,17 @@ export function CenarioPainelContent() {
           </>
         }
         acoes={
-          <div className="flex flex-wrap items-center gap-4">
-            <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={MESES.map((m, k) => ({ valor: String(k + 1), rotulo: m }))} />
-            <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
-            <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
-            <SeletorCores cores={cores} onMudar={setCores} />
+          // As legendas e o botão Configurar Gráficos, com as listas no modal (14/10/2026).
+          <div className="flex flex-wrap items-center justify-end gap-4">
+            <RotulosDoGrafico.Provider value={ROTULOS}>
+              <LegendaDoPainel tipo={tipoGrafico} cores={cores} />
+            </RotulosDoGrafico.Provider>
+            <ConfigurarGraficos>
+              <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={MESES.map((m, k) => ({ valor: String(k + 1), rotulo: m }))} />
+              <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
+              <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
+              <SeletorCores cores={cores} onMudar={setCores} />
+            </ConfigurarGraficos>
           </div>
         }
       />
