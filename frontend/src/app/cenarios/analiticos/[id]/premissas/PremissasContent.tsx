@@ -12,15 +12,17 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
+import { CentrosDoCenario } from "../../../components/CentrosDoCenario";
 import { Erro } from "../../../components/CenarioDialog";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
 
-/** As abas das premissas: as unidades (as dos centros de custo, investimentos e extra-operacional virão depois). */
+/** As abas das premissas: as unidades e os centros de custo (os investimentos e o extra-operacional virão depois). */
 const ABAS = [
   { chave: "1", rotulo: "Matriz" },
   { chave: "2", rotulo: "Filial" },
   { chave: "3", rotulo: "Serviços" },
+  { chave: "centros", rotulo: "Centros de Custo" },
 ];
 
 /**
@@ -33,9 +35,10 @@ export function PremissasContent() {
   const [aba, setAba] = useState("1");
   const { hasPermission } = usePermissions();
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
-  const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3) });
+  const centros = aba === "centros";
+  const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: !centros });
   const travado = !!cenario.data && estaTravado(cenario.data);
-  const podeEditar = hasPermission("cenarios_analiticos:editar") && !!consulta.data?.editavel && !travado;
+  const podeEditar = hasPermission("cenarios_analiticos:editar") && !travado && (centros || !!consulta.data?.editavel);
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -43,6 +46,12 @@ export function PremissasContent() {
         comoUsar={
           <ul>
             <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global.</li>
+            <li>
+              Na aba Centros de Custo, escolha o centro na lista à esquerda (agrupada como em Resultados Realizados, com a busca e o total do exercício) e digite,
+              à direita, os valores mensais das contas dele: mão de obra direta, indireta e terceirizada e gastos gerais diretos, indiretos e comerciais (as
+              Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos).
+              Embaixo do título do centro, o balde e para onde vai o valor; no fim da aba, os percentuais de rateio de cada mês.
+            </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
               Ajustes (o percentual sobre a receita bruta e líquida e o percentual sobre os custos e despesas), a Demanda Diária de cada linha (na
@@ -82,12 +91,21 @@ export function PremissasContent() {
               A mão de obra, os gastos gerais diretos e indiretos, a depreciação, as despesas e o extra-operacional virão dos centros de custo, dos
               investimentos e do extra-operacional.
             </p>
+            <p>
+              Os valores dos centros de custo vão para as unidades como no fechamento mensal: nos custos de produção, os centros dos baldes Matriz e Filial vão
+              direto para a unidade, os do balde Unidade para a da filial deles, e os de Produção e Projeto se rateiam entre Matriz e Filial; os de
+              Metalurgia e Armadura, também entre a Montagem e a Complementar de Serviços; nos custos de montagem, os de Obras vão para Serviços e os de
+              Acompanhamento se rateiam entre a Montagem e a Complementar; os das despesas vão para Despesas e Extra. Os percentuais: a Produção pelo m³
+              produzido do cenário (Matriz × Filial, mês a mês); as demais chaves, sem premissa do destino, pela média do realizado.
+            </p>
           </>
         }
       />
       <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={ABAS} />
       {cenario.data && travado && hasPermission("cenarios_analiticos:editar") ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
-      {consulta.isError ? (
+      {centros ? (
+        <CentrosDoCenario id={id} editavel={podeEditar} />
+      ) : consulta.isError ? (
         <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as premissas.")} />
       ) : consulta.isPending ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />

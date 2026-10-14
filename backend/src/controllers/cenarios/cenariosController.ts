@@ -48,6 +48,36 @@ export const cenariosController = {
     return responder(response, () => cenariosService.premissas(c, u.data as 1 | 2 | 3, usuario(request)));
   },
 
+  centros(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.centros(c, usuario(request))) : undefined;
+  },
+
+  centro(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const centro = idSchema.safeParse(request.params.centroId);
+    if (!centro.success) return response.status(400).json({ error: "Centro de custo inválido." });
+    return responder(response, () => cenariosService.centro(c, centro.data, usuario(request)));
+  },
+
+  gravarCentro(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const centro = idSchema.safeParse(request.params.centroId);
+    if (!centro.success) return response.status(400).json({ error: "Centro de custo inválido." });
+    const corpo = z
+      .object({
+        alteracoes: z.array(z.object({ linha: z.string().min(1).max(200), mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() })).min(1).max(5000),
+        origem: z
+          .object({ tipo: z.enum(["MARCADOS", "VALOR"]), modo: z.enum(["PERCENTUAL", "ABSOLUTO", "DIGITADO"]), reajuste: z.number().finite().nullable(), replicado: z.boolean() })
+          .optional(),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Valores inválidos." });
+    return responder(response, () => cenariosService.gravarCentro(c, centro.data, corpo.data.alteracoes, usuario(request), corpo.data.origem));
+  },
+
   gravarPremissas(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;

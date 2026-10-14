@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
+import { alocarCentros, centrosDoCadastro, percentuaisDoCenario, percentuaisDoRealizado } from "./centrosCenario.js";
 import { recalcular, UNIDADES } from "./edicaoCenario.js";
 
 type Tx = Prisma.TransactionClient;
@@ -239,33 +240,58 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
 }
 
 /**
- * Recalcula a DRE do cenário analítico a partir das premissas (13/10/2026): as contas das tabelas de cada unidade (as
- * de Global e Mercantil somadas) substituem a DRE inteira do cenário, e os totais e o Consolidado se recalculam pela
- * Estrutura da DRE. Como a DRE do analítico não se edita, ela é sempre a soma do que as premissas dão.
+ * Recalcula a DRE do cenário analítico (13/10/2026): as contas das premissas de cada unidade (as de Global e Mercantil
+ * somadas) e as dos centros de custo, alocadas às unidades pelo balde e pelos rateios (centrosCenario.ts), substituem a
+ * DRE inteira do cenário, e os totais e o Consolidado se recalculam pela Estrutura da DRE. Como a DRE do analítico não
+ * se edita, ela é sempre a soma do que as premissas e os centros dão.
  */
 export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   const cenario = await tx.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true } });
-  const [est, linhas, gravadas] = await Promise.all([estrutura(), linhasDoCadastro(), tx.cenarioPremissa.findMany({ where: { cenarioId } })]);
+  const [est, linhas, gravadas, centros, valoresCentros, realizado] = await Promise.all([
+    estrutura(),
+    linhasDoCadastro(),
+    tx.cenarioPremissa.findMany({ where: { cenarioId } }),
+    centrosDoCadastro(),
+    tx.cenarioCentro.findMany({ where: { cenarioId }, include: { linhaDRE: { select: { codigo: true } } } }),
+    percentuaisDoRealizado(),
+  ]);
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
   const dados = new Map(gravadas.map((p) => [`${p.unidade}|${p.venda}|${p.chave}|${p.mes}`, Number(p.valor)]));
-  const novos: Array<{ cenarioId: string; visao: number; linhaDREId: string; mes: number; valor: Prisma.Decimal }> = [];
+  // Por unidade, conta e mês.
+  const somas = new Map<string, number[]>();
+  const somar = (u: number, codigo: string, lista: number[]) => {
+    const s = somas.get(`${u}|${codigo}`) ?? Array<number>(12).fill(0);
+    lista.forEach((x, k) => (s[k] += x));
+    somas.set(`${u}|${codigo}`, s);
+  };
   for (const u of UNIDADES_PREMISSAS) {
-    const somas = new Map<string, number[]>();
     for (const v of VENDAS_DA_UNIDADE[u]) {
       const { dre } = calcularTabela(est, linhas, u, cenario.ano, (chave, mes) => dados.get(`${u}|${v}|${chave}|${mes}`));
-      for (const [codigo, lista] of dre) {
-        const s = somas.get(codigo) ?? Array<number>(12).fill(0);
-        lista.forEach((x, k) => (s[k] += x));
-        somas.set(codigo, s);
-      }
+      for (const [codigo, lista] of dre) somar(u, codigo, lista);
     }
-    for (const [codigo, lista] of somas) {
-      const l = porCodigo.get(codigo);
-      if (!l || l.tipo !== "ITEM" || !l.unidades.includes(u)) continue;
-      lista.forEach((x, k) => {
-        if (Math.abs(x) >= 0.00005) novos.push({ cenarioId, visao: u, linhaDREId: l.id, mes: k + 1, valor: new Prisma.Decimal(x.toFixed(4)) });
-      });
-    }
+  }
+  // Os centros de custo: a Produção rateada pelo m³ produzido do cenário em cada mês.
+  const m3 = (u: number) => somas.get(`${u}|${C.PRODUCAO_M3}`) ?? Array<number>(12).fill(0);
+  const percentuais = percentuaisDoCenario(realizado.percentuais, m3(1), m3(2));
+  const alocados = alocarCentros(
+    est,
+    centros,
+    valoresCentros.map((x) => ({ centroId: x.centroCustoId, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
+    percentuais,
+  );
+  for (const [k, lista] of alocados) {
+    const [u, codigo] = k.split("|");
+    somar(Number(u), codigo, lista);
+  }
+  const novos: Array<{ cenarioId: string; visao: number; linhaDREId: string; mes: number; valor: Prisma.Decimal }> = [];
+  for (const [k, lista] of somas) {
+    const [us, codigo] = k.split("|");
+    const u = Number(us);
+    const l = porCodigo.get(codigo);
+    if (!l || l.tipo !== "ITEM" || !l.unidades.includes(u)) continue;
+    lista.forEach((x, m) => {
+      if (Math.abs(x) >= 0.00005) novos.push({ cenarioId, visao: u, linhaDREId: l.id, mes: m + 1, valor: new Prisma.Decimal(x.toFixed(4)) });
+    });
   }
   await tx.cenarioResultado.deleteMany({ where: { cenarioId } });
   for (let i = 0; i < novos.length; i += 500) await tx.cenarioResultado.createMany({ data: novos.slice(i, i + 500) });

@@ -41,6 +41,17 @@ export type LinhaDaPremissa = {
   gravados: boolean[];
 };
 export type TabelaDePremissas = { venda: "GLOBAL" | "MERCANTIL"; titulo: string; linhas: LinhaDaPremissa[] };
+/** Um centro de custo no cenário analítico (13/10/2026): o grupo da DRE das contas, o destino do valor e o total do exercício. */
+export type CentroDoCenario = { id: string; codigo: string | null; nome: string; grupo: string; departamento: string | null; balde: string | null; grupoDRE: string; unidade: 1 | 2; destino: string; total: number };
+export type CentrosDoCenario = {
+  ano: number;
+  meses: Array<{ mes: number; rotulo: string }>;
+  editavel: boolean;
+  centros: CentroDoCenario[];
+  periodoRealizado: string | null;
+  rateios: Array<{ chave: string; destino: string; rotulo: string; valores: number[] }>;
+};
+export type ContasDoCentro = { centro: Omit<CentroDoCenario, "total">; contas: Array<{ codigo: string; descricao: string; atribuicao: string; valores: number[]; gravados: boolean[] }> };
 export type PremissasDaUnidade = { ano: number; unidade: 1 | 2 | 3; nome: string; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; tabelas: TabelaDePremissas[] };
 export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; ler: string; editar: string }> = {
   SINTETICO: { base: "/cenarios/sinteticos", titulo: "Cenários Sintéticos", ler: "cenarios:ler", editar: "cenarios:editar" },
@@ -154,6 +165,10 @@ export type IndicadorDoCenario = Indicador & { classe: ClasseIndicador; digitado
 export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: IndicadorDoCenario[]; comparado?: { nome: string; ano: number } | null };
 
 export const cenariosService = {
+  centros: async (id: string) => (await api.get<{ data: CentrosDoCenario }>(`/proxy/cenarios/${id}/centros`)).data.data,
+  centro: async (id: string, centroId: string) => (await api.get<{ data: ContasDoCentro }>(`/proxy/cenarios/${id}/centros/${centroId}`)).data.data,
+  gravarCentro: async (id: string, centroId: string, alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
+    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/centros/${centroId}`, { alteracoes, origem })).data.data,
   premissas: async (id: string, unidade: 1 | 2 | 3) => (await api.get<{ data: PremissasDaUnidade }>(`/proxy/cenarios/${id}/premissas`, { params: { unidade } })).data.data,
   gravarPremissas: async (id: string, unidade: 1 | 2 | 3, alteracoes: Array<{ venda: "GLOBAL" | "MERCANTIL"; chave: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
     (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/premissas`, { unidade, alteracoes, origem })).data.data,

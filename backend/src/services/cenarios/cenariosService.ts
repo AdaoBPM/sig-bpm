@@ -30,6 +30,7 @@ import {
   type UnidadePremissa,
   type Venda,
 } from "./premissasCenario.js";
+import { centrosDoCadastro, contasDoCentro, percentuaisDoCenario, percentuaisDoRealizado, RATEIOS } from "./centrosCenario.js";
 
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
@@ -360,6 +361,8 @@ export const cenariosService = {
           // As premissas do analítico (13/10/2026).
           const premissas = await tx.cenarioPremissa.findMany({ where: { cenarioId: origem.id } });
           await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: c.id })) }));
+          const centros = await tx.cenarioCentro.findMany({ where: { cenarioId: origem.id } });
+          await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote.map((x) => ({ ...x, cenarioId: c.id })) }));
         }
         return c;
       },
@@ -852,6 +855,8 @@ export const cenariosService = {
         await gravarEmLotes(justificativas, (lote) => tx.cenarioJustificativa.createMany({ data: lote.map((j) => ({ ...j, cenarioId: c.id })) }));
         const premissas = await tx.cenarioPremissa.findMany({ where: { cenarioId: origem.id } });
         await gravarEmLotes(premissas, (lote) => tx.cenarioPremissa.createMany({ data: lote.map((p) => ({ ...p, cenarioId: c.id })) }));
+        const centros = await tx.cenarioCentro.findMany({ where: { cenarioId: origem.id } });
+        await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote.map((x) => ({ ...x, cenarioId: c.id })) }));
         return c;
       },
       { timeout: 120_000 },
@@ -977,6 +982,124 @@ export const cenariosService = {
       entidade: "cenario",
       entidadeId: id,
       metadados: { cenario: c.nome, premissas: NOME_DA_UNIDADE[unidade], valores: finais.size, meses, chaves: contas.map((x) => x.codigo).slice(0, 50), origem: origem ?? null },
+    });
+    return { alteradas: finais.size, meses };
+  },
+
+  /**
+   * Os centros de custo de um cenário analítico (13/10/2026): a lista (com o grupo, o destino do valor e o total do
+   * exercício de cada um) e os percentuais de rateio de cada mês (a Produção pelo m³ do cenário; as demais chaves pela
+   * média do realizado, com o período).
+   */
+  async centros(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const prisma = getPrismaClient();
+    const [centros, totais, realizado, producao] = await Promise.all([
+      centrosDoCadastro(),
+      prisma.cenarioCentro.groupBy({ by: ["centroCustoId"], where: { cenarioId: id }, _sum: { valor: true } }),
+      percentuaisDoRealizado(),
+      prisma.cenarioResultado.findMany({ where: { cenarioId: id, linhaDRE: { codigo: "P.PRODUCAO_DO_PRE_FABRICADO_M" }, visao: { in: [1, 2] } }, select: { visao: true, mes: true, valor: true } }),
+    ]);
+    const total = new Map(totais.map((t) => [t.centroCustoId, Number(t._sum.valor ?? 0)]));
+    const m3 = (u: number) => Array.from({ length: 12 }, (_, k) => Number(producao.find((p) => p.visao === u && p.mes === k + 1)?.valor ?? 0));
+    const percentuais = percentuaisDoCenario(realizado.percentuais, m3(1), m3(2));
+    return {
+      ano: c.ano,
+      meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1) })),
+      editavel: !c.marcacao && !c.versaoSalvaEm,
+      centros: centros.map((x) => ({ ...x, total: total.get(x.id) ?? 0 })),
+      periodoRealizado: realizado.periodo,
+      rateios: RATEIOS.map((r) => ({ ...r, valores: percentuais.map((p) => p.get(`${r.chave}|${r.destino}`) ?? 0) })),
+    };
+  },
+
+  /** As contas de um centro no cenário, com os doze meses (13/10/2026). */
+  async centro(id: string, centroId: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const centro = (await centrosDoCadastro()).find((x) => x.id === centroId);
+    if (!centro) throw new CenarioError(404, "Centro de custo não encontrado.");
+    const [est, gravados] = await Promise.all([estruturaDRE(), getPrismaClient().cenarioCentro.findMany({ where: { cenarioId: id, centroCustoId: centroId } })]);
+    const porLinha = new Map(gravados.map((g) => [`${g.linhaDREId}|${g.mes}`, Number(g.valor)]));
+    const atribuicoes = new Map(est.filter((l) => l.tipo !== "ITEM").map((l) => [l.codigo, l.descricao]));
+    return {
+      centro,
+      contas: contasDoCentro(est, centro).map((l) => ({
+        codigo: l.codigo,
+        descricao: l.descricao,
+        // A atribuição (Mão de Obra Direta…), pelo total dela (CPP.MOD…).
+        atribuicao: [...atribuicoes].find(([k]) => k.startsWith(`${l.codigo.split(".").slice(0, 2).join(".")}.`))?.[1] ?? l.atribuicao ?? "",
+        valores: Array.from({ length: 12 }, (_, k) => porLinha.get(`${l.id}|${k + 1}`) ?? 0),
+        gravados: Array.from({ length: 12 }, (_, k) => porLinha.has(`${l.id}|${k + 1}`)),
+      })),
+    };
+  },
+
+  /**
+   * Grava valores de um centro (13/10/2026): o valor de cada (conta, mês) — nulo ou zero apaga — e recalcula a DRE do
+   * cenário. Só as contas do centro se gravam. Vai para o histórico de reajustes ("Centros de Custo · centro").
+   */
+  async gravarCentro(id: string, centroId: string, alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, usuario: Usuario, origem?: OrigemDaGravacao) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const prisma = getPrismaClient();
+    const centro = (await centrosDoCadastro()).find((x) => x.id === centroId);
+    if (!centro) throw new CenarioError(404, "Centro de custo não encontrado.");
+    const est = await estruturaDRE();
+    const contas = new Map(contasDoCentro(est, centro).map((l) => [l.codigo, l]));
+    const fora = [...new Set(alteracoes.filter((a) => !contas.has(a.linha)).map((a) => a.linha))];
+    if (fora.length) throw new CenarioError(400, `Não são contas do centro ${centro.nome}: ${fora.slice(0, 3).join(", ")}.`);
+    const finais = new Map(alteracoes.map((a) => [`${a.linha}|${a.mes}`, a]));
+    const anteriores = await prisma.cenarioCentro.findMany({ where: { cenarioId: id, centroCustoId: centroId } });
+    const antes = new Map(anteriores.map((g) => [`${g.linhaDREId}|${g.mes}`, Number(g.valor)]));
+    let somaAntes = 0;
+    let somaDepois = 0;
+    for (const a of finais.values()) {
+      somaAntes += antes.get(`${contas.get(a.linha)!.id}|${a.mes}`) ?? 0;
+      somaDepois += a.valor ?? 0;
+    }
+    await prisma.$transaction(
+      async (tx) => {
+        for (const a of finais.values()) {
+          const chave = { cenarioId: id, centroCustoId: centroId, linhaDREId: contas.get(a.linha)!.id, mes: a.mes };
+          if (!a.valor) await tx.cenarioCentro.deleteMany({ where: chave });
+          else {
+            const valor = new Prisma.Decimal(a.valor.toFixed(4));
+            await tx.cenarioCentro.upsert({ where: { cenarioId_centroCustoId_linhaDREId_mes: chave }, create: { ...chave, valor }, update: { valor } });
+          }
+        }
+        await calcularAnalitico(tx, id);
+      },
+      { timeout: 120_000 },
+    );
+    const meses = [...new Set([...finais.values()].map((a) => a.mes))].sort((x, y) => x - y);
+    const alteradas = [...new Set([...finais.values()].map((a) => a.linha))].map((codigo) => ({ codigo, descricao: `${centro.nome} · ${contas.get(codigo)!.descricao}` }));
+    await prisma.cenarioReajuste.create({
+      data: {
+        cenarioId: id,
+        usuarioId: usuario.id || null,
+        usuarioNome: usuario.nome,
+        tipo: origem?.tipo ?? "VALOR",
+        modo: origem?.modo ?? "DIGITADO",
+        reajuste: origem?.reajuste ?? null,
+        replicado: !!origem?.replicado,
+        contas: alteradas,
+        meses,
+        valores: finais.size,
+        somaAntes,
+        somaDepois,
+        descricao: `Centros de Custo · ${centro.codigo ?? ""} ${centro.nome}`.trim(),
+      },
+    });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      metadados: { cenario: c.nome, centro: centro.codigo, valores: finais.size, meses, contas: alteradas.map((x) => x.codigo), origem: origem ?? null },
     });
     return { alteradas: finais.size, meses };
   },

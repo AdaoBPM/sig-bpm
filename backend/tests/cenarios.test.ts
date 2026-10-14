@@ -7,6 +7,7 @@ import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
+import { alocarCentros, contasDoCentro, percentuaisDoCenario } from "../src/services/cenarios/centrosCenario.js";
 import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
 
 const planilha = (...linhas: ValorCelula[][]): LinhaPlanilha[] => linhas.map((celulas, i) => ({ numero: i + 1, celulas }));
@@ -169,5 +170,46 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     assert.equal(valores.get("DIAS_UTEIS")![1], 20);
     assert.equal(Math.round(dre.get("ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO")![1]), Math.round(4 * 20 * 17.5 * 1700 * 1.05));
     assert.equal(valores.get("RL:ALVEOLARES")![0], 1700 * 0.75);
+  });
+});
+
+describe("centros de custo dos cenários analíticos (13/10/2026)", () => {
+  const item = (codigo: string, grupoSigla: string, atribuicao: string, descricao: string, unidades: number[]) => ({ id: codigo, codigo, tipo: "ITEM" as const, grupo: "", grupoSigla, atribuicao, descricao, expressao: null, unidades });
+  const EST = [
+    item("CPP.MOD.CLT", "CPP", "MOD", "Remunerações CLT", [1, 2]),
+    item("CPP.MP.CIMENTO", "CPP", "MP", "Cimento", [1, 2]),
+    item("CSM.MOD.CLT", "CSM", "MOD", "Remunerações CLT", [3]),
+    item("CSC.MOD.CLT", "CSC", "MOD", "Remunerações CLT", [3]),
+    item("DA.MOI.CLT", "DA", "MOI", "Remunerações CLT", [4]),
+  ];
+  const centro = (id: string, balde: string, grupoDRE: string, unidade: 1 | 2 = 1) => ({ id, codigo: id, nome: id, grupo: "", departamento: null, balde, grupoDRE, unidade, destino: "" });
+  const CENTROS = [centro("m", "MATRIZ", "CPP"), centro("u", "UNIDADE", "CPP", 2), centro("p", "PRODUCAO", "CPP"), centro("met", "METALURGIA", "CPP"), centro("a", "ACOMPANHAMENTO", "CSM"), centro("d", "DESPESAS", "DA")];
+  const realizado = new Map([["PRODUCAO|MATRIZ", 0.5], ["PRODUCAO|FILIAL", 0.5], ["METALURGIA|MATRIZ", 0.4], ["METALURGIA|FILIAL", 0.1], ["METALURGIA|MONTAGEM", 0.2], ["METALURGIA|COMPLEMENTAR", 0.3], ["ACOMPANHAMENTO|MONTAGEM", 0.7], ["ACOMPANHAMENTO|COMPLEMENTAR", 0.3]]);
+
+  it("as contas do centro: mão de obra e gastos gerais do grupo dele, sem MP, GGV, estoque e depreciação", () => {
+    assert.deepEqual(contasDoCentro(EST, { grupoDRE: "CPP" }).map((l) => l.codigo), ["CPP.MOD.CLT"]);
+    assert.deepEqual(contasDoCentro(EST, { grupoDRE: "DA" }).map((l) => l.codigo), ["DA.MOI.CLT"]);
+  });
+
+  it("a Produção pelo m³ do cenário; sem produção no mês, a média do realizado", () => {
+    const p = percentuaisDoCenario(realizado, [300, 0], [100, 0]);
+    assert.equal(p[0].get("PRODUCAO|MATRIZ"), 0.75);
+    assert.equal(p[1].get("PRODUCAO|MATRIZ"), 0.5);
+    assert.equal(p[0].get("METALURGIA|COMPLEMENTAR"), 0.3);
+  });
+
+  it("aloca pelo balde e pelos rateios, como o fechamento", () => {
+    const p = percentuaisDoCenario(realizado, [300], [100]);
+    const v = (centroId: string, codigo: string) => ({ centroId, codigo, mes: 1, valor: 1000 });
+    const r = alocarCentros(EST, CENTROS, [v("m", "CPP.MOD.CLT"), v("u", "CPP.MOD.CLT"), v("p", "CPP.MOD.CLT"), v("met", "CPP.MOD.CLT"), v("a", "CSM.MOD.CLT"), v("d", "DA.MOI.CLT")], p);
+    const jan = (k: string) => Math.round(r.get(k)?.[0] ?? 0);
+    // Matriz: o direto (1000) + 75% da Produção + 40% da Metalurgia.
+    assert.equal(jan("1|CPP.MOD.CLT"), 1000 + 750 + 400);
+    // Filial: o UNIDADE da filial 2 (1000) + 25% da Produção + 10% da Metalurgia.
+    assert.equal(jan("2|CPP.MOD.CLT"), 1000 + 250 + 100);
+    // Serviços: Metalurgia (20% na CSM, 30% na CSC) e Acompanhamento (70% e 30%).
+    assert.equal(jan("3|CSM.MOD.CLT"), 200 + 700);
+    assert.equal(jan("3|CSC.MOD.CLT"), 300 + 300);
+    assert.equal(jan("4|DA.MOI.CLT"), 1000);
   });
 });

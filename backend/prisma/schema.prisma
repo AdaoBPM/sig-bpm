@@ -425,6 +425,7 @@ model CentroCusto {
   @@index([nomeControladoria])
   @@index([balde])
   @@map("centros_custo")
+  cenariosCentros CenarioCentro[]
 }
 
 model ContaResultado {
@@ -500,6 +501,7 @@ model LinhaDRE {
 
   @@index([grupoSigla])
   @@map("linhas_dre")
+  cenariosCentros CenarioCentro[]
 }
 
 /// LISTA-DE: LinhaDRE.unidadesAplicaveis (seria `String[]` no PostgreSQL)
@@ -1933,6 +1935,7 @@ model Cenario {
   reajustes      CenarioReajuste[]
   justificativas CenarioJustificativa[]
   premissas      CenarioPremissa[]
+  centros        CenarioCentro[]
 
   @@unique([marcacao])
   @@map("cenarios")
@@ -2009,6 +2012,26 @@ model CenarioPremissa {
 
   @@id([cenarioId, unidade, venda, chave, mes])
   @@map("cenarios_premissas")
+}
+
+/// Os valores dos centros de custo de um cenário analítico (13/10/2026): o valor de cada conta da DRE (mão de obra,
+/// terceirizados e gastos gerais diretos, indiretos e comerciais) de cada centro, mês a mês, alocado às unidades pelo
+/// balde do centro e pelos rateios do fechamento (centrosCenario.ts).
+model CenarioCentro {
+  cenarioId     String      @map("cenario_id")
+  centroCustoId String      @map("centro_custo_id")
+  linhaDREId    String      @map("linha_dre_id")
+  mes           Int
+  valor         Decimal
+
+  cenario     Cenario     @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+  centroCusto CentroCusto @relation(fields: [centroCustoId], references: [id], onDelete: Cascade)
+  linhaDRE    LinhaDRE    @relation(fields: [linhaDREId], references: [id], onDelete: Cascade)
+
+  @@id([cenarioId, centroCustoId, linhaDREId, mes])
+  @@index([centroCustoId])
+  @@index([linhaDREId])
+  @@map("cenarios_centros")
 }
 
 model CenarioReajuste {
