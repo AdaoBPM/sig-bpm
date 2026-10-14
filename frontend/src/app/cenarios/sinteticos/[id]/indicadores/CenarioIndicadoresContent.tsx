@@ -62,7 +62,7 @@ export function CenarioIndicadoresContent() {
             <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
             <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
             <li>
-              Indicadores Manuais: os quadros de lotação e os indicadores do Comercial e do Administrativo, que não saem da DRE. Vêm da aba das metas
+              Indicadores Manuais: {analitico ? "os indicadores do Comercial e do Administrativo (os quadros de lotação saem do Quadro de Lotação dos centros de custo, nas Premissas)" : "os quadros de lotação e os indicadores do Comercial e do Administrativo"}, que não saem da DRE. Vêm da aba das metas
               do arquivo importado{analitico ? " ou do resultado realizado; digitam-se na tela Premissas, aba Indicadores Manuais (as células digitadas ficam em amarelo)" : podeEditar ? "; clique numa linha para digitar os meses (as células digitadas ficam em amarelo)" : ""}.
             </li>
             <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um dos grupos da aba, como a lista dos níveis em Resultados.</li>

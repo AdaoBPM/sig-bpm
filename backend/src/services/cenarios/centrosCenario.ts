@@ -64,6 +64,8 @@ export type GrupoDoCenario = {
   unidade: 1 | 2;
   /** Para onde vai o valor, em texto. */
   destino: string;
+  /** A atribuição mais comum dos centros (14/10/2026: o quadro de lotação em que o grupo entra); sem ela, nula. */
+  atribuicao: "DIRETA" | "INDIRETA" | null;
 };
 
 const maisComum = <T>(xs: T[]) => {
@@ -100,6 +102,7 @@ export async function gruposDoCadastro(): Promise<GrupoDoCenario[]> {
       grupoDRE,
       unidade,
       destino: destinoDoGrupo(grupoDRE, balde, unidade),
+      atribuicao: maisComum(cs.map((c) => c.atribuicao).filter((a): a is "DIRETA" | "INDIRETA" => !!a)) ?? null,
     };
   });
 }

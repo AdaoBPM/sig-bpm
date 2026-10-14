@@ -17,7 +17,8 @@ const reais = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 
 /**
  * A aba Centros de Custo das premissas de um cenário analítico (13/10/2026), como a de Resultados Realizados: os grupos
  * da Controladoria à esquerda (com a busca e o total do exercício; sem os centros de estoque e de investimento) e, à
- * direita, as contas do grupo escolhido (mão de obra e gastos gerais, por atribuição) mês a mês, para digitar. O grupo
+ * direita, o Quadro de Lotação do grupo (14/10/2026: os colaboradores de cada mês, de onde saem os quadros de lotação
+ * dos indicadores) e as contas dele (mão de obra e gastos gerais, por atribuição) mês a mês, para digitar. O grupo
  * com centros de baldes diferentes traz o aviso: o valor vai pelo balde mais comum.
  */
 export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boolean }) {
@@ -72,6 +73,32 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
                 {contas.data.grupo.balde ?? "—"}. Revise o agrupamento no cadastro Centros de Custo para que o grupo tenha um balde só.
               </p>
             ) : null}
+            <TabelaEditavel
+              key={`lotacao-${grupo ?? ""}`}
+              titulo="Quadro de Lotação"
+              subtitulo={`Os colaboradores do grupo ${contas.data.grupo.grupo} em cada mês. Entra em: ${contas.data.lotacao.quadro}.`}
+              meses={dados.meses}
+              linhas={[
+                {
+                  chave: "LOTACAO",
+                  secao: "QUADRO DE LOTAÇÃO",
+                  grupo: null,
+                  rotulo: "Colaboradores",
+                  und: "colab.",
+                  tipo: "PREMISSA",
+                  casas: 0,
+                  referencia: null,
+                  valores: contas.data.lotacao.valores,
+                  gravados: contas.data.lotacao.gravados,
+                },
+              ]}
+              editavel={editavel && dados.editavel}
+              comReferencia={false}
+              item="linha(s)"
+              cabecalho="QUADRO"
+              aoGravar={(alteracoes, origem) => cenariosService.gravarLotacao(id, grupo!, alteracoes.map((a) => ({ mes: a.mes, valor: a.valor })), origem)}
+              mensagem={(n) => `${n} mês(es) do quadro de lotação gravado(s); os quadros de lotação dos indicadores foram recalculados.`}
+            />
             <TabelaEditavel
               key={grupo ?? ""}
               titulo={contas.data.grupo.grupo}

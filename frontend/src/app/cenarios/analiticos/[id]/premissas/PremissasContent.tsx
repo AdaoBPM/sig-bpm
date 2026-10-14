@@ -59,7 +59,8 @@ export function PremissasContent() {
             <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global.</li>
             <li>
               Na aba Centros de Custo, escolha o grupo de centros da Controladoria na lista à esquerda (com a busca e o total do exercício; os centros de
-              estoque e de investimento não entram) e digite, à direita, os valores mensais das contas dele: mão de obra direta e indireta e gastos
+              estoque e de investimento não entram) e digite, à direita, o Quadro de Lotação dele (os colaboradores de cada mês) e os valores mensais
+              das contas dele: mão de obra direta e indireta e gastos
               gerais diretos, indiretos e comerciais (as Matérias Primas, a Mão de Obra Terceirizada, os Gastos Gerais Variáveis e o Estoque ficam nas
               tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
               baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum).
@@ -81,8 +82,9 @@ export function PremissasContent() {
               receitas e despesas financeiras, em Despesas e Extra e no RN.
             </li>
             <li>
-              Na aba Indicadores Manuais, como nos cenários sintéticos, os quadros de lotação e os indicadores do Comercial e do Administrativo, que não
-              saem da DRE{podeEditar ? ": clique numa linha para digitar os doze meses (as células digitadas ficam em amarelo)" : ""}.
+              Na aba Indicadores Manuais, os indicadores do Comercial e do Administrativo, que não saem da DRE
+              {podeEditar ? ": clique numa linha para digitar os doze meses (as células digitadas ficam em amarelo)" : ""}. Os quadros de lotação não
+              se digitam: saem do Quadro de Lotação dos grupos de centros de custo.
             </li>
             <li>
               A base das premissas pode vir da referência (Configurações / Referência): o resultado realizado (as Médias de Referência, os centros de
@@ -147,6 +149,14 @@ export function PremissasContent() {
               linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nos Cadastros da Controladoria / Linhas);
               o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). A armadura e a metalurgia por
               unidade são as das listas de cada linha ÷ o volume dela. A Metalúrgica, na Matriz, presta serviço às outras linhas e não entra nas premissas: os custos dela ficam com a Estrutura, e a metalurgia que as linhas consomem é a Metalurgia por Unidade delas.
+            </p>
+            <p>
+              Os quadros de lotação dos indicadores saem do Quadro de Lotação dos grupos de centros de custo, pela classificação de cada grupo: Direta
+              ou Indireta pela atribuição mais comum dos centros dele; Matriz ou Filial pelo balde (o Unidade e os de rateio, pela filial em que os
+              centros mais lançaram); Montagem nos grupos dos custos de montagem; as despesas e os grupos sem atribuição entram só no Quadro de Lotação
+              Total. MO Direta Total e MO Indireta Total são Matriz + Filial, e MO Geral, Direta + Indireta; com eles se calculam as eficiências. Na
+              referência realizada, que só tem os quadros (não os colaboradores por centro), cada quadro se divide entre os grupos dele pela mão de
+              obra de cada um no mês, em colaboradores inteiros, e o que o Quadro de Lotação Total tem a mais vai para as despesas.
             </p>
             <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil

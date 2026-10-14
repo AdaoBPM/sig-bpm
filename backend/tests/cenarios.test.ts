@@ -9,6 +9,7 @@ import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
 import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
 import { dividirPorLinhas, linhaDaTarefa, vendaDaObra } from "../src/services/cenarios/referenciaAnalitico.js";
+import { distribuirLotacao, quadroDoGrupo, quadrosDeLotacao } from "../src/services/cenarios/lotacaoCenario.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
 import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
 import { Prisma } from "../src/generated/prisma/client.js";
@@ -371,5 +372,65 @@ describe("referência realizada dos cenários analíticos (14/10/2026)", () => {
   it("a mão de obra terceirizada não é dos centros (vem das premissas)", () => {
     const est = [{ id: "x", codigo: "CSM.MOT.MONTAGEM", tipo: "ITEM" as const, grupo: "", grupoSigla: "CSM", atribuicao: "MOT", descricao: "Montagem", expressao: null, unidades: [3] }];
     assert.deepEqual(contasDoGrupo(est, { grupoDRE: "CSM" }), []);
+  });
+});
+
+describe("quadro de lotação dos cenários analíticos (14/10/2026)", () => {
+  const g = (grupo: string, grupoDRE: string, balde: string, atribuicao: "DIRETA" | "INDIRETA" | null, unidade: 1 | 2 = 1) => ({ grupo, grupoDRE, balde, atribuicao, unidade });
+  const GRUPOS = [
+    g("ESTRUTURA", "CPP", "MATRIZ", "DIRETA"),
+    g("ALVEOLARES", "CPP", "FILIAL", "DIRETA"),
+    g("PCP (CRI)", "CPP", "UNIDADE", "INDIRETA", 1),
+    g("QUALIDADE", "CPP", "PRODUCAO", "INDIRETA", 2),
+    g("GUINDASTEIROS", "CSM", "OBRAS", "DIRETA"),
+    g("FINANCEIRO", "DA", "DESPESAS", "INDIRETA"),
+    g("VEICULOS", "CPP", "UNIDADE", null),
+  ];
+
+  it("classifica o grupo: Direta ou Indireta pela atribuição; Matriz ou Filial pelo balde (ou pela filial dos lançamentos); Montagem na CSM", () => {
+    assert.equal(quadroDoGrupo(GRUPOS[2]).local, "Matriz");
+    assert.equal(quadroDoGrupo(GRUPOS[3]).local, "Filial");
+    assert.equal(quadroDoGrupo(GRUPOS[4]).local, "Montagem");
+    assert.equal(quadroDoGrupo(GRUPOS[5]).local, null);
+    assert.equal(quadroDoGrupo(GRUPOS[6]).atribuicao, null);
+  });
+
+  it("os quadros: Direta e Indireta por local, Total = Matriz + Filial, Geral = Direta + Indireta, e o Total de todos os grupos", () => {
+    const lot = new Map([
+      ["ESTRUTURA", [100, ...Array<number>(11).fill(0)]],
+      ["ALVEOLARES", [60, ...Array<number>(11).fill(0)]],
+      ["PCP (CRI)", [10, ...Array<number>(11).fill(0)]],
+      ["QUALIDADE", [5, ...Array<number>(11).fill(0)]],
+      ["GUINDASTEIROS", [8, ...Array<number>(11).fill(0)]],
+      ["FINANCEIRO", [12, ...Array<number>(11).fill(0)]],
+      ["VEICULOS", [1, ...Array<number>(11).fill(0)]],
+    ]);
+    const q = quadrosDeLotacao(GRUPOS, lot);
+    const jan = (n: string) => q.get(n)![0];
+    assert.equal(jan("Quadro de Lotação: MO Direta Matriz"), 100);
+    assert.equal(jan("Quadro de Lotação: MO Indireta Filial"), 5);
+    assert.equal(jan("Quadro de Lotação: MO Direta Total"), 160);
+    assert.equal(jan("Quadro de Lotação: MO Geral Matriz"), 110);
+    assert.equal(jan("Quadro de Lotação: MO Geral Total"), 175);
+    assert.equal(jan("Quadro de Lotação: MO Direta Montagem"), 8);
+    assert.equal(jan("Quadro de Lotação: MO Indireta Montagem"), null);
+    assert.equal(jan("Quadro de Lotação Total"), 196);
+    assert.equal(q.get("Quadro de Lotação Total")![1], null);
+    assert.equal(q.size, 13);
+  });
+
+  it("a referência divide cada quadro realizado entre os grupos dele pela mão de obra, em inteiros; o que sobra do Total vai para as despesas", () => {
+    const real: Record<string, number> = { "Quadro de Lotação: MO Direta Matriz": 10, "Quadro de Lotação: MO Indireta Matriz": 3, "Quadro de Lotação Total": 20 };
+    const grupos = [...GRUPOS, g("ACABAMENTO", "CPP", "MATRIZ", "DIRETA")];
+    const r = distribuirLotacao(grupos, (n) => real[n] ?? null, new Map([["ESTRUTURA", 2000], ["ACABAMENTO", 1000], ["FINANCEIRO", 500]]));
+    // 10 × 2/3 = 6,67 e 3,33: 7 e 3 (a sobra fica com o maior resto).
+    assert.equal(r.lotacao.get("ESTRUTURA"), 7);
+    assert.equal(r.lotacao.get("ACABAMENTO"), 3);
+    // A Indireta da Matriz sem peso: o único grupo dela fica com tudo.
+    assert.equal(r.lotacao.get("PCP (CRI)"), 3);
+    // O Total (20) − os classificados (13) = 7, entre as despesas e os sem atribuição pela mão de obra: só o Financeiro tem.
+    assert.equal(r.lotacao.get("FINANCEIRO"), 7);
+    assert.equal(r.lotacao.has("VEICULOS"), false);
+    assert.deepEqual(r.semGrupo, []);
   });
 });

@@ -59,7 +59,12 @@ export type GrupoDeCentros = {
 export type CorrespondenciaDeTarefa = { filial: number | null; tarefa: string; linha: string };
 export type Correspondencias = { itens: CorrespondenciaDeTarefa[]; linhas: Array<{ codigo: string; nome: string; unidade: number; nomeUnidade: string }> };
 export type CentrosDoCenario = { ano: number; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; grupos: GrupoDeCentros[] };
-export type ContasDoCentro = { grupo: Omit<GrupoDeCentros, "total">; contas: Array<{ codigo: string; descricao: string; atribuicao: string; valores: number[]; gravados: boolean[] }> };
+export type ContasDoCentro = {
+  grupo: Omit<GrupoDeCentros, "total">;
+  /** O quadro de lotação do grupo (14/10/2026): os colaboradores de cada mês e os quadros dos indicadores em que ele entra. */
+  lotacao: { valores: number[]; gravados: boolean[]; quadro: string };
+  contas: Array<{ codigo: string; descricao: string; atribuicao: string; valores: number[]; gravados: boolean[] }>;
+};
 export type RateiosDoCenario = {
   ano: number;
   meses: Array<{ mes: number; rotulo: string }>;
@@ -207,6 +212,8 @@ export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelator
 export const cenariosService = {
   centros: async (id: string) => (await api.get<{ data: CentrosDoCenario }>(`/proxy/cenarios/${id}/centros`)).data.data,
   centro: async (id: string, grupo: string) => (await api.get<{ data: ContasDoCentro }>(`/proxy/cenarios/${id}/centros/contas`, { params: { grupo } })).data.data,
+  gravarLotacao: async (id: string, grupo: string, alteracoes: Array<{ mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
+    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/centros/lotacao`, { grupo, alteracoes, origem })).data.data,
   gravarCentro: async (id: string, grupo: string, alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
     (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/centros`, { grupo, alteracoes, origem })).data.data,
   investimentos: async (id: string) => (await api.get<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos`)).data.data,

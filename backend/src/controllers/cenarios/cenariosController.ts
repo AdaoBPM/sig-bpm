@@ -342,6 +342,18 @@ export const cenariosController = {
     return responder(response, () => cenariosService.gravarJustificativa(c, corpo.data, usuario(request)));
   },
 
+  gravarLotacao(request: Request, response: Response) {
+    const corpo = z
+      .object({
+        grupo: z.string().min(1),
+        alteracoes: z.array(z.object({ mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() })).min(1).max(12),
+        origem: z.object({ tipo: z.enum(["MARCADOS", "VALOR"]), modo: z.enum(["PERCENTUAL", "ABSOLUTO", "DIGITADO"]), reajuste: z.number().nullable(), replicado: z.boolean() }).optional(),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ message: "Quadro de lotação inválido." });
+    return responder(response, () => cenariosService.gravarLotacao(String(request.params.id), corpo.data.grupo, corpo.data.alteracoes, usuario(request), corpo.data.origem));
+  },
+
   referenciaCenario(request: Request, response: Response) {
     const corpo = z.object({ origemId: z.string().min(1) }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ message: "Escolha o cenário de referência." });

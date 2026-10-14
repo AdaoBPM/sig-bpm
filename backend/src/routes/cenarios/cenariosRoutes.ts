@@ -49,6 +49,7 @@ cenariosRoutes.put("/:id/premissas", autenticacao, editar, express.json({ limit:
 cenariosRoutes.get("/:id/centros", autenticacao, ler, asyncHandler(c.centros));
 cenariosRoutes.get("/:id/centros/contas", autenticacao, ler, asyncHandler(c.centro));
 cenariosRoutes.put("/:id/centros", autenticacao, editar, express.json({ limit: "2mb" }), asyncHandler(c.gravarCentro));
+cenariosRoutes.put("/:id/centros/lotacao", autenticacao, editar, express.json(), asyncHandler(c.gravarLotacao));
 cenariosRoutes.get("/:id/rateios", autenticacao, ler, asyncHandler(c.rateios));
 // Os investimentos e o extra-operacional dos cenários analíticos (13/10/2026).
 cenariosRoutes.get("/:id/investimentos", autenticacao, ler, asyncHandler(c.investimentos));

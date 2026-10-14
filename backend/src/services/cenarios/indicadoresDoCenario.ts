@@ -4,6 +4,8 @@ import { INDICADORES_DAS_LISTAS, montarIndicador } from "../relatorios/catalogoI
 import { compilarFormula } from "../relatorios/formulaIndicador.js";
 import { acumular, type DadosDoMes, type Indicador, type Parte } from "../relatorios/indicadores.js";
 import { acumularMeta } from "../relatorios/metasOrcamento.js";
+import { gruposDoCadastro } from "./centrosCenario.js";
+import { QUADROS_DE_LOTACAO, quadrosDeLotacao, VENDA_LOTACAO } from "./lotacaoCenario.js";
 
 /**
  * Os indicadores de um cenário sintético (11/10/2026), com as fórmulas do cadastro Estrutura dos Indicadores — as
@@ -18,6 +20,9 @@ import { acumularMeta } from "../relatorios/metasOrcamento.js";
  *   que usam a demanda condicionada à venda e o orçado acumulado): ficam com o valor da aba das metas.
  *
  * O acumulado é o de Resultados Realizados (acumular); nos importados, o das metas (acumularMeta).
+ *
+ * No cenário analítico (14/10/2026), os quadros de lotação são CALCULADOS: saem do Quadro de Lotação dos grupos de
+ * centros de custo (lotacaoCenario.ts), e não são lançamentos manuais.
  */
 
 export type ClasseIndicador = "RESULTADO" | "MANUAL" | "CALCULADO" | "IMPORTADO";
@@ -26,7 +31,8 @@ const MANUAIS = new Set(INDICADORES_DAS_LISTAS);
 
 type Linha = { nome: string; formula: string | null; peso: string | null; modo: string };
 
-export function classificar(r: Linha): ClasseIndicador {
+export function classificar(r: Linha, analitico = false): ClasseIndicador {
+  if (analitico && QUADROS_DE_LOTACAO.has(r.nome)) return "CALCULADO";
   if (MANUAIS.has(r.nome)) return "MANUAL";
   // Do sistema, só a eficiência da operação total se calcula (a DRE e os quadros); os GME, não.
   if (r.modo === "SISTEMA" || !r.formula) return r.nome.startsWith("Eficiência") ? "CALCULADO" : "IMPORTADO";
@@ -61,12 +67,26 @@ export type CalculoDoCenario = {
 export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenario> {
   const prisma = getPrismaClient();
   const [cenario, dre, metas, estrutura] = await Promise.all([
-    prisma.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true } }),
+    prisma.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true, tipo: true } }),
     prisma.cenarioResultado.findMany({ where: { cenarioId }, select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } } }),
     prisma.cenarioIndicador.findMany({ where: { cenarioId }, select: { nome: true, mes: true, valor: true, origem: true } }),
     prisma.indicadorEstrutura.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
   ]);
   const porLinha = new Map(dre.map((r) => [`${r.mes}|${r.visao}|${r.linhaDRE.codigo}`, Number(r.valor)]));
+  // No analítico, os quadros de lotação dos grupos de centros de custo.
+  const analitico = cenario.tipo === "ANALITICO";
+  let quadros: Map<string, Array<number | null>> | null = null;
+  if (analitico) {
+    const [grupos, lotacao] = await Promise.all([gruposDoCadastro(), prisma.cenarioPremissa.findMany({ where: { cenarioId, venda: VENDA_LOTACAO } })]);
+    const porGrupo = new Map<string, number[]>();
+    for (const p of lotacao) {
+      if (p.mes < 1 || p.mes > 12) continue;
+      const lista = porGrupo.get(p.chave) ?? Array<number>(12).fill(0);
+      lista[p.mes - 1] = Number(p.valor);
+      porGrupo.set(p.chave, lista);
+    }
+    quadros = quadrosDeLotacao(grupos, porGrupo);
+  }
   const mesesComDRE = Array.from({ length: 12 }, (_, k) => dre.some((r) => r.mes === k + 1));
   const porMeta = new Map(metas.map((m) => [`${m.mes}|${m.nome}`, { valor: Number(m.valor), digitado: m.origem === "DIGITADO" }]));
   const importadas = Array.from({ length: 12 }, (_, k) => {
@@ -81,14 +101,14 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
       dre: (u, c) => (temDRE ? (porLinha.get(`${mes}|${u}|${c}`) ?? 0) : NaN),
       volume: () => NaN,
       lista: () => NaN,
-      importado: (n) => porMeta.get(`${mes}|${n}`)?.valor ?? null,
+      importado: (n) => (quadros?.has(n) ? quadros.get(n)![k] : (porMeta.get(`${mes}|${n}`)?.valor ?? null)),
       meta: () => null,
     };
   });
 
   const indicadores = estrutura.map((r): IndicadorDoCenario => {
     const indicador = montarIndicador(r);
-    const classe = classificar(r);
+    const classe = classificar(r, analitico);
     const partes =
       classe === "IMPORTADO"
         ? importadas.map((m) => (m ? { valor: m.get(r.nome) ?? null } : null))
