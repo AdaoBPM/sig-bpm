@@ -66,7 +66,6 @@ export const navGrupos: NavGrupo[] = [
     itens: [
       { title: "Resultados ROVA", href: "/analises-gerenciais/resultados-rova", icon: TrendingUp, emDesenvolvimento: true },
       { title: "Indicadores VPR", href: "/analises-gerenciais/indicadores-vpr", icon: Target, emDesenvolvimento: true },
-      { title: "Ociosidade do Maquinário", href: "/analises-gerenciais/ociosidade-do-maquinario", icon: Factory, emDesenvolvimento: true },
     ],
   },
   {
@@ -74,15 +73,16 @@ export const navGrupos: NavGrupo[] = [
     itens: [
       { title: "Auditoria de Investimentos", href: "/gestao-do-patrimonio/auditoria-de-investimentos", icon: ShieldCheck, emDesenvolvimento: true },
       { title: "Inventário de Prod. Acabados", href: "/gestao-do-patrimonio/inventario-de-produtos-acabados", icon: PackageCheck, emDesenvolvimento: true },
+      { title: "Ociosidade do Maquinário", href: "/gestao-do-patrimonio/ociosidade-do-maquinario", icon: Factory, emDesenvolvimento: true },
     ],
   },
   {
-    // Criação de Cenários (11/10/2026); os analíticos acima dos sintéticos (14/10/2026).
+    // Criação de Cenários (11/10/2026); os Resultados Vendidos no alto e os analíticos acima dos sintéticos (14/10/2026).
     titulo: "Criação de Cenários",
     itens: [
+      { title: "Resultados Vendidos", href: "/resultados-vendidos", icon: HandCoins, emDesenvolvimento: true },
       { title: "Cenários Analíticos", href: "/cenarios/analiticos", icon: Workflow, permission: "cenarios_analiticos_lista:ler", recurso: "CENARIOS_ANALITICOS" },
       { title: "Cenários Sintéticos", href: "/cenarios/sinteticos", icon: Layers, permission: "cenarios_lista:ler", recurso: "CENARIOS_SINTETICOS" },
-      { title: "Resultados Vendidos", href: "/resultados-vendidos", icon: HandCoins, emDesenvolvimento: true },
     ],
   },
   {
