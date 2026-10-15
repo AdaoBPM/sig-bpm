@@ -75,9 +75,9 @@ export function AppSidebar() {
   const itens = competencias.data?.itens ?? [];
   // Bola verde em "Competências" quando algum mês recebeu dados importados de outro mês e ainda não foi reapurado.
   const algumComDadosNovos = itens.some((c) => c.dadosNovos);
-  // Os processos em desenvolvimento (15/10/2026): só o Administrador e o Contábil os veem, com a caixa Apenas Telas
-  // Prontas; os demais perfis veem só as telas a que têm acesso, sem a caixa.
-  const veEmDesenvolvimento = ["ADMINISTRADOR", "CONTABIL"].includes(user?.perfil.codigo ?? "");
+  // Os processos em desenvolvimento (15/10/2026): só o Administrador os vê, com a caixa Apenas Telas Prontas; os demais
+  // perfis (também o Contador, antes Contábil) veem só as telas a que têm acesso, sem a caixa.
+  const veEmDesenvolvimento = user?.perfil.codigo === "ADMINISTRADOR";
   const mostra = (i: { emDesenvolvimento?: boolean }) => !i.emDesenvolvimento || (veEmDesenvolvimento && !apenasProntas);
   // Os grupos de telas aparecem como um item só, que abre na primeira tela alcançada.
   const grupos = navGrupos
