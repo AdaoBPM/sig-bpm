@@ -75,9 +75,13 @@ export function AppSidebar() {
   const itens = competencias.data?.itens ?? [];
   // Bola verde em "Competências" quando algum mês recebeu dados importados de outro mês e ainda não foi reapurado.
   const algumComDadosNovos = itens.some((c) => c.dadosNovos);
+  // Os processos em desenvolvimento (15/10/2026): só o Administrador e o Contábil os veem, com a caixa Apenas Telas
+  // Prontas; os demais perfis veem só as telas a que têm acesso, sem a caixa.
+  const veEmDesenvolvimento = ["ADMINISTRADOR", "CONTABIL"].includes(user?.perfil.codigo ?? "");
+  const mostra = (i: { emDesenvolvimento?: boolean }) => !i.emDesenvolvimento || (veEmDesenvolvimento && !apenasProntas);
   // Os grupos de telas aparecem como um item só, que abre na primeira tela alcançada.
   const grupos = navGrupos
-    .map((g) => ({ ...g, itens: g.itens.filter((i) => !apenasProntas || !i.emDesenvolvimento).map((i) => itemPermitido(i, hasPermission)).filter((i) => i !== null) }))
+    .map((g) => ({ ...g, itens: g.itens.filter(mostra).map((i) => itemPermitido(i, hasPermission)).filter((i) => i !== null) }))
     .filter((g) => g.itens.length > 0);
 
   return (
@@ -136,13 +140,15 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      {/* Acima do indicador do Next.js (no desenvolvimento, no canto de baixo). */}
+      {/* Acima do indicador do Next.js (no desenvolvimento, no canto de baixo). Só para quem vê os processos em desenvolvimento. */}
+      {veEmDesenvolvimento ? (
       <SidebarFooter className={`border-t border-sidebar-border group-data-[collapsible=icon]:hidden ${process.env.NODE_ENV === "development" ? "pb-16" : ""}`}>
         <label className="flex cursor-pointer items-center gap-2 px-2 py-1 text-xs text-sidebar-foreground/80">
           <input type="checkbox" checked={apenasProntas} onChange={(e) => setApenasProntas(e.target.checked)} className="size-3.5 accent-[var(--sidebar-primary)]" />
           Apenas Telas Prontas
         </label>
       </SidebarFooter>
+      ) : null}
 
       <SidebarRail />
     </Sidebar>
