@@ -21,8 +21,10 @@ export type MovimentacaoForaDoPadrao = {
   origens: string[];
   /** O total movimentado no período. */
   total: number;
-  /** Os valores que entram nos doze meses do cenário (mês a mês, ou a média replicada). */
+  /** Os valores que entram nos doze meses do cenário (mês a mês; zeros na média do período, 15/10/2026). */
   valores: number[];
+  /** O que entra na Média de Referência do grupo (o mês 0): a média dos meses com movimentação (15/10/2026). */
+  media?: number;
   /** Os grupos de centros que podem recebê-la: os que têm a mesma atribuição e conta no grupo da DRE deles. */
   destinos: Array<{ grupo: string; conta: string; departamento: string }>;
   /** A filial predominante dos lançamentos (pelo valor). */
@@ -32,7 +34,7 @@ export type MovimentacaoForaDoPadrao = {
 };
 
 /** O que está somado nos centros do cenário por uma decisão (para tirar se ela mudar). */
-export type RealocacaoAplicada = { grupo: string; conta: string; valores: number[] };
+export type RealocacaoAplicada = { grupo: string; conta: string; valores: number[]; media?: number };
 
 export type Realocacoes = {
   /** A carga do realizado que gerou a lista (o nome da referência). */
@@ -67,8 +69,12 @@ export function lerRealocacoes(json: unknown): Realocacoes {
  */
 export function diferencasDasDecisoes(r: Realocacoes, decisoes: Record<string, string | null>) {
   const diferencas = new Map<string, number>();
-  const somar = (a: RealocacaoAplicada, sinal: 1 | -1) =>
-    a.valores.forEach((v, k) => v && diferencas.set(`${a.grupo}|${a.conta}|${k + 1}`, (diferencas.get(`${a.grupo}|${a.conta}|${k + 1}`) ?? 0) + sinal * v));
+  const mais = (a: RealocacaoAplicada, mes: number, v: number) => v && diferencas.set(`${a.grupo}|${a.conta}|${mes}`, (diferencas.get(`${a.grupo}|${a.conta}|${mes}`) ?? 0) + v);
+  // Os meses e, desde 15/10/2026, a Média de Referência (o mês 0).
+  const somar = (a: RealocacaoAplicada, sinal: 1 | -1) => {
+    a.valores.forEach((v, k) => mais(a, k + 1, sinal * v));
+    if (a.media) mais(a, 0, sinal * a.media);
+  };
   const aplicadas: Record<string, RealocacaoAplicada> = {};
   for (const m of r.movimentacoes) {
     const grupo = m.chave in decisoes ? decisoes[m.chave] : (r.decisoes[m.chave] ?? null);
@@ -80,7 +86,7 @@ export function diferencasDasDecisoes(r: Realocacoes, decisoes: Record<string, s
     }
     if (antiga) somar(antiga, -1);
     if (alvo) {
-      const nova = { grupo: alvo.grupo, conta: alvo.conta, valores: m.valores };
+      const nova = { grupo: alvo.grupo, conta: alvo.conta, valores: m.valores, media: m.media };
       somar(nova, 1);
       aplicadas[m.chave] = nova;
     }

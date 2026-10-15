@@ -29,10 +29,24 @@ const comSinal = (v: number, texto: string) => (v > 0 ? `+${texto}` : texto);
 
 /** O tipo: o reajuste dos marcados, a edição de um valor (replicada ou não) ou a carga de uma referência. */
 const tipoDe = (r: ReajusteDoCenario) =>
-  r.tipo === "MARCADOS" ? "Reajuste dos Marcados" : r.tipo === "REFERENCIA" ? "Referência Carregada" : r.replicado ? "Edição de Valor (Replicada)" : "Edição de Valor";
+  r.tipo === "MARCADOS"
+    ? "Reajuste dos Marcados"
+    : r.tipo === "REFERENCIA"
+      ? "Referência Carregada"
+      : r.tipo === "RECALCULO"
+        ? "Recálculo"
+        : r.tipo === "MEDIAS"
+          ? "Médias Replicadas / Valores Apagados"
+          : r.tipo === "IMPORTACAO"
+            ? "Valores Importados"
+            : r.replicado
+              ? "Edição de Valor (Replicada)"
+              : "Edição de Valor";
+/** Os tipos que trazem a descrição no lugar das contas e sem o reajuste (15/10/2026: o recálculo, as médias e a importação). */
+const comDescricao = (r: ReajusteDoCenario) => ["REFERENCIA", "RECALCULO", "MEDIAS", "IMPORTACAO"].includes(r.tipo);
 /** O reajuste informado: +5,00%, +1.000 ou o valor digitado direto. */
 const reajusteDe = (r: ReajusteDoCenario) => {
-  if (r.tipo === "REFERENCIA") return null;
+  if (comDescricao(r)) return null;
   if (r.modo === "DIGITADO" || r.reajuste === null) return "Valor digitado";
   return r.modo === "PERCENTUAL" ? `${comSinal(r.reajuste, formato.valor(r.reajuste))}%` : comSinal(r.reajuste, formato.valor(r.reajuste));
 };
@@ -43,7 +57,7 @@ const mesesDe = (ms: number[]) => {
   return ms.length === 1 ? MESES[ms[0] - 1] : seguidos ? `${MESES[ms[0] - 1]} a ${MESES[ms[ms.length - 1] - 1]}` : ms.map((m) => MESES[m - 1]).join(", ");
 };
 const contasDe = (r: ReajusteDoCenario) =>
-  r.tipo === "REFERENCIA" ? r.descricao : r.contas.length === 1 ? r.contas[0].descricao : `${r.contas.length} contas: ${r.contas.map((c) => c.descricao).join(", ")}`;
+  comDescricao(r) ? r.descricao : r.contas.length === 1 ? r.contas[0].descricao : `${r.contas.length} contas: ${r.contas.map((c) => c.descricao).join(", ")}`;
 const diferenca = (r: ReajusteDoCenario) => (r.somaAntes === null || r.somaDepois === null ? null : r.somaDepois - r.somaAntes);
 
 // As 11 colunas cabem na tela com o espaço lateral menor (13/10/2026): o rótulo e as células com 10 px de cada lado.
@@ -198,20 +212,20 @@ export function ReajustesContent() {
 /** O botão da coluna Contas: cinza-claro, como os da barra de marcação dos Resultados. */
 const botaoCinza = "rounded-sm border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-medium text-gray-900 hover:bg-gray-200";
 const botaoDasContas = (r: ReajusteDoCenario) =>
-  r.tipo === "REFERENCIA" ? "Ver Descrição" : r.contas.length === 1 ? "Ver 1 Conta" : `Ver ${r.contas.length.toLocaleString("pt-BR")} Contas`;
+  comDescricao(r) ? "Ver Descrição" : r.contas.length === 1 ? "Ver 1 Conta" : `Ver ${r.contas.length.toLocaleString("pt-BR")} Contas`;
 
 /**
  * O modal de uma linha do histórico (13/10/2026): as contas alteradas, numa tabela com o Departamento e a Atribuição
  * (da linha da conta na Estrutura da DRE) e a Conta; na Referência Carregada, a descrição da referência.
  */
 function ContasDialog({ reajuste: r, onFechar }: { reajuste: ReajusteDoCenario; onFechar: () => void }) {
-  const referencia = r.tipo === "REFERENCIA";
+  const referencia = comDescricao(r);
   const meses = mesesDe(r.meses);
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className={`max-h-[85vh] overflow-y-auto rounded-sm ${referencia ? "sm:max-w-lg" : "sm:max-w-3xl"}`}>
         <DialogHeader>
-          <DialogTitle>{referencia ? "Referência Carregada" : r.contas.length === 1 ? "Conta Alterada" : "Contas Alteradas"}</DialogTitle>
+          <DialogTitle>{referencia ? tipoDe(r) : r.contas.length === 1 ? "Conta Alterada" : "Contas Alteradas"}</DialogTitle>
           <DialogDescription>
             {referencia ? null : `${tipoDe(r)} · `}
             {dataHora(r.criadoEm)} · {r.usuarioNome}

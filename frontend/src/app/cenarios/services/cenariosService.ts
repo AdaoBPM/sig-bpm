@@ -93,8 +93,9 @@ export type CentrosDoCenario = { ano: number; meses: Array<{ mes: number; rotulo
 export type ContasDoCentro = {
   grupo: Omit<GrupoDeCentros, "total">;
   /** O quadro de lotação do grupo (14/10/2026): os colaboradores de cada mês e os quadros dos indicadores em que ele entra. */
-  lotacao: { valores: number[]; gravados: boolean[]; quadro: string };
-  contas: Array<{ codigo: string; descricao: string; atribuicao: string; valores: number[]; gravados: boolean[] }>;
+  /** `referencia`: a Média de Referência (o mês 0; 15/10/2026). */
+  lotacao: { referencia: number | null; valores: number[]; gravados: boolean[]; quadro: string };
+  contas: Array<{ codigo: string; descricao: string; atribuicao: string; referencia: number | null; valores: number[]; gravados: boolean[] }>;
 };
 export type RateiosDoCenario = {
   ano: number;
@@ -191,7 +192,8 @@ export type ReajusteDoCenario = {
   id: string;
   criadoEm: string;
   usuarioNome: string;
-  tipo: "MARCADOS" | "VALOR" | "REFERENCIA";
+  /** RECALCULO (14/10/2026), MEDIAS e IMPORTACAO (15/10/2026: Replicar Médias / Apagar Valores e Importar Valores). */
+  tipo: "MARCADOS" | "VALOR" | "REFERENCIA" | "RECALCULO" | "MEDIAS" | "IMPORTACAO";
   modo: "PERCENTUAL" | "ABSOLUTO" | "DIGITADO" | null;
   reajuste: number | null;
   visao: number | null;
@@ -253,7 +255,37 @@ export type IndicadorDoCenario = Indicador & { classe: ClasseIndicador; digitado
 /** `comparado`: o cenário comparado (13/10/2026), cujo acumulado vem em `totalOrcado` de cada indicador. */
 export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: IndicadorDoCenario[]; comparado?: { nome: string; ano: number } | null };
 
+/** A análise de uma planilha do Importar Valores (15/10/2026): o padrão, as abas e as mudanças (os meses e as justificativas). */
+export type AnaliseDePremissas = {
+  arquivo: string;
+  valido: boolean;
+  erros: string[];
+  avisos: string[];
+  abas: string[];
+  linhas: number;
+  alteracoes: Array<{ chave: string; mes: number; valor: number | null }>;
+  justificativas: Array<{ chave: string; texto: string | null }>;
+};
+
 export const cenariosService = {
+  /** Replicar Médias / Apagar Valores (15/10/2026), em todas as abas das premissas. */
+  replicarMedias: async (id: string, acao: "replicar" | "apagar") =>
+    (await api.post<{ data: { linhas: number; valores: number } }>(`/proxy/cenarios/${id}/premissas/medias`, { acao })).data.data,
+  /** O Importar Valores, passo 1: confere um arquivo (um .zip vira uma análise por planilha). */
+  analisarPremissas: async (id: string, arquivo: File) =>
+    (
+      await api.post<{ data: AnaliseDePremissas[] }>(`/proxy/cenarios/${id}/premissas/importar/analise`, arquivo, {
+        params: { arquivo: arquivo.name },
+        headers: { "Content-Type": "application/octet-stream" },
+      })
+    ).data.data,
+  /** O Importar Valores, passo 2: grava as mudanças das planilhas válidas. */
+  importarPremissas: async (id: string, arquivos: AnaliseDePremissas[]) =>
+    (
+      await api.post<{ data: { valores: number; justificativas: number } }>(`/proxy/cenarios/${id}/premissas/importar`, {
+        arquivos: arquivos.map(({ arquivo, alteracoes, justificativas }) => ({ arquivo, alteracoes, justificativas })),
+      })
+    ).data.data,
   centros: async (id: string) => (await api.get<{ data: CentrosDoCenario }>(`/proxy/cenarios/${id}/centros`)).data.data,
   centro: async (id: string, grupo: string) => (await api.get<{ data: ContasDoCentro }>(`/proxy/cenarios/${id}/centros/contas`, { params: { grupo } })).data.data,
   gravarLotacao: async (id: string, grupo: string, alteracoes: Array<{ mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>

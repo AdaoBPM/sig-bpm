@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 
 import type { LinhaPlanilha, ValorCelula } from "../src/lib/xlsx.js";
 import { limiteDaLinha, mesesAcima, totaisDaDRE } from "../src/services/cenarios/comparativoCenario.js";
+import { abaDaChave, abaDaPlanilha, lerArquivoDePremissas, precisaJustificar, type LinhaDaPlanilha } from "../src/services/cenarios/planilhaPremissas.js";
+import { gerarXlsx } from "../src/lib/xlsxEscrita.js";
 import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
@@ -109,6 +111,30 @@ describe("comparativo entre cenários", () => {
       verificadas.map((v) => `${v.total.codigo}:${v.linha.codigo}`),
       ["RO.ROL:RO.ROL", "ROB.ROB:ROB.RBPF", "CPP.CPP:CPP.MOD.CLT", "MB.MB:MB.MB"],
     );
+  });
+  it("a planilha das premissas: Justificar? pela variação máxima sobre a média, a aba de cada código e a leitura do que se exportou", () => {
+    const meses = Array<number | null>(12).fill(null);
+    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [105, 95, ...meses.slice(2)] }), false);
+    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [105, 111, ...meses.slice(2)] }), true);
+    assert.equal(precisaJustificar({ limite: null, media: 100, meses: [500, ...meses.slice(1)] }), false);
+    assert.equal(precisaJustificar({ limite: 10, media: null, meses: [500, ...meses.slice(1)] }), false);
+    assert.equal(abaDaChave("P|2|GLOBAL|DEMANDA:X"), "2");
+    assert.equal(abaDaChave("C|PCP (CRI)|CPP.MOI.REMUNERACOES_CLT"), "centros");
+    assert.equal(abaDaChave("L|PCP (CRI)"), "centros");
+    assert.equal(abaDaChave("I|Venda: Global"), "manuais");
+    assert.equal(abaDaChave("Z|x"), null);
+    const linhas: LinhaDaPlanilha[] = [
+      { aba: "centros", chave: "C|ESTRUTURA|CPP.MOD.REMUNERACOES_CLT", descricao: ["ESTRUTURA", "Mão de Obra Direta", "Remunerações CLT"], und: "R$", conta: "CPP.MOD.REMUNERACOES_CLT", limite: 5, media: 1000, meses: [1000, 1200, ...meses.slice(2)], justificativa: "Dissídio" },
+      { aba: "centros", chave: "L|ESTRUTURA", descricao: ["ESTRUTURA", "Quadro de Lotação", "Colaboradores"], und: "colab.", conta: null, limite: null, media: 44, meses: Array(12).fill(44), justificativa: null },
+    ];
+    const xlsx = gerarXlsx([abaDaPlanilha("Centros de Custo", "centros", linhas, Array.from({ length: 12 }, (_, k) => `M${k + 1}`), "teste")]);
+    const [lido] = lerArquivoDePremissas("p.xlsx", xlsx);
+    assert.deepEqual(lido.erros, []);
+    assert.deepEqual(lido.linhas.map((l) => [l.chave, l.meses[0], l.meses[1], l.meses[2], l.justificativa]), [
+      ["C|ESTRUTURA|CPP.MOD.REMUNERACOES_CLT", 1000, 1200, null, "Dissídio"],
+      ["L|ESTRUTURA", 44, 44, 44, null],
+    ]);
+    assert.match(lerArquivoDePremissas("x.xlsx", gerarXlsx([{ nome: "Outra", larguras: [10], linhas: [[{ valor: "a" }]] }]))[0].erros[0], /não está no padrão/);
   });
   it("a média dos centros conta só os meses com movimentação de cada grupo e conta", () => {
     const r = mediaNosMesesComOcorrencia(

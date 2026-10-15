@@ -25,8 +25,8 @@ const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt
 
 /**
  * A aba Referência de um cenário analítico (14/10/2026): outro cenário analítico (as premissas, os centros de custo, os
- * investimentos e os indicadores dele) ou o resultado realizado de um exercício — Mês a Mês ou a Média Replicada de um
- * período —, que carrega as Médias de Referência das premissas (e os doze meses iguais a elas), os grupos de centros de
+ * investimentos e os indicadores dele) ou o resultado realizado de um exercício — Mês a Mês ou a Média do Período —, que
+ * carrega as Médias de Referência das premissas (15/10/2026: só elas; os meses ficam em branco), os grupos de centros de
  * custo, a depreciação base, o extra-operacional e os indicadores. A correspondência tarefa × linha fica nos Cadastros da
  * Controladoria / Linhas.
  */
@@ -73,7 +73,7 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
         tipo === "cenario"
           ? `${origem!.nome} carregado no cenário; a DRE foi recalculada.`
           : modo === "MEDIA"
-            ? `Média do realizado de ${ano} (${abrev(de)} a ${abrev(ate)}) carregada; a DRE foi recalculada.`
+            ? `Médias do realizado de ${ano} (${abrev(de)} a ${abrev(ate)}) carregadas: os meses do cenário ficaram em branco (use Replicar Médias, nas Premissas).`
             : `Resultado realizado de ${ano} carregado; a DRE foi recalculada.`,
         lista,
       ),
@@ -165,8 +165,8 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
             <legend className="mb-1.5 text-sm leading-none font-medium">Importação</legend>
             {(
               [
-                ["MEDIA", "Média Replicada", "A média de um período: os centros de custo (cada conta, só nos meses com movimentação), a depreciação e o extra-operacional, nos doze meses; as premissas, com as médias do período."],
-                ["MES_A_MES", "Mês a Mês", "Os centros de custo, a depreciação e o extra-operacional de cada competência fechada no mês dela; as premissas, com as médias de todos os meses fechados."],
+                ["MEDIA", "Média do Período", "As Médias de Referência de um período (os centros de custo, cada conta só nos meses com movimentação): os meses do cenário ficam em branco, para replicar as médias (Premissas / Replicar Médias) ou digitar."],
+                ["MES_A_MES", "Mês a Mês", "As Médias de Referência de todos os meses fechados e, nos centros de custo, na depreciação, no extra-operacional e nos indicadores, cada competência fechada no mês dela."],
               ] as const
             ).map(([v, rotulo, detalhe]) => (
               <OpcaoEmLinha key={v} nome="modo-realizado-analitico" marcada={modo === v} onMarcar={() => setModo(v)} rotulo={rotulo} detalhe={detalhe} />
@@ -242,12 +242,12 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
                     <>
                       <li>
                         As premissas são substituídas pelas Médias de Referência do realizado de {ano} (
-                        {modo === "MEDIA" ? `${abrev(de)} a ${abrev(ate)}` : mesesFechados.map(abrev).join(", ")}), por linha e venda, e os doze meses
-                        começam iguais a elas (a demanda diária é o volume médio ÷ os dias úteis). Os dias úteis e os ajustes voltam ao padrão.
+                        {modo === "MEDIA" ? `${abrev(de)} a ${abrev(ate)}` : mesesFechados.map(abrev).join(", ")}), por linha e venda (a demanda diária é o volume médio ÷ os dias úteis), e os doze meses
+                        ficam em branco. Os dias úteis e os ajustes voltam ao padrão.
                       </li>
                       <li>
                         Os centros de custo, a depreciação base e o extra-operacional são substituídos pelos do realizado
-                        {modo === "MEDIA" ? ", com a média do período nos doze meses" : ", cada mês fechado no seu mês"}; os indicadores, pelos realizados.
+                        {modo === "MEDIA" ? ": só as Médias de Referência, com os meses em branco" : ": as Médias de Referência e cada mês fechado no seu mês"}; os indicadores manuais, do mesmo jeito.
                       </li>
                       <li>Os investimentos ficam. A DRE do cenário é recalculada.</li>
                     </>

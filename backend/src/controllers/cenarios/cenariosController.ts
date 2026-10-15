@@ -6,7 +6,14 @@ import { ABA_DA_VISAO } from "../../services/acesso/telas.js";
 import { z } from "zod";
 
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
-import { CenarioError, cenariosService } from "../../services/cenarios/cenariosService.js";
+import { ABA_DA_PERMISSAO, CenarioError, cenariosService } from "../../services/cenarios/cenariosService.js";
+import { abaDaChave, ABAS_DAS_PREMISSAS, NOME_DA_ABA, type AbaDasPremissas } from "../../services/cenarios/planilhaPremissas.js";
+
+/** As abas das premissas que o perfil lê ou edita (15/10/2026: a planilha das premissas). */
+const abasDasPremissas = (request: Request, response: Response, acao: "ler" | "editar") => {
+  const base = String(response.locals.areaDoCenario ?? "cenarios_analiticos");
+  return ABAS_DAS_PREMISSAS.filter((a) => temPermissao(request, `${base}_premissas.${ABA_DA_PERMISSAO[a]}:${acao}`));
+};
 
 const idSchema = z.string().uuid();
 const nomeSchema = z.string().trim().min(1, "Dê um nome ao cenário.").max(120);
@@ -264,6 +271,73 @@ export const cenariosController = {
     const corpo = z.object({ marcacao: marcacaoSchema }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Marcação inválida." });
     return responder(response, () => cenariosService.marcar(c, corpo.data.marcacao, usuario(request)));
+  },
+
+  /** Replicar Médias / Apagar Valores (15/10/2026): em todas as abas das premissas, que o perfil precisa editar. */
+  async replicarMedias(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z.object({ acao: z.enum(["replicar", "apagar"]) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Ação inválida." });
+    const faltam = ABAS_DAS_PREMISSAS.filter((a) => !abasDasPremissas(request, response, "editar").includes(a));
+    if (faltam.length) return response.status(403).json({ error: `Replicar Médias e Apagar Valores mexem em todas as abas das premissas: seu perfil não edita ${faltam.map((a) => NOME_DA_ABA[a]).join(", ")}.` });
+    return responder(response, () => cenariosService.replicarMedias(c, corpo.data.acao, usuario(request)));
+  },
+
+  /** O Exportar Premissas (15/10/2026), só em Excel: ?escopo=atual (com ?aba=), todas, centros_abas ou centros_arquivos. */
+  async exportarPremissas(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    if (request.query.formato !== undefined && request.query.formato !== "xlsx") return response.status(400).json({ error: "As premissas só saem em Excel." });
+    const q = z
+      .object({ escopo: z.enum(["atual", "todas", "centros_abas", "centros_arquivos"]).default("atual"), aba: z.enum(ABAS_DAS_PREMISSAS as [AbaDasPremissas, ...AbaDasPremissas[]]).optional() })
+      .safeParse(request.query);
+    if (!q.success) return response.status(400).json({ error: "Escopo inválido." });
+    return enviarArquivo(request, response, () => cenariosService.exportarPremissas(c, q.data.escopo, q.data.aba ?? null, abasDasPremissas(request, response, "ler"), usuario(request)));
+  },
+
+  /** O Importar Valores, passo 1 (15/10/2026): o arquivo vai cru no corpo, com ?arquivo= (o nome). Devolve a análise de cada planilha. */
+  async analisarPremissas(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const q = z.object({ arquivo: z.string().trim().min(1).max(255) }).safeParse(request.query);
+    if (!q.success) return response.status(400).json({ error: "Dados inválidos." });
+    if (!Buffer.isBuffer(request.body) || request.body.length === 0) return response.status(400).json({ error: "O arquivo enviado está vazio." });
+    const editaveis = abasDasPremissas(request, response, "editar");
+    return responder(response, async () =>
+      (await cenariosService.analisarPremissas(c, q.data.arquivo, new Uint8Array(request.body as Buffer), usuario(request))).map((r) => {
+        // As abas que o perfil não edita recusam a planilha.
+        const fora = r.abasDasPremissas.filter((a) => !editaveis.includes(a));
+        return fora.length ? { ...r, valido: false, erros: [...r.erros, `Seu perfil não edita ${fora.map((a) => NOME_DA_ABA[a]).join(", ")}.`] } : r;
+      }),
+    );
+  },
+
+  /** O Importar Valores, passo 2 (15/10/2026; o usuário confirmou): as mudanças das planilhas analisadas. */
+  async importarPremissas(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z
+      .object({
+        arquivos: z
+          .array(
+            z.object({
+              arquivo: z.string().min(1).max(400),
+              alteracoes: z.array(z.object({ chave: z.string().min(1).max(400), mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() })).max(200_000),
+              justificativas: z.array(z.object({ chave: z.string().min(1).max(400), texto: z.string().max(2000).nullable() })).max(50_000),
+            }),
+          )
+          .min(1)
+          .max(200),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Dados inválidos." });
+    const editaveis = abasDasPremissas(request, response, "editar");
+    const abas = new Set(corpo.data.arquivos.flatMap((a) => [...a.alteracoes, ...a.justificativas].map((x) => abaDaChave(x.chave))));
+    if (abas.has(null)) return response.status(400).json({ error: "Há um Código de linha inválido." });
+    const fora = [...abas].filter((a): a is AbaDasPremissas => !!a && !editaveis.includes(a));
+    if (fora.length) return response.status(403).json({ error: `Seu perfil não edita ${fora.map((a) => NOME_DA_ABA[a]).join(", ")}.` });
+    return responder(response, () => cenariosService.importarPremissas(c, corpo.data.arquivos, usuario(request)));
   },
 
   /** Importação, passo 1: o arquivo vai cru no corpo; ?nomeArquivo= e, para importar num cenário, ?cenarioId=. Devolve a prévia. */

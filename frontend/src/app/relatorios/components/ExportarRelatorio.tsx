@@ -22,7 +22,20 @@ export type OpcaoExportar = { chave: string; excel: string; pdf: string | null; 
  * PDF, cada um com as opções da tela (a visão atual, todas as unidades, todos
  * os centros).
  */
-export function ExportarRelatorio({ caminho, endereco, opcoes, padrao }: { caminho?: string; endereco?: string; opcoes: OpcaoExportar[]; padrao: string }) {
+export function ExportarRelatorio({
+  caminho,
+  endereco,
+  opcoes,
+  padrao,
+  rotulo = "Exportar",
+}: {
+  caminho?: string;
+  endereco?: string;
+  opcoes: OpcaoExportar[];
+  padrao: string;
+  /** O texto do botão (15/10/2026: "Exportar Premissas", nas premissas dos analíticos). */
+  rotulo?: string;
+}) {
   const [gerando, setGerando] = useState(false);
 
   async function baixar(formato: Formato, o: OpcaoExportar) {
@@ -50,7 +63,7 @@ export function ExportarRelatorio({ caminho, endereco, opcoes, padrao }: { camin
         render={
           <Button type="button" className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm" disabled={gerando}>
             <Download className="size-4" />
-            {gerando ? "Gerando…" : "Exportar"}
+            {gerando ? "Gerando…" : rotulo}
           </Button>
         }
       />

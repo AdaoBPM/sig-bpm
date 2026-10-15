@@ -346,7 +346,8 @@ export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   const alocados = alocarCentros(
     est,
     grupos,
-    valoresCentros.map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
+    // Só os meses: o mês 0 é a Média de Referência (15/10/2026).
+    valoresCentros.filter((x) => x.mes >= 1 && x.mes <= 12).map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
     // Os percentuais pelas regras de rateio de cada mês (14/10/2026): o fixo, ou as bases entre os destinos das por volume.
     percentuaisPelasRegras(regras, cenario.ano, bases),
   );

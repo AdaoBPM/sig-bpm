@@ -81,7 +81,7 @@ export function TabelaPremissas({ id, dados, tabela, editavel }: { id: string; d
 /**
  * A tabela editável mês a mês (13/10/2026): as premissas de uma unidade e venda e as contas de um centro de custo. As
  * linhas vêm em seções, com subtítulos; depois da descrição, a unidade, a Média de Referência (`comReferencia`) e os
- * meses. Clicar num valor edita aquele mês (com a chave de replicar aos meses seguintes); as caixas das linhas e dos
+ * meses (em branco, os meses sem valor gravado, 15/10/2026). Clicar num valor edita aquele mês (com a chave de replicar aos meses seguintes); as caixas das linhas e dos
  * meses marcam valores, e "Reajustar Marcados" aplica um reajuste a todos. As linhas de cálculo não se editam.
  */
 export function TabelaEditavel({
@@ -209,16 +209,18 @@ export function TabelaEditavel({
         {comReferencia ? <td className="border-r border-gray-300 bg-gray-50 px-3 py-1.5 text-right text-sm whitespace-nowrap text-gray-700">{formatar(l.referencia, l)}</td> : null}
         {l.valores.map((v, i) => {
           const contornado = ePremissa && marcada && meses.has(i);
+          // O mês sem valor gravado fica em branco (15/10/2026); o padrão diferente de zero (os dias úteis), em cinza.
+          const texto = ePremissa && !l.gravados[i] && !v ? "" : formatar(v, l);
           const classe = `px-3 py-1.5 text-right text-sm whitespace-nowrap ${contornado ? "outline outline-1 -outline-offset-1 outline-gray-900" : ""} ${
             ePremissa ? (l.gravados[i] ? "text-gray-900" : "text-gray-400") : l.tipo === "CALCULO" && l.und === "R$" ? "font-bold text-gray-900" : "text-gray-600"
           }`;
           return editavel && ePremissa ? (
-            <td key={i} className={`${classe} cursor-pointer hover:bg-gray-100`} title={l.gravados[i] ? "Editar o valor" : "Valor padrão; clique para editar"} onClick={() => setValor({ l, i })}>
-              {formatar(v, l)}
+            <td key={i} className={`${classe} cursor-pointer hover:bg-gray-100`} title={l.gravados[i] ? "Editar o valor" : texto ? "Valor padrão; clique para editar" : "Em branco; clique para editar"} onClick={() => setValor({ l, i })}>
+              {texto}
             </td>
           ) : (
             <td key={i} className={classe}>
-              {formatar(v, l)}
+              {texto}
             </td>
           );
         })}

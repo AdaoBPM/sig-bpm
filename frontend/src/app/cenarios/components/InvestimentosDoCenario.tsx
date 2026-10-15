@@ -44,7 +44,6 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
         meses={dados.meses}
         linhas={dados.depreciacao}
         editavel={pode}
-        comReferencia={false}
         item={["conta", "contas"]}
         cabecalho="CONTA"
         aoGravar={(alteracoes, origem) => cenariosService.gravarMensais(id, "BASE", alteracoes, origem)}
@@ -273,7 +272,6 @@ export function ExtraDoCenario({ id, editavel }: { id: string; editavel: boolean
           meses={dados.meses}
           linhas={t.linhas}
           editavel={editavel && dados.editavel}
-          comReferencia={false}
           item={["conta", "contas"]}
           cabecalho="CONTA"
           aoGravar={(alteracoes, origem) => cenariosService.gravarMensais(id, "EXTRA", alteracoes, origem)}

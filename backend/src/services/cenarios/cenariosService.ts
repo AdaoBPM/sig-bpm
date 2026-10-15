@@ -15,6 +15,9 @@ import { estrutura as estruturaDRE } from "../dre/dreService.js";
 import { contasDaUnidade, ErroEdicao, gravarValores, linhasDaUnidade, linhasDoConsolidado, recalcular, UNIDADES, type Alteracao } from "./edicaoCenario.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { calcularCenario, type CalculoDoCenario } from "./indicadoresDoCenario.js";
+import { abaDaPlanilha, ABAS_DAS_PREMISSAS, lerArquivoDePremissas, NOME_DA_ABA, type AbaDasPremissas, type LinhaDaPlanilha } from "./planilhaPremissas.js";
+import { gerarXlsx } from "../../lib/xlsxEscrita.js";
+import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 import { montarPainel } from "../relatorios/painelService.js";
 import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, type Valor } from "../relatorios/painelDeBordo.js";
 import { limiteDaLinha, linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
@@ -27,6 +30,7 @@ import {
   linhasDoCadastro,
   NOME_DA_UNIDADE,
   NOME_DA_VENDA,
+  UNIDADES_PREMISSAS,
   VENDAS_DA_UNIDADE,
   type UnidadePremissa,
   type Venda,
@@ -345,6 +349,128 @@ async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: s
 
 export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 
+/** A conta da DRE de uma premissa de unidade: a da receita (RB:linha:conta) ou a do custo (CUSTO:linha:conta). */
+const contaDaPremissa = (chave: string) => (/^(RB|CUSTO):/.test(chave) ? (chave.split(":")[2] ?? null) : null);
+/** Os Ajustes das premissas: o Replicar Médias e o Apagar Valores os mantêm (15/10/2026). */
+const ehAjusteDaPlanilha = (chave: string) => /^P\|\d\|[A-Z]+\|AJUSTE_(RECEITA|CUSTOS)$/.test(chave);
+/** A aba da permissão (cenarios_analiticos_premissas.<aba>) de cada aba das premissas. */
+export const ABA_DA_PERMISSAO: Record<AbaDasPremissas, string> = { "1": "matriz", "2": "filial", "3": "servicos", centros: "centros", investimentos: "investimentos", extra: "extra", manuais: "manuais" };
+const iguais = (a: number | null, b: number | null) => (a === null || b === null ? a === b : Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a)));
+const MESES_1_A_12 = Array.from({ length: 12 }, (_, k) => k + 1);
+
+/**
+ * As linhas da planilha das premissas de um cenário analítico (15/10/2026): as premissas das unidades (por venda), o
+ * quadro de lotação e as contas de cada grupo de centros de custo, a depreciação base, o extra-operacional e os
+ * indicadores manuais, com a Média de Referência (o mês 0), os doze meses gravados (em branco: null), a variação máxima
+ * da conta (do Comparativo) e a justificativa.
+ */
+async function linhasDaPlanilha(c: { id: string; variacoesMaximas: unknown }): Promise<LinhaDaPlanilha[]> {
+  const prisma = getPrismaClient();
+  const [est, cadastro, premissas, centros, indicadores, grupos, justificativas, calculo] = await Promise.all([
+    estruturaDRE(),
+    linhasDoCadastro(),
+    prisma.cenarioPremissa.findMany({ where: { cenarioId: c.id } }),
+    prisma.cenarioCentro.findMany({ where: { cenarioId: c.id }, include: { linhaDRE: { select: { codigo: true } } } }),
+    prisma.cenarioIndicador.findMany({ where: { cenarioId: c.id } }),
+    gruposDoCadastro(),
+    prisma.cenarioPremissaJustificativa.findMany({ where: { cenarioId: c.id } }),
+    calcularCenario(c.id),
+  ]);
+  const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
+  const acimaDe = new Map(totaisDaDRE(est).linhas.map((l) => [l.linha.codigo, l.acima]));
+  const limiteDa = (conta: string | null) => (conta && acimaDe.has(conta) ? limiteDaLinha(limites, conta, acimaDe.get(conta)!) : null);
+  const justificativa = new Map(justificativas.map((j) => [j.chave, j.texto]));
+  const doze = (ler: (mes: number) => number | undefined) => MESES_1_A_12.map((m) => ler(m) ?? null);
+  const linhas: LinhaDaPlanilha[] = [];
+  const add = (l: Omit<LinhaDaPlanilha, "limite" | "justificativa">) => linhas.push({ ...l, limite: limiteDa(l.conta), justificativa: justificativa.get(l.chave) ?? null });
+  const prem = new Map(premissas.map((p) => [`${p.unidade}|${p.venda}|${p.chave}|${p.mes}`, Number(p.valor)]));
+  for (const u of UNIDADES_PREMISSAS) {
+    for (const venda of VENDAS_DA_UNIDADE[u]) {
+      for (const l of linhasDaTabela(est, cadastro, u).filter((x) => x.tipo === "PREMISSA")) {
+        const ler = (mes: number) => prem.get(`${u}|${venda}|${l.chave}|${mes}`);
+        const conta = contaDaPremissa(l.chave);
+        add({ aba: String(u) as AbaDasPremissas, chave: `P|${u}|${venda}|${l.chave}`, descricao: [NOME_DA_VENDA[venda], l.secao, l.grupo ?? "", l.rotulo], und: l.und, conta, media: ler(0) ?? null, meses: doze(ler) });
+      }
+    }
+  }
+  const cen = new Map(centros.map((x) => [`${x.grupo}|${x.linhaDRE.codigo}|${x.mes}`, Number(x.valor)]));
+  const totais = est.filter((l) => l.tipo !== "ITEM");
+  for (const g of [...grupos].sort((a, b) => a.grupo.localeCompare(b.grupo, "pt-BR"))) {
+    const lotacao = (mes: number) => prem.get(`0|${VENDA_LOTACAO}|${g.grupo}|${mes}`);
+    add({ aba: "centros", grupo: g.grupo, chave: `L|${g.grupo}`, descricao: [g.grupo, "Quadro de Lotação", "Colaboradores"], und: "colab.", conta: null, media: lotacao(0) ?? null, meses: doze(lotacao) });
+    for (const l of contasDoGrupo(est, g)) {
+      const atribuicao = totais.find((t) => t.codigo.startsWith(`${l.codigo.split(".").slice(0, 2).join(".")}.`))?.descricao ?? l.atribuicao ?? "";
+      const ler = (mes: number) => cen.get(`${g.grupo}|${l.codigo}|${mes}`);
+      add({ aba: "centros", grupo: g.grupo, chave: `C|${g.grupo}|${l.codigo}`, descricao: [g.grupo, atribuicao, l.descricao], und: "R$", conta: l.codigo, media: ler(0) ?? null, meses: doze(ler) });
+    }
+  }
+  for (const d of CONTAS_DEPRECIACAO) {
+    const chave = `${d.unidade}|${d.conta}`;
+    const ler = (mes: number) => prem.get(`${d.unidade}|${VENDA_BASE}|${chave}|${mes}`);
+    add({ aba: "investimentos", chave: `B|${chave}`, descricao: [d.nomeUnidade, d.rotulo], und: "R$", conta: d.conta, media: ler(0) ?? null, meses: doze(ler) });
+  }
+  for (const u of UNIDADES_EXTRA) {
+    for (const l of contasExtra(est, u.unidade)) {
+      const chave = `${u.unidade}|${l.codigo}`;
+      const secao = est.find((t) => t.tipo !== "ITEM" && t.grupoSigla === l.grupoSigla && t.codigo.split(".").length >= 2)?.descricao ?? l.grupoSigla;
+      const ler = (mes: number) => prem.get(`${u.unidade}|${VENDA_EXTRA}|${chave}|${mes}`);
+      add({ aba: "extra", chave: `X|${chave}`, descricao: [u.nome, secao, l.descricao], und: "R$", conta: l.codigo, media: ler(0) ?? null, meses: doze(ler) });
+    }
+  }
+  const ind = new Map(indicadores.map((i) => [`${i.nome}|${i.mes}`, Number(i.valor)]));
+  for (const i of calculo.indicadores.filter((x) => x.classe === "MANUAL" && !QUADROS_DE_LOTACAO.has(x.indicador.nome))) {
+    const ler = (mes: number) => ind.get(`${i.indicador.nome}|${mes}`);
+    add({ aba: "manuais", chave: `I|${i.indicador.nome}`, descricao: [i.indicador.grupo, i.indicador.nome], und: i.indicador.unidade, conta: null, media: ler(0) ?? null, meses: doze(ler), percentual: i.indicador.unidade === "%" });
+  }
+  return linhas;
+}
+
+type MudancaDaPlanilha = { chave: string; mes: number; valor: number | null };
+
+/**
+ * Grava mudanças das linhas da planilha (15/10/2026: o Replicar Médias, o Apagar Valores e o Importar Valores): cada
+ * (chave, mês) vira a premissa, o centro, o mensal ou o indicador dela; null apaga (o mês em branco). Apaga e recria em
+ * lotes, para as dezenas de milhares de valores de uma vez.
+ */
+async function aplicarMudancas(tx: Prisma.TransactionClient, cenarioId: string, mudancas: MudancaDaPlanilha[], est: Array<{ codigo: string; id: string }>) {
+  const idDaConta = new Map(est.map((l) => [l.codigo, l.id]));
+  type Prem = { unidade: number; venda: string; chave: string; mes: number };
+  type Cen = { grupo: string; linhaDREId: string; mes: number };
+  type Ind = { nome: string; mes: number };
+  const prem: Array<Prem & { valor: number | null }> = [];
+  const cen: Array<Cen & { valor: number | null }> = [];
+  const ind: Array<Ind & { valor: number | null }> = [];
+  for (const m of mudancas) {
+    const [tipo, ...resto] = m.chave.split("|");
+    if (tipo === "P") prem.push({ unidade: Number(resto[0]), venda: resto[1], chave: resto.slice(2).join("|"), mes: m.mes, valor: m.valor });
+    else if (tipo === "L") prem.push({ unidade: 0, venda: VENDA_LOTACAO, chave: resto.join("|"), mes: m.mes, valor: m.valor });
+    else if (tipo === "B" || tipo === "X") prem.push({ unidade: Number(resto[0]), venda: tipo === "B" ? VENDA_BASE : VENDA_EXTRA, chave: resto.join("|"), mes: m.mes, valor: m.valor });
+    else if (tipo === "C") {
+      const linhaDREId = idDaConta.get(resto[resto.length - 1]);
+      // Nos centros, o zero também apaga (como na tela).
+      if (linhaDREId) cen.push({ grupo: resto.slice(0, -1).join("|"), linhaDREId, mes: m.mes, valor: m.valor || null });
+    } else if (tipo === "I") ind.push({ nome: resto.join("|"), mes: m.mes, valor: m.valor });
+  }
+  const emLotes = async <T>(xs: T[], fn: (lote: T[]) => Promise<unknown>) => {
+    for (let i = 0; i < xs.length; i += 200) await fn(xs.slice(i, i + 200));
+  };
+  await emLotes(prem, (l) => tx.cenarioPremissa.deleteMany({ where: { cenarioId, OR: l.map(({ unidade, venda, chave, mes }) => ({ unidade, venda, chave, mes })) } }));
+  await emLotes(cen, (l) => tx.cenarioCentro.deleteMany({ where: { cenarioId, OR: l.map(({ grupo, linhaDREId, mes }) => ({ grupo, linhaDREId, mes })) } }));
+  await emLotes(ind, (l) => tx.cenarioIndicador.deleteMany({ where: { cenarioId, OR: l.map(({ nome, mes }) => ({ nome, mes })) } }));
+  await gravarEmLotes(
+    prem.filter((p) => p.valor !== null).map((p) => ({ cenarioId, unidade: p.unidade, venda: p.venda, chave: p.chave, mes: p.mes, valor: new Prisma.Decimal(p.valor!.toFixed(6)) })),
+    (lote) => tx.cenarioPremissa.createMany({ data: lote }),
+  );
+  await gravarEmLotes(
+    cen.filter((x) => x.valor !== null).map((x) => ({ cenarioId, grupo: x.grupo, linhaDREId: x.linhaDREId, mes: x.mes, valor: new Prisma.Decimal(x.valor!.toFixed(4)) })),
+    (lote) => tx.cenarioCentro.createMany({ data: lote }),
+  );
+  await gravarEmLotes(
+    ind.filter((x) => x.valor !== null).map((x) => ({ cenarioId, nome: x.nome, mes: x.mes, valor: new Prisma.Decimal(x.valor!.toFixed(8)), origem: "DIGITADO" as const })),
+    (lote) => tx.cenarioIndicador.createMany({ data: lote }),
+  );
+}
+
 export const cenariosService = {
   async listar(usuario: Usuario = SISTEMA, tipo: TipoCenario = "SINTETICO") {
     const cenarios = (await getPrismaClient().cenario.findMany({ where: { tipo }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((c) => alcanca(c, usuario));
@@ -621,7 +747,13 @@ export const cenariosService = {
   async indicadores(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
     const comparado = await comparadoDe(c);
-    const [calculo, doComparado] = await Promise.all([calcularCenario(id), comparado ? calcularCenario(comparado.id) : null]);
+    const [calculo, doComparado, medias] = await Promise.all([
+      calcularCenario(id),
+      comparado ? calcularCenario(comparado.id) : null,
+      // A Média de Referência dos indicadores manuais (o mês 0; 15/10/2026).
+      getPrismaClient().cenarioIndicador.findMany({ where: { cenarioId: id, mes: 0 }, select: { nome: true, valor: true } }),
+    ]);
+    const mediaDe = new Map(medias.map((m) => [m.nome, Number(m.valor)]));
     // Com um cenário comparado (13/10/2026), o acumulado dele no lugar do orçado acumulado (pelo nome do indicador).
     const comparados = new Map((doComparado?.indicadores ?? []).map((i) => [i.indicador.nome, i]));
     const acumuladoComparado = (nome: string) => {
@@ -645,6 +777,7 @@ export const cenariosService = {
         meses: i.partes.map((p) => p?.valor ?? null),
         total: calculo.acumulado(i, 12),
         digitados: i.digitados,
+        referencia: i.classe === "MANUAL" ? (mediaDe.get(i.indicador.nome) ?? null) : null,
         orcado: [],
         totalOrcado: acumuladoComparado(i.indicador.nome),
       })),
@@ -782,15 +915,15 @@ export const cenariosService = {
       const valor = new Prisma.Decimal((vs.reduce((s, v) => s + v, 0) / vs.length).toFixed(8));
       return doze.map((mes) => ({ nome: i.nome, mes, valor }));
     });
-    const nomeArquivo = media ? `Média do realizado de ${ano} (${periodo}), nos 12 meses` : `Resultado realizado de ${ano} (${periodo})`;
+    // Nos analíticos, a média vai só para as Médias de Referência (15/10/2026).
+    const nomeArquivo = media ? (analitico ? `Médias do realizado de ${ano} (${periodo})` : `Média do realizado de ${ano} (${periodo}), nos 12 meses`) : `Resultado realizado de ${ano} (${periodo})`;
     if (analitico) {
       // As decisões de realocação das movimentações fora dos padrões ficam entre as cargas (14/10/2026).
       const anteriores = lerRealocacoes(c.realocacoes);
       const ref = await referenciaDoRealizado(ano, fechadas.map((f) => f.mes), anteriores.decisoes);
-      // Os valores de cada movimentação nos doze meses do cenário: mês a mês, ou a média em todos (14/10/2026: só dos
-      // meses com movimentação; antes, de todos os meses do período).
-      const nosMeses = (meses12: number[]) => (media ? mediaDosMeses(meses12) : meses12);
-      const movimentacoes = ref.movimentacoes.map(({ meses, ...m }) => ({ ...m, valores: nosMeses(meses) }));
+      // Cada movimentação (15/10/2026): a média dos meses com movimentação vai para a Média de Referência do grupo (o mês
+      // 0); os meses, só no Mês a Mês (na média do período, os meses do cenário ficam em branco).
+      const movimentacoes = ref.movimentacoes.map(({ meses, ...m }) => ({ ...m, valores: media ? Array<number>(12).fill(0) : meses, media: mediaDosMeses(meses)[0] }));
       const realocacoes: Realocacoes = {
         ...anteriores,
         referencia: nomeArquivo,
@@ -798,42 +931,45 @@ export const cenariosService = {
         aplicadas: Object.fromEntries(
           movimentacoes.flatMap((m) => {
             const a = ref.aplicadas.get(m.chave);
-            return a ? [[m.chave, { ...a, valores: m.valores }]] : [];
+            return a ? [[m.chave, { ...a, valores: m.valores, media: m.media }]] : [];
           }),
         ),
       };
       const idDaConta = new Map((await estruturaDRE()).map((l) => [l.codigo, l.id]));
       const grupos = await gruposDoCadastro();
-      // Na média, cada valor mensal vira a soma no período ÷ o número de meses, nos doze meses.
-      const mediar = <T extends { mes: number; valor: number }>(xs: T[], chave: (x: T) => string) => {
-        if (!media) return xs;
+      // A Média de Referência (15/10/2026; o mês 0): a soma no período ÷ o número de meses. Os doze meses do cenário ficam
+      // em branco (o botão Replicar Médias os preenche); no Mês a Mês, cada mês fechado vai também para o seu mês.
+      const comMedia = <T extends { mes: number; valor: number }>(xs: T[], chave: (x: T) => string) => {
         const somas = new Map<string, { x: T; soma: number }>();
         for (const x of xs) somas.set(chave(x), { x, soma: (somas.get(chave(x))?.soma ?? 0) + x.valor });
-        return [...somas.values()].flatMap(({ x, soma }) => doze.map((mes) => ({ ...x, mes, valor: soma / fechadas.length })));
+        const medias = [...somas.values()].map(({ x, soma }) => ({ ...x, mes: 0, valor: soma / fechadas.length }));
+        return media ? medias : [...medias, ...xs];
       };
       const decimal = (v: number) => new Prisma.Decimal(v.toFixed(4));
       await prisma.$transaction(
         async (tx) => {
           await tx.cenarioPremissa.deleteMany({ where: { cenarioId: id } });
-          // As Médias de Referência (o mês 0) e os doze meses, que começam iguais a elas.
-          const premissas = ref.premissas.flatMap((p) => [0, ...doze].map((mes) => ({ cenarioId: id, unidade: p.unidade, venda: p.venda, chave: p.chave, mes, valor: new Prisma.Decimal(p.valor.toFixed(6)) })));
-          const mensais = mediar(ref.mensais, (x) => `${x.venda}|${x.chave}`).map((x) => ({ cenarioId: id, unidade: x.unidade, venda: x.venda, chave: x.chave, mes: x.mes, valor: decimal(x.valor) }));
+          // Só as Médias de Referência (o mês 0; 15/10/2026: antes, também os doze meses iguais a elas).
+          const premissas = ref.premissas.map((p) => ({ cenarioId: id, unidade: p.unidade, venda: p.venda, chave: p.chave, mes: 0, valor: new Prisma.Decimal(p.valor.toFixed(6)) }));
+          const mensais = comMedia(ref.mensais, (x) => `${x.venda}|${x.chave}`).map((x) => ({ cenarioId: id, unidade: x.unidade, venda: x.venda, chave: x.chave, mes: x.mes, valor: decimal(x.valor) }));
           await gravarEmLotes([...premissas, ...mensais], (lote) => tx.cenarioPremissa.createMany({ data: lote }));
           await tx.cenarioCentro.deleteMany({ where: { cenarioId: id } });
-          // Na média, cada grupo e conta conta só os meses em que teve movimentação (14/10/2026), e as realocações
-          // aplicadas entram com a média delas (a mesma que o quadro das realocações soma e tira ao mudar a decisão).
+          // A Média de Referência dos centros (o mês 0; 15/10/2026): cada grupo e conta conta só os meses em que teve
+          // movimentação (14/10/2026), e as realocações aplicadas entram com a média delas (a mesma que o quadro das
+          // realocações soma e tira ao mudar a decisão). No Mês a Mês, também cada mês fechado no seu mês.
           const somaDosCentros = new Map<string, { grupo: string; codigo: string; mes: number; valor: number }>();
           const naSoma = (x: { grupo: string; codigo: string; mes: number; valor: number }) => {
             const k = `${x.grupo}|${x.codigo}|${x.mes}`;
             somaDosCentros.set(k, { ...x, valor: (somaDosCentros.get(k)?.valor ?? 0) + x.valor });
           };
-          if (media) {
-            mediaNosMesesComOcorrencia(ref.centrosProprios, (x) => `${x.grupo}|${x.codigo}`).forEach(naSoma);
-            for (const m of movimentacoes) {
-              const a = ref.aplicadas.get(m.chave);
-              if (a) m.valores.forEach((valor, k) => naSoma({ grupo: a.grupo, codigo: a.conta, mes: k + 1, valor }));
-            }
-          } else ref.centros.forEach(naSoma);
+          mediaNosMesesComOcorrencia(ref.centrosProprios, (x) => `${x.grupo}|${x.codigo}`)
+            .filter((x) => x.mes === 1)
+            .forEach((x) => naSoma({ ...x, mes: 0 }));
+          for (const m of movimentacoes) {
+            const a = ref.aplicadas.get(m.chave);
+            if (a && m.media) naSoma({ grupo: a.grupo, codigo: a.conta, mes: 0, valor: m.media });
+          }
+          if (!media) ref.centros.forEach(naSoma);
           const centros = [...somaDosCentros.values()].flatMap((x) => {
             const linhaDREId = idDaConta.get(x.codigo);
             return linhaDREId && Math.abs(x.valor) >= 0.00005 ? [{ cenarioId: id, grupo: x.grupo, linhaDREId, mes: x.mes, valor: decimal(x.valor) }] : [];
@@ -842,15 +978,16 @@ export const cenariosService = {
           // O quadro de lotação dos grupos (14/10/2026): o realizado só tem os quadros (os indicadores), que se dividem
           // entre os grupos de cada um pela mão de obra deles no mês.
           const quadrosRealizados = new Map(realizados.indicadores.filter((i) => QUADROS_DE_LOTACAO.has(i.nome)).map((i) => [i.nome, i.meses]));
+          // O mês 0 é a Média de Referência (a média do período); no Mês a Mês, também cada mês fechado (15/10/2026).
           const doQuadro = (nome: string, mes: number) => {
             const vs = quadrosRealizados.get(nome) ?? [];
-            if (!media) return vs[mes - 1] ?? null;
+            if (mes > 0) return vs[mes - 1] ?? null;
             const doPeriodo = fechadas.map((f) => vs[f.mes - 1]).filter((v): v is number => v !== null && v !== undefined && Number.isFinite(v));
             return doPeriodo.length ? doPeriodo.reduce((s, v) => s + v, 0) / doPeriodo.length : null;
           };
           const lotacao: Array<{ cenarioId: string; unidade: number; venda: string; chave: string; mes: number; valor: Prisma.Decimal }> = [];
           const semGrupo = new Set<string>();
-          for (const mes of media ? doze : fechadas.map((f) => f.mes)) {
+          for (const mes of [0, ...(media ? [] : fechadas.map((f) => f.mes))]) {
             const pesos = new Map<string, number>();
             for (const x of centros) if (x.mes === mes) {
               const codigo = [...idDaConta].find(([, i]) => i === x.linhaDREId)?.[0] ?? "";
@@ -863,7 +1000,13 @@ export const cenariosService = {
           if (semGrupo.size) ref.avisos.push(`Quadro de lotação sem grupo de centros de custo para recebê-lo: ${[...semGrupo].join(", ")}.`);
           await gravarEmLotes(lotacao, (lote) => tx.cenarioPremissa.createMany({ data: lote }));
           await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id } });
-          const semQuadros = indicadores.filter((v) => !QUADROS_DE_LOTACAO.has(v.nome));
+          // Os indicadores: a Média de Referência (o mês 0, a média dos meses do período com valor) e, no Mês a Mês, os
+          // meses (15/10/2026: antes, na média, os doze meses iguais a ela).
+          const medias = realizados.indicadores.flatMap((i) => {
+            const vs = i.meses.filter((v, k): v is number => v !== null && Number.isFinite(v) && noPeriodo(k));
+            return vs.length ? [{ nome: i.nome, mes: 0, valor: new Prisma.Decimal((vs.reduce((s, v) => s + v, 0) / vs.length).toFixed(8)) }] : [];
+          });
+          const semQuadros = [...medias, ...(media ? [] : indicadores)].filter((v) => !QUADROS_DE_LOTACAO.has(v.nome));
           await gravarEmLotes(semQuadros, (lote) => tx.cenarioIndicador.createMany({ data: lote.map((v) => ({ cenarioId: id, ...v, origem: "IMPORTADO" as const })) }));
           await calcularAnalitico(tx, id);
           await tx.cenario.update({ where: { id }, data: { nomeArquivo, importadoEm: new Date(), realocacoes: realocacoes as unknown as Prisma.InputJsonValue } });
@@ -1296,7 +1439,7 @@ export const cenariosService = {
   async centros(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
-    const [grupos, totais] = await Promise.all([gruposDoCadastro(), getPrismaClient().cenarioCentro.groupBy({ by: ["grupo"], where: { cenarioId: id }, _sum: { valor: true } })]);
+    const [grupos, totais] = await Promise.all([gruposDoCadastro(), getPrismaClient().cenarioCentro.groupBy({ by: ["grupo"], where: { cenarioId: id, mes: { gte: 1 } }, _sum: { valor: true } })]);
     const total = new Map(totais.map((t) => [t.grupo, Number(t._sum.valor ?? 0)]));
     return {
       ano: c.ano,
@@ -1324,6 +1467,8 @@ export const cenariosService = {
       grupo: g,
       // O quadro de lotação do grupo (14/10/2026): os colaboradores de cada mês e os quadros em que ele entra.
       lotacao: {
+        // A Média de Referência (o mês 0; 15/10/2026).
+        referencia: porMes.get(0) ?? null,
         valores: Array.from({ length: 12 }, (_, k) => porMes.get(k + 1) ?? 0),
         gravados: Array.from({ length: 12 }, (_, k) => porMes.has(k + 1)),
         quadro: quadroDoGrupo(g).descricao,
@@ -1333,6 +1478,7 @@ export const cenariosService = {
         descricao: l.descricao,
         // A atribuição (Mão de Obra Direta…), pelo total dela (CPP.MOD…).
         atribuicao: totais.find((t) => t.codigo.startsWith(`${l.codigo.split(".").slice(0, 2).join(".")}.`))?.descricao ?? l.atribuicao ?? "",
+        referencia: porLinha.get(`${l.id}|0`) ?? null,
         valores: Array.from({ length: 12 }, (_, k) => porLinha.get(`${l.id}|${k + 1}`) ?? 0),
         gravados: Array.from({ length: 12 }, (_, k) => porLinha.has(`${l.id}|${k + 1}`)),
       })),
@@ -1485,9 +1631,10 @@ export const cenariosService = {
       const dosInvestimentos = Array<number>(12).fill(0);
       for (const i of investimentos.filter((x) => x.unidade === d.unidade && x.conta === d.conta)) depreciacaoNosMeses(i).forEach((v, k) => (dosInvestimentos[k] += v));
       const secao = d.nomeUnidade.toUpperCase();
-      const linha = (k: string, rotulo: string, tipo: "PREMISSA" | "CALCULO", valores: number[], gravados: boolean[]) => ({ chave: k, secao, grupo: null, rotulo, und: "R$", tipo, casas: 2, referencia: null, valores, gravados });
+      const linha = (k: string, rotulo: string, tipo: "PREMISSA" | "CALCULO", valores: number[], gravados: boolean[], referencia: number | null = null) => ({ chave: k, secao, grupo: null, rotulo, und: "R$", tipo, casas: 2, referencia, valores, gravados });
       return [
-        linha(chave, `Depreciação Base (${d.rotulo.replace(/^Depreciação d[oa] /, "")})`, "PREMISSA", valoresBase, valoresBase.map((_, k) => gravado.has(k + 1))),
+        // A Média de Referência da base (o mês 0; 15/10/2026).
+        linha(chave, `Depreciação Base (${d.rotulo.replace(/^Depreciação d[oa] /, "")})`, "PREMISSA", valoresBase, valoresBase.map((_, k) => gravado.has(k + 1)), gravado.get(0) ?? null),
         linha(`${chave}|INVESTIMENTOS`, "Depreciação dos Investimentos", "CALCULO", dosInvestimentos, dosInvestimentos.map(() => false)),
         linha(`${chave}|TOTAL`, "Depreciação Total", "CALCULO", valoresBase.map((v, k) => v + dosInvestimentos[k]), valoresBase.map(() => false)),
       ];
@@ -1526,7 +1673,8 @@ export const cenariosService = {
             und: "R$",
             tipo: "PREMISSA" as const,
             casas: 2,
-            referencia: null,
+            // A Média de Referência (o mês 0; 15/10/2026).
+            referencia: valor.get(`${chave}|0`) ?? null,
             valores: Array.from({ length: 12 }, (_, k) => valor.get(`${chave}|${k + 1}`) ?? 0),
             gravados: Array.from({ length: 12 }, (_, k) => valor.has(`${chave}|${k + 1}`)),
           };
@@ -1672,7 +1820,8 @@ export const cenariosService = {
       linhasDoCadastro(),
       prisma.cenarioPremissa.findMany({ where: { cenarioId: id } }),
       gruposDoCadastro(),
-      prisma.cenarioCentro.findMany({ where: { cenarioId: id }, include: { linhaDRE: { select: { codigo: true } } } }),
+      // Só os meses: o mês 0 é a Média de Referência (15/10/2026).
+      prisma.cenarioCentro.findMany({ where: { cenarioId: id, mes: { gte: 1 } }, include: { linhaDRE: { select: { codigo: true } } } }),
     ]);
     const { bases } = calcularPremissas(est, linhas, c.ano, gravadas);
     // Os percentuais pelas regras de rateio do mês (14/10/2026; antes, só as bases das premissas).
@@ -1701,6 +1850,183 @@ export const cenariosService = {
         percentuais: percentuais.map((p) => p.get(`${r.chave}|${r.destino}`) ?? 0),
       })),
     };
+  },
+
+  /**
+   * Replicar Médias / Apagar Valores (15/10/2026), em todas as abas das premissas: replicar leva a Média de Referência de
+   * cada linha aos doze meses (as linhas sem média ficam como estão); apagar deixa os meses em branco. Os Ajustes (sobre a
+   * receita e sobre os custos) ficam como estão nos dois. Recalcula a DRE; vai para o histórico (tela Reajustes).
+   */
+  async replicarMedias(id: string, acao: "replicar" | "apagar", usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const linhas = (await linhasDaPlanilha(c)).filter((l) => !ehAjusteDaPlanilha(l.chave));
+    const mudancas: MudancaDaPlanilha[] = linhas.flatMap((l) =>
+      acao === "replicar"
+        ? l.media === null
+          ? []
+          : MESES_1_A_12.filter((m) => !iguais(l.meses[m - 1], l.media)).map((mes) => ({ chave: l.chave, mes, valor: l.media }))
+        : MESES_1_A_12.filter((m) => l.meses[m - 1] !== null).map((mes) => ({ chave: l.chave, mes, valor: null })),
+    );
+    const prisma = getPrismaClient();
+    const est = await estruturaDRE();
+    await prisma.$transaction(
+      async (tx) => {
+        await aplicarMudancas(tx, id, mudancas, est);
+        await calcularAnalitico(tx, id);
+      },
+      { timeout: 300_000 },
+    );
+    const nLinhas = new Set(mudancas.map((m) => m.chave)).size;
+    const descricao =
+      acao === "replicar"
+        ? `Médias de Referência replicadas nos doze meses (${nLinhas} ${nLinhas === 1 ? "linha" : "linhas"}, em todas as abas das premissas; os Ajustes ficaram)`
+        : `Valores mensais apagados (${nLinhas} ${nLinhas === 1 ? "linha" : "linhas"}, em todas as abas das premissas; os Ajustes ficaram)`;
+    await prisma.cenarioReajuste.create({
+      data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "MEDIAS", descricao, valores: mudancas.length, meses: MESES_1_A_12 },
+    });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, premissas: acao, linhas: nLinhas, valores: mudancas.length } });
+    return { linhas: nLinhas, valores: mudancas.length };
+  },
+
+  /**
+   * O Exportar Premissas (15/10/2026), só em Excel: `atual` (a aba da tela), `todas` (uma aba por aba da tela, os
+   * centros de custo numa só), `centros_abas` (todas, um centro por aba) ou `centros_arquivos` (um arquivo por centro,
+   * num ZIP). `abas`: as que o perfil lê.
+   */
+  async exportarPremissas(id: string, escopo: "atual" | "todas" | "centros_abas" | "centros_arquivos", aba: AbaDasPremissas | null, abas: AbaDasPremissas[], usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const linhas = await linhasDaPlanilha(c);
+    const meses = MESES_1_A_12.map((m) => rotuloMes(c.ano, m));
+    const nomeDoCenario = `${/^cen[aá]rio/i.test(c.nome) ? "" : "Cenário "}${c.nome} ${rotuloVersao(c.versao)} (${c.ano})`;
+    const geracao = `${nomeDoCenario} · gerado em ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })} por ${usuario.nome}`;
+    const daAba = (a: AbaDasPremissas) => linhas.filter((l) => l.aba === a);
+    const grupos = [...new Set(daAba("centros").map((l) => l.grupo!))];
+    const departamento = new Map((await gruposDoCadastro()).map((g) => [g.grupo, nomeDoDepartamento(g.departamento)]));
+    const sufixo = `Premissas - ${c.nome} ${rotuloVersao(c.versao)} ${c.ano}`;
+    if (escopo === "centros_arquivos") {
+      if (!abas.includes("centros")) throw new CenarioError(403, "Exportar os centros de custo pede a leitura da aba Centros de Custo.");
+      const arquivos = grupos.map((g) => ({
+        nome: limparNome(`${departamento.get(g) ?? nomeDoDepartamento(null)} - ${g} - ${sufixo}.xlsx`),
+        conteudo: gerarXlsx([abaDaPlanilha(g, "centros", daAba("centros").filter((l) => l.grupo === g), meses, geracao)], `${sufixo} - ${g}`),
+      }));
+      return { nomeArquivo: limparNome(`${sufixo} - centros de custo (um arquivo por centro).zip`), tipo: TIPO_ZIP, conteudo: zipDeArquivos(arquivos), visoes: grupos };
+    }
+    const escolhidas = escopo === "atual" ? (aba && abas.includes(aba) ? [aba] : []) : ABAS_DAS_PREMISSAS.filter((a) => abas.includes(a));
+    if (!escolhidas.length) throw new CenarioError(403, "Sem permissão para ler a aba das premissas pedida.");
+    const planilhas = escolhidas.flatMap((a) =>
+      a === "centros" && escopo === "centros_abas"
+        ? grupos.map((g) => abaDaPlanilha(g, "centros", daAba("centros").filter((l) => l.grupo === g), meses, geracao))
+        : [abaDaPlanilha(NOME_DA_ABA[a], a, daAba(a), meses, geracao)],
+    );
+    const nome = escopo === "atual" ? NOME_DA_ABA[escolhidas[0]] : escopo === "centros_abas" ? "todas as abas (um centro por aba)" : "todas as abas";
+    return {
+      nomeArquivo: limparNome(`${sufixo} - ${nome}.xlsx`),
+      tipo: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      conteudo: gerarXlsx(planilhas, `${sufixo} - ${nome}`),
+      visoes: escolhidas.map((a) => NOME_DA_ABA[a]),
+    };
+  },
+
+  /**
+   * O Importar Valores, passo 1 (15/10/2026): lê um arquivo (.xlsx do Exportar Premissas, ou o .zip de um arquivo por
+   * centro) e confere o padrão; devolve, por planilha, as abas lidas, os erros e avisos e as mudanças (os meses e as
+   * justificativas diferentes dos do cenário). Não grava nada.
+   */
+  async analisarPremissas(id: string, arquivo: string, conteudo: Uint8Array, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    const porChave = new Map((await linhasDaPlanilha(c)).map((l) => [l.chave, l]));
+    return lerArquivoDePremissas(arquivo, conteudo).map((r) => {
+      const alteracoes = new Map<string, MudancaDaPlanilha>();
+      const justificativas = new Map<string, { chave: string; texto: string | null }>();
+      const desconhecidas: string[] = [];
+      const abasDasLinhas = new Set<AbaDasPremissas>();
+      for (const l of r.linhas) {
+        const atual = porChave.get(l.chave);
+        if (!atual) {
+          desconhecidas.push(`${l.aba}, linha ${l.numero}`);
+          continue;
+        }
+        abasDasLinhas.add(atual.aba);
+        l.meses.forEach((v, k) => {
+          const chave = `${l.chave}|${k + 1}`;
+          if (!iguais(atual.meses[k], v)) alteracoes.set(chave, { chave: l.chave, mes: k + 1, valor: v });
+          else alteracoes.delete(chave);
+        });
+        if ((l.justificativa ?? null) !== (atual.justificativa ?? null)) justificativas.set(l.chave, { chave: l.chave, texto: l.justificativa });
+        else justificativas.delete(l.chave);
+      }
+      const avisos = [...r.avisos];
+      if (desconhecidas.length) {
+        avisos.push(
+          `${desconhecidas.length} ${desconhecidas.length === 1 ? "linha com um Código que este cenário não tem foi ignorada" : "linhas com Códigos que este cenário não tem foram ignoradas"} (${desconhecidas.slice(0, 5).join("; ")}${desconhecidas.length > 5 ? "…" : ""}).`,
+        );
+      }
+      return {
+        arquivo: r.arquivo,
+        valido: r.erros.length === 0 && r.linhas.length > desconhecidas.length,
+        erros: r.linhas.length && r.linhas.length === desconhecidas.length && !r.erros.length ? ["Nenhuma linha do arquivo é deste cenário (os Códigos não batem)."] : r.erros,
+        avisos,
+        abas: r.abas,
+        abasDasPremissas: [...abasDasLinhas],
+        linhas: r.linhas.length - desconhecidas.length,
+        alteracoes: [...alteracoes.values()],
+        justificativas: [...justificativas.values()],
+      };
+    });
+  },
+
+  /**
+   * O Importar Valores, passo 2 (15/10/2026; o usuário confirmou): grava os meses (em branco apaga) e as justificativas
+   * das planilhas válidas, na ordem (a última vale), recalcula a DRE e registra no histórico (tela Reajustes).
+   */
+  async importarPremissas(
+    id: string,
+    arquivos: Array<{ arquivo: string; alteracoes: MudancaDaPlanilha[]; justificativas: Array<{ chave: string; texto: string | null }> }>,
+    usuario: Usuario,
+  ) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const porChave = new Map((await linhasDaPlanilha(c)).map((l) => [l.chave, l]));
+    const mudancas = new Map<string, MudancaDaPlanilha>();
+    const justificativas = new Map<string, string | null>();
+    for (const a of arquivos) {
+      for (const m of a.alteracoes) {
+        if (!porChave.has(m.chave)) throw new CenarioError(400, `O Código ${m.chave} não é deste cenário: analise os arquivos de novo.`);
+        mudancas.set(`${m.chave}|${m.mes}`, m);
+      }
+      for (const j of a.justificativas) {
+        if (!porChave.has(j.chave)) throw new CenarioError(400, `O Código ${j.chave} não é deste cenário: analise os arquivos de novo.`);
+        justificativas.set(j.chave, j.texto);
+      }
+    }
+    if (!mudancas.size && !justificativas.size) throw new CenarioError(400, "Nada a importar: os arquivos têm os mesmos valores e justificativas do cenário.");
+    const prisma = getPrismaClient();
+    const est = await estruturaDRE();
+    await prisma.$transaction(
+      async (tx) => {
+        await aplicarMudancas(tx, id, [...mudancas.values()], est);
+        for (const [chave, texto] of justificativas) {
+          if (texto) await tx.cenarioPremissaJustificativa.upsert({ where: { cenarioId_chave: { cenarioId: id, chave } }, create: { cenarioId: id, chave, texto, usuarioNome: usuario.nome }, update: { texto, usuarioNome: usuario.nome } });
+          else await tx.cenarioPremissaJustificativa.deleteMany({ where: { cenarioId: id, chave } });
+        }
+        if (mudancas.size) await calcularAnalitico(tx, id);
+      },
+      { timeout: 300_000 },
+    );
+    const meses = [...new Set([...mudancas.values()].map((m) => m.mes))].sort((a, b) => a - b);
+    const nomes = arquivos.map((a) => a.arquivo);
+    const descricao = `Valores importados de ${nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}: ${mudancas.size} ${mudancas.size === 1 ? "valor" : "valores"} e ${justificativas.size} ${justificativas.size === 1 ? "justificativa" : "justificativas"}`;
+    const contas = [...new Set([...mudancas.values()].map((m) => m.chave))].slice(0, 200).map((k) => ({ codigo: k, descricao: porChave.get(k)!.descricao.filter(Boolean).join(" · ") }));
+    await prisma.cenarioReajuste.create({
+      data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "IMPORTACAO", descricao, valores: mudancas.size, meses, contas },
+    });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, premissas: "importar valores", arquivos: nomes, valores: mudancas.size, justificativas: justificativas.size } });
+    return { valores: mudancas.size, justificativas: justificativas.size };
   },
 
   /**
@@ -1878,9 +2204,10 @@ export const cenariosService = {
     if (c.tipo === "ANALITICO" && QUADROS_DE_LOTACAO.has(nome))
       throw new CenarioError(400, `${nome} sai do Quadro de Lotação dos centros de custo (Premissas / Centros de Custo) e não se digita.`);
     const prisma = getPrismaClient();
-    const antes = await prisma.cenarioIndicador.findMany({ where: { cenarioId: id, nome }, orderBy: { mes: "asc" } });
+    const antes = await prisma.cenarioIndicador.findMany({ where: { cenarioId: id, nome, mes: { gte: 1 } }, orderBy: { mes: "asc" } });
     await prisma.$transaction(async (tx) => {
-      await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id, nome } });
+      // Só os meses: a Média de Referência (o mês 0) fica (15/10/2026).
+      await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id, nome, mes: { gte: 1 } } });
       const novos = valores.map((v, k) => ({ v, mes: k + 1 })).filter((x) => x.v !== null);
       await tx.cenarioIndicador.createMany({
         data: novos.map(({ v, mes }) => {

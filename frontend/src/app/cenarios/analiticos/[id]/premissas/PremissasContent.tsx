@@ -16,6 +16,7 @@ import { AvisoRateiosSemBase, CentrosDoCenario, RateiosDoCenario } from "../../.
 import { Erro } from "../../../components/CenarioDialog";
 import { ExtraDoCenario, InvestimentosDoCenario } from "../../../components/InvestimentosDoCenario";
 import { IndicadoresManuais } from "../../../components/IndicadoresManuais";
+import { BotaoImportarValores, BotaoReplicarMedias, ExportarPremissas } from "../../../components/PlanilhaPremissas";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
 
@@ -55,6 +56,10 @@ export function PremissasContent() {
   const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: deUnidade });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = editaAba && !travado && (!deUnidade || !!consulta.data?.editavel);
+  // Os botões da planilha (15/10/2026), na altura das abas: Replicar Médias / Apagar Valores (todas as abas editáveis),
+  // Importar Valores (alguma aba editável) e Exportar Premissas.
+  const editaTodas = ABAS.every((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:editar`));
+  const editaAlguma = ABAS.some((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:editar`));
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -95,6 +100,25 @@ export function PremissasContent() {
             <li>
               A base das premissas pode vir da referência (Configurações / Referência): o resultado realizado (as Médias de Referência, os centros de
               custo, a depreciação, o extra-operacional e os indicadores) ou outro cenário analítico.
+            </li>
+            <li>
+              Todas as abas (menos Rateios) têm a coluna Média de Ref.: a média do realizado da referência. A referência realizada carrega só as médias:
+              os meses do cenário ficam em branco (no Mês a Mês, os centros de custo, a depreciação, o extra-operacional e os indicadores trazem também cada mês fechado no seu mês). Mês em branco é mês sem valor (zero; nos Dias
+              Úteis, os do calendário, em cinza).
+            </li>
+            <li>
+              “Replicar Médias / Apagar Valores”, na altura das abas: em todas as abas, leva a Média de Referência de cada linha aos doze meses (as
+              linhas sem média ficam como estão) ou deixa os meses em branco. Os Ajustes ficam como estão nos dois. Pede editar todas as abas.
+            </li>
+            <li>
+              “Exportar Premissas” baixa em Excel a aba atual ou todas (os centros de custo numa aba, um por aba ou um arquivo por centro, num ZIP):
+              o Código da linha, a descrição, a unidade, a Média de Referência, os doze meses, Justificar? (Sim quando algum mês passa da variação
+              máxima da conta, em Configurações / Comparativo, em relação à Média de Referência) e a Justificativa, em texto livre.
+            </li>
+            <li>
+              “Importar Valores” abre a lista dos arquivos: escolha planilhas do Exportar Premissas (ou o ZIP) ou uma pasta com elas. Cada arquivo é
+              conferido no padrão (a coluna Código, a Média de Referência, os doze meses e a Justificativa) e mostra quantos valores e justificativas
+              mudam; “Importar” grava os meses (em branco apaga) e as justificativas, recalcula a DRE e registra no histórico (tela Reajustes).
             </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
@@ -174,7 +198,19 @@ export function PremissasContent() {
           </>
         }
       />
-      <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={abas} />
+      {/* As abas inteiras; sem espaço, os botões passam para baixo, à direita. */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="max-w-full shrink-0 grow">
+          <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={abas} />
+        </div>
+        {abas.length ? (
+          <div className="ml-auto flex flex-wrap items-center gap-2 pb-1">
+            {cenario.data && !travado && editaTodas ? <BotaoReplicarMedias id={id} /> : null}
+            {cenario.data && !travado && editaAlguma ? <BotaoImportarValores id={id} /> : null}
+            <ExportarPremissas id={id} aba={aba} />
+          </div>
+        ) : null}
+      </div>
       {abas.length ? <AvisoRateiosSemBase id={id} /> : null}
       {cenario.data && travado && editaAba ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
       {!abas.length ? (
@@ -188,7 +224,7 @@ export function PremissasContent() {
       ) : extra ? (
         <ExtraDoCenario id={id} editavel={podeEditar} />
       ) : manuais ? (
-        <IndicadoresManuais id={id} podeEditar={podeEditar} />
+        <IndicadoresManuais id={id} podeEditar={podeEditar} comReferencia />
       ) : consulta.isError ? (
         <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as premissas.")} />
       ) : consulta.isPending ? (

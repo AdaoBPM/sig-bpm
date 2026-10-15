@@ -37,11 +37,12 @@ export function ConfiguracoesContent() {
             {analitico ? (
               <>
                 <li>
-                  Na aba Referência (opcional): carregue o resultado realizado das competências fechadas de um exercício (Média Replicada, de um período,
-                  ou Mês a Mês) ou outro cenário analítico. O realizado traz as Médias de Referência das premissas, com os doze meses iguais a elas, os
-                  centros de custo, a depreciação base, o extra-operacional e os indicadores; outro analítico traz as premissas, os centros, os
-                  investimentos e os indicadores dele. Na Média Replicada, a média de cada conta dos centros de custo divide a soma do período só pelos meses
-                  em que a conta teve movimentação. Depois, tudo se edita na tela Premissas. Os avisos do que não coube aparecem embaixo.
+                  Na aba Referência (opcional): carregue o resultado realizado das competências fechadas de um exercício (Média do Período ou Mês a
+                  Mês) ou outro cenário analítico. O realizado traz só as Médias de Referência — das premissas, dos centros de custo (com o quadro de
+                  lotação), da depreciação base, do extra-operacional e dos indicadores manuais —, com os meses do cenário em branco (no Mês a Mês, também
+                  cada mês fechado no seu mês, menos nas premissas das unidades); use “Replicar Médias”, na tela Premissas, para levar as médias aos
+                  meses. Outro analítico traz as premissas, os centros, os investimentos e os indicadores dele. A média de cada conta dos centros de
+                  custo divide a soma do período só pelos meses em que a conta teve movimentação. Os avisos do que não coube aparecem embaixo.
                 </li>
                 <li>A Correspondência Tarefa × Linha, que leva os custos do realizado às linhas, fica nos Cadastros da Controladoria / Linhas, no botão “Tarefas”.</li>
                 <li>
@@ -50,7 +51,7 @@ export function ConfiguracoesContent() {
                   Padrões” aparece na aba Referência. Em “Realocar”, cada conta mostra a alocação na DRE (Departamento, Atribuição e Conta de Resultado),
                   o valor do período e o centro de custo que a recebe (só os grupos com a mesma atribuição e conta; num centro de outro departamento,
                   ela entra como do departamento dele). Sem centro, a conta fica fora do cenário, e gravar assim pede confirmação. As realocações ficam
-                  registradas no quadro, entram nos centros do cenário (a DRE se recalcula) e valem nas próximas cargas do realizado, ainda editáveis.
+                  registradas no quadro, entram na Média de Referência dos centros do cenário (no Mês a Mês, também nos meses; a DRE se recalcula) e valem nas próximas cargas do realizado, ainda editáveis.
                 </li>
                 <li>
                   “Aplicar Padrão”, no pé do modal, preenche os centros pelo padrão (pela filial em que a conta mais lançou): Produção Matriz — MOD,

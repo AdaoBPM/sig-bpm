@@ -1959,6 +1959,7 @@ model Cenario {
   indicadores    CenarioIndicador[]
   reajustes      CenarioReajuste[]
   justificativas CenarioJustificativa[]
+  justificativasPremissas CenarioPremissaJustificativa[]
   premissas      CenarioPremissa[]
   centros        CenarioCentro[]
   investimentos  CenarioInvestimento[]
@@ -2015,6 +2016,22 @@ model CenarioJustificativa {
   @@id([cenarioId, visao, linhaDREId])
   @@index([linhaDREId])
   @@map("cenarios_justificativas")
+}
+
+/// A justificativa de uma linha das premissas de um cenário analítico (15/10/2026): a coluna Justificativa do Exportar
+/// Premissas, que volta pelo Importar Valores. A chave é o código da linha na planilha (P|unidade|venda|premissa,
+/// C|grupo|conta, L|grupo, B|unidade|conta, X|unidade|conta ou I|indicador).
+model CenarioPremissaJustificativa {
+  cenarioId    String   @map("cenario_id")
+  chave        String
+  texto        String
+  usuarioNome  String   @map("usuario_nome")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  cenario Cenario @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
+
+  @@id([cenarioId, chave])
+  @@map("cenarios_premissas_justificativas")
 }
 
 /// O histórico de reajustes de um cenário (12/10/2026): cada gravação de valores da DRE (o reajuste dos marcados ou a

@@ -57,6 +57,8 @@ export type Indicador = {
   /** O orçado de cada mês e o acumulado do orçado: o cenário Orçamento Empresarial do exercício (zero sem ele). */
   orcado: Array<number | null>;
   totalOrcado: number | null;
+  /** A Média de Referência (os indicadores manuais dos analíticos, 15/10/2026). */
+  referencia?: number | null;
 };
 export type Indicadores = {
   ano: number;

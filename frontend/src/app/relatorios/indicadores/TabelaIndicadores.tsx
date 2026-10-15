@@ -122,6 +122,7 @@ function montarColunas<T extends Indicador>(
   acumulado: boolean,
   orcado: boolean,
   comparado: { rotulo: string } | null,
+  comReferencia = false,
 ): Coluna<T>[] {
   const ultimo = meses.length - 1;
   // O orçado (Resultados Empresariais, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado. Nos
@@ -152,6 +153,10 @@ function montarColunas<T extends Indicador>(
       classe: "sticky left-[var(--largura-indicador)] !z-30",
     },
     { chave: "unidade", rotulo: "Und.", valor: (i) => i.unidade, classe: `sticky left-[calc(var(--largura-indicador)+84px)] !z-30 shadow-[inset_-1px_0_0_#d1d5db]` },
+    // A Média de Referência (15/10/2026: os indicadores manuais dos analíticos), antes dos meses.
+    ...(comReferencia
+      ? [{ chave: "referencia", rotulo: "Média de Ref.", tipo: "numero", alinhamento: "direita", valor: (i: T) => i.referencia ?? null, texto: (i: T) => valor(i, i.referencia ?? null), classe: "border-r border-gray-300" } as Coluna<T>]
+      : []),
     ...indices.map(
       (k): Coluna<T> => ({
         chave: `mes:${meses[k].mes}`,
@@ -196,6 +201,8 @@ type Props<T extends Indicador> = {
   /** A célula do mês em destaque (o valor digitado, nos lançamentos manuais do cenário). */
   destacar?: (i: T, k: number) => boolean;
   dicaDoDestaque?: string;
+  /** A coluna Média de Referência, antes dos meses (os indicadores manuais dos analíticos, 15/10/2026). */
+  comReferencia?: boolean;
 };
 
 /**
@@ -213,19 +220,20 @@ export function TabelaIndicadores<T extends Indicador>({
   comparado,
   destacar,
   dicaDoDestaque,
+  comReferencia,
 }: Props<T>) {
   const colunas = useMemo(() => {
     const indices = soUltimoMes ? [meses.length - 1] : meses.map((_, k) => k);
     const doComparado = comparado ? { rotulo: "Comparado Acum." } : null;
-    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado);
-  }, [meses, soUltimoMes, comOrcado, comparado]);
+    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado, !!comReferencia);
+  }, [meses, soUltimoMes, comOrcado, comparado, comReferencia]);
   // O grupo escolhido na lista antes do rótulo Indicador (13/10/2026); um grupo que a tabela não tem vale Todos.
   const [grupoEscolhido, setGrupo] = useState(TODOS_OS_GRUPOS);
   const grupos = useMemo(() => [...new Set(indicadores.map((i) => i.grupo))], [indicadores]);
   const grupo = grupos.includes(grupoEscolhido) ? grupoEscolhido : TODOS_OS_GRUPOS;
   const doGrupo = useMemo(() => (grupo === TODOS_OS_GRUPOS ? indicadores : indicadores.filter((i) => i.grupo === grupo)), [indicadores, grupo]);
   const tabela = useTabelaFiltravel(doGrupo, colunas);
-  const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave.startsWith("orcado:") ? LARGURA.orcado : c.chave === "acumulado" ? LARGURA.acumulado : LARGURA.mes))];
+  const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave.startsWith("orcado:") ? LARGURA.orcado : c.chave === "acumulado" || c.chave === "referencia" ? LARGURA.acumulado : LARGURA.mes))];
   const ehOrcado = (chave: string) => chave.startsWith("orcado:");
   // A faixa do grupo em pedaços: amarela nas colunas do realizado, cinza nas do orçado (a mesma escala).
   const faixas = colunas.reduce<Array<{ orcado: boolean; n: number }>>((fs, c) => {

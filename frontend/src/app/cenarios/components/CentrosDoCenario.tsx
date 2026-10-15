@@ -103,13 +103,12 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
                   und: "colab.",
                   tipo: "PREMISSA",
                   casas: 0,
-                  referencia: null,
+                  referencia: contas.data.lotacao.referencia,
                   valores: contas.data.lotacao.valores,
                   gravados: contas.data.lotacao.gravados,
                 },
               ]}
               editavel={editavel && dados.editavel}
-              comReferencia={false}
               item={["linha", "linhas"]}
               cabecalho="QUADRO"
               aoGravar={(alteracoes, origem) => cenariosService.gravarLotacao(id, grupo!, alteracoes.map((a) => ({ mes: a.mes, valor: a.valor })), origem)}
@@ -122,7 +121,6 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
               meses={dados.meses}
               linhas={linhasDoCentro(contas.data.contas)}
               editavel={editavel && dados.editavel}
-              comReferencia={false}
               item={["conta", "contas"]}
               cabecalho="CONTA"
               aoGravar={(alteracoes, origem) => cenariosService.gravarCentro(id, grupo!, alteracoes, origem)}
@@ -136,7 +134,7 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
 }
 
 /** As contas do grupo como linhas da tabela: por atribuição, com o total do centro no fim. */
-function linhasDoCentro(contas: Array<{ codigo: string; descricao: string; atribuicao: string; valores: number[]; gravados: boolean[] }>): LinhaDaPremissa[] {
+function linhasDoCentro(contas: Array<{ codigo: string; descricao: string; atribuicao: string; referencia: number | null; valores: number[]; gravados: boolean[] }>): LinhaDaPremissa[] {
   const linhas: LinhaDaPremissa[] = contas.map((c) => ({
     chave: c.codigo,
     secao: c.atribuicao.toUpperCase(),
@@ -145,12 +143,14 @@ function linhasDoCentro(contas: Array<{ codigo: string; descricao: string; atrib
     und: "R$",
     tipo: "PREMISSA",
     casas: 2,
-    referencia: null,
+    // A Média de Referência da conta (15/10/2026).
+    referencia: c.referencia,
     valores: c.valores,
     gravados: c.gravados,
   }));
   const total = Array.from({ length: 12 }, (_, k) => contas.reduce((s, c) => s + (c.valores[k] ?? 0), 0));
-  return [...linhas, { chave: "TOTAL", secao: "TOTAL DO CENTRO", grupo: null, rotulo: "Total do Centro", und: "R$", tipo: "CALCULO", casas: 2, referencia: null, valores: total, gravados: total.map(() => false) }];
+  const totalReferencia = contas.some((c) => c.referencia !== null) ? contas.reduce((s, c) => s + (c.referencia ?? 0), 0) : null;
+  return [...linhas, { chave: "TOTAL", secao: "TOTAL DO CENTRO", grupo: null, rotulo: "Total do Centro", und: "R$", tipo: "CALCULO", casas: 2, referencia: totalReferencia, valores: total, gravados: total.map(() => false) }];
 }
 
 /**

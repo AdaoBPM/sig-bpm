@@ -139,7 +139,7 @@ export function LancamentoDialog({ id, indicador, meses, onFechar }: { id: strin
  * Os Indicadores Manuais de um cenário (14/10/2026: também a aba das Premissas dos analíticos): os quadros de lotação e
  * os indicadores do Comercial e do Administrativo, que não saem da DRE. Clicar numa linha abre os doze meses para digitar.
  */
-export function IndicadoresManuais({ id, podeEditar }: { id: string; podeEditar: boolean }) {
+export function IndicadoresManuais({ id, podeEditar, comReferencia = false }: { id: string; podeEditar: boolean; comReferencia?: boolean }) {
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   if (consulta.isError) return <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar os indicadores do cenário.")} />;
@@ -156,6 +156,7 @@ export function IndicadoresManuais({ id, podeEditar }: { id: string; podeEditar:
         iconeDoClique={podeEditar ? Pencil : undefined}
         destacar={(i, k) => i.digitados[k]}
         dicaDoDestaque="Valor digitado"
+        comReferencia={comReferencia}
       />
       {editando ? <LancamentoDialog id={id} indicador={editando} meses={dados.meses} onFechar={() => setEditando(null)} /> : null}
     </>

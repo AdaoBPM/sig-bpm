@@ -59,6 +59,11 @@ cenariosRoutes.get("/:id/justificativas", autenticacao, tela("reajustes", "ler",
 cenariosRoutes.put("/:id/justificativas", autenticacao, tela("reajustes", "editar", "justificativas"), express.json(), asyncHandler(c.gravarJustificativa));
 // As premissas dos cenários analíticos (13/10/2026).
 cenariosRoutes.get("/:id/premissas", autenticacao, tela("premissas", "ler", (r) => abaDaUnidade(r.query.unidade)), asyncHandler(c.premissas));
+// A planilha das premissas (15/10/2026): Replicar Médias / Apagar Valores, Exportar Premissas e Importar Valores; as abas, no controller.
+cenariosRoutes.post("/:id/premissas/medias", autenticacao, ler, express.json(), asyncHandler(c.replicarMedias));
+cenariosRoutes.get("/:id/premissas/exportar", autenticacao, ler, asyncHandler(c.exportarPremissas));
+cenariosRoutes.post("/:id/premissas/importar/analise", autenticacao, ler, express.raw({ type: () => true, limit: `${env.UPLOAD_MAX_MB}mb` }), asyncHandler(c.analisarPremissas));
+cenariosRoutes.post("/:id/premissas/importar", autenticacao, ler, express.json({ limit: "50mb" }), asyncHandler(c.importarPremissas));
 cenariosRoutes.put("/:id/premissas", autenticacao, express.json({ limit: "2mb" }), tela("premissas", "editar", (r) => abaDaUnidade((r.body as { unidade?: unknown } | undefined)?.unidade)), asyncHandler(c.gravarPremissas));
 // Os centros de custo dos cenários analíticos (13/10/2026).
 cenariosRoutes.get("/:id/centros", autenticacao, tela("premissas", "ler", "centros"), asyncHandler(c.centros));
