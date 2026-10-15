@@ -1,7 +1,7 @@
-// Carrega o backend/.env antes de qualquer leitura de process.env.
-// Sem isto, o .env criado pelo `npm run setup` nunca chega a ser lido e todas
-// as variáveis caem no valor padrão — inclusive DATABASE_URL e JWT_SECRET.
-import "dotenv/config";
+// Carrega o .env do modo (.env.development ou .env.production) e o .env comum antes de qualquer leitura de
+// process.env (15/10/2026; antes, só o .env). Sem isto, todas as variáveis caem no valor padrão — inclusive
+// DATABASE_URL e JWT_SECRET.
+import "./ambiente.js";
 
 import { z } from "zod";
 

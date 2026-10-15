@@ -2,11 +2,12 @@ import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/lib/backend";
+import { COOKIE_SESSAO } from "@/lib/cookieSessao";
 
 export async function GET(request: NextRequest) {
   await connection();
 
-  const token = request.cookies.get("bpm_token")?.value;
+  const token = request.cookies.get(COOKIE_SESSAO)?.value;
 
   if (!token) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

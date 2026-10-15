@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/lib/backend";
+import { COOKIE_SESSAO } from "@/lib/cookieSessao";
 import { buildProxyHeaders } from "@/lib/proxyHeaders";
 
 type RouteContext = {
@@ -45,7 +46,7 @@ async function proxyRequest(
   const url = new URL(request.url);
   const backendUrl = `${getBackendUrl()}/${targetPath}${url.search}`;
 
-  const token = request.cookies.get("bpm_token")?.value;
+  const token = request.cookies.get(COOKIE_SESSAO)?.value;
   const headers = buildProxyHeaders(request.headers, token);
 
   const init: RequestInit = {

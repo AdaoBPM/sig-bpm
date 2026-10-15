@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node --env-file=.env.production dist/server.js",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:copiar-producao": "node scripts/copiarBancoDeProducao.mjs",
+    "db:migrar-producao": "node scripts/migrarProducao.mjs",
+    "db:backup": "node scripts/backupDoBanco.mjs"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",

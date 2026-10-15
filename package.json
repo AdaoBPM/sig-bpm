@@ -10,13 +10,18 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "dev": "concurrently -k -n backend,frontend -c yellow,cyan \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "producao": "concurrently -k -n backend,frontend -c green,blue \"npm run start --prefix backend\" \"npm run start --prefix frontend\"",
+    "producao:construir": "npm run build",
+    "db:copiar-producao": "npm run db:copiar-producao --prefix backend",
+    "db:migrar-producao": "npm run db:migrar-producao --prefix backend",
     "dev:frontend": "npm run dev -w frontend",
     "dev:backend": "npm run dev -w backend",
     "build": "npm run build -w backend && npm run build -w frontend",
     "build:frontend": "npm run build -w frontend",
     "build:backend": "npm run build -w backend",
     "lint": "npm run lint -w frontend",
-    "test": "npm run test -w backend"
+    "test": "npm run test -w backend",
+    "db:backup": "npm run db:backup --prefix backend --"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

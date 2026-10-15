@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { COOKIE_SESSAO } from "@/lib/cookieSessao";
 import { NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
@@ -22,7 +23,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("bpm_token")?.value;
+  const token = request.cookies.get(COOKIE_SESSAO)?.value;
 
   if (!token && pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

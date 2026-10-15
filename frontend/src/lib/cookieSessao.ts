@@ -1,0 +1,15 @@
+import type { NextRequest } from "next/server";
+
+/**
+ * O cookie da sessão (15/10/2026). Um nome por ambiente: o navegador não separa os cookies pela porta, e a versão de
+ * produção (porta 3000) e a de desenvolvimento (porta 3100), no mesmo computador, derrubariam a sessão uma da outra.
+ */
+export const COOKIE_SESSAO = process.env.NODE_ENV === "production" ? "bpm_token" : "bpm_token_dev";
+
+/**
+ * O cookie só "seguro" (enviado só por https) quando o pedido chegou por https — direto ou por um proxy na frente
+ * (x-forwarded-proto), como num servidor com certificado. No acesso por http na rede interna (http://192.168…), um
+ * cookie seguro não seria guardado pelo navegador, e o login não entraria.
+ */
+export const cookieSeguro = (request: NextRequest) =>
+  (request.headers.get("x-forwarded-proto")?.split(",")[0].trim() ?? request.nextUrl.protocol.replace(":", "")) === "https";

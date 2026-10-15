@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/lib/backend";
+import { COOKIE_SESSAO, cookieSeguro } from "@/lib/cookieSessao";
 import { loginSchema } from "@/lib/schemas/loginSchema";
 
 export async function POST(request: NextRequest) {
@@ -36,10 +37,11 @@ export async function POST(request: NextRequest) {
     const token = payload.data?.token as string | undefined;
 
     if (token) {
-      nextResponse.cookies.set("bpm_token", token, {
+      nextResponse.cookies.set(COOKIE_SESSAO, token, {
         httpOnly: true,
         sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        // Seguro só no acesso por https (15/10/2026): por http na rede, o navegador não guardaria o cookie.
+        secure: cookieSeguro(request),
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });

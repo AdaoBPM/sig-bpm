@@ -51,13 +51,17 @@ npm install
 npm run dev
 ```
 
+> **Desde 15/10/2026, dois ambientes:** produção (`npm run producao:construir` e `npm run producao`, porta 3000, o banco
+> real) e desenvolvimento (`npm run dev`, porta 3100, uma cópia do banco). Ver
+> [Docs/PRODUCAO-E-DESENVOLVIMENTO.md](Docs/PRODUCAO-E-DESENVOLVIMENTO.md).
+
 Ou separado:
 
 ```bash
-# Backend (porta 3001) — opcional; necessário só se o SPEC prever API Express
+# Backend (porta 3101 no desenvolvimento; 3001 na produção)
 npm run dev:backend
 
-# Frontend (porta 3000)
+# Frontend (porta 3100 no desenvolvimento; 3000 na produção)
 npm run dev:frontend
 ```
 
