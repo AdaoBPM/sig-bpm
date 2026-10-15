@@ -24,6 +24,7 @@ import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, type Valor } from "../relatorios
 import { limiteDaLinha, linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 import {
+  C as CONTAS_DAS_PREMISSAS,
   calcularAnalitico,
   calcularPremissas,
   calcularTabela,
@@ -355,7 +356,7 @@ async function previa(lido: Awaited<ReturnType<typeof lerArquivo>>, cenarioId: s
 export type PreviaCenario = Awaited<ReturnType<typeof previa>>;
 
 /** A conta da DRE de uma premissa de unidade: a da receita (RB:linha:conta) ou a do custo (CUSTO:linha:conta). */
-const contaDaPremissa = (chave: string) => (/^(RB|CUSTO):/.test(chave) ? (chave.split(":")[2] ?? null) : null);
+const contaDaPremissa = (chave: string) => (/^(RB|CUSTO):/.test(chave) ? (chave.split(":")[2] ?? null) : chave.startsWith("COMISSOES:") ? CONTAS_DAS_PREMISSAS.COMISSOES : null);
 /** A aba da permissão (cenarios_analiticos_premissas.<aba>) de cada aba das premissas. */
 export const ABA_DA_PERMISSAO: Record<AbaDasPremissas, string> = { "1": "matriz", "2": "filial", "3": "servicos", centros: "centros", investimentos: "investimentos", extra: "extra", manuais: "manuais" };
 const iguais = (a: number | null, b: number | null) => (a === null || b === null ? a === b : Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a)));

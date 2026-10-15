@@ -328,6 +328,16 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
     if (calculados > 0 && realizados > 0) ajusteDosImpostos.set(u, realizados / calculados);
   }
 
+  // As comissões (15/10/2026), em % da receita bruta, por venda (Global ou Mercantil): as da unidade, divididas entre as
+  // vendas pela receita bruta de cada uma, sobre a receita bruta da venda. O realizado não separa as comissões por venda.
+  const robDaUnidade = (u: number, venda?: Venda) =>
+    [...receita].filter(([k]) => k.startsWith(`${u}|`) && (!venda || k.split("|")[2] === venda)).reduce((s, [, v]) => s + v, 0);
+  const comissoesPorVenda = (u: number, venda: Venda) => {
+    const rob = robDaUnidade(u, venda);
+    const total = robDaUnidade(u);
+    return rob && total ? ((doPeriodo(`${u}|${C.COMISSOES}`) * (rob / total)) / rob) * 100 : 0;
+  };
+
   // As Médias de Referência, por linha e venda.
   const premissas: ReferenciaRealizada["premissas"] = [];
   const add = (unidade: UnidadePremissa, venda: Venda, k: string, valor: number) => {
@@ -362,9 +372,12 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
           rl += rlItens.get(`${chave(l)}|${venda}|${conta}`) ?? 0;
         }
         if (rb > 0) add(u, venda, `IMPOSTOS:${l.codigo}`, ((rb - rl) / rb) * 100 * (ajusteDosImpostos.get(u) ?? 1));
+        if (receitaDaLinha(l, venda) && contasDaLinha(est, l).dvv.some((c) => c.codigo === C.COMISSOES)) add(u, venda, `COMISSOES:${l.codigo}`, comissoesPorVenda(u, venda));
         // Os custos por unidade da linha: o mesmo nas duas vendas.
         const bt = baseTotal(l);
         for (const c of [...contasDaLinha(est, l).custos, ...contasDaLinha(est, l).dvv]) {
+          // A conta das comissões se calcula do percentual (acima).
+          if (c.codigo === C.COMISSOES) continue;
           const v = custos.get(`${chave(l)}|${c.codigo}`) ?? 0;
           if (v && bt) add(u, venda, `CUSTO:${l.codigo}:${c.codigo}`, v / bt);
           else if (v && venda === VENDAS_DA_UNIDADE[u][0]) avisos.push(`${l.nome} (${NOME_DA_UNIDADE[u]}): ${reais(v)} de ${c.descricao} sem volume no período, fora das premissas.`);

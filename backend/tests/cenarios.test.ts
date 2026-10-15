@@ -213,6 +213,7 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     item("CPP.GGV.MADEIRAS", [1, 2]),
     item("CPP.MOD.REMUNERACOES_CLT", [1, 2]),
     item("DVV.GGV.FRETE_E_DESCARGA", [1, 2]),
+    item("DVV.GGV.COMISSOES_DE_REPRESENTANTES_E_TERCEIROS", [1, 2, 3]),
   ];
   const ALVEOLARES = { codigo: "ALVEOLARES", nome: "Alveolares", unidade: 2 as const, medida: "m³ e pistas" };
 
@@ -267,6 +268,32 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     assert.equal(valores.get("DIAS_UTEIS")![1], 20);
     assert.equal(Math.round(dre.get("ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO")![1]), Math.round(4 * 20 * 17.5 * 1700));
     assert.equal(valores.get("RL:ALVEOLARES")![0], 1700 * 0.75);
+  });
+
+  it("comissões (15/10/2026): o % sobre a receita bruta antes da conta, que se calcula dele; a MOT antes da MP", () => {
+    const linhas = linhasDaTabela(EST, [ALVEOLARES], 2);
+    const chaves = linhas.map((l) => l.chave);
+    const conta = "CUSTO:ALVEOLARES:DVV.GGV.COMISSOES_DE_REPRESENTANTES_E_TERCEIROS";
+    assert.equal(chaves.indexOf("COMISSOES:ALVEOLARES") + 1, chaves.indexOf(conta));
+    assert.equal(linhas.find((l) => l.chave === "COMISSOES:ALVEOLARES")!.und, "%/ROB");
+    assert.equal(linhas.find((l) => l.chave === conta)!.tipo, "CALCULO");
+    assert.ok(chaves.indexOf("CUSTO:ALVEOLARES:CPP.MOT.PROJETOS_TERCEIRIZADOS") < chaves.indexOf("CUSTO:ALVEOLARES:CPP.MP.CIMENTO"));
+    const p: Record<string, number> = {
+      "DEMANDA:ALVEOLARES": 4,
+      "M3_PISTA:ALVEOLARES": 17.5,
+      "RB:ALVEOLARES:ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO": 1700,
+      "RB:ALVEOLARES:ROB.RBF.RECEITA_BRUTA_DE_FRETE": 100,
+      "RB:ALVEOLARES:ROB.RBDI.RECEITA_BRUTA_DE_DEVOLUCOES_E_INVENTARIO": -50,
+      "COMISSOES:ALVEOLARES": 2,
+      // A conta gravada antes (R$ por unidade) não entra mais.
+      [conta]: 999,
+    };
+    const ler = (chave: string, mes: number) => (chave === "DIAS_UTEIS" && mes === 1 ? 10 : p[chave]);
+    const { valores, referencia, dre } = calcularTabela(EST, [ALVEOLARES], 2, 2026, ler);
+    // A receita bruta média (1.750, com as devoluções) × 2% = 35 por m³; × 700 m³ em janeiro.
+    assert.equal(valores.get(conta)![0], 35);
+    assert.equal(referencia.get(conta), 35);
+    assert.equal(Math.round(dre.get("DVV.GGV.COMISSOES_DE_REPRESENTANTES_E_TERCEIROS")![0]), 700 * 35);
   });
 
   it("as bases dos rateios: produção e projeto (só Global) pelo m³; armadura e metalurgia pelo volume × kg por unidade; acompanhamentos por dia × dias úteis", () => {

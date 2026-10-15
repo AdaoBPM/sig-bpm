@@ -23,7 +23,8 @@ type Tx = Prisma.TransactionClient;
  *   de pistas), os impostos operacionais (%/ROB) e a receita líquida média (calculada);
  * - Custos de Produção / Serviços: por linha, as Matérias Primas, a Mão de Obra Terceirizada (14/10/2026) e os Gastos
  *   Gerais Variáveis (por conta) e o Estoque, em R$ por unidade da linha;
- * - Despesas Variáveis de Venda: por linha, os Gastos Gerais Variáveis da DVV (por conta), em R$ por unidade.
+ * - Despesas Variáveis de Venda: por linha, os Gastos Gerais Variáveis da DVV (por conta), em R$ por unidade; as
+ *   Comissões (15/10/2026) são um percentual sobre a receita bruta, e a conta das comissões se calcula dele.
  *
  * O valor de cada conta no mês é o volume × o valor unitário (sem ajustes: só as médias e as demandas, 15/10/2026); a receita líquida, a bruta × (1 − os
  * impostos). As contas das tabelas somam-se na DRE da unidade (as de Global e Mercantil juntas), com os volumes
@@ -52,6 +53,7 @@ export const C = {
   EXPEDICAO_M3: "S.EXPEDICAO_DO_PRE_FABRICADO_M",
   MONTAGEM_M3: "S.MONTAGEM_DO_PRE_FABRICADO_M",
   ACOMPANHAMENTO_D: "S.ACOMPANHAMENTO_DE_OBRA_D",
+  COMISSOES: "DVV.GGV.COMISSOES_DE_REPRESENTANTES_E_TERCEIROS",
 } as const;
 /** A receita líquida de cada receita bruta. */
 export const LIQUIDA_DA_BRUTA: Record<string, string> = {
@@ -81,7 +83,7 @@ export type LinhaDoCadastro = { codigo: string; nome: string; unidade: UnidadePr
 /**
  * As linhas que prestam serviço às outras (14/10/2026): a Metalúrgica, na Matriz, faz as peças metálicas das demais
  * linhas. Não têm demanda, receita nem custo nas premissas: os custos dela ficam com as linhas da unidade, e a
- * metalurgia que as outras linhas consomem é a Metalúrgica (Interno) por Unidade delas.
+ * metalurgia que as outras linhas consomem é a Metalúrgica (Interno) Unit. delas.
  */
 export const LINHAS_DE_APOIO = new Set(["METALÚRGICA"]);
 
@@ -113,8 +115,8 @@ export function contasDaLinha(est: LinhaEstrutura[], l: LinhaDoCadastro) {
     // As devoluções e os inventários (14/10/2026), como receita unitária (negativa) nas linhas da Matriz e da Filial.
     receitas: l.unidade === 3 ? [LINHAS_DE_MONTAGEM.has(l.codigo) ? C.RBM : C.RBC] : [C.RBPF, C.RBF, C.RBDI],
     // A mão de obra terceirizada (14/10/2026) é custo unitário da linha: a de produção na Matriz e na Filial, a de
-    // serviços em Serviços (não vem dos centros de custo).
-    custos: [...daUnidade(`${custo}.MP.`), ...daUnidade(`${custo}.MOT.`), ...daUnidade(`${custo}.GGV.`), ...daUnidade(`${custo}.E.`)],
+    // serviços em Serviços (não vem dos centros de custo). Desde 15/10/2026, antes das matérias primas.
+    custos: [...daUnidade(`${custo}.MOT.`), ...daUnidade(`${custo}.MP.`), ...daUnidade(`${custo}.GGV.`), ...daUnidade(`${custo}.E.`)],
     dvv: daUnidade("DVV.GGV."),
   };
 }
@@ -147,11 +149,11 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     }
     // As bases dos rateios de armadura e de metalurgia (14/10/2026), em kg por unidade da linha (o volume × a demanda).
     if (LINHAS_COM_ARMADURA.has(l.codigo)) {
-      add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura (Interno) por Unidade", `kg/${undDoValor(l)}`);
+      add("PRODUÇÃO E SERVIÇOS", g, `ARMADURA:${l.codigo}`, "Armadura (Interno) Unit.", `kg/${undDoValor(l)}`);
       add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_ARMADURA:${l.codigo}`, "Armadura (Interno) no Mês", "kg", "CALCULO");
     }
     if (LINHAS_COM_METALURGIA.has(l.codigo)) {
-      add("PRODUÇÃO E SERVIÇOS", g, `METALURGIA:${l.codigo}`, "Metalúrgica (Interno) por Unidade", `kg/${undDoValor(l)}`);
+      add("PRODUÇÃO E SERVIÇOS", g, `METALURGIA:${l.codigo}`, "Metalúrgica (Interno) Unit.", `kg/${undDoValor(l)}`);
       add("PRODUÇÃO E SERVIÇOS", g, `VOLUME_METALURGIA:${l.codigo}`, "Metalúrgica (Interno) no Mês", "kg", "CALCULO");
     }
     if (l.unidade === 3) {
@@ -173,7 +175,12 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
   }
   for (const l of daUnidade) {
     const g = nomeDaLinha(l);
-    for (const c of contasDaLinha(est, l).dvv) add("DESPESAS VARIÁVEIS DE VENDA", g, `CUSTO:${l.codigo}:${c.codigo}`, `GGV: ${c.descricao}`, `R$/${undDoValor(l)}`);
+    for (const c of contasDaLinha(est, l).dvv) {
+      // As comissões (15/10/2026): o percentual sobre a receita bruta, e a conta calculada dele (a receita bruta média × %).
+      const comissoes = c.codigo === C.COMISSOES;
+      if (comissoes) add("DESPESAS VARIÁVEIS DE VENDA", g, `COMISSOES:${l.codigo}`, "Comissões", "%/ROB");
+      add("DESPESAS VARIÁVEIS DE VENDA", g, `CUSTO:${l.codigo}:${c.codigo}`, `GGV: ${c.descricao}`, `R$/${undDoValor(l)}`, comissoes ? "CALCULO" : "PREMISSA");
+    }
   }
   for (const [chave, rotulo] of RESULTADOS) add("RESULTADO DAS PREMISSAS", null, chave, rotulo, "R$", "CALCULO");
   return r;
@@ -268,6 +275,9 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     const impostos = premissa(`IMPOSTOS:${l.codigo}`);
     const liquida = Array<number>(12).fill(0);
     let liquidaRef: number | null = null;
+    // A receita bruta média da linha (todas as contas, com as devoluções), a base das comissões.
+    const brutaMedia = Array<number>(12).fill(0);
+    let brutaRef: number | null = null;
     for (const c of contas.receitas) {
       const unitario = premissa(`RB:${l.codigo}:${c}`);
       for (const m of meses) {
@@ -275,14 +285,25 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
         somar(c, m, bruta);
         somar(LIQUIDA_DA_BRUTA[c], m, bruta * (1 - impostos[m - 1] / 100));
         liquida[m - 1] += unitario[m - 1] * (1 - impostos[m - 1] / 100);
+        brutaMedia[m - 1] += unitario[m - 1];
       }
       const rb = referencia.get(`RB:${l.codigo}:${c}`);
+      if (rb !== null && rb !== undefined) brutaRef = (brutaRef ?? 0) + rb;
       if (rb !== null && rb !== undefined) liquidaRef = (liquidaRef ?? 0) + rb * (1 - (referencia.get(`IMPOSTOS:${l.codigo}`) ?? 0) / 100);
     }
     valores.set(`RL:${l.codigo}`, liquida);
     referencia.set(`RL:${l.codigo}`, liquidaRef);
     for (const c of [...contas.custos, ...contas.dvv]) {
-      const unitario = premissa(`CUSTO:${l.codigo}:${c.codigo}`);
+      const k = `CUSTO:${l.codigo}:${c.codigo}`;
+      let unitario: number[];
+      if (c.codigo === C.COMISSOES) {
+        // As comissões: a receita bruta média × o percentual (como o volume sai da demanda); a conta gravada antes fica de fora.
+        const pct = premissa(`COMISSOES:${l.codigo}`);
+        unitario = brutaMedia.map((b, i) => (b * pct[i]) / 100);
+        valores.set(k, unitario);
+        const pctRef = referencia.get(`COMISSOES:${l.codigo}`);
+        referencia.set(k, pctRef !== null && pctRef !== undefined && brutaRef !== null ? (brutaRef * pctRef) / 100 : null);
+      } else unitario = premissa(k);
       for (const m of meses) somar(c.codigo, m, volume[m - 1] * unitario[m - 1]);
     }
   }

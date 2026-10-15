@@ -189,7 +189,7 @@ export function RateiosDoCenario({ id }: { id: string }) {
   return (
     <TabelaEditavel
       titulo="Rateios"
-      subtitulo="Bases das premissas: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda Global; Metalurgia e Armadura pelo kg das linhas (o volume × a Metalúrgica (Interno) ou a Armadura (Interno) por Unidade); Acompanhamento pelos Acompanhamentos por Dia de Serviços. Sem base no mês, o percentual é zero."
+      subtitulo="Bases das premissas: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda Global; Metalurgia e Armadura pelo kg das linhas (o volume × a Metalúrgica (Interno) Unit. ou a Armadura (Interno) Unit.); Acompanhamento pelos Acompanhamentos por Dia de Serviços. Sem base no mês, o percentual é zero."
       meses={consulta.data.meses}
       linhas={linhasDosRateios(consulta.data.rateios)}
       editavel={false}

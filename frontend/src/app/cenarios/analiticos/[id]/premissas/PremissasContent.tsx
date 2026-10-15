@@ -80,7 +80,7 @@ export function PremissasContent() {
               Na aba Centros de Custo, escolha o grupo de centros da Controladoria na lista à esquerda (com a busca e o total do exercício; os centros de
               estoque e de investimento não entram) e digite, à direita, o Quadro de Lotação dele (os colaboradores de cada mês) e os valores mensais
               das contas dele: mão de obra direta e indireta e gastos
-              gerais diretos, indiretos e comerciais (as Matérias Primas, a Mão de Obra Terceirizada, os Gastos Gerais Variáveis e o Estoque ficam nas
+              gerais diretos, indiretos e comerciais (a Mão de Obra Terceirizada, as Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas
               tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
               baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum). “Exportar”, acima do grupo, baixa em Excel o centro
               de custo atual, todos os centros (um por aba, com a aba Consolidado na frente) ou um arquivo por centro (num ZIP, com o departamento e o
@@ -88,7 +88,7 @@ export function PremissasContent() {
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
-              Global; Metalurgia e Armadura pelo kg de cada linha (o volume × a Metalúrgica (Interno) ou a Armadura (Interno) por Unidade); Acompanhamento pelos
+              Global; Metalurgia e Armadura pelo kg de cada linha (o volume × a Metalúrgica (Interno) Unit. ou a Armadura (Interno) Unit.); Acompanhamento pelos
               Acompanhamentos por Dia das linhas de Serviços (× os dias úteis). Sem base no mês, o percentual é zero, e o valor dos grupos daquela chave não entra.
             </li>
             <li>
@@ -136,14 +136,15 @@ export function PremissasContent() {
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), a
               Demanda Diária de cada linha (na
-              unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Armadura (Interno) e a Metalúrgica (Interno) por Unidade (em kg por
+              unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Armadura (Interno) Unit. e a Metalúrgica (Interno) Unit. (em kg por
               unidade da linha: kg/m³, kg/kg, kg/m²; só nas linhas que as levam), a Receita Bruta Média (na Matriz e na Filial, também a de Devoluções e
-              Inventários, negativa) e os Impostos, os Custos (Matérias Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque, por conta) e
-              as Despesas Variáveis de Venda, em R$ por unidade da linha.
+              Inventários, negativa) e os Impostos, os Custos (Mão de Obra Terceirizada, Matérias Primas, Gastos Gerais Variáveis e Estoque, por conta) e
+              as Despesas Variáveis de Venda, em R$ por unidade da linha; antes da conta das comissões, as Comissões (em %/ROB, sobre a receita
+              bruta).
             </li>
             <li>
               Os cálculos ficam em cinza-escuro e não se editam: o volume do mês (a demanda × os dias úteis), a armadura e a metalurgia do mês (o
-              volume × o kg por unidade), a Receita Líquida Média e, no fim, o
+              volume × o kg por unidade), a Receita Líquida Média, a conta das comissões (a soma das Receitas Brutas Médias × as Comissões) e, no fim, o
               Resultado das Premissas em R$ (o que a tabela leva para a DRE).
             </li>
             {podeEditar ? (
@@ -187,11 +188,12 @@ export function PremissasContent() {
             </p>
             <p>
               Na referência realizada, a receita de cada conta (Pré-Fabricado, Frete, Devoluções e Inventários, Montagem e Complementar) é a da DRE da unidade, dividida entre as
-              linhas e as vendas pelos itens da receita prévia, e os impostos são os dos itens, ajustados aos da DRE da unidade. Os custos (Matérias
-              Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
+              linhas e as vendas pelos itens da receita prévia, e os impostos são os dos itens, ajustados aos da DRE da unidade. Os custos (Mão de Obra
+              Terceirizada, Matérias Primas, Gastos Gerais Variáveis e Estoque) e as despesas variáveis de venda de cada conta e mês são os da DRE da unidade, divididos entre as
               linhas na proporção das requisições e das notas fiscais com a tarefa de cada linha (a Correspondência Tarefa × Linha, nos Cadastros da Controladoria / Linhas);
               o que não tem tarefa vai pelo m³ das linhas (pela receita, nas despesas variáveis de venda e em Serviços). A armadura e a metalurgia por
-              unidade são as das listas de cada linha ÷ o volume dela. A Metalúrgica, na Matriz, presta serviço às outras linhas e não entra nas premissas: os custos dela ficam com a Estrutura, e a metalurgia que as linhas consomem é a Metalúrgica (Interno) por Unidade delas.
+              unidade são as das listas de cada linha ÷ o volume dela. A Metalúrgica, na Matriz, presta serviço às outras linhas e não entra nas premissas: os custos dela ficam com a Estrutura, e a metalurgia que as linhas consomem é a Metalúrgica (Interno) Unit. delas. As Comissões são as da DRE da unidade
+              em % da receita bruta, por venda (as da unidade divididas entre a Global e a Mercantil pela receita bruta de cada uma).
             </p>
             <p>
               Os quadros de lotação dos indicadores saem do Quadro de Lotação dos grupos de centros de custo, pela classificação de cada grupo: Direta

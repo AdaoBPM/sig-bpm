@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
+import { BordaDoDesenvolvimento } from "@/components/layout/AmbienteDeDesenvolvimento";
 import { SCRIPT_DO_TEMA } from "@/lib/temaScript";
 import { Providers } from "@/providers";
 
@@ -29,6 +30,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full font-sans">
         <Providers>{children}</Providers>
+        <BordaDoDesenvolvimento />
       </body>
     </html>
   );
