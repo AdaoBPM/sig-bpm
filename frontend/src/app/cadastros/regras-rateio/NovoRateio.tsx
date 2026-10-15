@@ -97,7 +97,7 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
           <DialogDescription render={<div />}>
             <p>Rateios com a mesma chave não podem ter vigências sobrepostas.</p>
             <ul className="mt-1 list-disc space-y-0.5 pl-5">
-              <li>Paramétrico: o percentual de cada destino sai do volume dele nas listas do mês.</li>
+              <li>Paramétrico: o percentual dos destinos sai dos valores mensais das respectivas listas (chaves).</li>
               <li>Fixo: os percentuais de Matriz, Filial, Montagem e Complementar, somando 100%.</li>
             </ul>
           </DialogDescription>
