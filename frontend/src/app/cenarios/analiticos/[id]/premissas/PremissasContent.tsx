@@ -16,7 +16,7 @@ import { AvisoRateiosSemBase, CentrosDoCenario, RateiosDoCenario } from "../../.
 import { Erro } from "../../../components/CenarioDialog";
 import { ExtraDoCenario, InvestimentosDoCenario } from "../../../components/InvestimentosDoCenario";
 import { IndicadoresManuais } from "../../../components/IndicadoresManuais";
-import { BotaoImportarValores, BotaoReplicarMedias, ExportarPremissas } from "../../../components/PlanilhaPremissas";
+import { BotaoApagarValores, BotaoImportarValores, BotaoReplicarMedias, ExportarPremissas } from "../../../components/PlanilhaPremissas";
 import { TabelaPremissas } from "../../../components/TabelaPremissas";
 import { cenariosService } from "../../../services/cenariosService";
 
@@ -56,7 +56,7 @@ export function PremissasContent() {
   const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: deUnidade });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = editaAba && !travado && (!deUnidade || !!consulta.data?.editavel);
-  // Os botões da planilha (15/10/2026), na altura do título: Replicar Médias / Apagar Valores (todas as abas editáveis),
+  // Os botões da planilha (15/10/2026), na altura do título: Replicar Médias e Apagar Valores (todas as abas editáveis),
   // Importar Valores (alguma aba editável) e Exportar Premissas.
   const editaTodas = ABAS.every((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:editar`));
   const editaAlguma = ABAS.some((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:editar`));
@@ -68,6 +68,7 @@ export function PremissasContent() {
           abas.length ? (
             <div className="flex flex-wrap items-center gap-2">
               {cenario.data && !travado && editaTodas ? <BotaoReplicarMedias id={id} /> : null}
+              {cenario.data && !travado && editaTodas ? <BotaoApagarValores id={id} /> : null}
               {cenario.data && !travado && editaAlguma ? <BotaoImportarValores id={id} /> : null}
               <ExportarPremissas id={id} aba={aba} />
             </div>
@@ -117,8 +118,9 @@ export function PremissasContent() {
               Úteis, os do calendário, em cinza).
             </li>
             <li>
-              “Replicar Médias / Apagar Valores”, na altura do título: em todas as abas, leva a Média de Referência de cada linha aos doze meses (as
-              linhas sem média ficam como estão) ou deixa os meses em branco. Pede editar todas as abas.
+              “Replicar Médias”, na altura do título: em todas as abas, leva a Média de Referência de cada linha aos doze meses (as linhas sem
+              média ficam como estão). “Apagar Valores”, ao lado: deixa os doze meses de todas as abas em branco (as Médias de Referência ficam).
+              Cada um abre o seu modal, que confirma antes de gravar; os dois pedem editar todas as abas.
             </li>
             <li>
               “Exportar Premissas” baixa em Excel a aba atual ou todas (os centros de custo numa aba, um por aba ou um arquivo por centro, num ZIP):

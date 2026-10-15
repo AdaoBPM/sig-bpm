@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CopyCheck, FileUp, FolderUp, Upload, X } from "lucide-react";
+import { CopyCheck, Eraser, FileUp, FolderUp, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,14 @@ const invalidar = (queryClient: ReturnType<typeof useQueryClient>) => {
   queryClient.invalidateQueries({ queryKey: ["relatorios"] });
 };
 
+/** O que cada botão faz, nos modais e no Como Usar. */
+const ABAS_DA_PLANILHA =
+  "Matriz, Filial, Serviços, Centros de Custo (com o Quadro de Lotação), Investimentos (a Depreciação Base), Extra-Operacional e Indicadores Manuais";
+
 /**
- * O botão Replicar Médias / Apagar Valores (15/10/2026), na altura do título das Premissas: em todas as abas, replica a
- * Média de Referência de cada linha nos doze meses, ou deixa os meses em branco.
+ * Os botões Replicar Médias e Apagar Valores (15/10/2026; antes, um botão só, Replicar Médias / Apagar Valores, com a
+ * escolha no modal), na altura do título das Premissas: em todas as abas, replica a Média de Referência de cada linha
+ * nos doze meses, ou deixa os meses em branco. Cada um abre o modal dele, que confirma antes de gravar.
  */
 export function BotaoReplicarMedias({ id }: { id: string }) {
   const [aberto, setAberto] = useState(false);
@@ -30,22 +35,35 @@ export function BotaoReplicarMedias({ id }: { id: string }) {
     <>
       <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
         <CopyCheck className="size-4" />
-        Replicar Médias / Apagar Valores
+        Replicar Médias
       </Button>
-      {aberto ? <ReplicarMediasDialog id={id} onFechar={() => setAberto(false)} /> : null}
+      {aberto ? <ReplicarOuApagarDialog id={id} acao="replicar" onFechar={() => setAberto(false)} /> : null}
     </>
   );
 }
 
-function ReplicarMediasDialog({ id, onFechar }: { id: string; onFechar: () => void }) {
+export function BotaoApagarValores({ id }: { id: string }) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
+        <Eraser className="size-4" />
+        Apagar Valores
+      </Button>
+      {aberto ? <ReplicarOuApagarDialog id={id} acao="apagar" onFechar={() => setAberto(false)} /> : null}
+    </>
+  );
+}
+
+function ReplicarOuApagarDialog({ id, acao, onFechar }: { id: string; acao: "replicar" | "apagar"; onFechar: () => void }) {
   const queryClient = useQueryClient();
-  const [acao, setAcao] = useState<"replicar" | "apagar">("replicar");
+  const replicar = acao === "replicar";
   const gravar = useMutation({
     mutationFn: () => cenariosService.replicarMedias(id, acao),
     onSuccess: (r) => {
       invalidar(queryClient);
       toast.success(
-        acao === "replicar"
+        replicar
           ? `Médias replicadas em ${r.linhas} ${plural(r.linhas, "linha", "linhas")} (${r.valores} ${plural(r.valores, "valor", "valores")}); a DRE do cenário foi recalculada.`
           : `Valores apagados em ${r.linhas} ${plural(r.linhas, "linha", "linhas")}; a DRE do cenário foi recalculada.`,
       );
@@ -56,39 +74,38 @@ function ReplicarMediasDialog({ id, onFechar }: { id: string; onFechar: () => vo
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Replicar Médias / Apagar Valores</DialogTitle>
-          <DialogDescription>
-            Vale para todas as abas das premissas: Matriz, Filial, Serviços, Centros de Custo (com o Quadro de Lotação), Investimentos (a Depreciação
-            Base), Extra-Operacional e Indicadores Manuais. A DRE do cenário se
-            recalcula, e a mudança fica no histórico (tela Reajustes).
+          <DialogTitle>{replicar ? "Replicar Médias" : "Apagar Valores"}</DialogTitle>
+          {/* Uma frase por item, com a bolinha, como nos painéis explicativos. */}
+          <DialogDescription render={<div />}>
+            <ul className="list-disc space-y-1.5 pl-5">
+              {replicar ? (
+                <>
+                  <li>A Média de Referência de cada linha vai para os doze meses, no lugar dos valores de hoje.</li>
+                  <li>As linhas sem Média de Referência ficam como estão.</li>
+                </>
+              ) : (
+                <>
+                  <li>Os doze meses de cada linha ficam em branco (mês sem valor; os Dias Úteis voltam aos do calendário).</li>
+                  <li>As Médias de Referência ficam: “Replicar Médias” as leva de novo aos meses.</li>
+                </>
+              )}
+              <li>Vale para todas as abas das premissas: {ABAS_DA_PLANILHA}.</li>
+              <li>A DRE do cenário se recalcula, e a mudança fica no histórico (tela Reajustes).</li>
+            </ul>
           </DialogDescription>
         </DialogHeader>
-        <fieldset className="space-y-2">
-          <legend className="sr-only">O que fazer</legend>
-          <OpcaoEmLinha
-            nome="replicar-medias"
-            marcada={acao === "replicar"}
-            onMarcar={() => setAcao("replicar")}
-            rotulo="Replicar Médias"
-            detalhe="A Média de Referência de cada linha vai para os doze meses, no lugar dos valores de hoje. As linhas sem média ficam como estão."
-            Icone={CopyCheck}
-          />
-          <OpcaoEmLinha
-            nome="replicar-medias"
-            marcada={acao === "apagar"}
-            onMarcar={() => setAcao("apagar")}
-            rotulo="Apagar Valores"
-            detalhe="Os doze meses de cada linha ficam em branco (os Dias Úteis voltam aos do calendário). As Médias de Referência ficam."
-            Icone={X}
-          />
-        </fieldset>
+        {replicar ? null : (
+          <p className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-2 text-sm text-gray-700">
+            Os valores digitados nos meses se perdem. Para guardá-los, use antes o “Exportar Premissas”.
+          </p>
+        )}
         <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar.") : null} />
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
           <Button type="button" className={botaoPrimario} disabled={gravar.isPending} onClick={() => gravar.mutate()}>
-            {gravar.isPending ? "Gravando…" : acao === "replicar" ? "Replicar Médias" : "Apagar Valores"}
+            {gravar.isPending ? "Gravando…" : replicar ? "Replicar Médias" : "Apagar Valores"}
           </Button>
         </DialogFooter>
       </DialogContent>
