@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { Fragment, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -98,7 +98,8 @@ export function AppSidebar() {
 
       <SidebarContent>
         {grupos.map((g) => (
-          <SidebarGroup key={g.titulo}>
+          <Fragment key={g.titulo}>
+          <SidebarGroup>
             <SidebarGroupLabel>{g.titulo}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -126,6 +127,10 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          {/* O separador amarelo-ouro abaixo de cada grupo (14/10/2026): na largura do texto dos processos (o recuo do grupo e
+              do processo, 1 rem de cada lado); no menu recolhido (3 rem), o mesmo recuo deixa a largura do ícone. */}
+          <div aria-hidden className="mx-4 h-px shrink-0 bg-bpm-primary group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:w-4" />
+          </Fragment>
         ))}
       </SidebarContent>
 
