@@ -94,9 +94,12 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
       <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Novo Rateio</DialogTitle>
-          <DialogDescription>
-            Rateios com a mesma chave não podem ter vigências sobrepostas. Paramétrico: o percentual de cada destino sai do volume dele nas listas do
-            mês. Fixo: os percentuais de Matriz, Filial, Montagem e Complementar, somando 100%.
+          <DialogDescription render={<div />}>
+            <p>Rateios com a mesma chave não podem ter vigências sobrepostas.</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              <li>Paramétrico: o percentual de cada destino sai do volume dele nas listas do mês.</li>
+              <li>Fixo: os percentuais de Matriz, Filial, Montagem e Complementar, somando 100%.</li>
+            </ul>
           </DialogDescription>
         </DialogHeader>
         {fixos.isError || def.isError ? (
