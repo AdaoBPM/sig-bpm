@@ -77,7 +77,10 @@ export const dreController = {
     const o = obraSchema.safeParse(request.query.obra);
     if (!o.success) return response.status(400).json({ error: "Obra inválida" });
     let visao: Parameters<typeof detalhamentoService.detalhar>[3] = { consolidado: true };
-    if (o.data) visao = { obra: o.data };
+    const semCentro = z.string().trim().min(1).max(40).optional().safeParse(request.query.semCentro);
+    if (!semCentro.success) return response.status(400).json({ error: "Grupo inválido" });
+    if (semCentro.data) visao = { semCentro: semCentro.data };
+    else if (o.data) visao = { obra: o.data };
     else if (g.data) visao = { grupo: g.data };
     else if (request.query.unidade !== undefined) {
       const u = unidadeSchema.safeParse(request.query.unidade);

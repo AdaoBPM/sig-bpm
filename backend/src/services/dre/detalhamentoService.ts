@@ -6,6 +6,7 @@ import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
 import { CENTRO_DE_OBRA, sinalDaLinha } from "./obrasService.js";
+import { deveriaTerCentro, ehGrupoSemCentro, grupoSemCentro, nomeDoGrupoSemCentro, veSemCentros } from "./semCentroService.js";
 
 /**
  * Detalhamento de um valor da DRE até os lançamentos de origem (Passo 20).
@@ -29,7 +30,7 @@ const ROTULO_NATUREZA: Record<string, string> = {
   COMPLEMENTAR: "complementar",
 };
 
-export type Visao = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string };
+export type Visao = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string } | { semCentro: string };
 
 type LancamentoDetalhe = {
   id: string;
@@ -223,7 +224,31 @@ export const detalhamentoService = {
     const blocos: Bloco[] = [];
     let titulo: string;
 
-    if ("obra" in visao) {
+    if ("semCentro" in visao) {
+      // Os movimentos sem centro de custo (14/10/2026): os lançamentos da linha sem centro do cadastro, no grupo (a
+      // filial, na Produção e na DVV).
+      if (!ehGrupoSemCentro(visao.semCentro)) throw new RegraDREError(400, "Grupo dos movimentos sem centro de custo inválido.");
+      if (!veSemCentros(acesso)) throw new RegraDREError(403, "Os movimentos sem centro de custo não são do seu recorte.");
+      titulo = `Sem centro de custo · ${nomeDoGrupoSemCentro(visao.semCentro)}`;
+      regra = "Lançamentos contábeis sem centro de custo do cadastro, nas contas de mão de obra e de gastos gerais, antes do rateio";
+      const ls = deveriaTerCentro(linha)
+        ? (await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: null }, select: selecaoContabil })).filter(
+            (l) => grupoSemCentro(linha.codigo, l.filial) === visao.semCentro,
+          )
+        : [];
+      if (ls.length > 0) {
+        valor = somar(ls.map((l) => l.valorMovimento));
+        blocos.push({
+          tipo: "CONTABIL",
+          titulo: "Lançamentos contábeis",
+          filtro: "sem centro de custo do cadastro, diretos e de rateio",
+          total: valor.toFixed(2),
+          lancamentos: ls.map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),
+        });
+      } else {
+        observacao = "Linha que soma outras linhas do grupo: veja o detalhamento de cada uma.";
+      }
+    } else if ("obra" in visao) {
       // A obra (aba Obras): os lançamentos do centro de obra na linha, com o sinal da DRE (receitas trocadas).
       if (!CENTRO_DE_OBRA.test(visao.obra)) throw new RegraDREError(400, `${visao.obra} não é um centro de custo de obra (1.98 ou 1.99).`);
       const ls = await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, codigoCentroCusto: visao.obra }, select: selecaoContabil });

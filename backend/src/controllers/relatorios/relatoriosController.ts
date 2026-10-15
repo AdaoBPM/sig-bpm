@@ -7,10 +7,11 @@ import { indicadoresService } from "../../services/relatorios/indicadoresService
 import { painelService } from "../../services/relatorios/painelService.js";
 import { RelatorioError, resultadosService } from "../../services/relatorios/resultadosService.js";
 import { veObras } from "../../services/acesso/recorteDepartamento.js";
+import { ehGrupoSemCentro, veSemCentros, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
 
 const anoSchema = z.coerce.number().int().min(2025).max(2100);
 const ateSchema = z.coerce.number().int().min(1).max(12).optional();
-const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.coerce.number().int().min(0).max(5)]);
+const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.literal("sem_centros"), z.coerce.number().int().min(0).max(5)]);
 const obraSchema = z.string().trim().regex(/^1.9[89]./, "Obra inválida").max(40).optional();
 const grupoSchema = z.string().trim().min(1).max(200).optional();
 
@@ -85,6 +86,12 @@ export const relatoriosController = {
       if (!veObras(acesso)) return response.status(403).json({ error: "O seu usuário não inclui os resultados das obras." });
       return responder(response, () => (o.data ? resultadosService.obra(p.ano, o.data, p.ate, acesso, true) : resultadosService.listarObras(p.ano, p.ate, acesso, true)));
     }
+    // Os movimentos sem centro de custo (14/10/2026): sem ?grupo, a lista dos grupos; com ele, o grupo.
+    if (v.data === "sem_centros") {
+      if (!veSemCentros(acesso)) return response.status(403).json({ error: "Os movimentos sem centro de custo não são do seu recorte." });
+      if (g.data && !ehGrupoSemCentro(g.data)) return response.status(400).json({ error: "Grupo inválido" });
+      return responder(response, () => (g.data ? resultadosService.semCentro(p.ano, g.data as GrupoSemCentro, p.ate, acesso, true) : resultadosService.listarSemCentros(p.ano, p.ate, acesso, true)));
+    }
     if (v.data === "centros") {
       return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso, true) : resultadosService.listarCentros(p.ano, p.ate, acesso, true)));
     }
@@ -108,7 +115,7 @@ export const relatoriosController = {
     if (escopo === "unidades") e = { tipo: "unidades" };
     else if (escopo === "centros") e = { tipo: "centros" };
     else if (g.success && g.data) e = { tipo: "centro", grupo: g.data };
-    else if (v.success && v.data !== "centros" && v.data !== "obras") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
+    else if (v.success && v.data !== "centros" && v.data !== "obras" && v.data !== "sem_centros") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
     else return response.status(400).json({ error: "Visão inválida: use ?visao=0..5, ?grupo= ou ?escopo=unidades|centros." });
     return enviarArquivo(request, response, "resultados", () =>
       exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, request.user!.acesso),

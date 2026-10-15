@@ -64,7 +64,7 @@ const CALCULADOS = new Set([
 type Movimento = { codigoCentroCusto: string | null; nomeCentroCusto: string | null; linhaDREId: string | null; valorMovimento: Decimal };
 
 /** Os itens de uma obra (com o sinal da DRE), e os subtotais e totais pela estrutura. */
-function linhasDaObra(linhas: LinhaEstrutura[], itens: Map<string, { valor: Decimal; n: number }>, completa: boolean) {
+export function linhasDaObra(linhas: LinhaEstrutura[], itens: Map<string, { valor: Decimal; n: number }>, completa: boolean) {
   // As contas com soma zero no mês ficam de fora, como nos centros.
   itens = new Map([...itens].filter(([, a]) => !a.valor.isZero()));
   const diretos = new Map([...itens].map(([c, a]) => [c, a.valor]));

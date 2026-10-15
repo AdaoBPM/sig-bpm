@@ -4,6 +4,7 @@ import { podeVerLinhaNaObra, podeVerMovimentos } from "../acesso/recorteDepartam
 import { cenarioMarcado } from "../cenarios/indicadoresDoCenario.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
 import { obrasService } from "../dre/obrasService.js";
+import { GRUPOS_SEM_CENTRO, nomeDoGrupoSemCentro, semCentroService, type GrupoSemCentro } from "../dre/semCentroService.js";
 import { linhasDoCentro } from "../dre/recorteCentros.js";
 import { baseDoPercentual, baseDoUnitario, basesDoConsolidado, COD, GRUPOS_DE_VOLUME, type VisaoResultados } from "./basesResultados.js";
 
@@ -239,6 +240,53 @@ export const resultadosService = {
       obra: { codigo, nome },
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       linhas: montar(linhas, "obras", apurado, valores, valores, acesso).filter((l) => l.tipo !== "SECAO"),
+    };
+  },
+
+  /**
+   * Os grupos dos movimentos sem centro de custo (aba Sem Centros de Custo, 14/10/2026) com lançamento em algum mês, na
+   * ordem da lista, com o total do exercício.
+   */
+  async listarSemCentros(ano: number, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
+    const totais = new Map<string, number>();
+    for (const m of meses) {
+      if (!m.competenciaId) continue;
+      for (const g of (await semCentroService.listar(ano, m.mes, acesso)).grupos) totais.set(g.codigo, (totais.get(g.codigo) ?? 0) + Number(g.total));
+    }
+    return {
+      ano,
+      ate: ultimo,
+      grupos: GRUPOS_SEM_CENTRO.filter((g) => totais.has(g.codigo)).map((g) => ({ codigo: g.codigo, nome: g.nome, total: totais.get(g.codigo)!.toFixed(2) })),
+    };
+  },
+
+  /** Um grupo dos movimentos sem centro de custo mês a mês; as bases do % e do R$/m³ são as do Consolidado, como nos centros. */
+  async semCentro(ano: number, grupo: GrupoSemCentro, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+    const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
+    const competencias = meses.map((m) => m.competenciaId);
+    const [linhas, consolidado] = await Promise.all([estrutura(), valoresDaVisao(competencias, 0)]);
+    const valores = await Promise.all(
+      meses.map(async (m) => {
+        const mapa = new Map<string, number>();
+        if (!m.competenciaId) return mapa;
+        try {
+          const dre = await semCentroService.consultar(ano, m.mes, grupo, acesso);
+          for (const l of dre.linhas) if (l.valor !== null && l.tipo !== "SECAO") mapa.set(l.codigo, Number(l.valor));
+        } catch (error) {
+          if (!(error instanceof RegraDREError && error.status === 404)) throw error; // sem lançamento no mês
+        }
+        return mapa;
+      }),
+    );
+    if (valores.every((m) => m.size === 0)) throw new RelatorioError(404, `Nenhum lançamento sem centro de custo em ${nomeDoGrupoSemCentro(grupo)} em ${ano}.`);
+    const apurado = meses.map((m) => m.competenciaId !== null);
+    return {
+      ano,
+      ate: ultimo,
+      grupo: nomeDoGrupoSemCentro(grupo),
+      meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
+      linhas: montar(linhas, "centros", apurado, valores, consolidado, acesso).filter((l) => l.tipo !== "SECAO"),
     };
   },
 

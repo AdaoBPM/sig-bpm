@@ -31,6 +31,8 @@ const VISOES = [
   { chave: "4", aba: "despesas", nome: "Despesas e Extra" },
   { chave: "5", aba: "rn", nome: "RN" },
   { chave: "centros", aba: "centros", nome: "Centros de Custo" },
+  // Os movimentos que deveriam ter centro de custo e não têm (14/10/2026).
+  { chave: "sem_centros", aba: "sem_centros", nome: "Sem Centros de Custo" },
   // As obras (centros 1.98 e 1.99), como a aba Obras da DRE (11/10/2026).
   { chave: "obras", aba: "obras", nome: "Obras" },
 ];
@@ -475,6 +477,54 @@ function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: n
   );
 }
 
+/**
+ * Os movimentos sem centro de custo (14/10/2026): os lançamentos das contas de mão de obra e de gastos gerais (MOD, MOI,
+ * GGD, GGI e GGC) sem centro do cadastro, como na referência dos cenários analíticos, por departamento (e filial). A
+ * lista à esquerda, como os centros, e a tabela do escolhido.
+ */
+function VisaoSemCentros({ ano, ate }: { ano: number; ate: number }) {
+  const [escolhido, setEscolhido] = useState<string | null>(null);
+  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "sem_centros"], queryFn: () => relatoriosService.semCentros(ano, ate) });
+  const grupos = lista.data?.grupos ?? [];
+  const codigo = (escolhido && grupos.some((g) => g.codigo === escolhido) ? escolhido : grupos[0]?.codigo) ?? null;
+  const nome = grupos.find((g) => g.codigo === codigo)?.nome ?? "";
+  const grupo = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "sem_centros", codigo], queryFn: () => relatoriosService.semCentro(ano, ate, codigo!), enabled: codigo !== null });
+  if (lista.isError) return <Erro erro={lista.error} padrao="Erro ao carregar os movimentos sem centro de custo." />;
+  if (lista.isPending) return <Carregando />;
+  if (grupos.length === 0) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhum movimento sem centro de custo no período.</p>;
+  return (
+    <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+      <div className="rounded-sm border border-gray-200 bg-white">
+        <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Grupos sem centro de custo">
+          {grupos.map((g) => (
+            <li key={g.codigo}>
+              <button
+                type="button"
+                onClick={() => setEscolhido(g.codigo)}
+                aria-current={g.codigo === codigo ? "true" : undefined}
+                className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${g.codigo === codigo ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+              >
+                <span className="min-w-0 truncate" title={g.nome}>
+                  {g.nome}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="min-w-0">
+        {grupo.isError ? (
+          <Erro erro={grupo.error} padrao="Erro ao carregar os movimentos sem centro de custo." />
+        ) : grupo.isPending ? (
+          <Carregando />
+        ) : (
+          <TabelaResultados key={codigo ?? ""} dados={grupo.data} titulo={nome} visao={{ semCentro: codigo! }} nomeVisao={nome} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** As obras: a lista à esquerda (nome, código e o total do exercício), como os centros de custo, e a tabela da escolhida. */
 function VisaoObras({ ano, ate }: { ano: number; ate: number }) {
   const [busca, setBusca] = useState("");
@@ -540,10 +590,12 @@ export function ResultadosContent() {
   // O Coordenador (recorte por centro de custo) vê a aba Obras só com a opção marcada no cadastro dele.
   const { user } = useAuth();
   const comObras = !user?.acesso.recorteCentro || user.acesso.recorteDepartamento || !!user.acesso.veObras;
+  // Os movimentos sem centro de custo não aparecem para o Coordenador (só os centros dele).
+  const comSemCentros = !user?.acesso.recorteCentro || user.acesso.recorteDepartamento;
   // As abas que o perfil lê (14/10/2026).
   const { hasPermission } = usePermissions();
   const le = (aba: string) => hasPermission(`relatorio_resultados.${aba}:ler`);
-  const visoes = VISOES.filter((v) => (v.chave !== "obras" || comObras) && le(v.aba));
+  const visoes = VISOES.filter((v) => (v.chave !== "obras" || comObras) && (v.chave !== "sem_centros" || comSemCentros) && le(v.aba));
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [visaoEscolhida, setVisao] = useState("0");
@@ -575,7 +627,15 @@ export function ResultadosContent() {
         comoUsar={
           <ul>
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>
+              Em Sem Centros de Custo, os lançamentos do balancete que deveriam ter um centro de custo e não têm um do cadastro, pela regra da
+              referência dos cenários analíticos: os das contas de mão de obra direta e indireta e de gastos gerais diretos, indiretos e comerciais
+              (os de obra, nos centros 1.98 e 1.99, também entram). A lista à esquerda traz Produção (Matriz e Filial), Despesas Variáveis de Venda
+              (Matriz e Filial), Serviços, Logística, Técnico, Comercial e Administrativo — só os que têm lançamento no período —, pelo departamento
+              da conta na DRE e, na Produção e na DVV, pela filial do lançamento. Clique no valor de um mês para ver os lançamentos. Os Gastos Gerais
+              Variáveis ficam de fora (nos cenários, vêm das premissas). Não tem exportação; o Coordenador não vê a aba.
+            </li>
             <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). As obras não têm exportação.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
@@ -643,11 +703,13 @@ export function ResultadosContent() {
             <div className="min-w-0 flex-1">
               <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
             </div>
-            {/* As obras não têm exportação (ainda). */}
-            {visao === "obras" ? null : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
+            {/* As obras e os movimentos sem centro não têm exportação (ainda). */}
+            {visao === "obras" || visao === "sem_centros" ? null : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
           </div>
           {!visao ? null : visao === "centros" ? (
             <VisaoCentros ano={ano} ate={ate} escolhido={escolhido} onEscolher={setEscolhido} />
+          ) : visao === "sem_centros" ? (
+            <VisaoSemCentros ano={ano} ate={ate} />
           ) : visao === "obras" ? (
             <VisaoObras ano={ano} ate={ate} />
           ) : (

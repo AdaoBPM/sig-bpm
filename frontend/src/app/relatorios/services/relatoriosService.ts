@@ -40,6 +40,8 @@ export type Resultados = {
 };
 /** As obras com lançamento no período, com o total do exercício (o Resultado Líquido; no recorte, a soma do que se vê). */
 export type ObrasResultados = { ano: number; ate: number; obras: Array<{ codigo: string; nome: string; total: string }> };
+/** Os grupos dos movimentos sem centro de custo com lançamento no período (14/10/2026), com o total do exercício. */
+export type SemCentrosResultados = { ano: number; ate: number; grupos: Array<{ codigo: string; nome: string; total: string }> };
 export type CentrosResultados = { ano: number; ate: number; grupos: Array<{ grupo: string; departamentos: string[]; total: string }> };
 
 export type Indicador = {
@@ -102,6 +104,10 @@ export const relatoriosService = {
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao } })).data.data,
   centros: async (ano: number, ate: number | undefined) =>
     (await api.get<{ data: CentrosResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros" } })).data.data,
+  semCentros: async (ano: number, ate: number | undefined) =>
+    (await api.get<{ data: SemCentrosResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "sem_centros" } })).data.data,
+  semCentro: async (ano: number, ate: number | undefined, grupo: string) =>
+    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "sem_centros", grupo } })).data.data,
   obras: async (ano: number, ate: number | undefined) =>
     (await api.get<{ data: ObrasResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "obras" } })).data.data,
   obra: async (ano: number, ate: number | undefined, obra: string) =>

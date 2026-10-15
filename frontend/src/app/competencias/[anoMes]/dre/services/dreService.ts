@@ -114,7 +114,7 @@ export type DetalheDRE = {
 };
 
 /** Em que visão o detalhamento é pedido: uma unidade, o consolidado, um agrupamento de centros ou uma obra. */
-export type VisaoDetalhe = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string };
+export type VisaoDetalhe = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string } | { semCentro: string };
 
 /** Uma linha do extrato das listas de uma linha de volume: os registros da obra somados. */
 export type LinhaVolume = {
@@ -139,7 +139,15 @@ export const dreService = {
   detalhe: async (anoMes: string, linha: string, visao: VisaoDetalhe): Promise<DetalheDRE> => {
     const params = {
       linha,
-      ...("unidade" in visao ? { unidade: visao.unidade } : "grupo" in visao ? { grupo: visao.grupo } : "obra" in visao ? { obra: visao.obra } : {}),
+      ...("unidade" in visao
+        ? { unidade: visao.unidade }
+        : "grupo" in visao
+          ? { grupo: visao.grupo }
+          : "obra" in visao
+            ? { obra: visao.obra }
+            : "semCentro" in visao
+              ? { semCentro: visao.semCentro }
+              : {}),
     };
     const { data } = await api.get<{ data: DetalheDRE }>(`/proxy/competencias/${anoMes}/dre/detalhe`, { params });
     return data.data;
