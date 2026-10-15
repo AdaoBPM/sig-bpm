@@ -16,6 +16,9 @@ relatoriosRoutes.get("/resultados", autenticacao, verificarAba("relatorio_result
 relatoriosRoutes.get("/resultados/exportar", autenticacao, verificarAba("relatorio_resultados", "ler", (r) => {
   const escopo = String(r.query.escopo ?? "atual");
   if (escopo === "unidades") return [...ABA_DA_VISAO];
+  // As obras e os movimentos sem centro de custo (14/10/2026): a aba deles, de um ou de todos.
+  if (escopo === "obras" || r.query.visao === "obras") return ["obras"];
+  if (escopo === "sem_centros" || r.query.visao === "sem_centros") return ["sem_centros"];
   if (escopo === "centros" || r.query.grupo !== undefined) return ["centros"];
   const a = abaDaVisao(r.query.visao ?? 0);
   return a ? [a] : null;

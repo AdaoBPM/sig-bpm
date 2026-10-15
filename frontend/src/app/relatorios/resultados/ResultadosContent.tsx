@@ -482,11 +482,9 @@ function VisaoCentros({ ano, ate, escolhido, onEscolher }: { ano: number; ate: n
  * GGD, GGI e GGC) sem centro do cadastro, como na referência dos cenários analíticos, por departamento (e filial). A
  * lista à esquerda, como os centros, e a tabela do escolhido.
  */
-function VisaoSemCentros({ ano, ate }: { ano: number; ate: number }) {
-  const [escolhido, setEscolhido] = useState<string | null>(null);
-  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "sem_centros"], queryFn: () => relatoriosService.semCentros(ano, ate) });
+function VisaoSemCentros({ ano, ate, escolhido, onEscolher: setEscolhido }: { ano: number; ate: number; escolhido: string | null; onEscolher: (g: string) => void }) {
+  const { lista, codigo } = useSemCentroEscolhido(ano, ate, true, escolhido);
   const grupos = lista.data?.grupos ?? [];
-  const codigo = (escolhido && grupos.some((g) => g.codigo === escolhido) ? escolhido : grupos[0]?.codigo) ?? null;
   const nome = grupos.find((g) => g.codigo === codigo)?.nome ?? "";
   const grupo = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "sem_centros", codigo], queryFn: () => relatoriosService.semCentro(ano, ate, codigo!), enabled: codigo !== null });
   if (lista.isError) return <Erro erro={lista.error} padrao="Erro ao carregar os movimentos sem centro de custo." />;
@@ -526,12 +524,26 @@ function VisaoSemCentros({ ano, ate }: { ano: number; ate: number }) {
 }
 
 /** As obras: a lista à esquerda (nome, código e o total do exercício), como os centros de custo, e a tabela da escolhida. */
-function VisaoObras({ ano, ate }: { ano: number; ate: number }) {
-  const [busca, setBusca] = useState("");
-  const [escolhida, setEscolhida] = useState<string | null>(null);
-  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "obras"], queryFn: () => relatoriosService.obras(ano, ate) });
+/** O grupo sem centro escolhido (o primeiro da lista, sem escolha): a lista e o código, também para o Exportar. */
+function useSemCentroEscolhido(ano: number, ate: number, ativo: boolean, escolhido: string | null) {
+  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "sem_centros"], queryFn: () => relatoriosService.semCentros(ano, ate), enabled: ativo });
+  const grupos = lista.data?.grupos ?? [];
+  const codigo = (escolhido && grupos.some((g) => g.codigo === escolhido) ? escolhido : grupos[0]?.codigo) ?? null;
+  return { lista, codigo };
+}
+
+/** A obra escolhida (a primeira da lista, sem escolha): a lista e o código, também para o Exportar. */
+function useObraEscolhida(ano: number, ate: number, ativo: boolean, escolhida: string | null) {
+  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "obras"], queryFn: () => relatoriosService.obras(ano, ate), enabled: ativo });
   const obras = lista.data?.obras ?? [];
   const codigo = (escolhida && obras.some((o) => o.codigo === escolhida) ? escolhida : obras[0]?.codigo) ?? null;
+  return { lista, codigo };
+}
+
+function VisaoObras({ ano, ate, escolhida, onEscolher: setEscolhida }: { ano: number; ate: number; escolhida: string | null; onEscolher: (o: string) => void }) {
+  const [busca, setBusca] = useState("");
+  const { lista, codigo } = useObraEscolhida(ano, ate, true, escolhida);
+  const obras = lista.data?.obras ?? [];
   const obra = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "obras", codigo], queryFn: () => relatoriosService.obra(ano, ate, codigo!), enabled: codigo !== null });
   if (lista.isError) return <Erro erro={lista.error} padrao="Erro ao carregar as obras." />;
   if (lista.isPending) return <Carregando />;
@@ -607,6 +619,11 @@ export function ResultadosContent() {
   // O mês escolhido vale se foi apurado no exercício; senão, o último apurado.
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
   const { grupo } = useCentroEscolhido(ano ?? 0, ate ?? 0, visao === "centros" && !!ano && !!ate, escolhido);
+  // A obra e o grupo sem centro escolhidos ficam aqui, como o centro: o Exportar deles vai para a linha das abas.
+  const [obra, setObra] = useState<string | null>(null);
+  const [semCentro, setSemCentro] = useState<string | null>(null);
+  const { codigo: obraEscolhida } = useObraEscolhida(ano ?? 0, ate ?? 0, visao === "obras" && !!ano && !!ate, obra);
+  const { codigo: semCentroEscolhido } = useSemCentroEscolhido(ano ?? 0, ate ?? 0, visao === "sem_centros" && !!ano && !!ate, semCentro);
   const periodo = { ano, ate };
   const opcoesExportar = [
     {
@@ -634,9 +651,9 @@ export function ResultadosContent() {
               (os de obra, nos centros 1.98 e 1.99, também entram). A lista à esquerda traz Produção (Matriz e Filial), Despesas Variáveis de Venda
               (Matriz e Filial), Serviços, Logística, Técnico, Comercial e Administrativo — só os que têm lançamento no período —, pelo departamento
               da conta na DRE e, na Produção e na DVV, pela filial do lançamento. Clique no valor de um mês para ver os lançamentos. Os Gastos Gerais
-              Variáveis ficam de fora (nos cenários, vêm das premissas). Não tem exportação; o Coordenador não vê a aba.
+              Variáveis ficam de fora (nos cenários, vêm das premissas). “Exportar” baixa o grupo na tela ou todos (um por aba no Excel, um por página no PDF); o Coordenador não vê a aba.
             </li>
-            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). As obras não têm exportação.</li>
+            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
             <li>Expandida, role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
@@ -654,7 +671,7 @@ export function ResultadosContent() {
               (Lista) e Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), importadas no Fechamento Mensal): abre no centro de custo e na
               filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
             </li>
-            <li>Use “Exportar” para baixar em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o % e o R$/m³): a visão atual, todas as unidades ou todos os centros de custo.</li>
+            <li>Use “Exportar” para baixar em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o % e o R$/m³): a visão atual, todas as unidades ou todos os centros de custo; em Obras e em Sem Centros de Custo, a obra (ou o grupo) na tela ou todas.</li>
           </ul>
         }
         sobre={
@@ -703,15 +720,37 @@ export function ResultadosContent() {
             <div className="min-w-0 flex-1">
               <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
             </div>
-            {/* As obras e os movimentos sem centro não têm exportação (ainda). */}
-            {visao === "obras" || visao === "sem_centros" ? null : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
+            {/* As obras e os movimentos sem centro (14/10/2026): o escolhido ou todos. */}
+            {visao === "obras" ? (
+              obraEscolhida ? (
+                <ExportarRelatorio
+                  caminho="resultados"
+                  opcoes={[
+                    { chave: "atual", excel: "Obra Atual", pdf: "Obra Atual", params: { ...periodo, visao: "obras", obra: obraEscolhida } },
+                    { chave: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)", params: { ...periodo, escopo: "obras" } },
+                  ]}
+                  padrao={`Resultados ${ano} - Obras`}
+                />
+              ) : null
+            ) : visao === "sem_centros" ? (
+              semCentroEscolhido ? (
+                <ExportarRelatorio
+                  caminho="resultados"
+                  opcoes={[
+                    { chave: "atual", excel: "Grupo Atual", pdf: "Grupo Atual", params: { ...periodo, visao: "sem_centros", grupo: semCentroEscolhido } },
+                    { chave: "todos", excel: "Todos os Grupos (um por aba)", pdf: "Todos os Grupos (um por página)", params: { ...periodo, escopo: "sem_centros" } },
+                  ]}
+                  padrao={`Resultados ${ano} - Sem Centros de Custo`}
+                />
+              ) : null
+            ) : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
           </div>
           {!visao ? null : visao === "centros" ? (
             <VisaoCentros ano={ano} ate={ate} escolhido={escolhido} onEscolher={setEscolhido} />
           ) : visao === "sem_centros" ? (
-            <VisaoSemCentros ano={ano} ate={ate} />
+            <VisaoSemCentros ano={ano} ate={ate} escolhido={semCentro} onEscolher={setSemCentro} />
           ) : visao === "obras" ? (
-            <VisaoObras ano={ano} ate={ate} />
+            <VisaoObras ano={ano} ate={ate} escolhida={obra} onEscolher={setObra} />
           ) : (
             <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} />
           )}

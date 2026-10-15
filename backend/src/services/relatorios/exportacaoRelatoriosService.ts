@@ -4,6 +4,7 @@ import { ESTILO, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxE
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { indicadoresService } from "./indicadoresService.js";
 import { RelatorioError, resultadosService } from "./resultadosService.js";
+import { nomeDoGrupoSemCentro, type GrupoSemCentro } from "../dre/semCentroService.js";
 import { plural } from "../../utils/plural.js";
 
 /**
@@ -15,7 +16,16 @@ import { plural } from "../../utils/plural.js";
  * referência (o último) e no total.
  */
 
-export type EscopoResultados = { tipo: "visao"; visao: 0 | 1 | 2 | 3 | 4 | 5 } | { tipo: "centro"; grupo: string } | { tipo: "unidades" } | { tipo: "centros" };
+export type EscopoResultados =
+  | { tipo: "visao"; visao: 0 | 1 | 2 | 3 | 4 | 5 }
+  | { tipo: "centro"; grupo: string }
+  | { tipo: "unidades" }
+  | { tipo: "centros" }
+  // As obras e os movimentos sem centro de custo (14/10/2026): um (o da tela) ou todos.
+  | { tipo: "obra"; codigo: string }
+  | { tipo: "obras" }
+  | { tipo: "semCentro"; grupo: GrupoSemCentro }
+  | { tipo: "semCentros" };
 export type Formato = "xlsx" | "pdf";
 
 // O que as visões e os centros de custo têm em comum (o orçado das visões não vai para a exportação).
@@ -57,6 +67,25 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
   if (escopo.tipo === "visao") {
     const v = VISOES.find((x) => x.visao === escopo.visao)!;
     return [{ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) }];
+  }
+  if (escopo.tipo === "obra" || escopo.tipo === "obras") {
+    const obras = escopo.tipo === "obra" ? [escopo.codigo] : (await resultadosService.listarObras(ano, ate, acesso, true)).obras.map((o) => o.codigo);
+    const r: Bloco[] = [];
+    for (const codigo of obras) {
+      const dados = await resultadosService.obra(ano, codigo, ate, acesso, true);
+      r.push({ nome: dados.obra.nome, titulo: `Obra ${dados.obra.nome} (${codigo})`, dados });
+    }
+    return r;
+  }
+  if (escopo.tipo === "semCentro" || escopo.tipo === "semCentros") {
+    const grupos = escopo.tipo === "semCentro" ? [escopo.grupo] : (await resultadosService.listarSemCentros(ano, ate, acesso, true)).grupos.map((g) => g.codigo as GrupoSemCentro);
+    const r: Bloco[] = [];
+    for (const g of grupos) {
+      // A aba do Excel tem até 31 caracteres: a DVV abreviada.
+      const nome = nomeDoGrupoSemCentro(g).replace("Despesas Variáveis de Venda", "DVV");
+      r.push({ nome, titulo: `Sem Centro de Custo · ${nomeDoGrupoSemCentro(g)}`, dados: await resultadosService.semCentro(ano, g, ate, acesso, true) });
+    }
+    return r;
   }
   if (escopo.tipo === "unidades") return Promise.all(VISOES.map(async (v) => ({ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) })));
   const grupos = escopo.tipo === "centro" ? [escopo.grupo] : (await resultadosService.listarCentros(ano, ate, acesso, true)).grupos.map((g) => g.grupo);
@@ -298,16 +327,27 @@ function rodapes(doc: DocumentoPDF, id: Identificacao) {
 }
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const limpar = (nome: string) => nome.replace(/[\\/:*?"<>|]/g, " ");
+const limpar = (nome: string) => nome.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ");
 
 export const exportacaoRelatoriosService = {
   async resultados(ano: number, ate: number | undefined, escopo: EscopoResultados, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
     // Sem `ate`, até o último mês apurado (como na tela).
     const bs = await blocos(ano, ate, escopo, acesso);
-    if (bs.length === 0) throw new RelatorioError(404, "Nenhum centro de custo com valor para exportar.");
+    if (bs.length === 0) throw new RelatorioError(404, escopo.tipo === "obras" ? "Nenhuma obra com lançamento para exportar." : escopo.tipo === "semCentros" ? "Nenhum movimento sem centro de custo para exportar." : "Nenhum centro de custo com valor para exportar.");
     const ultimo = bs[0].dados.ate;
     const id = await identificar(ano, ultimo, usuarioNome);
-    const nomeVisao = escopo.tipo === "unidades" ? "todas as unidades" : escopo.tipo === "centros" ? "todos os centros de custo" : bs[0].nome;
+    const nomeVisao =
+      escopo.tipo === "unidades"
+        ? "todas as unidades"
+        : escopo.tipo === "centros"
+          ? "todos os centros de custo"
+          : escopo.tipo === "obras"
+            ? "todas as obras"
+            : escopo.tipo === "semCentros"
+              ? "sem centros de custo"
+              : escopo.tipo === "semCentro"
+                ? `sem centro de custo - ${bs[0].nome}`
+                : bs[0].nome;
     const titulo = `Resultados ${ano} - ${nomeVisao}`;
     const nomeArquivo = limpar(`Resultados ${ano} até ${String(ultimo).padStart(2, "0")} - ${nomeVisao}.${formato}`);
     if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx(bs.map((b) => abaResultados(b, id)), titulo), visoes: bs.map((b) => b.nome) };

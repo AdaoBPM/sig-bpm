@@ -112,13 +112,27 @@ export const relatoriosController = {
     const v = visaoSchema.safeParse(request.query.visao ?? 0);
     const escopo = String(request.query.escopo ?? "atual");
     let e: EscopoResultados;
+    const acesso = request.user!.acesso;
+    const o = obraSchema.safeParse(request.query.obra || undefined);
     if (escopo === "unidades") e = { tipo: "unidades" };
     else if (escopo === "centros") e = { tipo: "centros" };
+    // As obras (o Coordenador só com a opção) e os movimentos sem centro de custo (14/10/2026).
+    else if (escopo === "obras" || (v.success && v.data === "obras")) {
+      if (!veObras(acesso)) return response.status(403).json({ error: "O seu usuário não inclui os resultados das obras." });
+      if (escopo === "obras") e = { tipo: "obras" };
+      else if (o.success && o.data) e = { tipo: "obra", codigo: o.data };
+      else return response.status(400).json({ error: "Obra inválida" });
+    } else if (escopo === "sem_centros" || (v.success && v.data === "sem_centros")) {
+      if (!veSemCentros(acesso)) return response.status(403).json({ error: "Os movimentos sem centro de custo não são do seu recorte." });
+      if (escopo === "sem_centros") e = { tipo: "semCentros" };
+      else if (g.success && g.data && ehGrupoSemCentro(g.data)) e = { tipo: "semCentro", grupo: g.data };
+      else return response.status(400).json({ error: "Grupo inválido" });
+    }
     else if (g.success && g.data) e = { tipo: "centro", grupo: g.data };
     else if (v.success && v.data !== "centros" && v.data !== "obras" && v.data !== "sem_centros") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
     else return response.status(400).json({ error: "Visão inválida: use ?visao=0..5, ?grupo= ou ?escopo=unidades|centros." });
     return enviarArquivo(request, response, "resultados", () =>
-      exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, request.user!.acesso),
+      exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, acesso),
     );
   },
 
