@@ -47,6 +47,8 @@ cenariosRoutes.post("/:id/referencia/realizado", autenticacao, tela("configuraco
 cenariosRoutes.put("/:id/realocacoes", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.gravarRealocacoes));
 cenariosRoutes.post("/:id/referencia/cenario", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaCenario));
 // O versionamento (13/10/2026): Congelar Versão, Reabrir Versão e Criar Revisão.
+// O Recalcular dos Resultados dos analíticos (14/10/2026): depois de editar uma regra de rateio.
+cenariosRoutes.post("/:id/recalcular", autenticacao, tela("resultados", "editar"), asyncHandler(c.recalcular));
 cenariosRoutes.post("/:id/versao", autenticacao, tela("resultados", "editar"), asyncHandler(c.congelarVersao));
 cenariosRoutes.post("/:id/versao/reabrir", autenticacao, tela("resultados", "editar"), asyncHandler(c.reabrirVersao));
 cenariosRoutes.post("/:id/revisao", autenticacao, tela("resultados", "editar"), asyncHandler(c.criarRevisao));

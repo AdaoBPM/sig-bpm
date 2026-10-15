@@ -78,10 +78,12 @@ type Props = {
    * o que o lápis faz, ou nulo para o formulário de sempre.
    */
   aoEditar?: (r: Registro) => (() => void) | null;
+  /** O botão de criar no lugar do Novo do cadastro (14/10/2026: o Novo Rateio, Paramétrico ou Fixo). */
+  novo?: ReactNode;
 };
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
-export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras, aviso, aoEditar }: Props) {
+export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras, aviso, aoEditar, novo }: Props) {
   useRegistrarAcessoTela(rota);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
@@ -105,8 +107,10 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
         acoesExtras ? (
           <div className="flex flex-wrap items-center gap-2">
             {acoesExtras}
-            {edicao.botaoNovo}
+            {novo !== undefined ? (edicao.pode ? novo : null) : edicao.botaoNovo}
           </div>
+        ) : novo !== undefined ? (
+          edicao.pode ? novo : null
         ) : (
           edicao.botaoNovo
         )

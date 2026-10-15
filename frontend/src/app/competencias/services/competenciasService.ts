@@ -13,6 +13,8 @@ export type Competencia = {
   apuracoes: number;
   /** Recebeu dados importados a partir de outro mês (lote) e ainda não foi apurado depois: bola verde. */
   dadosNovos: boolean;
+  /** Nas competências em andamento, as chaves de rateio sem regra vigente no mês (14/10/2026). */
+  rateiosSemVigencia?: string[];
   fechadaEm: string | null;
   usuarioAbertura: { nome: string } | null;
   usuarioApuracao: { nome: string } | null;

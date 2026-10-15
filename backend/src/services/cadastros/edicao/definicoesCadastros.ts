@@ -78,6 +78,8 @@ export type DefinicaoCadastro = {
   excluir: boolean;
   /** O cadastro muda a classificação dos lançamentos: reclassifica as competências não apuradas. */
   reclassifica?: boolean;
+  /** O texto explicativo do modal de edição (14/10/2026: as regras de rateio). */
+  explicacao?: string;
   listar: (db: Db, busca?: string) => Promise<Valores[]>;
   ler: (db: Db, id: string) => Promise<Valores | null>;
   /** Normaliza, valida e completa os derivados; devolve os dados para gravar. */
@@ -890,6 +892,7 @@ const totalDaRegra = (v: unknown, chave: string) => {
 
 const regras: DefinicaoCadastro = {
   entidade: "regras-rateio",
+  explicacao: "Rateios com a mesma chave não podem ter vigências sobrepostas. A alteração fica no log de auditoria, com o antes e o depois.",
   titulo: "Regra de rateio",
   auditoria: "regra_rateio",
   criar: true,

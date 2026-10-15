@@ -169,6 +169,10 @@ export function CompetenciasContent() {
             <li>Na coluna Andamento, clique num passo (importado, classificado, apurado, fechado) para ir direto à etapa.</li>
             <li>A bola verde ao lado do mês pede reapuração: as entradas mudaram depois da apuração, o mês anterior foi reapurado depois dele, ou ele recebeu dados importados a partir de outro mês. Reapure os meses em ordem, na DRE de cada um.</li>
             <li>Use “Abrir Competência” para começar um mês novo.</li>
+            <li>
+              O aviso “Rateios sem Vigência” lista as competências em andamento com alguma chave de rateio sem regra vigente no mês: cadastre a regra em
+              Cadastros da Controladoria / Regras de Rateio. Sem ela, a competência não se abre nem se fecha.
+            </li>
           </ul>
         }
         sobre={
@@ -185,6 +189,24 @@ export function CompetenciasContent() {
           ) : null
         }
       />
+
+      {/* Os rateios sem regra vigente nas competências em andamento (14/10/2026). */}
+      {(() => {
+        const semRegra = (data?.itens ?? []).filter((c) => c.rateiosSemVigencia?.length);
+        return semRegra.length ? (
+          <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+            <p className="font-medium text-gray-900">Rateios sem Vigência</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {semRegra.map((c) => (
+                <li key={c.id}>
+                  {String(c.mes).padStart(2, "0")}/{c.ano}: {c.rateiosSemVigencia!.join(", ")} sem regra vigente no mês.
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1">Cadastre as regras em Cadastros da Controladoria / Regras de Rateio: sem elas, a competência não se abre nem se fecha.</p>
+          </div>
+        ) : null;
+      })()}
 
       <QuadroTabela
         barra={

@@ -30,7 +30,7 @@ export type Campo = {
   ajuda?: string;
   opcoes?: Opcao[];
 };
-export type DefinicaoCadastro = { entidade: string; titulo: string; criar: boolean; excluir: boolean; reclassifica: boolean; campos: Campo[] };
+export type DefinicaoCadastro = { entidade: string; titulo: string; criar: boolean; excluir: boolean; reclassifica: boolean; campos: Campo[]; explicacao?: string | null };
 /** As travas do registro: com movimentos, os campos-chave não mudam e a exclusão é recusada (11/10/2026). */
 export type Travas = { movimentos: string | null; campos: string[]; exclusao: string | null };
 export type Registro = Record<string, unknown> & { id: string; __travas?: Travas };

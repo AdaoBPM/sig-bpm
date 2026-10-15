@@ -173,6 +173,8 @@ export type Cenario = {
   podeMudarVisualizacao: boolean;
   /** As movimentações fora dos padrões da última carga do realizado e as realocações delas (analíticos, 14/10/2026). */
   realocacoes: Realocacoes | null;
+  /** Nos analíticos (14/10/2026): os avisos dos rateios no exercício e se as regras mudaram depois do último cálculo. */
+  rateios?: { avisos: string[]; desatualizados: boolean } | null;
   criadoEm: string;
   /** As visões da DRE com valor (0 Consolidado, 1 a 5 as unidades). */
   visoes: number[];
@@ -319,6 +321,8 @@ export const cenariosService = {
     (await api.get<{ data: Painel & { comparado: { nome: string; ano: number } | null } }>(`/proxy/cenarios/${id}/painel`, { params: { ate } })).data.data,
   indicadores: async (id: string) => (await api.get<{ data: IndicadoresDoCenario }>(`/proxy/cenarios/${id}/indicadores`)).data.data,
   /** Congelar Versão: trava o cenário. */
+  /** Recalcula a DRE do analítico com as regras de rateio de hoje (14/10/2026). */
+  recalcular: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/recalcular`)).data.data,
   congelarVersao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/versao`)).data.data,
   /** Reabrir Versão: destrava a versão congelada. */
   reabrirVersao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/versao/reabrir`)).data.data,

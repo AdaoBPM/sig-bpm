@@ -9,6 +9,8 @@ import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
 import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
 import { plural } from "../../utils/plural.js";
+import { chavesSemRegra, regrasDeRateio } from "../volumes/vigenciaDosRateios.js";
+import { NOME_DA_CHAVE as NOME_DA_CHAVE_RATEIO } from "../volumes/rateiosService.js";
 
 /**
  * Apuração congelada, fechamento e reabertura da competência (Passo 21).
@@ -262,6 +264,9 @@ export const apuracaoService = {
     const motivosNaoFechar: string[] = [];
     if (c.status === "FECHADA") motivosNaoFechar.push("A competência já está fechada.");
     if (!apurada) motivosNaoFechar.push("A competência ainda não foi apurada.");
+    // Os rateios sem regra vigente no mês (14/10/2026).
+    const semRegra = chavesSemRegra(await regrasDeRateio(), ano, mes);
+    if (semRegra.length) motivosNaoFechar.push(`Rateios sem regra vigente no mês: ${semRegra.map((k) => NOME_DA_CHAVE_RATEIO[k] ?? k).join(", ")} (Cadastros da Controladoria / Regras de Rateio).`);
     if (mudou.length) motivosNaoFechar.push("As entradas mudaram depois da apuração: reapure antes de fechar.");
     if (pendentes) motivosNaoFechar.push(`Há ${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} com pendência de classificação.`);
     if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} ${plural(naoClassificados, "lançamento", "lançamentos")} sem classificação.`);

@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from "react";
 
 import { ListaCadastroContent } from "../components/ListaCadastroContent";
-import { AvisoRegrasRateio, BotaoPercentuaisFixos, PercentuaisFixosDialog } from "./PercentuaisFixos";
+import { BotaoNovoRateio } from "./NovoRateio";
+import { AvisoRegrasRateio, PercentuaisFixosDialog } from "./PercentuaisFixos";
 
 /**
  * A lista das Regras de Rateio (14/10/2026): o lápis de uma regra de percentual fixo abre o modal Percentuais Fixos na
@@ -18,7 +19,7 @@ export function RegrasRateioContent({ comoUsar, descricao }: { comoUsar: ReactNo
         rota="/cadastros/regras-rateio"
         titulo="Regras de Rateio"
         apenasAtivas
-        acoesExtras={<BotaoPercentuaisFixos />}
+        novo={<BotaoNovoRateio />}
         aviso={<AvisoRegrasRateio />}
         comoUsar={comoUsar}
         descricao={descricao}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Percent, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,16 +17,18 @@ import { botaoPrimario, classeSelect, Erro } from "@/app/cenarios/components/Cen
 import { lerNumero } from "@/app/cenarios/components/EdicaoDialogs";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean };
+type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean; rotulo: string };
 type Dados = { chaves: Array<{ chave: string; nome: string; destinos: Array<{ destino: string; nome: string }> }>; conjuntos: Conjunto[] };
 
-const servico = {
+/** O serviço dos percentuais fixos (também o Novo Rateio, do tipo Fixo). */
+export const servicoDosPercentuaisFixos = {
   listar: async () => (await api.get<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos")).data.data,
-  gravar: async (d: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number> }) =>
+  gravar: async (d: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number>; rotulo?: string | null }) =>
     (await api.put<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos", d)).data.data,
   excluir: async (chave: string, inicio: string) => (await api.delete<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos", { params: { chave, inicio } })).data.data,
   verificacao: async () => (await api.get<{ data: { avisos: string[] } }>("/proxy/cadastros/regras-rateio/verificacao")).data.data,
 };
+const servico = servicoDosPercentuaisFixos;
 
 const dataBR = (iso: string) => iso.split("-").reverse().join("/");
 const pct = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
@@ -40,7 +42,7 @@ export function AvisoRegrasRateio() {
   const avisos = consulta.data?.avisos ?? [];
   if (!avisos.length) return null;
   return (
-    <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+    <div className="mb-4 rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
       <p className="font-medium text-gray-900">Verificação das Vigências</p>
       <ul className="mt-1 list-disc space-y-1 pl-5">
         {avisos.map((a) => (
@@ -48,20 +50,6 @@ export function AvisoRegrasRateio() {
         ))}
       </ul>
     </div>
-  );
-}
-
-/** O botão Percentuais Fixos, na linha do título da tela Regras de Rateio (14/10/2026). */
-export function BotaoPercentuaisFixos() {
-  const [aberto, setAberto] = useState(false);
-  return (
-    <>
-      <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
-        <Percent className="size-4" />
-        Percentuais Fixos
-      </Button>
-      {aberto ? <PercentuaisFixosDialog onFechar={() => setAberto(false)} /> : null}
-    </>
   );
 }
 
@@ -79,8 +67,8 @@ export function PercentuaisFixosDialog({ onFechar, inicial }: { onFechar: () => 
         <DialogHeader>
           <DialogTitle>Percentuais Fixos</DialogTitle>
           <DialogDescription>
-            Os percentuais de cada destino da chave, no lugar dos percentuais dos volumes, somando 100%. Valem de um mês a outro, como as demais
-            regras; as regras por volume da chave precisam ter a vigência encerrada antes do início.
+            Rateios com a mesma chave não podem ter vigências sobrepostas. Os percentuais de cada destino da chave, no lugar dos percentuais dos
+            volumes, somando 100%; as regras por volume da chave precisam ter a vigência encerrada antes do início.
           </DialogDescription>
         </DialogHeader>
         {consulta.isError ? (
@@ -105,6 +93,7 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
   const [conjunto, setConjunto] = useState(doInicial?.inicio ?? "");
   const [inicio, setInicio] = useState(doInicial?.inicio ?? "");
   const [fim, setFim] = useState(doInicial?.fim ?? "");
+  const [rotulo, setRotulo] = useState(doInicial?.rotulo ?? "");
   const [textos, setTextos] = useState<Record<string, string>>(() =>
     doInicial ? Object.fromEntries(Object.entries(doInicial.percentuais).map(([d, v]) => [d, v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })])) : {},
   );
@@ -119,6 +108,7 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
     setConjunto(c ? c.inicio : "");
     setInicio(c?.inicio ?? "");
     setFim(c?.fim ?? "");
+    setRotulo(c?.rotulo ?? "");
     setTextos(c ? Object.fromEntries(Object.entries(c.percentuais).map(([d, v]) => [d, v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })])) : {});
     setExcluir(false);
   };
@@ -140,6 +130,7 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
         inicioAnterior: atual?.inicio ?? null,
         inicio,
         fim: fim || null,
+        rotulo: rotulo.trim() || null,
         percentuais: Object.fromEntries(valores.map((v) => [v.destino, typeof v.valor === "number" ? v.valor : 0])),
       }),
     onSuccess: () => concluir(`Percentuais fixos de ${daChave?.nome} gravados.`),
@@ -149,6 +140,11 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
+        {/* O rótulo do conjunto (14/10/2026): a base do rótulo de cada destino ("Produção: Matriz (Fixo)"). */}
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="pf-rotulo">Rótulo (opcional)</Label>
+          <Input id="pf-rotulo" value={rotulo} onChange={(e) => setRotulo(e.target.value)} maxLength={120} disabled={!pode} placeholder={daChave?.nome} className="rounded-sm" />
+        </div>
         <div className="space-y-1.5">
           <Label htmlFor="pf-chave">Chave</Label>
           <select id="pf-chave" value={chave} onChange={(e) => carregar(e.target.value, "")} className={classeSelect}>

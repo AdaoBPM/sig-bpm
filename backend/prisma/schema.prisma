@@ -1939,6 +1939,9 @@ model Cenario {
   /// do resultado realizado, as decisões de realocação (o grupo de centros de custo de cada conta; mantidas entre as
   /// cargas) e o que está somado nos centros por elas. Ver services/cenarios/realocacoesCenario.ts.
   realocacoes      Json?    @map("realocacoes")
+  /// As regras de rateio do último cálculo do cenário analítico (14/10/2026): o id e a data de alteração de cada uma. Se
+  /// as regras de hoje são outras (editadas, criadas ou excluídas), a tela Resultados pede o Recalcular.
+  rateiosAssinatura String? @map("rateios_assinatura")
   /// O versionamento (13/10/2026): a versão do cenário (0 = VER00); a família (o id da VER00; nulo na própria VER00) e
   /// a versão de que esta é revisão. Salvar Versão congela o cenário (como o fechamento de uma competência): a DRE, os
   /// indicadores manuais e a referência não se editam mais; Criar Revisão copia o cenário salvo numa versão nova.

@@ -120,6 +120,12 @@ export const cenariosController = {
     return enviarArquivo(request, response, () => exportacaoCenarioService.centros(c, e, usuario(request)));
   },
 
+  /** Recalcula a DRE do cenário analítico com as regras de rateio de hoje (14/10/2026). */
+  recalcular(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.recalcular(c, usuario(request))) : undefined;
+  },
+
   /** As contas de um grupo de centros (?grupo=, o nome da Controladoria). */
   centro(request: Request, response: Response) {
     const c = id(request, response);

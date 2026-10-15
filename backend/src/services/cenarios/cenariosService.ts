@@ -31,7 +31,7 @@ import {
   type UnidadePremissa,
   type Venda,
 } from "./premissasCenario.js";
-import { contasDoGrupo, gruposDoCadastro, percentuaisDasBases, RATEIOS, rateiosSemBase } from "./centrosCenario.js";
+import { contasDoGrupo, gruposDoCadastro, RATEIOS, rateiosSemBase } from "./centrosCenario.js";
 import {
   CONTAS_DEPRECIACAO,
   contaDeDepreciacao,
@@ -46,6 +46,7 @@ import {
 import { referenciaDoRealizado } from "./referenciaAnalitico.js";
 import { diferencasDasDecisoes, lerRealocacoes, type Realocacoes } from "./realocacoesCenario.js";
 import { distribuirLotacao, QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } from "./lotacaoCenario.js";
+import { assinaturaDasRegras, avisosDosRateios, bloqueioPorRateios, mesesDoAno, percentuaisPelasRegras, regrasDeRateio, type RegraDoMes } from "../volumes/vigenciaDosRateios.js";
 
 /**
  * Os cenários sintéticos (Criação de Cenários, 11/10/2026): a lista dos cenários gerados, a criação (vazio ou cópia
@@ -123,6 +124,12 @@ export const rotuloVersao = (v: number) => `VER${String(v).padStart(2, "0")}`;
  * - a versão congelada (13/10/2026: Congelar Versão trava o cenário, como o fechamento de uma competência; para mudar,
  *   reabre-se a versão ou cria-se uma revisão).
  */
+/** Os rateios sem regra vigente em algum mês do exercício não deixam abrir nem fechar um cenário analítico (14/10/2026). */
+function exigirRateios(regras: RegraDoMes[], ano: number, acao: string) {
+  const bloqueio = bloqueioPorRateios(regras, mesesDoAno(ano), acao);
+  if (bloqueio) throw new CenarioError(409, bloqueio);
+}
+
 function exigirEditavel(c: { nome: string; marcacao: MarcacaoCenario | null; versao: number; versaoSalvaEm: Date | null }) {
   if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} está congelada e não se edita: reabra a versão (Reabrir Versão) ou crie uma revisão (Criar Revisão), na tela Resultados.`);
   if (c.marcacao) throw new CenarioError(409, `O cenário ${c.nome} está marcado como ${MARCACOES[c.marcacao]} e não se edita: tire a marcação (ou marque outro cenário) antes de editá-lo.`);
@@ -348,7 +355,10 @@ export const cenariosService = {
 
   async obter(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
-    return { ...c, ...(await conteudo([id]))(id), ...(await familias())(c), podeMudarVisualizacao: mudaVisualizacao(c, usuario) };
+    // Nos analíticos (14/10/2026): os rateios sem regra no exercício e se as regras mudaram depois do último cálculo.
+    const regras = c.tipo === "ANALITICO" ? await regrasDeRateio() : null;
+    const rateios = regras ? { avisos: avisosDosRateios(regras, mesesDoAno(c.ano)), desatualizados: c.rateiosAssinatura !== assinaturaDasRegras(regras) } : null;
+    return { ...c, ...(await conteudo([id]))(id), ...(await familias())(c), podeMudarVisualizacao: mudaVisualizacao(c, usuario), rateios };
   },
 
   /**
@@ -358,6 +368,8 @@ export const cenariosService = {
   async criar(dados: { nome: string; ano: number; descricao: string | null; copiarDe: string | null; visualizacao?: VisualizacaoCenario; tipo?: TipoCenario }, usuario: Usuario) {
     const prisma = getPrismaClient();
     const tipo = dados.tipo ?? "SINTETICO";
+    // Os analíticos usam as regras de rateio: sem regra vigente em algum mês do exercício, não se abrem (14/10/2026).
+    if (tipo === "ANALITICO") exigirRateios(await regrasDeRateio(), dados.ano, `abrir um cenário analítico de ${dados.ano}`);
     const origem = dados.copiarDe ? await obterOuFalhar(dados.copiarDe, usuario) : null;
     if (origem && origem.tipo !== tipo) throw new CenarioError(400, `${TIPOS[tipo]} só copiam de ${TIPOS[tipo]}: ${origem.nome} é de outro tipo.`);
     const cenario = await prisma.$transaction(
@@ -1047,6 +1059,7 @@ export const cenariosService = {
   async congelarVersao(id: string, usuario: Usuario) {
     const c = await obterOuFalhar(id, usuario);
     if (c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} já está congelada.`);
+    if (c.tipo === "ANALITICO") exigirRateios(await regrasDeRateio(), c.ano, `congelar a ${rotuloVersao(c.versao)} de ${c.nome}`);
     const depois = await getPrismaClient().cenario.update({ where: { id }, data: { versaoSalvaEm: new Date(), versaoSalvaPor: usuario.nome } });
     await auditar({
       usuarioId: usuario.id,
@@ -1069,6 +1082,7 @@ export const cenariosService = {
   async reabrirVersao(id: string, usuario: Usuario) {
     const c = await obterOuFalhar(id, usuario);
     if (!c.versaoSalvaEm) throw new CenarioError(409, `A ${rotuloVersao(c.versao)} do cenário ${c.nome} não está congelada.`);
+    if (c.tipo === "ANALITICO") exigirRateios(await regrasDeRateio(), c.ano, `reabrir a ${rotuloVersao(c.versao)} de ${c.nome}`);
     await getPrismaClient().cenario.update({ where: { id }, data: { versaoSalvaEm: null, versaoSalvaPor: null } });
     await auditar({
       usuarioId: usuario.id,
@@ -1092,6 +1106,7 @@ export const cenariosService = {
     const prisma = getPrismaClient();
     const origem = await obterOuFalhar(id, usuario);
     if (!origem.versaoSalvaEm) throw new CenarioError(409, `Congele a ${rotuloVersao(origem.versao)} (Congelar Versão) antes de criar uma revisão.`);
+    if (origem.tipo === "ANALITICO") exigirRateios(await regrasDeRateio(), origem.ano, `criar uma revisão de ${origem.nome}`);
     const familia = origem.familiaId ?? origem.id;
     const ultima = await prisma.cenario.aggregate({ where: { OR: [{ id: familia }, { familiaId: familia }] }, _max: { versao: true } });
     const versao = (ultima._max.versao ?? origem.versao) + 1;
@@ -1643,8 +1658,17 @@ export const cenariosService = {
       prisma.cenarioCentro.findMany({ where: { cenarioId: id }, include: { linhaDRE: { select: { codigo: true } } } }),
     ]);
     const { bases } = calcularPremissas(est, linhas, c.ano, gravadas);
-    const percentuais = percentuaisDasBases(bases);
+    // Os percentuais pelas regras de rateio do mês (14/10/2026; antes, só as bases das premissas).
+    const percentuais = percentuaisPelasRegras(await regrasDeRateio(), c.ano, bases);
     const nomes = new Map(RATEIOS.map((r) => [r.chave, r.rotulo.split(":")[0]]));
+    const NOME_DESTINO: Record<string, string> = { MATRIZ: "Matriz", FILIAL: "Filial", MONTAGEM: "Montagem", COMPLEMENTAR: "Complementar" };
+    // Os destinos que só os percentuais fixos usam (a Produção em Serviços…) entram nas linhas, sem base.
+    const extras = [...new Set(percentuais.flatMap((p) => [...p].filter(([, v]) => v).map(([k]) => k)))]
+      .filter((k) => !RATEIOS.some((r) => `${r.chave}|${r.destino}` === k))
+      .map((k) => {
+        const [chave, destino] = k.split("|");
+        return { chave, destino, rotulo: `${nomes.get(chave) ?? chave}: ${NOME_DESTINO[destino] ?? destino}`, base: "fixo" };
+      });
     return {
       ano: c.ano,
       meses: Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, rotulo: rotuloMes(c.ano, k + 1) })),
@@ -1654,12 +1678,27 @@ export const cenariosService = {
         valores.map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
         percentuais,
       ).map((x) => ({ ...x, nome: nomes.get(x.chave) ?? x.chave, rotuloMes: rotuloMes(c.ano, x.mes) })),
-      rateios: RATEIOS.map((r) => ({
+      rateios: [...RATEIOS, ...extras].map((r) => ({
         ...r,
         bases: bases.get(`${r.chave}|${r.destino}`) ?? Array<number>(12).fill(0),
         percentuais: percentuais.map((p) => p.get(`${r.chave}|${r.destino}`) ?? 0),
       })),
     };
+  },
+
+  /**
+   * Recalcula a DRE do cenário analítico (14/10/2026: o botão Recalcular dos Resultados), com as regras de rateio de
+   * hoje: depois de editar uma regra com o cenário em aberto. Só nos cenários em aberto (sem marcação nem versão
+   * congelada).
+   */
+  async recalcular(id: string, usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    await getPrismaClient().$transaction(async (tx) => calcularAnalitico(tx, id), { timeout: 120_000 });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, recalculo: "regras de rateio" } });
+    await getPrismaClient().cenarioReajuste.create({ data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "RECALCULO", descricao: "Recalculado com as regras de rateio de hoje" } });
+    return this.obter(id, usuario);
   },
 
   /**

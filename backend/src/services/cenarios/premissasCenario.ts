@@ -3,9 +3,10 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
-import { alocarCentros, gruposDoCadastro, percentuaisDasBases } from "./centrosCenario.js";
+import { alocarCentros, gruposDoCadastro } from "./centrosCenario.js";
 import { calcularInvestimentosEExtra } from "./investimentosCenario.js";
 import { recalcular, UNIDADES } from "./edicaoCenario.js";
+import { assinaturaDasRegras, percentuaisPelasRegras, regrasDeRateio } from "../volumes/vigenciaDosRateios.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -331,13 +332,14 @@ export function calcularPremissas(est: LinhaEstrutura[], linhas: LinhaDoCadastro
  */
 export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   const cenario = await tx.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true } });
-  const [est, linhas, gravadas, grupos, valoresCentros, investimentos] = await Promise.all([
+  const [est, linhas, gravadas, grupos, valoresCentros, investimentos, regras] = await Promise.all([
     estrutura(),
     linhasDoCadastro(),
     tx.cenarioPremissa.findMany({ where: { cenarioId } }),
     gruposDoCadastro(),
     tx.cenarioCentro.findMany({ where: { cenarioId }, include: { linhaDRE: { select: { codigo: true } } } }),
     tx.cenarioInvestimento.findMany({ where: { cenarioId } }),
+    regrasDeRateio(tx),
   ]);
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
   const { somas, bases, juntar } = calcularPremissas(est, linhas, cenario.ano, gravadas);
@@ -345,8 +347,11 @@ export async function calcularAnalitico(tx: Tx, cenarioId: string) {
     est,
     grupos,
     valoresCentros.map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
-    percentuaisDasBases(bases),
+    // Os percentuais pelas regras de rateio de cada mês (14/10/2026): o fixo, ou as bases entre os destinos das por volume.
+    percentuaisPelasRegras(regras, cenario.ano, bases),
   );
+  // As regras deste cálculo: se mudarem depois, a tela Resultados pede o Recalcular.
+  await tx.cenario.update({ where: { id: cenarioId }, data: { rateiosAssinatura: assinaturaDasRegras(regras) } });
   for (const [k, lista] of alocados) juntar(somas, k, lista);
   // A depreciação base, a dos investimentos e o extra-operacional (etapa 4).
   const outros = calcularInvestimentosEExtra(

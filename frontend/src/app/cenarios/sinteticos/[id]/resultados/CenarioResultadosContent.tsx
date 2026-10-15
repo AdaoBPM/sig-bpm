@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 import { Abas } from "@/components/shared/Abas";
 import { ExportarRelatorio, type OpcaoExportar } from "@/app/relatorios/components/ExportarRelatorio";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
@@ -17,7 +20,8 @@ import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { EdicaoDRE } from "../../../components/EdicaoDRE";
 import { AvisoRateiosSemBase } from "../../../components/CentrosDoCenario";
 import { BotoesDeVersao } from "../../../components/VersaoCenario";
-import { cenariosService } from "../../../services/cenariosService";
+import { cenariosService, type Cenario } from "../../../services/cenariosService";
+import { botaoPrimario } from "../../../components/CenarioDialog";
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 /** As visões da DRE do cenário: as de Resultados Empresariais, sem os centros de custo. */
@@ -90,6 +94,8 @@ export function CenarioResultadosContent() {
   // centros de custo (em Excel).
   const leTodas = VISOES.every((v) => hasPermission(t.perm("resultados", "ler", v.aba)));
   const leCentros = analitico && hasPermission(t.perm("premissas", "ler", "centros"));
+  // O Recalcular (14/10/2026): nos analíticos em aberto, refaz a DRE com as regras de rateio de hoje.
+  const podeRecalcular = analitico && !!cenario.data && !travado && hasPermission(t.perm("resultados", "editar"));
   const opcoesExportar: OpcaoExportar[] = [
     ...(daVisao ? [{ chave: "atual", excel: "Visão Atual", pdf: "Visão Atual", params: { escopo: "atual", visao } }] : []),
     ...(leTodas ? [{ chave: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)", params: { escopo: "unidades" } }] : []),
@@ -106,6 +112,7 @@ export function CenarioResultadosContent() {
         titulo="Resultados"
         acoes={
           <div className="flex flex-wrap items-center gap-2">
+            {podeRecalcular ? <BotaoRecalcular id={id} /> : null}
             {hasPermission(t.perm("resultados", "editar")) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : null}
             {opcoesExportar.length ? <ExportarRelatorio endereco={`/proxy/cenarios/${id}/exportar`} opcoes={opcoesExportar} padrao={`${cenario.data?.nome ?? "Cenário"} - Resultados`} /> : null}
           </div>
@@ -115,6 +122,14 @@ export function CenarioResultadosContent() {
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             {analitico ? <li>No cenário analítico, a DRE é calculada a partir das premissas e não se edita aqui: os valores mudam com as premissas.</li> : null}
             <li>Escolha a visão nas abas: Consolidado ou cada unidade (as que o seu perfil lê).</li>
+            {analitico ? (
+              <li>
+                Nos analíticos, os rateios dos centros de custo seguem as regras de rateio de cada mês (o percentual fixo, ou as bases das premissas
+                entre os destinos das regras por volume). Se uma regra mudar com o cenário em aberto, o aviso pede o “Recalcular”, que refaz a DRE com
+                as regras de hoje. Os avisos em vermelho listam os meses do exercício com rateios sem regra vigente: sem regra, o cenário não se
+                abre nem se fecha (Congelar e Reabrir Versão, Criar Revisão).
+              </li>
+            ) : null}
             <li>
               Use “Exportar” para baixar em Excel ou PDF, como em Resultados Empresariais: a visão atual ou todas as unidades (uma por aba ou por
               página).{analitico ? " Nos analíticos, também os centros de custo em Excel: todos numa planilha (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo)." : ""}
@@ -161,6 +176,7 @@ export function CenarioResultadosContent() {
       />
       <Abas rotulo="Visão dos resultados do cenário" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
       {cenario.data && travado && hasPermission(t.perm("resultados", "editar")) && !analitico ? <AvisoMarcado cenario={cenario.data} oQue="a DRE" /> : null}
+      {analitico && cenario.data ? <AvisosDosRateios cenario={cenario.data} podeRecalcular={podeRecalcular} /> : null}
       {/* No analítico, o aviso dos rateios sem base nas premissas (13/10/2026): esse valor não entra na DRE. */}
       {analitico ? <AvisoRateiosSemBase id={id} /> : null}
       {!daVisao ? (
@@ -170,6 +186,43 @@ export function CenarioResultadosContent() {
       ) : (
         <Visao id={id} visao={Number(visao)} nome={nome} analitico={analitico} />
       )}
+    </div>
+  );
+}
+
+/** O botão Recalcular (14/10/2026): refaz a DRE do analítico em aberto com as regras de rateio de hoje. */
+function BotaoRecalcular({ id }: { id: string }) {
+  const queryClient = useQueryClient();
+  const recalcular = useMutation({
+    mutationFn: () => cenariosService.recalcular(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cenarios"] });
+      toast.success("Cenário recalculado com as regras de rateio de hoje.");
+    },
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível recalcular o cenário.")),
+  });
+  return (
+    <Button type="button" className={botaoPrimario} disabled={recalcular.isPending} onClick={() => recalcular.mutate()}>
+      <RefreshCw className={`size-4 ${recalcular.isPending ? "animate-spin" : ""}`} />
+      {recalcular.isPending ? "Recalculando…" : "Recalcular"}
+    </Button>
+  );
+}
+
+/** Os avisos dos rateios de um analítico (14/10/2026): as regras mudaram depois do cálculo e os meses sem regra. */
+function AvisosDosRateios({ cenario, podeRecalcular }: { cenario: Cenario; podeRecalcular: boolean }) {
+  const avisos = cenario.rateios?.avisos ?? [];
+  const desatualizado = !!cenario.rateios?.desatualizados && podeRecalcular;
+  if (!avisos.length && !desatualizado) return null;
+  return (
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
+      <p className="font-medium text-gray-900">Rateios do Cenário</p>
+      <ul className="mt-1 list-disc space-y-1 pl-5">
+        {desatualizado ? <li>As regras de rateio mudaram depois do último cálculo deste cenário: clique em “Recalcular”.</li> : null}
+        {avisos.map((a) => (
+          <li key={a}>{a}</li>
+        ))}
+      </ul>
     </div>
   );
 }

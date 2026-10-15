@@ -16,11 +16,15 @@ const NOME_DO_DESTINO: Record<string, string> = { MATRIZ: "Matriz", FILIAL: "Fil
 const nomeDaChave = (c: string) => NOME_DA_CHAVE[c] ?? c;
 const dia = (d: Date) => d.toISOString().slice(0, 10);
 
-type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean };
+/** Um conjunto: a chave, a vigência, o percentual de cada destino e o rótulo (a base do rótulo das regras, 14/10/2026). */
+type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean; rotulo: string };
+/** O rótulo de cada regra do conjunto: "Produção: Matriz (Fixo)", com a base escolhida no lugar do nome da chave. */
+const rotuloDaRegra = (base: string, destino: string) => `${base}: ${NOME_DO_DESTINO[destino] ?? destino} (Fixo)`;
+const baseDoRotulo = (rotulo: string) => rotulo.replace(/: [^:]+ (Fixo)$/, "");
 
 async function regras() {
   return getPrismaClient().regraRateio.findMany({
-    select: { id: true, chave: true, destino: true, vigenciaInicio: true, vigenciaFim: true, percentualFixo: true, _count: { select: { volumesOperacionais: true } } },
+    select: { id: true, chave: true, destino: true, rotulo: true, vigenciaInicio: true, vigenciaFim: true, percentualFixo: true, _count: { select: { volumesOperacionais: true } } },
     orderBy: [{ chave: "asc" }, { vigenciaInicio: "asc" }],
   });
 }
@@ -40,7 +44,7 @@ export const percentuaisFixosService = {
     const conjuntos = new Map<string, Conjunto>();
     for (const r of todas.filter((x) => x.percentualFixo !== null)) {
       const k = `${r.chave}|${dia(r.vigenciaInicio)}`;
-      const c = conjuntos.get(k) ?? { chave: r.chave, inicio: dia(r.vigenciaInicio), fim: r.vigenciaFim ? dia(r.vigenciaFim) : null, percentuais: {}, usado: false };
+      const c = conjuntos.get(k) ?? { chave: r.chave, inicio: dia(r.vigenciaInicio), fim: r.vigenciaFim ? dia(r.vigenciaFim) : null, percentuais: {}, usado: false, rotulo: baseDoRotulo(r.rotulo) };
       c.percentuais[r.destino] = Number(r.percentualFixo) * 100;
       c.usado ||= r._count.volumesOperacionais > 0;
       conjuntos.set(k, c);
@@ -60,7 +64,7 @@ export const percentuaisFixosService = {
    * mesma vigência. Recusa a vigência que se sobrepõe a outras regras da chave (as por volume têm de ser encerradas antes).
    */
   async gravar(
-    dados: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number> },
+    dados: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number>; rotulo?: string | null },
     usuarioId: string,
   ) {
     const prisma = getPrismaClient();
@@ -87,12 +91,14 @@ export const percentuaisFixosService = {
       if (conflito) throw new RegraRateioError(409, conflito);
     }
 
+    // O rótulo do conjunto (14/10/2026): a base dos rótulos das regras; sem ele, o nome da chave.
+    const base = dados.rotulo?.trim() || nomeDaChave(dados.chave);
     const unidades = new Map((await prisma.unidadeNegocio.findMany({ select: { id: true, codigo: true } })).map((u) => [u.codigo, u.id]));
     const ordem = await prisma.regraRateio.count();
     await prisma.$transaction(async (tx) => {
       for (const [k, p] of pcts.entries()) {
         const anterior = anteriores.find((r) => r.destino === p.regra.destino);
-        const dadosDaRegra = { vigenciaInicio: inicio, vigenciaFim: fim, percentualFixo: new Prisma.Decimal((p.valor / 100).toFixed(6)) };
+        const dadosDaRegra = { vigenciaInicio: inicio, vigenciaFim: fim, percentualFixo: new Prisma.Decimal((p.valor / 100).toFixed(6)), rotulo: rotuloDaRegra(base, p.regra.destino) };
         if (anterior) await tx.regraRateio.update({ where: { id: anterior.id }, data: dadosDaRegra });
         else
           await tx.regraRateio.create({
@@ -101,7 +107,6 @@ export const percentuaisFixosService = {
               chave: p.regra.chave,
               destino: p.regra.destino,
               unidadeDestinoId: unidades.get(p.regra.unidade)!,
-              rotulo: `${nomeDaChave(p.regra.chave)}: ${NOME_DO_DESTINO[p.regra.destino]} (Fixo)`,
               baseFisica: p.regra.baseFisica,
               origemDoVolume: p.regra.origem,
               ordem: ordem + k + 1,

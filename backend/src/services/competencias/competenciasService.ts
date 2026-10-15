@@ -3,6 +3,8 @@ import type { AbrirCompetenciaInput } from "../../schemas/competencias/abrirComp
 import { auditar } from "../auditoriaService.js";
 import { apuracaoService } from "../apuracao/apuracaoService.js";
 import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
+import { bloqueioPorRateios, chavesSemRegra, regrasDeRateio } from "../volumes/vigenciaDosRateios.js";
+import { NOME_DA_CHAVE } from "../volumes/rateiosService.js";
 
 /** Erro de regra de negócio — vira 409 no controller, não 500. */
 export class RegraCompetenciaError extends Error {}
@@ -63,10 +65,13 @@ export const competenciasService = {
       const em = ultimaRecebida.get(c.id);
       return atrasadas.has(c.id) || (!!em && (!c.apuradaEm || em > c.apuradaEm));
     };
+    // Os rateios sem regra vigente nas competências em andamento (14/10/2026): o aviso da tela.
+    const regras = await regrasDeRateio();
     return competencias.map((c) => ({
       ...c,
       nomeMes: MESES[c.mes - 1],
       dadosNovos: dadosNovos(c),
+      rateiosSemVigencia: c.status === "FECHADA" ? [] : chavesSemRegra(regras, c.ano, c.mes).map((k) => NOME_DA_CHAVE[k] ?? k),
       ...(etapas ? { andamento: etapas.get(c.id) } : {}),
     }));
   },
@@ -91,6 +96,10 @@ export const competenciasService = {
         `A competência ${String(input.mes).padStart(2, "0")}/${input.ano} já existe.`,
       );
     }
+
+    // Os rateios sem regra vigente no mês bloqueiam a abertura (14/10/2026).
+    const bloqueio = bloqueioPorRateios(await regrasDeRateio(), [{ ano: input.ano, mes: input.mes }], `abrir a competência ${String(input.mes).padStart(2, "0")}/${input.ano}`);
+    if (bloqueio) throw new RegraCompetenciaError(bloqueio);
 
     const criada = await prisma.competencia.create({
       data: { ano: input.ano, mes: input.mes, abertaPor: usuarioId },

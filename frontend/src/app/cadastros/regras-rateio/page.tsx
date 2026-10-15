@@ -12,7 +12,11 @@ export default function RegrasRateioPage() {
           comoUsar={
             <ul>
               <li>Use os filtros nos rótulos das colunas.</li>
-              <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
+              <li>
+                Use “Novo Rateio” para incluir: o Rótulo e, ao lado, o Tipo. Paramétrico: a Chave, o Destino e a vigência (uma regra por volume). Fixo: a
+                Chave, a vigência e o percentual de cada um dos quatro destinos, somando 100% (o Rótulo, opcional, é a base do rótulo de cada destino:
+                “Produção: Matriz (Fixo)”). Rateios com a mesma chave não podem ter vigências sobrepostas. O lápis edita, e a exclusão fica dentro da edição.
+              </li>
               <li>A chave não muda depois de criada a regra: para trocá-la, exclua e crie outra.</li>
               <li>O Destino é um dos totais destacados nas Listas Operacionais, que dá o volume da regra; a lista mostra só os da Chave escolhida (Metalurgia: Matriz, Filial, Montagem e Complementar, na chave METALURGIA…).</li>
               <li>A unidade que recebe e a base física saem do Destino: Projetos Liberados: Matriz vai para a Matriz; Metalurgia: Complementar, para a Complementar (unidade Serviços); as pistas, para a Filial.</li>
@@ -24,14 +28,14 @@ export default function RegrasRateioPage() {
                 chave e do mesmo destino valendo no mesmo mês, e a mistura de regras por volume e de percentual fixo na mesma chave e período.
               </li>
               <li>
-                “Percentuais Fixos” abre os percentuais digitados de uma chave: escolha a Chave e o Conjunto (Novo, ou um já cadastrado para editar),
-                a vigência e o percentual de cada destino, somando 100%, e clique em “Gravar”. Os destinos são sempre os quatro — Matriz, Filial,
+                Nos rateios fixos, os destinos são sempre os quatro — Matriz, Filial,
                 Montagem e Complementar —, em qualquer chave: um rateio pode passar a valer em outra unidade (a Produção em Serviços, por exemplo); o
-                destino que não deve receber fica com 0%. As
-                regras fixas aparecem na lista com o % Fixo; o lápis delas abre os Percentuais Fixos já na chave e no conjunto da regra, onde se editam e
-                se excluem (o conjunto já usado em apurações não se exclui: encerre a vigência).
+                destino que não deve receber fica com 0%. As regras fixas aparecem na lista com o % Fixo; o lápis delas abre os Percentuais Fixos já na
+                chave e no conjunto da regra, onde se editam o Rótulo, a vigência e os percentuais, e se excluem (o conjunto já usado em apurações não se
+                exclui: encerre a vigência).
               </li>
-              <li>O quadro vermelho acima da tabela avisa as chaves com meses sem regra (até dezembro do ano que vem): nesses meses, os lançamentos de rateio da chave não vão para nenhuma unidade.</li>
+              <li>O quadro vermelho acima da tabela avisa as chaves com meses sem regra (até dezembro do ano que vem): nesses meses, os lançamentos de rateio da chave não vão para nenhuma unidade. Sem regra no mês, a competência não se abre nem se fecha (Fechamento Mensal), e um cenário analítico do exercício não se abre nem se fecha.</li>
+              <li>Com um cenário analítico em aberto, editar uma regra pede o “Recalcular” na tela Resultados do cenário: os rateios dele seguem as regras de cada mês.</li>
             </ul>
           }
           descricao="As chaves de rateio (aba Rateios do BASE REALIZADO (OPERAÇÃO)): por volume — o volume do destino sobre o da chave, nas listas do mês — ou, desde 14/10/2026, por percentuais fixos digitados, que somam 100% na chave. A chave e o destino são fixos depois de criada a regra; as vigências dizem de que mês a que mês cada regra vale. O volume continua apurado também nas regras fixas (os indicadores de volume leem dele)."

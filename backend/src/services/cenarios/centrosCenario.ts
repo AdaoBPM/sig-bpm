@@ -226,6 +226,9 @@ export function alocarCentros(est: LinhaEstrutura[], grupos: GrupoDoCenario[], v
       if (g.balde === "ACOMPANHAMENTO") {
         somar(3, l.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "MONTAGEM"));
         somar(3, equivalente(l, "CSC")?.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "COMPLEMENTAR"));
+        // O acompanhamento com percentual fixo na Matriz ou na Filial (14/10/2026): na conta de produção equivalente.
+        somar(1, equivalente(l, "CPP")?.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "MATRIZ"));
+        somar(2, equivalente(l, "CPP")?.codigo, x.mes, x.valor * pct("ACOMPANHAMENTO", "FILIAL"));
       } else somar(3, l.codigo, x.mes, x.valor);
     } else if (sigla === "CPP") {
       switch (g.balde) {
@@ -239,6 +242,9 @@ export function alocarCentros(est: LinhaEstrutura[], grupos: GrupoDoCenario[], v
         case "PROJETO":
           somar(1, l.codigo, x.mes, x.valor * pct(g.balde, "MATRIZ"));
           somar(2, l.codigo, x.mes, x.valor * pct(g.balde, "FILIAL"));
+          // Com percentual fixo em Serviços (14/10/2026): na conta equivalente da montagem e da complementar.
+          somar(3, equivalente(l, "CSM")?.codigo, x.mes, x.valor * pct(g.balde, "MONTAGEM"));
+          somar(3, equivalente(l, "CSC")?.codigo, x.mes, x.valor * pct(g.balde, "COMPLEMENTAR"));
           break;
         case "METALURGIA":
         case "ARMADURA":

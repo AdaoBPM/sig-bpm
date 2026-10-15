@@ -241,7 +241,8 @@ export function EditarRegistroDialog({ entidade, id, onFechar }: Props) {
       <DialogContent avisoAoSair className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{def.data ? `${id ? "Editar" : "Novo Registro:"} ${def.data.titulo}` : "Carregando…"}</DialogTitle>
-          <DialogDescription>A alteração fica no log de auditoria, com o antes e o depois.</DialogDescription>
+          {/* O texto do cadastro (14/10/2026: as regras de rateio) ou o de sempre. */}
+          <DialogDescription>{def.data?.explicacao ?? "A alteração fica no log de auditoria, com o antes e o depois."}</DialogDescription>
         </DialogHeader>
         {def.isError || reg.isError ? <p className="text-sm text-red-700">{mensagemDeErro(def.error ?? reg.error, "Erro ao carregar o cadastro.")}</p> : null}
         {pronto ? <Formulario def={def.data!} registro={id ? reg.data! : null} entidade={entidade} onFechar={onFechar} /> : <div className="h-40 animate-pulse rounded-sm bg-gray-100" />}

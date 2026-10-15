@@ -52,7 +52,7 @@ export const edicaoCadastrosService = {
     const d = definicao(entidade);
     const db = getPrismaClient();
     const campos = await Promise.all(d.campos.map(async ({ opcoes, ...c }) => ({ ...c, opcoes: opcoes ? await opcoes(db) : undefined })));
-    return { entidade: d.entidade, titulo: d.titulo, criar: d.criar, excluir: d.excluir, reclassifica: !!d.reclassifica, campos };
+    return { entidade: d.entidade, titulo: d.titulo, criar: d.criar, excluir: d.excluir, reclassifica: !!d.reclassifica, explicacao: d.explicacao ?? null, campos };
   },
 
   async listar(entidade: string, busca?: string) {
