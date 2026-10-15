@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { CampoBusca } from "@/components/shared/Filtros";
+import { ExportarRelatorio } from "@/app/relatorios/components/ExportarRelatorio";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
@@ -62,6 +63,20 @@ export function CentrosDoCenario({ id, editavel }: { id: string; editavel: boole
         </ul>
       </div>
       <div className="min-w-0 space-y-3">
+        {/* Os centros em Excel (14/10/2026): o grupo na tela, todos numa planilha ou um arquivo por centro. */}
+        {grupo ? (
+          <div className="flex justify-end">
+            <ExportarRelatorio
+              endereco={`/proxy/cenarios/${id}/centros/exportar`}
+              padrao="Centros de Custo"
+              opcoes={[
+                { chave: "atual", excel: "Centro de Custo Atual", pdf: null, params: { escopo: "atual", grupo } },
+                { chave: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: null, params: { escopo: "centros" } },
+                { chave: "arquivos", excel: "Todos os Centros de Custo (um arquivo por centro)", pdf: null, params: { escopo: "centros_arquivos" } },
+              ]}
+            />
+          </div>
+        ) : null}
         {contas.isError ? (
           <Erro erro={mensagemDeErro(contas.error, "Erro ao carregar o centro de custo.")} />
         ) : contas.isPending || !contas.data ? (

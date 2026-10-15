@@ -1,4 +1,8 @@
 import type { Request, Response } from "express";
+import { auditar } from "../../services/auditoriaService.js";
+import { exportacaoCenarioService, type EscopoCentrosDoCenario, type EscopoResultadosDoCenario } from "../../services/cenarios/exportacaoCenario.js";
+import { temPermissao } from "../../middlewares/verificarPermissao.js";
+import { ABA_DA_VISAO } from "../../services/acesso/telas.js";
 import { z } from "zod";
 
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
@@ -20,6 +24,27 @@ const tipoSchema = z.enum(["SINTETICO", "ANALITICO"]);
 
 /** Quem pede; o Administrador (Editar no Controle de Usuários) vê também os cenários particulares. */
 const usuario = (request: Request) => ({ id: request.user!.sub, nome: request.user!.nome, admin: request.user!.perfil.codigo === CODIGO_ADMINISTRADOR });
+
+/** Envia um arquivo exportado (14/10/2026), com a auditoria; os erros do cenário viram a resposta. */
+async function enviarArquivo(request: Request, response: Response, gerar: () => Promise<{ nomeArquivo: string; tipo: string; conteudo: Uint8Array; visoes: string[] }>) {
+  try {
+    const r = await gerar();
+    await auditar({
+      usuarioId: request.user!.sub,
+      usuarioNome: request.user!.nome,
+      acao: "EXPORTACAO",
+      entidade: "cenario",
+      entidadeId: String(request.params.id),
+      metadados: { formato: request.query.formato ?? "xlsx", escopo: request.query.escopo ?? "atual", visoes: r.visoes, arquivo: r.nomeArquivo },
+    });
+    response.setHeader("Content-Type", r.tipo);
+    response.setHeader("Content-Disposition", `attachment; filename="${r.nomeArquivo.normalize("NFD").replace(/[^ -~]/g, "")}"; filename*=UTF-8''${encodeURIComponent(r.nomeArquivo)}`);
+    return response.send(Buffer.from(r.conteudo));
+  } catch (error) {
+    if (error instanceof CenarioError) return response.status(error.status).json({ error: error.message });
+    throw error;
+  }
+}
 
 async function responder(response: Response, fn: () => Promise<unknown>, status = 200) {
   try {
@@ -52,6 +77,47 @@ export const cenariosController = {
   centros(request: Request, response: Response) {
     const c = id(request, response);
     return c ? responder(response, () => cenariosService.centros(c, usuario(request))) : undefined;
+  },
+
+  /**
+   * A exportação da DRE do cenário (14/10/2026), como a de Resultados Realizados: ?formato=xlsx|pdf e ?escopo=atual (a
+   * visão de ?visao=0..5) ou unidades (as seis: pede a leitura de todas as abas da tela Resultados).
+   */
+  async exportar(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const formato = z.enum(["xlsx", "pdf"]).safeParse(request.query.formato);
+    if (!formato.success) return response.status(400).json({ error: "Formato inválido: use xlsx ou pdf." });
+    const base = String(response.locals.areaDoCenario ?? "cenarios");
+    const le = (v: number) => temPermissao(request, `${base}_resultados.${ABA_DA_VISAO[v]}:ler`);
+    let escopo: EscopoResultadosDoCenario;
+    if (request.query.escopo === "unidades") {
+      if (![0, 1, 2, 3, 4, 5].every(le)) return response.status(403).json({ error: "Exportar todas as unidades pede a leitura de todas as abas da tela Resultados." });
+      escopo = { tipo: "unidades" };
+    } else {
+      const v = z.coerce.number().int().min(0).max(5).safeParse(request.query.visao ?? 0);
+      if (!v.success) return response.status(400).json({ error: "Visão inválida." });
+      if (!le(v.data)) return response.status(403).json({ error: "Sem permissão para esta aba." });
+      escopo = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
+    }
+    return enviarArquivo(request, response, () => exportacaoCenarioService.resultados(c, escopo, formato.data, usuario(request)));
+  },
+
+  /** Os centros de custo do cenário analítico em Excel (14/10/2026): ?escopo=atual (o ?grupo=), centros ou centros_arquivos. */
+  async exportarCentros(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    if (request.query.formato !== undefined && request.query.formato !== "xlsx") return response.status(400).json({ error: "Os centros de custo do cenário só saem em Excel." });
+    const escopo = String(request.query.escopo ?? "atual");
+    let e: EscopoCentrosDoCenario;
+    if (escopo === "centros") e = { tipo: "centros" };
+    else if (escopo === "centros_arquivos") e = { tipo: "centrosArquivos" };
+    else {
+      const grupo = z.string().trim().min(1).max(200).safeParse(request.query.grupo);
+      if (!grupo.success) return response.status(400).json({ error: "Grupo de centros de custo inválido." });
+      e = { tipo: "centro", grupo: grupo.data };
+    }
+    return enviarArquivo(request, response, () => exportacaoCenarioService.centros(c, e, usuario(request)));
   },
 
   /** As contas de um grupo de centros (?grupo=, o nome da Controladoria). */

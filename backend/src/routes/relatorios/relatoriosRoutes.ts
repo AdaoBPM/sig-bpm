@@ -19,7 +19,7 @@ relatoriosRoutes.get("/resultados/exportar", autenticacao, verificarAba("relator
   // As obras e os movimentos sem centro de custo (14/10/2026): a aba deles, de um ou de todos.
   if (escopo === "obras" || r.query.visao === "obras") return ["obras"];
   if (escopo === "sem_centros" || r.query.visao === "sem_centros") return ["sem_centros"];
-  if (escopo === "centros" || r.query.grupo !== undefined) return ["centros"];
+  if (escopo === "centros" || escopo === "centros_arquivos" || r.query.grupo !== undefined) return ["centros"];
   const a = abaDaVisao(r.query.visao ?? 0);
   return a ? [a] : null;
 }), asyncHandler(c.exportarResultados));

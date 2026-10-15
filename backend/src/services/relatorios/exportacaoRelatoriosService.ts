@@ -6,6 +6,7 @@ import { indicadoresService } from "./indicadoresService.js";
 import { RelatorioError, resultadosService } from "./resultadosService.js";
 import { nomeDoGrupoSemCentro, type GrupoSemCentro } from "../dre/semCentroService.js";
 import { plural } from "../../utils/plural.js";
+import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 
 /**
  * Exportação dos relatórios em Excel e PDF, como a tela: os Resultados (uma
@@ -21,6 +22,8 @@ export type EscopoResultados =
   | { tipo: "centro"; grupo: string }
   | { tipo: "unidades" }
   | { tipo: "centros" }
+  /** Todos os centros de custo, um arquivo Excel por centro, num ZIP (14/10/2026). */
+  | { tipo: "centrosArquivos" }
   // As obras e os movimentos sem centro de custo (14/10/2026): um (o da tela) ou todos.
   | { tipo: "obra"; codigo: string }
   | { tipo: "obras" }
@@ -30,7 +33,8 @@ export type Formato = "xlsx" | "pdf";
 
 // O que as visões e os centros de custo têm em comum (o orçado das visões não vai para a exportação).
 type Resultados = Pick<Awaited<ReturnType<typeof resultadosService.centros>>, "ano" | "ate" | "meses" | "linhas">;
-type Bloco = { nome: string; titulo: string; dados: Resultados };
+/** Uma aba (Excel) ou um conjunto de páginas (PDF); nos centros de custo, o departamento (para o nome do arquivo). */
+export type Bloco = { nome: string; titulo: string; dados: Resultados; departamento?: string };
 
 const VISOES: Array<{ visao: 0 | 1 | 2 | 3 | 4 | 5; nome: string }> = [
   { visao: 0, nome: "Consolidado" },
@@ -60,7 +64,10 @@ async function identificar(ano: number, ate: number, usuarioNome: string) {
     geracao: `Gerado em ${dataHora(new Date())} por ${usuarioNome} · SIG BPM`,
   };
 }
-type Identificacao = Awaited<ReturnType<typeof identificar>>;
+export type Identificacao = Awaited<ReturnType<typeof identificar>>;
+
+/** A identificação de um arquivo de fora dos Resultados Realizados (os cenários, 14/10/2026): o período e quem gerou. */
+export const identificacaoLivre = (periodo: string, usuarioNome: string): Identificacao => ({ periodo, avisos: [], geracao: `Gerado em ${dataHora(new Date())} por ${usuarioNome} · SIG BPM` });
 
 // A exportação de Resultados é a tela de Resultados Realizados: só as competências fechadas (11/10/2026).
 async function blocos(ano: number, ate: number | undefined, escopo: EscopoResultados, acesso: Acesso): Promise<Bloco[]> {
@@ -88,9 +95,12 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
     return r;
   }
   if (escopo.tipo === "unidades") return Promise.all(VISOES.map(async (v) => ({ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) })));
-  const grupos = escopo.tipo === "centro" ? [escopo.grupo] : (await resultadosService.listarCentros(ano, ate, acesso, true)).grupos.map((g) => g.grupo);
+  // Os centros, com o departamento de cada um (o do cadastro; com mais de um, todos) para o nome do arquivo.
+  const lista = (await resultadosService.listarCentros(ano, ate, acesso, true)).grupos;
+  const departamento = (g: string) => (lista.find((x) => x.grupo === g)?.departamentos ?? []).map(nomeDoDepartamento).join(" e ") || nomeDoDepartamento(null);
+  const grupos = escopo.tipo === "centro" ? [escopo.grupo] : lista.map((g) => g.grupo);
   const r: Bloco[] = [];
-  for (const g of grupos) r.push({ nome: g, titulo: `Centro de Custo ${g}`, dados: await resultadosService.centros(ano, g, ate, acesso, true) });
+  for (const g of grupos) r.push({ nome: g, titulo: `Centro de Custo ${g}`, dados: await resultadosService.centros(ano, g, ate, acesso, true), departamento: departamento(g) });
   return r;
 }
 
@@ -329,10 +339,29 @@ function rodapes(doc: DocumentoPDF, id: Identificacao) {
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const limpar = (nome: string) => nome.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ");
 
+/** O arquivo (Excel ou PDF) com os blocos: uma aba ou um conjunto de páginas por bloco. Também para os cenários. */
+export function arquivoDeResultados(bs: Bloco[], id: Identificacao, formato: Formato, titulo: string, nomeArquivo: string) {
+  if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx(bs.map((b) => abaResultados(b, id)), titulo), visoes: bs.map((b) => b.nome) };
+  const doc = new DocumentoPDF(A4_PAISAGEM);
+  for (const b of bs) paginasResultados(doc, b, id);
+  rodapes(doc, id);
+  return { nomeArquivo, tipo: "application/pdf", conteudo: doc.gerar(titulo), visoes: bs.map((b) => b.nome) };
+}
+
+/**
+ * Um arquivo Excel por centro de custo, num ZIP (14/10/2026): cada um com o departamento e o centro no nome
+ * ("Custos de Produção (CP) - ESTRUTURA - Resultados 2026 até 08.xlsx").
+ */
+export function zipDosCentros(bs: Bloco[], id: Identificacao, sufixo: string, nomeArquivo: string) {
+  const conteudo = zipDeArquivos(bs.map((b) => ({ nome: `${b.departamento ?? nomeDoDepartamento(null)} - ${b.nome} - ${sufixo}.xlsx`, conteudo: gerarXlsx([abaResultados(b, id)], `${sufixo} - ${b.nome}`) })));
+  return { nomeArquivo: limparNome(nomeArquivo), tipo: TIPO_ZIP, conteudo, visoes: bs.map((b) => b.nome) };
+}
+
 export const exportacaoRelatoriosService = {
   async resultados(ano: number, ate: number | undefined, escopo: EscopoResultados, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
+    if (escopo.tipo === "centrosArquivos" && formato !== "xlsx") throw new RelatorioError(400, "Um arquivo por centro de custo só sai em Excel.");
     // Sem `ate`, até o último mês apurado (como na tela).
-    const bs = await blocos(ano, ate, escopo, acesso);
+    const bs = await blocos(ano, ate, escopo.tipo === "centrosArquivos" ? { tipo: "centros" } : escopo, acesso);
     if (bs.length === 0) throw new RelatorioError(404, escopo.tipo === "obras" ? "Nenhuma obra com lançamento para exportar." : escopo.tipo === "semCentros" ? "Nenhum movimento sem centro de custo para exportar." : "Nenhum centro de custo com valor para exportar.");
     const ultimo = bs[0].dados.ate;
     const id = await identificar(ano, ultimo, usuarioNome);
@@ -341,7 +370,11 @@ export const exportacaoRelatoriosService = {
         ? "todas as unidades"
         : escopo.tipo === "centros"
           ? "todos os centros de custo"
-          : escopo.tipo === "obras"
+          : escopo.tipo === "centrosArquivos"
+            ? "centros de custo (um arquivo por centro)"
+            : escopo.tipo === "centro"
+              ? `${bs[0].departamento} - ${bs[0].nome}`
+              : escopo.tipo === "obras"
             ? "todas as obras"
             : escopo.tipo === "semCentros"
               ? "sem centros de custo"
@@ -350,11 +383,8 @@ export const exportacaoRelatoriosService = {
                 : bs[0].nome;
     const titulo = `Resultados ${ano} - ${nomeVisao}`;
     const nomeArquivo = limpar(`Resultados ${ano} até ${String(ultimo).padStart(2, "0")} - ${nomeVisao}.${formato}`);
-    if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx(bs.map((b) => abaResultados(b, id)), titulo), visoes: bs.map((b) => b.nome) };
-    const doc = new DocumentoPDF(A4_PAISAGEM);
-    for (const b of bs) paginasResultados(doc, b, id);
-    rodapes(doc, id);
-    return { nomeArquivo, tipo: "application/pdf", conteudo: doc.gerar(titulo), visoes: bs.map((b) => b.nome) };
+    if (escopo.tipo === "centrosArquivos") return zipDosCentros(bs, id, `Resultados ${ano} até ${String(ultimo).padStart(2, "0")}`, nomeArquivo.replace(/\.xlsx$/, ".zip"));
+    return arquivoDeResultados(bs, id, formato, titulo, nomeArquivo);
   },
 
   /**

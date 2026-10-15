@@ -68,7 +68,8 @@ export function PremissasContent() {
               das contas dele: mão de obra direta e indireta e gastos
               gerais diretos, indiretos e comerciais (as Matérias Primas, a Mão de Obra Terceirizada, os Gastos Gerais Variáveis e o Estoque ficam nas
               tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
-              baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum).
+              baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum). “Exportar”, acima do grupo, baixa em Excel o centro
+              de custo atual, todos os centros (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo).
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda

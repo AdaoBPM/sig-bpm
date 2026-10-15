@@ -153,6 +153,7 @@ export const dreController = {
     else if (g.data) visao = { tipo: "centros", grupo: g.data };
     else if (v === "consolidado" || v === "todas") visao = { tipo: v };
     else if (v === "centros") visao = { tipo: "todosCentros" };
+    else if (v === "centros_arquivos") visao = { tipo: "centrosArquivos" };
     else if (v === "obras") visao = { tipo: "todasObras" };
     else {
       const u = unidadeSchema.safeParse(v);

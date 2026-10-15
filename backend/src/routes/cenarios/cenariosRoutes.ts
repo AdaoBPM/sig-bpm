@@ -30,6 +30,9 @@ cenariosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 cenariosRoutes.patch("/:id", autenticacao, tela("configuracoes", "editar", "cenario"), express.json(), asyncHandler(c.atualizar));
 cenariosRoutes.delete("/:id", autenticacao, tela("configuracoes", "editar", "cenario"), asyncHandler(c.excluir));
 cenariosRoutes.put("/:id/marcacao", autenticacao, tela("configuracoes", "editar", "cenario"), express.json(), asyncHandler(c.marcar));
+// A exportação (14/10/2026): a DRE (a aba de cada visão, conferida no controller) e os centros dos analíticos.
+cenariosRoutes.get("/:id/exportar", autenticacao, tela("resultados", "ler"), asyncHandler(c.exportar));
+cenariosRoutes.get("/:id/centros/exportar", autenticacao, tela("premissas", "ler", "centros"), asyncHandler(c.exportarCentros));
 cenariosRoutes.get("/:id/resultados", autenticacao, tela("resultados", "ler", (r: Request) => abaDaVisao(r.query.visao ?? 0)), asyncHandler(c.resultados));
 // Os indicadores: a tela Indicadores (o controlador deixa só as abas permitidas) ou, no analítico, a aba Indicadores
 // Manuais das Premissas.

@@ -116,6 +116,7 @@ export const relatoriosController = {
     const o = obraSchema.safeParse(request.query.obra || undefined);
     if (escopo === "unidades") e = { tipo: "unidades" };
     else if (escopo === "centros") e = { tipo: "centros" };
+    else if (escopo === "centros_arquivos") e = { tipo: "centrosArquivos" };
     // As obras (o Coordenador só com a opção) e os movimentos sem centro de custo (14/10/2026).
     else if (escopo === "obras" || (v.success && v.data === "obras")) {
       if (!veObras(acesso)) return response.status(403).json({ error: "O seu usuário não inclui os resultados das obras." });

@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ESTILO, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 import { A4, caber, DocumentoPDF, type Cor } from "../../lib/pdfEscrita.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { apuracaoService } from "../apuracao/apuracaoService.js";
@@ -28,13 +29,15 @@ export type VisaoExportacao =
   | { tipo: "centros"; grupo: string }
   /** Todos os centros de custo (agrupamentos) que o usuário alcança, um por aba. */
   | { tipo: "todosCentros" }
+  /** Todos os centros de custo, um arquivo Excel por centro, num ZIP (14/10/2026). */
+  | { tipo: "centrosArquivos" }
   | { tipo: "obra"; obra: string }
   /** Todas as obras com lançamento no mês, uma por aba. */
   | { tipo: "todasObras" };
 export type Formato = "xlsx" | "pdf";
 
 type LinhaTela = { codigo: string; tipo: string; grupo: string; descricao: string; valor: string | null };
-type Bloco = { nome: string; titulo: string; complemento?: string; linhas: LinhaTela[] };
+type Bloco = { nome: string; titulo: string; complemento?: string; linhas: LinhaTela[]; departamento?: string };
 
 const ROTULO_STATUS: Record<string, string> = { ABERTA: "Aberta", EM_CONFERENCIA: "Em conferência", FECHADA: "Fechada" };
 // As linhas de volume (m³ e kg) dos grupos PRODUÇÃO e SERVIÇOS, pelo nome do grupo.
@@ -63,9 +66,13 @@ async function blocos(ano: number, mes: number, visao: VisaoExportacao, acesso: 
     return [await unidade(visao.unidade)];
   }
   if (visao.tipo === "todas") return [await consolidado(), ...(await Promise.all(unidades.map((u) => unidade(u.codigo))))];
+  // O departamento de cada centro (o do cadastro; com mais de um, todos), para o nome do arquivo.
+  const listaCentros = visao.tipo === "centros" || visao.tipo === "todosCentros" || visao.tipo === "centrosArquivos" ? (await dreService.listarCentros(ano, mes, acesso)).grupos : [];
+  const departamento = (g: string) => (listaCentros.find((x) => x.grupo === g)?.departamentos ?? []).map(nomeDoDepartamento).join(" e ") || nomeDoDepartamento(null);
   const centro = async (grupo: string): Promise<Bloco> => {
     const c = await dreService.consultarCentros(ano, mes, grupo, acesso);
     return {
+      departamento: departamento(grupo),
       nome: grupo,
       titulo: `Centro de custo: ${grupo}`,
       complemento: c.centros.map((x) => `${x.codigoRM ?? "sem código"} · ${x.nome}`).join("  |  "),
@@ -83,8 +90,7 @@ async function blocos(ano: number, mes: number, visao: VisaoExportacao, acesso: 
   }
   if (visao.tipo === "centros") return [await centro(visao.grupo)];
   // Todos os agrupamentos que o usuário alcança; os sem custo nem despesa na tela ficam de fora.
-  const { grupos } = await dreService.listarCentros(ano, mes, acesso);
-  const todos = await Promise.all(grupos.map((g) => centro(g.grupo)));
+  const todos = await Promise.all(listaCentros.map((g) => centro(g.grupo)));
   return todos.filter((b) => b.linhas.length > 0);
 }
 
@@ -196,7 +202,17 @@ function rodapes(doc: DocumentoPDF, id: Identificacao) {
 }
 
 const nomeDaVisao = (v: VisaoExportacao, b: Bloco[]) =>
-  v.tipo === "todas" ? "todas as unidades" : v.tipo === "todosCentros" ? "todos os centros de custo" : v.tipo === "todasObras" ? "todas as obras" : b[0].nome;
+  v.tipo === "todas"
+    ? "todas as unidades"
+    : v.tipo === "todosCentros"
+      ? "todos os centros de custo"
+      : v.tipo === "centrosArquivos"
+        ? "centros de custo (um arquivo por centro)"
+        : v.tipo === "centros"
+          ? `${b[0].departamento} - ${b[0].nome}`
+          : v.tipo === "todasObras"
+            ? "todas as obras"
+            : b[0].nome;
 
 export const exportacaoService = {
   async exportar(ano: number, mes: number, visao: VisaoExportacao, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
@@ -206,7 +222,14 @@ export const exportacaoService = {
       throw new RegraDREError(404, visao.tipo === "todasObras" ? "Nenhuma obra com lançamento para exportar." : "Nenhum centro de custo com custos ou despesas para exportar.");
     }
     const titulo = `DRE ${id.competencia} - ${nomeDaVisao(visao, bs)}`;
-    const nomeArquivo = `DRE ${ano}-${String(mes).padStart(2, "0")} - ${nomeDaVisao(visao, bs)}.${formato}`.replace(/[\\/:*?"<>|]/g, " ");
+    const nomeArquivo = limparNome(`DRE ${ano}-${String(mes).padStart(2, "0")} - ${nomeDaVisao(visao, bs)}.${formato}`);
+    // Um arquivo Excel por centro de custo, num ZIP, com o departamento e o centro no nome (14/10/2026).
+    if (visao.tipo === "centrosArquivos") {
+      if (formato !== "xlsx") throw new RegraDREError(400, "Um arquivo por centro de custo só sai em Excel.");
+      const sufixo = `DRE ${ano}-${String(mes).padStart(2, "0")}`;
+      const conteudo = zipDeArquivos(bs.map((b) => ({ nome: `${b.departamento} - ${b.nome} - ${sufixo}.xlsx`, conteudo: gerarXlsx([abaExcel(b, id)], `${sufixo} - ${b.nome}`) })));
+      return { nomeArquivo: nomeArquivo.replace(/\.xlsx$/, ".zip"), tipo: TIPO_ZIP, conteudo, visoes: bs.map((b) => b.nome) };
+    }
     if (formato === "xlsx") {
       return {
         nomeArquivo,

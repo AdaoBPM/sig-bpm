@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { Abas } from "@/components/shared/Abas";
+import { ExportarRelatorio, type OpcaoExportar } from "@/app/relatorios/components/ExportarRelatorio";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -85,16 +86,39 @@ export function CenarioResultadosContent() {
   const daVisao = VISOES.find((v) => v.chave === visao);
   const podeEditar = !analitico && !!daVisao && hasPermission(t.perm("resultados", "editar", daVisao.aba)) && !!cenario.data && !travado;
   const nome = daVisao?.nome ?? "";
+  // O Exportar (14/10/2026), como o de Resultados Realizados: a visão na tela, as seis unidades e, nos analíticos, os
+  // centros de custo (em Excel).
+  const leTodas = VISOES.every((v) => hasPermission(t.perm("resultados", "ler", v.aba)));
+  const leCentros = analitico && hasPermission(t.perm("premissas", "ler", "centros"));
+  const opcoesExportar: OpcaoExportar[] = [
+    ...(daVisao ? [{ chave: "atual", excel: "Visão Atual", pdf: "Visão Atual", params: { escopo: "atual", visao } }] : []),
+    ...(leTodas ? [{ chave: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)", params: { escopo: "unidades" } }] : []),
+    ...(leCentros
+      ? [
+          { chave: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: null, params: { escopo: "centros" }, url: `/proxy/cenarios/${id}/centros/exportar` },
+          { chave: "arquivos", excel: "Todos os Centros de Custo (um arquivo por centro)", pdf: null, params: { escopo: "centros_arquivos" }, url: `/proxy/cenarios/${id}/centros/exportar` },
+        ]
+      : []),
+  ];
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Resultados"
-        acoes={hasPermission(t.perm("resultados", "editar")) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : undefined}
+        acoes={
+          <div className="flex flex-wrap items-center gap-2">
+            {hasPermission(t.perm("resultados", "editar")) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : null}
+            {opcoesExportar.length ? <ExportarRelatorio endereco={`/proxy/cenarios/${id}/exportar`} opcoes={opcoesExportar} padrao={`${cenario.data?.nome ?? "Cenário"} - Resultados`} /> : null}
+          </div>
+        }
         comoUsar={
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
             {analitico ? <li>No cenário analítico, a DRE é calculada a partir das premissas e não se edita aqui: os valores mudam com as premissas.</li> : null}
             <li>Escolha a visão nas abas: Consolidado ou cada unidade (as que o seu perfil lê).</li>
+            <li>
+              Use “Exportar” para baixar em Excel ou PDF, como em Resultados Realizados: a visão atual ou todas as unidades (uma por aba ou por
+              página).{analitico ? " Nos analíticos, também os centros de custo em Excel: todos numa planilha (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo)." : ""}
+            </li>
             <li>
               Versões (para quem edita a tela Resultados): “Congelar Versão” trava o cenário na versão atual (VER00, VER01…), como o fechamento de uma
               competência — a DRE, os Indicadores Manuais e a referência não se editam mais; “Reabrir Versão” a destrava, como a reabertura de uma

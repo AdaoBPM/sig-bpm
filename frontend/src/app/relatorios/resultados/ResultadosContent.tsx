@@ -17,7 +17,7 @@ import { InfoAgrupamento } from "../../competencias/[anoMes]/dre/components/Info
 import { Agrupador, fundoDaLinha, fundoDoOrcado, ROTULO_DO_ORCADO, SeletorNivel, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
 import { VolumesDialog } from "../../competencias/[anoMes]/dre/components/VolumesDialog";
 import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreService";
-import { ExportarRelatorio } from "../components/ExportarRelatorio";
+import { ExportarRelatorio, type OpcaoExportar } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { TabelaLarga } from "../components/TabelaLarga";
 import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type MesRelatorio, type Resultados } from "../services/relatoriosService";
@@ -625,17 +625,39 @@ export function ResultadosContent() {
   const { codigo: obraEscolhida } = useObraEscolhida(ano ?? 0, ate ?? 0, visao === "obras" && !!ano && !!ate, obra);
   const { codigo: semCentroEscolhido } = useSemCentroEscolhido(ano ?? 0, ate ?? 0, visao === "sem_centros" && !!ano && !!ate, semCentro);
   const periodo = { ano, ate };
-  const opcoesExportar = [
-    {
-      chave: "atual",
-      excel: "Visão Atual",
-      pdf: "Visão Atual",
-      params: visao === "centros" ? { ...periodo, grupo: grupo ?? "" } : { ...periodo, visao },
-    },
-    { chave: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)", params: { ...periodo, escopo: "unidades" } },
-    { chave: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: "Todos os Centros de Custo (um por página)", params: { ...periodo, escopo: "centros" } },
-    // Todas as unidades pedem as seis abas; os centros, a deles.
-  ].filter((o) => (o.chave === "unidades" ? VISOES.slice(0, 6).every((v) => le(v.aba)) : o.chave === "centros" ? le("centros") : true));
+  // O Exportar (14/10/2026: na altura do título, com as opções de todas as abas): o que está na tela (a visão, o centro,
+  // o grupo sem centro ou a obra escolhidos) e os "todos" de cada aba que o perfil lê.
+  const veObrasNaAba = comObras && le("obras");
+  const veSemCentrosNaAba = comSemCentros && le("sem_centros");
+  const atual: OpcaoExportar | null =
+    visao === "centros"
+      ? grupo
+        ? { chave: "atual", excel: "Centro de Custo Atual", pdf: "Centro de Custo Atual", params: { ...periodo, grupo } }
+        : null
+      : visao === "obras"
+        ? obraEscolhida
+          ? { chave: "atual", excel: "Obra Atual", pdf: "Obra Atual", params: { ...periodo, visao: "obras", obra: obraEscolhida } }
+          : null
+        : visao === "sem_centros"
+          ? semCentroEscolhido
+            ? { chave: "atual", excel: "Sem Centro de Custo Atual", pdf: "Sem Centro de Custo Atual", params: { ...periodo, visao: "sem_centros", grupo: semCentroEscolhido } }
+            : null
+          : visao
+            ? { chave: "atual", excel: "Visão Atual", pdf: "Visão Atual", params: { ...periodo, visao } }
+            : null;
+  const opcoesExportar: OpcaoExportar[] = [
+    ...(atual ? [atual] : []),
+    // Todas as unidades pedem as seis abas; os centros, as obras e os sem centro, a deles.
+    ...(VISOES.slice(0, 6).every((v) => le(v.aba)) ? [{ chave: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)", params: { ...periodo, escopo: "unidades" } }] : []),
+    ...(le("centros")
+      ? [
+          { chave: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: "Todos os Centros de Custo (um por página)", params: { ...periodo, escopo: "centros" } },
+          { chave: "centros_arquivos", excel: "Todos os Centros de Custo (um arquivo por centro)", pdf: null, params: { ...periodo, escopo: "centros_arquivos" } },
+        ]
+      : []),
+    ...(veSemCentrosNaAba ? [{ chave: "sem_centros", excel: "Todas Sem Centro de Custo (uma por aba)", pdf: "Todas Sem Centro de Custo (uma por página)", params: { ...periodo, escopo: "sem_centros" } }] : []),
+    ...(veObrasNaAba ? [{ chave: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)", params: { ...periodo, escopo: "obras" } }] : []),
+  ];
 
   return (
     <div className="space-y-6">
@@ -671,7 +693,12 @@ export function ResultadosContent() {
               (Lista) e Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), importadas no Fechamento Mensal): abre no centro de custo e na
               filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
             </li>
-            <li>Use “Exportar” para baixar em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o % e o R$/m³): a visão atual, todas as unidades ou todos os centros de custo; em Obras e em Sem Centros de Custo, a obra (ou o grupo) na tela ou todas.</li>
+            <li>
+              “Exportar”, ao lado do período, baixa em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o %
+              e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo ou a Obra Atual) e, de qualquer aba, todas as unidades,
+              todos os centros de custo, todas sem centro de custo e todas as obras (uma por aba ou por página). Em Excel, também um arquivo por centro de
+              custo, num ZIP, com o departamento e o centro no nome de cada arquivo.
+            </li>
           </ul>
         }
         sobre={
@@ -692,6 +719,7 @@ export function ResultadosContent() {
         }
         acoes={
           ano && ate ? (
+            <div className="flex flex-wrap items-center justify-end gap-3">
             <SeletorPeriodo
               ano={ano}
               ate={ate}
@@ -703,6 +731,8 @@ export function ResultadosContent() {
               }}
               onAte={setAte}
             />
+            {opcoesExportar.length && visoes.length ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
+            </div>
           ) : null
         }
       />
@@ -720,30 +750,6 @@ export function ResultadosContent() {
             <div className="min-w-0 flex-1">
               <Abas rotulo="Visão dos resultados" ativa={visao} onMudar={setVisao} abas={visoes.map((v) => ({ chave: v.chave, rotulo: v.nome }))} />
             </div>
-            {/* As obras e os movimentos sem centro (14/10/2026): o escolhido ou todos. */}
-            {visao === "obras" ? (
-              obraEscolhida ? (
-                <ExportarRelatorio
-                  caminho="resultados"
-                  opcoes={[
-                    { chave: "atual", excel: "Obra Atual", pdf: "Obra Atual", params: { ...periodo, visao: "obras", obra: obraEscolhida } },
-                    { chave: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)", params: { ...periodo, escopo: "obras" } },
-                  ]}
-                  padrao={`Resultados ${ano} - Obras`}
-                />
-              ) : null
-            ) : visao === "sem_centros" ? (
-              semCentroEscolhido ? (
-                <ExportarRelatorio
-                  caminho="resultados"
-                  opcoes={[
-                    { chave: "atual", excel: "Grupo Atual", pdf: "Grupo Atual", params: { ...periodo, visao: "sem_centros", grupo: semCentroEscolhido } },
-                    { chave: "todos", excel: "Todos os Grupos (um por aba)", pdf: "Todos os Grupos (um por página)", params: { ...periodo, escopo: "sem_centros" } },
-                  ]}
-                  padrao={`Resultados ${ano} - Sem Centros de Custo`}
-                />
-              ) : null
-            ) : visao !== "centros" || grupo ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
           </div>
           {!visao ? null : visao === "centros" ? (
             <VisaoCentros ano={ano} ate={ate} escolhido={escolhido} onEscolher={setEscolhido} />

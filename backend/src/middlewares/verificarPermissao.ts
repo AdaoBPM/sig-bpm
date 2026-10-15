@@ -69,6 +69,7 @@ export function abasDaDREDoPedido(request: Request): string[] | null {
   if (caminho.endsWith("/exportar")) {
     const v = String(q.grupo ? "centros" : q.obra ? "obras" : (q.visao ?? "consolidado"));
     if (v === "todas") return [...ABA_DA_VISAO];
+    if (v === "centros_arquivos") return ["centros"];
     const a = abaDaVisao(v);
     return a ? [a] : null;
   }

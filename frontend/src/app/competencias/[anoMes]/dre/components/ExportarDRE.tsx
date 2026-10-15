@@ -14,11 +14,13 @@ export type VisaoExportar = "consolidado" | number | { grupo: string } | { obra:
 
 type Formato = "xlsx" | "pdf";
 /** O que entra no arquivo: a visão na tela, o consolidado e todas as unidades, todos os centros de custo ou todas as obras. */
-type Alcance = "atual" | "unidades" | "centros" | "obras";
-const OPCOES: Array<{ alcance: Alcance; excel: string; pdf: string }> = [
+type Alcance = "atual" | "unidades" | "centros" | "centrosArquivos" | "obras";
+const OPCOES: Array<{ alcance: Alcance; excel: string; pdf: string | null }> = [
   { alcance: "atual", excel: "Visão Atual", pdf: "Visão Atual" },
   { alcance: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)" },
   { alcance: "centros", excel: "Todos os Centros de Custo (um por aba)", pdf: "Todos os Centros de Custo (um por página)" },
+  // Um arquivo Excel por centro, num ZIP, com o departamento e o centro no nome (14/10/2026).
+  { alcance: "centrosArquivos", excel: "Todos os Centros de Custo (um arquivo por centro)", pdf: null },
   { alcance: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)" },
 ];
 
@@ -49,7 +51,7 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
   const { hasPermission } = usePermissions();
   const le = (aba: string) => hasPermission(`dre.${aba}:ler`);
   const opcoes = OPCOES.filter((o) =>
-    o.alcance === "unidades" ? ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"].every(le) : o.alcance === "atual" ? true : le(o.alcance),
+    o.alcance === "unidades" ? ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"].every(le) : o.alcance === "atual" ? true : le(o.alcance === "centrosArquivos" ? "centros" : o.alcance),
   );
 
   async function baixar(formato: Formato, alcance: Alcance) {
@@ -60,6 +62,8 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
           ? { formato, visao: "todas" }
           : alcance === "centros"
             ? { formato, visao: "centros" }
+            : alcance === "centrosArquivos"
+              ? { formato, visao: "centros_arquivos" }
             : alcance === "obras"
               ? { formato, visao: "obras" }
               : typeof visao === "object"
@@ -93,7 +97,7 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="w-[22rem]">
+      <DropdownMenuContent align="end" className="w-[25rem]">
         {(["xlsx", "pdf"] as const).map((formato, i) => (
           <DropdownMenuGroup key={formato}>
             {i > 0 ? <DropdownMenuSeparator /> : null}
@@ -101,7 +105,7 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
               {formato === "xlsx" ? <FileSpreadsheet className="size-3.5" /> : <FileText className="size-3.5" />}
               {formato === "xlsx" ? "Excel" : "PDF"}
             </DropdownMenuLabel>
-            {opcoes.map((o) => (
+            {opcoes.filter((o) => formato === "xlsx" || o.pdf).map((o) => (
               <DropdownMenuItem key={o.alcance} onClick={() => void baixar(formato, o.alcance)} className="pl-6">
                 {formato === "xlsx" ? o.excel : o.pdf}
               </DropdownMenuItem>
