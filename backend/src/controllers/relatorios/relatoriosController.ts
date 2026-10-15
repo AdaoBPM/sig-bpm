@@ -48,12 +48,12 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
 }
 
 /**
- * Resultados Realizados mostra só as competências fechadas (11/10/2026). A etapa Indicadores do Fechamento Mensal usa
+ * Resultados Empresariais mostra só as competências fechadas (11/10/2026). A etapa Indicadores do Fechamento Mensal usa
  * as mesmas rotas com ?etapa=1 e vê o mês aberto, se o usuário tem a tela dela (indicadores_mes, 14/10/2026).
  */
 const tem = (request: Request, p: string) => request.user!.permissions.includes(p);
 const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
-/** Os indicadores: a tela Indicadores dos Resultados Realizados ou a etapa do Fechamento Mensal (?etapa=1). */
+/** Os indicadores: a tela Indicadores dos Resultados Empresariais ou a etapa do Fechamento Mensal (?etapa=1). */
 const podeIndicadores = (request: Request) => tem(request, "relatorio_indicadores:ler") || (request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
 
 /** ?ano= e ?ate= (o último mês; sem ele, o último apurado). */

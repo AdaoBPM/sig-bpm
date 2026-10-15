@@ -66,10 +66,10 @@ async function identificar(ano: number, ate: number, usuarioNome: string) {
 }
 export type Identificacao = Awaited<ReturnType<typeof identificar>>;
 
-/** A identificação de um arquivo de fora dos Resultados Realizados (os cenários, 14/10/2026): o período e quem gerou. */
+/** A identificação de um arquivo de fora dos Resultados Empresariais (os cenários, 14/10/2026): o período e quem gerou. */
 export const identificacaoLivre = (periodo: string, usuarioNome: string): Identificacao => ({ periodo, avisos: [], geracao: `Gerado em ${dataHora(new Date())} por ${usuarioNome} · SIG BPM` });
 
-// A exportação de Resultados é a tela de Resultados Realizados: só as competências fechadas (11/10/2026).
+// A exportação de Resultados é a tela de Resultados Empresariais: só as competências fechadas (11/10/2026).
 async function blocos(ano: number, ate: number | undefined, escopo: EscopoResultados, acesso: Acesso): Promise<Bloco[]> {
   if (escopo.tipo === "visao") {
     const v = VISOES.find((x) => x.visao === escopo.visao)!;
@@ -389,7 +389,7 @@ export const exportacaoRelatoriosService = {
 
   /**
    * `apenasMes`: só o mês `ate` (a etapa Indicadores do Fechamento Mensal), sem os anteriores nem o acumulado.
-   * `somenteFechadas`: só as competências fechadas (Resultados Realizados).
+   * `somenteFechadas`: só as competências fechadas (Resultados Empresariais).
    */
   async indicadores(ano: number, ate: number | undefined, formato: Formato, usuarioNome: string, apenasMes = false, somenteFechadas = false) {
     const todos = await indicadoresService.listar(ano, ate, somenteFechadas);

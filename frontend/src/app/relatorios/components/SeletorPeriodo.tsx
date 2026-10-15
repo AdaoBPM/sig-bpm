@@ -9,7 +9,7 @@ import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
 /**
  * O exercício e o último mês do relatório (como o mês escolhido no topo das
- * abas da planilha). Resultados Realizados: só as competências fechadas
+ * abas da planilha). Resultados Empresariais: só as competências fechadas
  * (11/10/2026); sem escolha, a última fechada. `somenteFechadas` falso: as
  * apuradas (a etapa Indicadores do Fechamento Mensal).
  */
@@ -42,7 +42,7 @@ export function Seletor({ rotulo, valor, opcoes, onMudar, largura }: { rotulo: s
   );
 }
 
-/** O exercício e o mês até onde ver, à direita da linha do título (Resultados Realizados). */
+/** O exercício e o mês até onde ver, à direita da linha do título (Resultados Empresariais). */
 export function SeletorPeriodo({
   ano,
   ate,

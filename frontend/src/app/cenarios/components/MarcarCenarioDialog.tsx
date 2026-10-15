@@ -14,7 +14,7 @@ import { botaoPrimario, Erro } from "./CenarioDialog";
 
 /** O que cada marcação faz, embaixo da opção. */
 const EFEITO: Record<MarcacaoCenario, (c: Cenario) => string> = {
-  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado das telas Indicadores e Painel de Bordo de Resultados Realizados em ${c.ano}.`,
+  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado das telas Indicadores e Painel de Bordo de Resultados Empresariais em ${c.ano}.`,
   RESULTADOS_ANTERIORES: () => "Os resultados de comparação do exercício anterior (para as telas que vierem).",
   RESULTADOS_VENDIDOS: () => "Os resultados do que foi vendido (para as telas que vierem).",
 };
@@ -32,7 +32,7 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
     mutationFn: () => cenariosService.marcar(cenario.id, escolha || null),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
-      // O orçado de Resultados Realizados muda com o Orçamento Empresarial.
+      // O orçado de Resultados Empresariais muda com o Orçamento Empresarial.
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
       toast.success(escolha ? `${cenario.nome} marcado como ${rotuloMarcacao(escolha)}.${r.desmarcado ? ` ${r.desmarcado} deixou de ser.` : ""}` : `${cenario.nome} ficou sem marcação.`);
       onFechar();

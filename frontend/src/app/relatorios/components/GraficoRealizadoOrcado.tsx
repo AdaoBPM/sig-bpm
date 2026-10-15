@@ -7,7 +7,7 @@ import { Seletor } from "./SeletorPeriodo";
 export type MesDoGrafico = { mes: string; realizado: number | null; orcado: number | null };
 
 /**
- * Os nomes das duas séries (13/10/2026): Realizado e Orçado em Resultados Realizados; no Painel de Bordo dos cenários,
+ * Os nomes das duas séries (13/10/2026): Realizado e Orçado em Resultados Empresariais; no Painel de Bordo dos cenários,
  * Cenário e Comparado. Valem no gráfico (a dica), na legenda e nos cards do painel.
  */
 export type RotulosDasSeries = { realizado: string; orcado: string };

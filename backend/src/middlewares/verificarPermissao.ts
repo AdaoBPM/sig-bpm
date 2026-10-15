@@ -73,7 +73,7 @@ export function abasDaDREDoPedido(request: Request): string[] | null {
     const a = abaDaVisao(v);
     return a ? [a] : null;
   }
-  // O detalhamento dos movimentos sem centro de custo: a aba deles (só dos Resultados Realizados).
+  // O detalhamento dos movimentos sem centro de custo: a aba deles (só dos Resultados Empresariais).
   if (q.semCentro !== undefined) return ["sem_centros"];
   // Os documentos de uma linha valem para qualquer aba da tela.
   if (caminho.endsWith("/documentos")) return [];
@@ -89,7 +89,7 @@ export function abasDaDREDoPedido(request: Request): string[] | null {
 
 /**
  * A DRE de um mês (/competencias/:anoMes/dre…): com a tela DRE do Fechamento Mensal, qualquer mês, nas abas dela; com a
- * tela Resultados dos Resultados Realizados, só as competências fechadas, nas abas dela (11/10/2026; por aba desde
+ * tela Resultados dos Resultados Empresariais, só as competências fechadas, nas abas dela (11/10/2026; por aba desde
  * 14/10/2026).
  */
 export async function lerDREDoMes(request: Request, response: Response, next: NextFunction) {
@@ -103,7 +103,7 @@ export async function lerDREDoMes(request: Request, response: Response, next: Ne
   if (!m) return response.status(400).json({ error: "Competência inválida." });
   try {
     const c = await getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano: Number(m[1]), mes: Number(m[2]) } }, select: { status: true } });
-    if (c?.status !== "FECHADA") return response.status(403).json({ error: "Os Resultados Realizados mostram só as competências fechadas." });
+    if (c?.status !== "FECHADA") return response.status(403).json({ error: "Os Resultados Empresariais mostram só as competências fechadas." });
     return next();
   } catch (error) {
     return next(error);

@@ -88,10 +88,10 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
   { recurso: "CENARIOS_ANALITICOS", nome: "Cenários Analíticos", area: "cenarios_analiticos", telas: telasDoCenario("cenarios_analiticos", true) },
   {
     recurso: "RESULTADOS_REALIZADOS",
-    nome: "Resultados Realizados",
+    nome: "Resultados Empresariais",
     area: "resultados",
     telas: [
-      // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Realizados.
+      // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Empresariais.
       { codigo: "relatorio_resultados", nome: "Resultados", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
       { codigo: "relatorio_indicadores", nome: "Indicadores" },
       { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: PAINEL },

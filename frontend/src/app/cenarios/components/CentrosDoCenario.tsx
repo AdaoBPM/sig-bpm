@@ -17,7 +17,7 @@ const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-1
 const reais = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 
 /**
- * A aba Centros de Custo das premissas de um cenário analítico (13/10/2026), como a de Resultados Realizados: os grupos
+ * A aba Centros de Custo das premissas de um cenário analítico (13/10/2026), como a de Resultados Empresariais: os grupos
  * da Controladoria à esquerda (com a busca e o total do exercício; sem os centros de estoque e de investimento) e, à
  * direita, o Quadro de Lotação do grupo (14/10/2026: os colaboradores de cada mês, de onde saem os quadros de lotação
  * dos indicadores) e as contas dele (mão de obra e gastos gerais, por atribuição) mês a mês, para digitar. O grupo

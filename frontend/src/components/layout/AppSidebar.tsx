@@ -69,7 +69,12 @@ export function AppSidebar() {
                       isActive={itemAtivo(pathname, item)}
                       tooltip={item.title}
                       render={<Link href={item.href} />}
-                      className="data-active:bg-bpm-primary data-active:font-bold data-active:text-black data-active:hover:bg-bpm-primary data-active:hover:text-black"
+                      className={
+                        item.emDesenvolvimento
+                          ? // Os processos em desenvolvimento (14/10/2026): o texto em cinza e o destaque amarelo-claro.
+                            "text-sidebar-foreground/50 hover:text-sidebar-foreground/70 data-active:bg-yellow-100 data-active:font-bold data-active:text-gray-600 data-active:hover:bg-yellow-100 data-active:hover:text-gray-600"
+                          : "data-active:bg-bpm-primary data-active:font-bold data-active:text-black data-active:hover:bg-bpm-primary data-active:hover:text-black"
+                      }
                     >
                       <item.icon />
                       <span>{item.title}</span>

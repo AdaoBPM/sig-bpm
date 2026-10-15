@@ -45,7 +45,7 @@ export const RECURSOS: RecursoSistema[] = [
 const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   CENARIOS_SINTETICOS: "Cenários Sintéticos",
   CENARIOS_ANALITICOS: "Cenários Analíticos",
-  RESULTADOS_REALIZADOS: "Resultados Realizados",
+  RESULTADOS_REALIZADOS: "Resultados Empresariais",
   FECHAMENTO_MENSAL: "Fechamento Mensal",
   CADASTROS_APURACAO: "Cadastros da Apuração",
   CADASTROS_CONTROLADORIA: "Cadastros da Controladoria",

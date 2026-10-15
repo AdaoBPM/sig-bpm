@@ -34,7 +34,7 @@ export function EdicaoDRE({ id, visao, nome }: { id: string; visao: number; nome
       cenariosService.gravarValores(id, visao, alteracoes, origem),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios", id] });
-      // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Realizados muda.
+      // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Empresariais muda.
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
       toast.success(`${r.alteradas} ${plural(r.alteradas, "valor gravado", "valores gravados")}; totais e Consolidado recalculados.`);
       setReajuste(null);

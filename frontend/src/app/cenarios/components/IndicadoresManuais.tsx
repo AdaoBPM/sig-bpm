@@ -69,7 +69,7 @@ export function LancamentoDialog({ id, indicador, meses, onFechar }: { id: strin
     mutationFn: () => cenariosService.salvarManual(id, indicador.nome, valores.map((v) => (v === undefined ? null : v))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
-      // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Realizados muda.
+      // Se o cenário é o Orçamento Empresarial, o orçado de Resultados Empresariais muda.
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
       toast.success(`${indicador.nome}: lançamentos gravados.`);
       onFechar();

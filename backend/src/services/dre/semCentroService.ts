@@ -13,7 +13,7 @@ const zero = () => new Decimal(0);
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 
 /**
- * Os movimentos sem centro de custo (aba Sem Centros de Custo de Resultados Realizados, 14/10/2026): os lançamentos do
+ * Os movimentos sem centro de custo (aba Sem Centros de Custo de Resultados Empresariais, 14/10/2026): os lançamentos do
  * balancete que deveriam ter um centro de custo e não têm um do cadastro — pela regra da referência realizada dos
  * cenários analíticos, os das contas de mão de obra e de gastos gerais diretos, indiretos e comerciais (MOD, MOI, GGD,
  * GGI e GGC) sem centro (ou com um centro fora do cadastro, como os de obra). Os Gastos Gerais Variáveis ficam de fora:

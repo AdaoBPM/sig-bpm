@@ -129,7 +129,7 @@ export const LINHAS_DE_RESULTADO = new Set([
 export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-yellow-100" : l.tipo !== "ITEM" ? "bg-yellow-50" : "bg-white");
 
 /**
- * O fundo das colunas do orçado (Resultados Realizados, 11/10/2026): a mesma escala do amarelo, em cinza — os rótulos
+ * O fundo das colunas do orçado (Resultados Empresariais, 11/10/2026): a mesma escala do amarelo, em cinza — os rótulos
  * em preto (no lugar do amarelo-ouro), as linhas de resultado num cinza mais escuro e os totais num mais claro.
  */
 // A marca celula-orcado (13/10/2026): no tema Escuro, as células do orçado/comparado ficam claras, com o texto preto.

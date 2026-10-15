@@ -3,7 +3,7 @@ import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 
 /**
  * Os centros de custo dos cenários analíticos (13/10/2026, etapa 3): os valores mensais de cada grupo de centros da
- * Controladoria (o nome da Controladoria, como em Resultados Realizados), por conta da DRE, e a alocação deles às
+ * Controladoria (o nome da Controladoria, como em Resultados Empresariais), por conta da DRE, e a alocação deles às
  * unidades com as regras do fechamento mensal (apuracaoUnidades):
  *
  * - nas contas dos custos de produção (CPP), o balde do grupo: MATRIZ e FILIAL vão direto para a unidade; UNIDADE, para
@@ -47,7 +47,7 @@ const foraDoCenario = (c: { departamento: string | null; codigoRM: string | null
   FORA.has((c.departamento ?? "").trim().toUpperCase()) || /^1.9[67](.|$)/.test(c.codigoRM ?? "");
 const DESPESAS = new Set(["DL", "DT", "DC", "DA"]);
 
-/** O grupo de um centro: o nome da Controladoria; sem ele, o nome do centro (como em Resultados Realizados). */
+/** O grupo de um centro: o nome da Controladoria; sem ele, o nome do centro (como em Resultados Empresariais). */
 export const nomeDoGrupo = (c: { nomeControladoria: string | null; nomeRM: string | null; codigoRM: string | null }) => c.nomeControladoria?.trim() || c.nomeRM?.trim() || c.codigoRM || "Centro";
 
 export type GrupoDoCenario = {

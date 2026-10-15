@@ -5,6 +5,14 @@ import {
   Building2,
   CalendarDays,
   ClipboardList,
+  Factory,
+  HandCoins,
+  HardHat,
+  PackageCheck,
+  ShieldCheck,
+  Target,
+  TrendingUp,
+  ChartColumn,
   Columns3,
   Database,
   FileBarChart,
@@ -42,24 +50,49 @@ export type NavItem = {
    * na primeira tela que o perfil alcança, e a barra no topo troca de tela.
    */
   telas?: NavItem[];
+  /** Um processo ainda por fazer (14/10/2026): a tela diz "Tela em desenvolvimento." e o menu o mostra em cinza. */
+  emDesenvolvimento?: boolean;
 };
 
 export type NavGrupo = { titulo: string; itens: NavItem[] };
 
+/**
+ * Os grupos do menu lateral e os processos (os links) de cada um (14/10/2026: "processo" é o termo para os links do
+ * menu). Os processos em desenvolvimento abrem a tela "Tela em desenvolvimento." e ficam em cinza no menu.
+ */
 export const navGrupos: NavGrupo[] = [
   {
-    // Criação de Cenários (11/10/2026): por enquanto, os sintéticos; os analíticos virão depois.
+    titulo: "Análises Gerenciais",
+    itens: [
+      { title: "Resultados ROVA", href: "/analises-gerenciais/resultados-rova", icon: TrendingUp, emDesenvolvimento: true },
+      { title: "Indicadores VPR", href: "/analises-gerenciais/indicadores-vpr", icon: Target, emDesenvolvimento: true },
+      { title: "Ociosidade do Maquinário", href: "/analises-gerenciais/ociosidade-do-maquinario", icon: Factory, emDesenvolvimento: true },
+    ],
+  },
+  {
+    titulo: "Gestão do Patrimônio",
+    itens: [
+      { title: "Auditoria de Investimentos", href: "/gestao-do-patrimonio/auditoria-de-investimentos", icon: ShieldCheck, emDesenvolvimento: true },
+      { title: "Inventário de Prod. Acabados", href: "/gestao-do-patrimonio/inventario-de-produtos-acabados", icon: PackageCheck, emDesenvolvimento: true },
+    ],
+  },
+  {
+    // Criação de Cenários (11/10/2026); os analíticos acima dos sintéticos (14/10/2026).
     titulo: "Criação de Cenários",
     itens: [
-      { title: "Cenários Sintéticos", href: "/cenarios/sinteticos", icon: Layers, permission: "cenarios_lista:ler", recurso: "CENARIOS_SINTETICOS" },
       { title: "Cenários Analíticos", href: "/cenarios/analiticos", icon: Workflow, permission: "cenarios_analiticos_lista:ler", recurso: "CENARIOS_ANALITICOS" },
+      { title: "Cenários Sintéticos", href: "/cenarios/sinteticos", icon: Layers, permission: "cenarios_lista:ler", recurso: "CENARIOS_SINTETICOS" },
+      { title: "Resultados Vendidos", href: "/resultados-vendidos", icon: HandCoins, emDesenvolvimento: true },
     ],
   },
   {
     titulo: "Apuração dos Resultados",
     itens: [
+      { title: "Resultados por Obra", href: "/resultados-por-obra", icon: HardHat, emDesenvolvimento: true },
+      { title: "Resultados por Linha", href: "/resultados-por-linha", icon: ChartColumn, emDesenvolvimento: true },
       {
-        title: "Resultados Realizados",
+        // Antes, Resultados Realizados (renomeado em 14/10/2026).
+        title: "Resultados Empresariais",
         href: "/relatorios/resultados",
         icon: FileBarChart,
         recurso: "RESULTADOS_REALIZADOS",
@@ -272,5 +305,7 @@ export function getPageTitle(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname];
 
   const match = Object.entries(pageTitles).find(([path]) => pathname.startsWith(`${path}/`));
-  return match?.[1] ?? "Área restrita";
+  if (match) return match[1];
+  // Os processos do menu sem título próprio (como os em desenvolvimento, 14/10/2026): o nome no menu.
+  return navGrupos.flatMap((g) => g.itens).find((i) => naTela(pathname, i.href))?.title ?? "Área restrita";
 }

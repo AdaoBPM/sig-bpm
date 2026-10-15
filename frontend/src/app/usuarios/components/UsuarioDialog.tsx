@@ -223,7 +223,7 @@ export function UsuarioDialog({ opcoes, editando, onFechar }: Props) {
                 <span>
                   Vê os Resultados das Obras
                   <span className="text-gray-500">
-                    : a aba Obras de Resultados Realizados, só com as linhas da DRE da gestão
+                    : a aba Obras de Resultados Empresariais, só com as linhas da DRE da gestão
                     {gestao ? ` (${opcoes.gestoes.find((g) => g.gestao === gestao)?.rotulo ?? gestao})` : ""} e as da Receita Bruta, da Receita Líquida e dos Impostos
                   </span>
                 </span>

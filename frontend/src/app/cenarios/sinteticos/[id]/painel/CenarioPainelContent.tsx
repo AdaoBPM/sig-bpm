@@ -22,7 +22,7 @@ import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 const ROTULOS = { realizado: "Cenário", orcado: "Comparado" };
 
 /**
- * O Painel de Bordo de um cenário sintético (13/10/2026), como o de Resultados Realizados: as abas Resultados e
+ * O Painel de Bordo de um cenário sintético (13/10/2026), como o de Resultados Empresariais: as abas Resultados e
  * Performance, com o cenário no lugar do realizado e o cenário comparado (Configurações / Comparativo) no lugar do
  * orçado. O mês de referência começa em dezembro (o cenário se olha nos 12 meses).
  */
@@ -48,7 +48,7 @@ export function CenarioPainelContent() {
             <li>
               Em “Configurar Gráficos”, à direita do título, escolha o Período (o mês de referência; o acumulado vai de janeiro até ele), os Rótulos
               (Com: os valores de cada mês escritos nos gráficos, o cenário por cima do comparado), o Tipo dos gráficos e as Cores dos sinais
-              (guardados neste navegador, os mesmos do Painel de Bordo de Resultados Realizados). As legendas (as cores das séries e os sinais)
+              (guardados neste navegador, os mesmos do Painel de Bordo de Resultados Empresariais). As legendas (as cores das séries e os sinais)
               ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
@@ -74,7 +74,7 @@ export function CenarioPainelContent() {
         sobre={
           <>
             <p>
-              O Painel de Bordo do cenário: os mesmos quadros do Painel de Bordo de Resultados Realizados, com os indicadores do cenário (os da tela
+              O Painel de Bordo do cenário: os mesmos quadros do Painel de Bordo de Resultados Empresariais, com os indicadores do cenário (os da tela
               Indicadores dele: os que saem da DRE do cenário, os lançamentos manuais e os importados) no lugar do realizado, e os do cenário comparado
               no lugar do orçado.
             </p>

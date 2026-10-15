@@ -22,7 +22,7 @@ export type EscopoCentrosDoCenario = { tipo: "centro"; grupo: string } | { tipo:
 const nomeDoCenario = (c: { nome: string; versao: number; ano: number }) => `${/^cen[aá]rio/i.test(c.nome) ? "" : "Cenário "}${c.nome} ${rotuloVersao(c.versao)} (${c.ano})`;
 
 /**
- * A exportação dos cenários (14/10/2026), como a de Resultados Realizados: a DRE do cenário (a visão na tela ou as seis,
+ * A exportação dos cenários (14/10/2026), como a de Resultados Empresariais: a DRE do cenário (a visão na tela ou as seis,
  * uma por aba no Excel ou por página no PDF, no mesmo formato) e, nos analíticos, os centros de custo em Excel (o
  * centro na tela, todos numa planilha — um por aba — ou um arquivo por centro, num ZIP, com o departamento e o centro
  * no nome).

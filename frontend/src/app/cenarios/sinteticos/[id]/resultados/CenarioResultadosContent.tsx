@@ -20,7 +20,7 @@ import { BotoesDeVersao } from "../../../components/VersaoCenario";
 import { cenariosService } from "../../../services/cenariosService";
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
-/** As visões da DRE do cenário: as de Resultados Realizados, sem os centros de custo. */
+/** As visões da DRE do cenário: as de Resultados Empresariais, sem os centros de custo. */
 const VISOES = [
   { chave: "0", aba: "consolidado", nome: "Consolidado" },
   { chave: "1", aba: "matriz", nome: "Matriz" },
@@ -65,7 +65,7 @@ function Visao({ id, visao, nome, analitico }: { id: string; visao: number; nome
 }
 
 /**
- * A tela Resultados de um cenário: as visões da DRE mês a mês no exercício, como em Resultados Realizados. No sintético,
+ * A tela Resultados de um cenário: as visões da DRE mês a mês no exercício, como em Resultados Empresariais. No sintético,
  * quem edita os cenários edita a DRE aqui; no analítico (13/10/2026), a DRE é calculada a partir das premissas e fica
  * só para leitura.
  */
@@ -86,7 +86,7 @@ export function CenarioResultadosContent() {
   const daVisao = VISOES.find((v) => v.chave === visao);
   const podeEditar = !analitico && !!daVisao && hasPermission(t.perm("resultados", "editar", daVisao.aba)) && !!cenario.data && !travado;
   const nome = daVisao?.nome ?? "";
-  // O Exportar (14/10/2026), como o de Resultados Realizados: a visão na tela, as seis unidades e, nos analíticos, os
+  // O Exportar (14/10/2026), como o de Resultados Empresariais: a visão na tela, as seis unidades e, nos analíticos, os
   // centros de custo (em Excel).
   const leTodas = VISOES.every((v) => hasPermission(t.perm("resultados", "ler", v.aba)));
   const leCentros = analitico && hasPermission(t.perm("premissas", "ler", "centros"));
@@ -116,7 +116,7 @@ export function CenarioResultadosContent() {
             {analitico ? <li>No cenário analítico, a DRE é calculada a partir das premissas e não se edita aqui: os valores mudam com as premissas.</li> : null}
             <li>Escolha a visão nas abas: Consolidado ou cada unidade (as que o seu perfil lê).</li>
             <li>
-              Use “Exportar” para baixar em Excel ou PDF, como em Resultados Realizados: a visão atual ou todas as unidades (uma por aba ou por
+              Use “Exportar” para baixar em Excel ou PDF, como em Resultados Empresariais: a visão atual ou todas as unidades (uma por aba ou por
               página).{analitico ? " Nos analíticos, também os centros de custo em Excel: todos numa planilha (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo)." : ""}
             </li>
             <li>
@@ -128,7 +128,7 @@ export function CenarioResultadosContent() {
             <li>
               Com um cenário comparado (Configurações / Comparativo), depois do total do exercício vêm, em preto e cinza, o total do cenário comparado (valor, % e
               R$/m³) e, no amarelo, a Diferença (o cenário menos o comparado), o Atingimento (o cenário sobre o comparado) e a Eficiência (a diferença
-              dos %, em pontos percentuais), como o orçado em Resultados Realizados — sem o mês vigente, porque o cenário se olha nos 12 meses.
+              dos %, em pontos percentuais), como o orçado em Resultados Empresariais — sem o mês vigente, porque o cenário se olha nos 12 meses.
             </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses — todos, dezembro também, deixando a descrição e os totais, que se esticam e enchem a tela; a escolha fica guardada neste navegador.</li>
@@ -146,13 +146,13 @@ export function CenarioResultadosContent() {
         sobre={
           <>
             <p>
-              A DRE do cenário mês a mês no exercício, como as abas de Resultados Realizados (sem os centros de custo): o valor e a participação (%)
+              A DRE do cenário mês a mês no exercício, como as abas de Resultados Empresariais (sem os centros de custo): o valor e a participação (%)
               de cada mês e o total do exercício, com o valor unitário (R$/m³) em dezembro e no total. Os valores são os digitados na ferramenta ou os da
               referência do cenário (um arquivo importado, ligado às linhas da Estrutura da DRE pela descrição, ou o resultado realizado); os totais são
               calculados pela Estrutura da DRE, e o Consolidado soma as unidades.
             </p>
             <p>
-              A participação e o valor unitário seguem as bases de Resultados Realizados: a ROB nas receitas e nos impostos; a Receita Líquida do
+              A participação e o valor unitário seguem as bases de Resultados Empresariais: a ROB nas receitas e nos impostos; a Receita Líquida do
               Pré-Fabricado nos custos de produção; a de Montagem e a Complementar nos custos de serviços; a de Frete no Frete e Descarga; a ROL no
               resto. Em Despesas e Extra e no RN, as bases são as do Consolidado.
             </p>

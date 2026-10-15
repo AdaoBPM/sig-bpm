@@ -62,7 +62,7 @@ export function CenarioIndicadoresContent() {
           <ul>
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Com um cenário comparado (Configurações / Comparativo), a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele.</li>
-            <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Realizados usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
+            <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Empresariais usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
             <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
             <li>
               Indicadores Manuais: {analitico ? "os indicadores do Comercial e do Administrativo (os quadros de lotação saem do Quadro de Lotação dos centros de custo, nas Premissas)" : "os quadros de lotação e os indicadores do Comercial e do Administrativo"}, que não saem da DRE. Vêm da aba das metas
@@ -77,7 +77,7 @@ export function CenarioIndicadoresContent() {
           <>
             <p>
               Os indicadores do cenário, mês a mês e acumulados, com as fórmulas do cadastro Estrutura dos Indicadores — as mesmas de Resultados
-              Realizados — sobre a DRE do cenário e os lançamentos manuais. O acumulado também segue Resultados Realizados: a soma dos meses ou,
+              Realizados — sobre a DRE do cenário e os lançamentos manuais. O acumulado também segue Resultados Empresariais: a soma dos meses ou,
               nas razões, a média ponderada; os de posição valem o último mês.
             </p>
             <p>

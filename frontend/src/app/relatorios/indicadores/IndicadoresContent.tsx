@@ -17,7 +17,7 @@ import { GraficoIndicadorDialog } from "./GraficoIndicadorDialog";
 import { TabelaIndicadores, valor, valorCurto } from "./TabelaIndicadores";
 
 /**
- * A tela Indicadores (Resultados Realizados), com o exercício e o mês
+ * A tela Indicadores (Resultados Empresariais), com o exercício e o mês
  * escolhidos no topo; ou, com `periodoFixo`, a etapa Indicadores do
  * Fechamento Mensal: só os valores do mês da competência, que se troca na
  * barra de etapas.
@@ -38,7 +38,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
-  // O indicador com o gráfico aberto (só em Resultados Realizados; a etapa do Fechamento Mensal mostra um mês só).
+  // O indicador com o gráfico aberto (só em Resultados Empresariais; a etapa do Fechamento Mensal mostra um mês só).
   const [comGrafico, setComGrafico] = useState<Indicador | null>(null);
   const abreGrafico = !periodoFixo;
   // O tipo do gráfico do indicador (Barras ou Área), o mesmo do Painel de Bordo.
@@ -82,7 +82,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               INDICADORES DE RESULTADO (aba Realizado (SIG)). O catálogo — grupo, numeração, nome, comportamento, unidade, a fórmula de cada indicador e a forma do acumulado — fica em Cadastros da Controladoria / Estrutura dos Indicadores, onde se edita.
             </p>
             <p>
-              Os valores saem da DRE apurada (congelada) de cada competência{periodoFixo ? "" : " fechada (as abertas e em conferência não entram em Resultados Realizados)"}, dos volumes da apuração (projetos liberados) e dos indicadores
+              Os valores saem da DRE apurada (congelada) de cada competência{periodoFixo ? "" : " fechada (as abertas e em conferência não entram em Resultados Empresariais)"}, dos volumes da apuração (projetos liberados) e dos indicadores
               importados no fechamento: a aba Indicadores (Admin.) do LISTAS REALIZADO (OPERAÇÃO) — quadro de lotação, fluxo de caixa,
               inadimplência, turnover, vagas e acidentes — e a aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL — vendas, receita
               vendida, margem, demanda e mix. O acumulado soma os meses ou, nos indicadores de razão (%, R$/m³, eficiências, margem das vendas,

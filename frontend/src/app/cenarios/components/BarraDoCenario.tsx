@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { cenariosService, rotuloDoCenario, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
 import { useTipoDoCenario } from "./tipoDoCenario";
 
-/** As telas de um cenário (sintético ou analítico), como as abas de Resultados Realizados. */
+/** As telas de um cenário (sintético ou analítico), como as abas de Resultados Empresariais. */
 export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnaliticos?: boolean }> = [
   // As configurações do cenário (12/10/2026). Cada tela aparece com a permissão dela (14/10/2026; antes, as Configurações
   // só para quem editava os cenários).
@@ -21,7 +21,7 @@ export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnalit
   { caminho: "premissas", rotulo: "Premissas", soAnaliticos: true },
   { caminho: "resultados", rotulo: "Resultados" },
   { caminho: "indicadores", rotulo: "Indicadores" },
-  // O Painel de Bordo do cenário (13/10/2026): o cenário × o comparado, como o de Resultados Realizados.
+  // O Painel de Bordo do cenário (13/10/2026): o cenário × o comparado, como o de Resultados Empresariais.
   { caminho: "painel", rotulo: "Painel de Bordo" },
   // O histórico de reajustes do cenário (12/10/2026).
   { caminho: "reajustes", rotulo: "Reajustes" },

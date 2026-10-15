@@ -3,7 +3,7 @@ import { calcularCenario, cenarioMarcado, metasPorMes } from "../cenarios/indica
 import type { Indicador } from "./indicadores.js";
 
 /**
- * O orçado de Resultados Realizados (Indicadores e Painel de Bordo): as Metas Orçadas do cenário marcado como
+ * O orçado de Resultados Empresariais (Indicadores e Painel de Bordo): as Metas Orçadas do cenário marcado como
  * Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos), calculadas como as de Resultados
  * Realizados. Desde 11/10/2026, as metas importadas (aba Metas (Orçamento), no Fechamento Mensal) não valem mais
  * fora dos cenários: sem cenário marcado no exercício, ou sem o valor no cenário, o orçado é zero.

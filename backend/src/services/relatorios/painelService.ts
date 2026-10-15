@@ -48,7 +48,7 @@ export const painelService = {
    */
   async painel(ano: number, ate?: number, somenteFechadas = false) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
-    // Com `somenteFechadas` (Resultados Realizados), só os meses de competência fechada têm valor.
+    // Com `somenteFechadas` (Resultados Empresariais), só os meses de competência fechada têm valor.
     const fechados = new Set(meses.filter((m) => m.competenciaId !== null).map((m) => m.mes));
     const competencias = (await getPrismaClient().competencia.findMany({ where: { ano, mes: { lte: ultimo } }, select: { id: true, mes: true } })).filter(
       (c) => !somenteFechadas || fechados.has(c.mes),

@@ -640,8 +640,8 @@ function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
           <p className="mt-2 text-xs text-gray-500">
             Aba lida: {resumo.aba}.{" "}
             {metas
-              ? "Os valores são o orçado do Painel de Bordo (Resultados Realizados); não entram na apuração."
-              : "Os valores vão para a tela Indicadores (Resultados Realizados); não entram na apuração."}
+              ? "Os valores são o orçado do Painel de Bordo (Resultados Empresariais); não entram na apuração."
+              : "Os valores vão para a tela Indicadores (Resultados Empresariais); não entram na apuração."}
           </p>
         </div>
       ) : null}

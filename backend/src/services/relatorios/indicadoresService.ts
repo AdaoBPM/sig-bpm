@@ -58,7 +58,7 @@ export function encadearMeses<T extends DadosDoMes | null>(dados: T[]): T[] {
 
 export const indicadoresService = {
   /**
-   * Os indicadores do exercício, mês a mês até `ate`, com o acumulado. Com `somenteFechadas` (Resultados Realizados),
+   * Os indicadores do exercício, mês a mês até `ate`, com o acumulado. Com `somenteFechadas` (Resultados Empresariais),
    * só os meses de competência fechada têm valor.
    */
   async listar(ano: number, ate?: number, somenteFechadas = false) {

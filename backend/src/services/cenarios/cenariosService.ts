@@ -150,7 +150,7 @@ async function conteudo(ids: string[]) {
 
 /**
  * A DRE de um cenário numa visão, mês a mês: os valores da visão e as bases (as do Consolidado em Despesas e Extra e no
- * RN, cuja tabela abre com a ROL do Consolidado, como em Resultados Realizados) e os meses com valor.
+ * RN, cuja tabela abre com a ROL do Consolidado, como em Resultados Empresariais) e os meses com valor.
  */
 async function dreDoCenario(cenarioId: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
   const visoes = basesDoConsolidado(visao) ? [visao, 0] : [visao];
@@ -205,7 +205,7 @@ const TOTAL_ZERO: CelulaTotal = { valor: 0, pct: null, unitario: null };
 
 /**
  * Os totais do exercício do cenário comparado numa visão, por linha (13/10/2026): o valor, o % e o R$/m³ do total,
- * como a coluna do total da tabela dele. Vão no lugar do orçado dos Resultados Realizados (só o total, sem o mês).
+ * como a coluna do total da tabela dele. Vão no lugar do orçado dos Resultados Empresariais (só o total, sem o mês).
  */
 async function totaisDoComparado(comparadoId: string, visao: 0 | 1 | 2 | 3 | 4 | 5, linhas: Awaited<ReturnType<typeof estrutura>>) {
   const d = await dreDoCenario(comparadoId, visao);
@@ -548,7 +548,7 @@ export const cenariosService = {
     return { cenario: await this.obter(cenario.id, usuario), previa: { hash: dados.hash, nomeArquivo: dados.nomeArquivo, ...p } };
   },
 
-  /** Uma visão da DRE do cenário (0 Consolidado, 1 a 5 as unidades), mês a mês, como as abas de Resultados Realizados. */
+  /** Uma visão da DRE do cenário (0 Consolidado, 1 a 5 as unidades), mês a mês, como as abas de Resultados Empresariais. */
   async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
     const [linhas, d, comparado] = await Promise.all([estrutura(), dreDoCenario(id, visao), comparadoDe(c)]);
@@ -566,7 +566,7 @@ export const cenariosService = {
   },
 
   /**
-   * O Painel de Bordo do cenário (13/10/2026), como o de Resultados Realizados: os mesmos quadros (Resultados e
+   * O Painel de Bordo do cenário (13/10/2026), como o de Resultados Empresariais: os mesmos quadros (Resultados e
    * Performance), com o cenário no lugar do realizado e o cenário comparado (o comparativo) no lugar do orçado — sem
    * comparado, essa parte fica vazia. O mês de referência é `ate` (dezembro, sem ele); o acumulado vai de janeiro a ele.
    */
@@ -705,7 +705,7 @@ export const cenariosService = {
   /**
    * A referência do cenário pelo resultado realizado (12/10/2026): a DRE das competências fechadas de um exercício
    * (o Consolidado e as cinco unidades, mês a mês) substitui a DRE do cenário; os meses sem competência fechada
-   * ficam vazios. Os indicadores realizados desses meses (os de Resultados Realizados) substituem os do cenário, como
+   * ficam vazios. Os indicadores realizados desses meses (os de Resultados Empresariais) substituem os do cenário, como
    * a aba das metas de um arquivo (12/10/2026): os que saem da DRE o cenário recalcula; os das listas, os
    * lançamentos manuais e os GME ficam com o realizado. Com `modo` MEDIA (12/10/2026), a média do período `de`–`ate`
    * (todo de competências fechadas) vai para os doze meses do cenário, na DRE e nos indicadores.

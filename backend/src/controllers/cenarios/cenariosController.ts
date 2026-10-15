@@ -80,7 +80,7 @@ export const cenariosController = {
   },
 
   /**
-   * A exportação da DRE do cenário (14/10/2026), como a de Resultados Realizados: ?formato=xlsx|pdf e ?escopo=atual (a
+   * A exportação da DRE do cenário (14/10/2026), como a de Resultados Empresariais: ?formato=xlsx|pdf e ?escopo=atual (a
    * visão de ?visao=0..5) ou unidades (as seis: pede a leitura de todas as abas da tela Resultados).
    */
   async exportar(request: Request, response: Response) {

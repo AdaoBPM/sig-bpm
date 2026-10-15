@@ -192,12 +192,12 @@ export function TabelaResultados({
   // (13/10/2026): os meses marcados e escondidos continuam marcados (a barra de marcação mostra quantos).
   const [recolhido, alternarMeses] = useMesesRecolhidos();
   const mostra = (i: number) => !recolhido || (i === referencia && !doCenario);
-  // O R$/m³ do mês de referência (Resultados Realizados); nos cenários, só no total.
+  // O R$/m³ do mês de referência (Resultados Empresariais); nos cenários, só no total.
   const unitarioNoMes = !doCenario;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
-  // O orçado (só nas visões de Resultados Realizados): depois do mês de referência e depois do total, o orçado (valor, % e
+  // O orçado (só nas visões de Resultados Empresariais): depois do mês de referência e depois do total, o orçado (valor, % e
   // R$/m³, em cinza); só depois do total, a variação (em amarelo): a diferença, o atingimento e a eficiência.
   const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
   // Nos cenários (13/10/2026), o cenário comparado no lugar do orçado: só depois do total (os 12 meses se olham inteiros).
@@ -706,7 +706,7 @@ export function ResultadosContent() {
             <p>
               As visões da DRE mês a mês no exercício, como as abas Resultados do BASE REALIZADO (RESULTADOS): o valor e a participação (%) de
               cada mês e o total do exercício; o mês de referência e o total trazem também o valor unitário (R$/m³). Os valores são os apurados (congelados) de cada
-              competência fechada: as abertas e em conferência não entram em Resultados Realizados.
+              competência fechada: as abertas e em conferência não entram em Resultados Empresariais.
             </p>
             <p>
               A participação é sobre a ROB nas receitas e nos impostos; sobre a Receita Líquida do Pré-Fabricado nos custos de produção

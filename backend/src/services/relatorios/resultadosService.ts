@@ -33,7 +33,7 @@ type Celula = { valor: number | null; pct: number | null; unitario: number | nul
 
 /**
  * Os meses do exercício até `ate`, com a competência apurada de cada um (ou nenhuma). Com `somenteFechadas` (as telas
- * de Resultados Realizados, 11/10/2026), só as competências fechadas contam: os meses abertos ou em conferência ficam
+ * de Resultados Empresariais, 11/10/2026), só as competências fechadas contam: os meses abertos ou em conferência ficam
  * vazios, e sem `ate` o último mês é o último fechado.
  */
 export async function mesesDoExercicio(ano: number, ate?: number, somenteFechadas = false) {

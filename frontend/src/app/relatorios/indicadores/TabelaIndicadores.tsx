@@ -124,7 +124,7 @@ function montarColunas<T extends Indicador>(
   comparado: { rotulo: string } | null,
 ): Coluna<T>[] {
   const ultimo = meses.length - 1;
-  // O orçado (Resultados Realizados, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado. Nos
+  // O orçado (Resultados Empresariais, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado. Nos
   // cenários com um cenário comparado (13/10/2026), só o acumulado dele, depois do acumulado.
   const orcadoDoMes: Coluna<T>[] = orcado && !comparado
     ? [{ chave: "orcado:mes", rotulo: `Orçado ${meses[ultimo].rotulo}`, tipo: "numero", alinhamento: "direita", valor: (i) => i.orcado[ultimo] ?? null, texto: (i) => valor(i, i.orcado[ultimo] ?? null), classe: ROTULO_DO_ORCADO }]
@@ -189,7 +189,7 @@ type Props<T extends Indicador> = {
   onClicar?: (i: T) => void;
   dicaDoClique?: string;
   iconeDoClique?: ComponentType<{ className?: string }>;
-  /** As colunas do orçado (Resultados Realizados): a do último mês e a do acumulado. */
+  /** As colunas do orçado (Resultados Empresariais): a do último mês e a do acumulado. */
   comOrcado?: boolean;
   /** Nos cenários (13/10/2026): o cenário comparado, cujo acumulado vem no lugar do orçado (só ele, sem o do mês). */
   comparado?: { nome: string; ano: number } | null;
@@ -199,7 +199,7 @@ type Props<T extends Indicador> = {
 };
 
 /**
- * A tabela dos indicadores (Resultados Realizados / Indicadores e os cenários sintéticos): os grupos em faixas, as
+ * A tabela dos indicadores (Resultados Empresariais / Indicadores e os cenários sintéticos): os grupos em faixas, as
  * colunas Indicador, Sent. e Und. presas à esquerda, os meses e o acumulado, com os filtros nos rótulos.
  */
 export function TabelaIndicadores<T extends Indicador>({

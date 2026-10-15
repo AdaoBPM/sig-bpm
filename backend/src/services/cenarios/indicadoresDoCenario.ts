@@ -9,7 +9,7 @@ import { QUADROS_DE_LOTACAO, quadrosDeLotacao, VENDA_LOTACAO } from "./lotacaoCe
 
 /**
  * Os indicadores de um cenário sintético (11/10/2026), com as fórmulas do cadastro Estrutura dos Indicadores — as
- * mesmas de Resultados Realizados —, sobre a DRE do cenário e os lançamentos manuais dele. Cada indicador fica numa
+ * mesmas de Resultados Empresariais —, sobre a DRE do cenário e os lançamentos manuais dele. Cada indicador fica numa
  * classe:
  *
  * - RESULTADO: a fórmula só usa linhas da DRE (custos, volumes, receitas, margens…): sai da DRE do cenário;
@@ -19,7 +19,7 @@ import { QUADROS_DE_LOTACAO, quadrosDeLotacao, VENDA_LOTACAO } from "./lotacaoCe
  * - IMPORTADO: os que o cenário não tem como calcular (a liberação de projetos, que vem das Listas, e os GME 4 e 8,
  *   que usam a demanda condicionada à venda e o orçado acumulado): ficam com o valor da aba das metas.
  *
- * O acumulado é o de Resultados Realizados (acumular); nos importados, o das metas (acumularMeta).
+ * O acumulado é o de Resultados Empresariais (acumular); nos importados, o das metas (acumularMeta).
  *
  * No cenário analítico (14/10/2026), os quadros de lotação são CALCULADOS: saem do Quadro de Lotação dos grupos de
  * centros de custo (lotacaoCenario.ts), e não são lançamentos manuais.
@@ -131,7 +131,7 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
   };
 }
 
-/** As metas orçadas de cada mês (todos os indicadores com valor), como Resultados Realizados lê o orçado. */
+/** As metas orçadas de cada mês (todos os indicadores com valor), como Resultados Empresariais lê o orçado. */
 export function metasPorMes(c: CalculoDoCenario): Array<Map<string, number> | null> {
   return Array.from({ length: 12 }, (_, k) => {
     const m = new Map<string, number>();
@@ -143,7 +143,7 @@ export function metasPorMes(c: CalculoDoCenario): Array<Map<string, number> | nu
   });
 }
 
-/** O cenário com a marcação no exercício (o Orçamento Empresarial dá o orçado de Resultados Realizados). */
+/** O cenário com a marcação no exercício (o Orçamento Empresarial dá o orçado de Resultados Empresariais). */
 export async function cenarioMarcado(ano: number, marcacao: MarcacaoCenario) {
   return getPrismaClient().cenario.findFirst({ where: { ano, marcacao }, select: { id: true, nome: true } });
 }

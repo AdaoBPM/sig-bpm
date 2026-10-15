@@ -17,7 +17,7 @@ export type LinhaResultado = {
   meses: Celula[];
   total: Celula;
   /**
-   * Nas visões de Resultados Realizados: o orçado do mês de referência e o acumulado, com o % e o R$/m³ (o cenário
+   * Nas visões de Resultados Empresariais: o orçado do mês de referência e o acumulado, com o % e o R$/m³ (o cenário
    * Orçamento Empresarial; zero sem ele). Nos cenários com um cenário comparado (13/10/2026): só o total dele.
    */
   orcado?: { mes?: Celula; total: Celula } | null;
