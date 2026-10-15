@@ -71,7 +71,7 @@ export function BotaoPercentuaisFixos() {
  * percentual, somando 100%, no lugar dos percentuais dos volumes. Escolha a chave e o conjunto (um já cadastrado, para
  * editar, ou Novo), a vigência e os percentuais. As regras por volume da chave precisam estar encerradas antes do início.
  */
-function PercentuaisFixosDialog({ onFechar }: { onFechar: () => void }) {
+export function PercentuaisFixosDialog({ onFechar, inicial }: { onFechar: () => void; inicial?: { chave: string; inicio: string } }) {
   const consulta = useQuery({ queryKey: ["edicao", "regras-rateio", "percentuais-fixos"], queryFn: servico.listar });
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -88,22 +88,26 @@ function PercentuaisFixosDialog({ onFechar }: { onFechar: () => void }) {
         ) : consulta.isPending ? (
           <div className="h-48 animate-pulse rounded-sm bg-gray-100" />
         ) : (
-          <Formulario dados={consulta.data} onFechar={onFechar} />
+          <Formulario dados={consulta.data} onFechar={onFechar} inicial={inicial} />
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function Formulario({ dados, onFechar }: { dados: Dados; onFechar: () => void }) {
+function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () => void; inicial?: { chave: string; inicio: string } }) {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const pode = hasPermission("cadastro_regras_rateio:editar");
-  const [chave, setChave] = useState(dados.chaves[0]?.chave ?? "");
-  const [conjunto, setConjunto] = useState("");
-  const [inicio, setInicio] = useState("");
-  const [fim, setFim] = useState("");
-  const [textos, setTextos] = useState<Record<string, string>>({});
+  // Aberto pelo lápis de uma regra fixa (14/10/2026): já na chave e no conjunto dela.
+  const doInicial = inicial ? (dados.conjuntos.find((x) => x.chave === inicial.chave && x.inicio === inicial.inicio) ?? null) : null;
+  const [chave, setChave] = useState(doInicial?.chave ?? dados.chaves[0]?.chave ?? "");
+  const [conjunto, setConjunto] = useState(doInicial?.inicio ?? "");
+  const [inicio, setInicio] = useState(doInicial?.inicio ?? "");
+  const [fim, setFim] = useState(doInicial?.fim ?? "");
+  const [textos, setTextos] = useState<Record<string, string>>(() =>
+    doInicial ? Object.fromEntries(Object.entries(doInicial.percentuais).map(([d, v]) => [d, v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })])) : {},
+  );
   const [excluir, setExcluir] = useState(false);
   const daChave = dados.chaves.find((c) => c.chave === chave);
   const conjuntos = dados.conjuntos.filter((c) => c.chave === chave);

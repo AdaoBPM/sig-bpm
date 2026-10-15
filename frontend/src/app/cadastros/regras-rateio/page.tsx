@@ -2,20 +2,13 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { SemLeitura } from "@/components/shared/SemLeitura";
 
-import { ListaCadastroContent } from "../components/ListaCadastroContent";
-import { AvisoRegrasRateio, BotaoPercentuaisFixos } from "./PercentuaisFixos";
+import { RegrasRateioContent } from "./RegrasRateioContent";
 
 export default function RegrasRateioPage() {
   return (
     <ProtectedLayout>
       <PermissionGuard permission="cadastro_regras_rateio:ler" fallback={<SemLeitura />}>
-        <ListaCadastroContent
-          entidade="regras-rateio"
-          rota="/cadastros/regras-rateio"
-          titulo="Regras de Rateio"
-          apenasAtivas
-          acoesExtras={<BotaoPercentuaisFixos />}
-          aviso={<AvisoRegrasRateio />}
+        <RegrasRateioContent
           comoUsar={
             <ul>
               <li>Use os filtros nos rótulos das colunas.</li>
@@ -35,8 +28,8 @@ export default function RegrasRateioPage() {
                 a vigência e o percentual de cada destino, somando 100%, e clique em “Gravar”. Os destinos são sempre os quatro — Matriz, Filial,
                 Montagem e Complementar —, em qualquer chave: um rateio pode passar a valer em outra unidade (a Produção em Serviços, por exemplo); o
                 destino que não deve receber fica com 0%. As
-                regras fixas aparecem na lista com o % Fixo e se editam e excluem só por esse botão (o conjunto já usado em apurações não se exclui:
-                encerre a vigência).
+                regras fixas aparecem na lista com o % Fixo; o lápis delas abre os Percentuais Fixos já na chave e no conjunto da regra, onde se editam e
+                se excluem (o conjunto já usado em apurações não se exclui: encerre a vigência).
               </li>
               <li>O quadro vermelho acima da tabela avisa as chaves com meses sem regra (até dezembro do ano que vem): nesses meses, os lançamentos de rateio da chave não vão para nenhuma unidade.</li>
             </ul>

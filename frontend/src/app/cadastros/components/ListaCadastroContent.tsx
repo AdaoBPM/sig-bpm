@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import { Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -72,10 +73,15 @@ type Props = {
   acoesExtras?: ReactNode;
   /** Um aviso acima da tabela (14/10/2026: a verificação das vigências, na tela Regras de Rateio). */
   aviso?: ReactNode;
+  /**
+   * A edição própria de alguns registros (14/10/2026: as regras de percentual fixo abrem o modal Percentuais Fixos): devolve
+   * o que o lápis faz, ou nulo para o formulário de sempre.
+   */
+  aoEditar?: (r: Registro) => (() => void) | null;
 };
 
 /** Consulta e edição de um cadastro simples, com as colunas que a definição dele declara (Passo 25). */
-export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras, aviso }: Props) {
+export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUsar, apenasAtivas, acoesExtras, aviso, aoEditar }: Props) {
   useRegistrarAcessoTela(rota);
   const def = useQuery({ queryKey: ["edicao", entidade, "definicao"], queryFn: () => edicaoService.definicao(entidade) });
   const lista = useQuery({ queryKey: ["edicao", entidade, "lista"], queryFn: () => edicaoService.listar(entidade) });
@@ -132,7 +138,20 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
                 {formatar(c, r[c.nome])}
               </td>
             ))}
-            {edicao.pode ? <td className="w-12 px-2 py-3">{edicao.botaoEditar(r.id)}</td> : null}
+            {edicao.pode ? (
+              <td className="w-12 px-2 py-3">
+                {(() => {
+                  const proprio = aoEditar?.(r);
+                  return proprio ? (
+                    <button type="button" onClick={proprio} title="Editar" className="rounded-sm p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
+                      <Pencil className="size-4" />
+                    </button>
+                  ) : (
+                    edicao.botaoEditar(r.id)
+                  );
+                })()}
+              </td>
+            ) : null}
           </tr>
         )}
       />
