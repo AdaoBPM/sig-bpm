@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   BadgeDollarSign,
   Building2,
+  Calculator,
   CalendarCheck,
   ChartPie,
   SlidersHorizontal,
@@ -66,13 +67,16 @@ export const navGrupos: NavGrupo[] = [
     itens: [
       { title: "Resultados ROVA", href: "/analises-gerenciais/resultados-rova", icon: TrendingUp, emDesenvolvimento: true },
       { title: "Indicadores VPR", href: "/analises-gerenciais/indicadores-vpr", icon: Target, emDesenvolvimento: true },
+      // Custos Operacionais (15/10/2026), em desenvolvimento.
+      { title: "Custos Operacionais", href: "/analises-gerenciais/custos-operacionais", icon: Calculator, emDesenvolvimento: true },
     ],
   },
   {
     titulo: "Gestão do Patrimônio",
     itens: [
       { title: "Auditoria de Investimentos", href: "/gestao-do-patrimonio/auditoria-de-investimentos", icon: ShieldCheck, emDesenvolvimento: true },
-      { title: "Inventário de Prod. Acabados", href: "/gestao-do-patrimonio/inventario-de-produtos-acabados", icon: PackageCheck, emDesenvolvimento: true },
+      // Inventários e Cíclicas (15/10/2026; antes, Inventário de Prod. Acabados).
+      { title: "Inventários e Cíclicas", href: "/gestao-do-patrimonio/inventarios-e-ciclicas", icon: PackageCheck, emDesenvolvimento: true },
       { title: "Ociosidade do Maquinário", href: "/gestao-do-patrimonio/ociosidade-do-maquinario", icon: Factory, emDesenvolvimento: true },
     ],
   },
