@@ -9,7 +9,10 @@ import { usePermissions } from "@/context/PermissionContext";
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { cenariosService, rotuloDoCenario, rotuloMarcacao, rotuloVersao } from "../services/cenariosService";
+import { cenariosService, rotuloDoCenario, rotuloVersao } from "../services/cenariosService";
+import { EtiquetaMarcacao, EtiquetaVigente } from "./EtiquetasCenario";
+
+const ETIQUETA = "rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700";
 import { useTipoDoCenario } from "./tipoDoCenario";
 
 /** As telas de um cenário (sintético ou analítico), como as abas de Resultados Empresariais. */
@@ -45,7 +48,6 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const t = useTipoDoCenario();
   const lista = useQuery({ queryKey: ["cenarios", t.tipo], queryFn: () => cenariosService.listar(t.tipo) });
   const atual = lista.data?.find((c) => c.id === id);
-  const marcacao = rotuloMarcacao(atual?.marcacao ?? null);
   return (
     <nav aria-label="Telas do cenário" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
       <div className="flex shrink-0 items-center gap-2 px-1">
@@ -99,7 +101,9 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
             {atual.versaoSalvaEm ? " · Congelada" : ""}
           </span>
         ) : null}
-        {marcacao ? <span className="rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700">{marcacao}</span> : null}
+        {/* Depois da versão, a etiqueta Vigente e a da marcação, com os símbolos (14/10/2026). */}
+        {atual?.vigente ? <EtiquetaVigente classe={ETIQUETA} /> : null}
+        <EtiquetaMarcacao marcacao={atual?.marcacao ?? null} classe={ETIQUETA} />
       </div>
     </nav>
   );

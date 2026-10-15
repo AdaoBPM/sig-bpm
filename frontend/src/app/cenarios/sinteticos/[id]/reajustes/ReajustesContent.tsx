@@ -17,6 +17,7 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { formato } from "@/app/relatorios/services/relatoriosService";
 
+import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { JustificativasCenario } from "../../../components/JustificativasCenario";
 import { cenariosService, type ReajusteDoCenario } from "../../../services/cenariosService";
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
@@ -107,10 +108,11 @@ export function ReajustesContent() {
             </li>
             <li>
               Na aba Justificativas (só com um cenário comparado, em Configurações / Comparativo): escolha a aba da DRE (Consolidado ou cada unidade); acima
-              da tabela, quantas contas da aba passam da variação. Cada linha é uma conta com algum mês acima da variação máxima do total dela: os meses
+              da tabela, quantas contas da aba passam da variação. Cada linha é uma conta com algum mês acima da variação máxima dela: os meses
               mostram a variação (passe o mouse para ver o valor do cenário e o do comparado; “sem base”: o comparado é zero no mês). Digite a
               justificativa e clique em “Gravar”; apagar o texto e gravar a apaga. “Só Sem Justificativa” esconde as já justificadas. Uma conta que
-              deixa de passar da variação sai da lista (a justificativa fica guardada).
+              deixa de passar da variação sai da lista (a justificativa fica guardada). Com o cenário marcado ou com a versão congelada, as
+              justificativas só se leem.
             </li>
           </ul>
         }
@@ -118,7 +120,7 @@ export function ReajustesContent() {
           <>
             <p>O histórico dos reajustes do cenário: quem, quando, em que aba, que contas e meses, o reajuste e o efeito nas somas dos valores alterados.</p>
             <p>
-              As justificativas: com um cenário comparado, as contas que variam, num mês, mais do que a variação máxima do total delas em relação ao
+              As justificativas: com um cenário comparado, as contas que variam, num mês, mais do que a variação máxima delas em relação ao
               comparado (a diferença dividida pelo valor do comparado, para mais ou para menos). O total sem contas embaixo (como a Margem Bruta e o
               EBITDA) se compara ele mesmo.
             </p>
@@ -134,7 +136,16 @@ export function ReajustesContent() {
       {aba === null ? (
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
       ) : aba === "justificativas" ? (
-        <JustificativasCenario id={id} podeEditar={hasPermission(t.perm("reajustes", "editar", "justificativas"))} />
+        // O cenário travado (marcado ou com a versão congelada): as justificativas não se editam (14/10/2026).
+        <div className="space-y-4">
+          {cenario.data && estaTravado(cenario.data) && hasPermission(t.perm("reajustes", "editar", "justificativas")) ? (
+            <AvisoMarcado cenario={cenario.data} oQue="as justificativas" varios />
+          ) : null}
+          <JustificativasCenario
+            id={id}
+            podeEditar={hasPermission(t.perm("reajustes", "editar", "justificativas")) && !!cenario.data && !estaTravado(cenario.data)}
+          />
+        </div>
       ) : (
         <QuadroTabela
           barra={

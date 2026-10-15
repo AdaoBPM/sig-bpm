@@ -165,7 +165,7 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
             <legend className="mb-1.5 text-sm leading-none font-medium">Importação</legend>
             {(
               [
-                ["MEDIA", "Média Replicada", "A média de um período: os centros de custo, a depreciação e o extra-operacional, nos doze meses; as premissas, com as médias do período."],
+                ["MEDIA", "Média Replicada", "A média de um período: os centros de custo (cada conta, só nos meses com movimentação), a depreciação e o extra-operacional, nos doze meses; as premissas, com as médias do período."],
                 ["MES_A_MES", "Mês a Mês", "Os centros de custo, a depreciação e o extra-operacional de cada competência fechada no mês dela; as premissas, com as médias de todos os meses fechados."],
               ] as const
             ).map(([v, rotulo, detalhe]) => (

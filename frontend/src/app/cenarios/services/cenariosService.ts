@@ -211,7 +211,11 @@ export type Comparativo = {
   /** Os cenários que se podem escolher; `vigente`: a versão mais recente da família (13/10/2026). */
   /** Os cenários dos dois tipos (13/10/2026): o tipo vai numa etiqueta. */
   opcoes: Array<{ id: string; nome: string; ano: number; tipo: TipoCenario; marcacao: MarcacaoCenario | null; versao: number; vigente: boolean }>;
-  totais: Array<{ codigo: string; descricao: string; limite: number | null }>;
+  /**
+   * As linhas da DRE vigente (14/10/2026; antes, só os totais): totais, atribuições e contas. `verificada`: a linha sem
+   * nada embaixo (a conta, ou o total e a atribuição sem contas), a que tem a variação máxima.
+   */
+  linhas: Array<{ codigo: string; descricao: string; tipo: string; verificada: boolean; limite: number | null }>;
 };
 /** Uma linha acima da variação máxima: os meses (o valor, o comparado e a variação em %; nula sem base) e a justificativa. */
 export type ItemJustificativa = {

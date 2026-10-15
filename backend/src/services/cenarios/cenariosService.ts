@@ -17,7 +17,7 @@ import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { calcularCenario, type CalculoDoCenario } from "./indicadoresDoCenario.js";
 import { montarPainel } from "../relatorios/painelService.js";
 import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, type Valor } from "../relatorios/painelDeBordo.js";
-import { linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
+import { limiteDaLinha, linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 import {
   calcularAnalitico,
@@ -43,7 +43,7 @@ import {
   VENDA_BASE,
   VENDA_EXTRA,
 } from "./investimentosCenario.js";
-import { referenciaDoRealizado } from "./referenciaAnalitico.js";
+import { mediaDosMeses, mediaNosMesesComOcorrencia, referenciaDoRealizado } from "./referenciaAnalitico.js";
 import { diferencasDasDecisoes, lerRealocacoes, type Realocacoes } from "./realocacoesCenario.js";
 import { distribuirLotacao, QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } from "./lotacaoCenario.js";
 import { assinaturaDasRegras, avisosDosRateios, bloqueioPorRateios, mesesDoAno, percentuaisPelasRegras, regrasDeRateio, type RegraDoMes } from "../volumes/vigenciaDosRateios.js";
@@ -420,6 +420,8 @@ export const cenariosService = {
     if (dados.nome !== antes.nome && (await familias())(antes).nomeTravado) {
       throw new CenarioError(409, `O cenário ${antes.nome} tem revisões: o nome é o mesmo em todas as versões e não muda.`);
     }
+    // O nome e a descrição do cenário travado (marcado ou com a versão congelada) não mudam (14/10/2026); a visualização, sim.
+    if (dados.nome !== antes.nome || (dados.descricao ?? null) !== (antes.descricao ?? null)) exigirEditavel(antes);
     const visualizacao = dados.visualizacao ?? antes.visualizacao;
     if (visualizacao !== antes.visualizacao) {
       if (!mudaVisualizacao(antes, usuario)) throw new CenarioError(409, "Só quem criou o cenário ou o Administrador muda a visualização dele.");
@@ -785,8 +787,9 @@ export const cenariosService = {
       // As decisões de realocação das movimentações fora dos padrões ficam entre as cargas (14/10/2026).
       const anteriores = lerRealocacoes(c.realocacoes);
       const ref = await referenciaDoRealizado(ano, fechadas.map((f) => f.mes), anteriores.decisoes);
-      // Os valores de cada movimentação nos doze meses do cenário: mês a mês, ou a média do período em todos.
-      const nosMeses = (meses12: number[]) => (media ? doze.map(() => meses12.reduce((s, v) => s + v, 0) / fechadas.length) : meses12);
+      // Os valores de cada movimentação nos doze meses do cenário: mês a mês, ou a média em todos (14/10/2026: só dos
+      // meses com movimentação; antes, de todos os meses do período).
+      const nosMeses = (meses12: number[]) => (media ? mediaDosMeses(meses12) : meses12);
       const movimentacoes = ref.movimentacoes.map(({ meses, ...m }) => ({ ...m, valores: nosMeses(meses) }));
       const realocacoes: Realocacoes = {
         ...anteriores,
@@ -817,7 +820,21 @@ export const cenariosService = {
           const mensais = mediar(ref.mensais, (x) => `${x.venda}|${x.chave}`).map((x) => ({ cenarioId: id, unidade: x.unidade, venda: x.venda, chave: x.chave, mes: x.mes, valor: decimal(x.valor) }));
           await gravarEmLotes([...premissas, ...mensais], (lote) => tx.cenarioPremissa.createMany({ data: lote }));
           await tx.cenarioCentro.deleteMany({ where: { cenarioId: id } });
-          const centros = mediar(ref.centros, (x) => `${x.grupo}|${x.codigo}`).flatMap((x) => {
+          // Na média, cada grupo e conta conta só os meses em que teve movimentação (14/10/2026), e as realocações
+          // aplicadas entram com a média delas (a mesma que o quadro das realocações soma e tira ao mudar a decisão).
+          const somaDosCentros = new Map<string, { grupo: string; codigo: string; mes: number; valor: number }>();
+          const naSoma = (x: { grupo: string; codigo: string; mes: number; valor: number }) => {
+            const k = `${x.grupo}|${x.codigo}|${x.mes}`;
+            somaDosCentros.set(k, { ...x, valor: (somaDosCentros.get(k)?.valor ?? 0) + x.valor });
+          };
+          if (media) {
+            mediaNosMesesComOcorrencia(ref.centrosProprios, (x) => `${x.grupo}|${x.codigo}`).forEach(naSoma);
+            for (const m of movimentacoes) {
+              const a = ref.aplicadas.get(m.chave);
+              if (a) m.valores.forEach((valor, k) => naSoma({ grupo: a.grupo, codigo: a.conta, mes: k + 1, valor }));
+            }
+          } else ref.centros.forEach(naSoma);
+          const centros = [...somaDosCentros.values()].flatMap((x) => {
             const linhaDREId = idDaConta.get(x.codigo);
             return linhaDREId && Math.abs(x.valor) >= 0.00005 ? [{ cenarioId: id, grupo: x.grupo, linhaDREId, mes: x.mes, valor: decimal(x.valor) }] : [];
           });
@@ -1702,15 +1719,16 @@ export const cenariosService = {
   },
 
   /**
-   * O comparativo do cenário (12/10/2026): o cenário comparado, os cenários que o usuário pode escolher e os totais da
-   * DRE com a variação máxima (em %) de cada um (nula: o total não se verifica).
+   * O comparativo do cenário (12/10/2026): o cenário comparado, os cenários que o usuário pode escolher e as linhas da
+   * DRE (14/10/2026: totais, atribuições e contas; antes, só os totais), com a variação máxima (em %) de cada linha
+   * verificada (nula: a linha não se verifica).
    */
   async comparativo(id: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
     // Os dois tipos (13/10/2026): o analítico se compara também com um sintético (o Orçamento Empresarial, por exemplo).
     const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id } }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
     const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
-    const { totais } = totaisDaDRE(await estruturaDRE());
+    const { linhas } = totaisDaDRE(await estruturaDRE());
     const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
     // A versão vigente (13/10/2026): a maior da família (o filtro "Apenas Vigentes" do modal de escolha).
     const ultimas = new Map<string, number>();
@@ -1721,22 +1739,30 @@ export const cenariosService = {
     return {
       comparadoCom: comparado,
       opcoes: outros.map((o) => ({ id: o.id, nome: o.nome, ano: o.ano, tipo: o.tipo as TipoCenario, marcacao: o.marcacao, versao: o.versao, vigente: o.versao === ultimas.get(o.familiaId ?? o.id) })),
-      totais: totais.map((t) => ({ ...t, limite: typeof limites[t.codigo] === "number" ? limites[t.codigo] : null })),
+      linhas: linhas.map((l) => ({
+        codigo: l.linha.codigo,
+        descricao: l.linha.descricao,
+        tipo: l.linha.tipo,
+        verificada: l.folha,
+        limite: l.folha ? limiteDaLinha(limites, l.linha.codigo, l.acima) : null,
+      })),
     };
   },
 
   /**
    * Grava o comparativo: o cenário comparado (nulo desliga o comparativo; as variações máximas ficam guardadas) e as
-   * variações máximas dos totais. Não mexe nos dados do cenário: vale também para o cenário marcado.
+   * variações máximas das linhas verificadas (as contas, e os totais e atribuições sem contas). Não vale para o cenário
+   * travado (14/10/2026: marcado ou com a versão congelada; antes, valia).
    */
   async gravarComparativo(id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }, usuario: Usuario) {
     const antes = await obterOuFalhar(id, usuario);
     exigirQuemCriou(antes, usuario);
+    exigirEditavel(antes);
     if (dados.comparadoComId === id) throw new CenarioError(400, "Escolha outro cenário para comparar.");
     if (dados.comparadoComId) await obterOuFalhar(dados.comparadoComId, usuario);
-    const codigos = new Set(totaisDaDRE(await estruturaDRE()).totais.map((t) => t.codigo));
+    const codigos = new Set(totaisDaDRE(await estruturaDRE()).verificadas.map((v) => v.linha.codigo));
     const fora = Object.keys(dados.limites).filter((k) => !codigos.has(k));
-    if (fora.length) throw new CenarioError(400, `Não são totais da DRE: ${fora.slice(0, 3).join(", ")}.`);
+    if (fora.length) throw new CenarioError(400, `Não são contas da DRE: ${fora.slice(0, 3).join(", ")}.`);
     const variacoesMaximas = Object.fromEntries(Object.entries(dados.limites).filter((e): e is [string, number] => e[1] !== null));
     const depois = await getPrismaClient().cenario.update({ where: { id }, data: { comparadoComId: dados.comparadoComId, variacoesMaximas } });
     await auditar({
@@ -1753,8 +1779,8 @@ export const cenariosService = {
   },
 
   /**
-   * As justificativas do comparativo: em cada visão da DRE, as contas (ou os totais sem contas) com algum mês acima da
-   * variação máxima do total delas, os meses (o valor, o comparado e a variação) e a justificativa gravada.
+   * As justificativas do comparativo: em cada visão da DRE, as contas (ou os totais e atribuições sem contas) com algum
+   * mês acima da variação máxima delas, os meses (o valor, o comparado e a variação) e a justificativa gravada.
    */
   async justificativas(id: string, usuario: Usuario = SISTEMA) {
     const prisma = getPrismaClient();
@@ -1763,7 +1789,8 @@ export const cenariosService = {
     if (!comparado) return { comparadoCom: null, visoes: [] };
     const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
     const est = await estruturaDRE();
-    const { verificadas } = totaisDaDRE(est);
+    const { verificadas, linhas } = totaisDaDRE(est);
+    const acimaDe = new Map(linhas.map((l) => [l.linha.codigo, l.acima]));
     const dasVisoes = linhasDasVisoes(est);
     const [valores, comparados, gravadas] = await Promise.all([
       prisma.cenarioResultado.findMany({ where: { cenarioId: id }, select: { visao: true, linhaDREId: true, mes: true, valor: true } }),
@@ -1789,7 +1816,7 @@ export const cenariosService = {
         visao,
         nome,
         itens: verificadas.flatMap(({ linha, total }) => {
-          const limite = limites[total.codigo];
+          const limite = limiteDaLinha(limites, linha.codigo, acimaDe.get(linha.codigo) ?? []);
           if (typeof limite !== "number" || !dasVisoes.get(visao)!.has(linha.codigo)) return [];
           const k = `${visao}|${linha.id}`;
           const meses = mesesAcima(doCenario.get(k) ?? vazio, doComparado.get(k) ?? vazio, limite);
@@ -1811,10 +1838,13 @@ export const cenariosService = {
     };
   },
 
-  /** Grava a justificativa de uma linha numa visão; o texto vazio a apaga. Vale também para o cenário marcado. */
+  /**
+   * Grava a justificativa de uma linha numa visão; o texto vazio a apaga. Não vale para o cenário travado (14/10/2026:
+   * marcado ou com a versão congelada; antes, valia).
+   */
   async gravarJustificativa(id: string, dados: { visao: number; linha: string; texto: string }, usuario: Usuario) {
     const prisma = getPrismaClient();
-    await obterOuFalhar(id, usuario);
+    exigirEditavel(await obterOuFalhar(id, usuario));
     const linha = await prisma.linhaDRE.findUnique({ where: { codigo: dados.linha }, select: { id: true, descricao: true } });
     if (!linha) throw new CenarioError(400, "Conta não encontrada na Estrutura da DRE.");
     const chave = { cenarioId_visao_linhaDREId: { cenarioId: id, visao: dados.visao, linhaDREId: linha.id } };

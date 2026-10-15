@@ -277,3 +277,42 @@
 [data-tema="escuro"] .celula-orcado {
   color: #111827;
 }
+
+/*
+ * A imagem do grupo do Painel de Bordo sem os gráficos (14/10/2026; CopiarComoImagem semGraficos): a cópia do grupo,
+ * fora da tela, na largura dos valores; os cards sem a coluna do gráfico, com a borda de cada um.
+ */
+[data-sem-graficos] {
+  width: max-content !important;
+}
+[data-sem-graficos] [data-grafico-do-card] {
+  display: none !important;
+}
+@media (min-width: 64rem) {
+  [data-sem-graficos] [data-card-indicador] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+}
+
+/*
+ * As notificações (14/10/2026; components/ui/sonner.tsx): o êxito em verde forte e o erro em vermelho forte, com o
+ * texto, a descrição e o X em branco, em todos os temas.
+ */
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"]:is([data-type="success"], [data-type="error"]) {
+  color: var(--color-white);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="success"],
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="success"] [data-close-button] {
+  background: var(--color-green-700);
+  border-color: var(--color-green-800);
+  color: var(--color-white);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="error"],
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="error"] [data-close-button] {
+  background: var(--color-red-700);
+  border-color: var(--color-red-800);
+  color: var(--color-white);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"]:is([data-type="success"], [data-type="error"]) [data-description] {
+  color: inherit;
+}

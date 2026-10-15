@@ -18,8 +18,11 @@ import type { Coluna } from "@/lib/filtrosDeTabela";
 import { formato } from "@/app/relatorios/services/relatoriosService";
 
 import { botaoPrimario, CenarioDialog } from "../components/CenarioDialog";
-import { cenariosService, rotuloMarcacao, rotuloVersao, ROTULO_VISUALIZACAO, type Cenario, DO_TIPO, type TipoCenario } from "../services/cenariosService";
+import { EtiquetaMarcacao, EtiquetaVigente } from "../components/EtiquetasCenario";
+import { cenariosService, rotuloVersao, ROTULO_VISUALIZACAO, type Cenario, DO_TIPO, type TipoCenario } from "../services/cenariosService";
 
+/** O contorno das etiquetas Vigente e da marcação, ao lado do nome (14/10/2026). */
+const ETIQUETA = "rounded-sm border border-gray-300 bg-white px-1.5 py-px align-middle text-xs font-medium whitespace-nowrap text-gray-900";
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null);
 
 /** Uma coluna dos resultados do exercício (13/10/2026): o valor em R$ e, embaixo, o %; ordena e filtra pelo valor. */
@@ -80,8 +83,9 @@ const COMO_USAR_ANALITICOS = (
       coluna ordena e filtra pelo RL.
     </li>
     <li>
-      Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando congelada; as versões se congelam, se reabrem e se revisam na tela
-      Resultados de cada cenário, como nos sintéticos.
+      Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando congelada, a etiqueta “Vigente” (com a estrela) na versão mais
+      alta de cada cenário e a da marcação (com o símbolo de marcação); as versões se congelam, se reabrem e se revisam na tela Resultados de cada
+      cenário, como nos sintéticos.
     </li>
     <li>Clique na linha para abrir o cenário, com as telas Configurações, Resultados, Indicadores, Painel de Bordo e Reajustes (as que o seu perfil lê).</li>
     <li>
@@ -137,17 +141,18 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
               total da tela Resultados), com os reais abreviados (R$ 86,42M nos milhões, R$ 532,10 mil nos milhares). A coluna ordena e filtra pelo RL.
             </li>
             <li>
-              Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando congelada. As versões se congelam, se reabrem e se revisam na tela
-              Resultados de cada cenário (Congelar Versão, Reabrir Versão e Criar Revisão); cada revisão é um cenário próprio na lista, com o mesmo nome e a versão seguinte.
+              Ao lado do nome, a versão do cenário (VER00, VER01…), com o cadeado quando congelada, e a etiqueta “Vigente” (com a estrela) na versão
+              mais alta de cada cenário. As versões se congelam, se reabrem e se revisam na tela Resultados de cada cenário (Congelar Versão, Reabrir
+              Versão e Criar Revisão); cada revisão é um cenário próprio na lista, com o mesmo nome e a versão seguinte.
             </li>
             <li>Clique na linha para abrir o cenário, com as telas Configurações, Resultados, Indicadores e Reajustes (as que o seu perfil lê).</li>
             <li>
-              Embaixo da visualização, a etiqueta da marcação diz se o cenário é o Orçamento Empresarial, os Resultados Anteriores ou os Resultados Vendidos. Para marcar, excluir,
+              Depois da etiqueta Vigente, a da marcação (com o símbolo de marcação) diz se o cenário é o Orçamento Empresarial, os Resultados Anteriores ou os Resultados Vendidos. Para marcar, excluir,
               importar um arquivo no cenário ou mudar o nome, a descrição, a visualização, a referência e o comparativo, abra o cenário e vá em
               Configurações. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
             <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Empresariais.</li>
-            <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui nem se edita (a DRE, os indicadores manuais e a referência; o nome e a descrição, sim): tire a marcação (ou marque outro cenário) antes.</li>
+            <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui; marcado ou com a versão congelada, não se edita: a DRE, os indicadores manuais, a referência, o nome, a descrição, o comparativo e as justificativas (a visualização, sim). Tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e os Administradores
               têm acesso; os demais não veem o cenário na lista) ou Pública (todos os usuários com permissão nos Cenários Sintéticos). A
@@ -230,12 +235,9 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
                     {c.versaoSalvaEm ? <Lock className="size-3" /> : null}
                     {rotuloVersao(c.versao)}
                   </span>
-                  {/* A marcação logo depois da versão (13/10/2026; antes, embaixo da descrição). */}
-                  {c.marcacao ? (
-                    <span className="ml-1.5 inline-flex rounded-sm border border-gray-300 bg-white px-1.5 py-px align-middle text-xs font-medium text-gray-900">
-                      {rotuloMarcacao(c.marcacao)}
-                    </span>
-                  ) : null}
+                  {/* Depois da versão, a etiqueta Vigente (14/10/2026) e a da marcação (13/10/2026; antes, embaixo da descrição). */}
+                  {c.vigente ? <EtiquetaVigente classe={`ml-1.5 ${ETIQUETA}`} /> : null}
+                  <EtiquetaMarcacao marcacao={c.marcacao} classe={`ml-1.5 ${ETIQUETA}`} />
                 </div>
                 {c.descricao ? <div className="text-xs text-gray-500">{c.descricao}</div> : null}
               </td>

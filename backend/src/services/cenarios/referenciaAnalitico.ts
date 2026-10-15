@@ -71,6 +71,8 @@ export type ReferenciaRealizada = {
   premissas: Array<{ unidade: UnidadePremissa; venda: Venda; chave: string; valor: number }>;
   /** Os grupos de centros de custo, por conta e mês. */
   centros: Array<{ grupo: string; codigo: string; mes: number; valor: number }>;
+  /** Os mesmos, sem as realocações aplicadas (14/10/2026: a média dos centros conta os meses com movimentação de cada um). */
+  centrosProprios: Array<{ grupo: string; codigo: string; mes: number; valor: number }>;
   /** A depreciação (BASE) e o extra-operacional (EXTRA) das unidades, mês a mês ("u|conta"). */
   mensais: Array<{ venda: typeof VENDA_BASE | typeof VENDA_EXTRA; unidade: number; chave: string; mes: number; valor: number }>;
   /** O que não coube (receita sem volume, custos sem linha…). */
@@ -83,6 +85,29 @@ export type ReferenciaRealizada = {
   /** As decisões que entraram nos centros desta carga (a conta → o grupo e a conta de destino). */
   aplicadas: Map<string, { grupo: string; conta: string }>;
 };
+
+/**
+ * A média dos centros de custo na referência Média Replicada (14/10/2026): a soma de cada grupo e conta no período ÷ o
+ * número de meses em que a conta teve movimentação no grupo (antes, ÷ todos os meses do período), nos doze meses. A
+ * conta sem movimentação no período fica de fora.
+ */
+export function mediaNosMesesComOcorrencia<T extends { mes: number; valor: number }>(xs: T[], chave: (x: T) => string): T[] {
+  const somas = new Map<string, { x: T; soma: number; meses: Set<number> }>();
+  for (const x of xs) {
+    const s = somas.get(chave(x)) ?? { x, soma: 0, meses: new Set<number>() };
+    s.soma += x.valor;
+    if (Math.abs(x.valor) >= 0.005) s.meses.add(x.mes);
+    somas.set(chave(x), s);
+  }
+  return [...somas.values()].flatMap(({ x, soma, meses }) => (meses.size ? Array.from({ length: 12 }, (_, k) => ({ ...x, mes: k + 1, valor: soma / meses.size })) : []));
+}
+
+/** Os doze meses de uma movimentação na Média Replicada: a soma ÷ os meses com movimentação (14/10/2026). */
+export function mediaDosMeses(meses: number[]): number[] {
+  const com = meses.filter((v) => Math.abs(v) >= 0.005);
+  const media = com.length ? com.reduce((s, v) => s + v, 0) / com.length : 0;
+  return Array<number>(12).fill(media);
+}
 
 const reais = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -411,6 +436,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
     const grupo = nomeRM ? grupoDoCentroRM(grupos, nomeRM) : null;
     m.padrao = grupo && m.destinos.some((d) => d.grupo === grupo) ? grupo : null;
   }
+  const proprios = new Map(somaCentros);
   // As decisões gravadas (mantidas entre as cargas) entram nos grupos escolhidos.
   const aplicadas = new Map<string, { grupo: string; conta: string }>();
   for (const m of movimentacoes) {
@@ -420,10 +446,12 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
     m.meses.forEach((v, k) => v && somar(somaCentros, `${alvo.grupo}|${alvo.conta}|${k + 1}`, v));
     aplicadas.set(m.chave, alvo);
   }
-  const centrosDoCenario = [...somaCentros].map(([k, valor]) => {
-    const [grupo, codigo, mes] = k.split("|");
-    return { grupo, codigo, mes: Number(mes), valor };
-  });
+  const paraLista = (m: Map<string, number>) =>
+    [...m].map(([k, valor]) => {
+      const [grupo, codigo, mes] = k.split("|");
+      return { grupo, codigo, mes: Number(mes), valor };
+    });
+  const centrosDoCenario = paraLista(somaCentros);
 
   // A depreciação de cada unidade e o extra-operacional.
   const mensais: ReferenciaRealizada["mensais"] = [];
@@ -459,7 +487,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
   }
   if (fora.length) avisos.push(`Contas do realizado que o cenário não tem (ficam fora da DRE dele): ${fora.join("; ")}.`);
 
-  return { premissas, centros: centrosDoCenario, mensais, avisos, movimentacoes, aplicadas };
+  return { premissas, centros: centrosDoCenario, centrosProprios: paraLista(proprios), mensais, avisos, movimentacoes, aplicadas };
 }
 
 const NOME_DA_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços" };

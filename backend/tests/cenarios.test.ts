@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { LinhaPlanilha, ValorCelula } from "../src/lib/xlsx.js";
-import { mesesAcima, totaisDaDRE } from "../src/services/cenarios/comparativoCenario.js";
+import { limiteDaLinha, mesesAcima, totaisDaDRE } from "../src/services/cenarios/comparativoCenario.js";
 import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
 import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
 import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
-import { dividirPorLinhas, linhaDaTarefa, vendaDaObra } from "../src/services/cenarios/referenciaAnalitico.js";
+import { dividirPorLinhas, linhaDaTarefa, mediaDosMeses, mediaNosMesesComOcorrencia, vendaDaObra } from "../src/services/cenarios/referenciaAnalitico.js";
 import { distribuirLotacao, quadroDoGrupo, quadrosDeLotacao } from "../src/services/cenarios/lotacaoCenario.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
 import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
@@ -109,6 +109,48 @@ describe("comparativo entre cenários", () => {
       verificadas.map((v) => `${v.total.codigo}:${v.linha.codigo}`),
       ["RO.ROL:RO.ROL", "ROB.ROB:ROB.RBPF", "CPP.CPP:CPP.MOD.CLT", "MB.MB:MB.MB"],
     );
+  });
+  it("a média dos centros conta só os meses com movimentação de cada grupo e conta", () => {
+    const r = mediaNosMesesComOcorrencia(
+      [
+        { grupo: "A", codigo: "X", mes: 1, valor: 100 },
+        { grupo: "A", codigo: "X", mes: 3, valor: 200 },
+        { grupo: "B", codigo: "X", mes: 2, valor: 60 },
+        { grupo: "B", codigo: "Y", mes: 2, valor: 0 },
+      ],
+      (x) => `${x.grupo}|${x.codigo}`,
+    );
+    assert.equal(r.length, 24);
+    assert.equal(r.find((x) => x.grupo === "A" && x.mes === 7)!.valor, 150);
+    assert.equal(r.find((x) => x.grupo === "B" && x.mes === 12)!.valor, 60);
+    assert.deepEqual(mediaDosMeses([0, 30, 0, 90, 0, 0, 0, 0, 0, 0, 0, 0]), Array(12).fill(60));
+    assert.deepEqual(mediaDosMeses(Array(12).fill(0)), Array(12).fill(0));
+  });
+  it("a Variação Máxima na estrutura da DRE: sem a primeira ROL, com as atribuições e as contas; a variação do total vale para as contas", () => {
+    const { linhas, verificadas } = totaisDaDRE([
+      linha("RO.ROL", "TOTAL", "RECEITA OPERACIONAL LÍQUIDA (ROL)"),
+      linha("ROB.ROB", "SUBTOTAL"),
+      linha("ROB.RBPF", "ITEM"),
+      linha("IRB.IRB", "TOTAL"),
+      linha("IRB.IO.IMPOSTOS", "TOTAL"),
+      linha("ROL.ROL", "SUBTOTAL", "RECEITA OPERACIONAL LÍQUIDA (ROL)"),
+      linha("ROL.RLPF", "ITEM"),
+      linha("CPP.CPP", "SUBTOTAL"),
+      linha("CPP.MOD.MAO", "SUBTOTAL"),
+      linha("CPP.MOD.CLT", "ITEM"),
+    ]);
+    assert.deepEqual(
+      linhas.map((l) => `${l.linha.codigo}:${l.nivel}${l.folha ? "*" : ""}`),
+      ["ROB.ROB:0", "ROB.RBPF:1*", "IRB.IRB:0", "IRB.IO.IMPOSTOS:1*", "ROL.ROL:0", "ROL.RLPF:1*", "CPP.CPP:0", "CPP.MOD.MAO:1", "CPP.MOD.CLT:2*"],
+    );
+    assert.deepEqual(verificadas.map((v) => `${v.total.codigo}:${v.linha.codigo}`), ["ROB.ROB:ROB.RBPF", "IRB.IRB:IRB.IO.IMPOSTOS", "ROL.ROL:ROL.RLPF", "CPP.CPP:CPP.MOD.CLT"]);
+    const clt = linhas.find((l) => l.linha.codigo === "CPP.MOD.CLT")!;
+    assert.deepEqual(clt.acima, ["CPP.CPP", "CPP.MOD.MAO"]);
+    // A da conta; sem ela, a da atribuição; sem ela, a do total (as gravadas por total, antes de 14/10/2026).
+    assert.equal(limiteDaLinha({ "CPP.CPP": 10, "CPP.MOD.MAO": 5, "CPP.MOD.CLT": 2 }, "CPP.MOD.CLT", clt.acima), 2);
+    assert.equal(limiteDaLinha({ "CPP.CPP": 10, "CPP.MOD.MAO": 5 }, "CPP.MOD.CLT", clt.acima), 5);
+    assert.equal(limiteDaLinha({ "CPP.CPP": 10 }, "CPP.MOD.CLT", clt.acima), 10);
+    assert.equal(limiteDaLinha({}, "CPP.MOD.CLT", clt.acima), null);
   });
   it("os meses acima da variação máxima, para mais ou para menos; sem base quando o comparado é zero", () => {
     const valores = new Map([[1, 110], [2, 89], [3, 50], [4, 100]]);

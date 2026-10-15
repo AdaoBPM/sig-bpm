@@ -53,6 +53,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
   // leem. O servidor recusa do mesmo jeito.
   const dono = cenario.podeMudarVisualizacao;
   const edita = (a: AbaDasConfiguracoes) => dono && pode(a, "editar");
+  // O cenário travado (marcado ou com a versão congelada): o nome, a descrição e o comparativo não mudam (14/10/2026).
+  const travado = estaTravado(cenario);
   const soLe = (a: AbaDasConfiguracoes, oQue: string) =>
     !pode(a, "editar") ? `Seu perfil só lê ${oQue}.` : `Este cenário é de ${cenario.criadoPor ?? "outro usuário"}: só quem o criou (ou o Administrador) altera ${oQue}.`;
   const abas = (["cenario", "referencia", "comparativo"] as AbaDasConfiguracoes[]).filter((a) => pode(a));
@@ -129,7 +131,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 maxLength={120}
-                disabled={cenario.nomeTravado || !edita("cenario")}
+                disabled={cenario.nomeTravado || travado || !edita("cenario")}
                 className="rounded-sm disabled:bg-gray-50 disabled:text-gray-700 disabled:opacity-100"
               />
               {/* Com revisões, o nome é o mesmo em todas as versões (13/10/2026), para comparar as versões. */}
@@ -146,7 +148,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 maxLength={500}
-                disabled={!edita("cenario")}
+                disabled={travado || !edita("cenario")}
                 className="rounded-sm disabled:bg-gray-50 disabled:text-gray-700 disabled:opacity-100"
               />
             </div>
@@ -160,6 +162,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
               />
             </div>
           </div>
+          {travado && edita("cenario") ? <AvisoMarcado cenario={cenario} oQue="o nome e a descrição" varios /> : null}
           <Erro erro={salvar.isError ? mensagemDeErro(salvar.error, "Não foi possível gravar as configurações.") : null} />
           {!edita("cenario") ? <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("cenario", "os dados do cenário")}</p> : (
           <div className="flex flex-wrap items-center gap-2">
@@ -188,8 +191,12 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
         </section>
       ) : aba === "comparativo" ? (
         <div className="space-y-4">
-          {!edita("comparativo") ? <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("comparativo", "o comparativo")}</p> : null}
-          <ComparativoCenario id={cenario.id} podeEditar={edita("comparativo")} />
+          {!edita("comparativo") ? (
+            <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("comparativo", "o comparativo")}</p>
+          ) : travado ? (
+            <AvisoMarcado cenario={cenario} oQue="o comparativo" />
+          ) : null}
+          <ComparativoCenario id={cenario.id} podeEditar={edita("comparativo") && !travado} />
         </div>
       ) : analitico ? (
         // A referência dos analíticos (14/10/2026): o realizado (com as Médias de Referência e os centros de custo) ou outro analítico.

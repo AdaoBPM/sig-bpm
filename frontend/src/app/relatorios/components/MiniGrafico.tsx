@@ -113,10 +113,12 @@ export function MiniGrafico({
                 <stop offset="100%" stopColor={OURO} stopOpacity={degrade.base} />
               </linearGradient>
             </defs>
-            {/* A grade e a linha do zero (um pouco mais escura e grossa). */}
-            {[0.25, 0.5, 0.75].map((f) => (
-              <line key={f} x1={0} x2={100} y1={topo + f * util} y2={topo + f * util} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
-            ))}
+            {/* A grade e a linha do zero (um pouco mais escura e grossa); com os Rótulos, só a linha do zero (14/10/2026). */}
+            {comRotulos
+              ? null
+              : [0.25, 0.5, 0.75].map((f) => (
+                  <line key={f} x1={0} x2={100} y1={topo + f * util} y2={topo + f * util} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
+                ))}
             {foco !== null ? <rect x={foco * faixaX} y={0} width={faixaX} height={100} style={{ fill: "var(--color-gray-100)" }} /> : null}
             {!area ? (
               dados.map((d, i) => {

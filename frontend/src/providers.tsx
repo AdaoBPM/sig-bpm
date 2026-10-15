@@ -20,7 +20,7 @@ export function Providers({ children }: ProvidersProps) {
         <AuthProvider>
           <PermissionProvider>
             {children}
-            <Toaster richColors closeButton position="top-right" />
+            <Toaster richColors closeButton />
           </PermissionProvider>
         </AuthProvider>
       </TooltipProvider>

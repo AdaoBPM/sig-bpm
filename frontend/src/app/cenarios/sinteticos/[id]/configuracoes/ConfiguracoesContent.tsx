@@ -29,7 +29,7 @@ export function ConfiguracoesContent() {
         titulo="Configurações"
         comoUsar={
           <ul>
-            <li>Na aba Cenário, mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”. Depois da primeira revisão, o nome fica travado: é o mesmo em todas as versões do cenário.</li>
+            <li>Na aba Cenário, mude o nome, a descrição e a visualização (Particular ou Pública) e clique em “Gravar Configurações”. Depois da primeira revisão, o nome fica travado: é o mesmo em todas as versões do cenário. Com o cenário marcado ou com a versão congelada, o nome e a descrição não mudam (a visualização, sim).</li>
             <li>
               Também na aba Cenário: “Marcar Cenário” marca o cenário como Orçamento Empresarial, Resultados Anteriores ou Resultados Vendidos (cada
               marcação fica ativa em um cenário só: marcar este tira a do anterior), e “Excluir Cenário” o exclui (um cenário marcado não se exclui).
@@ -40,7 +40,8 @@ export function ConfiguracoesContent() {
                   Na aba Referência (opcional): carregue o resultado realizado das competências fechadas de um exercício (Média Replicada, de um período,
                   ou Mês a Mês) ou outro cenário analítico. O realizado traz as Médias de Referência das premissas, com os doze meses iguais a elas, os
                   centros de custo, a depreciação base, o extra-operacional e os indicadores; outro analítico traz as premissas, os centros, os
-                  investimentos e os indicadores dele. Depois, tudo se edita na tela Premissas. Os avisos do que não coube aparecem embaixo.
+                  investimentos e os indicadores dele. Na Média Replicada, a média de cada conta dos centros de custo divide a soma do período só pelos meses
+                  em que a conta teve movimentação. Depois, tudo se edita na tela Premissas. Os avisos do que não coube aparecem embaixo.
                 </li>
                 <li>A Correspondência Tarefa × Linha, que leva os custos do realizado às linhas, fica nos Cadastros da Controladoria / Linhas, no botão “Tarefas”.</li>
                 <li>
@@ -66,9 +67,12 @@ export function ConfiguracoesContent() {
             <li>Só quem criou o cenário (ou o Administrador) altera as Configurações: num cenário público de outro usuário, as abas se leem, com um aviso que diz de quem é o cenário.</li>
             <li>Na Referência, os meses fechados do exercício aparecem resumidos (por exemplo, “Fechada: de Janeiro a Agosto.”).</li>
             <li>
-              Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada total da DRE;
-              em branco, o total não se verifica. “Preencher Todos Com” põe o mesmo percentual em todos. Clique em “Gravar Comparativo”. “Nenhum”
-              desliga o comparativo (as variações ficam guardadas).
+              Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada conta, na
+              estrutura da DRE vigente (totais, atribuições e contas; a seta no rótulo da coluna escolhe até que nível mostrar, e as setas das linhas
+              abrem e fecham cada grupo). A variação digitada num total ou numa atribuição vale para todas as contas abaixo dele; com contas de
+              variações diferentes, o campo dele fica em branco (“Várias”). Em branco, a conta não se verifica. “Preencher Todos Com” põe o mesmo
+              percentual em todas. Clique em “Gravar Comparativo”. “Nenhum” desliga o comparativo (as variações ficam guardadas). Com o cenário
+              marcado ou com a versão congelada, o comparativo só se lê.
             </li>
             <li>
               Com um cenário comparado, as telas Resultados e Indicadores trazem, em preto e cinza depois do total, os totais dele (e, nos Resultados, a

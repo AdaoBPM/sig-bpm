@@ -180,7 +180,11 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
   return (
     // O leiaute de 13/10/2026: o título e a legenda, maiores, em cima dos dois blocos (o Atual e o Acumulado); o gráfico
     // na terceira coluna, na altura do card. Em telas estreitas, um embaixo do outro.
-    <article className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2">
+    // data-card-indicador e data-grafico-do-card: a imagem sem os gráficos (globals.css, 14/10/2026).
+    <article
+      data-card-indicador
+      className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2"
+    >
       {/* O nome e, à direita dele, a sigla e o sentido, alinhados ao vs. Orçado do Acumulado; o mês fica no nome do grupo (13/10/2026). */}
       <header className="flex min-w-0 items-baseline justify-between gap-3 lg:col-span-2 lg:pr-3">
         <h3 className="text-xl leading-snug font-bold text-gray-900" title={i.titulo}>
@@ -200,7 +204,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
         O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha, na altura do card: os meses e
         o ACUM. perto do pé dele. O gráfico fica preso à célula (absolute), para a altura do card vir dos valores.
       */}
-      <div className="relative min-h-32 min-w-0 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-gray-100">
+      <div data-grafico-do-card className="relative min-h-32 min-w-0 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-gray-100">
         <div className="absolute inset-0 flex gap-3 lg:left-5">
           <div className="min-w-0 flex-1">
             <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} formatarCurto={(v) => formatarCurto(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
@@ -234,6 +238,8 @@ function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes:
           <span className="font-semibold text-gray-500"> · {rotuloMes}</span>
         </h2>
         <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} dica="Copiar o grupo como imagem" />
+        {/* Ao lado, o grupo sem os gráficos: só os valores dos cards (14/10/2026). */}
+        <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} dica="Copiar o grupo sem os gráficos como imagem" semGraficos />
       </div>
       <div className="space-y-3">
         {q.itens.map((i) => (
@@ -405,9 +411,10 @@ export function PainelContent() {
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>
-              Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita. O botão ao lado do
-              nome de cada grupo copia o grupo inteiro (o nome e os cards) como imagem, para colar num e-mail ou numa apresentação; se o navegador não
-              deixar copiar, a imagem é baixada.
+              Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
+              ficam sem as linhas da escala (só a do zero). O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como
+              imagem, para colar num e-mail ou numa apresentação; o botão seguinte (o mesmo ícone, com um asterisco) copia o grupo sem os gráficos:
+              só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
             <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, o orçado fica zero.</li>
           </ul>

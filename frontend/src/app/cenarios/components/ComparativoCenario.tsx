@@ -11,11 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
+import { plural } from "@/lib/texto";
 
+import { Agrupador, fundoDaLinha, SeletorNivel, useNiveisDRE } from "@/app/competencias/[anoMes]/dre/components/NiveisDRE";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, rotuloMarcacao, rotuloVersao, type Comparativo } from "../services/cenariosService";
+import { cenariosService, rotuloVersao, type Comparativo } from "../services/cenariosService";
 import { botaoPrimario, Erro } from "./CenarioDialog";
+import { EtiquetaMarcacao, EtiquetaVigente } from "./EtiquetasCenario";
 import { lerNumero } from "./EdicaoDialogs";
 
 // Os quadros com o destaque amarelo-ouro à esquerda; o título com iniciais maiúsculas (13/10/2026).
@@ -26,8 +29,9 @@ const TITULO = "text-sm font-bold text-gray-900";
 
 /**
  * A aba Comparativo das Configurações do cenário (13/10/2026; antes, a aba Referência da tela Comparativo e, antes, a
- * aba Comparar dos Resultados): o cenário com que este se compara e a variação máxima (em %) de cada total da DRE. Com
- * um cenário comparado, a aba Justificativas da tela Reajustes lista as contas que passam da variação.
+ * aba Comparar dos Resultados): o cenário com que este se compara e a variação máxima (em %) de cada conta, na
+ * estrutura da DRE vigente (14/10/2026; antes, só os totais). Com um cenário comparado, a aba Justificativas da tela
+ * Reajustes lista as contas que passam da variação.
  */
 export function ComparativoCenario({ id, podeEditar }: { id: string; podeEditar: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "comparativo"], queryFn: () => cenariosService.comparativo(id) });
@@ -36,17 +40,31 @@ export function ComparativoCenario({ id, podeEditar }: { id: string; podeEditar:
   return <Formulario key={JSON.stringify(consulta.data)} id={id} dados={consulta.data} podeEditar={podeEditar} />;
 }
 
+type LinhaDaVariacao = Comparativo["linhas"][number];
+
 function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo; podeEditar: boolean }) {
   const queryClient = useQueryClient();
   const [comparado, setComparado] = useState(dados.comparadoCom?.id ?? "");
-  const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(dados.totais.map((t) => [t.codigo, t.limite === null ? "" : duasCasas(t.limite)])));
+  // As linhas verificadas (as contas, e os totais e atribuições sem contas) guardam a variação; as demais a repassam.
+  const verificadas = dados.linhas.filter((l) => l.verificada);
+  const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(verificadas.map((l) => [l.codigo, l.limite === null ? "" : duasCasas(l.limite)])));
   const [todos, setTodos] = useState("");
   const [escolhendo, setEscolhendo] = useState(false);
+  // Os níveis da DRE (14/10/2026): totais, atribuições e contas, com as setas de abrir e fechar.
+  const niveis = useNiveisDRE(dados.linhas, "sig.cenarios.variacaoMaxima.nivel");
   const escolhido = dados.opcoes.find((o) => o.id === comparado) ?? null;
   const lidos = Object.fromEntries(Object.entries(limites).map(([c, t]) => [c, lerNumero(t)]));
-  const invalidos = dados.totais.filter((t) => lidos[t.codigo] === undefined || (lidos[t.codigo] ?? 0) < 0);
-  const mudou = comparado !== (dados.comparadoCom?.id ?? "") || dados.totais.some((t) => (lidos[t.codigo] ?? null) !== t.limite);
-  const comLimite = dados.totais.filter((t) => typeof lidos[t.codigo] === "number").length;
+  const invalidos = verificadas.filter((l) => lidos[l.codigo] === undefined || (lidos[l.codigo] ?? 0) < 0);
+  const mudou = comparado !== (dados.comparadoCom?.id ?? "") || verificadas.some((l) => (lidos[l.codigo] ?? null) !== l.limite);
+  const comLimite = verificadas.filter((l) => typeof lidos[l.codigo] === "number").length;
+  // As contas de um total ou de uma atribuição: a variação digitada nele vale para todas elas (14/10/2026).
+  const contasDe = (l: LinhaDaVariacao) => (l.verificada ? [l.codigo] : niveis.abaixo(l).filter((x) => x.verificada).map((x) => x.codigo));
+  // O campo do total ou da atribuição: a variação das contas dele, quando todas têm a mesma; senão, em branco ("Várias").
+  const textoDe = (l: LinhaDaVariacao) => {
+    const textos = [...new Set(contasDe(l).map((c) => limites[c] ?? ""))];
+    return textos.length === 1 ? textos[0] : "";
+  };
+  const mudar = (l: LinhaDaVariacao, texto: string) => setLimites((atual) => ({ ...atual, ...Object.fromEntries(contasDe(l).map((c) => [c, texto])) }));
   // Sair com o comparativo mudado e não gravado pergunta antes (13/10/2026).
   useAlteracoesPendentes(mudou);
   const valorTodos = lerNumero(todos);
@@ -55,7 +73,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
     mutationFn: () =>
       cenariosService.gravarComparativo(id, {
         comparadoComId: comparado || null,
-        limites: Object.fromEntries(dados.totais.map((t) => [t.codigo, (lidos[t.codigo] as number | null) ?? null])),
+        limites: Object.fromEntries(verificadas.map((l) => [l.codigo, (lidos[l.codigo] as number | null) ?? null])),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
@@ -79,7 +97,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                       {rotuloVersao(escolhido.versao)} · {escolhido.ano}
                     </span>
                     <Etiqueta>{ROTULO_DO_TIPO[escolhido.tipo]}</Etiqueta>
-                    {escolhido.marcacao ? <Etiqueta>{rotuloMarcacao(escolhido.marcacao)}</Etiqueta> : null}
+                    {escolhido.vigente ? <EtiquetaVigente classe={ETIQUETA} /> : null}
+                    <EtiquetaMarcacao marcacao={escolhido.marcacao} classe={ETIQUETA} />
                   </>
                 ) : (
                   <span className="text-gray-500">Nenhum (sem comparativo)</span>
@@ -94,7 +113,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
           </div>
           <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">
             {comparado
-              ? "Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima do total delas aparecem na aba Justificativas da tela Reajustes."
+              ? "Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima delas aparecem na aba Justificativas da tela Reajustes."
               : "Sem cenário comparado, o comparativo fica desligado e a aba Justificativas (tela Reajustes) não aparece. As variações máximas ficam guardadas."}
           </p>
         </div>
@@ -106,7 +125,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
           <div className="min-w-0">
             <h2 className={TITULO}>Variação Máxima</h2>
             <p className="mt-1 text-xs text-gray-600">
-              A variação aceita (em %, para mais ou para menos) nas contas de cada total. Em branco, as contas do total não se verificam.
+              A variação aceita (em %, para mais ou para menos) em cada conta, na estrutura da DRE vigente. A variação de um total ou de uma
+              atribuição vale para todas as contas abaixo dele. Em branco, a conta não se verifica.
             </p>
           </div>
           {podeEditar ? (
@@ -118,11 +138,11 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                 variant="outline"
                 className="rounded-sm"
                 disabled={typeof valorTodos !== "number" || valorTodos < 0}
-                onClick={() => setLimites(Object.fromEntries(dados.totais.map((t) => [t.codigo, duasCasas(valorTodos as number)])))}
+                onClick={() => setLimites(Object.fromEntries(verificadas.map((l) => [l.codigo, duasCasas(valorTodos as number)])))}
               >
                 Aplicar
               </Button>
-              <Button type="button" variant="outline" className="rounded-sm" disabled={comLimite === 0} onClick={() => setLimites(Object.fromEntries(dados.totais.map((t) => [t.codigo, ""])))}>
+              <Button type="button" variant="outline" className="rounded-sm" disabled={comLimite === 0} onClick={() => setLimites(Object.fromEntries(verificadas.map((l) => [l.codigo, ""])))}>
                 Limpar
               </Button>
             </div>
@@ -132,30 +152,46 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
           <table className="tabela-sig w-full border-collapse">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600">Total</th>
+                <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600">
+                  <span className="flex items-center gap-2">
+                    <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
+                    Linha da DRE
+                  </span>
+                </th>
                 <th className="w-48 px-4 py-2.5 text-right text-xs font-bold text-gray-600">Variação Máxima (%)</th>
               </tr>
             </thead>
             <tbody>
-              {dados.totais.map((t) => {
-                const invalido = invalidos.some((x) => x.codigo === t.codigo);
+              {niveis.linhas.filter(niveis.visivel).map((l) => {
+                const contas = contasDe(l);
+                const invalido = invalidos.some((x) => contas.includes(x.codigo));
+                const texto = textoDe(l);
+                const varias = !l.verificada && !texto && contas.some((c) => limites[c]);
                 return (
-                  <tr key={t.codigo} className="border-b border-gray-100 last:border-b-0">
-                    <td className="px-4 py-1.5 text-sm">{t.descricao}</td>
+                  <tr key={l.codigo} className={`border-b border-gray-100 last:border-b-0 ${fundoDaLinha(l)}`}>
+                    <td className={`py-1.5 pr-4 text-sm ${niveis.recuo(l)} ${l.tipo !== "ITEM" ? "font-bold text-gray-900" : "text-gray-700"}`}>
+                      <span className="flex items-center gap-1">
+                        <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />
+                        <span className="truncate" title={l.descricao}>
+                          {l.descricao}
+                        </span>
+                      </span>
+                    </td>
                     <td className="px-4 py-1.5 text-right">
                       <Input
-                        aria-label={`Variação máxima de ${t.descricao}`}
-                        value={limites[t.codigo]}
-                        onChange={(e) => setLimites((l) => ({ ...l, [t.codigo]: e.target.value }))}
+                        aria-label={`Variação máxima de ${l.descricao}`}
+                        title={l.verificada ? undefined : "A variação digitada vale para todas as contas abaixo"}
+                        value={texto}
+                        onChange={(e) => mudar(l, e.target.value)}
                         // Ao sair do campo, o número digitado fica com duas casas.
                         onBlur={() => {
-                          const v = lerNumero(limites[t.codigo]);
-                          if (typeof v === "number" && v >= 0) setLimites((l) => ({ ...l, [t.codigo]: duasCasas(v) }));
+                          const v = lerNumero(texto);
+                          if (texto && typeof v === "number" && v >= 0) mudar(l, duasCasas(v));
                         }}
                         disabled={!podeEditar}
                         inputMode="decimal"
-                        placeholder="—"
-                        className={`ml-auto h-8 w-28 rounded-sm text-right ${invalido ? "border-red-400" : ""}`}
+                        placeholder={varias ? "Várias" : "—"}
+                        className={`ml-auto h-8 w-28 rounded-sm bg-white text-right ${invalido ? "border-red-400" : ""}`}
                       />
                     </td>
                   </tr>
@@ -164,11 +200,17 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
             </tbody>
           </table>
         </div>
-        {invalidos.length ? <p className="text-xs text-red-700">Variação inválida em {invalidos.map((t) => t.descricao).join(", ")}: use um número a partir de zero.</p> : null}
+        {invalidos.length ? (
+          <p className="text-xs text-red-700">
+            Variação inválida em {invalidos.length} {plural(invalidos.length, "conta", "contas")} (em vermelho): use um número a partir de zero.
+          </p>
+        ) : null}
         <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar o comparativo.") : null} />
         {podeEditar ? (
           <div className="flex items-center justify-end gap-3">
-            <span className="text-xs text-gray-500">{comLimite} de {dados.totais.length} totais com variação máxima.</span>
+            <span className="text-xs text-gray-500">
+              {comLimite} de {verificadas.length} {plural(verificadas.length, "conta", "contas")} com variação máxima.
+            </span>
             <Button type="button" className={botaoPrimario} disabled={!mudou || invalidos.length > 0 || gravar.isPending} onClick={() => gravar.mutate()}>
               {gravar.isPending ? "Gravando…" : "Gravar Comparativo"}
             </Button>
@@ -193,9 +235,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
 /** O tipo do cenário na etiqueta (13/10/2026: o comparativo vale entre sintéticos e analíticos). */
 const ROTULO_DO_TIPO = { SINTETICO: "Sintético", ANALITICO: "Analítico" } as const;
 
-const Etiqueta = ({ children }: { children: React.ReactNode }) => (
-  <span className="shrink-0 rounded-sm border border-gray-300 bg-white px-1.5 py-px text-xs font-medium whitespace-nowrap text-gray-700">{children}</span>
-);
+const ETIQUETA = "shrink-0 rounded-sm border border-gray-300 bg-white px-1.5 py-px text-xs font-medium whitespace-nowrap text-gray-700";
+const Etiqueta = ({ children }: { children: React.ReactNode }) => <span className={ETIQUETA}>{children}</span>;
 /** O texto para a busca: sem diferença de maiúsculas e de acentos. */
 const paraBusca = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -257,8 +298,8 @@ function EscolherCenarioDialog({
                 {rotuloVersao(o.versao)} · {o.ano}
               </span>
               <Etiqueta>{ROTULO_DO_TIPO[o.tipo]}</Etiqueta>
-              {o.vigente ? <Etiqueta>Vigente</Etiqueta> : null}
-              {o.marcacao ? <Etiqueta>{rotuloMarcacao(o.marcacao)}</Etiqueta> : null}
+              {o.vigente ? <EtiquetaVigente classe={ETIQUETA} /> : null}
+              <EtiquetaMarcacao marcacao={o.marcacao} classe={ETIQUETA} />
             </label>
           ))}
           {visiveis.length === 0 ? <p className="px-3 py-6 text-center text-sm text-gray-500">Nenhum cenário com esses filtros.</p> : null}

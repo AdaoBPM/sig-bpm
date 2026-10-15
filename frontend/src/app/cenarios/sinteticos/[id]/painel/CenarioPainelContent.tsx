@@ -58,12 +58,14 @@ export function CenarioPainelContent() {
               cenário comparado (vs. Comparado); e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
             </li>
             <li>
-              Com os Rótulos, o valor do cenário fica à esquerda do centro de cada mês (e do acumulado) e o do comparado à direita. Cores: Padrão
+              Com os Rótulos, o valor do cenário fica à esquerda do centro de cada mês (e do acumulado) e o do comparado à direita, e os gráficos
+              ficam sem as linhas da escala (só a do zero). Cores: Padrão
               (verde, amarelo e vermelho) ou Acessíveis (azul no lugar do verde, para quem não distingue o verde do vermelho).
             </li>
             <li>
               O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como imagem, para colar num e-mail ou numa
-              apresentação; se o navegador não deixar copiar, a imagem é baixada.
+              apresentação; o botão seguinte (o mesmo ícone, com um asterisco) copia o grupo sem os gráficos: só os valores dos cards, com a borda
+              de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
             <li>
               O comparado é o cenário escolhido em Configurações / Comparativo; sem ele, essa parte fica vazia (—), e o aviso traz o botão

@@ -2,40 +2,77 @@ import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 import { linhasDaUnidade, linhasDoConsolidado, UNIDADES } from "./edicaoCenario.js";
 
 /**
- * O comparativo entre cenários (12/10/2026): um cenário se compara com outro, e cada total da DRE tem uma variação
- * máxima (em %). As contas de cada visão (Consolidado e unidades) cuja variação mensal passa da variação máxima do
- * total delas pedem justificativa (tela Justificativas).
+ * O comparativo entre cenários (12/10/2026): um cenário se compara com outro, e cada conta da DRE tem uma variação
+ * máxima (em %). As contas de cada visão (Consolidado e unidades) cuja variação mensal passa da variação máxima delas
+ * pedem justificativa (tela Justificativas).
  *
- * Os totais são os do nível Totais da DRE (o mesmo contorno de NiveisDRE, no frontend): as linhas que não são conta
- * nem seção e cujo código abre um grupo. Cada conta fica sob o último total antes dela, na ordem da DRE. O total sem
- * contas embaixo (MB, MC, EBITDA, RL…) é verificado ele mesmo.
+ * A Variação Máxima segue a estrutura da DRE vigente (14/10/2026; antes, só os totais): totais, atribuições e contas,
+ * no mesmo contorno de NiveisDRE, no frontend. Os totais são as linhas que não são conta nem seção e cujo código abre
+ * um grupo; as atribuições, as de três partes do grupo; cada conta fica sob o último total (e a última atribuição do
+ * mesmo prefixo) antes dela. Verificam-se as linhas sem nada embaixo: as contas e os totais e atribuições sem contas
+ * (MB, MC, EBITDA, RL…). A variação de um total ou de uma atribuição vale para as contas abaixo dele: grava-se em
+ * cada conta.
  */
 
 export type TotalDaDRE = { codigo: string; descricao: string };
 export type ContaComparada = { linha: LinhaEstrutura; total: TotalDaDRE };
+/** Uma linha da Variação Máxima: o nível (0 total, 1 atribuição ou conta de um total, 2 conta de uma atribuição) e os grupos acima. */
+export type LinhaDaVariacao = { linha: LinhaEstrutura; nivel: number; acima: string[]; folha: boolean };
 
-/** Os totais da DRE e as linhas que cada um verifica: as contas embaixo dele ou, sem contas, ele mesmo. */
-export function totaisDaDRE(est: LinhaEstrutura[]): { totais: TotalDaDRE[]; verificadas: ContaComparada[] } {
-  const linhas = est.filter((l) => l.tipo !== "SECAO");
+/**
+ * A estrutura da Variação Máxima: as linhas (sem as seções e os volumes antes do primeiro total; sem a primeira ROL,
+ * o total repetido mais adiante na DRE), os totais e as linhas verificadas, cada uma com o total acima dela.
+ */
+export function totaisDaDRE(est: LinhaEstrutura[]): { totais: TotalDaDRE[]; verificadas: ContaComparada[]; linhas: LinhaDaVariacao[] } {
+  const semSecoes = est.filter((l) => l.tipo !== "SECAO");
+  const primeiro = semSecoes.findIndex((l) => l.tipo !== "ITEM");
+  const todas = primeiro < 0 ? [] : semSecoes.slice(primeiro);
   const partes = (c: string) => c.split(".");
-  const abremGrupo = new Set(linhas.filter((l) => l.tipo !== "ITEM" && partes(l.codigo).length === 2).map((l) => partes(l.codigo)[0]));
+  const abremGrupo = new Set(todas.filter((l) => l.tipo !== "ITEM" && partes(l.codigo).length === 2).map((l) => partes(l.codigo)[0]));
   const ehTotal = (l: LinhaEstrutura) => l.tipo !== "ITEM" && !(partes(l.codigo).length > 2 && abremGrupo.has(partes(l.codigo)[0]));
-  const totais: TotalDaDRE[] = [];
-  const contas = new Map<string, LinhaEstrutura[]>();
-  let atual: TotalDaDRE | null = null;
+  // A primeira ROL (14/10/2026): o total com a mesma descrição de um total mais adiante sai da lista.
+  const ultimoTotal = new Map(todas.filter(ehTotal).map((l) => [l.descricao, l.codigo]));
+  const linhas = todas.filter((l) => !ehTotal(l) || ultimoTotal.get(l.descricao) === l.codigo);
+  const atribuicoes = new Set(linhas.filter((l) => l.tipo !== "ITEM" && !ehTotal(l)).map((l) => partes(l.codigo).slice(0, 2).join(".")));
+  const nivelDe = (l: LinhaEstrutura) =>
+    ehTotal(l) ? 0 : l.tipo !== "ITEM" ? 1 : partes(l.codigo).length > 2 && atribuicoes.has(partes(l.codigo).slice(0, 2).join(".")) ? 2 : 1;
+  const resultado: LinhaDaVariacao[] = [];
+  const comFilhos = new Set<string>();
+  let total: LinhaEstrutura | null = null;
+  let atribuicao: LinhaEstrutura | null = null;
   for (const l of linhas) {
-    if (ehTotal(l)) {
-      atual = { codigo: l.codigo, descricao: l.descricao };
-      totais.push(atual);
-      contas.set(l.codigo, []);
-    } else if (l.tipo === "ITEM" && atual) contas.get(atual.codigo)!.push(l);
+    const nivel = nivelDe(l);
+    let acima: string[];
+    if (nivel === 0) {
+      acima = [];
+      total = l;
+      atribuicao = null;
+    } else if (nivel === 1) {
+      acima = total ? [total.codigo] : [];
+      atribuicao = l.tipo === "ITEM" ? null : l;
+    } else acima = [total?.codigo, atribuicao?.codigo].filter((x): x is string => !!x);
+    for (const g of acima) comFilhos.add(g);
+    resultado.push({ linha: l, nivel, acima, folha: false });
   }
+  for (const r of resultado) r.folha = !comFilhos.has(r.linha.codigo);
   const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
-  const verificadas = totais.flatMap((t) => {
-    const cs = contas.get(t.codigo)!;
-    return (cs.length ? cs : [porCodigo.get(t.codigo)!]).map((linha) => ({ linha, total: t }));
-  });
-  return { totais, verificadas };
+  const totais = resultado.filter((r) => r.nivel === 0).map((r) => ({ codigo: r.linha.codigo, descricao: r.linha.descricao }));
+  const verificadas = resultado
+    .filter((r) => r.folha)
+    .map((r) => {
+      const t = r.nivel === 0 ? r.linha : porCodigo.get(r.acima[0])!;
+      return { linha: r.linha, total: { codigo: t.codigo, descricao: t.descricao } };
+    });
+  return { totais, verificadas, linhas: resultado };
+}
+
+/**
+ * A variação máxima de uma linha verificada: a dela ou, sem ela, a da atribuição e a do total acima (as variações
+ * gravadas por total, antes de 14/10/2026, valem para as contas dele até a próxima gravação).
+ */
+export function limiteDaLinha(limites: Record<string, number>, codigo: string, acima: string[]): number | null {
+  for (const c of [codigo, ...[...acima].reverse()]) if (typeof limites[c] === "number") return limites[c];
+  return null;
 }
 
 export type MesComparado = { mes: number; valor: number; comparado: number; variacao: number | null };
