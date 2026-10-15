@@ -97,7 +97,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {grupos.map((g) => (
+        {grupos.map((g, k) => (
           <Fragment key={g.titulo}>
           <SidebarGroup>
             {/* O nome do grupo em caixa alta e, logo abaixo, o separador amarelo-ouro na largura útil dos processos (14/10/2026). */}
@@ -129,8 +129,9 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          {/* No menu recolhido (sem os nomes dos grupos), o separador fica entre os grupos, na largura do ícone. */}
-          <div aria-hidden className="ml-4 hidden h-px w-4 shrink-0 bg-bpm-primary group-data-[collapsible=icon]:block" />
+          {/* No menu recolhido (sem os nomes dos grupos), o separador fica entre os grupos, na largura do ícone; depois do
+              último, não (14/10/2026). */}
+          {k < grupos.length - 1 ? <div aria-hidden className="ml-4 hidden h-px w-4 shrink-0 bg-bpm-primary group-data-[collapsible=icon]:block" /> : null}
           </Fragment>
         ))}
       </SidebarContent>
