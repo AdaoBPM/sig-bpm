@@ -24,13 +24,15 @@ import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
 const volume = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
-/** Consolidado, uma das unidades (1 a 5), a visão por centro de custo ou a por obra. */
-type Visao = "consolidado" | "centros" | "obras" | number;
+/** Consolidado, uma das unidades (1 a 5), a visão por centro de custo, a dos movimentos sem centro ou a por obra. */
+type Visao = "consolidado" | "centros" | "sem_centros" | "obras" | number;
 const ABA_DA_UNIDADE = ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"];
 const VISOES: Array<{ visao: Visao; aba: string; nome: string }> = [
   { visao: "consolidado", aba: "consolidado", nome: "Consolidado" },
   ...UNIDADES.map((u) => ({ visao: u.codigo as Visao, aba: ABA_DA_UNIDADE[u.codigo], nome: u.nome })),
   { visao: "centros", aba: "centros", nome: "Centros de Custo" },
+  // Os movimentos sem centro de custo (15/10/2026), como em Resultados Empresariais.
+  { visao: "sem_centros", aba: "sem_centros", nome: "Sem Centros de Custo" },
   { visao: "obras", aba: "obras", nome: "Obras" },
 ];
 
@@ -177,6 +179,12 @@ const SemApuracao = () => (
     Nenhuma apuração ainda. Apure os rateios e a receita prévia do mês e, depois, a DRE.
   </div>
 );
+/** Centros de Custo, Sem Centros de Custo e Obras saem dos lançamentos desde a importação do balancete (15/10/2026). */
+const SemLancamento = ({ oQue }: { oQue: string }) => (
+  <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">
+    {oQue} Esta aba se consulta desde a importação do balancete, antes da apuração, com os lançamentos já classificados.
+  </div>
+);
 
 /**
  * Na DRE de um centro de custo, só os custos de produção e de serviços e as
@@ -246,7 +254,7 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
         Nenhum centro de custo dos seus departamentos tem lançamento neste mês.
       </div>
     ) : (
-      <SemApuracao />
+      <SemLancamento oQue="Nenhum centro de custo tem lançamento classificado neste mês." />
     );
   }
   const t = busca.trim().toLowerCase();
@@ -319,10 +327,7 @@ function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhi
 
   if (obras.isError) return <Erro erro={obras.error} padrao="Erro ao carregar as obras." />;
   if (obras.isPending) return <Carregando />;
-  if (!obras.data.apuradoEm) return <SemApuracao />;
-  if (lista.length === 0) {
-    return <div className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma obra tem lançamento neste mês.</div>;
-  }
+  if (lista.length === 0) return <SemLancamento oQue="Nenhuma obra tem lançamento classificado neste mês." />;
   const t = busca.trim().toLowerCase();
   const filtradas = lista.filter((o) => !t || o.nome.toLowerCase().includes(t) || o.codigo.includes(t));
   return (
@@ -371,6 +376,53 @@ function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhi
   );
 }
 
+/**
+ * Os movimentos sem centro de custo (15/10/2026; antes, só em Resultados Empresariais): os grupos (Produção Matriz,
+ * Produção Filial, Serviços, Logística…) com lançamento de mão de obra ou de gastos gerais sem centro do cadastro, à
+ * esquerda da DRE do grupo, como em Obras.
+ */
+function VisaoSemCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escolhido: string | null; onEscolher: (grupo: string) => void }) {
+  const grupos = useQuery({ queryKey: ["dre", anoMes, "sem-centros"], queryFn: () => dreService.semCentros(anoMes) });
+  const lista = grupos.data?.grupos ?? [];
+  const dre = useQuery({
+    queryKey: ["dre", anoMes, "sem-centro", escolhido],
+    queryFn: () => dreService.semCentro(anoMes, escolhido!),
+    enabled: escolhido !== null,
+  });
+  if (grupos.isError) return <Erro erro={grupos.error} padrao="Erro ao carregar os movimentos sem centro de custo." />;
+  if (grupos.isPending) return <Carregando />;
+  if (lista.length === 0) return <SemLancamento oQue="Nenhum lançamento de mão de obra ou de gastos gerais sem centro de custo neste mês." />;
+  return (
+    <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
+      <div className="rounded-sm border border-gray-200 bg-white lg:sticky lg:top-[calc(var(--topo-tabela,0px)+1rem)]">
+        <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Grupos sem centro de custo">
+          {lista.map((g) => (
+            <li key={g.codigo}>
+              <button
+                type="button"
+                onClick={() => onEscolher(g.codigo)}
+                aria-current={g.codigo === escolhido ? "true" : undefined}
+                className={`block w-full truncate px-3 py-1.5 text-left text-sm ${g.codigo === escolhido ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+              >
+                {g.nome}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="min-w-0">
+        {dre.isError ? (
+          <Erro erro={dre.error} padrao="Erro ao carregar o grupo." />
+        ) : dre.isPending ? (
+          <Carregando />
+        ) : (
+          <TabelaDRE key={escolhido ?? ""} linhas={dre.data.linhas} anoMes={anoMes} visao={{ semCentro: escolhido! }} titulo={`Sem Centro de Custo · ${dre.data.grupo.nome}`} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DREContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
   useRegistrarAcessoTela(`/competencias/${anoMes}/dre`);
@@ -393,6 +445,11 @@ export function DREContent() {
   const obras = useQuery({ queryKey: ["dre", anoMes, "obras"], queryFn: () => dreService.obras(anoMes), enabled: periodo !== null && visao === "obras" });
   const listaObras = obras.data?.obras ?? [];
   const obraEscolhida = (obra && listaObras.some((o) => o.codigo === obra) ? obra : listaObras[0]?.codigo) ?? null;
+  // O grupo sem centro de custo escolhido, do mesmo jeito.
+  const [semCentro, setSemCentro] = useState<string | null>(null);
+  const semCentros = useQuery({ queryKey: ["dre", anoMes, "sem-centros"], queryFn: () => dreService.semCentros(anoMes), enabled: periodo !== null && visao === "sem_centros" });
+  const listaSemCentros = semCentros.data?.grupos ?? [];
+  const semCentroEscolhido = (semCentro && listaSemCentros.some((g) => g.codigo === semCentro) ? semCentro : listaSemCentros[0]?.codigo) ?? null;
 
   // A consolidada também traz o estado da competência e da apuração para o cabeçalho.
   const consolidado = useQuery({
@@ -425,7 +482,15 @@ export function DREContent() {
         titulo="DRE"
         comoUsar={
           <ul>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo ou Obras (com a lista dos centros ou das obras à esquerda). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo, Sem Centros de Custo ou Obras (com a lista dos centros, dos grupos ou das obras à esquerda). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>
+              Centros de Custo, Sem Centros de Custo e Obras saem dos lançamentos do balancete: consultam-se desde a importação, antes da apuração (com
+              o que já está classificado). Depois da apuração, os centros de custo mostram os valores apurados.
+            </li>
+            <li>
+              Em Sem Centros de Custo, os lançamentos de mão de obra e de gastos gerais sem centro de custo do cadastro, por grupo (pelo departamento da
+              conta e pela filial), como em Resultados Empresariais.
+            </li>
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra.</li>
             <li>
               No extrato, clique na conta de um lançamento contábil para ver as requisições e as notas fiscais dela no mês (das abas Requisições
@@ -477,10 +542,13 @@ export function DREContent() {
             abas={visoes.map((v) => ({ chave: String(v.visao), rotulo: v.nome }))}
           />
         </div>
+        {/* Centros, sem centros e obras: o Exportar desde a importação do balancete (15/10/2026). */}
         {visao === "centros" ? (
-          grupoEscolhido && grupos.data?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={{ grupo: grupoEscolhido }} /> : null
+          grupoEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ grupo: grupoEscolhido }} /> : null
+        ) : visao === "sem_centros" ? (
+          semCentroEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ semCentro: semCentroEscolhido }} /> : null
         ) : visao === "obras" ? (
-          obraEscolhida && obras.data?.apuradoEm ? <ExportarDRE anoMes={anoMes} visao={{ obra: obraEscolhida }} /> : null
+          obraEscolhida ? <ExportarDRE anoMes={anoMes} visao={{ obra: obraEscolhida }} /> : null
         ) : cabecalho?.apuradoEm ? (
           <ExportarDRE anoMes={anoMes} visao={visao} />
         ) : null}
@@ -488,6 +556,8 @@ export function DREContent() {
 
       {visao === "centros" ? (
         <VisaoCentros key={anoMes} anoMes={anoMes} escolhido={grupoEscolhido} onEscolher={setGrupo} />
+      ) : visao === "sem_centros" ? (
+        <VisaoSemCentros key={anoMes} anoMes={anoMes} escolhido={semCentroEscolhido} onEscolher={setSemCentro} />
       ) : visao === "obras" ? (
         <VisaoObras key={anoMes} anoMes={anoMes} escolhida={obraEscolhida} onEscolher={setObra} />
       ) : consulta.isError ? (

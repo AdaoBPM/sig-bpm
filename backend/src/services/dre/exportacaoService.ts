@@ -7,6 +7,7 @@ import { apuracaoService } from "../apuracao/apuracaoService.js";
 import { dreService, RegraDREError } from "./dreService.js";
 import { linhasDoCentro } from "./recorteCentros.js";
 import { obrasService } from "./obrasService.js";
+import { semCentroService, type GrupoSemCentro } from "./semCentroService.js";
 
 /**
  * Exportação da DRE apurada em Excel e PDF (Passo 26, RF012). O arquivo
@@ -33,7 +34,10 @@ export type VisaoExportacao =
   | { tipo: "centrosArquivos" }
   | { tipo: "obra"; obra: string }
   /** Todas as obras com lançamento no mês, uma por aba. */
-  | { tipo: "todasObras" };
+  | { tipo: "todasObras" }
+  /** Um grupo dos movimentos sem centro de custo, ou todos, um por aba (15/10/2026). */
+  | { tipo: "semCentro"; grupo: GrupoSemCentro }
+  | { tipo: "todosSemCentros" };
 export type Formato = "xlsx" | "pdf";
 
 type LinhaTela = { codigo: string; tipo: string; grupo: string; descricao: string; valor: string | null };
@@ -83,6 +87,15 @@ async function blocos(ano: number, mes: number, visao: VisaoExportacao, acesso: 
     const o = await obrasService.consultar(ano, mes, codigo, acesso);
     return { nome: o.obra.nome, titulo: `Obra: ${o.obra.nome}`, complemento: `Centro de custo ${o.obra.codigo}`, linhas: o.linhas };
   };
+  const semCentro = async (grupo: GrupoSemCentro): Promise<Bloco> => {
+    const s = await semCentroService.consultar(ano, mes, grupo, acesso);
+    return { nome: s.grupo.nome, titulo: `Sem centro de custo: ${s.grupo.nome}`, linhas: s.linhas };
+  };
+  if (visao.tipo === "semCentro") return [await semCentro(visao.grupo)];
+  if (visao.tipo === "todosSemCentros") {
+    const { grupos } = await semCentroService.listar(ano, mes, acesso);
+    return Promise.all(grupos.map((g) => semCentro(g.codigo as GrupoSemCentro)));
+  }
   if (visao.tipo === "obra") return [await obra(visao.obra)];
   if (visao.tipo === "todasObras") {
     const { obras } = await obrasService.listar(ano, mes, acesso);
@@ -212,14 +225,25 @@ const nomeDaVisao = (v: VisaoExportacao, b: Bloco[]) =>
           ? `${b[0].departamento} - ${b[0].nome}`
           : v.tipo === "todasObras"
             ? "todas as obras"
-            : b[0].nome;
+            : v.tipo === "todosSemCentros"
+              ? "sem centros de custo"
+              : v.tipo === "semCentro"
+                ? `sem centro de custo - ${b[0].nome}`
+                : b[0].nome;
 
 export const exportacaoService = {
   async exportar(ano: number, mes: number, visao: VisaoExportacao, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
     const id = await identificar(ano, mes, usuarioNome);
     const bs = await blocos(ano, mes, visao, acesso);
     if (bs.length === 0) {
-      throw new RegraDREError(404, visao.tipo === "todasObras" ? "Nenhuma obra com lançamento para exportar." : "Nenhum centro de custo com custos ou despesas para exportar.");
+      throw new RegraDREError(
+        404,
+        visao.tipo === "todasObras"
+          ? "Nenhuma obra com lançamento para exportar."
+          : visao.tipo === "todosSemCentros"
+            ? "Nenhum movimento sem centro de custo para exportar."
+            : "Nenhum centro de custo com custos ou despesas para exportar.",
+      );
     }
     const titulo = `DRE ${id.competencia} - ${nomeDaVisao(visao, bs)}`;
     const nomeArquivo = limparNome(`DRE ${ano}-${String(mes).padStart(2, "0")} - ${nomeDaVisao(visao, bs)}.${formato}`);

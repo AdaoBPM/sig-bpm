@@ -7,6 +7,7 @@ import { documentosService } from "../../services/dre/documentosService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
 import { exportacaoService, type VisaoExportacao } from "../../services/dre/exportacaoService.js";
 import { obrasService } from "../../services/dre/obrasService.js";
+import { ehGrupoSemCentro, semCentroService, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
 import { volumesDaLinha } from "../../services/dre/volumesDaLinhaService.js";
 import { auditar } from "../../services/auditoriaService.js";
 
@@ -64,6 +65,18 @@ export const dreController = {
     const o = obraSchema.safeParse(request.query.obra);
     if (!o.success) return response.status(400).json({ error: "Obra inválida" });
     return responder(response, () => (o.data ? obrasService.consultar(c.ano, c.mes, o.data, request.user!.acesso) : obrasService.listar(c.ano, c.mes, request.user!.acesso)));
+  },
+
+  /** Sem ?grupo, os grupos dos movimentos sem centro de custo no mês; com ele, a DRE do grupo (15/10/2026). */
+  async semCentros(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    const g = z.string().trim().min(1).max(40).optional().safeParse(request.query.grupo);
+    if (!g.success) return response.status(400).json({ error: "Grupo inválido" });
+    if (g.data && !ehGrupoSemCentro(g.data)) return response.status(400).json({ error: "Grupo dos movimentos sem centro de custo inválido." });
+    return responder(response, () =>
+      g.data ? semCentroService.consultar(c.ano, c.mes, g.data as GrupoSemCentro, request.user!.acesso) : semCentroService.listar(c.ano, c.mes, request.user!.acesso),
+    );
   },
 
   /** Detalhamento de uma linha: ?linha=código e ?unidade=1..5, ?grupo=centro, ou nenhum dos dois (consolidado). */
@@ -149,7 +162,11 @@ export const dreController = {
     if (!o.success) return response.status(400).json({ error: "Obra inválida" });
     let visao: VisaoExportacao;
     const v = String(request.query.visao ?? "consolidado");
-    if (o.data) visao = { tipo: "obra", obra: o.data };
+    const s = z.string().trim().min(1).max(40).optional().safeParse(request.query.semCentro);
+    if (!s.success || (s.data && !ehGrupoSemCentro(s.data))) return response.status(400).json({ error: "Grupo dos movimentos sem centro de custo inválido." });
+    if (s.data) visao = { tipo: "semCentro", grupo: s.data as GrupoSemCentro };
+    else if (v === "sem_centros") visao = { tipo: "todosSemCentros" };
+    else if (o.data) visao = { tipo: "obra", obra: o.data };
     else if (g.data) visao = { tipo: "centros", grupo: g.data };
     else if (v === "consolidado" || v === "todas") visao = { tipo: v };
     else if (v === "centros") visao = { tipo: "todosCentros" };

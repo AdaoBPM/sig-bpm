@@ -80,6 +80,39 @@ function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[], acesso:
 export const SEM_AGRUPAMENTO = "(sem centro de custo da controladoria)";
 export const grupoDoCentro = (cc: { nomeControladoria: string | null }) => cc.nomeControladoria?.trim() || SEM_AGRUPAMENTO;
 
+type CentroDoValor = { id: string; codigoRM: string | null; nomeRM: string; nomeControladoria: string | null; departamento: string | null };
+type ValorDoCentro = { linhaDREId: string; valor: Prisma.Decimal; apuradoEm: Date | null; congelado: boolean; centroCusto: CentroDoValor };
+
+/**
+ * Os valores dos centros de custo no mês (15/10/2026): os apurados ou, antes da apuração, os calculados na hora dos
+ * lançamentos classificados (apurarCentros, a mesma conta da apuração), com `apuradoEm` nulo. Assim, a aba Centros de
+ * Custo da DRE do mês se consulta desde a importação do balancete.
+ */
+async function valoresDosCentros(competenciaId: string, linhas: LinhaEstrutura[]): Promise<ValorDoCentro[]> {
+  const prisma = getPrismaClient();
+  const selecao = { id: true, codigoRM: true, nomeRM: true, nomeControladoria: true, departamento: true } as const;
+  const apurados = await prisma.resultadoApurado.findMany({
+    where: { competenciaId, centroCustoId: { not: null } },
+    select: { linhaDREId: true, valor: true, apuradoEm: true, congelado: true, centroCusto: { select: selecao } },
+  });
+  if (apurados.length) return apurados.map((a) => ({ ...a, centroCusto: a.centroCusto! }));
+  const lancamentos = await prisma.lancamentoContabil.findMany({
+    where: { competenciaId, centroCustoId: { not: null }, linhaDREId: { not: null } },
+    select: { centroCustoId: true, linhaDREId: true, valorMovimento: true },
+  });
+  if (!lancamentos.length) return [];
+  const centros = new Map(
+    (await prisma.centroCusto.findMany({ where: { id: { in: [...new Set(lancamentos.map((l) => l.centroCustoId!))] } }, select: selecao })).map((c) => [c.id, c]),
+  );
+  return apurarCentros(
+    linhas,
+    lancamentos.map((l) => ({ centroCustoId: l.centroCustoId, linhaDREId: l.linhaDREId, valor: l.valorMovimento })),
+  ).flatMap((r) => {
+    const cc = centros.get(r.centroCustoId);
+    return cc ? [{ linhaDREId: r.linhaId, valor: r.valor, apuradoEm: null, congelado: false, centroCusto: cc }] : [];
+  });
+}
+
 export const dreService = {
   /**
    * Apura a DRE das cinco unidades a partir do que já está apurado no mês — a
@@ -178,18 +211,13 @@ export const dreService = {
    */
   async listarCentros(ano: number, mes: number, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
-    const [valores, linhas] = await Promise.all([
-      getPrismaClient().resultadoApurado.findMany({
-        where: { competenciaId: c.id, centroCustoId: { not: null }, linhaDRE: { tipo: "ITEM" } },
-        select: {
-          valor: true,
-          apuradoEm: true,
-          linhaDRE: { select: { codigo: true } },
-          centroCusto: { select: { id: true, nomeRM: true, nomeControladoria: true, departamento: true } },
-        },
-      }),
-      estrutura(),
-    ]);
+    const linhas = await estrutura();
+    // Os apurados ou, antes da apuração, os da hora (15/10/2026); só as contas (ITEM).
+    const porId = new Map(linhas.map((l) => [l.id, l]));
+    const valores = (await valoresDosCentros(c.id, linhas)).flatMap((v) => {
+      const l = porId.get(v.linhaDREId);
+      return l && l.tipo === "ITEM" ? [{ ...v, linhaDRE: { codigo: l.codigo } }] : [];
+    });
     const permitidas = atribuicoesDoCentro(linhas);
     type Grupo = { departamentos: Set<string>; centros: Set<string>; atribuicoes: Map<string, Prisma.Decimal> };
     const grupos = new Map<string, Grupo>();
@@ -224,23 +252,12 @@ export const dreService = {
   /** A DRE de um agrupamento de centros de custo: a soma dos centros, com a parte de cada um. */
   async consultarCentros(ano: number, mes: number, grupo: string, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competenciaPorAnoMes(ano, mes);
-    const [linhas, valores] = await Promise.all([
-      estrutura(),
-      getPrismaClient().resultadoApurado.findMany({
-        where: { competenciaId: c.id, centroCustoId: { not: null } },
-        select: {
-          linhaDREId: true,
-          valor: true,
-          apuradoEm: true,
-          congelado: true,
-          centroCusto: { select: { id: true, codigoRM: true, nomeRM: true, nomeControladoria: true, departamento: true } },
-        },
-      }),
-    ]);
+    const linhas = await estrutura();
+    const valores = await valoresDosCentros(c.id, linhas);
     // Recorte do Gestor: só os centros e as linhas dos departamentos dele; do Coordenador, só os centros dele.
     const permitidas = new Set(linhas.filter((l) => podeVerLinhaNoCentro(acesso, l)).map((l) => l.id));
     const doGrupo = valores.filter((v) => grupoDoCentro(v.centroCusto!) === grupo && podeVerCentro(acesso, v.centroCusto!) && permitidas.has(v.linhaDREId));
-    if (doGrupo.length === 0) throw new RegraDREError(404, `Nenhum valor apurado para o centro de custo ${grupo} em ${rotulo(ano, mes)}.`);
+    if (doGrupo.length === 0) throw new RegraDREError(404, `Nenhum valor para o centro de custo ${grupo} em ${rotulo(ano, mes)}.`);
     type Parte = { codigoRM: string | null; nome: string; valor: string };
     const porLinha = new Map<string, { valor: Prisma.Decimal; centros: Parte[] }>();
     for (const v of doGrupo) {

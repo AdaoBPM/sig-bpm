@@ -10,11 +10,11 @@ import { usePermissions } from "@/context/PermissionContext";
 import { api } from "@/lib/api";
 
 /** A visão na tela: o consolidado, uma unidade (1 a 5), um agrupamento de centros ou uma obra. */
-export type VisaoExportar = "consolidado" | number | { grupo: string } | { obra: string };
+export type VisaoExportar = "consolidado" | number | { grupo: string } | { obra: string } | { semCentro: string };
 
 type Formato = "xlsx" | "pdf";
 /** O que entra no arquivo: a visão na tela, o consolidado e todas as unidades, todos os centros de custo ou todas as obras. */
-type Alcance = "atual" | "unidades" | "centros" | "centrosArquivos" | "obras";
+type Alcance = "atual" | "unidades" | "centros" | "centrosArquivos" | "obras" | "semCentros";
 const OPCOES: Array<{ alcance: Alcance; excel: string; pdf: string | null }> = [
   { alcance: "atual", excel: "Visão Atual", pdf: "Visão Atual" },
   { alcance: "unidades", excel: "Todas as Unidades (uma por aba)", pdf: "Todas as Unidades (uma por página)" },
@@ -22,6 +22,8 @@ const OPCOES: Array<{ alcance: Alcance; excel: string; pdf: string | null }> = [
   // Um arquivo Excel por centro, num ZIP, com o departamento e o centro no nome (14/10/2026).
   { alcance: "centrosArquivos", excel: "Todos os Centros de Custo (um arquivo por centro)", pdf: null },
   { alcance: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)" },
+  // Os movimentos sem centro de custo (15/10/2026), um grupo por aba.
+  { alcance: "semCentros", excel: "Todos Sem Centro de Custo (um por aba)", pdf: "Todos Sem Centro de Custo (um por página)" },
 ];
 
 /** O nome do arquivo que o backend mandou (filename*, em UTF-8), ou um padrão. */
@@ -51,7 +53,7 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
   const { hasPermission } = usePermissions();
   const le = (aba: string) => hasPermission(`dre.${aba}:ler`);
   const opcoes = OPCOES.filter((o) =>
-    o.alcance === "unidades" ? ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"].every(le) : o.alcance === "atual" ? true : le(o.alcance === "centrosArquivos" ? "centros" : o.alcance),
+    o.alcance === "unidades" ? ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"].every(le) : o.alcance === "atual" ? true : le(o.alcance === "centrosArquivos" ? "centros" : o.alcance === "semCentros" ? "sem_centros" : o.alcance),
   );
 
   async function baixar(formato: Formato, alcance: Alcance) {
@@ -66,11 +68,15 @@ export function ExportarDRE({ anoMes, visao }: { anoMes: string; visao: VisaoExp
               ? { formato, visao: "centros_arquivos" }
             : alcance === "obras"
               ? { formato, visao: "obras" }
-              : typeof visao === "object"
-                ? "obra" in visao
-                  ? { formato, obra: visao.obra }
-                  : { formato, grupo: visao.grupo }
-                : { formato, visao: String(visao) };
+              : alcance === "semCentros"
+                ? { formato, visao: "sem_centros" }
+                : typeof visao === "object"
+                  ? "obra" in visao
+                    ? { formato, obra: visao.obra }
+                    : "semCentro" in visao
+                      ? { formato, semCentro: visao.semCentro }
+                      : { formato, grupo: visao.grupo }
+                  : { formato, visao: String(visao) };
       const r = await api.get<Blob>(`/proxy/competencias/${anoMes}/dre/exportar`, { params, responseType: "blob" });
       const url = URL.createObjectURL(r.data);
       const a = document.createElement("a");

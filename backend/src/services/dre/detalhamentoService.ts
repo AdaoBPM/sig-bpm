@@ -277,7 +277,8 @@ export const detalhamentoService = {
         prisma.resultadoApurado.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: { valor: true, composicao: true } }),
         prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: selecaoContabil }),
       ]);
-      valor = gravados.length ? somar(gravados.map((g) => g.valor)) : null;
+      // Antes da apuração (15/10/2026), a soma dos lançamentos.
+      valor = gravados.length ? somar(gravados.map((g) => g.valor)) : ls.length ? somar(ls.map((l) => l.valorMovimento)) : null;
       regra = "Lançamentos contábeis dos centros do agrupamento, diretos e de rateio, antes do rateio";
       if (ls.length > 0) {
         blocos.push({

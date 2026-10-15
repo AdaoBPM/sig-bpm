@@ -66,14 +66,15 @@ export function abasDaDREDoPedido(request: Request): string[] | null {
   if (caminho.endsWith("/consolidado")) return ["consolidado"];
   if (caminho.endsWith("/centros")) return ["centros"];
   if (caminho.endsWith("/obras")) return ["obras"];
+  if (caminho.endsWith("/sem-centros")) return ["sem_centros"];
   if (caminho.endsWith("/exportar")) {
-    const v = String(q.grupo ? "centros" : q.obra ? "obras" : (q.visao ?? "consolidado"));
+    const v = String(q.grupo ? "centros" : q.obra ? "obras" : q.semCentro ? "sem_centros" : (q.visao ?? "consolidado"));
     if (v === "todas") return [...ABA_DA_VISAO];
     if (v === "centros_arquivos") return ["centros"];
     const a = abaDaVisao(v);
     return a ? [a] : null;
   }
-  // O detalhamento dos movimentos sem centro de custo: a aba deles (só dos Resultados Empresariais).
+  // O detalhamento dos movimentos sem centro de custo: a aba deles (nos Resultados Empresariais e, desde 15/10/2026, na DRE do mês).
   if (q.semCentro !== undefined) return ["sem_centros"];
   // Os documentos de uma linha valem para qualquer aba da tela.
   if (caminho.endsWith("/documentos")) return [];

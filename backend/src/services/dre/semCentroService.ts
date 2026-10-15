@@ -103,7 +103,8 @@ export const semCentroService = {
   async listar(ano: number, mes: number, acesso: Acesso = ACESSO_TOTAL) {
     const c = await competencia(ano, mes);
     const ap = await apuracao(c.id);
-    const grupos = ap && veSemCentros(acesso) ? await movimentos(c.id, await estrutura(), acesso) : new Map();
+    // Desde a importação do balancete (15/10/2026; antes, só depois da apuração).
+    const grupos = veSemCentros(acesso) ? await movimentos(c.id, await estrutura(), acesso) : new Map();
     return {
       competencia: { ano, mes, status: c.status },
       apuradoEm: ap?.apuradoEm ?? null,
@@ -119,15 +120,14 @@ export const semCentroService = {
     if (!veSemCentros(acesso)) throw new RegraDREError(403, "Os movimentos sem centro de custo não são do seu recorte.");
     const c = await competencia(ano, mes);
     const ap = await apuracao(c.id);
-    if (!ap) throw new RegraDREError(404, `A DRE de ${rotulo(ano, mes)} ainda não foi apurada.`);
     const linhas = await estrutura();
     const itens = (await movimentos(c.id, linhas, acesso)).get(grupo);
     if (!itens?.size) throw new RegraDREError(404, `Nenhum lançamento sem centro de custo em ${nomeDoGrupoSemCentro(grupo)} em ${rotulo(ano, mes)}.`);
     return {
       competencia: { ano, mes, status: c.status },
       grupo: { codigo: grupo, nome: nomeDoGrupoSemCentro(grupo) },
-      apuradoEm: ap.apuradoEm,
-      congelado: ap.congelado,
+      apuradoEm: ap?.apuradoEm ?? null,
+      congelado: ap?.congelado ?? false,
       linhas: linhasDaObra(linhas, itens, false),
     };
   },

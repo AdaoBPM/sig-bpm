@@ -147,7 +147,8 @@ export const obrasService = {
     const c = await competencia(ano, mes);
     const ap = await apuracao(c.id);
     const linhas = await estrutura();
-    const obras = ap ? await movimentos(c.id, linhas, acesso) : [];
+    // Desde a importação do balancete (15/10/2026; antes, só depois da apuração): os lançamentos dos centros de obra.
+    const obras = await movimentos(c.id, linhas, acesso);
     const completa = !acesso.recorteDepartamento && !acesso.recorteCentro;
     return {
       competencia: { ano, mes, status: c.status },
@@ -163,15 +164,14 @@ export const obrasService = {
     if (!CENTRO_DE_OBRA.test(obra)) throw new RegraDREError(400, `${obra} não é um centro de custo de obra (1.98 ou 1.99).`);
     const c = await competencia(ano, mes);
     const ap = await apuracao(c.id);
-    if (!ap) throw new RegraDREError(404, `A DRE de ${rotulo(ano, mes)} ainda não foi apurada.`);
     const linhas = await estrutura();
     const [o] = await movimentos(c.id, linhas, acesso, obra);
     if (!o) throw new RegraDREError(404, `Nenhum lançamento da obra ${obra} em ${rotulo(ano, mes)}.`);
     return {
       competencia: { ano, mes, status: c.status },
       obra: { codigo: o.codigo, nome: o.nome },
-      apuradoEm: ap.apuradoEm,
-      congelado: ap.congelado,
+      apuradoEm: ap?.apuradoEm ?? null,
+      congelado: ap?.congelado ?? false,
       linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento && !acesso.recorteCentro).filter((l) => !CALCULADOS.has(l.codigo)),
     };
   },

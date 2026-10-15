@@ -49,6 +49,13 @@ export type ObrasDaDRE = {
   obras: Array<{ codigo: string; nome: string; total: string }>;
 };
 export type DREObra = DREUnidade & { obra: { codigo: string; nome: string } };
+/** Os grupos dos movimentos sem centro de custo no mês (15/10/2026), com o total de cada um. */
+export type SemCentrosDaDRE = {
+  competencia: { ano: number; mes: number; status: StatusCompetencia };
+  apuradoEm: string | null;
+  grupos: Array<{ codigo: string; nome: string; total: string }>;
+};
+export type DRESemCentro = DREUnidade & { grupo: { codigo: string; nome: string } };
 
 export type LancamentoDetalhe = {
   id: string;
@@ -175,6 +182,14 @@ export const dreService = {
   },
   obra: async (anoMes: string, obra: string): Promise<DREObra> => {
     const { data } = await api.get<{ data: DREObra }>(`/proxy/competencias/${anoMes}/dre/obras`, { params: { obra } });
+    return data.data;
+  },
+  semCentros: async (anoMes: string): Promise<SemCentrosDaDRE> => {
+    const { data } = await api.get<{ data: SemCentrosDaDRE }>(`/proxy/competencias/${anoMes}/dre/sem-centros`);
+    return data.data;
+  },
+  semCentro: async (anoMes: string, grupo: string): Promise<DRESemCentro> => {
+    const { data } = await api.get<{ data: DRESemCentro }>(`/proxy/competencias/${anoMes}/dre/sem-centros`, { params: { grupo } });
     return data.data;
   },
   consultar: async (anoMes: string, unidade: number): Promise<DREUnidade> => {
