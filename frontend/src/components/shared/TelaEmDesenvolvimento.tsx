@@ -7,7 +7,7 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 export function TelaEmDesenvolvimento() {
   return (
     <ProtectedLayout>
-      <p className="text-sm text-gray-600">Tela em desenvolvimento.</p>
+      <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 text-sm text-gray-700">Tela em desenvolvimento.</p>
     </ProtectedLayout>
   );
 }

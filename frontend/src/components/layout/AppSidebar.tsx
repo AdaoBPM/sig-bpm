@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -7,6 +8,7 @@ import { BpmLogo } from "@/components/layout/BpmLogo";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -25,7 +27,45 @@ import { competenciasService } from "@/app/competencias/services/competenciasSer
 import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
 import { itemAtivo, itemPermitido, navGrupos } from "@/lib/navigation-config";
 
+/**
+ * "Apenas Telas Prontas" (14/10/2026): esconde do menu os processos em desenvolvimento. A escolha fica guardada neste
+ * navegador (vale nas próximas sessões); sem armazenamento (janela privada), vale só nesta visita. Lida por
+ * useSyncExternalStore, como as outras escolhas guardadas: no servidor, desmarcada.
+ */
+const CHAVE_PRONTAS = "sig.menu.apenasTelasProntas";
+const ouvintesDasProntas = new Set<() => void>();
+let prontasNaMemoria: boolean | null = null;
+function lerApenasProntas() {
+  if (prontasNaMemoria !== null) return prontasNaMemoria;
+  try {
+    return window.localStorage.getItem(CHAVE_PRONTAS) === "1";
+  } catch {
+    return false; // sem armazenamento
+  }
+}
+function useApenasTelasProntas(): [boolean, (v: boolean) => void] {
+  const valor = useSyncExternalStore(
+    (avisar) => {
+      ouvintesDasProntas.add(avisar);
+      return () => ouvintesDasProntas.delete(avisar);
+    },
+    lerApenasProntas,
+    () => false,
+  );
+  const mudar = (v: boolean) => {
+    prontasNaMemoria = v;
+    try {
+      window.localStorage.setItem(CHAVE_PRONTAS, v ? "1" : "0");
+    } catch {
+      // sem armazenamento: vale só nesta visita
+    }
+    ouvintesDasProntas.forEach((avisar) => avisar());
+  };
+  return [valor, mudar];
+}
+
 export function AppSidebar() {
+  const [apenasProntas, setApenasProntas] = useApenasTelasProntas();
   const pathname = usePathname();
   const { hasPermission } = usePermissions();
   const { user } = useAuth();
@@ -37,7 +77,7 @@ export function AppSidebar() {
   const algumComDadosNovos = itens.some((c) => c.dadosNovos);
   // Os grupos de telas aparecem como um item só, que abre na primeira tela alcançada.
   const grupos = navGrupos
-    .map((g) => ({ ...g, itens: g.itens.map((i) => itemPermitido(i, hasPermission)).filter((i) => i !== null) }))
+    .map((g) => ({ ...g, itens: g.itens.filter((i) => !apenasProntas || !i.emDesenvolvimento).map((i) => itemPermitido(i, hasPermission)).filter((i) => i !== null) }))
     .filter((g) => g.itens.length > 0);
 
   return (
@@ -88,6 +128,14 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+
+      {/* Acima do indicador do Next.js (no desenvolvimento, no canto de baixo). */}
+      <SidebarFooter className={`border-t border-sidebar-border group-data-[collapsible=icon]:hidden ${process.env.NODE_ENV === "development" ? "pb-16" : ""}`}>
+        <label className="flex cursor-pointer items-center gap-2 px-2 py-1 text-xs text-sidebar-foreground/80">
+          <input type="checkbox" checked={apenasProntas} onChange={(e) => setApenasProntas(e.target.checked)} className="size-3.5 accent-[var(--sidebar-primary)]" />
+          Apenas Telas Prontas
+        </label>
+      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>
