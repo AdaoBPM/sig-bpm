@@ -32,8 +32,9 @@ export default function RegrasRateioPage() {
               </li>
               <li>
                 “Percentuais Fixos” abre os percentuais digitados de uma chave: escolha a Chave e o Conjunto (Novo, ou um já cadastrado para editar),
-                a vigência e o percentual de cada destino, somando 100%, e clique em “Gravar”. Os destinos são os que a apuração usa na chave (Projeto e
-                Produção: Matriz e Filial; Metalurgia e Armadura: Matriz, Filial, Montagem e Complementar; Acompanhamento: Montagem e Complementar). As
+                a vigência e o percentual de cada destino, somando 100%, e clique em “Gravar”. Os destinos são sempre os quatro — Matriz, Filial,
+                Montagem e Complementar —, em qualquer chave: um rateio pode passar a valer em outra unidade (a Produção em Serviços, por exemplo); o
+                destino que não deve receber fica com 0%. As
                 regras fixas aparecem na lista com o % Fixo e se editam e excluem só por esse botão (o conjunto já usado em apurações não se exclui:
                 encerre a vigência).
               </li>

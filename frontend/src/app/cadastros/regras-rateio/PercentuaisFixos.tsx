@@ -66,7 +66,8 @@ export function BotaoPercentuaisFixos() {
 }
 
 /**
- * Os percentuais fixos de uma chave num período (14/10/2026): cada destino que a apuração usa na chave com um
+ * Os percentuais fixos de uma chave num período (14/10/2026): cada um dos quatro destinos (Matriz, Filial, Montagem e
+ * Complementar, em qualquer chave) com um
  * percentual, somando 100%, no lugar dos percentuais dos volumes. Escolha a chave e o conjunto (um já cadastrado, para
  * editar, ou Novo), a vigência e os percentuais. As regras por volume da chave precisam estar encerradas antes do início.
  */

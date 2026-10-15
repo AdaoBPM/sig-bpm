@@ -278,6 +278,17 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           rateios.push(parcela(chave, destino, l, base, p));
           v = v.plus(base.times(p));
         }
+        // O acompanhamento com percentual fixo na Matriz ou na Filial (14/10/2026): a base é a mesma conta na montagem
+        // (CSM), onde os lançamentos dele estão.
+        if (d.percentuais.has(`ACOMPANHAMENTO|${destino}`)) {
+          const linhaBase = linhaCSM(l);
+          const base = somaRateio("ACOMPANHAMENTO", linhaBase?.id);
+          if (!base.isZero()) {
+            const p = pct("ACOMPANHAMENTO", destino);
+            rateios.push(parcela("ACOMPANHAMENTO", destino, linhaBase, base, p));
+            v = v.plus(base.times(p));
+          }
+        }
         gravar(u, l, v, {
           regra: `Diretos (${descreverPares(paresCusto)}) + rateios × percentual da unidade`,
           direto: dir.toFixed(2),
@@ -359,6 +370,8 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           ["ACOMPANHAMENTO", montagem ? l : linhaCSM(l)],
           ["METALURGIA", linhaCP(l)],
           ["ARMADURA", linhaCP(l)],
+          // Projeto e Produção com percentual fixo em Serviços (14/10/2026): a base é a mesma conta na produção (CP).
+          ...(["PROJETO", "PRODUCAO"] as const).filter((c) => d.percentuais.has(`${c}|${destino}`)).map((c): [string, LinhaEstrutura | undefined] => [c, linhaCP(l)]),
         ];
         // A depreciação de montagem fica com o acompanhamento inteiro: o bloco
         // complementar não tem linha de depreciação (aba Resultados (Serviços),

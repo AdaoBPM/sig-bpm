@@ -31,5 +31,34 @@ export const REGRAS_RATEIO: Array<{
   { chave: "ACOMPANHAMENTO", destino: "COMPLEMENTAR", unidade: 3, baseFisica: "DIA", origem: "ACOMPANHAMENTO_COMPLEMENTAR", rotulo: "(S) Acompanhamento: Complementar" },
 ];
 
+/**
+ * Os destinos dos percentuais fixos (14/10/2026): em toda chave, os quatro — Matriz, Filial, Montagem e Complementar —,
+ * para que um rateio passe a valer também em outra unidade (a Produção em Serviços a partir de 2027, por exemplo). Os
+ * que não estão no catálogo das regras por volume ganham a linha dos Totais mais próxima (o volume só aparece na tela;
+ * com o percentual fixo, ele não dá o percentual).
+ */
+const ORIGEM_DO_DESTINO_NOVO: Record<string, CodigoTotais> = {
+  "PROJETO|MONTAGEM": "MONTAGEM",
+  "PROJETO|COMPLEMENTAR": "ACOMPANHAMENTO_COMPLEMENTAR",
+  "PRODUCAO|MONTAGEM": "MONTAGEM",
+  "PRODUCAO|COMPLEMENTAR": "ACOMPANHAMENTO_COMPLEMENTAR",
+  "ACOMPANHAMENTO|MATRIZ": "PREFABRICADO_MATRIZ",
+  "ACOMPANHAMENTO|FILIAL": "PREFABRICADO_FILIAL",
+};
+const DESTINOS: Array<{ destino: DestinoRateio; unidade: 1 | 2 | 3; nome: string }> = [
+  { destino: "MATRIZ", unidade: 1, nome: "Matriz" },
+  { destino: "FILIAL", unidade: 2, nome: "Filial" },
+  { destino: "MONTAGEM", unidade: 3, nome: "Montagem" },
+  { destino: "COMPLEMENTAR", unidade: 3, nome: "Complementar" },
+];
+export const REGRAS_DOS_PERCENTUAIS_FIXOS: typeof REGRAS_RATEIO = [...new Set(REGRAS_RATEIO.map((r) => r.chave))].flatMap((chave) =>
+  DESTINOS.map((d) => {
+    const doCatalogo = REGRAS_RATEIO.find((r) => r.chave === chave && r.destino === d.destino);
+    if (doCatalogo) return doCatalogo;
+    const qualquer = REGRAS_RATEIO.find((r) => r.chave === chave)!;
+    return { chave, destino: d.destino, unidade: d.unidade, baseFisica: qualquer.baseFisica, origem: ORIGEM_DO_DESTINO_NOVO[`${chave}|${d.destino}`], rotulo: `${qualquer.rotulo.split(":")[0]}: ${d.nome}` };
+  }),
+);
+
 /** Início da vigência das regras da carga inicial. */
 export const VIGENCIA_REGRAS = new Date(Date.UTC(2026, 0, 1));

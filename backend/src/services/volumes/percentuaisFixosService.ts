@@ -2,15 +2,14 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { auditar } from "../auditoriaService.js";
 import { CHAVES_DE_RATEIO, NOME_DA_CHAVE, RegraRateioError } from "./rateiosService.js";
-import { REGRAS_RATEIO } from "./regrasRateio.js";
+import { REGRAS_DOS_PERCENTUAIS_FIXOS } from "./regrasRateio.js";
 import { conflitoDeVigencia, descreverVigencia, lacunasDasRegras, type RegraComVigencia } from "./vigenciasRateio.js";
 
 /**
  * Os percentuais fixos das regras de rateio (14/10/2026, a tela Percentuais Fixos de Cadastros da Controladoria / Regras
  * de Rateio): numa chave e num período, cada destino fica com um percentual digitado, e os destinos somam 100%. Os
- * destinos são os que a apuração usa na chave — Projeto e Produção: Matriz e Filial; Metalurgia e Armadura: Matriz,
- * Filial, Montagem e Complementar; Acompanhamento: Montagem e Complementar —, cada um com a linha de volume dele (o
- * volume continua apurado). O conjunto (uma regra por destino, com a mesma vigência) se grava e se exclui junto.
+ * destinos são sempre os quatro — Matriz, Filial, Montagem e Complementar (14/10/2026; antes, só os que a chave usava
+ * por volume) —, cada um com a linha de volume dele (o volume continua apurado, só para a tela). O conjunto (uma regra por destino, com a mesma vigência) se grava e se exclui junto.
  */
 
 const NOME_DO_DESTINO: Record<string, string> = { MATRIZ: "Matriz", FILIAL: "Filial", MONTAGEM: "Montagem", COMPLEMENTAR: "Complementar" };
@@ -50,7 +49,7 @@ export const percentuaisFixosService = {
       chaves: CHAVES_DE_RATEIO.map((chave) => ({
         chave,
         nome: nomeDaChave(chave),
-        destinos: REGRAS_RATEIO.filter((r) => r.chave === chave).map((r) => ({ destino: r.destino, nome: NOME_DO_DESTINO[r.destino] })),
+        destinos: REGRAS_DOS_PERCENTUAIS_FIXOS.filter((r) => r.chave === chave).map((r) => ({ destino: r.destino, nome: NOME_DO_DESTINO[r.destino] })),
       })),
       conjuntos: [...conjuntos.values()],
     };
@@ -65,7 +64,7 @@ export const percentuaisFixosService = {
     usuarioId: string,
   ) {
     const prisma = getPrismaClient();
-    const catalogo = REGRAS_RATEIO.filter((r) => r.chave === dados.chave);
+    const catalogo = REGRAS_DOS_PERCENTUAIS_FIXOS.filter((r) => r.chave === dados.chave);
     if (!catalogo.length) throw new RegraRateioError(400, "Chave de rateio inválida.");
     const inicio = new Date(`${dados.inicio}T00:00:00.000Z`);
     const fim = dados.fim ? new Date(`${dados.fim}T00:00:00.000Z`) : null;

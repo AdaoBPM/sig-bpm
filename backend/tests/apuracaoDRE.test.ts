@@ -75,6 +75,39 @@ describe("apuração da DRE por unidade", () => {
   });
 });
 
+describe("percentuais fixos em todos os destinos", () => {
+  const linha = (codigo: string, grupo: string, grupoSigla: string, unidades: number[]): LinhaEstrutura => ({
+    id: codigo, codigo, tipo: "ITEM", grupo, grupoSigla, atribuicao: "Mão de Obra Direta", descricao: "Remunerações CLT", expressao: null, unidades,
+  });
+  const linhas = [
+    linha("CP.CLT", "CUSTOS DE PRODUÇÃO (CP)", "CPP", [1, 2]),
+    linha("CSM.CLT", "CUSTOS DE SERVIÇOS: MONTAGEM (CSM)", "CSM", [3]),
+    linha("CSC.CLT", "CUSTOS DE SERVIÇOS: COMPLEMENTARES (CSC)", "CSC", [3]),
+  ];
+  it("a Produção com percentual em Montagem e Complementar e o Acompanhamento na Matriz: nada se perde", () => {
+    const { resultados } = apurarUnidades({
+      linhas,
+      manuais: [],
+      receitas: [],
+      totais: new Map(),
+      percentuais: new Map([
+        ["PRODUCAO|MATRIZ", D(0.5)], ["PRODUCAO|FILIAL", D(0.3)], ["PRODUCAO|MONTAGEM", D(0.15)], ["PRODUCAO|COMPLEMENTAR", D(0.05)],
+        ["ACOMPANHAMENTO|MATRIZ", D(0.1)], ["ACOMPANHAMENTO|MONTAGEM", D(0.6)], ["ACOMPANHAMENTO|COMPLEMENTAR", D(0.3)],
+      ]),
+      lancamentos: [
+        { filial: 1, linhaDREId: "CP.CLT", balde: "PRODUCAO", alocacao: "RATEIO", valor: D(1000) },
+        { filial: 1, linhaDREId: "CSM.CLT", balde: "ACOMPANHAMENTO", alocacao: "RATEIO", valor: D(200) },
+      ],
+    });
+    const v = (u: number, c: string) => Number(resultados.find((r) => r.unidade === u && r.codigo === c)?.valor ?? 0);
+    assert.equal(v(1, "CP.CLT"), 520); // 1.000 × 50% + 200 × 10%
+    assert.equal(v(2, "CP.CLT"), 300); // 1.000 × 30%
+    assert.equal(v(3, "CSM.CLT"), 270); // 1.000 × 15% + 200 × 60%
+    assert.equal(v(3, "CSC.CLT"), 110); // 1.000 × 5% + 200 × 30%
+    assert.equal(v(1, "CP.CLT") + v(2, "CP.CLT") + v(3, "CSM.CLT") + v(3, "CSC.CLT"), 1200);
+  });
+});
+
 describe("consolidação e visão por centro de custo", () => {
   const linha = (codigo: string, tipo: LinhaEstrutura["tipo"], expressao: string | null = null): LinhaEstrutura => ({
     id: `id-${codigo}`, codigo, tipo, grupo: "G", grupoSigla: "G", atribuicao: "A", descricao: codigo, expressao, unidades: [],
