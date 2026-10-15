@@ -29,7 +29,8 @@ export function Seletor({ rotulo, valor, opcoes, onMudar, largura }: { rotulo: s
         <SelectTrigger className={`${largura} rounded-sm bg-white`} aria-label={rotulo}>
           <SelectValue>{(v: string | null) => opcoes.find((o) => o.valor === v)?.rotulo ?? v}</SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        {/* A lista abre sempre para baixo do botão (14/10/2026; antes, alinhada ao item escolhido, subia no último mês). */}
+        <SelectContent alignItemWithTrigger={false}>
           {opcoes.map((o) => (
             <SelectItem key={o.valor} value={o.valor}>
               {o.rotulo}
