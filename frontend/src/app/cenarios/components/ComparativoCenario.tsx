@@ -49,6 +49,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   const verificadas = dados.linhas.filter((l) => l.verificada);
   const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(verificadas.map((l) => [l.codigo, l.limite === null ? "" : duasCasas(l.limite)])));
   const [todos, setTodos] = useState("");
+  // As contas marcadas (15/10/2026): o Preencher Selecionados e o Limpar valem só para elas (antes, para todas).
+  const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set());
   const [escolhendo, setEscolhendo] = useState(false);
   // Os níveis da DRE (14/10/2026): totais, atribuições e contas, com as setas de abrir e fechar.
   const niveis = useNiveisDRE(dados.linhas, "sig.cenarios.variacaoMaxima.nivel");
@@ -64,6 +66,21 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
     const textos = [...new Set(contasDe(l).map((c) => limites[c] ?? ""))];
     return textos.length === 1 ? textos[0] : "";
   };
+  // A caixa de um total ou de uma atribuição marca as contas abaixo dele; fica parcial com só parte delas marcada.
+  const marcacaoDe = (codigos: string[]) => {
+    const n = codigos.filter((c) => marcadas.has(c)).length;
+    return n === 0 ? "nenhuma" : n === codigos.length ? "todas" : "parte";
+  };
+  const marcar = (codigos: string[], marcar: boolean) =>
+    setMarcadas((atual) => {
+      const novo = new Set(atual);
+      for (const c of codigos) {
+        if (marcar) novo.add(c);
+        else novo.delete(c);
+      }
+      return novo;
+    });
+  const preencherMarcadas = (texto: string) => setLimites((atual) => ({ ...atual, ...Object.fromEntries([...marcadas].map((c) => [c, texto])) }));
   const mudar = (l: LinhaDaVariacao, texto: string) => setLimites((atual) => ({ ...atual, ...Object.fromEntries(contasDe(l).map((c) => [c, texto])) }));
   // Sair com o comparativo mudado e não gravado pergunta antes (13/10/2026).
   useAlteracoesPendentes(mudou);
@@ -120,29 +137,37 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
       </section>
 
       <section className={QUADRO}>
-        {/* O "Preencher Todos Com" à direita, ao lado do texto (13/10/2026). */}
+        {/* O "Preencher Selecionados" à direita, ao lado do texto (13/10/2026; até 15/10/2026, "Preencher Todos Com"). */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <h2 className={TITULO}>Variação Máxima</h2>
             <p className="mt-1 text-xs text-gray-600">
-              A variação aceita (em %, para mais ou para menos) em cada conta, na estrutura da DRE vigente. A variação de um total ou de uma
-              atribuição vale para todas as contas abaixo dele. Em branco, a conta não se verifica.
+              A variação aceita (em %, para mais ou para menos) em cada conta, na estrutura da DRE vigente. Variações em branco não serão
+              verificadas.
             </p>
           </div>
           {podeEditar ? (
             <div className="flex shrink-0 items-center gap-2">
-              <Label htmlFor="cmp-todos">Preencher Todos Com</Label>
+              <Label htmlFor="cmp-todos">Preencher Selecionados</Label>
               <Input id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} placeholder="%" inputMode="decimal" className="w-24 rounded-sm text-right" />
               <Button
                 type="button"
                 variant="outline"
                 className="rounded-sm"
-                disabled={typeof valorTodos !== "number" || valorTodos < 0}
-                onClick={() => setLimites(Object.fromEntries(verificadas.map((l) => [l.codigo, duasCasas(valorTodos as number)])))}
+                disabled={marcadas.size === 0 || typeof valorTodos !== "number" || valorTodos < 0}
+                title={marcadas.size === 0 ? "Marque as contas (a caixa de um total ou de uma atribuição marca as contas abaixo dele)" : undefined}
+                onClick={() => preencherMarcadas(duasCasas(valorTodos as number))}
               >
                 Aplicar
               </Button>
-              <Button type="button" variant="outline" className="rounded-sm" disabled={comLimite === 0} onClick={() => setLimites(Object.fromEntries(verificadas.map((l) => [l.codigo, ""])))}>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-sm"
+                disabled={![...marcadas].some((c) => typeof lidos[c] === "number")}
+                title={marcadas.size === 0 ? "Marque as contas que perdem a variação" : undefined}
+                onClick={() => preencherMarcadas("")}
+              >
                 Limpar
               </Button>
             </div>
@@ -155,6 +180,13 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                 <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600">
                   <span className="flex items-center gap-2">
                     <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
+                    {podeEditar ? (
+                      <Caixa
+                        rotulo="Marcar todas as contas"
+                        estado={marcacaoDe(verificadas.map((l) => l.codigo))}
+                        onMudar={(m) => marcar(verificadas.map((l) => l.codigo), m)}
+                      />
+                    ) : null}
                     Linha da DRE
                   </span>
                 </th>
@@ -172,6 +204,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                     <td className={`py-1.5 pr-4 text-sm ${niveis.recuo(l)} ${l.tipo !== "ITEM" ? "font-bold text-gray-900" : "text-gray-700"}`}>
                       <span className="flex items-center gap-1">
                         <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />
+                        {podeEditar ? <Caixa rotulo={`Marcar ${l.descricao}`} estado={marcacaoDe(contas)} onMudar={(m) => marcar(contas, m)} /> : null}
                         <span className="truncate" title={l.descricao}>
                           {l.descricao}
                         </span>
@@ -209,6 +242,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
         {podeEditar ? (
           <div className="flex items-center justify-end gap-3">
             <span className="text-xs text-gray-500">
+              {marcadas.size ? `${marcadas.size} ${plural(marcadas.size, "conta marcada", "contas marcadas")} · ` : ""}
               {comLimite} de {verificadas.length} {plural(verificadas.length, "conta", "contas")} com variação máxima.
             </span>
             <Button type="button" className={botaoPrimario} disabled={!mudou || invalidos.length > 0 || gravar.isPending} onClick={() => gravar.mutate()}>
@@ -229,6 +263,22 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
         />
       ) : null}
     </div>
+  );
+}
+
+/** A caixa de marcar uma linha (ou todas): parcial quando só parte das contas dela está marcada. */
+function Caixa({ rotulo, estado, onMudar }: { rotulo: string; estado: "nenhuma" | "parte" | "todas"; onMudar: (marcar: boolean) => void }) {
+  return (
+    <input
+      type="checkbox"
+      aria-label={rotulo}
+      className="size-3.5 shrink-0 accent-black"
+      checked={estado === "todas"}
+      ref={(el) => {
+        if (el) el.indeterminate = estado === "parte";
+      }}
+      onChange={() => onMudar(estado !== "todas")}
+    />
   );
 }
 
