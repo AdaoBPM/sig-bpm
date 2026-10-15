@@ -94,9 +94,10 @@ describe("leitura do cenário sintético", () => {
 
 describe("comparativo entre cenários", () => {
   const linha = (codigo: string, tipo: "SECAO" | "ITEM" | "SUBTOTAL" | "TOTAL", descricao = codigo) => ({ id: codigo, codigo, tipo, grupo: "", grupoSigla: "", atribuicao: null, descricao, expressao: null, unidades: [] });
-  it("os totais são os do nível Totais; cada conta fica sob o último total, e o total sem contas se verifica ele mesmo", () => {
-    const { totais, verificadas } = totaisDaDRE([
+  it("os totais são os do nível Totais; cada conta fica sob o último total; a PS entra com os volumes, e os totais que só somam outros saem (15/10/2026)", () => {
+    const { totais, verificadas, linhas } = totaisDaDRE([
       linha("PS.PRODUCAO", "SECAO"),
+      linha("P.PRODUCAO", "SECAO"),
       linha("P.PISTAS", "ITEM"),
       linha("RO.ROL", "TOTAL"),
       linha("ROB.ROB", "SUBTOTAL"),
@@ -106,11 +107,13 @@ describe("comparativo entre cenários", () => {
       linha("CPP.MOD.CLT", "ITEM"),
       linha("MB.MB", "TOTAL"),
     ]);
-    assert.deepEqual(totais.map((t) => t.codigo), ["RO.ROL", "ROB.ROB", "CPP.CPP", "MB.MB"]);
+    assert.deepEqual(totais.map((t) => t.codigo), ["PS.PRODUCAO", "ROB.ROB", "CPP.CPP"]);
     assert.deepEqual(
       verificadas.map((v) => `${v.total.codigo}:${v.linha.codigo}`),
-      ["RO.ROL:RO.ROL", "ROB.ROB:ROB.RBPF", "CPP.CPP:CPP.MOD.CLT", "MB.MB:MB.MB"],
+      ["PS.PRODUCAO:P.PISTAS", "ROB.ROB:ROB.RBPF", "CPP.CPP:CPP.MOD.CLT"],
     );
+    // O volume fica sob a PS e a Produção (a variação de cada uma vale para ele).
+    assert.deepEqual(linhas.find((l) => l.linha.codigo === "P.PISTAS")!.acima, ["PS.PRODUCAO", "P.PRODUCAO"]);
   });
   it("a planilha das premissas: Justificar? pela variação máxima sobre a média, a aba de cada código e a leitura do que se exportou", () => {
     const meses = Array<number | null>(12).fill(null);

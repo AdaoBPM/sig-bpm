@@ -135,8 +135,8 @@ export function ReajustesContent() {
             <p>O histórico dos reajustes do cenário: quem, quando, em que aba, que contas e meses, o reajuste e o efeito nas somas dos valores alterados.</p>
             <p>
               As justificativas: com um cenário comparado, as contas que variam, num mês, mais do que a variação máxima delas em relação ao
-              comparado (a diferença dividida pelo valor do comparado, para mais ou para menos). O total sem contas embaixo (como a Margem Bruta e o
-              EBITDA) se compara ele mesmo.
+              comparado (a diferença dividida pelo valor do comparado, para mais ou para menos), também os volumes de Produção e Serviços (PS).
+              Os totais que só somam outros (CPV, MB, MC, DFO, EBITDA, EBIT, NOPAT, RF, DF e RL) não se verificam.
             </p>
           </>
         }

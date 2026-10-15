@@ -82,7 +82,8 @@ export function ConfiguracoesContent() {
             <li>Na Referência, os meses fechados do exercício aparecem resumidos (por exemplo, “Fechada: de Janeiro a Agosto.”).</li>
             <li>
               Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada conta, na
-              estrutura da DRE vigente (totais, atribuições e contas; a seta no rótulo da coluna escolhe até que nível mostrar, e as setas das linhas
+              estrutura da DRE vigente (totais, atribuições e contas, desde Produção e Serviços (PS), com os volumes; sem os totais que só somam
+              outros, como CPV, MB, MC, DFO, EBITDA, EBIT, NOPAT, RF, DF e RL; a seta no rótulo da coluna escolhe até que nível mostrar, e as setas das linhas
               abrem e fecham cada grupo). A variação digitada num total ou numa atribuição vale para todas as contas abaixo dele; com contas de
               variações diferentes, o campo dele fica em branco (“Várias”). Em branco, a conta não se verifica. “Preencher Todos Com” põe o mesmo
               percentual em todas. Clique em “Gravar Comparativo”. “Nenhum” desliga o comparativo (as variações ficam guardadas). Com o cenário
