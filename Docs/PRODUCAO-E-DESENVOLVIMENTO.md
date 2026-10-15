@@ -51,6 +51,9 @@ Nenhum desses arquivos vai para o git. Os modelos estão em `backend/.env.exampl
 4. Com migração nova: `npm run db:migrar-producao`.
 5. Parar a produção, rodar `npm run producao:construir` e iniciar de novo com `npm run producao`. A produção fica fora
    do ar por cerca de 2 minutos.
+6. Conferir a produção em http://localhost:3000.
+7. Enviar ao GitHub (padrão desde 15/10/2026, em toda publicação): `git push origin master` e a etiqueta da publicação
+   (`git push origin publicado-…`), no repositório https://github.com/AdaoBPM/sig-bpm.
 
 ## Migração para o servidor da empresa (a fazer)
 
