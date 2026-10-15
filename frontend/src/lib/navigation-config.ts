@@ -3,8 +3,9 @@ import {
   ArrowLeftRight,
   BadgeDollarSign,
   Building2,
-  CalendarDays,
-  ClipboardList,
+  CalendarCheck,
+  ChartPie,
+  SlidersHorizontal,
   Factory,
   HandCoins,
   HardHat,
@@ -15,7 +16,6 @@ import {
   ChartColumn,
   Columns3,
   Database,
-  FileBarChart,
   Gauge,
   History,
   KeyRound,
@@ -94,7 +94,8 @@ export const navGrupos: NavGrupo[] = [
         // Antes, Resultados Realizados (renomeado em 14/10/2026).
         title: "Resultados Empresariais",
         href: "/relatorios/resultados",
-        icon: FileBarChart,
+        // Ícones de formas diferentes nos processos prontos da Apuração (14/10/2026; antes, documento, calendário e prancheta).
+        icon: ChartPie,
         recurso: "RESULTADOS_REALIZADOS",
         telas: [
           { title: "Resultados", href: "/relatorios/resultados", icon: ListOrdered, permission: "relatorio_resultados:ler" },
@@ -102,11 +103,11 @@ export const navGrupos: NavGrupo[] = [
           { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "relatorio_painel:ler" },
         ],
       },
-      { title: "Fechamento Mensal", href: "/competencias", icon: CalendarDays, permission: "fechamento:ler", recurso: "FECHAMENTO_MENSAL" },
+      { title: "Fechamento Mensal", href: "/competencias", icon: CalendarCheck, permission: "fechamento:ler", recurso: "FECHAMENTO_MENSAL" },
       {
         title: "Cadastros da Apuração",
         href: "/cadastros/reclassificacoes",
-        icon: ClipboardList,
+        icon: SlidersHorizontal,
         recurso: "CADASTROS_APURACAO",
         telas: [
           { title: "Reclassificações", href: "/cadastros/reclassificacoes", icon: Shuffle, permission: "cadastro_reclassificacoes:ler" },

@@ -101,7 +101,7 @@ export function AppSidebar() {
           <Fragment key={g.titulo}>
           <SidebarGroup>
             {/* O nome do grupo em caixa alta e, logo abaixo, o separador amarelo-ouro na largura útil dos processos (14/10/2026). */}
-            <SidebarGroupLabel className="uppercase">{g.titulo}</SidebarGroupLabel>
+            <SidebarGroupLabel className="font-bold uppercase">{g.titulo}</SidebarGroupLabel>
             <div aria-hidden className="mx-2 mb-1 h-px shrink-0 bg-bpm-primary group-data-[collapsible=icon]:hidden" />
             <SidebarGroupContent>
               <SidebarMenu>
