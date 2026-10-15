@@ -457,6 +457,20 @@ export const cenariosController = {
     return responder(response, () => cenariosService.referenciaRealizado(c, ano, usuario(request), opcoes));
   },
 
+  /** A referência dos sintéticos por cenários e realizados (15/10/2026): uma ou duas partes, sem meses em comum. */
+  referenciaComposta(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const mes = z.number().int().min(1).max(12);
+    const parte = z.discriminatedUnion("tipo", [
+      z.object({ tipo: z.literal("REALIZADO"), ano: anoSchema, modo: z.enum(["MES_A_MES", "MEDIA"]), de: mes.optional(), ate: mes.optional(), mesDe: mes, mesAte: mes }),
+      z.object({ tipo: z.literal("CENARIO"), origemId: z.string().min(1), mesDe: mes, mesAte: mes }),
+    ]);
+    const corpo = z.object({ partes: z.array(parte).min(1).max(2) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Referência inválida: escolha uma ou duas, com a origem e os meses de cada uma." });
+    return responder(response, () => cenariosService.referenciaComposta(c, corpo.data.partes, usuario(request)));
+  },
+
   /** Congelar Versão: trava o cenário. */
   congelarVersao(request: Request, response: Response) {
     const c = id(request, response);

@@ -257,11 +257,6 @@ function ContasDialog({ reajuste: r, onFechar }: { reajuste: ReajusteDoCenario; 
             </table>
           </div>
         )}
-        <DialogFooter>
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            Fechar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

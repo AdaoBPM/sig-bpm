@@ -3,7 +3,8 @@ import { strToU8, zipSync } from "fflate";
 /**
  * Escritor mínimo de .xlsx: texto e número, com um conjunto fixo de estilos
  * para relatório. O par do leitor de `xlsx.ts`, sem dependência além do
- * fflate. Não escreve fórmulas: os valores são os apurados, como na tela.
+ * fflate. Os valores são os apurados, como na tela; a célula com `formula` (15/10/2026: a aba Consolidado das
+ * exportações dos centros de custo) grava a fórmula, com o valor calculado como o já mostrado, e o Excel recalcula ao abrir.
  */
 
 /** Os estilos disponíveis. A ordem é a dos `cellXfs` de `styles.xml`. */
@@ -31,7 +32,7 @@ export const ESTILO = {
 } as const;
 export type Estilo = (typeof ESTILO)[keyof typeof ESTILO];
 
-export type Celula = { valor: string | number | null; estilo?: Estilo };
+export type Celula = { valor: string | number | null; estilo?: Estilo; /** A fórmula, sem o "=" (o `valor` é o resultado dela). */ formula?: string };
 export type AbaEscrita = {
   nome: string;
   /** Largura de cada coluna, em caracteres. */
@@ -55,14 +56,15 @@ const NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationship
 // eslint-disable-next-line no-control-regex
 const escapar = (t: string) => t.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function coluna(i: number) {
+/** A letra da coluna (0: A, 26: AA). */
+export function coluna(i: number) {
   let s = "";
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
 }
 
 /** Nome de aba válido no Excel: até 31 caracteres, sem []:*?/\, e único no arquivo. */
-function nomesDasAbas(nomes: string[]) {
+export function nomesDasAbas(nomes: string[]) {
   const usados = new Set<string>();
   return nomes.map((n) => {
     const base = n.replace(/[[\]:*?/\\]/g, " ").replace(/^'+|'+$/g, "").trim().slice(0, 31) || "Aba";
@@ -115,6 +117,7 @@ function planilha(aba: AbaEscrita) {
         .map((c, j) => {
           const ref = `${coluna(j)}${i + 1}`;
           const s = c.estilo ? ` s="${c.estilo}"` : "";
+          if (c.formula) return `<c r="${ref}"${s}><f>${escapar(c.formula)}</f>${typeof c.valor === "number" ? `<v>${c.valor}</v>` : ""}</c>`;
           if (c.valor === null || c.valor === "") return c.estilo ? `<c r="${ref}"${s}/>` : "";
           if (typeof c.valor === "number") return `<c r="${ref}"${s}><v>${c.valor}</v></c>`;
           return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${escapar(c.valor)}</t></is></c>`;
@@ -177,7 +180,9 @@ export function gerarXlsx(abas: AbaEscrita[], titulo?: string): Uint8Array {
     "xl/workbook.xml",
     `${XML}<workbook xmlns="${NS}" xmlns:r="${NS_R}"><sheets>` +
       nomes.map((nome, i) => `<sheet name="${escapar(nome)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("") +
-      `</sheets>${titulos ? `<definedNames>${titulos}</definedNames>` : ""}</workbook>`,
+      `</sheets>${titulos ? `<definedNames>${titulos}</definedNames>` : ""}` +
+      // Com fórmulas, o Excel recalcula tudo ao abrir.
+      `${abas.some((a) => a.linhas.some((l) => l.some((c) => c.formula))) ? '<calcPr calcId="191029" fullCalcOnLoad="1"/>' : ""}</workbook>`,
   );
   poe(
     "xl/_rels/workbook.xml.rels",

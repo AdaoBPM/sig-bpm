@@ -136,8 +136,9 @@ export function RealocacoesDialog({ cenario, podeEditar, onFechar }: { cenario: 
         </p>
         {padraoAplicado ? <p className="text-sm text-gray-600">{padraoAplicado}</p> : null}
         <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar as realocações.") : null} />
-        <DialogFooter>
-          {podeEditar ? (
+        {/* Sem a edição, o rodapé teria só o Fechar: sai, e o X do canto fecha (15/10/2026). */}
+        {podeEditar ? (
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -149,16 +150,14 @@ export function RealocacoesDialog({ cenario, podeEditar, onFechar }: { cenario: 
             >
               Aplicar Padrão
             </Button>
-          ) : null}
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            {podeEditar ? "Cancelar" : "Fechar"}
-          </Button>
-          {podeEditar ? (
+            <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+              Cancelar
+            </Button>
             <Button type="button" className={botaoPrimario} disabled={!mudou || gravar.isPending} onClick={aoGravar}>
               {gravar.isPending ? "Gravando…" : "Gravar"}
             </Button>
-          ) : null}
-        </DialogFooter>
+          </DialogFooter>
+        ) : null}
       </DialogContent>
 
       {confirmar ? (

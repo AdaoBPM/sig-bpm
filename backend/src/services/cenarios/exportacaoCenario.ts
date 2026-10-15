@@ -1,7 +1,9 @@
 import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
-import { ESTILO, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { coluna, ESTILO, gerarXlsx, nomesDasAbas, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { estrutura } from "../dre/dreService.js";
 import { arquivoDeResultados, identificacaoLivre, type Bloco, type Formato } from "../relatorios/exportacaoRelatoriosService.js";
 import { CenarioError, cenariosService, rotuloVersao } from "./cenariosService.js";
+import { abaConsolidado, juntarOrigem, type OrigensDasContas } from "./consolidadoDosCentros.js";
 
 type Usuario = NonNullable<Parameters<typeof cenariosService.obter>[1]>;
 
@@ -24,8 +26,8 @@ const nomeDoCenario = (c: { nome: string; versao: number; ano: number }) => `${/
 /**
  * A exportação dos cenários (14/10/2026), como a de Resultados Empresariais: a DRE do cenário (a visão na tela ou as seis,
  * uma por aba no Excel ou por página no PDF, no mesmo formato) e, nos analíticos, os centros de custo em Excel (o
- * centro na tela, todos numa planilha — um por aba — ou um arquivo por centro, num ZIP, com o departamento e o centro
- * no nome).
+ * centro na tela, todos numa planilha — um por aba, com o Consolidado na primeira (15/10/2026) — ou um arquivo por
+ * centro, num ZIP, com o departamento e o centro no nome).
  */
 export const exportacaoCenarioService = {
   async resultados(id: string, escopo: EscopoResultadosDoCenario, formato: Formato, usuario: Usuario) {
@@ -45,11 +47,12 @@ export const exportacaoCenarioService = {
     const grupos = escopo.tipo === "centro" ? lista.grupos.filter((g) => g.grupo === escopo.grupo) : lista.grupos.filter((g) => g.total !== 0);
     if (!grupos.length) throw new CenarioError(404, escopo.tipo === "centro" ? "Grupo de centros de custo não encontrado." : "Nenhum centro de custo com valor no cenário.");
     const geracao = identificacaoLivre("", usuario.nome).geracao;
-    const abas: Array<{ aba: AbaEscrita; departamento: string; grupo: string }> = [];
+    const abas: Array<{ aba: AbaEscrita; departamento: string; grupo: string; contas: ContasDaAba }> = [];
     for (const g of grupos) {
       const dados = await cenariosService.centro(id, g.grupo, usuario);
       const departamento = nomeDoDepartamento(g.departamento);
-      abas.push({ grupo: g.grupo, departamento, aba: abaDoCentro(g.grupo, departamento, g.destino, nomeDoCenario(c), geracao, lista.meses, dados) });
+      const contas: ContasDaAba = [];
+      abas.push({ grupo: g.grupo, departamento, contas, aba: abaDoCentro(g.grupo, departamento, g.destino, nomeDoCenario(c), geracao, lista.meses, dados, contas) });
     }
     const nomeBase = nomeDoCenario(c);
     if (escopo.tipo === "centrosArquivos") {
@@ -57,9 +60,36 @@ export const exportacaoCenarioService = {
       return { nomeArquivo: limparNome(`${nomeBase} - centros de custo (um arquivo por centro).zip`), tipo: TIPO_ZIP, conteudo, visoes: abas.map((a) => a.grupo) };
     }
     const nomeVisao = escopo.tipo === "centro" ? `${abas[0].departamento} - ${abas[0].grupo}` : "todos os centros de custo";
-    return { nomeArquivo: limparNome(`${nomeBase} - ${nomeVisao}.xlsx`), tipo: XLSX, conteudo: gerarXlsx(abas.map((a) => a.aba), `${nomeBase} - ${nomeVisao}`), visoes: abas.map((a) => a.grupo) };
+    const planilhas = abas.map((a) => a.aba);
+    if (escopo.tipo === "centros") {
+      // O Consolidado na primeira aba (15/10/2026), com as fórmulas apontando para os nomes finais das abas.
+      const nomes = nomesDasAbas(["Consolidado", ...planilhas.map((p) => p.nome)]);
+      const origens: OrigensDasContas = new Map();
+      const colunas = lista.meses.map((_, k) => coluna(2 + k));
+      abas.forEach((a, i) => {
+        a.aba.nome = nomes[i + 1];
+        for (const x of a.contas) juntarOrigem(origens, x.codigo, { aba: a.aba.nome, linha: x.linha, colunas, valores: x.valores });
+      });
+      planilhas.unshift(
+        abaConsolidado({
+          est: await estrutura(),
+          informacoes: [
+            `${nomeBase} · ${geracao}`,
+            "A DRE das contas dos centros de custo: cada conta é a soma dela nas abas dos centros (em fórmulas: acompanha os valores das abas); as atribuições, os grupos e o total somam as contas. Confira com a DRE do cenário (tela Resultados / Consolidado): o total bate; por conta, a parte dos rateios que vai para Serviços (Metalurgia, Armadura e Acompanhamento) está, na DRE, nas contas da CSM ou da CSC. O Quadro de Lotação não entra.",
+          ],
+          rotulos: lista.meses.map((m) => m.rotulo),
+          total: [0, lista.meses.length - 1],
+          origens,
+          rodape: `${nomeBase} · Consolidado`,
+        }),
+      );
+    }
+    return { nomeArquivo: limparNome(`${nomeBase} - ${nomeVisao}.xlsx`), tipo: XLSX, conteudo: gerarXlsx(planilhas, `${nomeBase} - ${nomeVisao}`), visoes: abas.map((a) => a.grupo) };
   },
 };
+
+/** As contas de uma aba de centro, para o Consolidado: o código, a linha na aba e os doze meses. */
+type ContasDaAba = Array<{ codigo: string; linha: number; valores: number[] }>;
 
 /** A aba de um grupo de centros: o quadro de lotação e as contas por atribuição, nos doze meses e no total. */
 function abaDoCentro(
@@ -70,6 +100,7 @@ function abaDoCentro(
   geracao: string,
   meses: Array<{ rotulo: string }>,
   dados: Awaited<ReturnType<typeof cenariosService.centro>>,
+  contasDaAba: ContasDaAba,
 ): AbaEscrita {
   const soma = (vs: number[]) => vs.reduce((s, v) => s + v, 0);
   const num = (v: number, destaque: boolean): Celula => ({ valor: Math.round(v * 100) / 100, estilo: destaque ? ESTILO.destaqueNumero : ESTILO.itemNumero });
@@ -97,7 +128,10 @@ function abaDoCentro(
     const sub = Array.from({ length: 12 }, (_, k) => soma(contas.map((x) => x.valores[k])));
     sub.forEach((v, k) => (total[k] += v));
     linhas.push([{ valor: a, estilo: ESTILO.destaque }, { valor: null, estilo: ESTILO.destaque }, ...sub.map((v) => num(v, true)), num(soma(sub), true)]);
-    for (const x of contas) linhas.push([{ valor: null, estilo: ESTILO.item }, { valor: x.descricao, estilo: ESTILO.item }, ...x.valores.map((v) => num(v, false)), num(soma(x.valores), false)]);
+    for (const x of contas) {
+      linhas.push([{ valor: null, estilo: ESTILO.item }, { valor: x.descricao, estilo: ESTILO.item }, ...x.valores.map((v) => num(v, false)), num(soma(x.valores), false)]);
+      contasDaAba.push({ codigo: x.codigo, linha: linhas.length, valores: x.valores.map((v) => Math.round(v * 100) / 100) });
+    }
   }
   linhas.push([{ valor: "Total", estilo: ESTILO.destaque }, { valor: null, estilo: ESTILO.destaque }, ...total.map((v) => num(v, true)), num(soma(total), true)]);
   return { nome: grupo, larguras: [26, 40, ...meses.map(() => 13), 15], linhas, linhaCabecalho: cabecalho, rodape: `${cenario} · Centro de Custo ${grupo}`, paisagem: true, congelarPrimeiraColuna: true };

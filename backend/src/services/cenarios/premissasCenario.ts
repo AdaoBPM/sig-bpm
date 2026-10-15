@@ -16,7 +16,6 @@ type Tx = Prisma.TransactionClient;
  * Serviços, só a Global. Cada tabela tem, mês a mês:
  *
  * - Jornada: os dias úteis (o calendário — segunda a sexta menos os feriados nacionais —, editável);
- * - Ajustes: o percentual sobre a receita (bruta e líquida) e o percentual sobre os custos e despesas;
  * - Produção e Serviços: a demanda diária de cada linha do cadastro Linhas da unidade, na Und. de Medida dela (nas
  *   linhas de "m³ e pistas", as pistas por dia e os m³ por pista: o m³ é o m³/pista × as pistas); o volume do mês é a
  *   demanda × os dias úteis;
@@ -26,7 +25,7 @@ type Tx = Prisma.TransactionClient;
  *   Gerais Variáveis (por conta) e o Estoque, em R$ por unidade da linha;
  * - Despesas Variáveis de Venda: por linha, os Gastos Gerais Variáveis da DVV (por conta), em R$ por unidade.
  *
- * O valor de cada conta no mês é o volume × o valor unitário × (1 + o ajuste); a receita líquida, a bruta × (1 − os
+ * O valor de cada conta no mês é o volume × o valor unitário (sem ajustes: só as médias e as demandas, 15/10/2026); a receita líquida, a bruta × (1 − os
  * impostos). As contas das tabelas somam-se na DRE da unidade (as de Global e Mercantil juntas), com os volumes
  * (produção, pistas, metalurgia, expedição e montagem), e os totais e o Consolidado se calculam pela Estrutura da DRE.
  * As demais contas (mão de obra, gastos gerais diretos e indiretos, depreciação, despesas e o extra-operacional) virão
@@ -98,7 +97,7 @@ export async function linhasDoCadastro(todas = false): Promise<LinhaDoCadastro[]
 export type LinhaPremissa = {
   chave: string;
   secao: string;
-  /** A linha de produto ou de obra da premissa (o subtítulo na tabela); nula na Jornada, nos Ajustes e no Resultado. */
+  /** A linha de produto ou de obra da premissa (o subtítulo na tabela); nula na Jornada e no Resultado. */
   grupo: string | null;
   rotulo: string;
   und: string;
@@ -135,8 +134,6 @@ export function linhasDaTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
   const add = (secao: string, grupo: string | null, chave: string, rotulo: string, und: string, tipo: LinhaPremissa["tipo"] = "PREMISSA", casas = 2) =>
     r.push({ chave, secao, grupo, rotulo, und, tipo, casas });
   add("JORNADA", null, "DIAS_UTEIS", "Dias Úteis", "dia", "PREMISSA", 0);
-  add("AJUSTES", null, "AJUSTE_RECEITA", "Ajuste sobre a Receita Bruta e Líquida", "%");
-  add("AJUSTES", null, "AJUSTE_CUSTOS", "Ajuste sobre os Custos e Despesas", "%");
   for (const l of daUnidade) {
     const g = nomeDaLinha(l);
     if (pistas(l)) {
@@ -228,8 +225,6 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     return lista;
   };
   const dias = premissa("DIAS_UTEIS", (m) => diasUteis(ano, m));
-  const ajusteReceita = premissa("AJUSTE_RECEITA").map((p) => 1 + p / 100);
-  const ajusteCustos = premissa("AJUSTE_CUSTOS").map((p) => 1 + p / 100);
   for (const l of daUnidade) {
     const demanda = premissa(`DEMANDA:${l.codigo}`);
     let volume: number[];
@@ -276,7 +271,7 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     for (const c of contas.receitas) {
       const unitario = premissa(`RB:${l.codigo}:${c}`);
       for (const m of meses) {
-        const bruta = volume[m - 1] * unitario[m - 1] * ajusteReceita[m - 1];
+        const bruta = volume[m - 1] * unitario[m - 1];
         somar(c, m, bruta);
         somar(LIQUIDA_DA_BRUTA[c], m, bruta * (1 - impostos[m - 1] / 100));
         liquida[m - 1] += unitario[m - 1] * (1 - impostos[m - 1] / 100);
@@ -288,7 +283,7 @@ export function calcularTabela(est: LinhaEstrutura[], linhas: LinhaDoCadastro[],
     referencia.set(`RL:${l.codigo}`, liquidaRef);
     for (const c of [...contas.custos, ...contas.dvv]) {
       const unitario = premissa(`CUSTO:${l.codigo}:${c.codigo}`);
-      for (const m of meses) somar(c.codigo, m, volume[m - 1] * unitario[m - 1] * ajusteCustos[m - 1]);
+      for (const m of meses) somar(c.codigo, m, volume[m - 1] * unitario[m - 1]);
     }
   }
   // O resultado da tabela em R$.

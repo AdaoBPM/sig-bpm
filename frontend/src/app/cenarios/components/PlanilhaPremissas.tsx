@@ -21,8 +21,8 @@ const invalidar = (queryClient: ReturnType<typeof useQueryClient>) => {
 };
 
 /**
- * O botão Replicar Médias / Apagar Valores (15/10/2026), na altura das abas das Premissas: em todas as abas, replica a
- * Média de Referência de cada linha nos doze meses, ou deixa os meses em branco. Os Ajustes ficam como estão.
+ * O botão Replicar Médias / Apagar Valores (15/10/2026), na altura do título das Premissas: em todas as abas, replica a
+ * Média de Referência de cada linha nos doze meses, ou deixa os meses em branco.
  */
 export function BotaoReplicarMedias({ id }: { id: string }) {
   const [aberto, setAberto] = useState(false);
@@ -59,7 +59,7 @@ function ReplicarMediasDialog({ id, onFechar }: { id: string; onFechar: () => vo
           <DialogTitle>Replicar Médias / Apagar Valores</DialogTitle>
           <DialogDescription>
             Vale para todas as abas das premissas: Matriz, Filial, Serviços, Centros de Custo (com o Quadro de Lotação), Investimentos (a Depreciação
-            Base), Extra-Operacional e Indicadores Manuais. Os Ajustes (sobre a receita e sobre os custos) ficam como estão. A DRE do cenário se
+            Base), Extra-Operacional e Indicadores Manuais. A DRE do cenário se
             recalcula, e a mudança fica no histórico (tela Reajustes).
           </DialogDescription>
         </DialogHeader>

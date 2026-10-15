@@ -23,12 +23,26 @@ type Decimal = Prisma.Decimal;
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 const NOME_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços", 4: "Despesas e Extra", 5: "RN" };
 const ROTULO_NATUREZA: Record<string, string> = {
-  PRE_FABRICADO: "pré-fabricado",
-  FRETE: "frete",
-  DEVOLUCOES_INVENTARIOS: "devoluções e inventários",
-  MONTAGEM: "montagem",
-  COMPLEMENTAR: "complementar",
+  PRE_FABRICADO: "Pré-Fabricado",
+  FRETE: "Frete",
+  DEVOLUCOES_INVENTARIOS: "Devoluções e Inventários",
+  MONTAGEM: "Montagem",
+  COMPLEMENTAR: "Complementar",
 };
+/** As chaves e os destinos dos rateios nos títulos dos blocos (15/10/2026: "Rateio: Produção → Matriz"). */
+const ROTULO_RATEIO: Record<string, string> = {
+  PRODUCAO: "Produção",
+  PROJETO: "Projeto",
+  METALURGIA: "Metalurgia",
+  ARMADURA: "Armadura",
+  ACOMPANHAMENTO: "Acompanhamento",
+  MATRIZ: "Matriz",
+  FILIAL: "Filial",
+  SERVICOS: "Serviços",
+  MONTAGEM: "Montagem",
+  COMPLEMENTAR: "Complementar",
+};
+const rotuloRateio = (c: string) => ROTULO_RATEIO[c] ?? c.charAt(0) + c.slice(1).toLowerCase();
 
 export type Visao = { unidade: number } | { consolidado: true } | { grupo: string } | { obra: string } | { semCentro: string };
 
@@ -135,7 +149,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     ].filter(Boolean);
     blocos.push({
       tipo: "CONTABIL",
-      titulo: "Lançamentos contábeis diretos",
+      titulo: "Lançamentos Contábeis Diretos",
       unidade,
       filtro: partes.join(" · "),
       fator: f.fator,
@@ -153,7 +167,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     const p = new Decimal(r.percentual);
     blocos.push({
       tipo: "RATEIO",
-      titulo: `Rateio ${r.chave.toLowerCase()} → ${r.destino.toLowerCase()}`,
+      titulo: `Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}`,
       unidade,
       filtro: `lançamentos de rateio do balde ${r.chave}, linha ${r.base.split(": ")[0]}`,
       percentual: r.percentual,
@@ -178,7 +192,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     });
     blocos.push({
       tipo: "MANUAL",
-      titulo: "Lançamentos manuais",
+      titulo: "Lançamentos Manuais",
       unidade,
       filtro: `balde ${o.manual.balde}`,
       total: somar(ms.map((m) => m.valor)).toFixed(2),
@@ -207,7 +221,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     const v = r ? (pv.componente === "BRUTA" ? r.receitaBruta : r.receitaLiquida) : new Decimal(0);
     blocos.push({
       tipo: "PREVIA",
-      titulo: `Receita prévia · ${ROTULO_NATUREZA[pv.natureza] ?? pv.natureza} (${pv.componente === "BRUTA" ? "bruta" : "líquida"})${pv.sinal < 0 ? ", com sinal trocado" : ""}`,
+      titulo: `Receita Prévia: ${ROTULO_NATUREZA[pv.natureza] ?? pv.natureza} (${pv.componente === "BRUTA" ? "Bruta" : "Líquida"})${pv.sinal < 0 ? ", com sinal trocado" : ""}`,
       unidade: pv.unidade,
       natureza: pv.natureza,
       componente: pv.componente,
@@ -245,7 +259,7 @@ export const detalhamentoService = {
       // filial, na Produção e na DVV).
       if (!ehGrupoSemCentro(visao.semCentro)) throw new RegraDREError(400, "Grupo dos movimentos sem centro de custo inválido.");
       if (!veSemCentros(acesso)) throw new RegraDREError(403, "Os movimentos sem centro de custo não são do seu recorte.");
-      titulo = `Sem centro de custo · ${nomeDoGrupoSemCentro(visao.semCentro)}`;
+      titulo = `Sem Centro de Custo · ${nomeDoGrupoSemCentro(visao.semCentro)}`;
       regra = "Lançamentos contábeis sem centro de custo do cadastro, nas contas de mão de obra e de gastos gerais, antes do rateio";
       const ls = deveriaTerCentro(linha)
         ? (await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: null }, select: selecaoContabil })).filter(
@@ -256,7 +270,7 @@ export const detalhamentoService = {
         valor = somar(ls.map((l) => l.valorMovimento));
         blocos.push({
           tipo: "CONTABIL",
-          titulo: "Lançamentos contábeis",
+          titulo: "Lançamentos Contábeis",
           filtro: "sem centro de custo do cadastro, diretos e de rateio",
           total: valor.toFixed(2),
           lancamentos: agrupar(ls).map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),
@@ -275,7 +289,7 @@ export const detalhamentoService = {
         valor = somar(ls.map((l) => l.valorMovimento)).times(fator);
         blocos.push({
           tipo: "CONTABIL",
-          titulo: "Lançamentos contábeis",
+          titulo: "Lançamentos Contábeis",
           filtro: "todas as filiais, diretos e de rateio",
           ...(fator.isNegative() ? { fator: "-1" } : {}),
           total: valor.toFixed(2),
@@ -285,7 +299,7 @@ export const detalhamentoService = {
         observacao = "Linha que soma outras linhas da obra: veja o detalhamento de cada uma.";
       }
     } else if ("grupo" in visao) {
-      titulo = `Centro de custo ${visao.grupo}`;
+      titulo = `Centro de Custo ${visao.grupo}`;
       const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true, departamento: true } });
       const ids = centros.filter((x) => grupoDoCentro(x) === visao.grupo && podeVerCentro(acesso, x)).map((x) => x.id);
       if (ids.length === 0) throw new RegraDREError(403, `O centro de custo ${visao.grupo} não é de um departamento seu.`);
@@ -299,7 +313,7 @@ export const detalhamentoService = {
       if (ls.length > 0) {
         blocos.push({
           tipo: "CONTABIL",
-          titulo: "Lançamentos contábeis",
+          titulo: "Lançamentos Contábeis",
           filtro: "todas as filiais, diretos e de rateio",
           total: somar(ls.map((l) => l.valorMovimento)).toFixed(2),
           lancamentos: agrupar(ls).map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),

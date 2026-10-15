@@ -239,7 +239,7 @@ function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes:
         </h2>
         <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} dica="Copiar o grupo como imagem" />
         {/* Ao lado, o grupo sem os gráficos: só os valores dos cards (14/10/2026). */}
-        <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} dica="Copiar o grupo sem os gráficos como imagem" semGraficos />
+        <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} dica="Copiar o grupo como imagem (sem gráficos)" semGraficos />
       </div>
       <div className="space-y-3">
         {q.itens.map((i) => (
@@ -413,8 +413,8 @@ export function PainelContent() {
             <li>
               Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
               ficam sem as linhas da escala (só a do zero). O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como
-              imagem, para colar num e-mail ou numa apresentação; o botão seguinte (o mesmo ícone, com um asterisco) copia o grupo sem os gráficos:
-              só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
+              imagem, para colar num e-mail ou numa apresentação; o botão seguinte (o mesmo ícone, com um asterisco: “Copiar o grupo como imagem (sem
+              gráficos)”) copia só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
             <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, o orçado fica zero.</li>
           </ul>

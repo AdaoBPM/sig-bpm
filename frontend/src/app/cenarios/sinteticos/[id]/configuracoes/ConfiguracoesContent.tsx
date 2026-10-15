@@ -61,7 +61,20 @@ export function ConfiguracoesContent() {
                 </li>
               </>
             ) : (
-              <li>Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue o resultado realizado das competências fechadas de um exercício. Ela substitui a DRE do cenário, que depois se edita na tela Resultados.</li>
+              <>
+                <li>
+                  Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue até duas referências em Cenários e Realizados. A
+                  referência substitui a DRE e os indicadores do cenário, que depois se editam na tela Resultados.
+                </li>
+                <li>
+                  Em Cenários e Realizados, escolha em cada referência a Origem (o Resultado Realizado ou outro cenário, sintético ou analítico) e os
+                  Meses do Cenário que ela preenche (De e Até). O realizado vai Mês a Mês (cada competência fechada do exercício que cai nesses meses, no
+                  mês dela) ou pela Média Replicada (a média de um período, em todos esses meses); outro cenário leva a DRE e os indicadores dele, mês a
+                  mês, para os mesmos meses. “Incluir Referência” abre a segunda (por exemplo, o realizado de Janeiro a Agosto e outro cenário de
+                  Setembro a Dezembro): os meses das duas não podem se sobrepor, e os meses fora delas ficam vazios. Clique em “Carregar Referência” e
+                  confirme.
+                </li>
+              </>
             )}
             <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas Resultados e Indicadores.</li>
             <li>Aparecem só as abas que o seu perfil lê, e os botões de cada aba só com a permissão de editar nela (Controle de Usuários / Perfis); sem ela, a aba se lê, com um aviso.</li>
@@ -90,8 +103,8 @@ export function ConfiguracoesContent() {
             </p>
           ) : (
             <p>
-              Os dados do cenário e a base opcional da DRE dele: um arquivo importado ou o resultado realizado. Sem referência, a DRE se digita inteira
-              na tela Resultados, com os totais calculados pela Estrutura da DRE.
+              Os dados do cenário e a base opcional da DRE dele: um arquivo importado ou até duas referências, em meses distintos, entre o resultado
+              realizado e outros cenários. Sem referência, a DRE se digita inteira na tela Resultados, com os totais calculados pela Estrutura da DRE.
             </p>
           )
         }

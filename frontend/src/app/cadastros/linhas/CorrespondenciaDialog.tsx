@@ -230,13 +230,7 @@ function Formulario({
             {gravar.isPending ? "Gravando…" : "Gravar"}
           </Button>
         </DialogFooter>
-      ) : (
-        <DialogFooter>
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            Fechar
-          </Button>
-        </DialogFooter>
-      )}
+      ) : null}
     </>
   );
 }

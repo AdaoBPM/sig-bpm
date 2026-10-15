@@ -1,7 +1,8 @@
 import { unzipSync } from "fflate";
 
 import { ArquivoInvalidoError, lerAba, listarAbas, type ValorCelula } from "../../lib/xlsx.js";
-import { ESTILO, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { coluna, ESTILO, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { juntarOrigem, type OrigensDasContas } from "./consolidadoDosCentros.js";
 import { mesesAcima } from "./comparativoCenario.js";
 
 /**
@@ -113,6 +114,24 @@ export function abaDaPlanilha(nome: string, aba: AbaDasPremissas, linhas: LinhaD
   };
 }
 
+/** A linha da primeira linha de valores nas abas da planilha (abaDaPlanilha: o título, a identificação, a explicação, uma em branco e os rótulos). */
+const PRIMEIRA_LINHA = 6;
+
+/**
+ * As contas de uma aba de centros da planilha (15/10/2026), para o Consolidado: as linhas das contas (C|grupo|conta) e as
+ * colunas da Média de Referência e dos doze meses. `aba` é o nome final da aba no arquivo.
+ */
+export function origensDaAba(origens: OrigensDasContas, aba: string, linhas: LinhaDaPlanilha[]) {
+  const iMedia = 1 + COLUNAS.centros.length + 1;
+  const colunas = Array.from({ length: 13 }, (_, k) => coluna(iMedia + k));
+  linhas.forEach((l, i) => {
+    if (l.chave.startsWith("C|") && l.conta) juntarOrigem(origens, l.conta, { aba, linha: PRIMEIRA_LINHA + i, colunas, valores: [l.media, ...l.meses] });
+  });
+}
+
+/** O nome da aba Consolidado: o Importar Valores a ignora sem aviso. */
+export const ABA_CONSOLIDADO = "Consolidado";
+
 /** Uma linha lida de um arquivo: a chave, os doze meses (null: em branco) e a justificativa. */
 export type LinhaLida = { aba: string; numero: number; chave: string; meses: Array<number | null>; justificativa: string | null };
 export type ArquivoLido = { arquivo: string; linhas: LinhaLida[]; abas: string[]; erros: string[]; avisos: string[] };
@@ -141,6 +160,7 @@ function lerXlsx(arquivo: string, buffer: Uint8Array): ArquivoLido {
     return r;
   }
   for (const nome of abas) {
+    if (nome === ABA_CONSOLIDADO) continue;
     const { linhas } = lerAba(buffer, () => nome);
     const i = linhas.findIndex((l) => String(l.celulas[0] ?? "").trim() === COLUNA_CODIGO);
     if (i < 0) {

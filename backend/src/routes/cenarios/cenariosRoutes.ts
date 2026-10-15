@@ -45,6 +45,8 @@ cenariosRoutes.get("/:id/reajustes", autenticacao, tela("reajustes", "ler", "his
 cenariosRoutes.post("/:id/referencia/realizado", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaRealizado));
 // As realocações das movimentações fora dos padrões, na aba Referência (14/10/2026).
 cenariosRoutes.put("/:id/realocacoes", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.gravarRealocacoes));
+// A referência dos sintéticos por cenários e realizados (15/10/2026).
+cenariosRoutes.post("/:id/referencia/composta", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaComposta));
 cenariosRoutes.post("/:id/referencia/cenario", autenticacao, tela("configuracoes", "editar", "referencia"), express.json(), asyncHandler(c.referenciaCenario));
 // O versionamento (13/10/2026): Congelar Versão, Reabrir Versão e Criar Revisão.
 // O Recalcular dos Resultados dos analíticos (14/10/2026): depois de editar uma regra de rateio.

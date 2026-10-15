@@ -316,3 +316,18 @@
 [data-sonner-toaster] [data-sonner-toast][data-styled="true"]:is([data-type="success"], [data-type="error"]) [data-description] {
   color: inherit;
 }
+
+/*
+ * Os modais com rolagem (15/10/2026): o Firefox não conta o espaço de baixo do modal na área que rola, e o último
+ * quadro (como a Soma das Origens do detalhamento da DRE) encostava na borda. O espaço passa para um item vazio no
+ * fim: com o espaçamento entre os itens do modal, fica igual ao das outras bordas. O item tem 1px (com -1px de
+ * margem): com altura zero, o Firefox também não o conta.
+ */
+[data-slot="dialog-content"].overflow-y-auto {
+  padding-bottom: 0;
+}
+[data-slot="dialog-content"].overflow-y-auto::after {
+  content: "";
+  height: 1px;
+  margin-top: -1px;
+}

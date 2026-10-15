@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -61,16 +61,10 @@ export function ReajusteDialog({
   erro,
   onAplicar,
   onFechar,
-  soPercentual = false,
-  explicacao,
 }: {
   /** Os valores marcados: a conta, o mês e o valor atual. */
   valores: Array<{ linha: string; mes: number; atual: number }>;
   rotulo: string;
-  /** Sem o reajuste absoluto (14/10/2026: os Ajustes das premissas, que já são percentuais). */
-  soPercentual?: boolean;
-  /** Uma explicação do que o valor faz, no pé do modal. */
-  explicacao?: ReactNode;
   gravando: boolean;
   erro: string | null;
   onAplicar: (novos: Array<{ linha: string; mes: number; valor: number }>, reajuste: { modo: Reajuste; valor: number }) => void;
@@ -99,7 +93,7 @@ export function ReajusteDialog({
             <p className="text-sm text-gray-700">
               <span className="font-bold text-gray-900">{valores.length}</span> {plural(valores.length, "valor marcado", "valores marcados")}, somando <span className="font-bold text-gray-900">{paraTexto(somaAtual)}</span>.
             </p>
-            {soPercentual ? null : <TipoReajuste tipo={tipo} onMudar={setTipo} />}
+            <TipoReajuste tipo={tipo} onMudar={setTipo} />
             <div className="space-y-1.5">
               <Label htmlFor="reajuste-valor">{tipo === "PERCENTUAL" ? "Reajuste (%)" : "Reajuste (valor somado a cada um)"}</Label>
               <Input id="reajuste-valor" autoFocus value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "PERCENTUAL" ? "Ex.: 5 ou -2,5" : "Ex.: 1.000 ou -500"} className="rounded-sm" />
@@ -111,7 +105,6 @@ export function ReajusteDialog({
                 {paraTexto(somaNova - somaAtual)}).
               </p>
             ) : null}
-            {explicacao ? <p className="text-xs text-gray-500">{explicacao}</p> : null}
           </div>
         )}
         <Erro erro={erro} />
@@ -142,14 +135,8 @@ export function ValorDialog({
   erro,
   onGravar,
   onFechar,
-  soPercentual = false,
-  explicacao,
 }: {
   conta: string;
-  /** Sem o reajuste absoluto (14/10/2026: os Ajustes das premissas, que já são percentuais). */
-  soPercentual?: boolean;
-  /** Uma explicação do que o valor faz, abaixo dos campos. */
-  explicacao?: ReactNode;
   rotuloMes: string;
   /** Os rótulos dos meses depois deste (para a chave de replicar). */
   mesesSeguintes: string[];
@@ -197,18 +184,16 @@ export function ValorDialog({
             <Label htmlFor="valor-atual">Valor Atual</Label>
             <Input id="valor-atual" value={comDuasCasas(atual)} readOnly className="rounded-sm bg-gray-50 text-right text-gray-700" />
           </div>
-          {soPercentual ? null : (
-            <TipoReajuste
-              tipo={tipo}
-              onMudar={(t) => {
-                setTipo(t);
-                mudarReajuste(reajuste, t);
-              }}
-            />
-          )}
+          <TipoReajuste
+            tipo={tipo}
+            onMudar={(t) => {
+              setTipo(t);
+              mudarReajuste(reajuste, t);
+            }}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="valor-reajuste">{soPercentual ? "Reajuste (% sobre o atual)" : tipo === "PERCENTUAL" ? "Reajuste (%)" : "Reajuste (valor)"}</Label>
+              <Label htmlFor="valor-reajuste">{tipo === "PERCENTUAL" ? "Reajuste (%)" : "Reajuste (valor)"}</Label>
               <Input id="valor-reajuste" value={reajuste} onChange={(e) => mudarReajuste(e.target.value)} placeholder="Ex.: 5 ou -2,5" className="rounded-sm" />
             </div>
             <div className="space-y-1.5">
@@ -224,7 +209,6 @@ export function ValorDialog({
               {valorNovo === undefined ? <p className="text-xs text-red-700">Número inválido.</p> : null}
             </div>
           </div>
-          {explicacao ? <p className="text-xs text-gray-500">{explicacao}</p> : null}
           {mesesSeguintes.length ? (
             <label className="flex cursor-pointer items-center gap-3 text-sm text-gray-900">
               {/* A chave: replica o valor recalculado aos meses seguintes. */}

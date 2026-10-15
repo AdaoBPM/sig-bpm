@@ -143,6 +143,11 @@ export const DO_TIPO: Record<TipoCenario, { base: string; titulo: string; area: 
 export const tipoDaRota = (pathname: string): TipoCenario => (pathname.startsWith("/cenarios/analiticos") ? "ANALITICO" : "SINTETICO");
 export const ROTULO_VISUALIZACAO: Record<Visualizacao, string> = { PARTICULAR: "Particular", PUBLICA: "Pública" };
 
+/** Uma parte da referência dos sintéticos (15/10/2026): a origem e os meses do cenário (`mesDe`–`mesAte`) que ela preenche. */
+export type ParteDaReferencia =
+  | { tipo: "REALIZADO"; ano: number; modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number; mesDe: number; mesAte: number }
+  | { tipo: "CENARIO"; origemId: string; mesDe: number; mesAte: number };
+
 export type Cenario = {
   id: string;
   nome: string;
@@ -346,6 +351,9 @@ export const cenariosService = {
   /** No analítico (14/10/2026), com os avisos do que não coube nas premissas. */
   referenciaRealizado: async (id: string, ano: number, opcoes: { modo: "MES_A_MES" | "MEDIA"; de?: number; ate?: number } = { modo: "MES_A_MES" }) =>
     (await api.post<{ data: Cenario & { avisos?: string[] } }>(`/proxy/cenarios/${id}/referencia/realizado`, { ano, ...opcoes })).data.data,
+  /** A referência dos sintéticos por cenários e realizados (15/10/2026): uma ou duas partes, sem meses em comum. */
+  referenciaComposta: async (id: string, partes: ParteDaReferencia[]) =>
+    (await api.post<{ data: Cenario & { avisos?: string[] } }>(`/proxy/cenarios/${id}/referencia/composta`, { partes })).data.data,
   /** A referência de um analítico por outro analítico (14/10/2026). */
   referenciaCenario: async (id: string, origemId: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/referencia/cenario`, { origemId })).data.data,
   /** A correspondência tarefa × linha (14/10/2026), nos Cadastros da Controladoria / Linhas. */

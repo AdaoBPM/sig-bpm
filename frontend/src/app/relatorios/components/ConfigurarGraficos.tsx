@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /**
  * O botão Configurar Gráficos (14/10/2026; antes, as listas na linha do título): abre o modal com as opções da tela — o
@@ -28,11 +28,6 @@ export function ConfigurarGraficos({ children }: { children: ReactNode }) {
             </DialogHeader>
             {/* As opções uma embaixo da outra: o rótulo à esquerda, a lista à direita. */}
             <div className="grid gap-3 [&_label]:justify-between [&_label>span]:text-sm [&_[data-slot=select-trigger]]:w-40">{children}</div>
-            <DialogFooter>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setAberto(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       ) : null}

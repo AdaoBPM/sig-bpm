@@ -64,7 +64,8 @@ export function CenarioPainelContent() {
             </li>
             <li>
               O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como imagem, para colar num e-mail ou numa
-              apresentação; o botão seguinte (o mesmo ícone, com um asterisco) copia o grupo sem os gráficos: só os valores dos cards, com a borda
+              apresentação; o botão seguinte (o mesmo ícone, com um asterisco: “Copiar o grupo como imagem (sem gráficos)”) copia
+              só os valores dos cards, com a borda
               de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
             <li>

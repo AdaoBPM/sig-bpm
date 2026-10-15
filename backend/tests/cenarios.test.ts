@@ -221,8 +221,6 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     const chaves = linhas.map((l) => l.chave);
     for (const c of [
       "DIAS_UTEIS",
-      "AJUSTE_RECEITA",
-      "AJUSTE_CUSTOS",
       "DEMANDA:ALVEOLARES",
       "M3_PISTA:ALVEOLARES",
       "VOLUME:ALVEOLARES",
@@ -237,6 +235,8 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     ])
       assert.ok(chaves.includes(c), c);
     assert.ok(!chaves.some((c) => c.includes("CPP.MOD")));
+    // Sem os Ajustes (15/10/2026): os totais saem só das médias e das demandas.
+    assert.ok(!chaves.some((c) => c.startsWith("AJUSTE_")));
     // A armadura e a metalurgia em kg por unidade da linha (o m³ nas de pistas).
     assert.equal(linhas.find((l) => l.chave === "ARMADURA:ALVEOLARES")!.und, "kg/m³");
     // Só nas linhas que levam armadura e metalurgia: a Vedação não leva.
@@ -244,7 +244,7 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     assert.ok(!ved.includes("ARMADURA:VEDAÇÃO") && !ved.includes("METALURGIA:VEDAÇÃO"));
   });
 
-  it("calcula: pistas × dias, × m³ por pista; a receita × (1 + ajuste) e a líquida × (1 − impostos); os custos × (1 + ajuste)", () => {
+  it("calcula: pistas × dias, × m³ por pista; a líquida × (1 − impostos); os ajustes gravados antes de 15/10/2026 não entram", () => {
     const p: Record<string, number> = {
       "DEMANDA:ALVEOLARES": 4,
       "M3_PISTA:ALVEOLARES": 17.5,
@@ -262,10 +262,10 @@ describe("premissas dos cenários analíticos (13/10/2026)", () => {
     assert.equal(dre.get("P.PRODUCAO_DO_PRE_FABRICADO_M")![0], 700);
     assert.equal(dre.get("ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO")![0], 700 * 1700);
     assert.equal(dre.get("ROL.RLPF.RECEITA_LIQUIDA_DO_PRE_FABRICADO")![0], 700 * 1700 * 0.75);
-    assert.equal(Math.round(dre.get("CPP.MP.CIMENTO")![0]), Math.round(700 * 300 * 1.1));
-    // Fevereiro: os 20 dias do calendário e o ajuste de 5% na receita.
+    assert.equal(Math.round(dre.get("CPP.MP.CIMENTO")![0]), 700 * 300);
+    // Fevereiro: os 20 dias do calendário; o ajuste de 5% na receita, ainda gravado, não entra.
     assert.equal(valores.get("DIAS_UTEIS")![1], 20);
-    assert.equal(Math.round(dre.get("ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO")![1]), Math.round(4 * 20 * 17.5 * 1700 * 1.05));
+    assert.equal(Math.round(dre.get("ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO")![1]), Math.round(4 * 20 * 17.5 * 1700));
     assert.equal(valores.get("RL:ALVEOLARES")![0], 1700 * 0.75);
   });
 

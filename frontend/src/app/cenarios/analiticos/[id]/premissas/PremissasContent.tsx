@@ -56,7 +56,7 @@ export function PremissasContent() {
   const consulta = useQuery({ queryKey: ["cenarios", id, "premissas", aba], queryFn: () => cenariosService.premissas(id, Number(aba) as 1 | 2 | 3), enabled: deUnidade });
   const travado = !!cenario.data && estaTravado(cenario.data);
   const podeEditar = editaAba && !travado && (!deUnidade || !!consulta.data?.editavel);
-  // Os botões da planilha (15/10/2026), na altura das abas: Replicar Médias / Apagar Valores (todas as abas editáveis),
+  // Os botões da planilha (15/10/2026), na altura do título: Replicar Médias / Apagar Valores (todas as abas editáveis),
   // Importar Valores (alguma aba editável) e Exportar Premissas.
   const editaTodas = ABAS.every((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:editar`));
   const editaAlguma = ABAS.some((a) => hasPermission(`cenarios_analiticos_premissas.${abaDaChave(a.chave)}:editar`));
@@ -64,6 +64,15 @@ export function PremissasContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Premissas"
+        acoes={
+          abas.length ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {cenario.data && !travado && editaTodas ? <BotaoReplicarMedias id={id} /> : null}
+              {cenario.data && !travado && editaAlguma ? <BotaoImportarValores id={id} /> : null}
+              <ExportarPremissas id={id} aba={aba} />
+            </div>
+          ) : null
+        }
         comoUsar={
           <ul>
             <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
@@ -74,7 +83,8 @@ export function PremissasContent() {
               gerais diretos, indiretos e comerciais (as Matérias Primas, a Mão de Obra Terceirizada, os Gastos Gerais Variáveis e o Estoque ficam nas
               tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
               baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum). “Exportar”, acima do grupo, baixa em Excel o centro
-              de custo atual, todos os centros (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo).
+              de custo atual, todos os centros (um por aba, com a aba Consolidado na frente) ou um arquivo por centro (num ZIP, com o departamento e o
+              centro no nome de cada arquivo).
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
@@ -107,13 +117,16 @@ export function PremissasContent() {
               Úteis, os do calendário, em cinza).
             </li>
             <li>
-              “Replicar Médias / Apagar Valores”, na altura das abas: em todas as abas, leva a Média de Referência de cada linha aos doze meses (as
-              linhas sem média ficam como estão) ou deixa os meses em branco. Os Ajustes ficam como estão nos dois. Pede editar todas as abas.
+              “Replicar Médias / Apagar Valores”, na altura do título: em todas as abas, leva a Média de Referência de cada linha aos doze meses (as
+              linhas sem média ficam como estão) ou deixa os meses em branco. Pede editar todas as abas.
             </li>
             <li>
               “Exportar Premissas” baixa em Excel a aba atual ou todas (os centros de custo numa aba, um por aba ou um arquivo por centro, num ZIP):
               o Código da linha, a descrição, a unidade, a Média de Referência, os doze meses, Justificar? (Sim quando algum mês passa da variação
-              máxima da conta, em Configurações / Comparativo, em relação à Média de Referência) e a Justificativa, em texto livre.
+              máxima da conta, em Configurações / Comparativo, em relação à Média de Referência) e a Justificativa, em texto livre. No um centro de
+              custo por aba, a primeira aba, Consolidado, traz a DRE das contas dos centros: cada conta somada em todas as abas dos centros (em
+              fórmulas, que acompanham os valores das abas), para conferir com a DRE do cenário; o total bate, e a parte dos rateios que vai para
+              Serviços está, na DRE, nas contas da CSM ou da CSC.
             </li>
             <li>
               “Importar Valores” abre a lista dos arquivos: escolha planilhas do Exportar Premissas (ou o ZIP) ou uma pasta com elas. Cada arquivo é
@@ -121,8 +134,8 @@ export function PremissasContent() {
               mudam; “Importar” grava os meses (em branco apaga) e as justificativas, recalcula a DRE e registra no histórico (tela Reajustes).
             </li>
             <li>
-              Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), os
-              Ajustes (o percentual sobre a receita bruta e líquida e o percentual sobre os custos e despesas), a Demanda Diária de cada linha (na
+              Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), a
+              Demanda Diária de cada linha (na
               unidade de medida dela; nas linhas de m³ e pistas, as pistas por dia e o volume por pista), a Armadura (Interno) e a Metalúrgica (Interno) por Unidade (em kg por
               unidade da linha: kg/m³, kg/kg, kg/m²; só nas linhas que as levam), a Receita Bruta Média (na Matriz e na Filial, também a de Devoluções e
               Inventários, negativa) e os Impostos, os Custos (Matérias Primas, Mão de Obra Terceirizada, Gastos Gerais Variáveis e Estoque, por conta) e
@@ -137,9 +150,7 @@ export function PremissasContent() {
               <>
                 <li>
                   Para editar um valor: clique nele. O modal mostra o valor atual, o reajuste (percentual ou absoluto) e o valor recalculado, que também se
-                  digita direto; a chave “Replicar aos meses posteriores” copia o valor aos meses seguintes. Nos Ajustes, o reajuste é só percentual (sobre
-                  o ajuste atual), e o percentual do ajuste vale sobre o valor absoluto do mês (o volume × o valor unitário), e não sobre o unitário: as
-                  médias por unidade não mudam; mudam a Receita Bruta e a Receita Líquida (ou os custos e as despesas) do resultado da tabela e a DRE.
+                  digita direto; a chave “Replicar aos meses posteriores” copia o valor aos meses seguintes.
                 </li>
                 <li>
                   Para reajustar vários valores: marque as premissas (a caixa de uma seção ou de uma linha de produto marca as premissas dela) e os meses (a
@@ -154,8 +165,8 @@ export function PremissasContent() {
           <>
             <p>
               As premissas do cenário analítico, de onde a DRE dele se calcula: em cada unidade e venda, o volume de cada linha é a demanda diária ×
-              os dias úteis (nas linhas de m³ e pistas, as pistas × o volume por pista); cada conta é o volume × o valor unitário × (1 + o ajuste); a
-              receita líquida é a bruta × (1 − os impostos). As contas de Global e Mercantil somam-se na DRE da unidade, com os volumes (a produção e a
+              os dias úteis (nas linhas de m³ e pistas, as pistas × o volume por pista); cada conta é o volume × o valor unitário (os totais
+              consideram só as médias e as demandas, sem ajustes); a receita líquida é a bruta × (1 − os impostos). As contas de Global e Mercantil somam-se na DRE da unidade, com os volumes (a produção e a
               expedição, iguais, a metalurgia consumida pelas linhas da unidade e a montagem), e os totais e o Consolidado saem da Estrutura da DRE.
             </p>
             <p>
@@ -198,19 +209,7 @@ export function PremissasContent() {
           </>
         }
       />
-      {/* As abas inteiras; sem espaço, os botões passam para baixo, à direita. */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="max-w-full shrink-0 grow">
-          <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={abas} />
-        </div>
-        {abas.length ? (
-          <div className="ml-auto flex flex-wrap items-center gap-2 pb-1">
-            {cenario.data && !travado && editaTodas ? <BotaoReplicarMedias id={id} /> : null}
-            {cenario.data && !travado && editaAlguma ? <BotaoImportarValores id={id} /> : null}
-            <ExportarPremissas id={id} aba={aba} />
-          </div>
-        ) : null}
-      </div>
+      <Abas rotulo="Unidade das premissas" ativa={aba} onMudar={setAba} abas={abas} />
       {abas.length ? <AvisoRateiosSemBase id={id} /> : null}
       {cenario.data && travado && editaAba ? <AvisoMarcado cenario={cenario.data} oQue="as premissas" /> : null}
       {!abas.length ? (

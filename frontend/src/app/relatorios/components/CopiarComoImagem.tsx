@@ -117,7 +117,7 @@ export function CopiarComoImagem({
       onClick={copiar}
       disabled={estado === "gerando"}
       title={dica}
-      aria-label={semGraficos ? `Copiar ${nome} sem os gráficos como imagem` : `Copiar ${nome} como imagem`}
+      aria-label={semGraficos ? `Copiar ${nome} como imagem (sem gráficos)` : `Copiar ${nome} como imagem`}
       className="relative inline-flex size-7 items-center justify-center rounded-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-wait disabled:opacity-60"
     >
       <Icone className="size-4" />

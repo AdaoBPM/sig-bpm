@@ -202,35 +202,36 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
       </div>
       {!somaCerta && !invalido ? <p className="text-xs text-red-700">Os percentuais precisam somar 100% (faltam {pct(100 - soma)}).</p> : null}
       <Erro erro={erro} />
-      <DialogFooter>
-        {pode && atual ? (
-          atual.usado ? (
-            <span className="text-xs text-gray-500 sm:mr-auto" title="Já usado em apurações">
-              Já usado em apurações: encerre a vigência em vez de excluir.
-            </span>
-          ) : excluir ? (
-            <span className="flex items-center gap-2 text-sm text-gray-700 sm:mr-auto">
-              Excluir o conjunto?
-              <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" disabled={apagar.isPending} onClick={() => apagar.mutate()}>
-                Sim, Excluir
+      {/* Sem a edição, o rodapé teria só o Fechar: sai, e o X do canto fecha (15/10/2026). */}
+      {pode ? (
+        <DialogFooter>
+          {atual ? (
+            atual.usado ? (
+              <span className="text-xs text-gray-500 sm:mr-auto" title="Já usado em apurações">
+                Já usado em apurações: encerre a vigência em vez de excluir.
+              </span>
+            ) : excluir ? (
+              <span className="flex items-center gap-2 text-sm text-gray-700 sm:mr-auto">
+                Excluir o conjunto?
+                <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" disabled={apagar.isPending} onClick={() => apagar.mutate()}>
+                  Sim, Excluir
+                </Button>
+              </span>
+            ) : (
+              <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50 sm:mr-auto" onClick={() => setExcluir(true)}>
+                <Trash2 className="size-4" />
+                Excluir Conjunto
               </Button>
-            </span>
-          ) : (
-            <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50 sm:mr-auto" onClick={() => setExcluir(true)}>
-              <Trash2 className="size-4" />
-              Excluir Conjunto
-            </Button>
-          )
-        ) : null}
-        <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-          {pode ? "Cancelar" : "Fechar"}
-        </Button>
-        {pode ? (
+            )
+          ) : null}
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
           <Button type="button" className={botaoPrimario} disabled={!pronto || gravar.isPending} onClick={() => gravar.mutate()}>
             {gravar.isPending ? "Gravando…" : "Gravar"}
           </Button>
-        ) : null}
-      </DialogFooter>
+        </DialogFooter>
+      ) : null}
     </>
   );
 }
