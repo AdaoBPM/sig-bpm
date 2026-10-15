@@ -32,7 +32,7 @@ const LISTAS = "SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)";
  * virão.
  */
 export const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; origem?: string }> = [
-  { valor: "BALANCETE", rotulo: "Balancete (TOTVS RM)", disponivel: true, origem: "aba Balancete (Lista) do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS). O sistema lê as colunas do mês e confere a soma com o Total Geral do arquivo" },
+  { valor: "BALANCETE", rotulo: "Balancete (TOTVS RM)", disponivel: true, origem: "aba Balancete (Lista) do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS). O sistema lê a coluna do mês — um movimento por linha, com o cliente ou fornecedor, a emissão e o histórico (colunas CLI_FORN, EMISSAO e HISTORICO) — e confere a soma com o Total Geral do arquivo" },
   { valor: "PROJETO", rotulo: "Projetos liberados", disponivel: true, origem: `aba Projetos (Resumo) do ${LISTAS}: por obra e linha` },
   { valor: "PRODUCAO", rotulo: "Produção (m³)", disponivel: true, origem: `aba Produção (Resumo) do ${LISTAS}: por obra, linha e peça de estaca` },
   { valor: "PRODUCAO_PISTA", rotulo: "Produção (pistas)", disponivel: true, origem: `aba Produção (Lista pst) do ${LISTAS}` },
@@ -47,8 +47,6 @@ export const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; 
   { valor: "INDICADORES_ADMIN", rotulo: "Indicadores do Administrativo", disponivel: true, origem: `aba Indicadores (Admin.) do ${LISTAS}: quadro de lotação, fluxo de caixa, inadimplência, turnover, vagas e acidentes, na coluna do mês. Vão para a tela Indicadores; não entram na apuração` },
   { valor: "INDICADORES_COMERCIAL", rotulo: "Indicadores do Comercial", disponivel: true, origem: "aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL: vendas, receita líquida vendida, margem de contribuição, demanda e mix ampliado, na coluna do mês. Vão para a tela Indicadores; não entram na apuração" },
   // As Metas do Orçamento saíram da importação do mês (11/10/2026): ficam nos cenários (Cenários Sintéticos).
-  { valor: "REQUISICOES", rotulo: "Requisições", disponivel: true, origem: "aba Requisições (Lista) do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS): os itens das requisições do mês (coluna PERÍODO), com a conta contábil, o centro de custo e o valor. É o que o extrato de uma conta na DRE abre; não entra na apuração" },
-  { valor: "NOTAS_FISCAIS", rotulo: "Notas Fiscais", disponivel: true, origem: "aba Notas Fiscais (Lista) do SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS): os itens das notas fiscais do mês (coluna PERÍODO), com a conta contábil, o centro de custo, o fornecedor e o valor. É o que o extrato de uma conta na DRE abre; não entra na apuração" },
   { valor: "ESTOQUE_INICIAL", rotulo: "Saldo inicial do estoque", disponivel: true, origem: `aba Estoque (2025) do ${LISTAS}. Importe no primeiro mês da ferramenta (01/2026): a apuração do estoque dele parte deste saldo` },
   { valor: "DRE_COMERCIAL", rotulo: "DRE do Comercial", disponivel: true, origem: "aba DRE do CONTROLE DAS VENDAS - COMERCIAL. Os preços valem para todas as competências; um preço alterado substitui o anterior, que fica no histórico" },
 ];

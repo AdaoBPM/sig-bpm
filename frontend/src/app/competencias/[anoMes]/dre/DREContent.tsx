@@ -493,9 +493,13 @@ export function DREContent() {
             </li>
             <li>Clique numa linha com lupa para ver os lançamentos de origem; nas linhas de volume (Produção, Expedição, Montagem, Acompanhamento), as listas somadas por obra.</li>
             <li>
-              No extrato, clique na conta de um lançamento contábil para ver as requisições e as notas fiscais dela no mês (das abas Requisições
-              (Lista) e Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), importadas no Fechamento Mensal): abre no centro de custo e na
-              filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
+              No extrato, clique na conta de um lançamento contábil para ver o balancete dela no mês (o modal Balancete): os movimentos da aba
+              Balancete (Lista) do LISTAS REALIZADO (RESULTADOS), com a emissão, o cliente ou fornecedor e o histórico de cada um. Abre no centro
+              de custo e na filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
+            </li>
+            <li>
+              No extrato, o lançamento reclassificado (Cadastros da Apuração / Reclassificações) mostra a conta corrigida, a que vale na DRE, com
+              “(Corrigida de: …)” e a conta do balancete em vermelho.
             </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados. A DRE do centro traz só os custos e as despesas de mão de obra, gastos gerais e depreciação.</li>

@@ -1031,6 +1031,11 @@ model LancamentoContabil {
   nomeCentroCusto   String? @map("nome_centro_custo")
   /// Linha da planilha de origem, para o relatório e a conferência.
   linhaArquivo      Int     @map("linha_arquivo")
+  /// O detalhe do movimento (15/10/2026), do balancete detalhado (colunas CLI_FORN, EMISSAO e HISTORICO do
+  /// Balancete (Lista)): o cliente ou fornecedor, a data de emissão e o histórico. Nulos no balancete agregado.
+  cliForn           String? @map("cli_forn")
+  emissao           DateTime?
+  historico         String?
 
   // --- campos derivados, recalculados a cada apuração e congelados com ela ---
   /// Conta que vale na DRE: a do balancete, ou a do cadastro de

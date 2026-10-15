@@ -207,6 +207,10 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
               codigoCentroCusto: a.codigoCentroCusto,
               nomeCentroCusto: a.nomeCentroCusto,
               linhaArquivo: a.linhaArquivo,
+              // O detalhe do movimento (15/10/2026), no balancete detalhado.
+              cliForn: a.cliForn,
+              emissao: a.emissao,
+              historico: a.historico,
             })),
           });
         }

@@ -71,29 +71,23 @@ export type LancamentoDetalhe = {
 };
 
 /** Um item de requisição ou de nota fiscal do mês (abas Requisições (Lista) e Notas Fiscais (Lista)). */
-type ItemDocumento = {
+/** Um movimento do balancete detalhado (15/10/2026): o cliente ou fornecedor, a emissão e o histórico. */
+export type MovimentoDoBalancete = {
   id: string;
-  identificador: string | null;
-  filial: number | null;
+  filial: number;
   codigoCentroCusto: string | null;
   nomeCentroCusto: string | null;
-  contaContabil: string;
-  codigoProduto: string | null;
-  descricaoItem: string | null;
-  quantidade: string | null;
-  valorTotal: string;
-  tipoMovimento: string | null;
-  nomeTipoMovimento: string | null;
-  naturezaOrcamentaria: string | null;
-  linhaArquivo: number;
+  cliForn: string | null;
+  emissao: string | null;
+  historico: string | null;
+  valor: string;
 };
-export type RequisicaoDocumento = ItemDocumento & { dataBaixa: string | null; descricaoConta: string | null; valorUnitario: string | null };
-export type NotaFiscalDocumento = ItemDocumento & { dataEmissao: string | null; numero: string | null; fornecedor: string | null; cfop: string | null };
-export type DocumentosConta = {
+/** O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais). */
+export type BalanceteDaConta = {
   conta: { reduzido: string; descricao: string };
-  importadas: { requisicoes: boolean; notas: boolean };
-  requisicoes: RequisicaoDocumento[];
-  notas: NotaFiscalDocumento[];
+  /** O balancete do mês é o detalhado (sem ele, cada linha é a soma da filial, do centro e da conta). */
+  detalhado: boolean;
+  linhas: MovimentoDoBalancete[];
 };
 
 export type BlocoDetalhe =
@@ -137,9 +131,10 @@ export type VolumesDaLinha = { linha: string; medida: string | null; destinos: s
 
 export const dreService = {
   /** As requisições e as notas fiscais de uma conta no mês (o extrato de uma conta): a linha (o recorte), a conta e, quando vêm, o centro e a filial. */
-  documentos: async (anoMes: string, filtro: { linha: string; conta: string; centro?: string | null; filial?: number | null }): Promise<DocumentosConta> => {
+  /** O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais). */
+  balancete: async (anoMes: string, filtro: { linha: string; conta: string; centro?: string | null; filial?: number | null }): Promise<BalanceteDaConta> => {
     const params = { linha: filtro.linha, conta: filtro.conta, ...(filtro.centro ? { centro: filtro.centro } : {}), ...(filtro.filial ? { filial: filtro.filial } : {}) };
-    const { data } = await api.get<{ data: DocumentosConta }>(`/proxy/competencias/${anoMes}/dre/documentos`, { params });
+    const { data } = await api.get<{ data: BalanceteDaConta }>(`/proxy/competencias/${anoMes}/dre/documentos`, { params });
     return data.data;
   },
 

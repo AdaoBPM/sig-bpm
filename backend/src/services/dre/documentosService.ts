@@ -7,10 +7,11 @@ import { RegraDREError } from "./dreService.js";
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 
 /**
- * As requisições e as notas fiscais de uma conta no mês (11/10/2026): o que o extrato de uma conta na DRE abre, das
- * abas Requisições (Lista) e Notas Fiscais (Lista) importadas no mês. A conta é a do lançamento (o código reduzido); o
- * centro de custo (código RM) e a filial recortam, quando vêm. A linha da DRE dá o recorte do Gestor por departamento,
- * como no extrato.
+ * O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais, das abas Requisições (Lista) e
+ * Notas Fiscais (Lista), que saíram do LISTAS REALIZADO (RESULTADOS)): o que o extrato de uma conta na DRE abre — os
+ * movimentos do balancete detalhado (o cliente ou fornecedor, a emissão e o histórico de cada um). A conta é a do
+ * balancete (o código reduzido, antes da reclassificação); o centro de custo (código RM) e a filial recortam, quando
+ * vêm. A linha da DRE dá o recorte do Gestor por departamento, como no extrato.
  */
 export const documentosService = {
   async listar(ano: number, mes: number, filtro: { linha: string; conta: string; centro: string | null; filial: number | null }, acesso: Acesso = ACESSO_TOTAL) {
@@ -30,28 +31,45 @@ export const documentosService = {
     if (!podeVerMovimentos(acesso, linha) && !doCentroDele && !daObra) {
       throw new RegraDREError(403, acesso.recorteCentro ? "Só as movimentações dos seus centros de custo: marque o Centro de Custo do Lançamento." : `As movimentações de "${linha.descricao}" não são de um departamento seu.`);
     }
-    const where = {
-      competenciaId: c.id,
-      contaContabil: filtro.conta,
-      ...(filtro.centro ? { codigoCentroCusto: filtro.centro } : {}),
-      ...(filtro.filial ? { filial: filtro.filial } : {}),
-    };
-    const [conta, requisicoes, notas, importacoes] = await Promise.all([
+    const [conta, lancamentos, detalhados] = await Promise.all([
       prisma.contaResultado.findUnique({ where: { reduzido: filtro.conta }, select: { reduzido: true, descricao: true } }),
-      prisma.requisicaoItem.findMany({ where, orderBy: [{ dataBaixa: "asc" }, { linhaArquivo: "asc" }] }),
-      prisma.notaFiscalItem.findMany({ where, orderBy: [{ dataEmissao: "asc" }, { linhaArquivo: "asc" }] }),
-      prisma.importacao.findMany({
-        where: { competenciaId: c.id, tipo: { in: ["REQUISICOES", "NOTAS_FISCAIS"] }, status: "CONCLUIDA", substituidaEm: null },
-        select: { tipo: true },
+      prisma.lancamentoContabil.findMany({
+        where: {
+          competenciaId: c.id,
+          contaResultado: { reduzido: filtro.conta },
+          ...(filtro.centro ? { codigoCentroCusto: filtro.centro } : {}),
+          ...(filtro.filial ? { filial: filtro.filial } : {}),
+        },
+        select: {
+          id: true,
+          filial: true,
+          codigoCentroCusto: true,
+          nomeCentroCusto: true,
+          cliForn: true,
+          emissao: true,
+          historico: true,
+          valorMovimento: true,
+          centroCusto: { select: { codigoRM: true, nomeRM: true } },
+        },
+        orderBy: [{ emissao: "asc" }, { linhaArquivo: "asc" }],
       }),
+      // O mês tem o balancete detalhado (com o detalhe de algum movimento)?
+      prisma.lancamentoContabil.count({ where: { competenciaId: c.id, OR: [{ historico: { not: null } }, { cliForn: { not: null } }, { emissao: { not: null } }] } }),
     ]);
-    const omitir = <T extends { competenciaId: string; importacaoId: string }>({ competenciaId: _c, importacaoId: _i, ...resto }: T) => resto;
     return {
       conta: conta ?? { reduzido: filtro.conta, descricao: "" },
-      /** Se o mês tem as abas importadas (sem elas, as listas ficam vazias por falta de importação). */
-      importadas: { requisicoes: importacoes.some((i) => i.tipo === "REQUISICOES"), notas: importacoes.some((i) => i.tipo === "NOTAS_FISCAIS") },
-      requisicoes: requisicoes.map(omitir),
-      notas: notas.map(omitir),
+      /** O balancete do mês é o detalhado (sem ele, cada linha é a soma da filial, do centro e da conta). */
+      detalhado: detalhados > 0,
+      linhas: lancamentos.map((l) => ({
+        id: l.id,
+        filial: l.filial,
+        codigoCentroCusto: l.centroCusto?.codigoRM ?? l.codigoCentroCusto,
+        nomeCentroCusto: l.centroCusto?.nomeRM ?? l.nomeCentroCusto,
+        cliForn: l.cliForn,
+        emissao: l.emissao,
+        historico: l.historico,
+        valor: l.valorMovimento.toFixed(2),
+      })),
     };
   },
 };

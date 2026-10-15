@@ -54,7 +54,8 @@ async function competenciaPorAnoMes(ano: number, mes: number) {
 /** As entradas da competência que, mudando, desatualizam a apuração. */
 type Retrato = Record<string, { rotulo: string; n: number; soma: string; ultima?: string | null }>;
 
-async function retratoEntradas(competenciaId: string): Promise<Retrato> {
+/** O retrato das entradas da apuração (exportado em 15/10/2026: a troca do balancete detalhado nos meses apurados). */
+export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
   const prisma = getPrismaClient();
   const where = { competenciaId };
   const q = (x: Prisma.Decimal | null | undefined) => (x ?? new Prisma.Decimal(0)).toFixed(4);

@@ -13,7 +13,7 @@ import { MemoriaCalculoDialog } from "../../receita-previa/components/MemoriaCal
 import type { Natureza } from "../../receita-previa/services/receitaPreviaService";
 import { moeda } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, UNIDADES, type BlocoDetalhe, type LancamentoDetalhe, type VisaoDetalhe } from "../services/dreService";
-import { DocumentosDialog } from "./DocumentosDialog";
+import { BalanceteDialog } from "./BalanceteDialog";
 import { plural } from "@/lib/texto";
 
 type Props = {
@@ -85,11 +85,13 @@ function Bloco({
 type Lancamento = LancamentoDetalhe;
 
 const centroTexto = (l: Lancamento) => (l.centro ? `${l.centro.codigoRM ?? "sem código"} · ${l.centro.nome}` : null);
-const contaTexto = (l: Lancamento) => `${l.conta.reduzido} · ${l.conta.descricao}`;
+// A conta que vale na DRE (a corrigida pela reclassificação, 15/10/2026), para o filtro e a ordem.
+const contaTexto = (l: Lancamento) => `${(l.contaAdotada ?? l.conta).reduzido} · ${(l.contaAdotada ?? l.conta).descricao}`;
 
 /**
  * Os lançamentos de um bloco, com filtro e ordem nos rótulos das colunas. Nos contábeis (diretos e de rateio), a conta
- * abre as requisições e as notas fiscais dela no mês (11/10/2026).
+ * abre o balancete dela no mês (15/10/2026; antes, as requisições e as notas fiscais). Reclassificado, o lançamento
+ * mostra a conta corrigida, com "(Corrigida de: …)" em vermelho.
  */
 function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamentos: Lancamento[]; multiplica: boolean; onDocumentos?: (l: Lancamento) => void }) {
   const colunas = useMemo<Coluna<Lancamento>[]>(
@@ -132,26 +134,23 @@ function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamen
                     <button
                       type="button"
                       onClick={() => onDocumentos(l)}
-                      title="Ver as requisições e as notas fiscais da conta no mês"
+                      title="Ver o balancete da conta no mês"
                       className="inline-flex items-start gap-1 text-left underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900"
                     >
                       <FileSearch className="mt-px size-3.5 shrink-0 text-gray-400" />
                       <span>
-                        {l.conta.reduzido}
-                        <span className="text-gray-500"> · {l.conta.descricao}</span>
+                        {(l.contaAdotada ?? l.conta).reduzido}
+                        <span className="text-gray-500"> · {(l.contaAdotada ?? l.conta).descricao}</span>
                       </span>
                     </button>
                   ) : (
                     <>
-                      <span>{l.conta.reduzido}</span>
-                      <span className="text-gray-500"> · {l.conta.descricao}</span>
+                      <span>{(l.contaAdotada ?? l.conta).reduzido}</span>
+                      <span className="text-gray-500"> · {(l.contaAdotada ?? l.conta).descricao}</span>
                     </>
                   )}
-                  {l.contaAdotada ? (
-                    <div className="text-yellow-800">
-                      reclassificada para {l.contaAdotada.reduzido} · {l.contaAdotada.descricao}
-                    </div>
-                  ) : null}
+                  {/* A conta corrigida pela reclassificação (15/10/2026; antes, a do balancete com "reclassificada para"). */}
+                  {l.contaAdotada ? <span className="font-bold text-red-700"> (Corrigida de: {l.conta.reduzido})</span> : null}
                   {l.descricao ? <div className="text-gray-500">{l.descricao}</div> : null}
                 </td>
                 <td className="px-4 py-1.5 text-gray-600">{l.balde ?? "—"}</td>
@@ -174,7 +173,7 @@ function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamen
 /** Detalhamento de um valor da DRE até os lançamentos de origem. */
 export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Props) {
   const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza } | null>(null);
-  // O lançamento cuja conta abre as requisições e as notas fiscais (o extrato volta ao fechar).
+  // O lançamento cuja conta abre o balancete do mês (15/10/2026; o extrato volta ao fechar).
   const [documentos, setDocumentos] = useState<LancamentoDetalhe | null>(null);
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["dre", anoMes, "detalhe", linha, visao],
@@ -183,7 +182,7 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
   const fecha = data?.somaOrigens !== null && data?.somaOrigens !== undefined && Math.abs(Number(data.somaOrigens) - Number(data.valor ?? 0)) <= 0.05;
 
   if (documentos) {
-    return <DocumentosDialog anoMes={anoMes} linha={linha} lancamento={documentos} rotuloMes={rotuloMes} onVoltar={() => setDocumentos(null)} />;
+    return <BalanceteDialog anoMes={anoMes} linha={linha} lancamento={documentos} rotuloMes={rotuloMes} onVoltar={() => setDocumentos(null)} />;
   }
   if (memoria) {
     return <MemoriaCalculoDialog anoMes={anoMes} unidade={memoria.unidade} natureza={memoria.natureza} onFechar={() => setMemoria(null)} />;

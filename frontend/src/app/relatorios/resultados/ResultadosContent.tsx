@@ -689,9 +689,13 @@ export function ResultadosContent() {
             </li>
             <li>Clique no valor de um mês, numa linha com lupa, para ver os lançamentos de origem daquele mês (ou, nas linhas de volume, as listas somadas por obra); clicar na descrição abre o mês de referência.</li>
             <li>
-              No extrato, clique na conta de um lançamento contábil para ver as requisições e as notas fiscais dela no mês (das abas Requisições
-              (Lista) e Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), importadas no Fechamento Mensal): abre no centro de custo e na
-              filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
+              No extrato, clique na conta de um lançamento contábil para ver o balancete dela no mês (o modal Balancete): os movimentos da aba
+              Balancete (Lista) do LISTAS REALIZADO (RESULTADOS), com a emissão, o cliente ou fornecedor e o histórico de cada um. Abre no centro
+              de custo e na filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
+            </li>
+            <li>
+              No extrato, o lançamento reclassificado (Cadastros da Apuração / Reclassificações) mostra a conta corrigida, a que vale na DRE, com
+              “(Corrigida de: …)” e a conta do balancete em vermelho.
             </li>
             <li>
               “Exportar”, ao lado do período, baixa em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o %

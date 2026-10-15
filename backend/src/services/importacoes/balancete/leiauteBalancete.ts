@@ -10,11 +10,17 @@ type Decimal = Prisma.Decimal;
  *
  * A aba é uma tabela dinâmica do exercício inteiro, em forma tabular:
  *
- *   FILIAL | COD_CUSTO | C_CUSTO | SUB_COD_CONTA_4 | REDUZIDO_CONTA | CONTA | <mês> <mês> <mês> | … | Total Geral
+ *   FILIAL | COD_CUSTO | C_CUSTO | SUB_COD_CONTA_4 | REDUZIDO_CONTA | CONTA | [CLI_FORN | EMISSAO | HISTORICO] | <mês> … | Total Geral
  *
- * Cada mês ocupa três colunas com a mesma data no cabeçalho: as duas parciais
- * (crédito e débito) e a movimentação do mês, que é a soma delas. A planilha
- * de resultados usa só a terceira, e é ela que se grava. As linhas de subtotal
+ * Cada mês ocupa três colunas com a mesma data no cabeçalho — as duas parciais
+ * (crédito e débito) e a movimentação do mês, que é a soma delas — ou, desde
+ * 15/10/2026, uma só, a movimentação. A planilha de resultados usa só a
+ * movimentação, e é ela que se grava.
+ *
+ * O balancete detalhado (15/10/2026): com as colunas CLI_FORN, EMISSAO e
+ * HISTORICO, cada linha é um movimento (o cliente ou fornecedor, a data de
+ * emissão e o histórico), e a mesma filial, centro e conta se repetem — não é
+ * duplicidade. Sem elas, uma linha por filial, centro e conta, como antes. As linhas de subtotal
  * da tabela dinâmica ("3.01 Total", "1 Total", "Total Geral") não são
  * lançamento; a última delas serve para conferir o arquivo.
  *
@@ -51,6 +57,10 @@ export type LinhaBalancete = {
   reduzido: string;
   descricaoConta: string | null;
   valorMovimento: Decimal;
+  /** O detalhe do movimento (15/10/2026), quando o arquivo traz as colunas CLI_FORN, EMISSAO e HISTORICO. */
+  cliForn: string | null;
+  emissao: Date | null;
+  historico: string | null;
 };
 
 export type LeituraBalancete =
@@ -108,6 +118,16 @@ function mesDoCabecalho(v: ValorCelula): { ano: number; mes: number } | null {
   if (typeof v === "string") {
     const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (m) return { ano: Number(m[3]), mes: Number(m[2]) };
+  }
+  return null;
+}
+
+/** A data de emissão do movimento: o número de série do Excel ou o texto dd/mm/aaaa; outra coisa, sem data. */
+function dataDaCelula(v: ValorCelula): Date | null {
+  if (typeof v === "number" && v > 36500 && v < 73000) return new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86_400_000);
+  if (typeof v === "string") {
+    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
   }
   return null;
 }
@@ -174,6 +194,9 @@ export function interpretarBalancete(
   const col = Object.fromEntries(
     Object.entries(COLUNAS_OBRIGATORIAS).map(([k, n]) => [k, nomes.indexOf(n)]),
   ) as Colunas;
+  // As colunas do detalhe (15/10/2026); com alguma delas, o balancete é detalhado.
+  const colDetalhe = { cliForn: nomes.indexOf("CLI_FORN"), emissao: nomes.indexOf("EMISSAO"), historico: nomes.indexOf("HISTORICO") };
+  const detalhado = Object.values(colDetalhe).some((i) => i >= 0);
 
   // Colunas do mês da competência, e o inventário dos meses para a mensagem.
   const doMes: number[] = [];
@@ -206,6 +229,18 @@ export function interpretarBalancete(
     };
   }
   const colTotal = doMes[doMes.length - 1];
+  // As colunas de agrupamento (antes do primeiro mês). Na tabela dinâmica, o subtotal traz "… Total" numa delas e as
+  // seguintes vazias; a última (no detalhado, o HISTORICO) nunca tem subtotal — um histórico que termine em "Total" é
+  // movimento (15/10/2026: os subtotais por conta do balancete detalhado, com " Total" na coluna CLI_FORN).
+  const primeiroMes = cabecalho.celulas.findIndex((v) => mesDoCabecalho(v) !== null);
+  const ultimaDimensao = (primeiroMes > 0 ? primeiroMes : cabecalho.celulas.length) - 1;
+  const ehSubtotalDaTabela = (c: ValorCelula[]) => {
+    for (let i = 0; i < ultimaDimensao; i++) {
+      const v = c[i];
+      if (typeof v === "string" && /(^|\s)Total$/.test(v.trim()) && c.slice(i + 1, ultimaDimensao + 1).every((x) => x === null || x === undefined || String(x).trim() === "")) return true;
+    }
+    return false;
+  };
   const colParciais = doMes.length === 3 ? doMes.slice(0, 2) : [];
 
   const lancamentos: LinhaBalancete[] = [];
@@ -224,6 +259,11 @@ export function interpretarBalancete(
 
     if (normalizar(celula(0)) === "TOTAL GERAL") {
       totalGeral = decimal(celula(colTotal)) ?? new Decimal(0);
+      ignoradas.subtotais++;
+      continue;
+    }
+
+    if (ehSubtotalDaTabela(c)) {
       ignoradas.subtotais++;
       continue;
     }
@@ -299,8 +339,9 @@ export function interpretarBalancete(
       continue;
     }
 
+    // No detalhado, a mesma filial, centro e conta se repetem: cada linha é um movimento.
     const chave = `${filial}|${codigoCentroCusto ?? ""}|${reduzido}`;
-    const anterior = chaves.get(chave);
+    const anterior = detalhado ? undefined : chaves.get(chave);
     if (anterior !== undefined) {
       rejeicoes.push({
         ...base,
@@ -320,6 +361,9 @@ export function interpretarBalancete(
       reduzido,
       descricaoConta: texto(celula(col.descricaoConta)),
       valorMovimento: movimento,
+      cliForn: colDetalhe.cliForn >= 0 ? texto(celula(colDetalhe.cliForn)) : null,
+      emissao: colDetalhe.emissao >= 0 ? dataDaCelula(celula(colDetalhe.emissao)) : null,
+      historico: colDetalhe.historico >= 0 ? texto(celula(colDetalhe.historico)) : null,
     });
   }
 

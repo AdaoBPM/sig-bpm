@@ -93,6 +93,22 @@ function paraDetalhe(l: Contabil, multiplicador: Decimal): LancamentoDetalhe {
 const somar = (xs: Decimal[]) => xs.reduce((a, x) => a.plus(x), new Decimal(0));
 const porValor = (a: { valor: string }, b: { valor: string }) => Math.abs(Number(b.valor)) - Math.abs(Number(a.valor));
 
+/**
+ * O extrato agrupado (15/10/2026): no balancete detalhado, cada movimento é um lançamento, e a mesma filial, centro e
+ * conta se repetem. O extrato soma os movimentos de cada filial, centro, conta (e conta adotada, balde e alocação),
+ * como antes; os movimentos aparecem no modal Balancete da conta.
+ */
+function agrupar(ls: Contabil[]): Contabil[] {
+  const grupos = new Map<string, Contabil>();
+  for (const l of ls) {
+    const k = [l.filial, l.codigoCentroCusto ?? "", l.centroCusto?.codigoRM ?? "", l.contaResultado.reduzido, l.contaAdotada?.reduzido ?? "", l.balde ?? "", l.alocacao ?? ""].join("|");
+    const g = grupos.get(k);
+    if (g) g.valorMovimento = g.valorMovimento.plus(l.valorMovimento);
+    else grupos.set(k, { ...l });
+  }
+  return [...grupos.values()].filter((g) => !g.valorMovimento.isZero());
+}
+
 /** Os blocos de origem de um valor apurado de unidade. */
 async function blocosDaUnidade(competenciaId: string, unidade: number, c: Composicao): Promise<Bloco[]> {
   const prisma = getPrismaClient();
@@ -124,7 +140,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
       filtro: partes.join(" · "),
       fator: f.fator,
       total: somar(ls.map((l) => l.valorMovimento)).times(fator).toFixed(2),
-      lancamentos: ls.map((l) => paraDetalhe(l, fator)).sort(porValor),
+      lancamentos: agrupar(ls).map((l) => paraDetalhe(l, fator)).sort(porValor),
     });
   }
 
@@ -142,7 +158,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
       filtro: `lançamentos de rateio do balde ${r.chave}, linha ${r.base.split(": ")[0]}`,
       percentual: r.percentual,
       total: somar(ls.map((l) => l.valorMovimento)).times(p).toFixed(2),
-      lancamentos: ls.map((l) => paraDetalhe(l, p)).sort(porValor),
+      lancamentos: agrupar(ls).map((l) => paraDetalhe(l, p)).sort(porValor),
     });
   }
 
@@ -243,7 +259,7 @@ export const detalhamentoService = {
           titulo: "Lançamentos contábeis",
           filtro: "sem centro de custo do cadastro, diretos e de rateio",
           total: valor.toFixed(2),
-          lancamentos: ls.map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),
+          lancamentos: agrupar(ls).map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),
         });
       } else {
         observacao = "Linha que soma outras linhas do grupo: veja o detalhamento de cada uma.";
@@ -263,7 +279,7 @@ export const detalhamentoService = {
           filtro: "todas as filiais, diretos e de rateio",
           ...(fator.isNegative() ? { fator: "-1" } : {}),
           total: valor.toFixed(2),
-          lancamentos: ls.map((l) => paraDetalhe(l, fator)).sort(porValor),
+          lancamentos: agrupar(ls).map((l) => paraDetalhe(l, fator)).sort(porValor),
         });
       } else {
         observacao = "Linha que soma outras linhas da obra: veja o detalhamento de cada uma.";
@@ -286,7 +302,7 @@ export const detalhamentoService = {
           titulo: "Lançamentos contábeis",
           filtro: "todas as filiais, diretos e de rateio",
           total: somar(ls.map((l) => l.valorMovimento)).toFixed(2),
-          lancamentos: ls.map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),
+          lancamentos: agrupar(ls).map((l) => paraDetalhe(l, new Decimal(1))).sort(porValor),
         });
       } else if (valor) {
         observacao = "Linha que soma outras linhas do agrupamento: veja o detalhamento de cada uma.";
