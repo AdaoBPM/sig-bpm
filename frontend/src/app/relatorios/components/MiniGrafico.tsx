@@ -63,8 +63,9 @@ export function MiniGrafico({
   const area = tipo === "area";
   const umPonto = n === 1;
   const degrade = degradeDoRealizado(dados);
-  // As colunas: 82% da faixa do mês (o espaço entre os meses, como o barCategoryGap de 18%), metade para cada série.
-  const coluna = (faixaX * 0.82) / 2;
+  // As colunas: 73% da faixa do mês, metade para cada série; o espaço entre os meses, 27% (14/10/2026: 50% maior que os
+  // 18% de antes, como o barCategoryGap). No gráfico do acumulado (um só período), os 82% de antes.
+  const coluna = (faixaX * (n > 1 ? 0.73 : 0.82)) / 2;
   const retangulo = (x: number, v: number) => ({ x, y: Math.min(y(v), zero), width: coluna, height: Math.max(Math.abs(y(v) - zero), 0.6) });
   const pontos = (k: "realizado" | "orcado") =>
     dados.flatMap((d, i) => (numero(d[k]) ? [`${centro(i)},${y(d[k] as number)}`] : [])).join(" ");
