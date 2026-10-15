@@ -104,9 +104,12 @@ export function AppSidebar() {
         {grupos.map((g, k) => (
           <Fragment key={g.titulo}>
           <SidebarGroup>
-            {/* O nome do grupo em caixa alta e, logo abaixo, o separador amarelo-ouro na largura útil dos processos (14/10/2026). */}
-            <SidebarGroupLabel className="font-bold uppercase">{g.titulo}</SidebarGroupLabel>
-            <div aria-hidden className="mx-2 mb-1 h-px shrink-0 bg-bpm-primary group-data-[collapsible=icon]:hidden" />
+            {/* No menu estendido, o destaque amarelo-ouro à esquerda do nome do grupo, na altura do texto, como nos cards
+                (15/10/2026; antes, a linha abaixo do nome). O nome em caixa alta. No menu contraído, os separadores de sempre. */}
+            <SidebarGroupLabel className="gap-2 font-bold uppercase">
+              <span aria-hidden className="h-3 w-1 shrink-0 bg-bpm-primary" />
+              {g.titulo}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {g.itens.map((item) => (
