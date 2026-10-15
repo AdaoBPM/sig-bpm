@@ -121,8 +121,9 @@ export function AppSidebar() {
                       render={<Link href={item.href} />}
                       className={
                         item.emDesenvolvimento
-                          ? // Os processos em desenvolvimento (14/10/2026): o texto em cinza e o destaque amarelo-claro.
-                            "text-sidebar-foreground/50 hover:text-sidebar-foreground/70 data-active:bg-yellow-100 data-active:font-bold data-active:text-gray-600 data-active:hover:bg-yellow-100 data-active:hover:text-gray-600"
+                          ? // Os processos em desenvolvimento (14/10/2026): o texto em cinza (15/10/2026: 40% da cor do texto do menu,
+                            // antes 50% — mais claro no tema Claro, mais escuro nos demais) e o destaque amarelo-claro.
+                            "text-sidebar-foreground/40 hover:text-sidebar-foreground/60 data-active:bg-yellow-100 data-active:font-bold data-active:text-gray-600 data-active:hover:bg-yellow-100 data-active:hover:text-gray-600"
                           : "data-active:bg-bpm-primary data-active:font-bold data-active:text-black data-active:hover:bg-bpm-primary data-active:hover:text-black"
                       }
                     >
