@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import { ChartColumn, CircleAlert, GripVertical, Settings, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
@@ -117,11 +117,14 @@ export function GradeDoRelatorio({
   cores,
   tipo,
   linhas,
+  ampliavel = false,
   onMudar,
 }: {
   relatorioId: string;
   /** As linhas da página: os blocos não passam delas, e a página tem essa altura (o espaço útil da tela inteira). */
   linhas: number;
+  /** Na apresentação (16/10/2026): o bloco se destaca sob o mouse e, clicado, se amplia na tela, com o fundo escurecido. */
+  ampliavel?: boolean;
   blocos: Bloco[];
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
@@ -152,6 +155,18 @@ export function GradeDoRelatorio({
     if (mudou) onMudar(blocos.map((b) => ({ ...b, ...(pos.has(b.id) ? { x: pos.get(b.id)!.x, y: pos.get(b.id)!.y, w: pos.get(b.id)!.w, h: pos.get(b.id)!.h } : {}) })));
   };
   const doCard = blocos.find((b) => b.id === configurando);
+  // O bloco ampliado, com o tamanho dele na grade (sem a ampliação do mouse); Esc ou um clique o fecham.
+  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!ampliado) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setAmpliado(null);
+    };
+    window.addEventListener("keydown", aoTeclar, true);
+    return () => window.removeEventListener("keydown", aoTeclar, true);
+  }, [ampliado]);
   return (
     // A página na altura do espaço útil da tela inteira; na edição, com o contorno tracejado dela (o bloco que passa dele,
     // de antes do limite, aparece abaixo e volta para dentro ao ser movido). A sombra do bloco, em cinza.
@@ -178,16 +193,23 @@ export function GradeDoRelatorio({
         onResizeStop={terminar}
       >
         {blocos.map((b) => (
-          <div key={b.id} className="group relative">
+          <div key={b.id} className={`group relative ${ampliavel ? "hover:z-10" : ""}`}>
             {editavel ? (
               <BarraDoBloco b={b} onMudar={(m) => mudarBloco(b.id, m)} onConfigurar={() => setConfigurando(b.id)} onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))} />
             ) : null}
-            <div className="h-full overflow-hidden">
+            {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca; o clique o amplia. */}
+            <div
+              className={`h-full overflow-hidden ${ampliavel ? "cursor-zoom-in rounded-sm transition duration-200 hover:scale-110 hover:bg-background hover:shadow-lg" : ""}`}
+              onClick={ampliavel ? (e) => setAmpliado({ b, w: e.currentTarget.offsetWidth, h: e.currentTarget.offsetHeight }) : undefined}
+            >
               <ConteudoDoBloco relatorioId={relatorioId} b={b} dados={dados} editavel={editavel} cores={cores} tipo={tipo} onMudar={(m) => mudarBloco(b.id, m)} />
             </div>
           </div>
         ))}
       </Grade>
+      {ampliado ? <BlocoAmpliado {...ampliado} onFechar={() => setAmpliado(null)}>
+        <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} onMudar={() => undefined} />
+      </BlocoAmpliado> : null}
       {doCard?.tipo === "PAINEL" ? (
         <ConfigurarGraficoDialog
           b={doCard}
@@ -201,6 +223,22 @@ export function GradeDoRelatorio({
           }}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * O bloco ampliado na apresentação (16/10/2026): o mesmo bloco, no tamanho da grade, ampliado (transform) até ocupar o
+ * máximo da tela, sobre um fundo escurecido; um clique em qualquer lugar fecha.
+ */
+function BlocoAmpliado({ w, h, onFechar, children }: { w: number; h: number; onFechar: () => void; children: React.ReactNode }) {
+  const borda = 16;
+  const escala = Math.min((window.innerWidth * 0.94) / (w + 2 * borda), (window.innerHeight * 0.92) / (h + 2 * borda));
+  return (
+    <div role="dialog" aria-modal aria-label="Bloco ampliado" className="fixed inset-0 z-[70] flex cursor-zoom-out items-center justify-center bg-black/75" onClick={onFechar}>
+      <div className="shrink-0 rounded-sm bg-background shadow-2xl" style={{ width: w + 2 * borda, height: h + 2 * borda, padding: borda, transform: `scale(${escala})` }}>
+        {children}
+      </div>
     </div>
   );
 }

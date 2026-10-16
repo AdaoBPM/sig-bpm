@@ -23,7 +23,7 @@ export function entrarEmTelaInteira() {
  * A apresentação do relatório (16/10/2026): em tela inteira (a função do navegador), sem o menu lateral, uma página
  * por slide, só para leitura, na altura da página (o espaço útil da tela inteira). Os botões de recuar, avançar e sair ficam
  * no centro da base, em cinza escuro, e só aparecem quando o mouse se move; as setas do teclado também mudam o slide, e
- * Esc encerra.
+ * Esc encerra. Sem seleção de textos; o bloco se destaca sob o mouse e, clicado, se amplia (GradeDoRelatorio, ampliavel).
  */
 export function ApresentacaoDoRelatorio({
   relatorioId,
@@ -84,7 +84,7 @@ export function ApresentacaoDoRelatorio({
   const slide = slides[k];
   const botao = "inline-flex size-9 items-center justify-center rounded-sm text-gray-100 hover:bg-gray-700 hover:text-white disabled:pointer-events-none disabled:opacity-40";
   return (
-    <div role="dialog" aria-modal aria-label={`Apresentação: ${titulo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background" onMouseMove={mostrarBotoes}>
+    <div role="dialog" aria-modal aria-label={`Apresentação: ${titulo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
       {/* O topo e as margens do slide: os de linhasDaPagina, para a página caber inteira na tela. */}
       <div className="px-8 pt-6 pb-6">
         {/*
@@ -98,7 +98,7 @@ export function ApresentacaoDoRelatorio({
           <BpmLogo className="h-[30px] w-auto shrink-0" />
         </header>
         {slide ? (
-          <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} onMudar={() => undefined} />
+          <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} ampliavel onMudar={() => undefined} />
         ) : null}
       </div>
       <nav
