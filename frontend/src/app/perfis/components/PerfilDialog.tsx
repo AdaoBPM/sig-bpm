@@ -43,7 +43,7 @@ function Caixa({ rotulo, chaves, acao, nivel, onMarcar, desabilitada }: { rotulo
 
 /**
  * Tipo de usuário: nome, situação, recortes e as permissões por tela e por aba (14/10/2026; antes, por grupo de telas
- * do menu), sob o título do menu (Criação de Cenários, Apuração dos Resultados, Controladoria). Cada grupo abre nas
+ * do menu), sob o título do menu (Análises Gerenciais, Criação de Cenários, Apuração dos Resultados, Controladoria). Cada grupo abre nas
  * telas dele, e cada tela com abas nas abas. A caixa do grupo ou da tela marca (ou desmarca) tudo o que está abaixo; o
  * traço mostra que só parte está marcada. Marcar "Editar" marca também "Ler"; desmarcar "Ler" desmarca "Editar"; a aba
  * só vale com a tela lida (marcar a aba marca a leitura da tela) — a mesma coerência que o backend grava.
