@@ -2245,33 +2245,45 @@ model NotaFiscalItem {
 // Relatórios Executivos (15/10/2026)
 // -----------------------------------------------------------------------------
 
-/// ENUM: a situação de um relatório executivo — em elaboração (só o autor o vê) ou finalizado (público, só leitura).
+/// ENUM: a situação de uma aba de um relatório executivo — em elaboração (só quem a edita a vê) ou finalizada (todos a veem, só leitura).
 enum SituacaoRelatorio {
   EM_ELABORACAO
   FINALIZADO
 }
 
-/// Um relatório executivo (15/10/2026, Análises Gerenciais): a apresentação mensal de um gestor sobre os seus
-/// departamentos, numa competência fechada — uma por gestor e mês. Cada departamento é uma aba, com os blocos da tela
-/// (os cards do Painel de Bordo, os dos Indicadores e as anotações positivas, negativas e de atenção), com a posição e
-/// o tamanho de cada um na grade. Em elaboração, só o autor o vê; finalizado, todos os que leem a tela, e o autor (ou o
-/// Administrador) pode reabri-lo.
+/// Um relatório executivo (15/10/2026, Análises Gerenciais): a apresentação de uma competência fechada — um por mês —,
+/// que os gestores montam juntos: uma aba por departamento (os sete), cada gestor nas abas do seu recorte (sem recorte,
+/// todas). O relatório está finalizado quando todas as abas estão.
 model RelatorioExecutivo {
-  id           String            @id @default(uuid())
-  ano          Int
-  mes          Int
-  autorId      String            @map("autor_id")
-  autorNome    String            @map("autor_nome")
-  /// Os departamentos (as abas): a lista de DepartamentoAcesso, na ordem.
-  departamentos Json
-  /// Os blocos de cada aba: { DEPARTAMENTO: [{ id, tipo, x, y, w, h, … }] }.
-  blocos       Json
-  situacao     SituacaoRelatorio @default(EM_ELABORACAO)
-  finalizadoEm DateTime?         @map("finalizado_em")
-  criadoEm     DateTime          @default(now()) @map("criado_em")
-  atualizadoEm DateTime          @updatedAt @map("atualizado_em")
+  id            String                  @id @default(uuid())
+  ano           Int
+  mes           Int
+  criadoPorId   String                  @map("criado_por_id")
+  criadoPorNome String                  @map("criado_por_nome")
+  criadoEm      DateTime                @default(now()) @map("criado_em")
+  atualizadoEm  DateTime                @updatedAt @map("atualizado_em")
+  abas          RelatorioExecutivoAba[]
 
-  @@unique([ano, mes, autorId])
-  @@index([ano, mes])
+  @@unique([ano, mes])
   @@map("relatorios_executivos")
+}
+
+/// Uma aba (um departamento) de um relatório executivo: os blocos da grade (os cards do Painel de Bordo, os dos
+/// Indicadores e as anotações, com a posição e o tamanho de cada um) e a situação. Em elaboração, só quem a edita (e o
+/// Administrador) a vê; finalizada, todos; quem a edita a finaliza e a reabre.
+model RelatorioExecutivoAba {
+  relatorioId   String             @map("relatorio_id")
+  departamento  DepartamentoAcesso
+  /// Os blocos: [{ id, tipo, x, y, w, h, … }].
+  blocos        Json
+  situacao      SituacaoRelatorio  @default(EM_ELABORACAO)
+  atualizadoPor String?            @map("atualizado_por")
+  atualizadoEm  DateTime           @updatedAt @map("atualizado_em")
+  finalizadoPor String?            @map("finalizado_por")
+  finalizadoEm  DateTime?          @map("finalizado_em")
+
+  relatorio RelatorioExecutivo @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
+
+  @@id([relatorioId, departamento])
+  @@map("relatorios_executivos_abas")
 }

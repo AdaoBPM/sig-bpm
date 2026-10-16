@@ -2,27 +2,31 @@ import { api } from "@/lib/api";
 
 import type { Indicadores, Painel } from "@/app/relatorios/services/relatoriosService";
 
-/** Os Relatórios Executivos (15/10/2026, Análises Gerenciais): as apresentações mensais dos gestores. */
-export type Departamento = { chave: string; nome: string };
+/**
+ * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com uma aba por
+ * departamento; cada gestor edita as abas do seu recorte, e cada aba tem a sua situação.
+ */
 export type Situacao = "EM_ELABORACAO" | "FINALIZADO";
+export type AbaResumida = { chave: string; nome: string; situacao: Situacao };
 export type ResumoDoRelatorio = {
   id: string;
   ano: number;
   mes: number;
   rotuloMes: string;
-  autorNome: string;
-  departamentos: Departamento[];
   situacao: Situacao;
-  finalizadoEm: string | null;
+  finalizadas: number;
+  total: number;
+  /** As abas que o usuário edita, com a situação de cada uma. */
+  minhas: AbaResumida[];
+  criadoPor: string;
+  criadoEm: string;
   atualizadoEm: string;
-  meu: boolean;
 };
 export type ListaDeRelatorios = {
-  anos: number[];
-  ano: number;
-  meusDepartamentos: Departamento[] | null;
-  departamentos: Departamento[];
-  meses: Array<{ mes: number; rotulo: string; relatorios: ResumoDoRelatorio[]; temMeu: boolean }>;
+  relatorios: ResumoDoRelatorio[];
+  /** As competências fechadas ainda sem relatório. */
+  livres: Array<{ ano: number; mes: number; rotulo: string }>;
+  meusDepartamentos: Array<{ chave: string; nome: string }>;
 };
 
 /** Um bloco da grade: a posição e o tamanho (colunas e linhas) e o conteúdo. */
@@ -36,18 +40,38 @@ export type Bloco = Posicao &
   );
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
-export type Blocos = Record<string, Bloco[]>;
-export type Relatorio = ResumoDoRelatorio & { blocos: Blocos; podeEditar: boolean; podeReabrir: boolean };
+export type AbaDoRelatorio = AbaResumida & {
+  /** Em elaboração, só quem a edita (e o Administrador) a vê. */
+  visivel: boolean;
+  blocos: Bloco[];
+  podeEditar: boolean;
+  podeReabrir: boolean;
+  atualizadoPor: string | null;
+  atualizadoEm: string;
+  finalizadoPor: string | null;
+  finalizadoEm: string | null;
+};
+export type Relatorio = {
+  id: string;
+  ano: number;
+  mes: number;
+  rotuloMes: string;
+  situacao: Situacao;
+  criadoPor: string;
+  criadoEm: string;
+  abas: AbaDoRelatorio[];
+  podeExcluir: boolean;
+};
 export type DadosDoRelatorio = { painel: Painel; indicadores: Indicadores };
 
 const base = "/proxy/relatorios-executivos";
 export const relatoriosExecutivosService = {
-  listar: async (ano: number | null) => (await api.get<{ data: ListaDeRelatorios }>(base, { params: ano ? { ano } : {} })).data.data,
-  criar: async (ano: number, mes: number, departamentos: string[] | null) => (await api.post<{ data: ResumoDoRelatorio }>(base, { ano, mes, departamentos })).data.data,
+  listar: async () => (await api.get<{ data: ListaDeRelatorios }>(base)).data.data,
+  criar: async (ano: number, mes: number) => (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes })).data.data,
   obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
   dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
-  gravar: async (id: string, blocos: Blocos) => (await api.put<{ data: Relatorio }>(`${base}/${id}`, { blocos })).data.data,
-  finalizar: async (id: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/finalizar`)).data.data,
-  reabrir: async (id: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/reabrir`)).data.data,
+  gravarAba: async (id: string, aba: string, blocos: Bloco[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { blocos })).data.data,
+  finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
+  reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
   excluir: async (id: string) => (await api.delete<{ data: { excluido: boolean } }>(`${base}/${id}`)).data.data,
 };

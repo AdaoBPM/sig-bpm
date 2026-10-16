@@ -7,12 +7,13 @@ import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { painelService } from "../relatorios/painelService.js";
 
 /**
- * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação mensal de cada gestor sobre os seus
- * departamentos, numa competência fechada. Decisões do usuário: as abas são os departamentos do recorte do gestor (sem
- * recorte, os escolhidos ao criar); uma apresentação por gestor e mês; em elaboração, só o autor a vê; finalizada, todos
- * os que leem a tela, e o autor (ou o Administrador) a reabre; as anotações são blocos livres na grade, ao lado dos
- * cards. Os cards trazem os dados do Painel de Bordo e dos Indicadores de Resultados Empresariais até o mês do
- * relatório, só das competências fechadas.
+ * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
+ * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; uma aba por
+ * departamento (os sete); cada gestor edita as abas do seu recorte (sem recorte, todas); cada aba tem a sua situação —
+ * em elaboração, só quem a edita (e o Administrador) a vê; finalizada, todos —, e quem a edita a finaliza e a reabre (o
+ * Administrador reabre qualquer uma); o relatório fica finalizado quando todas as abas estão. As anotações são blocos
+ * livres na grade, ao lado dos cards. Os cards trazem o Painel de Bordo e os Indicadores de Resultados Empresariais até
+ * o mês do relatório, só das competências fechadas.
  */
 
 export class RelatorioExecutivoError extends Error {
@@ -24,7 +25,8 @@ export class RelatorioExecutivoError extends Error {
   }
 }
 
-export type UsuarioDoRelatorio = { id: string; nome: string; admin: boolean; departamentos: DepartamentoAcesso[] | null };
+/** O usuário: se edita a tela e os departamentos do recorte (null: sem recorte, todos). */
+export type UsuarioDoRelatorio = { id: string; nome: string; admin: boolean; edita: boolean; departamentos: DepartamentoAcesso[] | null };
 
 export const DEPARTAMENTOS: DepartamentoAcesso[] = ["PRODUCAO", "SERVICOS", "LOGISTICA", "TECNICO", "COMERCIAL", "ADMINISTRATIVO", "EXTRA_OPERACIONAL"];
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -36,135 +38,174 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "INDICADOR"; nome: string }
   | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string }
 );
-export type BlocosDoRelatorio = Partial<Record<DepartamentoAcesso, BlocoDoRelatorio[]>>;
 
-type Linha = Awaited<ReturnType<ReturnType<typeof getPrismaClient>["relatorioExecutivo"]["findUniqueOrThrow"]>>;
+type Aba = { departamento: DepartamentoAcesso; blocos: unknown; situacao: "EM_ELABORACAO" | "FINALIZADO"; atualizadoPor: string | null; atualizadoEm: Date; finalizadoPor: string | null; finalizadoEm: Date | null };
 
-const resumo = (r: Linha, usuario: UsuarioDoRelatorio) => ({
-  id: r.id,
-  ano: r.ano,
-  mes: r.mes,
-  rotuloMes: rotuloMes(r.ano, r.mes),
-  autorNome: r.autorNome,
-  departamentos: (r.departamentos as DepartamentoAcesso[]).map((d) => ({ chave: d, nome: ROTULO_DEPARTAMENTO[d] })),
-  situacao: r.situacao,
-  finalizadoEm: r.finalizadoEm,
-  atualizadoEm: r.atualizadoEm,
-  meu: r.autorId === usuario.id,
-});
+/** Quem edita a aba: quem edita a tela, nos departamentos do recorte (sem recorte, todos). */
+const editaAba = (u: UsuarioDoRelatorio, d: DepartamentoAcesso) => u.edita && (u.departamentos === null || u.departamentos.includes(d));
+/** Quem vê a aba: finalizada, todos; em elaboração, quem a edita e o Administrador. */
+const veAba = (u: UsuarioDoRelatorio, a: Aba) => a.situacao === "FINALIZADO" || editaAba(u, a.departamento) || u.admin;
 
-/** O relatório que o usuário pode ver: o dele, ou um finalizado; o Administrador vê todos. */
-async function visivel(id: string, usuario: UsuarioDoRelatorio) {
-  const r = await getPrismaClient().relatorioExecutivo.findUnique({ where: { id } });
-  if (!r || (r.autorId !== usuario.id && r.situacao !== "FINALIZADO" && !usuario.admin)) throw new RelatorioExecutivoError(404, "Relatório não encontrado.");
+/** A situação do relatório: finalizado quando todas as abas estão. */
+const situacaoGeral = (abas: Aba[]) => (abas.length && abas.every((a) => a.situacao === "FINALIZADO") ? "FINALIZADO" : "EM_ELABORACAO");
+
+async function doRelatorio(id: string) {
+  const r = await getPrismaClient().relatorioExecutivo.findUnique({ where: { id }, include: { abas: true } });
+  if (!r) throw new RelatorioExecutivoError(404, "Relatório não encontrado.");
   return r;
 }
 
-/** O relatório que o usuário pode alterar: o dele, em elaboração. */
-async function doAutor(id: string, usuario: UsuarioDoRelatorio) {
-  const r = await visivel(id, usuario);
-  if (r.autorId !== usuario.id) throw new RelatorioExecutivoError(403, `Só o autor (${r.autorNome}) altera o relatório.`);
-  if (r.situacao === "FINALIZADO") throw new RelatorioExecutivoError(409, "O relatório está finalizado: reabra-o para alterar.");
-  return r;
+/** A aba que o usuário pode alterar: a do recorte dele, em elaboração. */
+async function abaEditavel(id: string, d: DepartamentoAcesso, u: UsuarioDoRelatorio) {
+  const r = await doRelatorio(id);
+  const aba = r.abas.find((a) => a.departamento === d);
+  if (!aba) throw new RelatorioExecutivoError(404, "Aba não encontrada.");
+  if (!editaAba(u, d)) throw new RelatorioExecutivoError(403, `A aba ${ROTULO_DEPARTAMENTO[d]} não é do seu recorte.`);
+  if (aba.situacao === "FINALIZADO") throw new RelatorioExecutivoError(409, `A aba ${ROTULO_DEPARTAMENTO[d]} está finalizada: reabra-a para alterar.`);
+  return { r, aba };
 }
 
 export const relatoriosExecutivosService = {
   /**
-   * As competências fechadas do exercício (a mais recente primeiro), cada uma com os relatórios que o usuário vê: os
-   * finalizados, o dele (em elaboração ou finalizado) e, para o Administrador, também os em elaboração dos outros.
+   * Os relatórios (a competência mais recente primeiro), com a situação, o andamento (as abas finalizadas) e as abas do
+   * usuário; e as competências fechadas ainda sem relatório (o Novo Relatório).
    */
-  async listar(ano: number | null, usuario: UsuarioDoRelatorio) {
+  async listar(usuario: UsuarioDoRelatorio) {
     const prisma = getPrismaClient();
-    const fechadas = await prisma.competencia.findMany({ where: { status: "FECHADA" }, select: { ano: true, mes: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] });
-    const anos = [...new Set(fechadas.map((c) => c.ano))];
-    const exercicio = ano ?? anos[0] ?? new Date().getFullYear();
-    const relatorios = await prisma.relatorioExecutivo.findMany({ where: { ano: exercicio }, orderBy: [{ autorNome: "asc" }] });
-    const vistos = relatorios.filter((r) => r.situacao === "FINALIZADO" || r.autorId === usuario.id || usuario.admin);
+    const [relatorios, fechadas] = await Promise.all([
+      prisma.relatorioExecutivo.findMany({ include: { abas: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] }),
+      prisma.competencia.findMany({ where: { status: "FECHADA" }, select: { ano: true, mes: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] }),
+    ]);
+    const comRelatorio = new Set(relatorios.map((r) => `${r.ano}|${r.mes}`));
     return {
-      anos,
-      ano: exercicio,
-      // Os departamentos do recorte do usuário (as abas dos relatórios dele); sem recorte, ele os escolhe ao criar.
-      meusDepartamentos: usuario.departamentos?.map((d) => ({ chave: d, nome: ROTULO_DEPARTAMENTO[d] })) ?? null,
-      departamentos: DEPARTAMENTOS.map((d) => ({ chave: d, nome: ROTULO_DEPARTAMENTO[d] })),
-      meses: fechadas
-        .filter((c) => c.ano === exercicio)
-        .map((c) => ({
-          mes: c.mes,
-          rotulo: rotuloMes(c.ano, c.mes),
-          relatorios: vistos.filter((r) => r.mes === c.mes).map((r) => resumo(r, usuario)),
-          temMeu: relatorios.some((r) => r.mes === c.mes && r.autorId === usuario.id),
-        })),
+      relatorios: relatorios.map((r) => ({
+        id: r.id,
+        ano: r.ano,
+        mes: r.mes,
+        rotuloMes: rotuloMes(r.ano, r.mes),
+        situacao: situacaoGeral(r.abas),
+        finalizadas: r.abas.filter((a) => a.situacao === "FINALIZADO").length,
+        total: r.abas.length,
+        // As abas que o usuário edita, com a situação de cada uma.
+        minhas: DEPARTAMENTOS.filter((d) => editaAba(usuario, d)).flatMap((d) => {
+          const a = r.abas.find((x) => x.departamento === d);
+          return a ? [{ chave: d, nome: ROTULO_DEPARTAMENTO[d], situacao: a.situacao }] : [];
+        }),
+        criadoPor: r.criadoPorNome,
+        criadoEm: r.criadoEm,
+        atualizadoEm: r.abas.reduce((m, a) => (a.atualizadoEm > m ? a.atualizadoEm : m), r.atualizadoEm),
+      })),
+      livres: fechadas.filter((c) => !comRelatorio.has(`${c.ano}|${c.mes}`)).map((c) => ({ ano: c.ano, mes: c.mes, rotulo: rotuloMes(c.ano, c.mes) })),
+      meusDepartamentos: DEPARTAMENTOS.filter((d) => editaAba(usuario, d)).map((d) => ({ chave: d, nome: ROTULO_DEPARTAMENTO[d] })),
     };
   },
 
-  /** Cria o relatório do usuário num mês de competência fechada (um por gestor e mês). */
-  async criar(dados: { ano: number; mes: number; departamentos: DepartamentoAcesso[] | null }, usuario: UsuarioDoRelatorio) {
+  /** Cria o relatório de uma competência fechada (um por competência), com as sete abas vazias. */
+  async criar(dados: { ano: number; mes: number }, usuario: UsuarioDoRelatorio) {
     const prisma = getPrismaClient();
     const competencia = await prisma.competencia.findFirst({ where: { ano: dados.ano, mes: dados.mes } });
     if (!competencia || competencia.status !== "FECHADA") throw new RelatorioExecutivoError(400, `A competência ${rotuloMes(dados.ano, dados.mes)} não está fechada: os relatórios são das competências fechadas.`);
-    const departamentos = usuario.departamentos ?? DEPARTAMENTOS.filter((d) => dados.departamentos?.includes(d));
-    if (!departamentos.length) throw new RelatorioExecutivoError(400, usuario.departamentos ? "Seu perfil não tem departamentos no recorte: peça ao Administrador." : "Escolha ao menos um departamento.");
-    if (await prisma.relatorioExecutivo.findUnique({ where: { ano_mes_autorId: { ano: dados.ano, mes: dados.mes, autorId: usuario.id } } })) {
-      throw new RelatorioExecutivoError(409, `Você já tem o relatório de ${rotuloMes(dados.ano, dados.mes)}.`);
+    if (await prisma.relatorioExecutivo.findUnique({ where: { ano_mes: { ano: dados.ano, mes: dados.mes } } })) {
+      throw new RelatorioExecutivoError(409, `${rotuloMes(dados.ano, dados.mes)} já tem relatório: abra-o na lista.`);
     }
     const r = await prisma.relatorioExecutivo.create({
-      data: { ano: dados.ano, mes: dados.mes, autorId: usuario.id, autorNome: usuario.nome, departamentos, blocos: {} },
+      data: {
+        ano: dados.ano,
+        mes: dados.mes,
+        criadoPorId: usuario.id,
+        criadoPorNome: usuario.nome,
+        abas: { create: DEPARTAMENTOS.map((departamento) => ({ departamento, blocos: [] })) },
+      },
     });
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "CRIACAO", entidade: "relatorio_executivo", entidadeId: r.id, metadados: { mes: rotuloMes(r.ano, r.mes), departamentos } });
-    return resumo(r, usuario);
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "CRIACAO", entidade: "relatorio_executivo", entidadeId: r.id, metadados: { mes: rotuloMes(r.ano, r.mes) } });
+    return { id: r.id, rotuloMes: rotuloMes(r.ano, r.mes) };
   },
 
-  /** O relatório, com os blocos de cada aba e o que o usuário pode fazer nele. */
+  /** O relatório, com as abas: a situação de cada uma, os blocos das que o usuário vê e o que ele pode fazer em cada. */
   async obter(id: string, usuario: UsuarioDoRelatorio) {
-    const r = await visivel(id, usuario);
-    const autor = r.autorId === usuario.id;
+    const r = await doRelatorio(id);
+    const abas = DEPARTAMENTOS.flatMap((d) => {
+      const a = r.abas.find((x) => x.departamento === d);
+      if (!a) return [];
+      const ve = veAba(usuario, a);
+      return [
+        {
+          chave: d,
+          nome: ROTULO_DEPARTAMENTO[d],
+          situacao: a.situacao,
+          visivel: ve,
+          blocos: ve ? (a.blocos as BlocoDoRelatorio[]) : [],
+          podeEditar: editaAba(usuario, d) && a.situacao === "EM_ELABORACAO",
+          podeReabrir: a.situacao === "FINALIZADO" && (editaAba(usuario, d) || usuario.admin),
+          atualizadoPor: a.atualizadoPor,
+          atualizadoEm: a.atualizadoEm,
+          finalizadoPor: a.finalizadoPor,
+          finalizadoEm: a.finalizadoEm,
+        },
+      ];
+    });
     return {
-      ...resumo(r, usuario),
-      blocos: r.blocos as BlocosDoRelatorio,
-      podeEditar: autor && r.situacao === "EM_ELABORACAO",
-      podeReabrir: (autor || usuario.admin) && r.situacao === "FINALIZADO",
+      id: r.id,
+      ano: r.ano,
+      mes: r.mes,
+      rotuloMes: rotuloMes(r.ano, r.mes),
+      situacao: situacaoGeral(r.abas),
+      criadoPor: r.criadoPorNome,
+      criadoEm: r.criadoEm,
+      abas,
+      // O criador (ou o Administrador) exclui o relatório enquanto nenhuma aba estiver finalizada.
+      podeExcluir: (r.criadoPorId === usuario.id || usuario.admin) && usuario.edita && r.abas.every((a) => a.situacao === "EM_ELABORACAO"),
     };
   },
 
   /** Os dados dos cards: o Painel de Bordo e os Indicadores até o mês do relatório, só das competências fechadas. */
-  async dados(id: string, usuario: UsuarioDoRelatorio) {
-    const r = await visivel(id, usuario);
+  async dados(id: string) {
+    const r = await doRelatorio(id);
     const [painel, indicadores] = await Promise.all([painelService.painel(r.ano, r.mes, true), indicadoresService.listar(r.ano, r.mes, true)]);
     return { painel, indicadores };
   },
 
-  /** Grava os blocos das abas (o autor, em elaboração); as abas que não são do relatório ficam de fora. */
-  async gravar(id: string, blocos: BlocosDoRelatorio, usuario: UsuarioDoRelatorio) {
-    const r = await doAutor(id, usuario);
-    const abas = r.departamentos as DepartamentoAcesso[];
-    const fora = Object.keys(blocos).filter((d) => !abas.includes(d as DepartamentoAcesso));
-    if (fora.length) throw new RelatorioExecutivoError(400, `O relatório não tem a aba ${fora.join(", ")}.`);
-    const depois = await getPrismaClient().relatorioExecutivo.update({ where: { id }, data: { blocos: blocos as Prisma.InputJsonValue } });
-    return { ...resumo(depois, usuario), blocos: depois.blocos as BlocosDoRelatorio };
-  },
-
-  /** Finaliza (torna público, só leitura) ou reabre (volta a ser só do autor) o relatório. */
-  async mudarSituacao(id: string, acao: "finalizar" | "reabrir", usuario: UsuarioDoRelatorio) {
-    const r = await visivel(id, usuario);
-    if (acao === "finalizar") {
-      await doAutor(id, usuario);
-      const blocos = r.blocos as BlocosDoRelatorio;
-      if (!Object.values(blocos).some((b) => b?.length)) throw new RelatorioExecutivoError(400, "O relatório está vazio: inclua cards ou anotações antes de finalizar.");
-    } else {
-      if (r.autorId !== usuario.id && !usuario.admin) throw new RelatorioExecutivoError(403, `Só o autor (${r.autorNome}) ou o Administrador reabre o relatório.`);
-      if (r.situacao !== "FINALIZADO") throw new RelatorioExecutivoError(409, "O relatório não está finalizado.");
-    }
-    const depois = await getPrismaClient().relatorioExecutivo.update({
-      where: { id },
-      data: acao === "finalizar" ? { situacao: "FINALIZADO", finalizadoEm: new Date() } : { situacao: "EM_ELABORACAO", finalizadoEm: null },
+  /** Grava os blocos de uma aba (de quem a edita, em elaboração). */
+  async gravarAba(id: string, departamento: DepartamentoAcesso, blocos: BlocoDoRelatorio[], usuario: UsuarioDoRelatorio) {
+    await abaEditavel(id, departamento, usuario);
+    await getPrismaClient().relatorioExecutivoAba.update({
+      where: { relatorioId_departamento: { relatorioId: id, departamento } },
+      data: { blocos: blocos as Prisma.InputJsonValue, atualizadoPor: usuario.nome },
     });
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "relatorio_executivo", entidadeId: id, metadados: { mes: rotuloMes(r.ano, r.mes), autor: r.autorNome, acao } });
-    return this.obter(depois.id, usuario);
+    return this.obter(id, usuario);
   },
 
-  /** Exclui o relatório (o autor, em elaboração). */
+  /** Finaliza a aba (fica visível para todos, só leitura) ou a reabre (volta a ser só de quem a edita). */
+  async mudarAba(id: string, departamento: DepartamentoAcesso, acao: "finalizar" | "reabrir", usuario: UsuarioDoRelatorio) {
+    const prisma = getPrismaClient();
+    const r = await doRelatorio(id);
+    if (acao === "finalizar") await abaEditavel(id, departamento, usuario);
+    else {
+      const aba = r.abas.find((a) => a.departamento === departamento);
+      if (!aba) throw new RelatorioExecutivoError(404, "Aba não encontrada.");
+      if (!editaAba(usuario, departamento) && !usuario.admin) throw new RelatorioExecutivoError(403, `A aba ${ROTULO_DEPARTAMENTO[departamento]} não é do seu recorte.`);
+      if (aba.situacao !== "FINALIZADO") throw new RelatorioExecutivoError(409, "A aba não está finalizada.");
+    }
+    await prisma.relatorioExecutivoAba.update({
+      where: { relatorioId_departamento: { relatorioId: id, departamento } },
+      data: acao === "finalizar" ? { situacao: "FINALIZADO", finalizadoPor: usuario.nome, finalizadoEm: new Date() } : { situacao: "EM_ELABORACAO", finalizadoPor: null, finalizadoEm: null, atualizadoPor: usuario.nome },
+    });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "relatorio_executivo",
+      entidadeId: id,
+      metadados: { mes: rotuloMes(r.ano, r.mes), aba: ROTULO_DEPARTAMENTO[departamento], acao },
+    });
+    return this.obter(id, usuario);
+  },
+
+  /** Exclui o relatório (quem o criou ou o Administrador), enquanto nenhuma aba estiver finalizada. */
   async excluir(id: string, usuario: UsuarioDoRelatorio) {
-    const r = await doAutor(id, usuario);
+    const r = await doRelatorio(id);
+    if ((r.criadoPorId !== usuario.id && !usuario.admin) || !usuario.edita) throw new RelatorioExecutivoError(403, `Só quem criou o relatório (${r.criadoPorNome}) ou o Administrador o exclui.`);
+    if (r.abas.some((a) => a.situacao === "FINALIZADO")) throw new RelatorioExecutivoError(409, "O relatório tem abas finalizadas: reabra-as antes de excluir.");
     await getPrismaClient().relatorioExecutivo.delete({ where: { id } });
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "EXCLUSAO", entidade: "relatorio_executivo", entidadeId: id, metadados: { mes: rotuloMes(r.ano, r.mes) } });
     return { excluido: true };
