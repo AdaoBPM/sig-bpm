@@ -60,6 +60,17 @@ function GradeDeFundo({ largura }: { largura: number }) {
   );
 }
 
+/**
+ * As linhas de uma página (16/10/2026): só o espaço útil da tela inteira, onde a apresentação a mostra — a altura da tela,
+ * menos o topo do slide (24 px de margem, o título em 40 px e 16 px abaixo dele) e a margem de baixo (24 px).
+ */
+export function linhasDaPagina() {
+  const altura = typeof window === "undefined" ? 1080 : window.screen.height;
+  const grade = altura - 24 - 40 - 16 - 24;
+  // A grade: 12 px em cima e embaixo, e cada linha com 12 px entre elas.
+  return Math.max(8, Math.floor((grade - MARGEM) / (ALTURA_DA_LINHA + MARGEM)));
+}
+
 /** O card do Painel sem o gráfico fica com 2/5 da largura (as duas colunas dos valores, do mesmo tamanho); com ele, 5/2. */
 const LARGURA_SEM_GRAFICO = 2 / 5;
 
@@ -78,17 +89,18 @@ export function linhasDaFoto(w: number, proporcao: number, largura: number) {
 
 /**
  * As notas das anotações (15/10/2026): o ícone e as cores, no padrão do Painel de Bordo — positivo em verde (azul nas
- * cores Acessíveis), negativo em vermelho e atenção em amarelo. O rótulo é o título da anotação até alguém o mudar.
+ * cores Acessíveis), negativo em vermelho e atenção em laranja. O rótulo é o título da anotação até alguém o mudar.
  */
 export const NOTAS: Record<Nota, { rotulo: string; Icone: typeof ThumbsUp; classe: (cores: Cores) => string; icone: (cores: Cores) => string }> = {
   POSITIVO: {
     rotulo: "Positivo",
     Icone: ThumbsUp,
-    classe: (c) => (c === "daltonismo" ? "border-l-blue-600" : "border-l-green-600"),
-    icone: (c) => (c === "daltonismo" ? "text-blue-700" : "text-green-700"),
+    classe: (c) => (c === "daltonismo" ? "border-l-blue-600" : "border-l-green-500"),
+    icone: (c) => (c === "daltonismo" ? "text-blue-700" : "text-green-600"),
   },
-  NEGATIVO: { rotulo: "Negativo", Icone: ThumbsDown, classe: () => "border-l-red-600", icone: () => "text-red-700" },
-  ATENCAO: { rotulo: "Atenção", Icone: CircleAlert, classe: () => "border-l-yellow-500", icone: () => "text-yellow-700" },
+  // O vermelho mais escuro e o laranja (16/10/2026; antes, o amarelo, perto do amarelo-ouro da BPM).
+  NEGATIVO: { rotulo: "Negativo", Icone: ThumbsDown, classe: () => "border-l-red-700", icone: () => "text-red-800" },
+  ATENCAO: { rotulo: "Atenção", Icone: CircleAlert, classe: () => "border-l-orange-500", icone: () => "text-orange-600" },
 };
 
 /**
@@ -104,9 +116,12 @@ export function GradeDoRelatorio({
   editavel,
   cores,
   tipo,
+  linhas,
   onMudar,
 }: {
   relatorioId: string;
+  /** As linhas da página: os blocos não passam delas, e a página tem essa altura (o espaço útil da tela inteira). */
+  linhas: number;
   blocos: Bloco[];
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
@@ -138,13 +153,18 @@ export function GradeDoRelatorio({
   };
   const doCard = blocos.find((b) => b.id === configurando);
   return (
-    // Ao ajustar, a área cresce até boa parte da tela, para a grade de fundo ir além dos blocos; a sombra do bloco, em cinza.
-    <div ref={caixa} className={`relative -mx-3 [&_.react-grid-placeholder]:!bg-gray-400 ${ajustando ? "min-h-[70vh]" : ""}`}>
+    // A página na altura do espaço útil da tela inteira; na edição, com o contorno tracejado dela (o bloco que passa dele,
+    // de antes do limite, aparece abaixo e volta para dentro ao ser movido). A sombra do bloco, em cinza.
+    <div ref={caixa} className="relative -mx-3 [&_.react-grid-placeholder]:!bg-gray-400" style={{ minHeight: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }}>
+      {editavel ? (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 rounded-sm border border-dashed border-gray-300" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} />
+      ) : null}
       {ajustando ? <GradeDeFundo largura={ajustando} /> : null}
       <Grade
         layout={layout}
         cols={COLUNAS}
         rowHeight={ALTURA_DA_LINHA}
+        maxRows={linhas}
         margin={[12, 12]}
         isDraggable={editavel}
         isResizable={editavel}

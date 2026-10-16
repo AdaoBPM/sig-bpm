@@ -22,7 +22,7 @@ import { botaoPrimario, Erro } from "@/app/cenarios/components/CenarioDialog";
 import { AdicionarCardsDialog } from "../components/AdicionarCardsDialog";
 import { ApresentacaoDoRelatorio, entrarEmTelaInteira } from "../components/ApresentacaoDoRelatorio";
 import { EtiquetaSituacao } from "../components/EtiquetaSituacao";
-import { COLUNAS, GradeDoRelatorio, linhasDaFoto, tamanhoInicial } from "../components/GradeDoRelatorio";
+import { COLUNAS, GradeDoRelatorio, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Pagina, type Relatorio } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
@@ -155,7 +155,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   // Os slides da apresentação: as páginas com algum bloco das abas que o usuário vê (o que está na tela, gravado ou não).
   const slides = relatorio.abas.flatMap((a) => {
     const ps = a.visivel ? (paginas[a.chave] ?? []) : [];
-    return ps.flatMap((p, k) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: ps.length > 1 ? `${a.nome} · Página ${k + 1}` : a.nome, blocos: p.blocos }] : []));
+    return ps.flatMap((p) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: a.nome, blocos: p.blocos }] : []));
   });
   const apresentar = () => {
     entrarEmTelaInteira();
@@ -280,6 +280,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Cada aba tem uma ou mais páginas, logo abaixo do título. Os botões ao lado delas incluem uma página nova (depois da aberta), excluem a página
               aberta (com blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de um departamento para o outro.
+              A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
               Na sua aba, “Adicionar” traz três opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
@@ -289,7 +290,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
               nele para mudar) e o texto no card com o destaque da cor. No canto do bloco, escolha Positivo (verde; azul nas cores Acessíveis do Painel),
-              Negativo (vermelho) ou Atenção (amarelo). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
+              Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
             </li>
             <li>
               Foto envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px) e a inclui com a legenda embaixo, no destaque amarelo-ouro. A foto aumenta e
@@ -302,8 +303,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
             </li>
             <li>
-              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com a logo da BPM no
-              canto de cima: os botões na base esquerda (ou as setas do teclado) recuam e avançam; Esc encerra.
+              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o relatório e o
+              departamento no topo e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base: recuar, avançar e sair (as setas do teclado
+              também mudam o slide; Esc encerra).
             </li>
             <li>
               “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar Aba” grava a aba e a torna pública, só para
@@ -368,7 +370,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           {editavel ? "A página está vazia: use “Adicionar”, na linha do título." : "Nada nesta página."}
         </p>
       ) : (
-        <GradeDoRelatorio key={pagina?.id} relatorioId={relatorio.id} blocos={daPagina} dados={dados.data} editavel={editavel} cores={cores} tipo={tipo} onMudar={mudarPagina} />
+        <GradeDoRelatorio key={pagina?.id} relatorioId={relatorio.id} blocos={daPagina} dados={dados.data} editavel={editavel} cores={cores} tipo={tipo} linhas={linhasDaPagina()} onMudar={mudarPagina} />
       )}
       {relatorio.podeExcluir ? (
         <div className="flex justify-end">
