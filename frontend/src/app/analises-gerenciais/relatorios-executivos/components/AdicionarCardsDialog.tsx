@@ -67,16 +67,19 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
             mova e redimensione cada um na tela.
           </DialogDescription>
         </DialogHeader>
-        <Abas
-          rotulo="Origem dos cards"
-          ativa={origem}
-          onMudar={(a) => setOrigem(a as "painel" | "indicadores")}
-          abas={[
-            { chave: "painel", rotulo: "Painel de Bordo" },
-            { chave: "indicadores", rotulo: "Indicadores" },
-          ]}
-        />
-        <div className="flex flex-wrap items-center gap-4">
+        {/* As abas e a busca na altura delas (sem encolher): só a lista rola. */}
+        <div className="shrink-0">
+          <Abas
+            rotulo="Origem dos cards"
+            ativa={origem}
+            onMudar={(a) => setOrigem(a as "painel" | "indicadores")}
+            abas={[
+              { chave: "painel", rotulo: "Painel de Bordo" },
+              { chave: "indicadores", rotulo: "Indicadores" },
+            ]}
+          />
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-4">
           <div className="min-w-64 flex-1">
             <CampoBusca valor={busca} onMudar={setBusca} placeholder="Buscar pelo nome…" />
           </div>
