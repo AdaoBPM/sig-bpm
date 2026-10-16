@@ -1,8 +1,13 @@
+import { randomUUID } from "node:crypto";
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { DepartamentoAcesso } from "../../generated/prisma/enums.js";
 import { ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { auditar } from "../auditoriaService.js";
+import { diretorioUploads } from "../importacoes/arquivosImportados.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { painelService } from "../relatorios/painelService.js";
 
@@ -36,8 +41,34 @@ const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
 export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h: number } & (
   | { tipo: "PAINEL"; aba: "resultados" | "performance"; quadro: string; titulo: string; sigla: string; comGrafico: boolean; /** As opções do gráfico do card (16/10/2026), como no Configurar Gráficos do Painel; sem elas, as do navegador. */ tipoGrafico?: "barras" | "area"; comRotulos?: boolean; cores?: "padrao" | "daltonismo" }
   | { tipo: "INDICADOR"; nome: string }
-  | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string }
+  | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string }
+  /** Uma foto (16/10/2026): o arquivo (na pasta do relatório), a legenda e a proporção (largura ÷ altura). */
+  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number }
 );
+
+/** As fotos (16/10/2026): na pasta do relatório, dentro dos uploads, com um nome sorteado. */
+export const NOME_DA_FOTO = /^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/;
+const EXTENSOES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+const TIPOS: Record<string, string> = Object.fromEntries(Object.entries(EXTENSOES).map(([t, e]) => [e, t]));
+const pastaDasFotos = (relatorioId: string) => join(diretorioUploads(), "relatorios-executivos", relatorioId);
+const MAXIMO_DA_FOTO = 10 * 1024 * 1024;
+
+/**
+ * Apaga as fotos que nenhuma aba usa (enviadas e não gravadas, ou tiradas da aba) com mais de um dia: as mais novas
+ * podem estar numa aba ainda não gravada.
+ */
+async function limparFotos(relatorioId: string) {
+  const abas = await getPrismaClient().relatorioExecutivoAba.findMany({ where: { relatorioId }, select: { blocos: true } });
+  const usadas = new Set(abas.flatMap((a) => (a.blocos as BlocoDoRelatorio[]).flatMap((b) => (b.tipo === "FOTO" ? [b.arquivo] : []))));
+  const pasta = pastaDasFotos(relatorioId);
+  const arquivos = await readdir(pasta).catch(() => [] as string[]);
+  const umDia = Date.now() - 24 * 60 * 60 * 1000;
+  for (const arquivo of arquivos) {
+    if (usadas.has(arquivo) || !NOME_DA_FOTO.test(arquivo)) continue;
+    const info = await stat(join(pasta, arquivo)).catch(() => null);
+    if (info && info.mtimeMs < umDia) await rm(join(pasta, arquivo), { force: true });
+  }
+}
 
 type Aba = { departamento: DepartamentoAcesso; blocos: unknown; situacao: "EM_ELABORACAO" | "FINALIZADO"; atualizadoPor: string | null; atualizadoEm: Date; finalizadoPor: string | null; finalizadoEm: Date | null };
 
@@ -100,24 +131,41 @@ export const relatoriosExecutivosService = {
     };
   },
 
-  /** Cria o relatório de uma competência fechada (um por competência), com as sete abas vazias. */
-  async criar(dados: { ano: number; mes: number }, usuario: UsuarioDoRelatorio) {
+  /**
+   * Cria o relatório de uma competência fechada (um por competência), com as sete abas: vazias ou, com `importarDe`
+   * (16/10/2026), com os blocos das abas de outro relatório — os cards (que trazem os dados do mês novo), as fotos
+   * (copiadas para a pasta do relatório novo) e as anotações —, todas em elaboração.
+   */
+  async criar(dados: { ano: number; mes: number; importarDe?: string | null }, usuario: UsuarioDoRelatorio) {
     const prisma = getPrismaClient();
     const competencia = await prisma.competencia.findFirst({ where: { ano: dados.ano, mes: dados.mes } });
     if (!competencia || competencia.status !== "FECHADA") throw new RelatorioExecutivoError(400, `A competência ${rotuloMes(dados.ano, dados.mes)} não está fechada: os relatórios são das competências fechadas.`);
     if (await prisma.relatorioExecutivo.findUnique({ where: { ano_mes: { ano: dados.ano, mes: dados.mes } } })) {
       throw new RelatorioExecutivoError(409, `${rotuloMes(dados.ano, dados.mes)} já tem relatório: abra-o na lista.`);
     }
+    const origem = dados.importarDe ? await doRelatorio(dados.importarDe) : null;
+    const daOrigem = new Map((origem?.abas ?? []).map((a) => [a.departamento, a.blocos as BlocoDoRelatorio[]]));
     const r = await prisma.relatorioExecutivo.create({
       data: {
         ano: dados.ano,
         mes: dados.mes,
         criadoPorId: usuario.id,
         criadoPorNome: usuario.nome,
-        abas: { create: DEPARTAMENTOS.map((departamento) => ({ departamento, blocos: [] })) },
+        abas: { create: DEPARTAMENTOS.map((departamento) => ({ departamento, blocos: (daOrigem.get(departamento) ?? []) as Prisma.InputJsonValue, atualizadoPor: origem ? usuario.nome : null })) },
       },
     });
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "CRIACAO", entidade: "relatorio_executivo", entidadeId: r.id, metadados: { mes: rotuloMes(r.ano, r.mes) } });
+    // As fotos da origem vão para a pasta do relatório novo (a origem pode ser excluída depois).
+    if (origem && [...daOrigem.values()].some((bs) => bs.some((b) => b.tipo === "FOTO"))) {
+      await cp(pastaDasFotos(origem.id), pastaDasFotos(r.id), { recursive: true }).catch(() => undefined);
+    }
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "CRIACAO",
+      entidade: "relatorio_executivo",
+      entidadeId: r.id,
+      metadados: { mes: rotuloMes(r.ano, r.mes), importadoDe: origem ? rotuloMes(origem.ano, origem.mes) : null },
+    });
     return { id: r.id, rotuloMes: rotuloMes(r.ano, r.mes) };
   },
 
@@ -172,6 +220,7 @@ export const relatoriosExecutivosService = {
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
       data: { blocos: blocos as Prisma.InputJsonValue, atualizadoPor: usuario.nome },
     });
+    await limparFotos(id);
     return this.obter(id, usuario);
   },
 
@@ -201,12 +250,36 @@ export const relatoriosExecutivosService = {
     return this.obter(id, usuario);
   },
 
+  /** Guarda uma foto do relatório (quem edita a tela; até 10 MB, JPEG, PNG, WebP ou GIF) e devolve o nome do arquivo. */
+  async salvarFoto(id: string, conteudo: Buffer, tipo: string, usuario: UsuarioDoRelatorio) {
+    await doRelatorio(id);
+    if (!usuario.edita) throw new RelatorioExecutivoError(403, "Seu perfil não edita os relatórios.");
+    const extensao = EXTENSOES[tipo.split(";")[0].trim().toLowerCase()];
+    if (!extensao) throw new RelatorioExecutivoError(400, "A foto precisa ser JPEG, PNG, WebP ou GIF.");
+    if (!conteudo.length) throw new RelatorioExecutivoError(400, "O arquivo da foto está vazio.");
+    if (conteudo.length > MAXIMO_DA_FOTO) throw new RelatorioExecutivoError(400, "A foto passa de 10 MB.");
+    const arquivo = `${randomUUID()}.${extensao}`;
+    await mkdir(pastaDasFotos(id), { recursive: true });
+    await writeFile(join(pastaDasFotos(id), arquivo), conteudo);
+    return { arquivo };
+  },
+
+  /** Uma foto do relatório: o conteúdo e o tipo. */
+  async lerFoto(id: string, arquivo: string) {
+    if (!NOME_DA_FOTO.test(arquivo)) throw new RelatorioExecutivoError(400, "Foto inválida.");
+    await doRelatorio(id);
+    const conteudo = await readFile(join(pastaDasFotos(id), arquivo)).catch(() => null);
+    if (!conteudo) throw new RelatorioExecutivoError(404, "Foto não encontrada.");
+    return { conteudo, tipo: TIPOS[arquivo.split(".").pop()!] };
+  },
+
   /** Exclui o relatório (quem o criou ou o Administrador), enquanto nenhuma aba estiver finalizada. */
   async excluir(id: string, usuario: UsuarioDoRelatorio) {
     const r = await doRelatorio(id);
     if ((r.criadoPorId !== usuario.id && !usuario.admin) || !usuario.edita) throw new RelatorioExecutivoError(403, `Só quem criou o relatório (${r.criadoPorNome}) ou o Administrador o exclui.`);
     if (r.abas.some((a) => a.situacao === "FINALIZADO")) throw new RelatorioExecutivoError(409, "O relatório tem abas finalizadas: reabra-as antes de excluir.");
     await getPrismaClient().relatorioExecutivo.delete({ where: { id } });
+    await rm(pastaDasFotos(id), { recursive: true, force: true });
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "EXCLUSAO", entidade: "relatorio_executivo", entidadeId: id, metadados: { mes: rotuloMes(r.ano, r.mes) } });
     return { excluido: true };
   },

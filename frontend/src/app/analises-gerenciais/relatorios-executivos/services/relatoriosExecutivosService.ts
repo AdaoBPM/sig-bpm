@@ -47,7 +47,10 @@ export type Bloco = Posicao &
         cores?: "padrao" | "daltonismo";
       }
     | { tipo: "INDICADOR"; nome: string }
-    | { tipo: "ANOTACAO"; nota: Nota; texto: string }
+    /** O título da anotação (16/10/2026); sem ele, o nome da nota. */
+    | { tipo: "ANOTACAO"; nota: Nota; texto: string; titulo?: string }
+    /** Uma foto (16/10/2026): o arquivo, guardado no servidor, a legenda e a proporção (largura ÷ altura). */
+    | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number }
   );
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
@@ -78,11 +81,17 @@ export type DadosDoRelatorio = { painel: Painel; indicadores: Indicadores };
 const base = "/proxy/relatorios-executivos";
 export const relatoriosExecutivosService = {
   listar: async () => (await api.get<{ data: ListaDeRelatorios }>(base)).data.data,
-  criar: async (ano: number, mes: number) => (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes })).data.data,
+  /** Com `importarDe` (16/10/2026), as abas começam com os blocos (cards, fotos e anotações) daquele relatório. */
+  criar: async (ano: number, mes: number, importarDe: string | null) => (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe })).data.data,
   obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
   dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
   gravarAba: async (id: string, aba: string, blocos: Bloco[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { blocos })).data.data,
   finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
   reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
+  enviarFoto: async (id: string, foto: Blob) =>
+    (await api.post<{ data: { arquivo: string } }>(`${base}/${id}/fotos`, foto, { headers: { "Content-Type": foto.type } })).data.data,
   excluir: async (id: string) => (await api.delete<{ data: { excluido: boolean } }>(`${base}/${id}`)).data.data,
 };
+
+/** O endereço de uma foto do relatório (pelo proxy, com o login). */
+export const enderecoDaFoto = (id: string, arquivo: string) => `/api${base}/${id}/fotos/${arquivo}`;

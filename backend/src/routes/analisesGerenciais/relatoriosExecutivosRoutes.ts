@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 
 import { relatoriosExecutivosController as c } from "../../controllers/analisesGerenciais/relatoriosExecutivosController.js";
 import { autenticacao } from "../../middlewares/autenticacao.js";
@@ -18,6 +18,9 @@ relatoriosExecutivosRoutes.post("/", autenticacao, editar, asyncHandler(c.criar)
 relatoriosExecutivosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 relatoriosExecutivosRoutes.get("/:id/dados", autenticacao, ler, asyncHandler(c.dados));
 relatoriosExecutivosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));
+// As fotos (16/10/2026): o arquivo cru no corpo (até 10 MB).
+relatoriosExecutivosRoutes.post("/:id/fotos", autenticacao, editar, express.raw({ type: () => true, limit: "10mb" }), asyncHandler(c.salvarFoto));
+relatoriosExecutivosRoutes.get("/:id/fotos/:arquivo", autenticacao, ler, asyncHandler(c.lerFoto));
 relatoriosExecutivosRoutes.put("/:id/abas/:departamento", autenticacao, editar, asyncHandler(c.gravarAba));
 relatoriosExecutivosRoutes.post("/:id/abas/:departamento/finalizar", autenticacao, editar, asyncHandler(c.finalizarAba));
 relatoriosExecutivosRoutes.post("/:id/abas/:departamento/reabrir", autenticacao, ler, asyncHandler(c.reabrirAba));

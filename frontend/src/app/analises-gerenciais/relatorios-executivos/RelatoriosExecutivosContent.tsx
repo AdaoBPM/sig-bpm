@@ -70,14 +70,20 @@ export function RelatoriosExecutivosContent() {
               A Situação é Finalizado quando todas as abas (os sete departamentos) estão finalizadas; antes, Em Elaboração. A coluna Abas Finalizadas mostra o
               andamento, e Suas Abas, as abas que você edita (as do seu recorte de departamentos, em Controle de Usuários) e a situação de cada uma (sem recorte, Todas).
             </li>
-            {pode ? <li>“Novo Relatório” cria o relatório de uma competência fechada que ainda não tem; depois, cada gestor monta as abas dele.</li> : null}
+            {pode ? (
+              <li>
+                “Novo Relatório” cria o relatório de uma competência fechada que ainda não tem. Em Importar de, escolha o relatório de onde vêm os cards (com
+                os dados da competência nova), as fotos e as anotações das abas (de início, o mais recente), ou Nenhum, para começar com as abas vazias; depois,
+                cada gestor ajusta as abas dele.
+              </li>
+            ) : null}
             <li>Use os filtros nos rótulos das colunas.</li>
           </ul>
         }
         sobre={
           <p>
             Os Relatórios Executivos são as apresentações mensais dos gestores: um relatório por competência fechada, com uma aba por departamento, onde
-            cada gestor escolhe os cards do Painel de Bordo e dos Indicadores e escreve as anotações dos pontos positivos, negativos e de atenção. Os cards
+            cada gestor escolhe os cards do Painel de Bordo e dos Indicadores e escreve as anotações dos pontos positivos, negativos e de atenção, com fotos. Os cards
             trazem só as competências fechadas, até o mês do relatório. Cada aba em elaboração só aparece para quem a edita; finalizada, todos a veem.
           </p>
         }
@@ -141,14 +147,18 @@ export function RelatoriosExecutivosContent() {
   );
 }
 
-/** O modal Novo Relatório: a competência (fechada, ainda sem relatório). */
+/**
+ * O modal Novo Relatório: a competência (fechada, ainda sem relatório) e, desde 16/10/2026, o relatório de onde importar
+ * os cards, as fotos e as anotações das abas (de início, o mais recente; ou nenhum, para começar com as abas vazias).
+ */
 function NovoRelatorioDialog({ dados, onFechar }: { dados: ListaDeRelatorios; onFechar: () => void }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [escolhida, setEscolhida] = useState(dados.livres[0] ? `${dados.livres[0].ano}|${dados.livres[0].mes}` : "");
   const [ano, mes] = escolhida.split("|").map(Number);
+  const [importarDe, setImportarDe] = useState(dados.relatorios[0]?.id ?? "");
   const criar = useMutation({
-    mutationFn: () => relatoriosExecutivosService.criar(ano, mes),
+    mutationFn: () => relatoriosExecutivosService.criar(ano, mes, importarDe || null),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"] });
       toast.success(`Relatório de ${r.rotuloMes} criado.`);
@@ -174,6 +184,18 @@ function NovoRelatorioDialog({ dados, onFechar }: { dados: ListaDeRelatorios; on
               </option>
             ))}
           </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="novo-importar">Importar de</Label>
+          <select id="novo-importar" value={importarDe} onChange={(e) => setImportarDe(e.target.value)} className={classeSelect}>
+            {dados.relatorios.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.rotuloMes}
+              </option>
+            ))}
+            <option value="">Nenhum (abas vazias)</option>
+          </select>
+          <p className="text-xs text-gray-500">Os cards (com os dados da competência nova), as fotos e as anotações das abas do relatório escolhido.</p>
         </div>
         <Erro erro={criar.isError ? mensagemDeErro(criar.error, "Não foi possível criar o relatório.") : null} />
         <DialogFooter>
