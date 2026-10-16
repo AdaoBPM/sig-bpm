@@ -46,6 +46,18 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number }
 );
 
+/**
+ * As páginas de uma aba (16/10/2026): cada departamento tem uma ou mais páginas, cada uma com a sua grade de blocos. Ficam
+ * na coluna `blocos` da aba; a lista antiga (só os blocos, de antes das páginas) vira uma página.
+ */
+export type PaginaDoRelatorio = { id: string; blocos: BlocoDoRelatorio[] };
+export function paginasDe(json: unknown): PaginaDoRelatorio[] {
+  const lista = Array.isArray(json) ? json : [];
+  if (!lista.length) return [{ id: "p1", blocos: [] }];
+  if (lista.some((x) => x && typeof x === "object" && "tipo" in x)) return [{ id: "p1", blocos: lista as BlocoDoRelatorio[] }];
+  return lista as PaginaDoRelatorio[];
+}
+
 /** As fotos (16/10/2026): na pasta do relatório, dentro dos uploads, com um nome sorteado. */
 export const NOME_DA_FOTO = /^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/;
 const EXTENSOES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
@@ -59,7 +71,7 @@ const MAXIMO_DA_FOTO = 10 * 1024 * 1024;
  */
 async function limparFotos(relatorioId: string) {
   const abas = await getPrismaClient().relatorioExecutivoAba.findMany({ where: { relatorioId }, select: { blocos: true } });
-  const usadas = new Set(abas.flatMap((a) => (a.blocos as BlocoDoRelatorio[]).flatMap((b) => (b.tipo === "FOTO" ? [b.arquivo] : []))));
+  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap((p) => p.blocos.flatMap((b) => (b.tipo === "FOTO" ? [b.arquivo] : [])))));
   const pasta = pastaDasFotos(relatorioId);
   const arquivos = await readdir(pasta).catch(() => [] as string[]);
   const umDia = Date.now() - 24 * 60 * 60 * 1000;
@@ -144,18 +156,18 @@ export const relatoriosExecutivosService = {
       throw new RelatorioExecutivoError(409, `${rotuloMes(dados.ano, dados.mes)} já tem relatório: abra-o na lista.`);
     }
     const origem = dados.importarDe ? await doRelatorio(dados.importarDe) : null;
-    const daOrigem = new Map((origem?.abas ?? []).map((a) => [a.departamento, a.blocos as BlocoDoRelatorio[]]));
+    const daOrigem = new Map((origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos)]));
     const r = await prisma.relatorioExecutivo.create({
       data: {
         ano: dados.ano,
         mes: dados.mes,
         criadoPorId: usuario.id,
         criadoPorNome: usuario.nome,
-        abas: { create: DEPARTAMENTOS.map((departamento) => ({ departamento, blocos: (daOrigem.get(departamento) ?? []) as Prisma.InputJsonValue, atualizadoPor: origem ? usuario.nome : null })) },
+        abas: { create: DEPARTAMENTOS.map((departamento) => ({ departamento, blocos: (daOrigem.get(departamento) ?? paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: origem ? usuario.nome : null })) },
       },
     });
     // As fotos da origem vão para a pasta do relatório novo (a origem pode ser excluída depois).
-    if (origem && [...daOrigem.values()].some((bs) => bs.some((b) => b.tipo === "FOTO"))) {
+    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => p.blocos.some((b) => b.tipo === "FOTO")))) {
       await cp(pastaDasFotos(origem.id), pastaDasFotos(r.id), { recursive: true }).catch(() => undefined);
     }
     await auditar({
@@ -169,7 +181,7 @@ export const relatoriosExecutivosService = {
     return { id: r.id, rotuloMes: rotuloMes(r.ano, r.mes) };
   },
 
-  /** O relatório, com as abas: a situação de cada uma, os blocos das que o usuário vê e o que ele pode fazer em cada. */
+  /** O relatório, com as abas: a situação de cada uma, as páginas (com os blocos) das que o usuário vê e o que ele pode fazer em cada. */
   async obter(id: string, usuario: UsuarioDoRelatorio) {
     const r = await doRelatorio(id);
     const abas = DEPARTAMENTOS.flatMap((d) => {
@@ -182,7 +194,7 @@ export const relatoriosExecutivosService = {
           nome: ROTULO_DEPARTAMENTO[d],
           situacao: a.situacao,
           visivel: ve,
-          blocos: ve ? (a.blocos as BlocoDoRelatorio[]) : [],
+          paginas: ve ? paginasDe(a.blocos) : [],
           podeEditar: editaAba(usuario, d) && a.situacao === "EM_ELABORACAO",
           podeReabrir: a.situacao === "FINALIZADO" && (editaAba(usuario, d) || usuario.admin),
           atualizadoPor: a.atualizadoPor,
@@ -213,12 +225,12 @@ export const relatoriosExecutivosService = {
     return { painel, indicadores };
   },
 
-  /** Grava os blocos de uma aba (de quem a edita, em elaboração). */
-  async gravarAba(id: string, departamento: DepartamentoAcesso, blocos: BlocoDoRelatorio[], usuario: UsuarioDoRelatorio) {
+  /** Grava as páginas de uma aba, com os blocos de cada uma (de quem a edita, em elaboração). */
+  async gravarAba(id: string, departamento: DepartamentoAcesso, paginas: PaginaDoRelatorio[], usuario: UsuarioDoRelatorio) {
     await abaEditavel(id, departamento, usuario);
     await getPrismaClient().relatorioExecutivoAba.update({
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
-      data: { blocos: blocos as Prisma.InputJsonValue, atualizadoPor: usuario.nome },
+      data: { blocos: (paginas.length ? paginas : paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: usuario.nome },
     });
     await limparFotos(id);
     return this.obter(id, usuario);

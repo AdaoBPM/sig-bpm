@@ -38,7 +38,26 @@ function tamanhoMinimo(b: Bloco) {
   if (b.tipo === "PAINEL") return b.comGrafico ? { minW: 10, minH: 6 } : { minW: 5, minH: 6 };
   if (b.tipo === "INDICADOR") return { minW: 3, minH: 4 };
   if (b.tipo === "FOTO") return { minW: 2, minH: 2 };
-  return { minW: 3, minH: 4 };
+  // A anotação baixa a ponto de mostrar uma linha só do texto (16/10/2026).
+  return { minW: 3, minH: 2 };
+}
+
+/**
+ * A grade no fundo, ao mover ou redimensionar (16/10/2026): as células das colunas e das linhas, bem claras, desenhadas
+ * por uma máscara (o SVG de uma célula, repetido) sobre o cinza do tema.
+ */
+function GradeDeFundo({ largura }: { largura: number }) {
+  const coluna = (largura - MARGEM * (COLUNAS - 1) - MARGEM * 2) / COLUNAS;
+  const celula = `<svg xmlns="http://www.w3.org/2000/svg" width="${coluna + MARGEM}" height="${ALTURA_DA_LINHA + MARGEM}"><rect width="${coluna}" height="${ALTURA_DA_LINHA}" rx="2"/></svg>`;
+  const mascara = `url("data:image/svg+xml,${encodeURIComponent(celula)}")`;
+  const tamanho = `${coluna + MARGEM}px ${ALTURA_DA_LINHA + MARGEM}px`;
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 bg-gray-200/60"
+      style={{ maskImage: mascara, WebkitMaskImage: mascara, maskSize: tamanho, WebkitMaskSize: tamanho, maskPosition: `${MARGEM}px ${MARGEM}px`, WebkitMaskPosition: `${MARGEM}px ${MARGEM}px` }}
+    />
+  );
 }
 
 /** O card do Painel sem o gráfico fica com 2/5 da largura (as duas colunas dos valores, do mesmo tamanho); com ele, 5/2. */
@@ -65,11 +84,11 @@ export const NOTAS: Record<Nota, { rotulo: string; Icone: typeof ThumbsUp; class
   POSITIVO: {
     rotulo: "Positivo",
     Icone: ThumbsUp,
-    classe: (c) => (c === "daltonismo" ? "border-l-blue-600 bg-blue-50" : "border-l-green-600 bg-green-50"),
+    classe: (c) => (c === "daltonismo" ? "border-l-blue-600" : "border-l-green-600"),
     icone: (c) => (c === "daltonismo" ? "text-blue-700" : "text-green-700"),
   },
-  NEGATIVO: { rotulo: "Negativo", Icone: ThumbsDown, classe: () => "border-l-red-600 bg-red-50", icone: () => "text-red-700" },
-  ATENCAO: { rotulo: "Atenção", Icone: CircleAlert, classe: () => "border-l-yellow-500 bg-yellow-50", icone: () => "text-yellow-700" },
+  NEGATIVO: { rotulo: "Negativo", Icone: ThumbsDown, classe: () => "border-l-red-600", icone: () => "text-red-700" },
+  ATENCAO: { rotulo: "Atenção", Icone: CircleAlert, classe: () => "border-l-yellow-500", icone: () => "text-yellow-700" },
 };
 
 /**
@@ -97,6 +116,10 @@ export function GradeDoRelatorio({
 }) {
   const [configurando, setConfigurando] = useState<string | null>(null);
   const caixa = useRef<HTMLDivElement>(null);
+  // A largura da grade enquanto um bloco se move ou se redimensiona (para a grade de fundo); fora disso, null.
+  const [ajustando, setAjustando] = useState<number | null>(null);
+  const comecar = () => setAjustando(caixa.current?.offsetWidth ?? null);
+  const terminar = () => setAjustando(null);
   const layout: Layout[] = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, ...tamanhoMinimo(b) }));
   // A foto se redimensiona pela largura: a altura acompanha, na proporção dela.
   const aoRedimensionar = (_l: Layout[], _antes: Layout, novo: Layout, sombra: Layout) => {
@@ -115,7 +138,9 @@ export function GradeDoRelatorio({
   };
   const doCard = blocos.find((b) => b.id === configurando);
   return (
-    <div ref={caixa} className="-mx-3">
+    // Ao ajustar, a área cresce até boa parte da tela, para a grade de fundo ir além dos blocos; a sombra do bloco, em cinza.
+    <div ref={caixa} className={`relative -mx-3 [&_.react-grid-placeholder]:!bg-gray-400 ${ajustando ? "min-h-[70vh]" : ""}`}>
+      {ajustando ? <GradeDeFundo largura={ajustando} /> : null}
       <Grade
         layout={layout}
         cols={COLUNAS}
@@ -127,6 +152,10 @@ export function GradeDoRelatorio({
         compactType="vertical"
         onLayoutChange={aoMudarLeiaute}
         onResize={aoRedimensionar}
+        onDragStart={comecar}
+        onDragStop={terminar}
+        onResizeStart={comecar}
+        onResizeStop={terminar}
       >
         {blocos.map((b) => (
           <div key={b.id} className="group relative">
@@ -265,13 +294,14 @@ function ConteudoDoBloco({
 }) {
   const indisponivel = (o: string) => <div className="flex h-full items-center justify-center rounded-sm border border-dashed border-gray-300 bg-white p-3 text-center text-xs text-gray-500">{o}</div>;
   if (b.tipo === "ANOTACAO") {
-    // O título editável (16/10/2026; de início, o nome da nota) em cima; o destaque da nota só na caixa do texto, encostado nela.
+    // No formato do card do Painel (16/10/2026): o título editável (de início, o nome da nota) no fundo da página, como o
+    // nome do grupo em cima dos cards, e o texto num card branco com o destaque da cor da nota à esquerda.
     const n = NOTAS[b.nota];
     const titulo = b.titulo?.trim() ? b.titulo : n.rotulo;
     return (
-      <article className="flex h-full flex-col gap-1.5 rounded-sm border border-gray-200 bg-white px-3 py-2">
-        <header className={`flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase ${n.icone(cores)}`}>
-          <n.Icone className="size-4 shrink-0" />
+      <div className="flex h-full flex-col">
+        <header className={`flex h-5 shrink-0 items-center gap-1.5 pb-1 text-xs font-bold tracking-wide uppercase ${n.icone(cores)}`}>
+          <n.Icone className="size-3.5 shrink-0" />
           {editavel ? (
             <input
               value={b.titulo ?? n.rotulo}
@@ -279,26 +309,26 @@ function ConteudoDoBloco({
               placeholder={n.rotulo}
               maxLength={120}
               aria-label="Título da anotação"
-              className="min-w-0 flex-1 rounded-sm border border-transparent bg-transparent px-1 py-0.5 font-bold tracking-wide uppercase outline-none placeholder:text-current placeholder:opacity-60 hover:border-gray-200 focus:border-gray-300"
+              className="h-4 min-w-0 flex-1 rounded-sm bg-transparent font-bold tracking-wide uppercase outline-none placeholder:text-current placeholder:opacity-60 hover:bg-gray-100 focus:bg-gray-100"
             />
           ) : (
             <span className="min-w-0 truncate">{titulo}</span>
           )}
         </header>
-        <div className={`flex min-h-0 flex-1 border-l-4 ${n.classe(cores)}`}>
+        <article className={`flex min-h-0 flex-1 rounded-sm border border-l-4 border-gray-200 bg-white ${n.classe(cores)}`}>
           {editavel ? (
             <textarea
               value={b.texto}
               onChange={(e) => onMudar({ texto: e.target.value } as Partial<Bloco>)}
               placeholder="Escreva a anotação…"
               aria-label={`Anotação (${titulo})`}
-              className="min-h-0 w-full flex-1 resize-none border border-transparent bg-transparent px-2 py-1 text-sm text-gray-900 outline-none focus:border-gray-300"
+              className="min-h-0 w-full flex-1 resize-none bg-transparent px-4 py-2 text-sm text-gray-900 outline-none"
             />
           ) : (
-            <p className="min-h-0 flex-1 overflow-auto px-2 py-1 text-sm whitespace-pre-wrap text-gray-900">{b.texto}</p>
+            <p className="min-h-0 flex-1 overflow-auto px-4 py-2 text-sm whitespace-pre-wrap text-gray-900">{b.texto}</p>
           )}
-        </div>
-      </article>
+        </article>
+      </div>
     );
   }
   if (b.tipo === "FOTO") {

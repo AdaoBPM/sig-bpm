@@ -54,10 +54,13 @@ export type Bloco = Posicao &
   );
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
+/** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
+export type Pagina = { id: string; blocos: Bloco[] };
 export type AbaDoRelatorio = AbaResumida & {
   /** Em elaboração, só quem a edita (e o Administrador) a vê. */
   visivel: boolean;
-  blocos: Bloco[];
+  /** As páginas (vazio, na aba que o usuário não vê). */
+  paginas: Pagina[];
   podeEditar: boolean;
   podeReabrir: boolean;
   atualizadoPor: string | null;
@@ -85,7 +88,7 @@ export const relatoriosExecutivosService = {
   criar: async (ano: number, mes: number, importarDe: string | null) => (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe })).data.data,
   obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
   dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
-  gravarAba: async (id: string, aba: string, blocos: Bloco[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { blocos })).data.data,
+  gravarAba: async (id: string, aba: string, paginas: Pagina[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas })).data.data,
   finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
   reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
   enviarFoto: async (id: string, foto: Blob) =>

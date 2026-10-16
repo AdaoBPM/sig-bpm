@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Minimize2 } from "lucide-react";
 
+import { BpmLogo } from "@/components/layout/BpmLogo";
+
 import type { Cores } from "@/app/relatorios/painel/PainelContent";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
@@ -17,8 +19,8 @@ export function entrarEmTelaInteira() {
 }
 
 /**
- * A apresentação do relatório (16/10/2026): em tela inteira (a função do navegador), sem o menu lateral, uma aba por
- * slide, só para leitura. Os botões de recuar e avançar ficam na base esquerda; as setas do teclado também mudam o slide,
+ * A apresentação do relatório (16/10/2026): em tela inteira (a função do navegador), sem o menu lateral, uma página
+ * por slide, só para leitura. Os botões de recuar e avançar ficam na base esquerda; as setas do teclado também mudam o slide,
  * e Esc (ou o botão Sair) encerra.
  */
 export function ApresentacaoDoRelatorio({
@@ -70,9 +72,11 @@ export function ApresentacaoDoRelatorio({
   return (
     <div role="dialog" aria-modal aria-label={`Apresentação: ${titulo}`} className="fixed inset-0 z-[60] overflow-auto bg-background">
       <div className="px-8 pt-6 pb-20">
-        <header className="mb-4 flex items-baseline gap-3 border-b border-gray-200 pb-3">
+        {/* A logo da BPM no canto de cima, à direita (16/10/2026), na altura do título. */}
+        <header className="mb-4 flex items-center gap-3 border-b border-gray-200 pb-3">
           <h1 className="text-2xl font-bold tracking-wide text-gray-900 uppercase">{slide?.nome}</h1>
           <span className="text-lg font-semibold text-gray-500">{titulo}</span>
+          <BpmLogo className="ml-auto h-8 w-auto" />
         </header>
         {slide ? <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} dados={dados} editavel={false} cores={cores} tipo={tipo} onMudar={() => undefined} /> : null}
       </div>
