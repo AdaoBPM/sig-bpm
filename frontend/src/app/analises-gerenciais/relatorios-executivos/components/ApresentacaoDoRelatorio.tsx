@@ -11,7 +11,8 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 import { GradeDoRelatorio, linhasDaPagina } from "./GradeDoRelatorio";
 import type { Bloco, DadosDoRelatorio } from "../services/relatoriosExecutivosService";
 
-export type Slide = { chave: string; nome: string; blocos: Bloco[] };
+/** Um slide: o departamento (`nome`), o nome da página (`pagina`) e os blocos. */
+export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[] };
 
 /** Entra na tela inteira do navegador (a página toda; a apresentação a cobre, sem o menu lateral). */
 export function entrarEmTelaInteira() {
@@ -86,11 +87,15 @@ export function ApresentacaoDoRelatorio({
     <div role="dialog" aria-modal aria-label={`Apresentação: ${titulo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background" onMouseMove={mostrarBotoes}>
       {/* O topo e as margens do slide: os de linhasDaPagina, para a página caber inteira na tela. */}
       <div className="px-8 pt-6 pb-6">
-        {/* O relatório em preto e o departamento em cinza (16/10/2026), com a logo da BPM à direita, na altura do título. */}
+        {/*
+          À esquerda, o departamento em preto e o nome do slide (o da página) em cinza; à direita, o relatório logo antes da
+          logo da BPM (16/10/2026). A logo, de 30 px, fica centrada na altura da barra, sem mudar a altura dela.
+        */}
         <header className="mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
-          <h1 className="text-lg font-bold text-gray-900">{titulo}</h1>
-          <span className="text-lg font-semibold text-gray-500">- {slide?.nome}</span>
-          <BpmLogo className="ml-auto h-6 w-auto" />
+          <h1 className="text-lg font-bold text-gray-900">{slide?.nome}</h1>
+          <span className="min-w-0 truncate text-lg font-semibold text-gray-500">- {slide?.pagina}</span>
+          <span className="ml-auto shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{titulo}</span>
+          <BpmLogo className="h-[30px] w-auto shrink-0" />
         </header>
         {slide ? (
           <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} onMudar={() => undefined} />

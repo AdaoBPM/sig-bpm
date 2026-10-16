@@ -70,7 +70,7 @@ export const relatoriosExecutivosController = {
     const d = r ? aba(request, response) : null;
     if (!r || !d) return;
     // As páginas da aba (16/10/2026), cada uma com os blocos dela.
-    const corpo = z.object({ paginas: z.array(z.object({ id: z.string().min(1).max(40), blocos: z.array(bloco).max(200) })).min(1).max(30) }).safeParse(request.body);
+    const corpo = z.object({ paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200) })).min(1).max(30) }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Páginas ou blocos inválidos." });
     return responder(response, () => s.gravarAba(r, d, corpo.data.paginas, usuario(request)));
   },

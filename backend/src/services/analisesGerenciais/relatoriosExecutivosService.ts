@@ -50,7 +50,8 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
  * As páginas de uma aba (16/10/2026): cada departamento tem uma ou mais páginas, cada uma com a sua grade de blocos. Ficam
  * na coluna `blocos` da aba; a lista antiga (só os blocos, de antes das páginas) vira uma página.
  */
-export type PaginaDoRelatorio = { id: string; blocos: BlocoDoRelatorio[] };
+/** O nome da página (16/10/2026), o do slide na apresentação; sem ele, "Página N". */
+export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[] };
 export function paginasDe(json: unknown): PaginaDoRelatorio[] {
   const lista = Array.isArray(json) ? json : [];
   if (!lista.length) return [{ id: "p1", blocos: [] }];

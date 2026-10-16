@@ -55,7 +55,7 @@ export type Bloco = Posicao &
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
-export type Pagina = { id: string; blocos: Bloco[] };
+export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[] };
 export type AbaDoRelatorio = AbaResumida & {
   /** Em elaboração, só quem a edita (e o Administrador) a vê. */
   visivel: boolean;

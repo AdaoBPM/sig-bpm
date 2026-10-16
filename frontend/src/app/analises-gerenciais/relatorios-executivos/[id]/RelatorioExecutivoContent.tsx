@@ -3,10 +3,9 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FilePlus2, FileX2, ImagePlus, LayoutGrid, LockOpen, Plus, Presentation, Save, StickyNote, Trash2 } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FilePlus2, FileX2, ImagePlus, LayoutGrid, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -48,6 +47,9 @@ async function prepararFoto(arquivo: File): Promise<{ foto: Blob; proporcao: num
   const foto = await new Promise<Blob>((ok, erro) => tela.toBlob((b) => (b ? ok(b) : erro(new Error("Não foi possível preparar a foto."))), "image/jpeg", 0.85));
   return { foto, proporcao: imagem.width / imagem.height };
 }
+
+/** O nome da página: o escolhido ou, sem ele, "Página N". */
+const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 1}`;
 
 /** A aba (departamento) e a página abertas. */
 type Aberta = { chave: string; pagina: string | null };
@@ -94,6 +96,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const [adicionando, setAdicionando] = useState(false);
   const [apresentando, setApresentando] = useState<number | null>(null);
   const [confirmar, setConfirmar] = useState<"finalizar" | "excluir" | "excluirPagina" | null>(null);
+  // A página com o nome em edição (16/10/2026), na própria aba dela.
+  const [renomeando, setRenomeando] = useState<string | null>(null);
   const seletorDeFoto = useRef<HTMLInputElement>(null);
   const area = useRef<HTMLDivElement>(null);
   const chave = aberta.chave;
@@ -155,7 +159,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   // Os slides da apresentação: as páginas com algum bloco das abas que o usuário vê (o que está na tela, gravado ou não).
   const slides = relatorio.abas.flatMap((a) => {
     const ps = a.visivel ? (paginas[a.chave] ?? []) : [];
-    return ps.flatMap((p) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: a.nome, blocos: p.blocos }] : []));
+    return ps.flatMap((p, k) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: a.nome, pagina: nomeDaPagina(p, k), blocos: p.blocos }] : []));
   });
   const apresentar = () => {
     entrarEmTelaInteira();
@@ -278,8 +282,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a finalizou e quando).
             </li>
             <li>
-              Cada aba tem uma ou mais páginas, logo abaixo do título. Os botões ao lado delas incluem uma página nova (depois da aberta), excluem a página
-              aberta (com blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de um departamento para o outro.
+              Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
+              dois cliques nele (ou o lápis) o editam. Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
+              blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de um departamento para o outro.
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
@@ -303,9 +308,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
             </li>
             <li>
-              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o relatório e o
-              departamento no topo e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base: recuar, avançar e sair (as setas do teclado
-              também mudam o slide; Esc encerra).
+              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o departamento e o
+              nome do slide (o da página) à esquerda do topo e o relatório e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
+              recuar, avançar e sair (as setas do teclado também mudam o slide; Esc encerra).
             </li>
             <li>
               “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar Aba” grava a aba e a torna pública, só para
@@ -321,20 +326,61 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           </p>
         }
       />
-      {/* As páginas da aba (16/10/2026) e, na altura delas, os botões só com ícones: incluir, excluir, recuar e avançar. */}
+      {/*
+        As páginas da aba (16/10/2026), no formato das abas das telas, com o nome de cada uma (o do slide; na sua aba, dois
+        cliques ou o lápis o editam) e, na altura delas, os botões só com ícones: renomear, incluir, excluir, recuar e avançar.
+      */}
       {aba?.visivel ? (
         <div className="flex items-end">
-          <div className="min-w-0 flex-1">
-            <Abas
-              rotulo={`Páginas de ${aba.nome}`}
-              ativa={pagina?.id ?? ""}
-              onMudar={(p) => setAberta({ chave, pagina: p })}
-              abas={daAba.map((p, k) => ({ chave: p.id, rotulo: `Página ${k + 1}` }))}
-            />
+          <div role="tablist" aria-label={`Páginas de ${aba.nome}`} className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
+            {daAba.map((p, k) => {
+              const atual = p.id === pagina?.id;
+              const classe = `-mb-px inline-flex shrink-0 items-center border-b-2 px-3 py-2 text-sm whitespace-nowrap ${atual ? "border-black font-bold text-gray-900" : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900"}`;
+              return renomeando === p.id ? (
+                <input
+                  key={p.id}
+                  autoFocus
+                  defaultValue={p.nome ?? ""}
+                  placeholder={`Página ${k + 1}`}
+                  maxLength={60}
+                  aria-label="Nome da página"
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => {
+                    const nome = e.target.value.trim();
+                    mudarPaginas(daAba.map((x) => (x.id === p.id ? { ...x, nome: nome || undefined } : x)));
+                    setRenomeando(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    if (e.key === "Escape") {
+                      e.currentTarget.value = p.nome ?? "";
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className={`${classe} w-48 rounded-t-sm bg-white outline-none`}
+                />
+              ) : (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={atual}
+                  onClick={() => setAberta({ chave, pagina: p.id })}
+                  onDoubleClick={() => (editavel ? setRenomeando(p.id) : undefined)}
+                  title={editavel ? "Dois cliques para mudar o nome (o do slide)" : undefined}
+                  className={classe}
+                >
+                  {nomeDaPagina(p, k)}
+                </button>
+              );
+            })}
           </div>
           <div className="flex shrink-0 items-center gap-0.5 border-b border-gray-200 pb-0.5 pl-2">
             {editavel ? (
               <>
+                <button type="button" className={botaoIcone} disabled={!pagina} onClick={() => pagina && setRenomeando(pagina.id)} title="Mudar o nome da página (o do slide)" aria-label="Mudar o nome da página">
+                  <Pencil className="size-4" />
+                </button>
                 <button type="button" className={botaoIcone} onClick={novaPagina} title="Nova página (depois da aberta)" aria-label="Nova página">
                   <FilePlus2 className="size-4" />
                 </button>
@@ -407,9 +453,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(null) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Excluir a Página {nPagina + 1}</DialogTitle>
+              <DialogTitle>Excluir a Página {pagina ? nomeDaPagina(pagina, nPagina) : ""}</DialogTitle>
               <DialogDescription>
-                A página {nPagina + 1} da aba {aba?.nome} sai com os blocos dela. A exclusão vale ao gravar (antes disso, sair sem gravar a desfaz).
+                A página {pagina ? nomeDaPagina(pagina, nPagina) : ""} da aba {aba?.nome} sai com os blocos dela. A exclusão vale ao gravar (antes disso, sair sem gravar a desfaz).
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
