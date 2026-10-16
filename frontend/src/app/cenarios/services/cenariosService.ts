@@ -107,6 +107,8 @@ export type RateiosDoCenario = {
 /** Um investimento do cenário analítico (13/10/2026), com a depreciação mensal e o ROI (%) calculados. */
 export type InvestimentoDoCenario = {
   id: string;
+  /** O Nome de Referência (15/10/2026): digitado, único no cenário; identifica o investimento na planilha das premissas. */
+  nomeReferencia: string;
   unidade: 1 | 2 | 3 | 4;
   conta: string;
   descricao: string;
@@ -119,7 +121,7 @@ export type InvestimentoDoCenario = {
   depreciacaoMensal: number;
   roi: number | null;
 };
-export type DadosDoInvestimento = Pick<InvestimentoDoCenario, "unidade" | "descricao" | "ganhoPrevisto" | "receitaBrutaPrevista" | "inicio" | "valorTotal" | "valorPosUso" | "vidaUtil">;
+export type DadosDoInvestimento = Pick<InvestimentoDoCenario, "nomeReferencia" | "unidade" | "descricao" | "ganhoPrevisto" | "receitaBrutaPrevista" | "inicio" | "valorTotal" | "valorPosUso" | "vidaUtil">;
 export type InvestimentosDoCenario = {
   ano: number;
   meses: Array<{ mes: number; rotulo: string }>;
@@ -262,7 +264,7 @@ export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelator
 
 /** A análise de uma planilha do Importar Valores (15/10/2026): o padrão, as abas e as mudanças (os meses e as justificativas). */
 /** Um investimento lido da aba Investimentos da planilha (15/10/2026). */
-export type InvestimentoDaPlanilha = DadosDoInvestimento & { numero: number; codigo: string | null };
+export type InvestimentoDaPlanilha = DadosDoInvestimento & { numero: number };
 export type AnaliseDePremissas = {
   arquivo: string;
   valido: boolean;
@@ -309,8 +311,8 @@ export const cenariosService = {
           alteracoes: alteracoes.map(({ chave, mes, valor }) => ({ chave, mes, valor })),
           justificativas: justificativas.map(({ chave, texto }) => ({ chave, texto })),
           investimentos: {
-            novos: investimentos.novos.map(({ numero: _n, codigo: _c, ...i }) => i),
-            alterados: investimentos.alterados.map(({ numero: _n, codigo: _c, ...i }) => i),
+            novos: investimentos.novos.map(({ numero: _n, ...i }) => i),
+            alterados: investimentos.alterados.map(({ numero: _n, ...i }) => i),
           },
         })),
       })

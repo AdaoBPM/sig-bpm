@@ -98,7 +98,7 @@ export function PremissasContent() {
               {podeEditar
                 ? " Clique em “Novo Investimento” para incluir um, ou numa linha da lista para editá-lo ou excluí-lo; para excluir vários, marque as caixas da lista (a do rótulo marca todos) e clique em “Excluir Selecionados”."
                 : null} Cada investimento
-              tem a unidade (a conta é a de depreciação dela), a descrição, o ganho previsto, a receita bruta prevista, o mês de início, o valor total, o
+              tem o Nome de Referência (único no cenário; identifica o investimento na planilha), a unidade (a conta é a de depreciação dela), a descrição, o ganho previsto, a receita bruta prevista, o mês de início, o valor total, o
               valor pós uso e a vida útil em meses; a lista mostra a depreciação mensal e o ROI.
             </li>
             <li>
@@ -142,8 +142,8 @@ export function PremissasContent() {
               “Importar Valores” abre a lista dos arquivos: escolha planilhas do Exportar Premissas (ou o ZIP) ou uma pasta com elas. Cada arquivo é
               conferido no padrão (a coluna Código, a Média de Referência, os doze meses e a Justificativa) e mostra quantos valores, justificativas e
               investimentos mudam. Quando um trecho (uma unidade, um centro de custo, a depreciação de uma unidade…) aparece em mais de um arquivo, o
-              quadro dos repetidos pede, em cada um, Ignorar (vale o primeiro arquivo) ou Sobrescrever (vale o último). Na aba Investimentos, os com
-              Código são atualizados e os sem Código entram na sequência dos que já existem. “Importar” grava os meses (em branco apaga), as
+              quadro dos repetidos pede, em cada um, Ignorar (vale o primeiro arquivo) ou Sobrescrever (vale o último). Na aba Investimentos, os com o
+              Nome de Referência de um investimento do cenário são atualizados e os de nome novo entram na sequência dos que já existem. “Importar” grava os meses (em branco apaga), as
               justificativas e os investimentos, recalcula a DRE e registra no histórico (tela Reajustes).
             </li>
             <li>

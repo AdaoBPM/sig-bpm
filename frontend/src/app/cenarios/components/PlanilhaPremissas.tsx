@@ -289,8 +289,8 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
           <DialogDescription>
             Escolha os arquivos (ou uma pasta) gerados pelo Exportar Premissas: planilhas .xlsx ou o .zip de um arquivo por centro. Cada arquivo é
             conferido assim que entra na lista; os valores mensais, as justificativas e os investimentos se gravam só em “Importar” (em branco, o mês
-            fica sem valor). A Média e o Total da Referência, a Variação Máxima e Justificar? não se importam. Na aba Investimentos, os com Código são
-            atualizados e os sem Código entram na sequência dos que já existem.
+            fica sem valor). A Média e o Total da Referência, a Variação Máxima e Justificar? não se importam. Na aba Investimentos, os com o Nome de
+            Referência de um investimento do cenário são atualizados e os de nome novo entram na sequência dos que já existem.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-center gap-2">

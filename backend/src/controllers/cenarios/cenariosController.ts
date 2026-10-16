@@ -194,6 +194,7 @@ export const cenariosController = {
     if (request.method === "DELETE") return responder(response, () => cenariosService.gravarInvestimento(c, investimentoId!.data!, null, usuario(request)));
     const corpo = z
       .object({
+        nomeReferencia: z.string().trim().min(1, "Dê um Nome de Referência ao investimento.").max(80),
         unidade: z.number().int().min(1).max(4),
         descricao: z.string().trim().min(1, "Descreva o investimento.").max(200),
         ganhoPrevisto: z.string().trim().max(500).nullish().transform((x) => x || null),
@@ -335,6 +336,7 @@ export const cenariosController = {
     const c = id(request, response);
     if (!c) return;
     const investimento = z.object({
+      nomeReferencia: z.string().trim().min(1).max(80),
       unidade: z.number().int().min(1).max(4),
       descricao: z.string().trim().min(1).max(200),
       ganhoPrevisto: z.string().max(500).nullable(),

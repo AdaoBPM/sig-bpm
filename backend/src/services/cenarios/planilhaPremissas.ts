@@ -14,7 +14,7 @@ import { CONTAS_DEPRECIACAO, depreciacaoMensal, roi } from "./investimentosCenar
  * máxima em relação ao Total da Referência) e a Justificativa (texto livre). O Importar Valores lê os meses e a
  * Justificativa das linhas pela coluna Código; as colunas da referência e Justificar? não se importam. A aba
  * Investimentos (15/10/2026) traz a lista dos investimentos, com as listas suspensas da Unidade e da Conta e as fórmulas
- * da Depreciação Mensal e do ROI; importada, atualiza os investimentos pelo Código e inclui os sem Código.
+ * da Depreciação Mensal e do ROI; importada, atualiza os investimentos pelo Nome de Referência e inclui os de nome novo.
  */
 
 export type AbaDasPremissas = "1" | "2" | "3" | "centros" | "investimentos" | "extra" | "manuais";
@@ -232,11 +232,11 @@ export const ABA_CONSOLIDADO = "Consolidado";
 
 /** Uma linha lida de um arquivo: a chave, os doze meses (null: em branco) e a justificativa. */
 export type LinhaLida = { aba: string; numero: number; chave: string; meses: Array<number | null>; justificativa: string | null };
-/** Um investimento lido da aba Investimentos: o Código (null, um novo) e os campos, já validados. */
+/** Um investimento lido da aba Investimentos: o Nome de Referência (o do investimento a atualizar, ou o de um novo) e os campos, já validados. */
 export type InvestimentoLido = {
   aba: string;
   numero: number;
-  codigo: string | null;
+  nomeReferencia: string;
   unidade: number;
   descricao: string;
   ganhoPrevisto: string | null;
@@ -264,8 +264,10 @@ function numeroDa(v: ValorCelula): number | null | undefined {
 /** O nome da aba da lista dos investimentos (15/10/2026). */
 export const ABA_INVESTIMENTOS = "Investimentos";
 /** As colunas da aba Investimentos (a partir de A). */
+/** A primeira coluna da aba Investimentos (15/10/2026; antes, o Código). */
+const COLUNA_NOME_REFERENCIA = "Nome de Referência";
 const COLUNAS_INVESTIMENTOS: Array<[string, number]> = [
-  [COLUNA_CODIGO, 38],
+  [COLUNA_NOME_REFERENCIA, 30],
   ["Unidade", 18],
   ["Conta", 36],
   ["Descrição", 40],
@@ -281,13 +283,13 @@ const COLUNAS_INVESTIMENTOS: Array<[string, number]> = [
 /** As linhas em branco, com as fórmulas e as listas, para incluir investimentos novos na planilha. */
 const LINHAS_NOVAS = 30;
 
-export type InvestimentoDaPlanilha = Omit<InvestimentoLido, "aba" | "numero" | "codigo"> & { id: string };
+export type InvestimentoDaPlanilha = Omit<InvestimentoLido, "aba" | "numero"> & { id: string };
 
 /**
- * A aba Investimentos (15/10/2026): os investimentos das unidades escolhidas, com o Código (o id; não se altera), a
- * Unidade e a Conta em listas suspensas, os campos do investimento e, em fórmulas, a Depreciação Mensal ((valor total −
- * valor pós uso) ÷ vida útil) e o ROI ((receita bruta prevista − valor total) ÷ valor total). Abaixo, linhas em branco
- * para os investimentos novos (sem Código).
+ * A aba Investimentos (15/10/2026): os investimentos das unidades escolhidas, com o Nome de Referência (que identifica o
+ * investimento na importação), a Unidade e a Conta em listas suspensas, os campos do investimento e, em fórmulas, a
+ * Depreciação Mensal ((valor total − valor pós uso) ÷ vida útil) e o ROI ((receita bruta prevista − valor total) ÷ valor
+ * total). Abaixo, linhas em branco para os investimentos novos.
  */
 export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], identificacao: string): AbaEscrita {
   const cab = (valor: string, direita = false): Celula => ({ valor, estilo: direita ? ESTILO.cabecalhoDireita : ESTILO.cabecalho });
@@ -303,7 +305,7 @@ export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], iden
     [
       {
         valor:
-          "Altere os investimentos ou inclua novos nas linhas em branco (sem Código) e importe o arquivo em Premissas / Importar Valores: com Código, o investimento é atualizado; sem Código, é incluído. A Depreciação Mensal e o ROI são fórmulas e não se importam.",
+          "Altere os investimentos ou inclua novos nas linhas em branco e importe o arquivo em Premissas / Importar Valores: com o Nome de Referência de um investimento do cenário, ele é atualizado; com um nome novo, é incluído (o nome não se repete no cenário). A Depreciação Mensal e o ROI são fórmulas e não se importam.",
         estilo: ESTILO.informacao,
       },
     ],
@@ -314,7 +316,7 @@ export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], iden
     const r = PRIMEIRA_LINHA + k;
     const f = formulas(r);
     linhas.push([
-      { valor: i.id },
+      { valor: i.nomeReferencia },
       { valor: nomeDaUnidade(i.unidade) },
       { valor: rotuloDaConta(i.unidade) },
       { valor: i.descricao },
@@ -364,13 +366,24 @@ function lerInvestimentos(nome: string, linhas: Array<{ numero: number; celulas:
     r.erros.push(`A aba ${nome} não tem as colunas do padrão (${COLUNAS_INVESTIMENTOS.slice(0, 10).map(([c]) => `“${c}”`).join(", ")}).`);
     return;
   }
-  const [iCodigo, iUnidade, iConta, iDescricao, iGanho, iReceita, iInicio, iTotal, iPosUso, iVida] = iCampos;
+  const [iNome, iUnidade, iConta, iDescricao, iGanho, iReceita, iInicio, iTotal, iPosUso, iVida] = iCampos;
   const texto = (v: ValorCelula | undefined) => (v === null || v === undefined ? "" : String(v).trim());
+  const nomes = new Set<string>();
   r.abas.push(nome);
   for (const l of linhas.slice(i + 1)) {
     const c = l.celulas;
-    if (iCampos.slice(1).every((k) => texto(c[k]) === "")) continue;
+    if (iCampos.every((k) => texto(c[k]) === "")) continue;
     const erro = (m: string) => r.erros.push(`${nome}, linha ${l.numero}: ${m}`);
+    const nomeReferencia = texto(c[iNome]).slice(0, 80);
+    if (!nomeReferencia) {
+      erro("dê um Nome de Referência ao investimento.");
+      continue;
+    }
+    if (nomes.has(nomeReferencia.toLocaleLowerCase("pt-BR"))) {
+      erro(`o Nome de Referência “${nomeReferencia}” se repete na aba.`);
+      continue;
+    }
+    nomes.add(nomeReferencia.toLocaleLowerCase("pt-BR"));
     const unidade = CONTAS_DEPRECIACAO.find((x) => x.nomeUnidade.toLocaleLowerCase("pt-BR") === texto(c[iUnidade]).toLocaleLowerCase("pt-BR"));
     if (!unidade) {
       erro(`a Unidade “${texto(c[iUnidade])}” não é uma das da lista (${CONTAS_DEPRECIACAO.map((x) => x.nomeUnidade).join(", ")}).`);
@@ -420,7 +433,7 @@ function lerInvestimentos(nome: string, linhas: Array<{ numero: number; celulas:
     r.investimentos.push({
       aba: nome,
       numero: l.numero,
-      codigo: texto(c[iCodigo]) || null,
+      nomeReferencia,
       unidade: unidade.unidade,
       descricao,
       ganhoPrevisto: texto(c[iGanho]).slice(0, 500) || null,
@@ -446,14 +459,14 @@ function lerXlsx(arquivo: string, buffer: Uint8Array): ArquivoLido {
   for (const nome of abas) {
     if (nome === ABA_CONSOLIDADO) continue;
     const { linhas } = lerAba(buffer, () => nome);
-    const i = linhas.findIndex((l) => String(l.celulas[0] ?? "").trim() === COLUNA_CODIGO);
+    const i = linhas.findIndex((l) => [COLUNA_CODIGO, COLUNA_NOME_REFERENCIA].includes(String(l.celulas[0] ?? "").trim()));
     if (i < 0) {
       r.avisos.push(`A aba ${nome} não está no padrão do Exportar Premissas (sem a coluna “${COLUNA_CODIGO}”) e foi ignorada.`);
       continue;
     }
     const rotulos = linhas[i].celulas.map((c) => String(c ?? "").trim());
-    // A aba Investimentos (15/10/2026): pela coluna da vida útil.
-    if (rotulos.includes("Vida Útil (meses)")) {
+    // A aba Investimentos (15/10/2026): pelo Nome de Referência na primeira coluna.
+    if (rotulos[0] === COLUNA_NOME_REFERENCIA) {
       lerInvestimentos(nome, linhas, i, r);
       continue;
     }

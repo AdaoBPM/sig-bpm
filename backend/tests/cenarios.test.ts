@@ -145,22 +145,26 @@ describe("comparativo entre cenários", () => {
     ]);
     assert.match(lerArquivoDePremissas("x.xlsx", gerarXlsx([{ nome: "Outra", larguras: [10], linhas: [[{ valor: "a" }]] }]))[0].erros[0], /não está no padrão/);
   });
-  it("a aba Investimentos (15/10/2026): a lista volta igual; a linha nova sem Código; a conta tem de ser a da unidade", () => {
-    const inv = { id: "abc", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 };
+  it("a aba Investimentos (15/10/2026): a lista volta igual; o Nome de Referência obrigatório e sem repetir; a conta tem de ser a da unidade", () => {
+    const inv = { id: "abc", nomeReferencia: "Notebooks 2026", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 };
     const aba = abaDeInvestimentos([inv], "teste");
-    // A linha nova (a primeira em branco) e uma com a conta de outra unidade.
-    aba.linhas[6] = [{ valor: null }, { valor: "Matriz" }, { valor: null }, { valor: "Ponte rolante" }, { valor: null }, { valor: null }, { valor: 5 }, { valor: 80000 }, { valor: null }, { valor: 120 }];
-    aba.linhas[7] = [{ valor: null }, { valor: "Serviços" }, { valor: "Depreciação do Patrimônio" }, { valor: "Caminhão" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 300000 }, { valor: 0 }, { valor: 60 }];
+    // A linha nova (a primeira em branco), uma com a conta de outra unidade, uma sem nome e uma com o nome repetido.
+    aba.linhas[6] = [{ valor: "Ponte 2026" }, { valor: "Matriz" }, { valor: null }, { valor: "Ponte rolante" }, { valor: null }, { valor: null }, { valor: 5 }, { valor: 80000 }, { valor: null }, { valor: 120 }];
+    aba.linhas[7] = [{ valor: "Caminhão" }, { valor: "Serviços" }, { valor: "Depreciação do Patrimônio" }, { valor: "Caminhão" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 300000 }, { valor: 0 }, { valor: 60 }];
+    aba.linhas[8] = [{ valor: null }, { valor: "Matriz" }, { valor: null }, { valor: "Sem nome" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 10 }, { valor: 0 }, { valor: 6 }];
+    aba.linhas[9] = [{ valor: "notebooks 2026" }, { valor: "Matriz" }, { valor: null }, { valor: "Repetido" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 10 }, { valor: 0 }, { valor: 6 }];
     const [lido] = lerArquivoDePremissas("i.xlsx", gerarXlsx([aba]));
     assert.deepEqual(
       lido.investimentos.map(({ aba: _a, numero: _n, ...i }) => i),
       [
-        { codigo: "abc", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 },
-        { codigo: null, unidade: 1, descricao: "Ponte rolante", ganhoPrevisto: null, receitaBrutaPrevista: null, inicio: 5, valorTotal: 80000, valorPosUso: 0, vidaUtil: 120 },
+        { nomeReferencia: "Notebooks 2026", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 },
+        { nomeReferencia: "Ponte 2026", unidade: 1, descricao: "Ponte rolante", ganhoPrevisto: null, receitaBrutaPrevista: null, inicio: 5, valorTotal: 80000, valorPosUso: 0, vidaUtil: 120 },
       ],
     );
-    assert.equal(lido.erros.length, 1);
+    assert.equal(lido.erros.length, 3);
     assert.match(lido.erros[0], /Conta de Serviços é a Depreciação do Maquinário de Serviços/);
+    assert.match(lido.erros[1], /dê um Nome de Referência/);
+    assert.match(lido.erros[2], /se repete na aba/);
     // As fórmulas da Depreciação Mensal e do ROI, com o valor calculado.
     assert.equal(aba.linhas[5][10].valor, 416.67);
     assert.equal(aba.linhas[5][11].valor, 0.25);

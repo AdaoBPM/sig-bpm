@@ -50,7 +50,7 @@ function ExcluirInvestimentosDialog({ id, investimentos, onFechar }: { id: strin
         <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
           {investimentos.map((i) => (
             <li key={i.id}>
-              {i.descricao} <span className="text-gray-500">· {NOME_DA_UNIDADE[i.unidade]} · {reais(i.valorTotal)}</span>
+              {i.nomeReferencia} <span className="text-gray-500">· {i.descricao} · {NOME_DA_UNIDADE[i.unidade]} · {reais(i.valorTotal)}</span>
             </li>
           ))}
         </ul>
@@ -73,7 +73,8 @@ function ExcluirInvestimentosDialog({ id, investimentos, onFechar }: { id: strin
  * A aba Investimentos das premissas de um cenário analítico (13/10/2026): em cima, a Depreciação Base de cada unidade
  * mês a mês (digitada, com a replicação e o reajuste das premissas), com a depreciação dos investimentos e a total; embaixo,
  * a lista dos investimentos (Novo Investimento; clicar numa linha edita ou exclui), com a depreciação mensal e o ROI. As
- * caixas da lista (15/10/2026) marcam os investimentos, e "Excluir Selecionados" exclui os marcados de uma vez.
+ * caixas da lista (15/10/2026) marcam os investimentos, e "Excluir Selecionados" exclui os marcados de uma vez. Cada
+ * investimento tem o Nome de Referência, único no cenário, que o identifica na planilha das premissas.
  */
 export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "investimentos"], queryFn: () => cenariosService.investimentos(id) });
@@ -157,8 +158,8 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
                     />
                   </th>
                 ) : null}
-                {["Unidade", "Conta", "Descrição", "Ganho Previsto", "Receita Bruta Prevista", "Início", "Valor Total", "Valor Pós Uso", "Vida Útil", "Depreciação Mensal", "ROI"].map((c, k) => (
-                  <th key={c} className={`px-3 py-2 text-xs font-bold ${k >= 4 ? "text-right" : "text-left"}`}>
+                {["Nome de Referência", "Unidade", "Conta", "Descrição", "Ganho Previsto", "Receita Bruta Prevista", "Início", "Valor Total", "Valor Pós Uso", "Vida Útil", "Depreciação Mensal", "ROI"].map((c, k) => (
+                  <th key={c} className={`px-3 py-2 text-xs font-bold ${k >= 5 ? "text-right" : "text-left"}`}>
                     {c}
                   </th>
                 ))}
@@ -167,7 +168,7 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
             <tbody>
               {dados.investimentos.length === 0 ? (
                 <tr>
-                  <td colSpan={pode ? 12 : 11} className="px-3 py-6 text-center text-gray-500">
+                  <td colSpan={pode ? 13 : 12} className="px-3 py-6 text-center text-gray-500">
                     Nenhum investimento no cenário.
                   </td>
                 </tr>
@@ -182,12 +183,13 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
                     {pode ? (
                       // A caixa marca sem abrir a edição (o clique na linha abre).
                       <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
-                        <input type="checkbox" aria-label={`Marcar ${i.descricao}`} className="accent-black" checked={marcados.has(i.id)} onChange={(e) => marcar([i.id], e.target.checked)} />
+                        <input type="checkbox" aria-label={`Marcar ${i.nomeReferencia}`} className="accent-black" checked={marcados.has(i.id)} onChange={(e) => marcar([i.id], e.target.checked)} />
                       </td>
                     ) : null}
+                    <td className="px-3 py-1.5 font-medium whitespace-nowrap text-gray-900">{i.nomeReferencia}</td>
                     <td className="px-3 py-1.5 whitespace-nowrap">{NOME_DA_UNIDADE[i.unidade]}</td>
                     <td className="px-3 py-1.5 whitespace-nowrap">{dados.contas.find((c) => c.unidade === i.unidade)?.rotulo}</td>
-                    <td className="px-3 py-1.5 font-medium text-gray-900">{i.descricao}</td>
+                    <td className="px-3 py-1.5 text-gray-900">{i.descricao}</td>
                     <td className="px-3 py-1.5 text-gray-600">{i.ganhoPrevisto ?? "—"}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{reais(i.receitaBrutaPrevista)}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{MESES[i.inicio - 1]}</td>
@@ -221,6 +223,7 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
 /** O formulário de um investimento (novo ou existente, com Excluir), com a depreciação mensal e o ROI calculados enquanto se digita. */
 function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string; dados: Dados; investimento: InvestimentoDoCenario | null; onFechar: () => void }) {
   const queryClient = useQueryClient();
+  const [nome, setNome] = useState(investimento?.nomeReferencia ?? "");
   const [unidade, setUnidade] = useState<number>(investimento?.unidade ?? 1);
   const [descricao, setDescricao] = useState(investimento?.descricao ?? "");
   const [ganho, setGanho] = useState(investimento?.ganhoPrevisto ?? "");
@@ -232,13 +235,14 @@ function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string;
   const [excluir, setExcluir] = useState(false);
   const n = { receita: lerNumero(receita), total: lerNumero(total), posUso: lerNumero(posUso), vida: lerNumero(vida) };
   const valido =
-    !!descricao.trim() && typeof n.total === "number" && n.total > 0 && (n.posUso === null || (typeof n.posUso === "number" && n.posUso >= 0)) && typeof n.vida === "number" && n.vida >= 1 && Number.isInteger(n.vida) && n.receita !== undefined;
+    !!nome.trim() && !!descricao.trim() && typeof n.total === "number" && n.total > 0 && (n.posUso === null || (typeof n.posUso === "number" && n.posUso >= 0)) && typeof n.vida === "number" && n.vida >= 1 && Number.isInteger(n.vida) && n.receita !== undefined;
   const mensal = typeof n.total === "number" && typeof n.vida === "number" && n.vida > 0 ? (n.total - (n.posUso ?? 0)) / n.vida : null;
   const roi = typeof n.total === "number" && n.total > 0 && typeof n.receita === "number" ? ((n.receita - n.total) / n.total) * 100 : null;
   const gravar = useMutation({
     mutationFn: (apagar: boolean) => {
       if (apagar) return cenariosService.excluirInvestimento(id, investimento!.id);
       const d: DadosDoInvestimento = {
+        nomeReferencia: nome.trim(),
         unidade: unidade as 1 | 2 | 3 | 4,
         descricao: descricao.trim(),
         ganhoPrevisto: ganho.trim() || null,
@@ -278,6 +282,8 @@ function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string;
           <DialogDescription>A depreciação do investimento entra na conta da unidade, mês a mês, a partir do Início e pela Vida Útil, somada à depreciação base.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* O Nome de Referência (15/10/2026): único no cenário; a planilha das premissas reconhece o investimento por ele. */}
+          <div className="sm:col-span-2">{campo("Nome de Referência", "inv-nome", nome, setNome, { placeholder: "Ex.: Ponte Rolante 2027" })}</div>
           <div className="space-y-1.5">
             <Label htmlFor="inv-unidade">Unidade</Label>
             <select id="inv-unidade" value={unidade} onChange={(e) => setUnidade(Number(e.target.value))} className={classeSelect}>

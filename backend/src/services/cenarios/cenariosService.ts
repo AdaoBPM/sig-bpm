@@ -447,7 +447,9 @@ async function linhasDaPlanilha(c: { id: string; variacoesMaximas: unknown }): P
 
 type MudancaDaPlanilha = { chave: string; mes: number; valor: number | null };
 /** Os campos de um investimento importado da planilha (15/10/2026). */
-type DadosDoInvestimento = Omit<InvestimentoLido, "aba" | "numero" | "codigo">;
+type DadosDoInvestimento = Omit<InvestimentoLido, "aba" | "numero">;
+/** O Nome de Referência para comparar: sem espaços nas pontas e sem diferença de maiúsculas. */
+const chaveDoNome = (nome: string) => nome.trim().toLocaleLowerCase("pt-BR");
 
 /**
  * Grava mudanças das linhas da planilha (15/10/2026: o Replicar Médias, o Apagar Valores e o Importar Valores): cada
@@ -1863,7 +1865,7 @@ export const cenariosService = {
   async gravarInvestimento(
     id: string,
     investimentoId: string | null,
-    dados: { unidade: number; descricao: string; ganhoPrevisto: string | null; receitaBrutaPrevista: number | null; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number } | null,
+    dados: { nomeReferencia: string; unidade: number; descricao: string; ganhoPrevisto: string | null; receitaBrutaPrevista: number | null; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number } | null,
     usuario: Usuario,
   ) {
     const c = await obterOuFalhar(id, usuario);
@@ -1875,12 +1877,18 @@ export const cenariosService = {
     if (dados) {
       if (!contaDeDepreciacao(dados.unidade)) throw new CenarioError(400, "Unidade inválida.");
       if (dados.valorPosUso > dados.valorTotal) throw new CenarioError(400, "O valor pós uso não pode passar do valor total.");
+      // O Nome de Referência não se repete no cenário (15/10/2026).
+      const mesmoNome = (await prisma.cenarioInvestimento.findMany({ where: { cenarioId: id }, select: { id: true, nomeReferencia: true } })).find(
+        (i) => i.id !== atual?.id && chaveDoNome(i.nomeReferencia) === chaveDoNome(dados.nomeReferencia),
+      );
+      if (mesmoNome) throw new CenarioError(400, `Já há um investimento com o Nome de Referência “${mesmoNome.nomeReferencia}” no cenário.`);
     }
     await prisma.$transaction(
       async (tx) => {
         if (!dados) await tx.cenarioInvestimento.delete({ where: { id: investimentoId! } });
         else {
           const valores = {
+            nomeReferencia: dados.nomeReferencia,
             unidade: dados.unidade,
             conta: contaDeDepreciacao(dados.unidade)!.conta,
             descricao: dados.descricao,
@@ -2128,7 +2136,8 @@ export const cenariosService = {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
     const porChave = new Map((await linhasDaPlanilha(c)).map((l) => [l.chave, l]));
-    const existentes = new Map((await getPrismaClient().cenarioInvestimento.findMany({ where: { cenarioId: id } })).map((i) => [i.id, i]));
+    // Os investimentos do cenário pelo Nome de Referência (sem diferença de maiúsculas).
+    const existentes = new Map((await getPrismaClient().cenarioInvestimento.findMany({ where: { cenarioId: id } })).map((i) => [chaveDoNome(i.nomeReferencia), i]));
     return lerArquivoDePremissas(arquivo, conteudo).map((r) => {
       const alteracoes = new Map<string, MudancaDaPlanilha & { bloco: string }>();
       const justificativas = new Map<string, { chave: string; texto: string | null; bloco: string }>();
@@ -2154,14 +2163,12 @@ export const cenariosService = {
         if ((l.justificativa ?? null) !== (atual.justificativa ?? null)) justificativas.set(l.chave, { chave: l.chave, texto: l.justificativa, bloco });
         else justificativas.delete(l.chave);
       }
-      // Os investimentos (15/10/2026): com o Código de um investimento do cenário, a alteração dele (se mudou); sem
-      // Código, ou com o de outro cenário, um novo.
+      // Os investimentos (15/10/2026): com o Nome de Referência de um investimento do cenário, a alteração dele (se mudou);
+      // com um nome novo, um novo.
       const novos: InvestimentoLido[] = [];
       const alterados: Array<InvestimentoLido & { id: string }> = [];
-      const deOutroCenario: string[] = [];
       for (const i of r.investimentos) {
-        const atual = i.codigo ? existentes.get(i.codigo) : undefined;
-        if (i.codigo && !atual) deOutroCenario.push(`linha ${i.numero}`);
+        const atual = existentes.get(chaveDoNome(i.nomeReferencia));
         if (!atual) novos.push(i);
         else if (
           atual.unidade !== i.unidade ||
@@ -2177,7 +2184,6 @@ export const cenariosService = {
       }
       if (r.investimentos.length) abasDasLinhas.add("investimentos");
       const avisos = [...r.avisos];
-      if (deOutroCenario.length) avisos.push(`Investimentos com Código de outro cenário entram como novos (${deOutroCenario.slice(0, 5).join("; ")}${deOutroCenario.length > 5 ? "…" : ""}).`);
       if (desconhecidas.length) {
         avisos.push(
           `${desconhecidas.length} ${desconhecidas.length === 1 ? "linha com um Código que este cenário não tem foi ignorada" : "linhas com Códigos que este cenário não tem foram ignoradas"} (${desconhecidas.slice(0, 5).join("; ")}${desconhecidas.length > 5 ? "…" : ""}).`,
@@ -2203,8 +2209,8 @@ export const cenariosService = {
   /**
    * O Importar Valores, passo 2 (15/10/2026; o usuário confirmou): grava os meses (em branco apaga) e as justificativas
    * das planilhas válidas, na ordem (a última vale; os trechos repetidos entre os arquivos o usuário resolve antes, na
-   * tela: ignorar ou sobrescrever), e os investimentos — os alterados pelo Código e os novos na sequência dos que já
-   * existem —, recalcula a DRE e registra no histórico (tela Reajustes).
+   * tela: ignorar ou sobrescrever), e os investimentos — os alterados pelo Nome de Referência e os novos na sequência dos
+   * que já existem —, recalcula a DRE e registra no histórico (tela Reajustes).
    */
   async importarPremissas(
     id: string,
@@ -2232,8 +2238,19 @@ export const cenariosService = {
         justificativas.set(j.chave, j.texto);
       }
     }
-    const novos = arquivos.flatMap((a) => a.investimentos?.novos ?? []);
+    // Os novos pelo Nome de Referência (o mesmo nome em dois arquivos: vale o último); o que já existe no cenário vira
+    // alteração dele.
+    const doCenario = new Map((await getPrismaClient().cenarioInvestimento.findMany({ where: { cenarioId: id } })).map((i) => [chaveDoNome(i.nomeReferencia), i.id]));
+    const porNome = new Map(arquivos.flatMap((a) => a.investimentos?.novos ?? []).map((i) => [chaveDoNome(i.nomeReferencia), i]));
     const alterados = new Map(arquivos.flatMap((a) => a.investimentos?.alterados ?? []).map((i) => [i.id, i]));
+    for (const [nome, i] of porNome) {
+      const existente = doCenario.get(nome);
+      if (existente) {
+        alterados.set(existente, { ...i, id: existente });
+        porNome.delete(nome);
+      }
+    }
+    const novos = [...porNome.values()];
     for (const i of [...novos, ...alterados.values()]) {
       if (!contaDeDepreciacao(i.unidade)) throw new CenarioError(400, `Unidade inválida no investimento ${i.descricao}.`);
       if (i.valorPosUso > i.valorTotal) throw new CenarioError(400, `No investimento ${i.descricao}, o valor pós uso passa do valor total.`);
@@ -2243,10 +2260,11 @@ export const cenariosService = {
     const prisma = getPrismaClient();
     const est = await estruturaDRE();
     if (alterados.size) {
-      const doCenario = await prisma.cenarioInvestimento.count({ where: { cenarioId: id, id: { in: [...alterados.keys()] } } });
-      if (doCenario !== alterados.size) throw new CenarioError(400, "Um investimento da planilha não é deste cenário: analise os arquivos de novo.");
+      const contados = await prisma.cenarioInvestimento.count({ where: { cenarioId: id, id: { in: [...alterados.keys()] } } });
+      if (contados !== alterados.size) throw new CenarioError(400, "Um investimento da planilha não é deste cenário: analise os arquivos de novo.");
     }
     const camposDoInvestimento = (i: DadosDoInvestimento) => ({
+      nomeReferencia: i.nomeReferencia,
       unidade: i.unidade,
       conta: contaDeDepreciacao(i.unidade)!.conta,
       descricao: i.descricao,

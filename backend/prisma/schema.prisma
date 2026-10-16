@@ -2091,6 +2091,8 @@ model CenarioInvestimento {
   unidade              Int
   /// A conta de depreciação (o código da linha da DRE): a do maquinário de produção, de serviços ou do patrimônio.
   conta                String
+  /// O Nome de Referência (15/10/2026): digitado, único no cenário; a planilha das premissas reconhece o investimento por ele.
+  nomeReferencia       String   @default("") @map("nome_referencia")
   descricao            String
   ganhoPrevisto        String?  @map("ganho_previsto")
   receitaBrutaPrevista Decimal? @map("receita_bruta_prevista")
@@ -2106,6 +2108,7 @@ model CenarioInvestimento {
 
   cenario Cenario @relation(fields: [cenarioId], references: [id], onDelete: Cascade)
 
+  @@unique([cenarioId, nomeReferencia])
   @@index([cenarioId])
   @@map("cenarios_investimentos")
 }
