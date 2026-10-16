@@ -261,16 +261,32 @@ export type IndicadorDoCenario = Indicador & { classe: ClasseIndicador; digitado
 export type IndicadoresDoCenario = { ano: number; ate: number; meses: MesRelatorio[]; indicadores: IndicadorDoCenario[]; comparado?: { nome: string; ano: number } | null };
 
 /** A análise de uma planilha do Importar Valores (15/10/2026): o padrão, as abas e as mudanças (os meses e as justificativas). */
+/** Um investimento lido da aba Investimentos da planilha (15/10/2026). */
+export type InvestimentoDaPlanilha = DadosDoInvestimento & { numero: number; codigo: string | null };
 export type AnaliseDePremissas = {
   arquivo: string;
   valido: boolean;
   erros: string[];
   avisos: string[];
   abas: string[];
+  /** Os trechos do arquivo (a unidade, cada centro, a depreciação base de uma unidade…), para conferir os repetidos (15/10/2026). */
+  blocos: string[];
   linhas: number;
-  alteracoes: Array<{ chave: string; mes: number; valor: number | null }>;
-  justificativas: Array<{ chave: string; texto: string | null }>;
+  alteracoes: Array<{ chave: string; mes: number; valor: number | null; bloco: string }>;
+  justificativas: Array<{ chave: string; texto: string | null; bloco: string }>;
+  investimentos: { novos: InvestimentoDaPlanilha[]; alterados: Array<InvestimentoDaPlanilha & { id: string }> };
 };
+/** Os departamentos do Exportar Premissas (15/10/2026). */
+export const DEPARTAMENTOS_DAS_PREMISSAS = [
+  { chave: "PRODUCAO", nome: "Produção", detalhe: "Matriz, Filial, os centros de custo de produção e a depreciação e os investimentos da Matriz e da Filial" },
+  { chave: "SERVICOS", nome: "Serviços", detalhe: "Serviços, os centros de custo de serviços e a depreciação e os investimentos de Serviços" },
+  { chave: "LOGISTICA", nome: "Logística", detalhe: "os centros de custo de logística" },
+  { chave: "TECNICO", nome: "Técnico", detalhe: "os centros de custo técnicos" },
+  { chave: "COMERCIAL", nome: "Comercial", detalhe: "os centros de custo comerciais" },
+  { chave: "ADMINISTRATIVO", nome: "Administrativo", detalhe: "os centros de custo administrativos" },
+  { chave: "EXTRA", nome: "Extra-Operacional", detalhe: "a aba Extra-Operacional" },
+] as const;
+export type DepartamentoDasPremissas = (typeof DEPARTAMENTOS_DAS_PREMISSAS)[number]["chave"];
 
 export const cenariosService = {
   /** Replicar Médias / Apagar Valores (15/10/2026), em todas as abas das premissas. */
@@ -285,12 +301,23 @@ export const cenariosService = {
       })
     ).data.data,
   /** O Importar Valores, passo 2: grava as mudanças das planilhas válidas. */
-  importarPremissas: async (id: string, arquivos: AnaliseDePremissas[]) =>
+  importarPremissas: async (id: string, arquivos: Array<Pick<AnaliseDePremissas, "arquivo" | "alteracoes" | "justificativas" | "investimentos">>) =>
     (
-      await api.post<{ data: { valores: number; justificativas: number } }>(`/proxy/cenarios/${id}/premissas/importar`, {
-        arquivos: arquivos.map(({ arquivo, alteracoes, justificativas }) => ({ arquivo, alteracoes, justificativas })),
+      await api.post<{ data: { valores: number; justificativas: number; investimentosNovos: number; investimentosAlterados: number } }>(`/proxy/cenarios/${id}/premissas/importar`, {
+        arquivos: arquivos.map(({ arquivo, alteracoes, justificativas, investimentos }) => ({
+          arquivo,
+          alteracoes: alteracoes.map(({ chave, mes, valor }) => ({ chave, mes, valor })),
+          justificativas: justificativas.map(({ chave, texto }) => ({ chave, texto })),
+          investimentos: {
+            novos: investimentos.novos.map(({ numero: _n, codigo: _c, ...i }) => i),
+            alterados: investimentos.alterados.map(({ numero: _n, codigo: _c, ...i }) => i),
+          },
+        })),
       })
     ).data.data,
+  /** O Exportar Premissas (15/10/2026): o arquivo dos departamentos marcados, no tipo escolhido. */
+  exportarPremissas: async (id: string, escopo: "todas" | "centros_abas" | "centros_arquivos", departamentos: DepartamentoDasPremissas[]) =>
+    api.get<Blob>(`/proxy/cenarios/${id}/premissas/exportar`, { params: { escopo, departamentos: departamentos.join(","), formato: "xlsx" }, responseType: "blob" }),
   centros: async (id: string) => (await api.get<{ data: CentrosDoCenario }>(`/proxy/cenarios/${id}/centros`)).data.data,
   centro: async (id: string, grupo: string) => (await api.get<{ data: ContasDoCentro }>(`/proxy/cenarios/${id}/centros/contas`, { params: { grupo } })).data.data,
   gravarLotacao: async (id: string, grupo: string, alteracoes: Array<{ mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
@@ -301,6 +328,8 @@ export const cenariosService = {
   criarInvestimento: async (id: string, dados: DadosDoInvestimento) => (await api.post<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos`, dados)).data.data,
   alterarInvestimento: async (id: string, investimentoId: string, dados: DadosDoInvestimento) =>
     (await api.put<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos/${investimentoId}`, dados)).data.data,
+  /** O Excluir Selecionados dos investimentos (15/10/2026). */
+  excluirInvestimentos: async (id: string, ids: string[]) => (await api.post<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos/excluir`, { ids })).data.data,
   excluirInvestimento: async (id: string, investimentoId: string) => (await api.delete<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos/${investimentoId}`)).data.data,
   extraOperacional: async (id: string) => (await api.get<{ data: ExtraDoCenario }>(`/proxy/cenarios/${id}/extra-operacional`)).data.data,
   gravarMensais: async (id: string, tipo: "BASE" | "EXTRA", alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>

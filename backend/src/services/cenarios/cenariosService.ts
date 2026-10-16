@@ -15,7 +15,23 @@ import { estrutura as estruturaDRE } from "../dre/dreService.js";
 import { contasDaUnidade, ErroEdicao, gravarValores, linhasDaUnidade, linhasDoConsolidado, recalcular, UNIDADES, type Alteracao } from "./edicaoCenario.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { calcularCenario, type CalculoDoCenario } from "./indicadoresDoCenario.js";
-import { ABA_CONSOLIDADO, abaDaPlanilha, ABAS_DAS_PREMISSAS, lerArquivoDePremissas, NOME_DA_ABA, origensDaAba, type AbaDasPremissas, type LinhaDaPlanilha } from "./planilhaPremissas.js";
+import {
+  ABA_CONSOLIDADO,
+  abaDaPlanilha,
+  abaDeInvestimentos,
+  ABAS_DAS_PREMISSAS,
+  blocoDaChave,
+  DEPARTAMENTOS,
+  departamentosDaLinha,
+  departamentosDaUnidade,
+  lerArquivoDePremissas,
+  NOME_DA_ABA,
+  origensDaAba,
+  type AbaDasPremissas,
+  type Departamento,
+  type InvestimentoLido,
+  type LinhaDaPlanilha,
+} from "./planilhaPremissas.js";
 import { abaConsolidado, type OrigensDasContas } from "./consolidadoDosCentros.js";
 import { gerarXlsx, nomesDasAbas, type AbaEscrita } from "../../lib/xlsxEscrita.js";
 import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
@@ -430,6 +446,8 @@ async function linhasDaPlanilha(c: { id: string; variacoesMaximas: unknown }): P
 }
 
 type MudancaDaPlanilha = { chave: string; mes: number; valor: number | null };
+/** Os campos de um investimento importado da planilha (15/10/2026). */
+type DadosDoInvestimento = Omit<InvestimentoLido, "aba" | "numero" | "codigo">;
 
 /**
  * Grava mudanças das linhas da planilha (15/10/2026: o Replicar Médias, o Apagar Valores e o Importar Valores): cada
@@ -1895,6 +1913,36 @@ export const cenariosService = {
     return this.investimentos(id, usuario);
   },
 
+  /** Exclui vários investimentos de uma vez (15/10/2026: o Excluir Selecionados da aba Investimentos), com um recálculo só. */
+  async excluirInvestimentos(id: string, ids: string[], usuario: Usuario) {
+    const c = await obterOuFalhar(id, usuario);
+    exigirAnalitico(c);
+    exigirEditavel(c);
+    const prisma = getPrismaClient();
+    const lista = await prisma.cenarioInvestimento.findMany({ where: { cenarioId: id, id: { in: ids } } });
+    if (lista.length !== new Set(ids).size) throw new CenarioError(404, "Algum investimento não foi encontrado: atualize a tela.");
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.cenarioInvestimento.deleteMany({ where: { cenarioId: id, id: { in: ids } } });
+        await calcularAnalitico(tx, id);
+      },
+      { timeout: 120_000 },
+    );
+    await prisma.cenarioReajuste.create({
+      data: {
+        cenarioId: id,
+        usuarioId: usuario.id || null,
+        usuarioNome: usuario.nome,
+        tipo: "VALOR",
+        modo: "DIGITADO",
+        contas: lista.map((i) => ({ codigo: i.conta, descricao: i.descricao })),
+        descricao: `Investimentos · ${lista.length === 1 ? "Excluído" : `${lista.length} excluídos`}: ${lista.map((i) => i.descricao).join(", ").slice(0, 400)}`,
+      },
+    });
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "EXCLUSAO", entidade: "cenario_investimento", entidadeId: id, antes: lista, metadados: { cenario: c.nome, excluidos: lista.length } });
+    return this.investimentos(id, usuario);
+  },
+
   /**
    * Os rateios de um cenário analítico (13/10/2026): por chave e destino, a base de cada mês nas premissas (o volume) e
    * o percentual (o destino sobre a chave; zero sem base no mês).
@@ -1978,44 +2026,66 @@ export const cenariosService = {
   },
 
   /**
-   * O Exportar Premissas (15/10/2026), só em Excel: `atual` (a aba da tela), `todas` (uma aba por aba da tela, os
-   * centros de custo numa só), `centros_abas` (todas, um centro por aba) ou `centros_arquivos` (um arquivo por centro,
-   * num ZIP). `abas`: as que o perfil lê. No um centro por aba, a primeira aba é o Consolidado (15/10/2026): a DRE das
-   * contas dos centros, a soma das abas deles em fórmulas.
+   * O Exportar Premissas (15/10/2026), só em Excel, com o que é dos `departamentos` marcados (planilhaPremissas:
+   * `departamentosDaLinha`): `todas` (uma aba por aba da tela, os centros de custo numa só), `centros_abas` (um centro
+   * por aba, com o Consolidado na frente) ou `centros_arquivos` (um arquivo por centro e um com as demais abas, num ZIP).
+   * A aba Investimentos traz a lista dos investimentos das unidades dos departamentos. `abas`: as que o perfil lê.
    */
-  async exportarPremissas(id: string, escopo: "atual" | "todas" | "centros_abas" | "centros_arquivos", aba: AbaDasPremissas | null, abas: AbaDasPremissas[], usuario: Usuario) {
+  async exportarPremissas(id: string, escopo: "todas" | "centros_abas" | "centros_arquivos", departamentos: Departamento[], abas: AbaDasPremissas[], usuario: Usuario) {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
-    const linhas = await linhasDaPlanilha(c);
+    if (!departamentos.length) throw new CenarioError(400, "Marque ao menos um departamento.");
+    const cadastro = await gruposDoCadastro();
+    const grupoDRE = new Map(cadastro.map((g) => [g.grupo, g.grupoDRE]));
+    const dos = (ds: Departamento[]) => ds.some((d) => departamentos.includes(d));
+    const linhas = (await linhasDaPlanilha(c)).filter((l) => abas.includes(l.aba) && dos(departamentosDaLinha(l, grupoDRE)));
+    const investimentos = abas.includes("investimentos")
+      ? (await getPrismaClient().cenarioInvestimento.findMany({ where: { cenarioId: id }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] }))
+          .filter((i) => dos(departamentosDaUnidade(i.unidade)))
+          .map((i) => ({ ...i, valorTotal: Number(i.valorTotal), valorPosUso: Number(i.valorPosUso), receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : Number(i.receitaBrutaPrevista) }))
+      : null;
+    if (!linhas.length && !investimentos) throw new CenarioError(400, "Nada a exportar: o seu perfil não lê as abas desses departamentos.");
     const meses = MESES_1_A_12.map((m) => rotuloMes(c.ano, m));
     const nomeDoCenario = `${/^cen[aá]rio/i.test(c.nome) ? "" : "Cenário "}${c.nome} ${rotuloVersao(c.versao)} (${c.ano})`;
     const geracao = `${nomeDoCenario} · gerado em ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })} por ${usuario.nome}`;
     const daAba = (a: AbaDasPremissas) => linhas.filter((l) => l.aba === a);
     const grupos = [...new Set(daAba("centros").map((l) => l.grupo!))];
-    const departamento = new Map((await gruposDoCadastro()).map((g) => [g.grupo, nomeDoDepartamento(g.departamento)]));
+    const departamento = new Map(cadastro.map((g) => [g.grupo, nomeDoDepartamento(g.departamento)]));
+    const nomesDosDepartamentos = DEPARTAMENTOS.filter((d) => departamentos.includes(d.chave)).map((d) => d.nome);
+    const deQuais = departamentos.length === DEPARTAMENTOS.length ? "todos os departamentos" : nomesDosDepartamentos.join(", ");
     const sufixo = `Premissas - ${c.nome} ${rotuloVersao(c.versao)} ${c.ano}`;
+    // As abas que não são de centros, na ordem da tela, com a lista dos investimentos depois da Depreciação Base.
+    const demais = () =>
+      ABAS_DAS_PREMISSAS.filter((a) => a !== "centros").flatMap((a) => [
+        ...(daAba(a).length ? [abaDaPlanilha(NOME_DA_ABA[a], a, daAba(a), meses, geracao)] : []),
+        ...(a === "investimentos" && investimentos ? [abaDeInvestimentos(investimentos, geracao)] : []),
+      ]);
+    const visoes = [...nomesDosDepartamentos];
     if (escopo === "centros_arquivos") {
-      if (!abas.includes("centros")) throw new CenarioError(403, "Exportar os centros de custo pede a leitura da aba Centros de Custo.");
       const arquivos = grupos.map((g) => ({
         nome: limparNome(`${departamento.get(g) ?? nomeDoDepartamento(null)} - ${g} - ${sufixo}.xlsx`),
         conteudo: gerarXlsx([abaDaPlanilha(g, "centros", daAba("centros").filter((l) => l.grupo === g), meses, geracao)], `${sufixo} - ${g}`),
       }));
-      return { nomeArquivo: limparNome(`${sufixo} - centros de custo (um arquivo por centro).zip`), tipo: TIPO_ZIP, conteudo: zipDeArquivos(arquivos), visoes: grupos };
+      const outras = demais();
+      if (outras.length) arquivos.push({ nome: limparNome(`${sufixo} - demais abas (${deQuais}).xlsx`), conteudo: gerarXlsx(outras, `${sufixo} - demais abas`) });
+      return { nomeArquivo: limparNome(`${sufixo} - ${deQuais} (um arquivo por centro).zip`), tipo: TIPO_ZIP, conteudo: zipDeArquivos(arquivos), visoes };
     }
-    const escolhidas = escopo === "atual" ? (aba && abas.includes(aba) ? [aba] : []) : ABAS_DAS_PREMISSAS.filter((a) => abas.includes(a));
-    if (!escolhidas.length) throw new CenarioError(403, "Sem permissão para ler a aba das premissas pedida.");
-    const umPorAba = escopo === "centros_abas" && escolhidas.includes("centros") && grupos.length > 0;
+    const umPorAba = escopo === "centros_abas" && grupos.length > 0;
     const doCentro = new Map<AbaEscrita, LinhaDaPlanilha[]>();
-    const planilhas = escolhidas.flatMap((a) =>
-      a === "centros" && umPorAba
+    const centros = !daAba("centros").length
+      ? []
+      : umPorAba
         ? grupos.map((g) => {
             const ls = daAba("centros").filter((l) => l.grupo === g);
             const p = abaDaPlanilha(g, "centros", ls, meses, geracao);
             doCentro.set(p, ls);
             return p;
           })
-        : [abaDaPlanilha(NOME_DA_ABA[a], a, daAba(a), meses, geracao)],
-    );
+        : [abaDaPlanilha(NOME_DA_ABA.centros, "centros", daAba("centros"), meses, geracao)];
+    // A ordem da tela: as unidades, os centros e as demais.
+    const outras = demais();
+    const unidades = outras.filter((p) => ["Matriz", "Filial", "Serviços"].includes(p.nome));
+    const planilhas = [...unidades, ...centros, ...outras.filter((p) => !unidades.includes(p))];
     if (umPorAba) {
       // Os nomes finais das abas (o Excel limita e repete nomes), para as fórmulas do Consolidado.
       const nomes = nomesDasAbas([ABA_CONSOLIDADO, ...planilhas.map((p) => p.nome)]);
@@ -2039,14 +2109,15 @@ export const cenariosService = {
         }),
       );
     }
-    const nome = escopo === "atual" ? NOME_DA_ABA[escolhidas[0]] : escopo === "centros_abas" ? "todas as abas (um centro por aba)" : "todas as abas";
+    const nome = `${deQuais}${umPorAba ? " (um centro por aba)" : ""}`;
     return {
       nomeArquivo: limparNome(`${sufixo} - ${nome}.xlsx`),
       tipo: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       conteudo: gerarXlsx(planilhas, `${sufixo} - ${nome}`),
-      visoes: escolhidas.map((a) => NOME_DA_ABA[a]),
+      visoes,
     };
   },
+
 
   /**
    * O Importar Valores, passo 1 (15/10/2026): lê um arquivo (.xlsx do Exportar Premissas, ou o .zip de um arquivo por
@@ -2057,11 +2128,15 @@ export const cenariosService = {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
     const porChave = new Map((await linhasDaPlanilha(c)).map((l) => [l.chave, l]));
+    const existentes = new Map((await getPrismaClient().cenarioInvestimento.findMany({ where: { cenarioId: id } })).map((i) => [i.id, i]));
     return lerArquivoDePremissas(arquivo, conteudo).map((r) => {
-      const alteracoes = new Map<string, MudancaDaPlanilha>();
-      const justificativas = new Map<string, { chave: string; texto: string | null }>();
+      const alteracoes = new Map<string, MudancaDaPlanilha & { bloco: string }>();
+      const justificativas = new Map<string, { chave: string; texto: string | null; bloco: string }>();
       const desconhecidas: string[] = [];
       const abasDasLinhas = new Set<AbaDasPremissas>();
+      // Os trechos do arquivo (15/10/2026): a unidade, o centro, a depreciação base de uma unidade… — para conferir os
+      // repetidos entre os arquivos de uma importação.
+      const blocos = new Set<string>();
       for (const l of r.linhas) {
         const atual = porChave.get(l.chave);
         if (!atual) {
@@ -2069,41 +2144,76 @@ export const cenariosService = {
           continue;
         }
         abasDasLinhas.add(atual.aba);
+        const bloco = blocoDaChave(l.chave, atual.descricao);
+        blocos.add(bloco);
         l.meses.forEach((v, k) => {
           const chave = `${l.chave}|${k + 1}`;
-          if (!iguais(atual.meses[k], v)) alteracoes.set(chave, { chave: l.chave, mes: k + 1, valor: v });
+          if (!iguais(atual.meses[k], v)) alteracoes.set(chave, { chave: l.chave, mes: k + 1, valor: v, bloco });
           else alteracoes.delete(chave);
         });
-        if ((l.justificativa ?? null) !== (atual.justificativa ?? null)) justificativas.set(l.chave, { chave: l.chave, texto: l.justificativa });
+        if ((l.justificativa ?? null) !== (atual.justificativa ?? null)) justificativas.set(l.chave, { chave: l.chave, texto: l.justificativa, bloco });
         else justificativas.delete(l.chave);
       }
+      // Os investimentos (15/10/2026): com o Código de um investimento do cenário, a alteração dele (se mudou); sem
+      // Código, ou com o de outro cenário, um novo.
+      const novos: InvestimentoLido[] = [];
+      const alterados: Array<InvestimentoLido & { id: string }> = [];
+      const deOutroCenario: string[] = [];
+      for (const i of r.investimentos) {
+        const atual = i.codigo ? existentes.get(i.codigo) : undefined;
+        if (i.codigo && !atual) deOutroCenario.push(`linha ${i.numero}`);
+        if (!atual) novos.push(i);
+        else if (
+          atual.unidade !== i.unidade ||
+          atual.descricao !== i.descricao ||
+          (atual.ganhoPrevisto ?? null) !== i.ganhoPrevisto ||
+          !iguais(atual.receitaBrutaPrevista === null ? null : Number(atual.receitaBrutaPrevista), i.receitaBrutaPrevista) ||
+          atual.inicio !== i.inicio ||
+          !iguais(Number(atual.valorTotal), i.valorTotal) ||
+          !iguais(Number(atual.valorPosUso), i.valorPosUso) ||
+          atual.vidaUtil !== i.vidaUtil
+        )
+          alterados.push({ ...i, id: atual.id });
+      }
+      if (r.investimentos.length) abasDasLinhas.add("investimentos");
       const avisos = [...r.avisos];
+      if (deOutroCenario.length) avisos.push(`Investimentos com Código de outro cenário entram como novos (${deOutroCenario.slice(0, 5).join("; ")}${deOutroCenario.length > 5 ? "…" : ""}).`);
       if (desconhecidas.length) {
         avisos.push(
           `${desconhecidas.length} ${desconhecidas.length === 1 ? "linha com um Código que este cenário não tem foi ignorada" : "linhas com Códigos que este cenário não tem foram ignoradas"} (${desconhecidas.slice(0, 5).join("; ")}${desconhecidas.length > 5 ? "…" : ""}).`,
         );
       }
+      const semLinhas = r.linhas.length > 0 && r.linhas.length === desconhecidas.length && !r.investimentos.length;
       return {
         arquivo: r.arquivo,
-        valido: r.erros.length === 0 && r.linhas.length > desconhecidas.length,
-        erros: r.linhas.length && r.linhas.length === desconhecidas.length && !r.erros.length ? ["Nenhuma linha do arquivo é deste cenário (os Códigos não batem)."] : r.erros,
+        valido: r.erros.length === 0 && (r.linhas.length > desconhecidas.length || r.investimentos.length > 0),
+        erros: semLinhas && !r.erros.length ? ["Nenhuma linha do arquivo é deste cenário (os Códigos não batem)."] : r.erros,
         avisos,
         abas: r.abas,
         abasDasPremissas: [...abasDasLinhas],
+        blocos: [...blocos],
         linhas: r.linhas.length - desconhecidas.length,
         alteracoes: [...alteracoes.values()],
         justificativas: [...justificativas.values()],
+        investimentos: { novos, alterados },
       };
     });
   },
 
   /**
    * O Importar Valores, passo 2 (15/10/2026; o usuário confirmou): grava os meses (em branco apaga) e as justificativas
-   * das planilhas válidas, na ordem (a última vale), recalcula a DRE e registra no histórico (tela Reajustes).
+   * das planilhas válidas, na ordem (a última vale; os trechos repetidos entre os arquivos o usuário resolve antes, na
+   * tela: ignorar ou sobrescrever), e os investimentos — os alterados pelo Código e os novos na sequência dos que já
+   * existem —, recalcula a DRE e registra no histórico (tela Reajustes).
    */
   async importarPremissas(
     id: string,
-    arquivos: Array<{ arquivo: string; alteracoes: MudancaDaPlanilha[]; justificativas: Array<{ chave: string; texto: string | null }> }>,
+    arquivos: Array<{
+      arquivo: string;
+      alteracoes: MudancaDaPlanilha[];
+      justificativas: Array<{ chave: string; texto: string | null }>;
+      investimentos?: { novos: DadosDoInvestimento[]; alterados: Array<DadosDoInvestimento & { id: string }> };
+    }>,
     usuario: Usuario,
   ) {
     const c = await obterOuFalhar(id, usuario);
@@ -2122,29 +2232,57 @@ export const cenariosService = {
         justificativas.set(j.chave, j.texto);
       }
     }
-    if (!mudancas.size && !justificativas.size) throw new CenarioError(400, "Nada a importar: os arquivos têm os mesmos valores e justificativas do cenário.");
+    const novos = arquivos.flatMap((a) => a.investimentos?.novos ?? []);
+    const alterados = new Map(arquivos.flatMap((a) => a.investimentos?.alterados ?? []).map((i) => [i.id, i]));
+    for (const i of [...novos, ...alterados.values()]) {
+      if (!contaDeDepreciacao(i.unidade)) throw new CenarioError(400, `Unidade inválida no investimento ${i.descricao}.`);
+      if (i.valorPosUso > i.valorTotal) throw new CenarioError(400, `No investimento ${i.descricao}, o valor pós uso passa do valor total.`);
+    }
+    const nInvestimentos = novos.length + alterados.size;
+    if (!mudancas.size && !justificativas.size && !nInvestimentos) throw new CenarioError(400, "Nada a importar: os arquivos têm os mesmos valores, justificativas e investimentos do cenário.");
     const prisma = getPrismaClient();
     const est = await estruturaDRE();
+    if (alterados.size) {
+      const doCenario = await prisma.cenarioInvestimento.count({ where: { cenarioId: id, id: { in: [...alterados.keys()] } } });
+      if (doCenario !== alterados.size) throw new CenarioError(400, "Um investimento da planilha não é deste cenário: analise os arquivos de novo.");
+    }
+    const camposDoInvestimento = (i: DadosDoInvestimento) => ({
+      unidade: i.unidade,
+      conta: contaDeDepreciacao(i.unidade)!.conta,
+      descricao: i.descricao,
+      ganhoPrevisto: i.ganhoPrevisto,
+      receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : new Prisma.Decimal(i.receitaBrutaPrevista.toFixed(2)),
+      inicio: i.inicio,
+      valorTotal: new Prisma.Decimal(i.valorTotal.toFixed(2)),
+      valorPosUso: new Prisma.Decimal(i.valorPosUso.toFixed(2)),
+      vidaUtil: i.vidaUtil,
+    });
     await prisma.$transaction(
       async (tx) => {
         await aplicarMudancas(tx, id, [...mudancas.values()], est);
+        for (const i of alterados.values()) await tx.cenarioInvestimento.update({ where: { id: i.id }, data: camposDoInvestimento(i) });
+        const ordem = await tx.cenarioInvestimento.count({ where: { cenarioId: id } });
+        for (const [k, i] of novos.entries()) await tx.cenarioInvestimento.create({ data: { ...camposDoInvestimento(i), cenarioId: id, ordem: ordem + k } });
         for (const [chave, texto] of justificativas) {
           if (texto) await tx.cenarioPremissaJustificativa.upsert({ where: { cenarioId_chave: { cenarioId: id, chave } }, create: { cenarioId: id, chave, texto, usuarioNome: usuario.nome }, update: { texto, usuarioNome: usuario.nome } });
           else await tx.cenarioPremissaJustificativa.deleteMany({ where: { cenarioId: id, chave } });
         }
-        if (mudancas.size) await calcularAnalitico(tx, id);
+        if (mudancas.size || nInvestimentos) await calcularAnalitico(tx, id);
       },
       { timeout: 300_000 },
     );
     const meses = [...new Set([...mudancas.values()].map((m) => m.mes))].sort((a, b) => a - b);
     const nomes = arquivos.map((a) => a.arquivo);
-    const descricao = `Valores importados de ${nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}: ${mudancas.size} ${mudancas.size === 1 ? "valor" : "valores"} e ${justificativas.size} ${justificativas.size === 1 ? "justificativa" : "justificativas"}`;
+    const doInvestimento = nInvestimentos
+      ? `, ${novos.length} ${novos.length === 1 ? "investimento novo" : "investimentos novos"} e ${alterados.size} ${alterados.size === 1 ? "alterado" : "alterados"}`
+      : "";
+    const descricao = `Valores importados de ${nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}: ${mudancas.size} ${mudancas.size === 1 ? "valor" : "valores"} e ${justificativas.size} ${justificativas.size === 1 ? "justificativa" : "justificativas"}${doInvestimento}`;
     const contas = [...new Set([...mudancas.values()].map((m) => m.chave))].slice(0, 200).map((k) => ({ codigo: k, descricao: porChave.get(k)!.descricao.filter(Boolean).join(" · ") }));
     await prisma.cenarioReajuste.create({
       data: { cenarioId: id, usuarioId: usuario.id || null, usuarioNome: usuario.nome, tipo: "IMPORTACAO", descricao, valores: mudancas.size, meses, contas },
     });
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, premissas: "importar valores", arquivos: nomes, valores: mudancas.size, justificativas: justificativas.size } });
-    return { valores: mudancas.size, justificativas: justificativas.size };
+    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "IMPORTACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, premissas: "importar valores", arquivos: nomes, valores: mudancas.size, justificativas: justificativas.size, investimentosNovos: novos.length, investimentosAlterados: alterados.size } });
+    return { valores: mudancas.size, justificativas: justificativas.size, investimentosNovos: novos.length, investimentosAlterados: alterados.size };
   },
 
   /**

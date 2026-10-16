@@ -70,7 +70,7 @@ export function PremissasContent() {
               {cenario.data && !travado && editaTodas ? <BotaoReplicarMedias id={id} /> : null}
               {cenario.data && !travado && editaTodas ? <BotaoApagarValores id={id} /> : null}
               {cenario.data && !travado && editaAlguma ? <BotaoImportarValores id={id} /> : null}
-              <ExportarPremissas id={id} aba={aba} />
+              <ExportarPremissas id={id} />
             </div>
           ) : null
         }
@@ -95,7 +95,9 @@ export function PremissasContent() {
             <li>
               Na aba Investimentos, em cima, a Depreciação Base de cada unidade mês a mês (digitada: o maquinário de produção na Matriz e na Filial, o de
               serviços em Serviços e o patrimônio em Despesas e Extra), com a depreciação dos investimentos e a total; embaixo, a lista dos investimentos.
-              {podeEditar ? " Clique em “Novo Investimento” para incluir um, ou numa linha da lista para editá-lo ou excluí-lo." : null} Cada investimento
+              {podeEditar
+                ? " Clique em “Novo Investimento” para incluir um, ou numa linha da lista para editá-lo ou excluí-lo; para excluir vários, marque as caixas da lista (a do rótulo marca todos) e clique em “Excluir Selecionados”."
+                : null} Cada investimento
               tem a unidade (a conta é a de depreciação dela), a descrição, o ganho previsto, a receita bruta prevista, o mês de início, o valor total, o
               valor pós uso e a vida útil em meses; a lista mostra a depreciação mensal e o ROI.
             </li>
@@ -123,17 +125,26 @@ export function PremissasContent() {
               Cada um abre o seu modal, que confirma antes de gravar; os dois pedem editar todas as abas.
             </li>
             <li>
-              “Exportar Premissas” baixa em Excel a aba atual ou todas (os centros de custo numa aba, um por aba ou um arquivo por centro, num ZIP):
-              o Código da linha, a descrição, a unidade, a Média de Referência, os doze meses, Justificar? (Sim quando algum mês passa da variação
-              máxima da conta, em Configurações / Comparativo, em relação à Média de Referência) e a Justificativa, em texto livre. No um centro de
-              custo por aba, a primeira aba, Consolidado, traz a DRE das contas dos centros: cada conta somada em todas as abas dos centros (em
-              fórmulas, que acompanham os valores das abas), para conferir com a DRE do cenário; o total bate, e a parte dos rateios que vai para
-              Serviços está, na DRE, nas contas da CSM ou da CSC.
+              “Exportar Premissas” abre o modal: marque os departamentos e escolha o tipo (Todas as Abas, com os centros de custo numa aba; Um Centro
+              de Custo por Aba; ou Um Arquivo por Centro de Custo, num ZIP com um arquivo também para as demais abas). O arquivo leva só o que é dos
+              departamentos: Produção, a Matriz, a Filial, os centros de produção e a depreciação e os investimentos delas; Serviços, a aba Serviços, os
+              centros de serviços e a depreciação e os investimentos de Serviços; Logística, Técnico, Comercial e Administrativo, os centros do
+              departamento; Extra-Operacional, a aba Extra-Operacional — esses cinco com a depreciação e os investimentos de Despesas e Extra. Os
+              indicadores manuais vão pelo grupo deles (o GME com o Comercial). Cada linha traz o Código, a descrição, a unidade, a Média de
+              Referência, o Total da Referência (a média × 12), a Variação Máxima da conta (Configurações / Comparativo), os doze meses, Justificar?
+              (uma fórmula: Sim quando o total dos doze meses passa da Variação Máxima em relação ao Total da Referência) e a Justificativa, em texto
+              livre. A aba Investimentos traz a lista, com a Unidade e a Conta em listas suspensas e a Depreciação Mensal e o ROI em fórmulas, e
+              linhas em branco para os novos. No um centro de custo por aba, a primeira aba, Consolidado, traz a DRE das contas dos centros: cada
+              conta somada em todas as abas dos centros (em fórmulas, que acompanham os valores das abas), para conferir com a DRE do cenário; o
+              total bate, e a parte dos rateios que vai para Serviços está, na DRE, nas contas da CSM ou da CSC.
             </li>
             <li>
               “Importar Valores” abre a lista dos arquivos: escolha planilhas do Exportar Premissas (ou o ZIP) ou uma pasta com elas. Cada arquivo é
-              conferido no padrão (a coluna Código, a Média de Referência, os doze meses e a Justificativa) e mostra quantos valores e justificativas
-              mudam; “Importar” grava os meses (em branco apaga) e as justificativas, recalcula a DRE e registra no histórico (tela Reajustes).
+              conferido no padrão (a coluna Código, a Média de Referência, os doze meses e a Justificativa) e mostra quantos valores, justificativas e
+              investimentos mudam. Quando um trecho (uma unidade, um centro de custo, a depreciação de uma unidade…) aparece em mais de um arquivo, o
+              quadro dos repetidos pede, em cada um, Ignorar (vale o primeiro arquivo) ou Sobrescrever (vale o último). Na aba Investimentos, os com
+              Código são atualizados e os sem Código entram na sequência dos que já existem. “Importar” grava os meses (em branco apaga), as
+              justificativas e os investimentos, recalcula a DRE e registra no histórico (tela Reajustes).
             </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), a

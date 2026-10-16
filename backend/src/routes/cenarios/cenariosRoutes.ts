@@ -76,6 +76,7 @@ cenariosRoutes.put("/:id/centros/lotacao", autenticacao, tela("premissas", "edit
 cenariosRoutes.get("/:id/rateios", autenticacao, verificarPermissaoDoCenario("ler", "premissas"), asyncHandler(c.rateios));
 // Os investimentos e o extra-operacional dos cenários analíticos (13/10/2026).
 cenariosRoutes.get("/:id/investimentos", autenticacao, tela("premissas", "ler", "investimentos"), asyncHandler(c.investimentos));
+cenariosRoutes.post("/:id/investimentos/excluir", autenticacao, tela("premissas", "editar", "investimentos"), express.json(), asyncHandler(c.excluirInvestimentos));
 cenariosRoutes.post("/:id/investimentos", autenticacao, tela("premissas", "editar", "investimentos"), express.json(), asyncHandler(c.gravarInvestimento));
 cenariosRoutes.put("/:id/investimentos/:investimentoId", autenticacao, tela("premissas", "editar", "investimentos"), express.json(), asyncHandler(c.gravarInvestimento));
 cenariosRoutes.delete("/:id/investimentos/:investimentoId", autenticacao, tela("premissas", "editar", "investimentos"), asyncHandler(c.gravarInvestimento));

@@ -24,18 +24,78 @@ const reais = (v: number | null) => (v === null ? "—" : v.toLocaleString("pt-B
 const paraCampo = (v: number | null | undefined) => (v === null || v === undefined ? "" : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 }));
 const NOME_DA_UNIDADE: Record<number, string> = { 1: "Matriz", 2: "Filial", 3: "Serviços", 4: "Despesas e Extra" };
 
+/** A confirmação do Excluir Selecionados (15/10/2026): a lista dos marcados e a soma do valor total; recalcula a DRE. */
+function ExcluirInvestimentosDialog({ id, investimentos, onFechar }: { id: string; investimentos: InvestimentoDoCenario[]; onFechar: (excluiu: boolean) => void }) {
+  const queryClient = useQueryClient();
+  const excluir = useMutation({
+    mutationFn: () => cenariosService.excluirInvestimentos(id, investimentos.map((i) => i.id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cenarios"] });
+      queryClient.invalidateQueries({ queryKey: ["relatorios"] });
+      toast.success(`${investimentos.length} ${plural(investimentos.length, "investimento excluído", "investimentos excluídos")}; a DRE do cenário foi recalculada.`);
+      onFechar(true);
+    },
+  });
+  const total = investimentos.reduce((s, i) => s + i.valorTotal, 0);
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar(false) : undefined)}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Excluir Investimentos Selecionados</DialogTitle>
+          <DialogDescription>
+            {investimentos.length} {plural(investimentos.length, "investimento", "investimentos")}, com o valor total de {reais(total)}. A depreciação {plural(investimentos.length, "dele", "deles")} sai da DRE do
+            cenário, que se recalcula, e a exclusão fica no histórico (tela Reajustes).
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+          {investimentos.map((i) => (
+            <li key={i.id}>
+              {i.descricao} <span className="text-gray-500">· {NOME_DA_UNIDADE[i.unidade]} · {reais(i.valorTotal)}</span>
+            </li>
+          ))}
+        </ul>
+        <Erro erro={excluir.isError ? mensagemDeErro(excluir.error, "Não foi possível excluir.") : null} />
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={() => onFechar(false)}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" disabled={excluir.isPending} onClick={() => excluir.mutate()}>
+            <Trash2 className="size-4" />
+            {excluir.isPending ? "Excluindo…" : "Excluir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /**
  * A aba Investimentos das premissas de um cenário analítico (13/10/2026): em cima, a Depreciação Base de cada unidade
  * mês a mês (digitada, com a replicação e o reajuste das premissas), com a depreciação dos investimentos e a total; embaixo,
- * a lista dos investimentos (Novo Investimento; clicar numa linha edita ou exclui), com a depreciação mensal e o ROI.
+ * a lista dos investimentos (Novo Investimento; clicar numa linha edita ou exclui), com a depreciação mensal e o ROI. As
+ * caixas da lista (15/10/2026) marcam os investimentos, e "Excluir Selecionados" exclui os marcados de uma vez.
  */
 export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "investimentos"], queryFn: () => cenariosService.investimentos(id) });
   const [aberto, setAberto] = useState<InvestimentoDoCenario | "novo" | null>(null);
+  const [marcados, setMarcados] = useState<Set<string>>(() => new Set());
+  const [excluindo, setExcluindo] = useState(false);
   if (consulta.isError) return <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar os investimentos.")} />;
   if (consulta.isPending) return <Carregando />;
   const dados = consulta.data;
   const pode = editavel && dados.editavel;
+  // Só os marcados que ainda estão na lista.
+  const selecionados = dados.investimentos.filter((i) => marcados.has(i.id));
+  const todos = dados.investimentos.length > 0 && selecionados.length === dados.investimentos.length;
+  const marcar = (ids: string[], marca: boolean) =>
+    setMarcados((atual) => {
+      const novo = new Set(atual);
+      for (const x of ids) {
+        if (marca) novo.add(x);
+        else novo.delete(x);
+      }
+      return novo;
+    });
   return (
     <div className="space-y-8">
       <TabelaEditavel
@@ -59,16 +119,44 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
             </p>
           </div>
           {pode ? (
-            <Button type="button" className={botaoPrimario} onClick={() => setAberto("novo")}>
-              <Plus className="size-4" />
-              Novo Investimento
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" className={botaoPrimario} onClick={() => setAberto("novo")}>
+                <Plus className="size-4" />
+                Novo Investimento
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-sm border-red-300 text-red-700 hover:bg-red-50"
+                disabled={!selecionados.length}
+                title={selecionados.length ? undefined : "Marque os investimentos na lista"}
+                onClick={() => setExcluindo(true)}
+              >
+                <Trash2 className="size-4" />
+                Excluir Selecionados
+              </Button>
+            </div>
           ) : null}
         </div>
         <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white [--topo-tabela:0px]">
           <table className="tabela-sig w-full min-w-max border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-300">
+                {pode ? (
+                  <th className="w-10 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label="Marcar todos os investimentos"
+                      className="accent-black"
+                      checked={todos}
+                      disabled={!dados.investimentos.length}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selecionados.length > 0 && !todos;
+                      }}
+                      onChange={() => marcar(dados.investimentos.map((i) => i.id), !todos)}
+                    />
+                  </th>
+                ) : null}
                 {["Unidade", "Conta", "Descrição", "Ganho Previsto", "Receita Bruta Prevista", "Início", "Valor Total", "Valor Pós Uso", "Vida Útil", "Depreciação Mensal", "ROI"].map((c, k) => (
                   <th key={c} className={`px-3 py-2 text-xs font-bold ${k >= 4 ? "text-right" : "text-left"}`}>
                     {c}
@@ -79,7 +167,7 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
             <tbody>
               {dados.investimentos.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-3 py-6 text-center text-gray-500">
+                  <td colSpan={pode ? 12 : 11} className="px-3 py-6 text-center text-gray-500">
                     Nenhum investimento no cenário.
                   </td>
                 </tr>
@@ -91,6 +179,12 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
                     onClick={pode ? () => setAberto(i) : undefined}
                     title={pode ? "Editar ou excluir o investimento" : undefined}
                   >
+                    {pode ? (
+                      // A caixa marca sem abrir a edição (o clique na linha abre).
+                      <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" aria-label={`Marcar ${i.descricao}`} className="accent-black" checked={marcados.has(i.id)} onChange={(e) => marcar([i.id], e.target.checked)} />
+                      </td>
+                    ) : null}
                     <td className="px-3 py-1.5 whitespace-nowrap">{NOME_DA_UNIDADE[i.unidade]}</td>
                     <td className="px-3 py-1.5 whitespace-nowrap">{dados.contas.find((c) => c.unidade === i.unidade)?.rotulo}</td>
                     <td className="px-3 py-1.5 font-medium text-gray-900">{i.descricao}</td>
@@ -110,6 +204,16 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
         </div>
       </section>
       {aberto ? <InvestimentoDialog id={id} dados={dados} investimento={aberto === "novo" ? null : aberto} onFechar={() => setAberto(null)} /> : null}
+      {excluindo ? (
+        <ExcluirInvestimentosDialog
+          id={id}
+          investimentos={selecionados}
+          onFechar={(excluiu) => {
+            setExcluindo(false);
+            if (excluiu) setMarcados(new Set());
+          }}
+        />
+      ) : null}
     </div>
   );
 }

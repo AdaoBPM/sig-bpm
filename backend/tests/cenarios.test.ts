@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import type { LinhaPlanilha, ValorCelula } from "../src/lib/xlsx.js";
 import { limiteDaLinha, mesesAcima, totaisDaDRE } from "../src/services/cenarios/comparativoCenario.js";
-import { abaDaChave, abaDaPlanilha, lerArquivoDePremissas, precisaJustificar, type LinhaDaPlanilha } from "../src/services/cenarios/planilhaPremissas.js";
+import { abaDaChave, abaDaPlanilha, abaDeInvestimentos, lerArquivoDePremissas, precisaJustificar, type LinhaDaPlanilha } from "../src/services/cenarios/planilhaPremissas.js";
 import { gerarXlsx } from "../src/lib/xlsxEscrita.js";
 import { classificar } from "../src/services/cenarios/indicadoresDoCenario.js";
 import { acharAba, lerAbaDRE, lerAbaMetas } from "../src/services/cenarios/leituraCenario.js";
@@ -115,10 +115,16 @@ describe("comparativo entre cenários", () => {
     // O volume fica sob a PS e a Produção (a variação de cada uma vale para ele).
     assert.deepEqual(linhas.find((l) => l.linha.codigo === "P.PISTAS")!.acima, ["PS.PRODUCAO", "P.PRODUCAO"]);
   });
-  it("a planilha das premissas: Justificar? pela variação máxima sobre a média, a aba de cada código e a leitura do que se exportou", () => {
+  it("a planilha das premissas: Justificar? pelo total dos doze meses sobre o Total da Referência (15/10/2026), a aba de cada código e a leitura do que se exportou", () => {
     const meses = Array<number | null>(12).fill(null);
-    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [105, 95, ...meses.slice(2)] }), false);
-    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [105, 111, ...meses.slice(2)] }), true);
+    // Total da Referência 1.200: 1.300 (8,33%) cabe nos 10%; 1.330 (10,83%) passa; um mês alto não basta mais.
+    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [200, ...Array(11).fill(100)] }), false);
+    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [230, ...Array(11).fill(100)] }), true);
+    // Os meses em branco valem zero: só dois meses preenchidos ficam muito abaixo do total.
+    assert.equal(precisaJustificar({ limite: 10, media: 100, meses: [105, 95, ...meses.slice(2)] }), true);
+    // Com a referência zero, Sim quando o total não é zero.
+    assert.equal(precisaJustificar({ limite: 10, media: 0, meses: [...meses] }), false);
+    assert.equal(precisaJustificar({ limite: 10, media: 0, meses: [1, ...meses.slice(1)] }), true);
     assert.equal(precisaJustificar({ limite: null, media: 100, meses: [500, ...meses.slice(1)] }), false);
     assert.equal(precisaJustificar({ limite: 10, media: null, meses: [500, ...meses.slice(1)] }), false);
     assert.equal(abaDaChave("P|2|GLOBAL|DEMANDA:X"), "2");
@@ -138,6 +144,26 @@ describe("comparativo entre cenários", () => {
       ["L|ESTRUTURA", 44, 44, 44, null],
     ]);
     assert.match(lerArquivoDePremissas("x.xlsx", gerarXlsx([{ nome: "Outra", larguras: [10], linhas: [[{ valor: "a" }]] }]))[0].erros[0], /não está no padrão/);
+  });
+  it("a aba Investimentos (15/10/2026): a lista volta igual; a linha nova sem Código; a conta tem de ser a da unidade", () => {
+    const inv = { id: "abc", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 };
+    const aba = abaDeInvestimentos([inv], "teste");
+    // A linha nova (a primeira em branco) e uma com a conta de outra unidade.
+    aba.linhas[6] = [{ valor: null }, { valor: "Matriz" }, { valor: null }, { valor: "Ponte rolante" }, { valor: null }, { valor: null }, { valor: 5 }, { valor: 80000 }, { valor: null }, { valor: 120 }];
+    aba.linhas[7] = [{ valor: null }, { valor: "Serviços" }, { valor: "Depreciação do Patrimônio" }, { valor: "Caminhão" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 300000 }, { valor: 0 }, { valor: 60 }];
+    const [lido] = lerArquivoDePremissas("i.xlsx", gerarXlsx([aba]));
+    assert.deepEqual(
+      lido.investimentos.map(({ aba: _a, numero: _n, ...i }) => i),
+      [
+        { codigo: "abc", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 },
+        { codigo: null, unidade: 1, descricao: "Ponte rolante", ganhoPrevisto: null, receitaBrutaPrevista: null, inicio: 5, valorTotal: 80000, valorPosUso: 0, vidaUtil: 120 },
+      ],
+    );
+    assert.equal(lido.erros.length, 1);
+    assert.match(lido.erros[0], /Conta de Serviços é a Depreciação do Maquinário de Serviços/);
+    // As fórmulas da Depreciação Mensal e do ROI, com o valor calculado.
+    assert.equal(aba.linhas[5][10].valor, 416.67);
+    assert.equal(aba.linhas[5][11].valor, 0.25);
   });
   it("a média dos centros conta só os meses com movimentação de cada grupo e conta", () => {
     const r = mediaNosMesesComOcorrencia(

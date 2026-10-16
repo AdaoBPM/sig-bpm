@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
 import { ABA_DA_PERMISSAO, CenarioError, cenariosService } from "../../services/cenarios/cenariosService.js";
-import { abaDaChave, ABAS_DAS_PREMISSAS, NOME_DA_ABA, type AbaDasPremissas } from "../../services/cenarios/planilhaPremissas.js";
+import { abaDaChave, ABAS_DAS_PREMISSAS, DEPARTAMENTOS, NOME_DA_ABA, type AbaDasPremissas, type Departamento } from "../../services/cenarios/planilhaPremissas.js";
 
 /** As abas das premissas que o perfil lê ou edita (15/10/2026: a planilha das premissas). */
 const abasDasPremissas = (request: Request, response: Response, acao: "ler" | "editar") => {
@@ -208,6 +208,15 @@ export const cenariosController = {
     return responder(response, () => cenariosService.gravarInvestimento(c, investimentoId?.data ?? null, corpo.data, usuario(request)), investimentoId ? 200 : 201);
   },
 
+  /** O Excluir Selecionados dos investimentos (15/10/2026). */
+  excluirInvestimentos(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z.object({ ids: z.array(idSchema).min(1).max(2000) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Escolha os investimentos a excluir." });
+    return responder(response, () => cenariosService.excluirInvestimentos(c, corpo.data.ids, usuario(request)));
+  },
+
   rateios(request: Request, response: Response) {
     const c = id(request, response);
     return c ? responder(response, () => cenariosService.rateios(c, usuario(request))) : undefined;
@@ -289,11 +298,19 @@ export const cenariosController = {
     const c = id(request, response);
     if (!c) return;
     if (request.query.formato !== undefined && request.query.formato !== "xlsx") return response.status(400).json({ error: "As premissas só saem em Excel." });
+    // Os departamentos (15/10/2026), separados por vírgula: PRODUCAO, SERVICOS, LOGISTICA, TECNICO, COMERCIAL, ADMINISTRATIVO e EXTRA.
     const q = z
-      .object({ escopo: z.enum(["atual", "todas", "centros_abas", "centros_arquivos"]).default("atual"), aba: z.enum(ABAS_DAS_PREMISSAS as [AbaDasPremissas, ...AbaDasPremissas[]]).optional() })
+      .object({
+        escopo: z.enum(["todas", "centros_abas", "centros_arquivos"]).default("todas"),
+        departamentos: z
+          .string()
+          .default(DEPARTAMENTOS.map((d) => d.chave).join(","))
+          .transform((t) => t.split(",").filter(Boolean))
+          .pipe(z.array(z.enum(DEPARTAMENTOS.map((d) => d.chave) as [Departamento, ...Departamento[]])).min(1)),
+      })
       .safeParse(request.query);
-    if (!q.success) return response.status(400).json({ error: "Escopo inválido." });
-    return enviarArquivo(request, response, () => cenariosService.exportarPremissas(c, q.data.escopo, q.data.aba ?? null, abasDasPremissas(request, response, "ler"), usuario(request)));
+    if (!q.success) return response.status(400).json({ error: "Escopo ou departamentos inválidos." });
+    return enviarArquivo(request, response, () => cenariosService.exportarPremissas(c, q.data.escopo, q.data.departamentos, abasDasPremissas(request, response, "ler"), usuario(request)));
   },
 
   /** O Importar Valores, passo 1 (15/10/2026): o arquivo vai cru no corpo, com ?arquivo= (o nome). Devolve a análise de cada planilha. */
@@ -313,10 +330,20 @@ export const cenariosController = {
     );
   },
 
-  /** O Importar Valores, passo 2 (15/10/2026; o usuário confirmou): as mudanças das planilhas analisadas. */
+  /** O Importar Valores, passo 2 (15/10/2026; o usuário confirmou): as mudanças das planilhas analisadas e os investimentos. */
   async importarPremissas(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;
+    const investimento = z.object({
+      unidade: z.number().int().min(1).max(4),
+      descricao: z.string().trim().min(1).max(200),
+      ganhoPrevisto: z.string().max(500).nullable(),
+      receitaBrutaPrevista: z.number().finite().min(0).nullable(),
+      inicio: z.number().int().min(1).max(12),
+      valorTotal: z.number().finite().positive(),
+      valorPosUso: z.number().finite().min(0),
+      vidaUtil: z.number().int().min(1).max(600),
+    });
     const corpo = z
       .object({
         arquivos: z
@@ -325,6 +352,7 @@ export const cenariosController = {
               arquivo: z.string().min(1).max(400),
               alteracoes: z.array(z.object({ chave: z.string().min(1).max(400), mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() })).max(200_000),
               justificativas: z.array(z.object({ chave: z.string().min(1).max(400), texto: z.string().max(2000).nullable() })).max(50_000),
+              investimentos: z.object({ novos: z.array(investimento).max(2000), alterados: z.array(investimento.extend({ id: idSchema })).max(2000) }).optional(),
             }),
           )
           .min(1)
@@ -334,6 +362,7 @@ export const cenariosController = {
     if (!corpo.success) return response.status(400).json({ error: "Dados inválidos." });
     const editaveis = abasDasPremissas(request, response, "editar");
     const abas = new Set(corpo.data.arquivos.flatMap((a) => [...a.alteracoes, ...a.justificativas].map((x) => abaDaChave(x.chave))));
+    if (corpo.data.arquivos.some((a) => (a.investimentos?.novos.length ?? 0) + (a.investimentos?.alterados.length ?? 0) > 0)) abas.add("investimentos");
     if (abas.has(null)) return response.status(400).json({ error: "Há um Código de linha inválido." });
     const fora = [...abas].filter((a): a is AbaDasPremissas => !!a && !editaveis.includes(a));
     if (fora.length) return response.status(403).json({ error: `Seu perfil não edita ${fora.map((a) => NOME_DA_ABA[a]).join(", ")}.` });

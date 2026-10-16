@@ -2,17 +2,17 @@
 
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CopyCheck, Eraser, FileUp, FolderUp, Upload, X } from "lucide-react";
+import { CopyCheck, Download, Eraser, FileUp, FolderUp, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { plural } from "@/lib/texto";
 
-import { ExportarRelatorio } from "@/app/relatorios/components/ExportarRelatorio";
+import { mensagemDoErro, nomeDoArquivo } from "@/app/competencias/[anoMes]/dre/components/ExportarDRE";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { cenariosService, type AnaliseDePremissas } from "../services/cenariosService";
+import { cenariosService, DEPARTAMENTOS_DAS_PREMISSAS, type AnaliseDePremissas, type DepartamentoDasPremissas } from "../services/cenariosService";
 import { botaoPrimario, Erro, OpcaoEmLinha } from "./CenarioDialog";
 
 const invalidar = (queryClient: ReturnType<typeof useQueryClient>) => {
@@ -113,20 +113,103 @@ function ReplicarOuApagarDialog({ id, acao, onFechar }: { id: string; acao: "rep
   );
 }
 
-/** O Exportar Premissas (15/10/2026): só em Excel, a aba atual ou todas, com os centros de custo numa aba, um por aba ou um arquivo por centro. */
-export function ExportarPremissas({ id, aba }: { id: string; aba: string }) {
+/** Os tipos do Exportar Premissas (15/10/2026: os de antes, sem a Aba Atual). */
+const TIPOS_DE_EXPORTACAO = [
+  { chave: "todas", rotulo: "Todas as Abas", detalhe: "Uma aba por aba da tela; os centros de custo numa aba só." },
+  { chave: "centros_abas", rotulo: "Um Centro de Custo por Aba", detalhe: "As abas da tela, com um centro de custo por aba e o Consolidado (a DRE dos centros) na frente." },
+  { chave: "centros_arquivos", rotulo: "Um Arquivo por Centro de Custo", detalhe: "Um ZIP com um arquivo por centro de custo (o departamento e o centro no nome) e um com as demais abas." },
+] as const;
+
+/**
+ * O Exportar Premissas (15/10/2026; antes, uma lista suspensa com a aba atual ou todas): o botão abre o modal, com os
+ * departamentos (o arquivo leva só as abas, os centros de custo, a depreciação, os investimentos e os indicadores
+ * manuais deles) e o tipo da exportação. Só em Excel.
+ */
+export function ExportarPremissas({ id }: { id: string }) {
+  const [aberto, setAberto] = useState(false);
   return (
-    <ExportarRelatorio
-      endereco={`/proxy/cenarios/${id}/premissas/exportar`}
-      padrao="Premissas"
-      rotulo="Exportar Premissas"
-      opcoes={[
-        ...(aba === "rateios" ? [] : [{ chave: "atual", excel: "Aba Atual", pdf: null, params: { escopo: "atual", aba } }]),
-        { chave: "todas", excel: "Todas as Abas (os centros de custo numa aba)", pdf: null, params: { escopo: "todas" } },
-        { chave: "centros_abas", excel: "Todas as Abas (um centro de custo por aba)", pdf: null, params: { escopo: "centros_abas" } },
-        { chave: "centros_arquivos", excel: "Centros de Custo (um arquivo por centro)", pdf: null, params: { escopo: "centros_arquivos" } },
-      ]}
-    />
+    <>
+      <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
+        <Download className="size-4" />
+        Exportar Premissas
+      </Button>
+      {aberto ? <ExportarPremissasDialog id={id} onFechar={() => setAberto(false)} /> : null}
+    </>
+  );
+}
+
+function ExportarPremissasDialog({ id, onFechar }: { id: string; onFechar: () => void }) {
+  const [departamentos, setDepartamentos] = useState<DepartamentoDasPremissas[]>(DEPARTAMENTOS_DAS_PREMISSAS.map((d) => d.chave));
+  const [tipo, setTipo] = useState<(typeof TIPOS_DE_EXPORTACAO)[number]["chave"]>("todas");
+  const [gerando, setGerando] = useState(false);
+  const todos = departamentos.length === DEPARTAMENTOS_DAS_PREMISSAS.length;
+  const alternar = (d: DepartamentoDasPremissas) => setDepartamentos((ds) => (ds.includes(d) ? ds.filter((x) => x !== d) : DEPARTAMENTOS_DAS_PREMISSAS.map((x) => x.chave).filter((x) => x === d || ds.includes(x))));
+  const exportar = async () => {
+    setGerando(true);
+    try {
+      const r = await cenariosService.exportarPremissas(id, tipo, departamentos);
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nomeDoArquivo(r.headers["content-disposition"] as string | undefined, tipo === "centros_arquivos" ? "Premissas.zip" : "Premissas.xlsx");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      onFechar();
+    } catch (error) {
+      toast.error(await mensagemDoErro(error));
+    } finally {
+      setGerando(false);
+    }
+  };
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Exportar Premissas</DialogTitle>
+          <DialogDescription>
+            O arquivo em Excel leva só o que é dos departamentos marcados. Logística, Técnico, Comercial, Administrativo e Extra-Operacional levam também a
+            depreciação e os investimentos de Despesas e Extra; os indicadores manuais vão pelo grupo deles. Cada linha traz a Média e o Total da
+            Referência, a Variação Máxima e Justificar? (em fórmula).
+          </DialogDescription>
+        </DialogHeader>
+        <fieldset className="space-y-2">
+          <legend className="mb-2 flex w-full items-center justify-between text-sm leading-none font-medium">
+            Departamentos
+            <button type="button" className="text-xs font-normal text-gray-600 underline underline-offset-2 hover:text-gray-900" onClick={() => setDepartamentos(todos ? [] : DEPARTAMENTOS_DAS_PREMISSAS.map((d) => d.chave))}>
+              {todos ? "Desmarcar Todos" : "Marcar Todos"}
+            </button>
+          </legend>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {DEPARTAMENTOS_DAS_PREMISSAS.map((d) => (
+              <label key={d.chave} className="flex cursor-pointer items-start gap-2 rounded-sm border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
+                <input type="checkbox" className="mt-0.5 accent-black" checked={departamentos.includes(d.chave)} onChange={() => alternar(d.chave)} />
+                <span>
+                  <span className="font-medium text-gray-900">{d.nome}</span>
+                  <span className="block text-xs text-gray-500">{d.detalhe[0].toUpperCase() + d.detalhe.slice(1)}.</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset className="space-y-2">
+          <legend className="mb-2 text-sm leading-none font-medium">Tipo da Exportação</legend>
+          {TIPOS_DE_EXPORTACAO.map((t) => (
+            <OpcaoEmLinha key={t.chave} nome="tipo-exportacao" marcada={tipo === t.chave} onMarcar={() => setTipo(t.chave)} rotulo={t.rotulo} detalhe={t.detalhe} />
+          ))}
+        </fieldset>
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button type="button" className={botaoPrimario} disabled={!departamentos.length || gerando} onClick={() => void exportar()}>
+            {gerando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            {gerando ? "Gerando…" : "Exportar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -148,8 +231,11 @@ type Item = { id: number; nome: string; estado: "analisando" | "pronto" | "erro"
 
 /**
  * O Importar Valores (15/10/2026): a lista dos arquivos escolhidos (um ou vários, ou uma pasta), cada um conferido no
- * padrão do Exportar Premissas assim que entra, com o que muda (os valores e as justificativas). Grava-se só em
- * "Importar", como nas importações do Fechamento Mensal; a importação fica no histórico (tela Reajustes).
+ * padrão do Exportar Premissas assim que entra, com o que muda (os valores, as justificativas e os investimentos). Os
+ * trechos repetidos entre os arquivos (a mesma unidade, o mesmo centro…; 15/10/2026) aparecem num quadro, e o usuário
+ * escolhe, em cada um, ignorar o repetido (vale o primeiro arquivo) ou sobrescrever (vale o último); os investimentos
+ * não se conferem: os novos entram na sequência. Grava-se só em "Importar", como nas importações do Fechamento Mensal;
+ * a importação fica no histórico (tela Reajustes).
  */
 function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => void }) {
   const queryClient = useQueryClient();
@@ -172,15 +258,25 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
   };
   const analises = itens.flatMap((x) => x.analises);
   const validas = analises.filter((a) => a.valido);
-  const valores = validas.reduce((s, a) => s + a.alteracoes.length, 0);
-  const justificativas = validas.reduce((s, a) => s + a.justificativas.length, 0);
+  // Os trechos repetidos entre as planilhas válidas, na ordem da lista, e a escolha de cada um (sobrescrever, de início).
+  const repetidos = [...new Set(validas.flatMap((a) => a.blocos))]
+    .map((bloco) => ({ bloco, em: validas.flatMap((a, i) => (a.blocos.includes(bloco) ? [i] : [])) }))
+    .filter((r) => r.em.length > 1);
+  const [ignorar, setIgnorar] = useState<Set<string>>(() => new Set());
+  const vencedor = new Map(repetidos.map((r) => [r.bloco, ignorar.has(r.bloco) ? r.em[0] : r.em[r.em.length - 1]]));
+  const doVencedor = (i: number) => (x: { bloco: string }) => !vencedor.has(x.bloco) || vencedor.get(x.bloco) === i;
+  const aImportar = validas.map((a, i) => ({ ...a, alteracoes: a.alteracoes.filter(doVencedor(i)), justificativas: a.justificativas.filter(doVencedor(i)) }));
+  const valores = aImportar.reduce((s, a) => s + a.alteracoes.length, 0);
+  const justificativas = aImportar.reduce((s, a) => s + a.justificativas.length, 0);
+  const investimentos = aImportar.reduce((s, a) => s + a.investimentos.novos.length + a.investimentos.alterados.length, 0);
   const analisando = itens.some((x) => x.estado === "analisando");
   const importar = useMutation({
-    mutationFn: () => cenariosService.importarPremissas(id, validas),
+    mutationFn: () => cenariosService.importarPremissas(id, aImportar),
     onSuccess: (r) => {
       invalidar(queryClient);
+      const inv = r.investimentosNovos + r.investimentosAlterados;
       toast.success(
-        `${r.valores} ${plural(r.valores, "valor importado", "valores importados")} e ${r.justificativas} ${plural(r.justificativas, "justificativa", "justificativas")}; a DRE do cenário foi recalculada.`,
+        `${r.valores} ${plural(r.valores, "valor importado", "valores importados")}, ${r.justificativas} ${plural(r.justificativas, "justificativa", "justificativas")}${inv ? ` e ${r.investimentosNovos} ${plural(r.investimentosNovos, "investimento novo", "investimentos novos")} e ${r.investimentosAlterados} ${plural(r.investimentosAlterados, "alterado", "alterados")}` : ""}; a DRE do cenário foi recalculada.`,
       );
       onFechar();
     },
@@ -192,8 +288,9 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
           <DialogTitle>Importar Valores</DialogTitle>
           <DialogDescription>
             Escolha os arquivos (ou uma pasta) gerados pelo Exportar Premissas: planilhas .xlsx ou o .zip de um arquivo por centro. Cada arquivo é
-            conferido assim que entra na lista; os valores mensais e as justificativas se gravam só em “Importar” (em branco, o mês fica sem valor).
-            A Média de Referência e Justificar? não se importam.
+            conferido assim que entra na lista; os valores mensais, as justificativas e os investimentos se gravam só em “Importar” (em branco, o mês
+            fica sem valor). A Média e o Total da Referência, a Variação Máxima e Justificar? não se importam. Na aba Investimentos, os com Código são
+            atualizados e os sem Código entram na sequência dos que já existem.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-center gap-2">
@@ -226,13 +323,14 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
                 <th className="px-3 py-2 text-right text-xs font-bold">Linhas</th>
                 <th className="px-3 py-2 text-right text-xs font-bold">Valores</th>
                 <th className="px-3 py-2 text-right text-xs font-bold">Justificativas</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Investimentos</th>
                 <th className="w-10 px-2 py-2" />
               </tr>
             </thead>
             <tbody>
               {itens.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                  <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
                     Nenhum arquivo escolhido.
                   </td>
                 </tr>
@@ -247,7 +345,7 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
                   return [
                     <tr key={x.id} className="border-b border-gray-100">
                       <td className="px-3 py-2 break-all text-gray-900">{x.nome}</td>
-                      <td colSpan={4} className={`px-3 py-2 ${x.estado === "erro" ? "text-red-700" : "text-gray-500"}`}>
+                      <td colSpan={5} className={`px-3 py-2 ${x.estado === "erro" ? "text-red-700" : "text-gray-500"}`}>
                         {x.estado === "erro" ? x.erro : "Conferindo…"}
                       </td>
                       <td className="px-2 py-2 text-right">{remover}</td>
@@ -267,6 +365,13 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
                     <td className="px-3 py-2 text-right">{a.linhas.toLocaleString("pt-BR")}</td>
                     <td className="px-3 py-2 text-right">{a.valido ? a.alteracoes.length.toLocaleString("pt-BR") : "—"}</td>
                     <td className="px-3 py-2 text-right">{a.valido ? a.justificativas.length.toLocaleString("pt-BR") : "—"}</td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      {!a.valido
+                        ? "—"
+                        : a.investimentos.novos.length + a.investimentos.alterados.length
+                          ? `${a.investimentos.novos.length} ${plural(a.investimentos.novos.length, "novo", "novos")} · ${a.investimentos.alterados.length} ${plural(a.investimentos.alterados.length, "alterado", "alterados")}`
+                          : "0"}
+                    </td>
                     <td className="px-2 py-2 text-right">{k === 0 ? remover : null}</td>
                   </tr>
                 ));
@@ -274,16 +379,68 @@ function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => v
             </tbody>
           </table>
         </div>
+        {repetidos.length ? (
+          <div className="max-h-56 shrink-0 space-y-2 overflow-y-auto rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3">
+            <p className="text-sm text-gray-700">
+              {plural(repetidos.length, "Um trecho aparece", `${repetidos.length} trechos aparecem`)} em mais de um arquivo. Em cada um, escolha:
+              Ignorar (vale o primeiro arquivo da lista) ou Sobrescrever (vale o último).
+            </p>
+            <div className="flex justify-end gap-3 text-xs">
+              <button type="button" className="text-gray-600 underline underline-offset-2 hover:text-gray-900" onClick={() => setIgnorar(new Set(repetidos.map((r) => r.bloco)))}>
+                Ignorar Todos
+              </button>
+              <button type="button" className="text-gray-600 underline underline-offset-2 hover:text-gray-900" onClick={() => setIgnorar(new Set())}>
+                Sobrescrever Todos
+              </button>
+            </div>
+            <table className="w-full text-sm">
+              <tbody>
+                {repetidos.map((r) => (
+                  <tr key={r.bloco} className="border-t border-gray-100 align-top">
+                    <td className="py-1.5 pr-3 font-medium text-gray-900">{r.bloco}</td>
+                    <td className="py-1.5 pr-3 text-xs text-gray-600">{r.em.map((i) => validas[i].arquivo).join("; ")}</td>
+                    <td className="py-1.5 whitespace-nowrap">
+                      {(
+                        [
+                          [true, "Ignorar"],
+                          [false, "Sobrescrever"],
+                        ] as const
+                      ).map(([ig, rotulo]) => (
+                        <label key={rotulo} className="mr-3 inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-800">
+                          <input
+                            type="radio"
+                            name={`repetido-${r.bloco}`}
+                            className="accent-black"
+                            checked={ignorar.has(r.bloco) === ig}
+                            onChange={() =>
+                              setIgnorar((atual) => {
+                                const novo = new Set(atual);
+                                if (ig) novo.add(r.bloco);
+                                else novo.delete(r.bloco);
+                                return novo;
+                              })
+                            }
+                          />
+                          {rotulo}
+                        </label>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
         <Erro erro={importar.isError ? mensagemDeErro(importar.error, "Não foi possível importar.") : null} />
         <DialogFooter className="items-center">
           <span className="text-xs text-gray-600 sm:mr-auto">
-            {validas.length} {plural(validas.length, "planilha no padrão", "planilhas no padrão")}: {valores.toLocaleString("pt-BR")} {plural(valores, "valor muda", "valores mudam")} e{" "}
-            {justificativas} {plural(justificativas, "justificativa", "justificativas")}.
+            {validas.length} {plural(validas.length, "planilha no padrão", "planilhas no padrão")}: {valores.toLocaleString("pt-BR")} {plural(valores, "valor muda", "valores mudam")},{" "}
+            {justificativas} {plural(justificativas, "justificativa", "justificativas")} e {investimentos} {plural(investimentos, "investimento", "investimentos")}.
           </span>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={analisando || importar.isPending || valores + justificativas === 0} onClick={() => importar.mutate()}>
+          <Button type="button" className={botaoPrimario} disabled={analisando || importar.isPending || valores + justificativas + investimentos === 0} onClick={() => importar.mutate()}>
             {importar.isPending ? "Importando…" : "Importar"}
           </Button>
         </DialogFooter>

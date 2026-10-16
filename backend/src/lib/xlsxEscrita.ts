@@ -46,6 +46,11 @@ export type AbaEscrita = {
   paisagem?: boolean;
   /** A primeira coluna fica presa ao rolar para os lados. */
   congelarPrimeiraColuna?: boolean;
+  /**
+   * As validações das células (15/10/2026: a aba Investimentos das premissas): a lista suspensa (`lista`) ou um número
+   * inteiro entre `minimo` e `maximo`, no intervalo `celulas` ("B6:B205").
+   */
+  validacoes?: Array<{ celulas: string; lista?: string[]; inteiro?: [number, number] }>;
 };
 
 const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
@@ -117,7 +122,11 @@ function planilha(aba: AbaEscrita) {
         .map((c, j) => {
           const ref = `${coluna(j)}${i + 1}`;
           const s = c.estilo ? ` s="${c.estilo}"` : "";
-          if (c.formula) return `<c r="${ref}"${s}><f>${escapar(c.formula)}</f>${typeof c.valor === "number" ? `<v>${c.valor}</v>` : ""}</c>`;
+          // A fórmula de texto (Sim/Não) leva t="str" e o texto calculado.
+          if (c.formula)
+            return typeof c.valor === "string"
+              ? `<c r="${ref}"${s} t="str"><f>${escapar(c.formula)}</f><v>${escapar(c.valor)}</v></c>`
+              : `<c r="${ref}"${s}><f>${escapar(c.formula)}</f>${typeof c.valor === "number" ? `<v>${c.valor}</v>` : ""}</c>`;
           if (c.valor === null || c.valor === "") return c.estilo ? `<c r="${ref}"${s}/>` : "";
           if (typeof c.valor === "number") return `<c r="${ref}"${s}><v>${c.valor}</v></c>`;
           return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${escapar(c.valor)}</t></is></c>`;
@@ -138,10 +147,22 @@ function planilha(aba: AbaEscrita) {
     `${XML}<worksheet xmlns="${NS}" xmlns:r="${NS_R}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>` +
     `<sheetViews><sheetView showGridLines="0" workbookViewId="0">${congela}</sheetView></sheetViews>` +
     `<sheetFormatPr defaultRowHeight="13"/><cols>${cols}</cols><sheetData>${linhas}</sheetData>` +
+    validacoes(aba) +
     `<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>` +
     `<pageSetup paperSize="9" orientation="${aba.paisagem ? "landscape" : "portrait"}" fitToWidth="1" fitToHeight="0"/>` +
     `<headerFooter><oddFooter>${rodape}</oddFooter></headerFooter></worksheet>`
   );
+}
+
+/** As validações da aba (a lista entre aspas, separada por vírgulas; até 255 caracteres, o limite do Excel). */
+function validacoes(aba: AbaEscrita) {
+  const vs = aba.validacoes ?? [];
+  if (!vs.length) return "";
+  const uma = (v: NonNullable<AbaEscrita["validacoes"]>[number]) =>
+    v.lista
+      ? `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${v.celulas}"><formula1>${escapar(`"${v.lista.join(",")}"`)}</formula1></dataValidation>`
+      : `<dataValidation type="whole" operator="between" allowBlank="1" showErrorMessage="1" sqref="${v.celulas}"><formula1>${v.inteiro![0]}</formula1><formula2>${v.inteiro![1]}</formula2></dataValidation>`;
+  return `<dataValidations count="${vs.length}">${vs.map(uma).join("")}</dataValidations>`;
 }
 
 /** O arquivo .xlsx com as abas, na ordem dada. */
