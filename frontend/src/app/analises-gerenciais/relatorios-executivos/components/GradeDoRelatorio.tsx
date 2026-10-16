@@ -157,6 +157,8 @@ export function GradeDoRelatorio({
   const doCard = blocos.find((b) => b.id === configurando);
   // O bloco ampliado, com o tamanho dele na grade (sem a ampliação do mouse); Esc ou um clique o fecham.
   const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number } | null>(null);
+  // O destaque sob o mouse (16/10/2026): o bloco cresce até 10%, a partir do ponto que o mantém dentro da tela.
+  const [realce, setRealce] = useState<{ id: string; escala: number; origem: string } | null>(null);
   useEffect(() => {
     if (!ampliado) return;
     const aoTeclar = (e: KeyboardEvent) => {
@@ -197,9 +199,12 @@ export function GradeDoRelatorio({
             {editavel ? (
               <BarraDoBloco b={b} onMudar={(m) => mudarBloco(b.id, m)} onConfigurar={() => setConfigurando(b.id)} onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))} />
             ) : null}
-            {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca; o clique o amplia. */}
+            {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca, sem sair da tela; o clique o amplia. */}
             <div
-              className={`h-full overflow-hidden ${ampliavel ? "cursor-zoom-in rounded-sm transition duration-200 hover:scale-110 hover:bg-background hover:shadow-lg" : ""}`}
+              className={`h-full overflow-hidden ${ampliavel ? "cursor-zoom-in rounded-sm transition duration-200 hover:bg-background hover:shadow-lg" : ""}`}
+              style={realce?.id === b.id ? { transform: `scale(${realce.escala})`, transformOrigin: realce.origem } : undefined}
+              onMouseEnter={ampliavel ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
+              onMouseLeave={ampliavel ? () => setRealce(null) : undefined}
               onClick={ampliavel ? (e) => setAmpliado({ b, w: e.currentTarget.offsetWidth, h: e.currentTarget.offsetHeight }) : undefined}
             >
               <ConteudoDoBloco relatorioId={relatorioId} b={b} dados={dados} editavel={editavel} cores={cores} tipo={tipo} onMudar={(m) => mudarBloco(b.id, m)} />
@@ -225,6 +230,26 @@ export function GradeDoRelatorio({
       ) : null}
     </div>
   );
+}
+
+/**
+ * O destaque de um bloco (16/10/2026): a escala (até 1,1) e o ponto de origem dela que deixam o bloco ampliado dentro da
+ * tela (8 px das bordas). Em cada direção, a origem fica no meio, se cabe; senão, encosta no lado que não tem espaço.
+ */
+function destaqueNaTela(r: DOMRect) {
+  const folga = 8;
+  const eixo = (inicio: number, tamanho: number, limite: number) => {
+    const antes = Math.max(0, inicio - folga);
+    const depois = Math.max(0, limite - folga - (inicio + tamanho));
+    const escala = Math.min(1.1, (tamanho + antes + depois) / tamanho);
+    const cresce = escala - 1;
+    // A origem o, em px a partir do início: cresce·o ≤ antes e cresce·(tamanho − o) ≤ depois; de preferência, o meio.
+    const o = cresce > 0 ? Math.min(Math.max(tamanho / 2, tamanho - depois / cresce), antes / cresce) : tamanho / 2;
+    return { escala, o: Math.min(tamanho, Math.max(0, o)) };
+  };
+  const x = eixo(r.left, r.width, window.innerWidth);
+  const y = eixo(r.top, r.height, window.innerHeight);
+  return { escala: Math.min(x.escala, y.escala), origem: `${x.o}px ${y.o}px` };
 }
 
 /**
