@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCheck, LayoutGrid, LockOpen, Save, StickyNote, Trash2 } from "lucide-react";
+import { CheckCheck, CircleCheck, LayoutGrid, LockOpen, Save, StickyNote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Abas } from "@/components/shared/Abas";
@@ -12,8 +11,7 @@ import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
-import { podeSair, useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
-import { plural } from "@/lib/texto";
+import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
@@ -120,7 +118,6 @@ function Editor({ relatorio, chave, setChave }: { relatorio: Relatorio; chave: s
     },
   });
   const editavel = aba?.podeEditar ?? false;
-  const finalizadas = relatorio.abas.filter((a) => a.situacao === "FINALIZADO").length;
   const emConfirmacao = confirmar === "finalizar" ? situacao : excluir;
   return (
     <div className="space-y-6">
@@ -165,7 +162,7 @@ function Editor({ relatorio, chave, setChave }: { relatorio: Relatorio; chave: s
           <ul>
             <li>
               Cada aba é um departamento. Você edita as abas do seu recorte de departamentos (Controle de Usuários); as dos outros aparecem quando o gestor
-              delas as finaliza. A marca ✓ no nome da aba diz que ela está finalizada.
+              delas as finaliza. O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a finalizou e quando).
             </li>
             <li>
               Na sua aba, “Adicionar Cards” abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e dos Indicadores (o card de destaque, com o valor
@@ -193,38 +190,25 @@ function Editor({ relatorio, chave, setChave }: { relatorio: Relatorio; chave: s
           </p>
         }
       />
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
-        <Link
-          href="/analises-gerenciais/relatorios-executivos"
-          onClick={(e) => {
-            if (!podeSair()) e.preventDefault();
-          }}
-          className="inline-flex items-center gap-1.5 hover:text-gray-900"
-        >
-          <ArrowLeft className="size-4" />
-          Relatórios Executivos
-        </Link>
-        <span>
-          {finalizadas} de {relatorio.abas.length} {plural(relatorio.abas.length, "aba finalizada", "abas finalizadas")}
-        </span>
-      </div>
+      {/* O ícone de check nas abas finalizadas (16/10/2026; antes, a linha da situação abaixo das abas), com quem finalizou na dica. */}
       <Abas
         rotulo="Departamentos do relatório"
         ativa={chave}
         onMudar={setChave}
-        abas={relatorio.abas.map((a) => ({ chave: a.chave, rotulo: `${a.nome}${a.situacao === "FINALIZADO" ? " ✓" : ""}` }))}
+        abas={relatorio.abas.map((a) => ({
+          chave: a.chave,
+          rotulo: (
+            <span className="inline-flex items-center gap-1.5">
+              {a.nome}
+              {a.situacao === "FINALIZADO" ? (
+                <span title={`Aba finalizada${a.finalizadoPor ? ` por ${a.finalizadoPor}` : ""}${a.finalizadoEm ? ` em ${dataHora(a.finalizadoEm)}` : ""}`}>
+                  <CircleCheck className="size-4 text-green-700" aria-label="Aba finalizada" />
+                </span>
+              ) : null}
+            </span>
+          ),
+        }))}
       />
-      {aba ? (
-        <p className="-mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-          <EtiquetaSituacao situacao={aba.situacao} />
-          {aba.situacao === "FINALIZADO" && aba.finalizadoEm
-            ? `Finalizada por ${aba.finalizadoPor ?? "—"} em ${dataHora(aba.finalizadoEm)}.`
-            : aba.atualizadoPor
-              ? `Editada por ${aba.atualizadoPor} em ${dataHora(aba.atualizadoEm)}.`
-              : "Ainda sem conteúdo."}
-          {editavel ? " Você edita esta aba." : ""}
-        </p>
-      ) : null}
       {dados.isError ? <Erro erro={mensagemDeErro(dados.error, "Erro ao carregar os dados dos cards.")} /> : null}
       {!aba?.visivel ? (
         <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">

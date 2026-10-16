@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { useTema, type Tema } from "@/lib/tema";
@@ -37,6 +38,8 @@ import { usePermissions } from "@/context/PermissionContext";
 import { etapasDoMes } from "@/lib/etapasDoMes";
 import { migalhas } from "@/lib/navigation-config";
 
+import { relatoriosExecutivosService } from "@/app/analises-gerenciais/relatorios-executivos/services/relatoriosExecutivosService";
+
 import { EtiquetaDoDesenvolvimento } from "./AmbienteDeDesenvolvimento";
 import { TrocarSenhaDialog } from "./TrocarSenhaDialog";
 
@@ -63,7 +66,14 @@ export function AppHeader() {
   const [tema, escolherTema] = useTema();
   const { hasPermission } = usePermissions();
   const etapas = etapasDoMes(hasPermission, user?.acesso);
-  const caminho = migalhas(pathname, (chave) => etapas.find((e) => e.chave === chave)?.rotulo ?? null);
+  // O mês do relatório executivo aberto (16/10/2026), no caminho: a mesma consulta da tela, que o cache já tem.
+  const idDoRelatorio = pathname.match(/^\/analises-gerenciais\/relatorios-executivos\/([0-9a-f-]{36})/)?.[1] ?? null;
+  const relatorio = useQuery({
+    queryKey: ["relatorios-executivos", "relatorio", idDoRelatorio],
+    queryFn: () => relatoriosExecutivosService.obter(idDoRelatorio!),
+    enabled: !!idDoRelatorio,
+  });
+  const caminho = migalhas(pathname, (chave) => etapas.find((e) => e.chave === chave)?.rotulo ?? null, relatorio.data?.rotuloMes ?? null);
 
   async function handleLogout() {
     if (!podeSair()) return;

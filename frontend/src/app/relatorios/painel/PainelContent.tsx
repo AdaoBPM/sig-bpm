@@ -230,11 +230,25 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
  * Um card do painel fora dele (15/10/2026: os Relatórios Executivos), com as cores escolhidas, na altura e na largura do
  * bloco; sem o gráfico, os valores em duas colunas, como no Copiar como Imagem (sem gráficos), mas sem estreitar o card.
  */
-export function CardDoPainel({ i, rotuloMes, tipo, cores, comGrafico }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; cores: Cores; comGrafico: boolean }) {
+export function CardDoPainel({
+  i,
+  rotuloMes,
+  tipo,
+  cores,
+  comGrafico,
+  comRotulos = false,
+}: {
+  i: ItemPainel;
+  rotuloMes: string;
+  tipo: TipoGrafico;
+  cores: Cores;
+  comGrafico: boolean;
+  comRotulos?: boolean;
+}) {
   return (
     <CoresDoPainel.Provider value={cores}>
       <div className={`h-full [&>article]:h-full ${comGrafico ? "" : "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"}`}>
-        <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={false} />
+        <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
       </div>
     </CoresDoPainel.Provider>
   );

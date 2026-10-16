@@ -1,12 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
-import { ChartColumn, CircleAlert, GripVertical, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { ChartColumn, CircleAlert, GripVertical, Settings, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-import { CardDoPainel, type Cores } from "@/app/relatorios/painel/PainelContent";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { CardDoPainel, SeletorCores, type Cores } from "@/app/relatorios/painel/PainelContent";
+import { SeletorRotulos, SeletorTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
+import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
@@ -60,6 +66,7 @@ export function GradeDoRelatorio({
   tipo: TipoGrafico;
   onMudar: (blocos: Bloco[]) => void;
 }) {
+  const [configurando, setConfigurando] = useState<string | null>(null);
   const layout: Layout[] = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, minW: 2, minH: 2 }));
   const mudarBloco = (id: string, m: Partial<Bloco>) => onMudar(blocos.map((b) => (b.id === id ? ({ ...b, ...m } as Bloco) : b)));
   const aoMudarLeiaute = (novo: Layout[]) => {
@@ -70,33 +77,104 @@ export function GradeDoRelatorio({
     });
     if (mudou) onMudar(blocos.map((b) => ({ ...b, ...(pos.has(b.id) ? { x: pos.get(b.id)!.x, y: pos.get(b.id)!.y, w: pos.get(b.id)!.w, h: pos.get(b.id)!.h } : {}) })));
   };
+  const doCard = blocos.find((b) => b.id === configurando);
   return (
-    <Grade
-      className="-mx-3"
-      layout={layout}
-      cols={COLUNAS}
-      rowHeight={ALTURA_DA_LINHA}
-      margin={[12, 12]}
-      isDraggable={editavel}
-      isResizable={editavel}
-      draggableHandle=".alca-do-bloco"
-      compactType="vertical"
-      onLayoutChange={aoMudarLeiaute}
-    >
-      {blocos.map((b) => (
-        <div key={b.id} className="group relative">
-          {editavel ? <BarraDoBloco b={b} onMudar={(m) => mudarBloco(b.id, m)} onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))} /> : null}
-          <div className="h-full overflow-hidden">
-            <ConteudoDoBloco b={b} dados={dados} editavel={editavel} cores={cores} tipo={tipo} onTexto={(texto) => mudarBloco(b.id, { texto } as Partial<Bloco>)} />
+    <>
+      <Grade
+        className="-mx-3"
+        layout={layout}
+        cols={COLUNAS}
+        rowHeight={ALTURA_DA_LINHA}
+        margin={[12, 12]}
+        isDraggable={editavel}
+        isResizable={editavel}
+        draggableHandle=".alca-do-bloco"
+        compactType="vertical"
+        onLayoutChange={aoMudarLeiaute}
+      >
+        {blocos.map((b) => (
+          <div key={b.id} className="group relative">
+            {editavel ? (
+              <BarraDoBloco b={b} onMudar={(m) => mudarBloco(b.id, m)} onConfigurar={() => setConfigurando(b.id)} onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))} />
+            ) : null}
+            <div className="h-full overflow-hidden">
+              <ConteudoDoBloco b={b} dados={dados} editavel={editavel} cores={cores} tipo={tipo} onTexto={(texto) => mudarBloco(b.id, { texto } as Partial<Bloco>)} />
+            </div>
           </div>
+        ))}
+      </Grade>
+      {doCard?.tipo === "PAINEL" ? (
+        <ConfigurarGraficoDialog
+          b={doCard}
+          tipo={tipo}
+          cores={cores}
+          onFechar={() => setConfigurando(null)}
+          onAplicar={(opcoes, todos) => {
+            // Neste card ou em todos os cards do Painel de Bordo da aba.
+            onMudar(blocos.map((x) => (x.tipo === "PAINEL" && (todos || x.id === doCard.id) ? { ...x, ...opcoes } : x)));
+            setConfigurando(null);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+type OpcoesDoGrafico = { tipoGrafico: TipoGrafico; comRotulos: boolean; cores: Cores };
+
+/**
+ * O Configurar Gráfico de um card do Painel de Bordo (16/10/2026): as opções do Configurar Gráficos do Painel — os
+ * Rótulos, o Tipo e as Cores —, aplicadas a este card ou a todos os cards do Painel da aba.
+ */
+function ConfigurarGraficoDialog({
+  b,
+  tipo,
+  cores,
+  onAplicar,
+  onFechar,
+}: {
+  b: Extract<Bloco, { tipo: "PAINEL" }>;
+  tipo: TipoGrafico;
+  cores: Cores;
+  onAplicar: (o: OpcoesDoGrafico, todos: boolean) => void;
+  onFechar: () => void;
+}) {
+  const [o, setO] = useState<OpcoesDoGrafico>({ tipoGrafico: b.tipoGrafico ?? tipo, comRotulos: b.comRotulos ?? false, cores: b.cores ?? cores });
+  const [todos, setTodos] = useState(false);
+  return (
+    <Dialog open onOpenChange={(a) => (!a ? onFechar() : undefined)}>
+      <DialogContent className="rounded-sm sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Configurar Gráfico</DialogTitle>
+          <DialogDescription>
+            {b.titulo} ({b.quadro}): as opções do Configurar Gráficos do Painel de Bordo.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 [&_label]:justify-between [&_label>span]:text-sm [&_[data-slot=select-trigger]]:w-40">
+          <SeletorRotulos com={o.comRotulos} onMudar={(comRotulos) => setO((x) => ({ ...x, comRotulos }))} />
+          <SeletorTipoGrafico tipo={o.tipoGrafico} onMudar={(tipoGrafico) => setO((x) => ({ ...x, tipoGrafico }))} />
+          <SeletorCores cores={o.cores} onMudar={(c) => setO((x) => ({ ...x, cores: c }))} />
         </div>
-      ))}
-    </Grade>
+        <fieldset className="space-y-2">
+          <legend className="mb-1.5 text-sm leading-none font-medium">Aplicar</legend>
+          <OpcaoEmLinha nome="aplicar-grafico" marcada={!todos} onMarcar={() => setTodos(false)} rotulo="Neste Card" detalhe="Só o card escolhido." />
+          <OpcaoEmLinha nome="aplicar-grafico" marcada={todos} onMarcar={() => setTodos(true)} rotulo="Em Todos os Cards da Aba" detalhe="Todos os cards do Painel de Bordo desta aba." />
+        </fieldset>
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button type="button" className={botaoPrimario} onClick={() => onAplicar(o, todos)}>
+            Aplicar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 /** Os botões do bloco na edição, no canto de cima: a alça de mover, as opções do tipo e excluir. */
-function BarraDoBloco({ b, onMudar, onExcluir }: { b: Bloco; onMudar: (m: Partial<Bloco>) => void; onExcluir: () => void }) {
+function BarraDoBloco({ b, onMudar, onConfigurar, onExcluir }: { b: Bloco; onMudar: (m: Partial<Bloco>) => void; onConfigurar: () => void; onExcluir: () => void }) {
   const botao = "inline-flex size-6 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900";
   return (
     <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white/95 p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-within:opacity-100">
@@ -107,6 +185,12 @@ function BarraDoBloco({ b, onMudar, onExcluir }: { b: Bloco; onMudar: (m: Partia
         <button type="button" className={`${botao} ${b.comGrafico ? "text-gray-900" : ""}`} title={b.comGrafico ? "Tirar o gráfico" : "Mostrar o gráfico"} aria-label={b.comGrafico ? "Tirar o gráfico" : "Mostrar o gráfico"} onClick={() => onMudar({ comGrafico: !b.comGrafico } as Partial<Bloco>)}>
           <ChartColumn className="size-4" />
           {b.comGrafico ? null : <span className="absolute h-px w-4 rotate-45 bg-current" />}
+        </button>
+      ) : null}
+      {/* As opções do gráfico (16/10/2026), nos cards com o gráfico. */}
+      {b.tipo === "PAINEL" && b.comGrafico ? (
+        <button type="button" className={botao} title="Configurar o gráfico" aria-label="Configurar o gráfico" onClick={onConfigurar}>
+          <Settings className="size-4" />
         </button>
       ) : null}
       {b.tipo === "ANOTACAO"
@@ -158,7 +242,7 @@ function ConteudoDoBloco({ b, dados, editavel, cores, tipo, onTexto }: { b: Bloc
       <div className="flex h-full flex-col">
         <p className="truncate pb-1 text-xs font-bold tracking-wide text-gray-500 uppercase">{b.quadro}</p>
         <div className="min-h-0 flex-1">
-          <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={tipo} cores={cores} comGrafico={b.comGrafico} />
+          <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={b.cores ?? cores} comGrafico={b.comGrafico} comRotulos={b.comRotulos ?? false} />
         </div>
       </div>
     );

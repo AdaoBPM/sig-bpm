@@ -292,7 +292,7 @@ export type Migalha = { rotulo: string; href?: string };
  * O caminho no topo (G2 do levantamento de layout): "Fechamento Mensal › 08/2026 ›
  * Classificação" nas telas do mês; "Grupo de telas › Tela" nas demais.
  */
-export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string | null): Migalha[] {
+export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string | null, rotuloDoRelatorio?: string | null): Migalha[] {
   const mes = pathname.match(/^\/competencias\/(\d{4})-(\d{2})(?:\/([^/]+))?/);
   if (mes) {
     const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
@@ -304,6 +304,10 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
     const tela = cenario[2] === "premissas" ? "Premissas" : cenario[2] === "indicadores" ? "Indicadores" : cenario[2] === "configuracoes" ? "Configurações" : cenario[2] === "reajustes" ? "Reajustes" : cenario[2] === "painel" ? "Painel de Bordo" : "Resultados";
     const lista = cenario[1] === "analiticos" ? "Cenários Analíticos" : "Cenários Sintéticos";
     return [{ rotulo: lista, href: `/cenarios/${cenario[1]}` }, { rotulo: tela }];
+  }
+  // Um relatório executivo (16/10/2026): "Relatórios Executivos › Agosto/2026"; o mês vem do relatório (`rotuloDoRelatorio`).
+  if (/^\/analises-gerenciais\/relatorios-executivos\/[^/]+/.test(pathname)) {
+    return [{ rotulo: "Relatórios Executivos", href: "/analises-gerenciais/relatorios-executivos" }, { rotulo: rotuloDoRelatorio ?? "Relatório" }];
   }
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];
