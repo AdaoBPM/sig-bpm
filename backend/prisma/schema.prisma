@@ -36,6 +36,8 @@ enum RecursoSistema {
   CADASTROS_APURACAO
   CADASTROS_CONTROLADORIA
   CONTROLE_USUARIOS
+  /// As Análises Gerenciais (15/10/2026): os Relatórios Executivos.
+  ANALISES_GERENCIAIS
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
@@ -2237,4 +2239,39 @@ model NotaFiscalItem {
   @@index([competenciaId, contaContabil])
   @@index([importacaoId])
   @@map("notas_fiscais_itens")
+}
+
+// -----------------------------------------------------------------------------
+// Relatórios Executivos (15/10/2026)
+// -----------------------------------------------------------------------------
+
+/// ENUM: a situação de um relatório executivo — em elaboração (só o autor o vê) ou finalizado (público, só leitura).
+enum SituacaoRelatorio {
+  EM_ELABORACAO
+  FINALIZADO
+}
+
+/// Um relatório executivo (15/10/2026, Análises Gerenciais): a apresentação mensal de um gestor sobre os seus
+/// departamentos, numa competência fechada — uma por gestor e mês. Cada departamento é uma aba, com os blocos da tela
+/// (os cards do Painel de Bordo, os dos Indicadores e as anotações positivas, negativas e de atenção), com a posição e
+/// o tamanho de cada um na grade. Em elaboração, só o autor o vê; finalizado, todos os que leem a tela, e o autor (ou o
+/// Administrador) pode reabri-lo.
+model RelatorioExecutivo {
+  id           String            @id @default(uuid())
+  ano          Int
+  mes          Int
+  autorId      String            @map("autor_id")
+  autorNome    String            @map("autor_nome")
+  /// Os departamentos (as abas): a lista de DepartamentoAcesso, na ordem.
+  departamentos Json
+  /// Os blocos de cada aba: { DEPARTAMENTO: [{ id, tipo, x, y, w, h, … }] }.
+  blocos       Json
+  situacao     SituacaoRelatorio @default(EM_ELABORACAO)
+  finalizadoEm DateTime?         @map("finalizado_em")
+  criadoEm     DateTime          @default(now()) @map("criado_em")
+  atualizadoEm DateTime          @updatedAt @map("atualizado_em")
+
+  @@unique([ano, mes, autorId])
+  @@index([ano, mes])
+  @@map("relatorios_executivos")
 }

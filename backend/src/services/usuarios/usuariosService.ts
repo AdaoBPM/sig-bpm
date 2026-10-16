@@ -34,6 +34,7 @@ export class RegraUsuarioError extends Error {
 
 /** Os grupos de telas do menu lateral, na ordem do menu (11/10/2026). */
 export const RECURSOS: RecursoSistema[] = [
+  "ANALISES_GERENCIAIS",
   "CENARIOS_SINTETICOS",
   "CENARIOS_ANALITICOS",
   "RESULTADOS_REALIZADOS",
@@ -50,6 +51,7 @@ const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   CADASTROS_APURACAO: "Cadastros da Apuração",
   CADASTROS_CONTROLADORIA: "Cadastros da Controladoria",
   CONTROLE_USUARIOS: "Controle de Usuários",
+  ANALISES_GERENCIAIS: "Análises Gerenciais",
 };
 const ACOES: AcaoPermissao[] = ["LER", "EDITAR"];
 const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [

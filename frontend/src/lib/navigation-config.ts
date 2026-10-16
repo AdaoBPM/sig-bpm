@@ -26,6 +26,7 @@ import {
   ListOrdered,
   ListTree,
   Percent,
+  Presentation,
   Rows3,
   Shuffle,
   Table2,
@@ -65,6 +66,8 @@ export const navGrupos: NavGrupo[] = [
   {
     titulo: "Análises Gerenciais",
     itens: [
+      // Os Relatórios Executivos (15/10/2026): as apresentações mensais dos gestores.
+      { title: "Relatórios Executivos", href: "/analises-gerenciais/relatorios-executivos", icon: Presentation, permission: "relatorios_executivos:ler" },
       { title: "Resultados ROVA", href: "/analises-gerenciais/resultados-rova", icon: TrendingUp, emDesenvolvimento: true },
       { title: "Indicadores VPR", href: "/analises-gerenciais/indicadores-vpr", icon: Target, emDesenvolvimento: true },
       // Custos Operacionais (15/10/2026), em desenvolvimento.
@@ -206,6 +209,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/perfis(\/|$)/, "perfis:ler"],
   [/^\/auditoria(\/|$)/, "auditoria:ler"],
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
+  [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
   [/^\/relatorios\/indicadores(\/|$)/, "relatorio_indicadores:ler"],
   [/^\/relatorios\/painel(\/|$)/, "relatorio_painel:ler"],
