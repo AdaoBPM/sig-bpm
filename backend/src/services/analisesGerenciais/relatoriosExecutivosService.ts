@@ -4,8 +4,7 @@ import { join } from "node:path";
 
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
-import type { DepartamentoAcesso } from "../../generated/prisma/enums.js";
-import { ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
+import type { AbaRelatorioExecutivo, DepartamentoAcesso } from "../../generated/prisma/enums.js";
 import { auditar } from "../auditoriaService.js";
 import { diretorioUploads } from "../importacoes/arquivosImportados.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
@@ -13,8 +12,10 @@ import { painelService } from "../relatorios/painelService.js";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
- * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; uma aba por
- * departamento (os sete); cada gestor edita as abas do seu recorte (sem recorte, todas); cada aba tem a sua situação —
+ * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as seis abas (17/10/2026;
+ * antes, uma por departamento) — Fatos Relevantes e Demonstrativo de Resultados, que todos os que editam a tela editam, e
+ * as performances Comercial, da Produção, de Serviços e Administrativa, que cada gestor edita pelo recorte de
+ * departamentos (sem recorte, todas); cada aba tem a sua situação —
  * em elaboração, só quem a edita (e o Administrador) a vê; finalizada, todos —, e quem a edita a finaliza e a reabre (o
  * Administrador reabre qualquer uma); o relatório fica finalizado quando todas as abas estão. As anotações são blocos
  * livres na grade, ao lado dos cards. Os cards trazem o Painel de Bordo e os Indicadores de Resultados Empresariais até
@@ -33,7 +34,21 @@ export class RelatorioExecutivoError extends Error {
 /** O usuário: se edita a tela e os departamentos do recorte (null: sem recorte, todos). */
 export type UsuarioDoRelatorio = { id: string; nome: string; admin: boolean; edita: boolean; departamentos: DepartamentoAcesso[] | null };
 
-export const DEPARTAMENTOS: DepartamentoAcesso[] = ["PRODUCAO", "SERVICOS", "LOGISTICA", "TECNICO", "COMERCIAL", "ADMINISTRATIVO", "EXTRA_OPERACIONAL"];
+/**
+ * As abas (17/10/2026), na ordem: o nome curto (o da barra do topo), o título (o da tela e do slide) e o departamento do
+ * recorte (nulo: geral, de todos os que editam a tela).
+ */
+export const ABAS: Array<{ chave: AbaRelatorioExecutivo; nome: string; titulo: string; departamento: DepartamentoAcesso | null }> = [
+  { chave: "FATOS", nome: "Fatos", titulo: "Fatos Relevantes", departamento: null },
+  { chave: "RESULTADOS", nome: "Resultados", titulo: "Demonstrativo de Resultados", departamento: null },
+  { chave: "COMERCIAL", nome: "Comercial", titulo: "Performance Comercial", departamento: "COMERCIAL" },
+  { chave: "PRODUCAO", nome: "Produção", titulo: "Performance da Produção", departamento: "PRODUCAO" },
+  { chave: "SERVICOS", nome: "Serviços", titulo: "Performance de Serviços", departamento: "SERVICOS" },
+  { chave: "ADMINISTRATIVO", nome: "Administrativo", titulo: "Performance Administrativa", departamento: "ADMINISTRATIVO" },
+];
+export const CHAVES_DAS_ABAS = ABAS.map((a) => a.chave);
+const DA_ABA = new Map(ABAS.map((a) => [a.chave, a]));
+const nomeDaAba = (d: AbaRelatorioExecutivo) => DA_ABA.get(d)?.nome ?? d;
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
 
@@ -83,10 +98,13 @@ async function limparFotos(relatorioId: string) {
   }
 }
 
-type Aba = { departamento: DepartamentoAcesso; blocos: unknown; situacao: "EM_ELABORACAO" | "FINALIZADO"; atualizadoPor: string | null; atualizadoEm: Date; finalizadoPor: string | null; finalizadoEm: Date | null };
+type Aba = { departamento: AbaRelatorioExecutivo; blocos: unknown; situacao: "EM_ELABORACAO" | "FINALIZADO"; atualizadoPor: string | null; atualizadoEm: Date; finalizadoPor: string | null; finalizadoEm: Date | null };
 
-/** Quem edita a aba: quem edita a tela, nos departamentos do recorte (sem recorte, todos). */
-const editaAba = (u: UsuarioDoRelatorio, d: DepartamentoAcesso) => u.edita && (u.departamentos === null || u.departamentos.includes(d));
+/** Quem edita a aba: quem edita a tela; nas abas de um departamento, só no recorte dele (sem recorte, todas). */
+const editaAba = (u: UsuarioDoRelatorio, d: AbaRelatorioExecutivo) => {
+  const dep = DA_ABA.get(d)?.departamento ?? null;
+  return u.edita && (dep === null || u.departamentos === null || u.departamentos.includes(dep));
+};
 /** Quem vê a aba: finalizada, todos; em elaboração, quem a edita e o Administrador. */
 const veAba = (u: UsuarioDoRelatorio, a: Aba) => a.situacao === "FINALIZADO" || editaAba(u, a.departamento) || u.admin;
 
@@ -100,12 +118,12 @@ async function doRelatorio(id: string) {
 }
 
 /** A aba que o usuário pode alterar: a do recorte dele, em elaboração. */
-async function abaEditavel(id: string, d: DepartamentoAcesso, u: UsuarioDoRelatorio) {
+async function abaEditavel(id: string, d: AbaRelatorioExecutivo, u: UsuarioDoRelatorio) {
   const r = await doRelatorio(id);
   const aba = r.abas.find((a) => a.departamento === d);
   if (!aba) throw new RelatorioExecutivoError(404, "Aba não encontrada.");
-  if (!editaAba(u, d)) throw new RelatorioExecutivoError(403, `A aba ${ROTULO_DEPARTAMENTO[d]} não é do seu recorte.`);
-  if (aba.situacao === "FINALIZADO") throw new RelatorioExecutivoError(409, `A aba ${ROTULO_DEPARTAMENTO[d]} está finalizada: reabra-a para alterar.`);
+  if (!editaAba(u, d)) throw new RelatorioExecutivoError(403, `A aba ${nomeDaAba(d)} não é do seu recorte.`);
+  if (aba.situacao === "FINALIZADO") throw new RelatorioExecutivoError(409, `A aba ${nomeDaAba(d)} está finalizada: reabra-a para alterar.`);
   return { r, aba };
 }
 
@@ -131,16 +149,16 @@ export const relatoriosExecutivosService = {
         finalizadas: r.abas.filter((a) => a.situacao === "FINALIZADO").length,
         total: r.abas.length,
         // As abas que o usuário edita, com a situação de cada uma.
-        minhas: DEPARTAMENTOS.filter((d) => editaAba(usuario, d)).flatMap((d) => {
+        minhas: CHAVES_DAS_ABAS.filter((d) => editaAba(usuario, d)).flatMap((d) => {
           const a = r.abas.find((x) => x.departamento === d);
-          return a ? [{ chave: d, nome: ROTULO_DEPARTAMENTO[d], situacao: a.situacao }] : [];
+          return a ? [{ chave: d, nome: nomeDaAba(d), situacao: a.situacao }] : [];
         }),
         criadoPor: r.criadoPorNome,
         criadoEm: r.criadoEm,
         atualizadoEm: r.abas.reduce((m, a) => (a.atualizadoEm > m ? a.atualizadoEm : m), r.atualizadoEm),
       })),
       livres: fechadas.filter((c) => !comRelatorio.has(`${c.ano}|${c.mes}`)).map((c) => ({ ano: c.ano, mes: c.mes, rotulo: rotuloMes(c.ano, c.mes) })),
-      meusDepartamentos: DEPARTAMENTOS.filter((d) => editaAba(usuario, d)).map((d) => ({ chave: d, nome: ROTULO_DEPARTAMENTO[d] })),
+      meusDepartamentos: CHAVES_DAS_ABAS.filter((d) => editaAba(usuario, d)).map((d) => ({ chave: d, nome: nomeDaAba(d) })),
     };
   },
 
@@ -164,7 +182,7 @@ export const relatoriosExecutivosService = {
         mes: dados.mes,
         criadoPorId: usuario.id,
         criadoPorNome: usuario.nome,
-        abas: { create: DEPARTAMENTOS.map((departamento) => ({ departamento, blocos: (daOrigem.get(departamento) ?? paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: origem ? usuario.nome : null })) },
+        abas: { create: CHAVES_DAS_ABAS.map((departamento) => ({ departamento, blocos: (daOrigem.get(departamento) ?? paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: origem ? usuario.nome : null })) },
       },
     });
     // As fotos da origem vão para a pasta do relatório novo (a origem pode ser excluída depois).
@@ -185,14 +203,15 @@ export const relatoriosExecutivosService = {
   /** O relatório, com as abas: a situação de cada uma, as páginas (com os blocos) das que o usuário vê e o que ele pode fazer em cada. */
   async obter(id: string, usuario: UsuarioDoRelatorio) {
     const r = await doRelatorio(id);
-    const abas = DEPARTAMENTOS.flatMap((d) => {
+    const abas = CHAVES_DAS_ABAS.flatMap((d) => {
       const a = r.abas.find((x) => x.departamento === d);
       if (!a) return [];
       const ve = veAba(usuario, a);
       return [
         {
           chave: d,
-          nome: ROTULO_DEPARTAMENTO[d],
+          nome: nomeDaAba(d),
+          titulo: DA_ABA.get(d)?.titulo ?? d,
           situacao: a.situacao,
           visivel: ve,
           paginas: ve ? paginasDe(a.blocos) : [],
@@ -227,7 +246,7 @@ export const relatoriosExecutivosService = {
   },
 
   /** Grava as páginas de uma aba, com os blocos de cada uma (de quem a edita, em elaboração). */
-  async gravarAba(id: string, departamento: DepartamentoAcesso, paginas: PaginaDoRelatorio[], usuario: UsuarioDoRelatorio) {
+  async gravarAba(id: string, departamento: AbaRelatorioExecutivo, paginas: PaginaDoRelatorio[], usuario: UsuarioDoRelatorio) {
     await abaEditavel(id, departamento, usuario);
     await getPrismaClient().relatorioExecutivoAba.update({
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
@@ -238,14 +257,14 @@ export const relatoriosExecutivosService = {
   },
 
   /** Finaliza a aba (fica visível para todos, só leitura) ou a reabre (volta a ser só de quem a edita). */
-  async mudarAba(id: string, departamento: DepartamentoAcesso, acao: "finalizar" | "reabrir", usuario: UsuarioDoRelatorio) {
+  async mudarAba(id: string, departamento: AbaRelatorioExecutivo, acao: "finalizar" | "reabrir", usuario: UsuarioDoRelatorio) {
     const prisma = getPrismaClient();
     const r = await doRelatorio(id);
     if (acao === "finalizar") await abaEditavel(id, departamento, usuario);
     else {
       const aba = r.abas.find((a) => a.departamento === departamento);
       if (!aba) throw new RelatorioExecutivoError(404, "Aba não encontrada.");
-      if (!editaAba(usuario, departamento) && !usuario.admin) throw new RelatorioExecutivoError(403, `A aba ${ROTULO_DEPARTAMENTO[departamento]} não é do seu recorte.`);
+      if (!editaAba(usuario, departamento) && !usuario.admin) throw new RelatorioExecutivoError(403, `A aba ${nomeDaAba(departamento)} não é do seu recorte.`);
       if (aba.situacao !== "FINALIZADO") throw new RelatorioExecutivoError(409, "A aba não está finalizada.");
     }
     await prisma.relatorioExecutivoAba.update({
@@ -258,7 +277,7 @@ export const relatoriosExecutivosService = {
       acao: "ALTERACAO",
       entidade: "relatorio_executivo",
       entidadeId: id,
-      metadados: { mes: rotuloMes(r.ano, r.mes), aba: ROTULO_DEPARTAMENTO[departamento], acao },
+      metadados: { mes: rotuloMes(r.ano, r.mes), aba: nomeDaAba(departamento), acao },
     });
     return this.obter(id, usuario);
   },

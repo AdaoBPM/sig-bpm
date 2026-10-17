@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { temPermissao } from "../../middlewares/verificarPermissao.js";
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
-import { DEPARTAMENTOS, NOME_DA_FOTO, RelatorioExecutivoError, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
+import { CHAVES_DAS_ABAS, NOME_DA_FOTO, RelatorioExecutivoError, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
 
 /** O usuário da requisição: se edita a tela e os departamentos do recorte (sem recorte, nulo: todos). */
 const usuario = (request: Request): UsuarioDoRelatorio => ({
@@ -29,7 +29,7 @@ function id(request: Request, response: Response) {
   return r.success ? r.data : null;
 }
 
-const departamento = z.enum(DEPARTAMENTOS as [(typeof DEPARTAMENTOS)[number], ...(typeof DEPARTAMENTOS)[number][]]);
+const departamento = z.enum(CHAVES_DAS_ABAS as [(typeof CHAVES_DAS_ABAS)[number], ...(typeof CHAVES_DAS_ABAS)[number][]]);
 function aba(request: Request, response: Response) {
   const r = departamento.safeParse(request.params.departamento);
   if (!r.success) response.status(400).json({ error: "Aba inválida." });

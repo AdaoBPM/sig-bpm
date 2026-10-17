@@ -51,13 +51,14 @@ async function prepararFoto(arquivo: File): Promise<{ foto: Blob; proporcao: num
 /** O nome da página: o escolhido ou, sem ele, "Página N". */
 const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 1}`;
 
-/** A aba (departamento) e a página abertas. */
+/** A aba e a página abertas. */
 type Aberta = { chave: string; pagina: string | null };
 
 /**
- * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com uma aba por departamento (na barra do topo, como
- * as etapas do Fechamento Mensal) e, em cada uma, as páginas (16/10/2026), cada página com a grade dos blocos. Quem edita
- * a aba (o gestor do departamento, pelo recorte) inclui e exclui páginas, adiciona cards (do Painel de Bordo, com ou sem
+ * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as seis abas (17/10/2026: Fatos, Resultados,
+ * Comercial, Produção, Serviços e Administrativo; na barra do topo, como as etapas do Fechamento Mensal) e, em cada uma, as
+ * páginas (16/10/2026), cada página com a grade dos blocos. Quem edita a aba (Fatos e Resultados, todos os que editam a
+ * tela; as performances, o gestor do departamento, pelo recorte) inclui e exclui páginas, adiciona cards (do Painel de Bordo, com ou sem
  * gráfico, e dos Indicadores), anotações (positivas, negativas e de atenção) e fotos, move, redimensiona e exclui os
  * blocos, grava e finaliza a aba; a aba finalizada todos a leem, e quem a edita (ou o Administrador) a reabre. A aba em
  * elaboração só aparece para quem a edita. Apresentar mostra as páginas como slides, em tela inteira.
@@ -159,7 +160,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   // Os slides da apresentação: as páginas com algum bloco das abas que o usuário vê (o que está na tela, gravado ou não).
   const slides = relatorio.abas.flatMap((a) => {
     const ps = a.visivel ? (paginas[a.chave] ?? []) : [];
-    return ps.flatMap((p, k) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: a.nome, pagina: nomeDaPagina(p, k), blocos: p.blocos }] : []));
+    return ps.flatMap((p, k) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos }] : []));
   });
   const apresentar = () => {
     entrarEmTelaInteira();
@@ -277,14 +278,17 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         comoUsar={
           <ul>
             <li>
-              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e os departamentos: cada departamento é uma aba.
-              Você edita as abas do seu recorte de departamentos (Controle de Usuários); as dos outros aparecem quando o gestor delas as finaliza. O ícone de
-              check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a finalizou e quando).
+              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as seis abas: Fatos (Fatos Relevantes),
+              Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
+              Serviços) e Administrativo (Performance Administrativa). Fatos e Resultados são gerais: todos os que editam a tela os editam. As performances
+              seguem o recorte de departamentos do seu usuário (Controle de Usuários): você edita as do seu recorte (sem recorte, todas); as dos outros
+              aparecem quando o gestor delas as finaliza. O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
+              finalizou e quando).
             </li>
             <li>
               Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
               dois cliques nele (ou o lápis) o editam. Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
-              blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de um departamento para o outro.
+              blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de uma aba para a outra.
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
@@ -308,9 +312,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
             </li>
             <li>
-              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o departamento e o
-              nome do slide (o da página) à esquerda do topo e o relatório e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
-              o grupo anterior (o departamento), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
+              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o título da aba (Fatos Relevantes,
+              Performance da Produção…) e o nome do slide (o da página) à esquerda do topo e o relatório e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
+              o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
               ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
               na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Na apresentação, os textos não se selecionam.
             </li>
@@ -322,8 +326,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         }
         sobre={
           <p>
-            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada departamento, as páginas com os cards do Painel de Bordo e dos Indicadores de
-            Resultados Empresariais escolhidos pelo gestor, com as anotações dos pontos positivos, negativos e de atenção e as fotos. Criado por{" "}
+            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (os Fatos Relevantes, o Demonstrativo de Resultados e as performances
+            Comercial, da Produção, de Serviços e Administrativa), as páginas com os cards do Painel de Bordo e dos Indicadores de Resultados
+            Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção e as fotos. Criado por{" "}
             {relatorio.criadoPor}.
           </p>
         }
@@ -505,14 +510,14 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
 
 /**
  * A barra do relatório (16/10/2026), no topo da tela, no formato da barra de etapas do Fechamento Mensal: o mês em
- * amarelo-ouro (o menu dele leva aos outros relatórios), a situação do relatório e os departamentos, com o ícone de check
+ * amarelo-ouro (o menu dele leva aos outros relatórios), a situação do relatório e as abas (o nome curto; o título na dica), com o ícone de check
  * nos finalizados (a dica diz quem finalizou e quando).
  */
 function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio; chave: string; onMudar: (chave: string) => void }) {
   const router = useRouter();
   const lista = useQuery({ queryKey: ["relatorios-executivos"], queryFn: () => relatoriosExecutivosService.listar() });
   return (
-    <nav aria-label="Departamentos do relatório" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
+    <nav aria-label="Abas do relatório" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
       <div className="flex shrink-0 items-center gap-1.5 px-1">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -549,6 +554,7 @@ function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio;
               <button
                 type="button"
                 aria-current={ativa ? "page" : undefined}
+                title={a.titulo}
                 onClick={() => onMudar(a.chave)}
                 className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
               >

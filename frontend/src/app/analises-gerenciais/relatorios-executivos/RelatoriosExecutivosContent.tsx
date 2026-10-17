@@ -67,8 +67,9 @@ export function RelatoriosExecutivosContent() {
           <ul>
             <li>Cada linha é o relatório de uma competência fechada (um por competência). Clique na linha para abrir o relatório.</li>
             <li>
-              A Situação é Finalizado quando todas as abas (os sete departamentos) estão finalizadas; antes, Em Elaboração. A coluna Abas Finalizadas mostra o
-              andamento, e Suas Abas, as abas que você edita (as do seu recorte de departamentos, em Controle de Usuários) e a situação de cada uma (sem recorte, Todas).
+              A Situação é Finalizado quando todas as abas (as seis: Fatos, Resultados, Comercial, Produção, Serviços e Administrativo) estão finalizadas;
+              antes, Em Elaboração. A coluna Abas Finalizadas mostra o andamento, e Suas Abas, as abas que você edita e a situação de cada uma (Fatos e
+              Resultados são de todos os que editam a tela; as performances seguem o seu recorte de departamentos, em Controle de Usuários; sem recorte, Todas).
             </li>
             {pode ? (
               <li>
@@ -82,8 +83,8 @@ export function RelatoriosExecutivosContent() {
         }
         sobre={
           <p>
-            Os Relatórios Executivos são as apresentações mensais dos gestores: um relatório por competência fechada, com uma aba por departamento, onde
-            cada gestor escolhe os cards do Painel de Bordo e dos Indicadores e escreve as anotações dos pontos positivos, negativos e de atenção, com fotos. Os cards
+            Os Relatórios Executivos são as apresentações mensais dos gestores: um relatório por competência fechada, com seis abas — Fatos Relevantes,
+            Demonstrativo de Resultados e as performances Comercial, da Produção, de Serviços e Administrativa —, onde cada gestor escolhe os cards do Painel de Bordo e dos Indicadores e escreve as anotações dos pontos positivos, negativos e de atenção, com fotos. Os cards
             trazem só as competências fechadas, até o mês do relatório. Cada aba em elaboração só aparece para quem a edita; finalizada, todos a veem.
           </p>
         }
@@ -171,8 +172,8 @@ function NovoRelatorioDialog({ dados, onFechar }: { dados: ListaDeRelatorios; on
         <DialogHeader>
           <DialogTitle>Novo Relatório Executivo</DialogTitle>
           <DialogDescription>
-            O relatório da competência, com uma aba por departamento. Cada gestor monta as abas do seu recorte
-            {dados.meusDepartamentos.length && dados.meusDepartamentos.length < 7 ? ` (as suas: ${dados.meusDepartamentos.map((d) => d.nome).join(", ")})` : ""}.
+            O relatório da competência, com as seis abas: Fatos e Resultados, de todos, e as performances, de cada gestor pelo seu recorte
+            {dados.meusDepartamentos.length && dados.meusDepartamentos.length < 6 ? ` (as suas: ${dados.meusDepartamentos.map((d) => d.nome).join(", ")})` : ""}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">

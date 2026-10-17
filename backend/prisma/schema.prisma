@@ -2271,9 +2271,22 @@ model RelatorioExecutivo {
 /// Uma aba (um departamento) de um relatório executivo: os blocos da grade (os cards do Painel de Bordo, os dos
 /// Indicadores e as anotações, com a posição e o tamanho de cada um) e a situação. Em elaboração, só quem a edita (e o
 /// Administrador) a vê; finalizada, todos; quem a edita a finaliza e a reabre.
+/// ENUM: as abas dos Relatórios Executivos (17/10/2026; antes, os sete departamentos): Fatos Relevantes e Demonstrativo
+/// de Resultados (gerais: quem edita a tela) e as performances Comercial, da Produção, de Serviços e Administrativa (pelo
+/// recorte de departamentos do usuário).
+enum AbaRelatorioExecutivo {
+  FATOS
+  RESULTADOS
+  COMERCIAL
+  PRODUCAO
+  SERVICOS
+  ADMINISTRATIVO
+}
+
 model RelatorioExecutivoAba {
   relatorioId   String             @map("relatorio_id")
-  departamento  DepartamentoAcesso
+  /// A aba (o nome da coluna ficou o de antes, departamento).
+  departamento  AbaRelatorioExecutivo
   /// Os blocos: [{ id, tipo, x, y, w, h, … }].
   blocos        Json
   situacao      SituacaoRelatorio  @default(EM_ELABORACAO)

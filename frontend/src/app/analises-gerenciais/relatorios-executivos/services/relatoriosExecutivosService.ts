@@ -3,8 +3,9 @@ import { api } from "@/lib/api";
 import type { Indicadores, Painel } from "@/app/relatorios/services/relatoriosService";
 
 /**
- * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com uma aba por
- * departamento; cada gestor edita as abas do seu recorte, e cada aba tem a sua situação.
+ * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com seis abas (17/10/2026:
+ * Fatos, Resultados, Comercial, Produção, Serviços e Administrativo); Fatos e Resultados todos os que editam a tela editam,
+ * e as performances, cada gestor pelo recorte de departamentos; cada aba tem a sua situação.
  */
 export type Situacao = "EM_ELABORACAO" | "FINALIZADO";
 export type AbaResumida = { chave: string; nome: string; situacao: Situacao };
@@ -57,6 +58,8 @@ export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B,
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
 export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[] };
 export type AbaDoRelatorio = AbaResumida & {
+  /** O título da aba (17/10/2026): Fatos Relevantes, Demonstrativo de Resultados, Performance Comercial… (`nome` é o curto, o da barra). */
+  titulo: string;
   /** Em elaboração, só quem a edita (e o Administrador) a vê. */
   visivel: boolean;
   /** As páginas (vazio, na aba que o usuário não vê). */

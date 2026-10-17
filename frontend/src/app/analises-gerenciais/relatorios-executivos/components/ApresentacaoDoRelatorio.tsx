@@ -11,7 +11,7 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 import { GradeDoRelatorio, linhasDaPagina } from "./GradeDoRelatorio";
 import type { Bloco, DadosDoRelatorio } from "../services/relatoriosExecutivosService";
 
-/** Um slide: o departamento (`nome`), o nome da página (`pagina`) e os blocos. */
+/** Um slide: o título da aba (`nome`: Fatos Relevantes, Performance da Produção…), o nome da página (`pagina`) e os blocos. */
 export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[] };
 
 /** Entra na tela inteira do navegador (a página toda; a apresentação a cobre, sem o menu lateral). */
@@ -58,7 +58,7 @@ export function ApresentacaoDoRelatorio({
   };
   useEffect(() => () => window.clearTimeout(relogio.current), []);
   const ir = (d: number) => setK((x) => Math.min(slides.length - 1, Math.max(0, x + d)));
-  // Os grupos (17/10/2026): os departamentos. Recuar vai ao início do grupo anterior; avançar, ao início do próximo.
+  // Os grupos (17/10/2026): as abas. Recuar vai ao início do grupo anterior; avançar, ao início do próximo.
   const grupo = (i: number) => slides[i]?.chave.split("|")[0];
   const inicioDoGrupo = (i: number) => {
     let j = i;
@@ -102,7 +102,7 @@ export function ApresentacaoDoRelatorio({
       {/* O topo e as margens do slide: os de linhasDaPagina, para a página caber inteira na tela. */}
       <div className="px-8 pt-6 pb-6">
         {/*
-          À esquerda, o departamento em preto e o nome do slide (o da página) em cinza; à direita, o relatório logo antes da
+          À esquerda, o título da aba em preto e o nome do slide (o da página) em cinza; à direita, o relatório logo antes da
           logo da BPM (16/10/2026). A logo, de 30 px, fica centrada na altura da barra, sem mudar a altura dela.
         */}
         <header className="mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
