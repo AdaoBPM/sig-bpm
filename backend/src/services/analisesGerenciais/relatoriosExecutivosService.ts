@@ -13,7 +13,7 @@ import { painelService } from "../relatorios/painelService.js";
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
  * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as seis abas (17/10/2026;
- * antes, uma por departamento) — Fatos Relevantes e Demonstrativo de Resultados, que todos os que editam a tela editam, e
+ * antes, uma por departamento) — Introdução e Demonstrativo de Resultados, que todos os que editam a tela editam, e
  * as performances Comercial, da Produção, de Serviços e Administrativa, que cada gestor edita pelo recorte de
  * departamentos (sem recorte, todas); cada aba tem a sua situação —
  * em elaboração, só quem a edita (e o Administrador) a vê; finalizada, todos —, e quem a edita a finaliza e a reabre (o
@@ -39,7 +39,7 @@ export type UsuarioDoRelatorio = { id: string; nome: string; admin: boolean; edi
  * recorte (nulo: geral, de todos os que editam a tela).
  */
 export const ABAS: Array<{ chave: AbaRelatorioExecutivo; nome: string; titulo: string; departamento: DepartamentoAcesso | null }> = [
-  { chave: "FATOS", nome: "Fatos", titulo: "Fatos Relevantes", departamento: null },
+  { chave: "FATOS", nome: "Introdução", titulo: "Introdução", departamento: null },
   { chave: "RESULTADOS", nome: "Resultados", titulo: "Demonstrativo de Resultados", departamento: null },
   { chave: "COMERCIAL", nome: "Comercial", titulo: "Performance Comercial", departamento: "COMERCIAL" },
   { chave: "PRODUCAO", nome: "Produção", titulo: "Performance da Produção", departamento: "PRODUCAO" },

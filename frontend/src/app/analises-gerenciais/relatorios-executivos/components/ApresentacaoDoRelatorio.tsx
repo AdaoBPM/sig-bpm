@@ -11,7 +11,7 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 import { GradeDoRelatorio, linhasDaPagina } from "./GradeDoRelatorio";
 import type { Bloco, DadosDoRelatorio } from "../services/relatoriosExecutivosService";
 
-/** Um slide: o título da aba (`nome`: Fatos Relevantes, Performance da Produção…), o nome da página (`pagina`) e os blocos. */
+/** Um slide: o título da aba (`nome`: Introdução, Performance da Produção…), o nome da página (`pagina`) e os blocos. */
 export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[] };
 
 /** Entra na tela inteira do navegador (a página toda; a apresentação a cobre, sem o menu lateral). */

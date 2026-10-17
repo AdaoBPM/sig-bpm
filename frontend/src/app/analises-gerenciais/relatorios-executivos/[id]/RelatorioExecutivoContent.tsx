@@ -55,9 +55,9 @@ const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 
 type Aberta = { chave: string; pagina: string | null };
 
 /**
- * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as seis abas (17/10/2026: Fatos, Resultados,
+ * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as seis abas (17/10/2026: Introdução, Resultados,
  * Comercial, Produção, Serviços e Administrativo; na barra do topo, como as etapas do Fechamento Mensal) e, em cada uma, as
- * páginas (16/10/2026), cada página com a grade dos blocos. Quem edita a aba (Fatos e Resultados, todos os que editam a
+ * páginas (16/10/2026), cada página com a grade dos blocos. Quem edita a aba (Introdução e Resultados, todos os que editam a
  * tela; as performances, o gestor do departamento, pelo recorte) inclui e exclui páginas, adiciona cards (do Painel de Bordo, com ou sem
  * gráfico, e dos Indicadores), anotações (positivas, negativas e de atenção) e fotos, move, redimensiona e exclui os
  * blocos, grava e finaliza a aba; a aba finalizada todos a leem, e quem a edita (ou o Administrador) a reabre. A aba em
@@ -210,7 +210,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     <div ref={area} className="space-y-6">
       <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => setAberta({ chave: c, pagina: null })} />
       <CabecalhoDaTela
-        // O título da tela é o da aba aberta (17/10/2026: Fatos Relevantes, Performance da Produção…); o mês fica na barra do topo.
+        // O título da tela é o da aba aberta (17/10/2026: Introdução, Performance da Produção…); o mês fica na barra do topo.
         titulo={aba?.titulo ?? `RE - ${relatorio.rotuloMes}`}
         acoes={
           <div className="flex flex-wrap items-center gap-2">
@@ -279,9 +279,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         comoUsar={
           <ul>
             <li>
-              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as seis abas: Fatos (Fatos Relevantes),
+              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as seis abas: Introdução,
               Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
-              Serviços) e Administrativo (Performance Administrativa). Fatos e Resultados são gerais: todos os que editam a tela os editam. As performances
+              Serviços) e Administrativo (Performance Administrativa). Introdução e Resultados são gerais: todos os que editam a tela os editam. As performances
               seguem o recorte de departamentos do seu usuário (Controle de Usuários): você edita as do seu recorte (sem recorte, todas); as dos outros
               aparecem quando o gestor delas as finaliza. O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
               finalizou e quando).
@@ -313,7 +313,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
             </li>
             <li>
-              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o título da aba (Fatos Relevantes,
+              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o título da aba (Introdução,
               Performance da Produção…) e o nome do slide (o da página) à esquerda do topo e o relatório e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
               o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
               ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
@@ -327,7 +327,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         }
         sobre={
           <p>
-            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (os Fatos Relevantes, o Demonstrativo de Resultados e as performances
+            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (a Introdução, o Demonstrativo de Resultados e as performances
             Comercial, da Produção, de Serviços e Administrativa), as páginas com os cards do Painel de Bordo e dos Indicadores de Resultados
             Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção e as fotos. Criado por{" "}
             {relatorio.criadoPor}.
