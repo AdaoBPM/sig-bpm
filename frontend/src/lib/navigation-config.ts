@@ -255,6 +255,8 @@ export function permissaoDaTela(pathname: string): string | null {
 export function primeiraTelaPermitida(pode: (p: string) => boolean): string | null {
   for (const g of navGrupos) {
     for (const item of g.itens) {
+      // As telas em desenvolvimento (Resultados ROVA…) não são início de ninguém (17/10/2026).
+      if (item.emDesenvolvimento) continue;
       const permitido = itemPermitido(item, pode);
       if (permitido) return permitido.href;
     }

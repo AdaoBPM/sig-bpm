@@ -89,7 +89,15 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/competencias" />}>
+            {/*
+              A marca, sem link (17/10/2026; antes, levava às Competências — e quem não lê o Fechamento Mensal ia parar
+              noutra tela): só a logo e o nome, sem o realce de botão.
+            */}
+            <SidebarMenuButton
+              size="lg"
+              render={<div />}
+              className="cursor-default hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground"
+            >
               <BpmLogo className="h-7 w-auto" priority />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">BPM Pré-Moldados</span>
