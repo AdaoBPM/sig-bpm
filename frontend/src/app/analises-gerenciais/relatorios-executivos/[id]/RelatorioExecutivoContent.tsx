@@ -210,7 +210,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     <div ref={area} className="space-y-6">
       <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => setAberta({ chave: c, pagina: null })} />
       <CabecalhoDaTela
-        titulo={`RE - ${relatorio.rotuloMes}`}
+        // O título da tela é o da aba aberta (17/10/2026: Fatos Relevantes, Performance da Produção…); o mês fica na barra do topo.
+        titulo={aba?.titulo ?? `RE - ${relatorio.rotuloMes}`}
         acoes={
           <div className="flex flex-wrap items-center gap-2">
             {editavel ? (
