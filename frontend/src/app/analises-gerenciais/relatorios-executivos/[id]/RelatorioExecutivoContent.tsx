@@ -312,7 +312,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
               nele para mudar) e o texto no card com o destaque da cor. Na barra do bloco (com o mouse sobre ele ou escrevendo nele), a formatação do
-              texto da anotação e da legenda da foto: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, amarelo-ouro,
+              texto da anotação e da legenda da foto: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
               verde, azul, amarelo, laranja e vermelho) e os marcadores (quadrado, seta, check e erro, o “x”). Ela vale para o trecho selecionado; sem seleção,
               para todo o texto. No canto do bloco, escolha Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
               Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.

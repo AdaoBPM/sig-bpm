@@ -23,7 +23,7 @@ export const COR_PADRAO = "#111827";
 export const CORES_DA_FONTE = [
   { nome: "Padrão", cor: COR_PADRAO },
   { nome: "Cinza", cor: "#6b7280" },
-  { nome: "Amarelo-Ouro", cor: "#ffcc00" },
+  { nome: "Ouro", cor: "#ffcc00" },
   { nome: "Verde", cor: "#16a34a" },
   { nome: "Azul", cor: "#2563eb" },
   { nome: "Amarelo", cor: "#eab308" },
