@@ -22,12 +22,14 @@ export function BordaDoDesenvolvimento() {
 }
 
 /**
- * O ícone da aba em vermelho (17/10/2026): o favicon de sempre, redesenhado com as partes escuras em vermelho, num
- * `<link rel="icon">` no fim do head (o navegador usa o último).
+ * O ícone da aba em vermelho (17/10/2026): o favicon de sempre, redesenhado com as partes escuras em vermelho. O endereço
+ * vermelho vai em todos os `<link rel="icon">` do head — também no do Next, que, ao navegar entre as telas, voltava a ficar
+ * depois do vermelho (e o navegador usa o último) — e se reaplica sempre que o head muda.
  */
 function IconeDoDesenvolvimento() {
   useEffect(() => {
     let cancelado = false;
+    let observador: MutationObserver | null = null;
     const imagem = new Image();
     imagem.onload = () => {
       if (cancelado) return;
@@ -47,17 +49,28 @@ function IconeDoDesenvolvimento() {
         }
       }
       ctx.putImageData(px, 0, 0);
-      const link = document.createElement("link");
-      link.rel = "icon";
-      link.type = "image/png";
-      link.dataset.desenvolvimento = "";
-      link.href = tela.toDataURL("image/png");
-      document.head.appendChild(link);
+      const vermelho = tela.toDataURL("image/png");
+      const aplicar = () => {
+        document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]').forEach((l) => {
+          if (l.getAttribute("href") === vermelho) return;
+          // Guarda o endereço original, para voltar ao desmontar.
+          if (l.dataset.original === undefined) l.dataset.original = l.getAttribute("href") ?? "";
+          l.type = "image/png";
+          l.setAttribute("href", vermelho);
+        });
+      };
+      aplicar();
+      observador = new MutationObserver(aplicar);
+      observador.observe(document.head, { childList: true, subtree: true, attributes: true, attributeFilter: ["href", "rel"] });
     };
     imagem.src = "/favicon.ico";
     return () => {
       cancelado = true;
-      document.head.querySelectorAll("link[data-desenvolvimento]").forEach((l) => l.remove());
+      observador?.disconnect();
+      document.head.querySelectorAll<HTMLLinkElement>("link[data-original]").forEach((l) => {
+        l.setAttribute("href", l.dataset.original ?? "");
+        delete l.dataset.original;
+      });
     };
   }, []);
   return null;
