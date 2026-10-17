@@ -12,7 +12,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { MESES } from "@/app/competencias/[anoMes]/utils/formatacao";
 import { RotulosDoGrafico, SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { Seletor } from "@/app/relatorios/components/SeletorPeriodo";
-import { AVISO_DO_PAINEL, CorpoDoPainel, LegendaDoPainel, SeletorCores, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
+import { AVISO_DO_PAINEL, CorpoDoPainel, LegendaDoPainel, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
 import { ConfigurarGraficos } from "@/app/relatorios/components/ConfigurarGraficos";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
@@ -36,7 +36,7 @@ export function CenarioPainelContent() {
   const router = useRouter();
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
   const [comRotulos, setComRotulos] = useRotulosDosValores();
-  const [cores, setCores] = useCoresDoPainel();
+  const [cores] = useCoresDoPainel();
   const consulta = useQuery({ queryKey: ["cenarios", id, "painel", ate], queryFn: () => cenariosService.painel(id, ate) });
   const dados = consulta.data;
   return (
@@ -47,8 +47,8 @@ export function CenarioPainelContent() {
           <ul>
             <li>
               Em “Configurar Gráficos”, à direita do título, escolha o Período (o mês de referência; o acumulado vai de janeiro até ele), os Rótulos
-              (Com: os valores de cada mês escritos nos gráficos, o cenário por cima do comparado), o Tipo dos gráficos e as Cores dos sinais
-              (guardados neste navegador, os mesmos do Painel de Bordo de Resultados Empresariais). As legendas (as cores das séries e os sinais)
+              (Com: os valores de cada mês escritos nos gráficos, o cenário por cima do comparado) e o Tipo dos gráficos (guardados neste navegador,
+              os mesmos do Painel de Bordo de Resultados Empresariais). As legendas (as cores das séries e os sinais)
               ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
@@ -59,8 +59,8 @@ export function CenarioPainelContent() {
             </li>
             <li>
               Com os Rótulos, o valor do cenário fica à esquerda do centro de cada mês (e do acumulado) e o do comparado à direita, e os gráficos
-              ficam sem as linhas da escala (só a do zero). Cores: Padrão
-              (verde, amarelo e vermelho) ou Acessíveis (azul no lugar do verde, para quem não distingue o verde do vermelho).
+              ficam sem as linhas da escala (só a do zero). As cores dos sinais seguem a Acessibilidade, no menu do usuário: Padrão (verde,
+              amarelo e vermelho) ou Daltonismo (azul no lugar do verde, para quem não distingue o verde do vermelho).
             </li>
             <li>
               O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como imagem, para colar num e-mail ou numa
@@ -82,7 +82,7 @@ export function CenarioPainelContent() {
               no lugar do orçado.
             </p>
             <p>
-              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O sinal fica verde (azul, nas cores Acessíveis) quando
+              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O sinal fica verde (azul, com a Acessibilidade Daltonismo) quando
               o cenário está do lado bom do comparado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%; o lado bom depende do sentido do
               indicador (↑ ou ↓).
             </p>
@@ -98,7 +98,6 @@ export function CenarioPainelContent() {
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={MESES.map((m, k) => ({ valor: String(k + 1), rotulo: m }))} />
               <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
-              <SeletorCores cores={cores} onMudar={setCores} />
             </ConfigurarGraficos>
           </div>
         }

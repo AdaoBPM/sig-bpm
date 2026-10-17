@@ -8,9 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 /**
  * O botão Configurar Gráficos (14/10/2026; antes, as listas na linha do título): abre o modal com as opções da tela — o
- * Exercício, o Período, os Rótulos, o Tipo e as Cores —, uma embaixo da outra, com o rótulo à esquerda. Cada escolha
- * vale na hora (as do Tipo, dos Rótulos e das Cores ficam guardadas neste navegador); o modal só fecha, sem explicação
- * embaixo do título (14/10/2026).
+ * Exercício, o Período, os Rótulos e o Tipo (as Cores, desde 16/10/2026, são a Acessibilidade do menu do usuário) —, uma
+ * embaixo da outra, com o rótulo à esquerda. Cada escolha vale na hora (as do Tipo e dos Rótulos ficam guardadas neste
+ * navegador); o modal só fecha, sem explicação embaixo do título (14/10/2026).
  */
 export function ConfigurarGraficos({ children }: { children: ReactNode }) {
   const [aberto, setAberto] = useState(false);

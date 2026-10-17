@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { useTema, type Tema } from "@/lib/tema";
-import { KeyRound, LogOut, Palette } from "lucide-react";
+import { useAcessibilidade, type Acessibilidade } from "@/lib/acessibilidade";
+import { Accessibility, KeyRound, LogOut, Palette } from "lucide-react";
 
 import {
   Avatar,
@@ -58,12 +59,19 @@ const TEMAS: Array<{ tema: Tema; rotulo: string; fundo: string }> = [
   { tema: "escuro", rotulo: "Escuro", fundo: "bg-[#111111]" },
 ];
 
+/** A acessibilidade no menu do usuário (16/10/2026): Padrão (os destaques bons em verde) ou Daltonismo (em azul). */
+const ACESSIBILIDADES: Array<{ valor: Acessibilidade; rotulo: string; dica: string }> = [
+  { valor: "padrao", rotulo: "Padrão", dica: "Os destaques bons em verde" },
+  { valor: "daltonismo", rotulo: "Daltonismo", dica: "Os destaques bons em azul, no lugar do verde" },
+];
+
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
   const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [tema, escolherTema] = useTema();
+  const [acessibilidade, escolherAcessibilidade] = useAcessibilidade();
   const { hasPermission } = usePermissions();
   const etapas = etapasDoMes(hasPermission, user?.acesso);
   // O mês do relatório executivo aberto (16/10/2026), no caminho: a mesma consulta da tela, que o cache já tem.
@@ -127,7 +135,7 @@ export function AppHeader() {
               {user?.nome ?? "Usuário"}
             </span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-0.5">
@@ -157,6 +165,31 @@ export function AppHeader() {
                     onClick={() => escolherTema(t.tema)}
                     className={`size-5 rounded-full border border-gray-400 outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-gray-400 ${t.fundo} ${tema === t.tema ? "ring-2 ring-bpm-primary ring-offset-1 ring-offset-[var(--popover)]" : "hover:ring-1 hover:ring-gray-400"}`}
                   />
+                ))}
+              </span>
+            </div>
+            {/*
+              A Acessibilidade (16/10/2026; antes, a lista Cores do Configurar Gráficos dos painéis), logo abaixo do Tema: com
+              Daltonismo, os destaques bons dos Painéis de Bordo e dos Relatórios Executivos ficam azuis no lugar do verde.
+            */}
+            <div className="flex items-center justify-between gap-2 px-1.5 py-1 text-sm">
+              <span className="flex items-center gap-1.5">
+                <Accessibility className="size-4 shrink-0" />
+                Acessibilidade
+              </span>
+              <span className="flex overflow-hidden rounded-sm border border-gray-300" role="radiogroup" aria-label="Acessibilidade">
+                {ACESSIBILIDADES.map((a) => (
+                  <button
+                    key={a.valor}
+                    type="button"
+                    role="radio"
+                    aria-checked={acessibilidade === a.valor}
+                    title={a.dica}
+                    onClick={() => escolherAcessibilidade(a.valor)}
+                    className={`px-1.5 py-0.5 text-xs outline-none focus-visible:bg-gray-100 ${acessibilidade === a.valor ? "bg-bpm-primary font-bold text-black" : "text-gray-700 hover:bg-gray-100"}`}
+                  >
+                    {a.rotulo}
+                  </button>
                 ))}
               </span>
             </div>

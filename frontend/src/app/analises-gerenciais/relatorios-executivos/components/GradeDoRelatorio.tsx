@@ -10,7 +10,7 @@ import "react-resizable/css/styles.css";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { CardDoPainel, SeletorCores, type Cores } from "@/app/relatorios/painel/PainelContent";
+import { CardDoPainel, type Cores } from "@/app/relatorios/painel/PainelContent";
 import { SeletorRotulos, SeletorTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
@@ -88,8 +88,8 @@ export function linhasDaFoto(w: number, proporcao: number, largura: number) {
 }
 
 /**
- * As notas das anotações (15/10/2026): o ícone e as cores, no padrão do Painel de Bordo — positivo em verde (azul nas
- * cores Acessíveis), negativo em vermelho e atenção em laranja. O rótulo é o título da anotação até alguém o mudar.
+ * As notas das anotações (15/10/2026): o ícone e as cores, no padrão do Painel de Bordo — positivo em verde (azul com a
+ * Acessibilidade Daltonismo, do menu do usuário), negativo em vermelho e atenção em laranja. O rótulo é o título da anotação até alguém o mudar.
  */
 export const NOTAS: Record<Nota, { rotulo: string; Icone: typeof ThumbsUp; classe: (cores: Cores) => string; icone: (cores: Cores) => string }> = {
   POSITIVO: {
@@ -223,7 +223,8 @@ export function GradeDoRelatorio({
           onFechar={() => setConfigurando(null)}
           onAplicar={(opcoes, todos) => {
             // Neste card ou em todos os cards do Painel de Bordo da aba.
-            onMudar(blocos.map((x) => (x.tipo === "PAINEL" && (todos || x.id === doCard.id) ? { ...x, ...opcoes } : x)));
+            // As cores próprias do card (de antes de 16/10/2026) saem: valem as da Acessibilidade.
+            onMudar(blocos.map((x) => (x.tipo === "PAINEL" && (todos || x.id === doCard.id) ? { ...x, ...opcoes, cores: undefined } : x)));
             setConfigurando(null);
           }}
         />
@@ -268,11 +269,12 @@ function BlocoAmpliado({ w, h, onFechar, children }: { w: number; h: number; onF
   );
 }
 
-type OpcoesDoGrafico = { tipoGrafico: TipoGrafico; comRotulos: boolean; cores: Cores };
+type OpcoesDoGrafico = { tipoGrafico: TipoGrafico; comRotulos: boolean };
 
 /**
  * O Configurar Gráfico de um card do Painel de Bordo (16/10/2026): as opções do Configurar Gráficos do Painel — os
- * Rótulos, o Tipo e as Cores —, aplicadas a este card ou a todos os cards do Painel da aba.
+ * Rótulos e o Tipo (as cores são as da Acessibilidade, 16/10/2026) —, aplicadas a este card ou a todos os cards do Painel
+ * da aba.
  */
 function ConfigurarGraficoDialog({
   b,
@@ -287,7 +289,7 @@ function ConfigurarGraficoDialog({
   onAplicar: (o: OpcoesDoGrafico, todos: boolean) => void;
   onFechar: () => void;
 }) {
-  const [o, setO] = useState<OpcoesDoGrafico>({ tipoGrafico: b.tipoGrafico ?? tipo, comRotulos: b.comRotulos ?? false, cores: b.cores ?? cores });
+  const [o, setO] = useState<OpcoesDoGrafico>({ tipoGrafico: b.tipoGrafico ?? tipo, comRotulos: b.comRotulos ?? false });
   const [todos, setTodos] = useState(false);
   return (
     <Dialog open onOpenChange={(a) => (!a ? onFechar() : undefined)}>
@@ -301,7 +303,6 @@ function ConfigurarGraficoDialog({
         <div className="grid gap-3 [&_label]:justify-between [&_label>span]:text-sm [&_[data-slot=select-trigger]]:w-40">
           <SeletorRotulos com={o.comRotulos} onMudar={(comRotulos) => setO((x) => ({ ...x, comRotulos }))} />
           <SeletorTipoGrafico tipo={o.tipoGrafico} onMudar={(tipoGrafico) => setO((x) => ({ ...x, tipoGrafico }))} />
-          <SeletorCores cores={o.cores} onMudar={(c) => setO((x) => ({ ...x, cores: c }))} />
         </div>
         <fieldset className="space-y-2">
           <legend className="mb-1.5 text-sm leading-none font-medium">Aplicar</legend>
@@ -447,7 +448,7 @@ function ConteudoDoBloco({
       <div className="flex h-full flex-col">
         <p className="truncate pb-1 text-xs font-bold tracking-wide text-gray-500 uppercase">{b.quadro}</p>
         <div className="min-h-0 flex-1">
-          <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={b.cores ?? cores} comGrafico={b.comGrafico} comRotulos={b.comRotulos ?? false} />
+          <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico} comRotulos={b.comRotulos ?? false} />
         </div>
       </div>
     );

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { useAcessibilidade } from "@/lib/acessibilidade";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
@@ -79,8 +80,8 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 
 /**
  * As cores do sinal (lista Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde, amarelo e
- * vermelho); Acessíveis (antes, Daltonismo; 13/10/2026), com azul no lugar do verde (melhor que o orçado), amarelo e
- * vermelho. O selo do desvio fica num tom claro da mesma cor (14/10/2026: o fundo em SVG, pelas variáveis --cor-selo-*,
+ * vermelho); Daltonismo (a Acessibilidade do menu do usuário, 16/10/2026), com azul no lugar do verde (melhor que o
+ * orçado), amarelo e vermelho. O selo do desvio fica num tom claro da mesma cor (14/10/2026: o fundo em SVG, pelas variáveis --cor-selo-*,
  * e o contorno como borda: no Firefox do usuário, o fundo em CSS saía em branco na imagem copiada). O valor guardado
  * continua "daltonismo", para manter a escolha já feita nos navegadores.
  */
@@ -342,53 +343,17 @@ function ItensDaLegenda({ tipo }: { tipo: TipoGrafico }) {
   );
 }
 
-/** A lista Cores (Padrão ou Acessíveis), guardada neste navegador; a mesma nos dois painéis. */
-export function useCoresDoPainel(): [Cores, (c: Cores) => void] {
-  const [cores, setCores] = useState<Cores>(() => guardado(CHAVE_CORES, ["padrao", "daltonismo"] as const, "padrao"));
-  return [
-    cores,
-    (c) => {
-      setCores(c);
-      guardar(CHAVE_CORES, c);
-    },
-  ];
-}
-export function SeletorCores({ cores, onMudar }: { cores: Cores; onMudar: (c: Cores) => void }) {
-  return (
-    <Seletor
-      rotulo="Cores"
-      valor={cores}
-      onMudar={(v) => onMudar(v === "daltonismo" ? "daltonismo" : "padrao")}
-      largura="w-32"
-      opcoes={[
-        { valor: "padrao", rotulo: "Padrão" },
-        { valor: "daltonismo", rotulo: "Acessíveis" },
-      ]}
-    />
-  );
+/**
+ * As cores dos sinais: as da Acessibilidade do menu do usuário (16/10/2026; antes, a lista Cores do Configurar Gráficos),
+ * Padrão (verde) ou Daltonismo (azul no lugar do verde), as mesmas em todas as telas.
+ */
+export function useCoresDoPainel(): [Cores] {
+  const [a] = useAcessibilidade();
+  return [a];
 }
 
 /** O quadro dos avisos do painel (13/10/2026): o quadro comum, com o destaque vermelho à esquerda. */
 export const AVISO_DO_PAINEL = "rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700";
-
-const CHAVE_CORES = "sig.painel.cores";
-/** Uma escolha guardada neste navegador (o tipo dos gráficos, as cores), ou o padrão. */
-function guardado<T extends string>(chave: string, valores: readonly T[], padrao: T): T {
-  try {
-    const v = window.localStorage.getItem(chave);
-    return valores.includes(v as T) ? (v as T) : padrao;
-  } catch {
-    // Sem armazenamento (janela privada, ou no servidor): o padrão.
-    return padrao;
-  }
-}
-function guardar(chave: string, valor: string) {
-  try {
-    window.localStorage.setItem(chave, valor);
-  } catch {
-    // Sem armazenamento: a escolha só não é lembrada.
-  }
-}
 
 export function PainelContent() {
   useRegistrarAcessoTela("/relatorios/painel");
@@ -396,10 +361,10 @@ export function PainelContent() {
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [aba, setAba] = useState("resultados");
-  // O tipo dos gráficos (Barras ou Área) e as cores dos sinais (Padrão ou Acessíveis), lembrados neste navegador.
+  // O tipo dos gráficos (Barras ou Área), lembrado neste navegador; as cores dos sinais, as da Acessibilidade do menu do usuário.
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
   const [comRotulos, setComRotulos] = useRotulosDosValores();
-  const [cores, setCores] = useCoresDoPainel();
+  const [cores] = useCoresDoPainel();
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
@@ -420,9 +385,8 @@ export function PainelContent() {
             <li>
               Em “Configurar Gráficos”, à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o
               acumulado vai de janeiro até ele), os Rótulos (Com: os valores de cada mês escritos nos gráficos, o realizado por cima do orçado), o
-              Tipo dos gráficos e as Cores dos sinais; cada escolha vale na hora. O Tipo, os Rótulos e as Cores ficam guardados neste navegador (o
-              Tipo e os Rótulos valem também para o gráfico do indicador em Indicadores). As legendas (as cores das séries e os sinais) ficam antes
-              do botão.
+              Tipo dos gráficos; cada escolha vale na hora. O Tipo e os Rótulos ficam guardados neste navegador (e valem também para o gráfico do
+              indicador em Indicadores). As legendas (as cores das séries e os sinais) ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
@@ -434,8 +398,9 @@ export function PainelContent() {
             <li>
               Tipo: Barras (colunas do realizado e do orçado, como na planilha) ou Área (o realizado numa área amarela, mais forte no máximo do
               período e transparente no zero, com o contorno em amarelo-ouro, e o orçado numa linha preta; no gráfico do acumulado, a coluna do
-              realizado com o mesmo degradê e o orçado como uma linha preta). Cores: Padrão (verde, amarelo e vermelho) ou Acessíveis (azul
-              no lugar do verde, amarelo e vermelho, para quem não distingue o verde do vermelho); a legenda acompanha.
+              realizado com o mesmo degradê e o orçado como uma linha preta). As cores dos sinais seguem a Acessibilidade, no menu do usuário (o
+              nome no canto de cima, à direita): Padrão (verde, amarelo e vermelho) ou Daltonismo (azul no lugar do verde, para quem não distingue
+              o verde do vermelho); a legenda acompanha.
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>
@@ -461,7 +426,7 @@ export function PainelContent() {
             </p>
             <p>
               O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O sinal fica verde
-              (azul, nas cores Acessíveis) quando o realizado está do lado bom do orçado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%. O lado bom depende
+              (azul, com a Acessibilidade Daltonismo) quando o realizado está do lado bom do orçado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%. O lado bom depende
               do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
             </p>
             <p>
@@ -494,7 +459,6 @@ export function PainelContent() {
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
               <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
-              <SeletorCores cores={cores} onMudar={setCores} />
               </ConfigurarGraficos>
             </div>
           ) : null
