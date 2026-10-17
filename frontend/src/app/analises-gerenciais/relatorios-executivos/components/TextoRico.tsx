@@ -125,17 +125,55 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
   campo.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-/** Aumenta ou diminui a fonte da seleção (um passo de 20%), envolvendo-a num span com o tamanho relativo. */
-function mudarFonte(sel: Selection, fator: number) {
+/**
+ * Aumenta ou diminui a fonte da seleção (um passo de 20%). Se a seleção é todo o trecho que já tem um tamanho, muda o
+ * tamanho dele (17/10/2026: antes, cada passo punha um span dentro do outro, e o de fora, maior, mantinha a linha alta
+ * depois de diminuir); de volta ao tamanho normal, o trecho perde a marca. Senão, envolve a seleção num span novo.
+ */
+function mudarFonte(sel: Selection, fator: number, campo: HTMLElement) {
   const r = sel.getRangeAt(0);
+  const selecionar = (no: Node, conteudo = true) => {
+    sel.removeAllRanges();
+    const nova = document.createRange();
+    if (conteudo) nova.selectNodeContents(no);
+    else nova.selectNode(no);
+    sel.addRange(nova);
+  };
+  let n: Node | null = r.commonAncestorContainer;
+  let trecho: HTMLElement | null = null;
+  while (n && n !== campo) {
+    if (n instanceof HTMLElement && n.tagName === "SPAN" && n.style.fontSize.endsWith("em")) {
+      trecho = n;
+      break;
+    }
+    n = n.parentNode;
+  }
+  const texto = sel.toString().trim();
+  if (trecho && texto && trecho.textContent?.trim() === texto) {
+    const tamanho = parseFloat(trecho.style.fontSize) * fator;
+    if (Math.abs(tamanho - 1) < 0.01) {
+      trecho.style.removeProperty("font-size");
+      if (!trecho.getAttribute("style")?.trim()) {
+        const filhos = [...trecho.childNodes];
+        trecho.replaceWith(...filhos);
+        if (filhos.length) {
+          sel.removeAllRanges();
+          const nova = document.createRange();
+          nova.setStartBefore(filhos[0]);
+          nova.setEndAfter(filhos[filhos.length - 1]);
+          sel.addRange(nova);
+        }
+        return;
+      }
+    } else trecho.style.fontSize = `${Number(tamanho.toFixed(4))}em`;
+    selecionar(trecho);
+    return;
+  }
   const span = document.createElement("span");
   span.style.fontSize = `${fator}em`;
   span.appendChild(r.extractContents());
   r.insertNode(span);
-  sel.removeAllRanges();
-  const nova = document.createRange();
-  nova.selectNodeContents(span);
-  sel.addRange(nova);
+  selecionar(span);
 }
 
 /** Põe (ou tira, se já tem o mesmo) a lista com o marcador na seleção. */
@@ -184,10 +222,16 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
       <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("underline")} title="Sublinhado" aria-label="Sublinhado">
         <Underline className="size-4" />
       </button>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => aplicar(campo(), (s) => mudarFonte(s, 1.2))} title="Aumentar a fonte" aria-label="Aumentar a fonte">
+      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => {
+          const el = campo();
+          if (el) aplicar(el, (s) => mudarFonte(s, 1.2, el));
+        }} title="Aumentar a fonte" aria-label="Aumentar a fonte">
         <AArrowUp className="size-4" />
       </button>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => aplicar(campo(), (s) => mudarFonte(s, 1 / 1.2))} title="Diminuir a fonte" aria-label="Diminuir a fonte">
+      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => {
+          const el = campo();
+          if (el) aplicar(el, (s) => mudarFonte(s, 1 / 1.2, el));
+        }} title="Diminuir a fonte" aria-label="Diminuir a fonte">
         <AArrowDown className="size-4" />
       </button>
       <span className="relative">
