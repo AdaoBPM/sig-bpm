@@ -32,7 +32,7 @@ export const MARCADORES = [
   { nome: "Quadrado", simbolo: "■" },
   { nome: "Seta", simbolo: "➜" },
   { nome: "Check", simbolo: "✓" },
-  { nome: "X", simbolo: "✗" },
+  { nome: "Erro", simbolo: "✗" },
 ];
 
 /** As listas com os marcadores (o símbolo vem no estilo da lista) e o recuo delas. */
