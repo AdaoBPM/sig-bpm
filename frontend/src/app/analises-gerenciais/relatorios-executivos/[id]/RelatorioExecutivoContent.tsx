@@ -99,6 +99,18 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const [confirmar, setConfirmar] = useState<"finalizar" | "excluir" | "excluirPagina" | null>(null);
   // A página com o nome em edição (16/10/2026), na própria aba dela.
   const [renomeando, setRenomeando] = useState<string | null>(null);
+  // A página arrastada para trocar de lugar (17/10/2026) e a aba sobre a qual ela está.
+  const [arrastando, setArrastando] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const moverPagina = (de: string, para: string) => {
+    const origem = daAba.findIndex((x) => x.id === de);
+    const destino = daAba.findIndex((x) => x.id === para);
+    if (origem < 0 || destino < 0 || origem === destino) return;
+    const lista = [...daAba];
+    const [movida] = lista.splice(origem, 1);
+    lista.splice(destino, 0, movida);
+    mudarPaginas(lista);
+  };
   const seletorDeFoto = useRef<HTMLInputElement>(null);
   const area = useRef<HTMLDivElement>(null);
   const chave = aberta.chave;
@@ -288,7 +300,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             </li>
             <li>
               Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
-              dois cliques nele (ou o lápis) o editam. Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
+              dois cliques nele (ou o lápis) o editam, e arrastar a aba de uma página para outra posição a troca de lugar (a ordem dos slides acompanha). Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
               blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de uma aba para a outra.
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
@@ -299,7 +311,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             </li>
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
-              nele para mudar) e o texto no card com o destaque da cor. No canto do bloco, escolha Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
+              nele para mudar) e o texto no card com o destaque da cor. Na barra do bloco (com o mouse sobre ele ou escrevendo nele), a formatação do
+              texto da anotação e da legenda da foto: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (preto, cinza médio, amarelo-ouro,
+              verde, azul, amarelo, laranja e vermelho) e os marcadores (quadrado, seta, check e “x”). Ela vale para o trecho selecionado; sem seleção,
+              para todo o texto. No canto do bloco, escolha Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
               Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
             </li>
             <li>
@@ -375,8 +390,32 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                   aria-selected={atual}
                   onClick={() => setAberta({ chave, pagina: p.id })}
                   onDoubleClick={() => (editavel ? setRenomeando(p.id) : undefined)}
-                  title={editavel ? "Dois cliques para mudar o nome (o do slide)" : undefined}
-                  className={classe}
+                  title={editavel ? "Dois cliques para mudar o nome (o do slide); arraste para trocar de lugar" : undefined}
+                  // Arrastar a aba para trocar a página de lugar (17/10/2026), na aba que se edita.
+                  draggable={editavel}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", p.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    setArrastando(p.id);
+                  }}
+                  onDragOver={(e) => {
+                    if (!arrastando || arrastando === p.id) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setSobre(p.id);
+                  }}
+                  onDragLeave={() => setSobre((s) => (s === p.id ? null : s))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (arrastando) moverPagina(arrastando, p.id);
+                    setArrastando(null);
+                    setSobre(null);
+                  }}
+                  onDragEnd={() => {
+                    setArrastando(null);
+                    setSobre(null);
+                  }}
+                  className={`${classe} ${editavel ? "cursor-grab active:cursor-grabbing" : ""} ${sobre === p.id ? "rounded-t-sm bg-gray-100" : ""} ${arrastando === p.id ? "opacity-50" : ""}`}
                 >
                   {nomeDaPagina(p, k)}
                 </button>

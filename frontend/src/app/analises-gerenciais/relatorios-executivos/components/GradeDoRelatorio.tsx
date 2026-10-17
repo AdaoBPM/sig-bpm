@@ -17,6 +17,7 @@ import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Nota } from "../services/relatoriosExecutivosService";
+import { BarraDeTexto, TextoRico } from "./TextoRico";
 
 const Grade = WidthProvider(GridLayout);
 
@@ -134,6 +135,8 @@ export function GradeDoRelatorio({
 }) {
   const [configurando, setConfigurando] = useState<string | null>(null);
   const caixa = useRef<HTMLDivElement>(null);
+  // Os campos de texto formatado dos blocos (anotações e legendas), para a barra de formatação de cada um.
+  const campos = useRef(new Map<string, HTMLElement>());
   // A largura da grade enquanto um bloco se move ou se redimensiona (para a grade de fundo); fora disso, null.
   const [ajustando, setAjustando] = useState<number | null>(null);
   const comecar = () => setAjustando(caixa.current?.offsetWidth ?? null);
@@ -200,7 +203,13 @@ export function GradeDoRelatorio({
           // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
           <div key={b.id} className="group relative hover:z-10">
             {editavel ? (
-              <BarraDoBloco b={b} onMudar={(m) => mudarBloco(b.id, m)} onConfigurar={() => setConfigurando(b.id)} onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))} />
+              <BarraDoBloco
+                b={b}
+                campo={() => campos.current.get(b.id) ?? null}
+                onMudar={(m) => mudarBloco(b.id, m)}
+                onConfigurar={() => setConfigurando(b.id)}
+                onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))}
+              />
             ) : null}
             {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca, sem sair da tela; o clique o amplia. */}
             <div
@@ -211,7 +220,16 @@ export function GradeDoRelatorio({
               onMouseLeave={ampliavel ? () => setRealce(null) : undefined}
               onClick={ampliavel ? (e) => setAmpliado(oQueAmpliar(b, e.currentTarget, e.target as HTMLElement)) : undefined}
             >
-              <ConteudoDoBloco relatorioId={relatorioId} b={b} dados={dados} editavel={editavel} cores={cores} tipo={tipo} onMudar={(m) => mudarBloco(b.id, m)} />
+              <ConteudoDoBloco
+                relatorioId={relatorioId}
+                b={b}
+                dados={dados}
+                editavel={editavel}
+                cores={cores}
+                tipo={tipo}
+                registrar={(el) => (el ? campos.current.set(b.id, el) : campos.current.delete(b.id))}
+                onMudar={(m) => mudarBloco(b.id, m)}
+              />
             </div>
           </div>
         ))}
@@ -381,10 +399,23 @@ function ConfigurarGraficoDialog({
 }
 
 /** Os botões do bloco na edição, no canto de cima: a alça de mover, as opções do tipo e excluir. */
-function BarraDoBloco({ b, onMudar, onConfigurar, onExcluir }: { b: Bloco; onMudar: (m: Partial<Bloco>) => void; onConfigurar: () => void; onExcluir: () => void }) {
+function BarraDoBloco({
+  b,
+  campo,
+  onMudar,
+  onConfigurar,
+  onExcluir,
+}: {
+  b: Bloco;
+  campo: () => HTMLElement | null;
+  onMudar: (m: Partial<Bloco>) => void;
+  onConfigurar: () => void;
+  onExcluir: () => void;
+}) {
   const botao = "inline-flex size-6 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900";
   return (
-    <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white/95 p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+    // Aparece com o mouse sobre o bloco e enquanto se escreve nele (o foco no texto).
+    <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white/95 p-0.5 opacity-0 shadow-sm transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 focus-within:opacity-100">
       <span className={`alca-do-bloco cursor-move ${botao}`} title="Mover (arraste)" aria-label="Mover">
         <GripVertical className="size-4" />
       </span>
@@ -410,6 +441,14 @@ function BarraDoBloco({ b, onMudar, onConfigurar, onExcluir }: { b: Bloco; onMud
             );
           })
         : null}
+      {/* A formatação do texto (17/10/2026), nas anotações e nas legendas das fotos. */}
+      {b.tipo === "ANOTACAO" || b.tipo === "FOTO" ? (
+        <>
+          <span className="mx-0.5 h-4 w-px bg-gray-200" />
+          <BarraDeTexto campo={campo} botao={botao} />
+          <span className="mx-0.5 h-4 w-px bg-gray-200" />
+        </>
+      ) : null}
       <button type="button" className={`${botao} hover:text-red-700`} title="Excluir o bloco" aria-label="Excluir o bloco" onClick={onExcluir}>
         <X className="size-4" />
       </button>
@@ -427,6 +466,7 @@ function ConteudoDoBloco({
   ampliado = false,
   soCard = false,
   semGrafico = false,
+  registrar,
   onMudar,
 }: {
   relatorioId: string;
@@ -437,6 +477,8 @@ function ConteudoDoBloco({
   soCard?: boolean;
   /** No card ampliado pela parte antes do gráfico (17/10/2026): o card como se não tivesse gráfico. */
   semGrafico?: boolean;
+  /** O campo do texto formatado (anotação ou legenda), para a barra de formatação. */
+  registrar?: (el: HTMLElement | null) => void;
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
   cores: Cores;
@@ -467,17 +509,17 @@ function ConteudoDoBloco({
           )}
         </header>
         <article className={`flex min-h-0 flex-1 rounded-sm border border-l-4 border-gray-200 bg-white ${n.classe(cores)}`}>
-          {editavel ? (
-            <textarea
-              value={b.texto}
-              onChange={(e) => onMudar({ texto: e.target.value } as Partial<Bloco>)}
-              placeholder="Escreva a anotação…"
-              aria-label={`Anotação (${titulo})`}
-              className="min-h-0 w-full flex-1 resize-none bg-transparent px-4 py-2 text-sm text-gray-900 outline-none"
-            />
-          ) : (
-            <p className="min-h-0 flex-1 overflow-auto px-4 py-2 text-sm whitespace-pre-wrap text-gray-900">{b.texto}</p>
-          )}
+          {/* O texto formatado (17/10/2026; antes, só texto): a formatação na barra do bloco. */}
+          <TextoRico
+            html={b.html}
+            texto={b.texto}
+            editavel={editavel}
+            placeholder="Escreva a anotação…"
+            rotulo={`Anotação (${titulo})`}
+            registrar={registrar}
+            onMudar={(html, texto) => onMudar({ html, texto } as Partial<Bloco>)}
+            className="min-h-0 w-full flex-1 overflow-auto px-4 py-2 text-sm text-gray-900"
+          />
         </article>
       </div>
     );
@@ -490,22 +532,22 @@ function ConteudoDoBloco({
           {/* eslint-disable-next-line @next/next/no-img-element -- a foto vem do servidor, pelo proxy, com o login. */}
           <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Foto"} draggable={false} className="h-full w-full object-contain" />
         </div>
-        {editavel ? (
-          <input
-            value={b.legenda}
-            onChange={(e) => onMudar({ legenda: e.target.value } as Partial<Bloco>)}
-            placeholder="Escreva a legenda…"
-            maxLength={500}
-            aria-label="Legenda da foto"
-            className="h-9 shrink-0 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-3 text-sm font-semibold text-gray-900 outline-none focus:border-gray-300 focus:border-l-bpm-primary"
-          />
-        ) : b.legenda ? (
+        {/* A legenda formatada (17/10/2026; antes, só texto): a formatação na barra do bloco. */}
+        {editavel || b.legenda ? (
           <figcaption
-            className="shrink-0 truncate rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-3 py-1.5 text-sm font-semibold text-gray-900"
+            className="max-h-[40%] min-h-9 shrink-0 overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white text-sm font-semibold text-gray-900"
             style={ampliado ? { zoom: 0.5 } : undefined}
-            title={b.legenda}
           >
-            {b.legenda}
+            <TextoRico
+              html={b.legendaHtml}
+              texto={b.legenda}
+              editavel={editavel}
+              placeholder="Escreva a legenda…"
+              rotulo="Legenda da foto"
+              registrar={registrar}
+              onMudar={(html, texto) => onMudar({ legendaHtml: html, legenda: texto.slice(0, 500) } as Partial<Bloco>)}
+              className="px-3 py-1.5"
+            />
           </figcaption>
         ) : null}
       </figure>

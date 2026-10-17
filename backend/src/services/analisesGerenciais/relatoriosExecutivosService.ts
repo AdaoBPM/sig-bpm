@@ -56,9 +56,9 @@ const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
 export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h: number } & (
   | { tipo: "PAINEL"; aba: "resultados" | "performance"; quadro: string; titulo: string; sigla: string; comGrafico: boolean; /** As opções do gráfico do card (16/10/2026), como no Configurar Gráficos do Painel; sem elas, as do navegador. */ tipoGrafico?: "barras" | "area"; comRotulos?: boolean; cores?: "padrao" | "daltonismo" }
   | { tipo: "INDICADOR"; nome: string }
-  | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string }
+  | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string }
   /** Uma foto (16/10/2026): o arquivo (na pasta do relatório), a legenda e a proporção (largura ÷ altura). */
-  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number }
+  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
 );
 
 /**
