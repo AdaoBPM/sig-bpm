@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Minimize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Minimize2 } from "lucide-react";
 
 import { BpmLogo } from "@/components/layout/BpmLogo";
 
@@ -58,6 +58,20 @@ export function ApresentacaoDoRelatorio({
   };
   useEffect(() => () => window.clearTimeout(relogio.current), []);
   const ir = (d: number) => setK((x) => Math.min(slides.length - 1, Math.max(0, x + d)));
+  // Os grupos (17/10/2026): os departamentos. Recuar vai ao início do grupo anterior; avançar, ao início do próximo.
+  const grupo = (i: number) => slides[i]?.chave.split("|")[0];
+  const inicioDoGrupo = (i: number) => {
+    let j = i;
+    while (j > 0 && grupo(j - 1) === grupo(i)) j--;
+    return j;
+  };
+  const inicio = inicioDoGrupo(k);
+  const grupoAnterior = inicio > 0 ? inicioDoGrupo(inicio - 1) : null;
+  const proximoGrupo = (() => {
+    let j = k;
+    while (j < slides.length && grupo(j) === grupo(k)) j++;
+    return j < slides.length ? j : null;
+  })();
   const sair = () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     onSair();
@@ -110,11 +124,17 @@ export function ApresentacaoDoRelatorio({
         }}
         className={`fixed bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-sm bg-gray-800 p-1 shadow-lg transition-opacity duration-300 ${comBotoes ? "opacity-100" : "pointer-events-none opacity-0"}`}
       >
+        <button type="button" className={botao} disabled={grupoAnterior === null} onClick={() => grupoAnterior !== null && setK(grupoAnterior)} title="Grupo anterior" aria-label="Grupo anterior">
+          <ChevronsLeft className="size-5" />
+        </button>
         <button type="button" className={botao} disabled={k === 0} onClick={() => ir(-1)} title="Slide anterior (←)" aria-label="Slide anterior">
           <ChevronLeft className="size-5" />
         </button>
         <button type="button" className={botao} disabled={k >= slides.length - 1} onClick={() => ir(1)} title="Próximo slide (→)" aria-label="Próximo slide">
           <ChevronRight className="size-5" />
+        </button>
+        <button type="button" className={botao} disabled={proximoGrupo === null} onClick={() => proximoGrupo !== null && setK(proximoGrupo)} title="Próximo grupo" aria-label="Próximo grupo">
+          <ChevronsRight className="size-5" />
         </button>
         <span className="mx-1 h-6 w-px bg-gray-600" />
         <button type="button" className={botao} onClick={sair} title="Sair da apresentação (Esc)" aria-label="Sair da apresentação">
