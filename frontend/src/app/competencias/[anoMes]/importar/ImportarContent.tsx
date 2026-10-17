@@ -27,7 +27,10 @@ import { dataHora, inteiro, lerAnoMes, ROTULO_TIPO } from "../utils/formatacao";
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 
-/** Os arquivos de todo mês, na ordem do fechamento. A DRE do Comercial e o saldo inicial só aparecem quando importados no mês. */
+/**
+ * Os arquivos de todo mês, na ordem do fechamento: todos obrigatórios para fechar a competência (17/10/2026). Depois deles,
+ * sempre visíveis, os opcionais: a DRE do Comercial e o saldo inicial (antes, só apareciam quando importados no mês).
+ */
 const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL"];
 const TIPOS_EVENTUAIS = ["DRE_COMERCIAL", "ESTOQUE_INICIAL"];
 
@@ -54,14 +57,16 @@ function StatusImportacaoBadge({ imp }: { imp: Importacao }) {
 }
 
 /** A importação de cada tipo que vale no mês e, se for mais recente, a última tentativa que não a substituiu (recusada ou comparação). */
-type Situacao = { tipo: string; vigente: Importacao | null; ultimaTentativa: Importacao | null };
+/** `semRegistros` (17/10/2026): sem importação em vigor, mas com o arquivo recusado por não ter registros no mês — o mês sem movimento da lista, que conta como entregue para o fechamento. */
+type Situacao = { tipo: string; vigente: Importacao | null; ultimaTentativa: Importacao | null; semRegistros: boolean };
 
 function situacaoPorTipo(itens: Importacao[], tipos: string[]): Situacao[] {
   return tipos.map((tipo) => {
     const doTipo = itens.filter((i) => i.tipo === tipo); // a lista vem da mais recente para a mais antiga
     const vigente = doTipo.find((i) => !i.comparacao && !i.substituidaEm && i.status !== "REJEITADA") ?? null;
     const ultima = doTipo[0] ?? null;
-    return { tipo, vigente, ultimaTentativa: ultima && ultima !== vigente ? ultima : null };
+    const semRegistros = !vigente && doTipo.some((i) => i.status === "REJEITADA" && !i.comparacao && !!i.motivoRejeicao?.includes("não tem registros de"));
+    return { tipo, vigente, ultimaTentativa: ultima && ultima !== vigente ? ultima : null, semRegistros };
   });
 }
 
@@ -87,7 +92,7 @@ const COLUNAS_VIGOR: Coluna<Situacao>[] = [
     valor: (s) => s.vigente?.linhasRejeitadas,
     texto: (s) => (s.vigente ? inteiro(s.vigente.linhasRejeitadas) : null),
   },
-  { chave: "situacao", rotulo: "Situação", valor: (s) => (s.vigente ? estiloSituacao(s.vigente).rotulo : "Não importado") },
+  { chave: "situacao", rotulo: "Situação", valor: (s) => (s.vigente ? estiloSituacao(s.vigente).rotulo : s.semRegistros ? "Sem Registros no Mês" : "Não Importado") },
   { chave: "acoes", rotulo: "", semFiltro: true },
 ];
 
@@ -136,7 +141,7 @@ export function ImportarContent() {
     const lista = data?.itens ?? [];
     // Recorte por setor (Passo 22): o Alimentador só vê as listas dos seus setores.
     const alcanca = (t: string) => !user?.acesso.recorteSetor || user.acesso.setores.includes(t);
-    const tipos = [...TIPOS_DO_MES.filter(alcanca), ...TIPOS_EVENTUAIS.filter((t) => lista.some((i) => i.tipo === t))];
+    const tipos = [...TIPOS_DO_MES, ...TIPOS_EVENTUAIS].filter(alcanca);
     return situacaoPorTipo(lista, tipos);
   }, [data, user]);
   const vigor = useTabelaFiltravel(situacoes, COLUNAS_VIGOR);
@@ -178,6 +183,11 @@ export function ImportarContent() {
             <li>A lista do arquivo avisa quando a importação muda competências fechadas (o balancete do ano inteiro, os preços da DRE do Comercial); as diferenças vão para Divergências.</li>
             <li>Para trocar só um tipo, use “Reimportar” na linha dele.</li>
             <li>Na aba Em Vigor, clique numa linha para abrir o relatório: linhas aceitas, recusadas e avisos.</li>
+            <li>
+              A aba Em Vigor mostra sempre todos os tipos, também os não importados. Para fechar a competência, todos precisam estar importados, menos os
+              marcados como Opcional (a DRE do Comercial e o saldo inicial do estoque); os que faltam aparecem nos motivos do Fechar Competência, na DRE. O
+              arquivo recusado por não ter registros do mês (o mês sem movimento daquela lista) aparece como Sem Registros no Mês e conta como entregue.
+            </li>
             <li>A aba Histórico guarda todas as importações, inclusive as recusadas e as substituídas.</li>
             <li>Em mês fechado, o balancete só é comparado com o gravado; as diferenças vão para Divergências.</li>
             <li>Depois de importar o balancete, confira a Classificação.</li>
@@ -236,13 +246,17 @@ export function ImportarContent() {
               {vigor.cabecalho}
               <tbody>
                 {vigor.visiveis.length === 0 ? <SemResultado colunas={COLUNAS_VIGOR.length} onLimpar={vigor.limpar} /> : null}
-                {vigor.visiveis.map(({ tipo, vigente, ultimaTentativa }) => (
+                {vigor.visiveis.map(({ tipo, vigente, ultimaTentativa, semRegistros }) => (
                   <tr
                     key={tipo}
                     onClick={vigente ? () => setAberta(vigente.id) : undefined}
                     className={`border-b border-gray-100 ${vigente ? "cursor-pointer hover:bg-gray-50" : ""}`}
                   >
-                    <td className="px-4 text-sm font-medium whitespace-nowrap text-gray-900">{ROTULO_TIPO[tipo] ?? tipo}</td>
+                    <td className="px-4 text-sm font-medium whitespace-nowrap text-gray-900">
+                      {ROTULO_TIPO[tipo] ?? tipo}
+                      {/* Os opcionais para o fechamento (17/10/2026). */}
+                      {TIPOS_EVENTUAIS.includes(tipo) ? <span className="ml-1.5 text-xs font-normal text-gray-500">(Opcional)</span> : null}
+                    </td>
                     {/* O nome do arquivo ocupa a largura que sobra e corta o resto, sem alargar a tabela. */}
                     <td className="w-full px-4 text-sm text-gray-900">
                       <div className="relative h-5" title={vigente?.nomeArquivo}>
@@ -271,7 +285,15 @@ export function ImportarContent() {
                     <td className="px-4 text-right text-sm">
                       {vigente ? vigente.linhasRejeitadas > 0 ? <span className="font-medium text-red-700">{inteiro(vigente.linhasRejeitadas)}</span> : <span className="text-gray-400">0</span> : ""}
                     </td>
-                    <td className="px-4">{vigente ? <StatusImportacaoBadge imp={vigente} /> : <Selo classe="border-gray-200 bg-white text-gray-500">Não importado</Selo>}</td>
+                    <td className="px-4">
+                      {vigente ? (
+                        <StatusImportacaoBadge imp={vigente} />
+                      ) : semRegistros ? (
+                        <Selo classe="border-gray-300 bg-gray-50 text-gray-700">Sem Registros no Mês</Selo>
+                      ) : (
+                        <Selo classe="border-gray-200 bg-white text-gray-500">Não Importado</Selo>
+                      )}
+                    </td>
                     <td className="px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       {podeEnviar(tipo) && TIPOS_DO_MES.includes(tipo) ? (
                         <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setEnvio({ tipo })}>

@@ -1,5 +1,5 @@
 import { getPrismaClient } from "../../config/prisma.js";
-import { Prisma } from "../../generated/prisma/client.js";
+import { Prisma, type TipoImportacao } from "../../generated/prisma/client.js";
 import { classificacaoService, VALIDACOES_PENDENTES } from "../classificacao/classificacaoService.js";
 import { dreService } from "../dre/dreService.js";
 import { estoqueService } from "../estoque/estoqueService.js";
@@ -8,6 +8,7 @@ import { rateiosService } from "../volumes/rateiosService.js";
 import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
 import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
+import { SEM_REGISTROS_NO_MES } from "../importacoes/listas/processarLista.js";
 import { plural } from "../../utils/plural.js";
 import { chavesSemRegra, regrasDeRateio } from "../volumes/vigenciaDosRateios.js";
 import { NOME_DA_CHAVE as NOME_DA_CHAVE_RATEIO } from "../volumes/rateiosService.js";
@@ -55,6 +56,47 @@ async function competenciaPorAnoMes(ano: number, mes: number) {
 type Retrato = Record<string, { rotulo: string; n: number; soma: string; ultima?: string | null }>;
 
 /** O retrato das entradas da apuração (exportado em 15/10/2026: a troca do balancete detalhado nos meses apurados). */
+/**
+ * As listas obrigatórias para fechar (17/10/2026): os arquivos de todo mês, na ordem da aba Em Vigor das Importações. A
+ * DRE do Comercial e o saldo inicial do estoque são opcionais. A regra vale para todo fechamento daqui em diante; o que
+ * já está fechado fica como está.
+ */
+const LISTAS_OBRIGATORIAS: Array<[TipoImportacao, string]> = [
+  ["BALANCETE", "Balancete"],
+  ["PROJETO", "Projetos"],
+  ["PRODUCAO", "Produção (m³)"],
+  ["PRODUCAO_PISTA", "Produção (pistas)"],
+  ["PRODUCAO_ARMADURA", "Armadura"],
+  ["PRODUCAO_METALURGIA", "Metalurgia"],
+  ["EXPEDICAO", "Expedição"],
+  ["MONTAGEM", "Montagem"],
+  ["ACOMPANHAMENTO", "Acompanhamento"],
+  ["MEDICAO", "Medições"],
+  ["DEVOLUCAO", "Devoluções"],
+  ["SAIDA", "Saídas"],
+  ["INDICADORES_ADMIN", "Indicadores do Administrativo"],
+  ["INDICADORES_COMERCIAL", "Indicadores do Comercial"],
+];
+
+/**
+ * As listas obrigatórias sem importação em vigor na competência (concluída, não substituída, não só de comparação). O
+ * arquivo recusado por não ter registros no mês (o mês sem movimento daquela lista) conta como entregue.
+ */
+async function listasQueFaltam(competenciaId: string) {
+  const vigentes = await getPrismaClient().importacao.findMany({
+    where: {
+      competenciaId,
+      comparacao: false,
+      tipo: { in: LISTAS_OBRIGATORIAS.map(([t]) => t) },
+      OR: [{ status: "CONCLUIDA", substituidaEm: null }, { status: "REJEITADA", motivoRejeicao: { contains: SEM_REGISTROS_NO_MES } }],
+    },
+    select: { tipo: true },
+    distinct: ["tipo"],
+  });
+  const tem = new Set(vigentes.map((v) => v.tipo));
+  return LISTAS_OBRIGATORIAS.filter(([t]) => !tem.has(t)).map(([, nome]) => nome);
+}
+
 export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
   const prisma = getPrismaClient();
   const where = { competenciaId };
@@ -271,6 +313,15 @@ export const apuracaoService = {
     if (mudou.length) motivosNaoFechar.push("As entradas mudaram depois da apuração: reapure antes de fechar.");
     if (pendentes) motivosNaoFechar.push(`Há ${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} com pendência de classificação.`);
     if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} ${plural(naoClassificados, "lançamento", "lançamentos")} sem classificação.`);
+    // Todas as listas obrigatórias importadas (17/10/2026; a DRE do Comercial e o saldo inicial do estoque são opcionais).
+    const faltam = c.status === "FECHADA" ? [] : await listasQueFaltam(c.id);
+    if (faltam.length) {
+      motivosNaoFechar.push(
+        faltam.length === 1
+          ? `Falta importar a lista ${faltam[0]} (Importações / Em Vigor).`
+          : `Faltam importar ${faltam.length} listas: ${faltam.join(", ")} (Importações / Em Vigor).`,
+      );
+    }
     // Fecha-se em ordem (11/10/2026): com uma competência anterior em aberto, esta não se fecha.
     if (c.status !== "FECHADA") {
       const abertas = await getPrismaClient().competencia.findMany({

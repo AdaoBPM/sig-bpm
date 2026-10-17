@@ -12,6 +12,12 @@ import { DEFINICOES_LISTAS, ehListaRateio, type TipoListaRateio } from "./defini
 import { DEFINICOES_LISTAS_RECEITA, ehListaReceita, type TipoListaReceita } from "./definicoesListasReceita.js";
 
 /** As listas operacionais importadas por este processamento: as dos rateios e as da receita prévia. */
+/**
+ * O trecho do motivo da recusa do arquivo sem registros no mês (17/10/2026): o mês sem movimento daquela lista. Para o
+ * fechamento, essa recusa conta como a lista entregue (apuracaoService.listasQueFaltam).
+ */
+export const SEM_REGISTROS_NO_MES = "não tem registros de";
+
 export type TipoListaOperacional = TipoListaRateio | TipoListaReceita;
 
 export function ehListaOperacional(tipo: TipoImportacao): tipo is TipoListaOperacional {
@@ -169,7 +175,7 @@ export async function processarLista(importacaoId: string): Promise<void> {
     if (leitura.registros.length === 0 && leitura.rejeicoes.length === 0) {
       await recusarImportacao(
         importacaoId,
-        `A aba "${aba.nome}" não tem registros de ${mesAno}.`,
+        `A aba "${aba.nome}" ${SEM_REGISTROS_NO_MES} ${mesAno}.`,
         { linhasLidas: leitura.linhasLidas, linhasIgnoradas },
       );
       return;
