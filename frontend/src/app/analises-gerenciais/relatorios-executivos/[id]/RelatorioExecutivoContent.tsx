@@ -312,7 +312,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               nome do slide (o da página) à esquerda do topo e o relatório e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
               recuar, avançar e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
               ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
-              no resto do card, só o card. Na apresentação, os textos não se selecionam.
+              na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Na apresentação, os textos não se selecionam.
             </li>
             <li>
               “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar Aba” grava a aba e a torna pública, só para

@@ -158,7 +158,7 @@ export function GradeDoRelatorio({
   // O bloco ampliado, com o tamanho dele na grade (sem a ampliação do mouse); Esc ou um clique o fecham. No card do Painel
   // (17/10/2026), só o card (sem o nome do grupo) ou só o gráfico, conforme o ponto clicado: `recorte` é a parte do card
   // que aparece (o gráfico), em px do card.
-  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number; soCard?: boolean; recorte?: Recorte } | null>(null);
+  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number; soCard?: boolean; semGrafico?: boolean; recorte?: Recorte } | null>(null);
   // O destaque sob o mouse (16/10/2026): o bloco cresce até 10%, a partir do ponto que o mantém dentro da tela.
   const [realce, setRealce] = useState<{ id: string; escala: number; origem: string } | null>(null);
   useEffect(() => {
@@ -226,7 +226,18 @@ export function GradeDoRelatorio({
               </div>
             </div>
           ) : (
-            <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado soCard={ampliado.soCard} onMudar={() => undefined} />
+            <ConteudoDoBloco
+              relatorioId={relatorioId}
+              b={ampliado.b}
+              dados={dados}
+              editavel={false}
+              cores={cores}
+              tipo={tipo}
+              ampliado
+              soCard={ampliado.soCard}
+              semGrafico={ampliado.semGrafico}
+              onMudar={() => undefined}
+            />
           )}
         </BlocoAmpliado>
       ) : null}
@@ -271,8 +282,9 @@ function destaqueNaTela(r: DOMRect) {
 type Recorte = { x: number; y: number; w: number; h: number };
 
 /**
- * O que ampliar ao clicar num bloco da apresentação (17/10/2026): no card do Painel, o gráfico (clicado nele) ou o card
- * (clicado no resto), sem o nome do grupo; nos demais blocos, o bloco inteiro. As medidas saem do card na tela, divididas
+ * O que ampliar ao clicar num bloco da apresentação (17/10/2026): no card do Painel, o gráfico (clicado nele) ou a parte
+ * antes dele (clicado no resto: o card como se não tivesse gráfico, na largura dessa parte), sem o nome do grupo; nos
+ * demais blocos, o bloco inteiro. As medidas saem do card na tela, divididas
  * pela ampliação do destaque do mouse, para virem no tamanho da grade.
  */
 function oQueAmpliar(b: Bloco, bloco: HTMLElement, alvo: HTMLElement) {
@@ -283,7 +295,12 @@ function oQueAmpliar(b: Bloco, bloco: HTMLElement, alvo: HTMLElement) {
   const rc = card.getBoundingClientRect();
   const escala = rc.width / card.offsetWidth || 1;
   const grafico = alvo.closest<HTMLElement>("[data-grafico-do-card]");
-  if (!grafico || !card.contains(grafico)) return { b, w: card.offsetWidth, h: card.offsetHeight, soCard: true };
+  if (!grafico || !card.contains(grafico)) {
+    // A parte antes do gráfico: o card sem o gráfico, na largura do card menos a do gráfico (o card sem gráfico já ocupa só ela).
+    const doCard = card.querySelector<HTMLElement>("[data-grafico-do-card]");
+    const comGrafico = !!doCard && doCard.offsetWidth > 0;
+    return { b, w: card.offsetWidth - (comGrafico ? doCard.offsetWidth : 0), h: card.offsetHeight, soCard: true, semGrafico: comGrafico };
+  }
   const rg = grafico.getBoundingClientRect();
   return {
     b,
@@ -409,6 +426,7 @@ function ConteudoDoBloco({
   tipo,
   ampliado = false,
   soCard = false,
+  semGrafico = false,
   onMudar,
 }: {
   relatorioId: string;
@@ -417,6 +435,8 @@ function ConteudoDoBloco({
   ampliado?: boolean;
   /** No card do Painel ampliado (17/10/2026): só o card, sem o nome do grupo em cima. */
   soCard?: boolean;
+  /** No card ampliado pela parte antes do gráfico (17/10/2026): o card como se não tivesse gráfico. */
+  semGrafico?: boolean;
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
   cores: Cores;
@@ -495,7 +515,7 @@ function ConteudoDoBloco({
   if (b.tipo === "PAINEL") {
     const item = dados.painel.abas.find((a) => a.chave === b.aba)?.quadros.find((q) => q.titulo === b.quadro)?.itens.find((i) => i.titulo === b.titulo && i.sigla === b.sigla);
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
-    const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico} comRotulos={b.comRotulos ?? false} />;
+    const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} comRotulos={b.comRotulos ?? false} />;
     if (soCard) return <div className="h-full">{card}</div>;
     return (
       <div className="flex h-full flex-col">
