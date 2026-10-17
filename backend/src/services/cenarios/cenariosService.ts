@@ -802,7 +802,8 @@ export const cenariosService = {
         total: calculo.acumulado(i, 12),
         digitados: i.digitados,
         referencia: i.classe === "MANUAL" ? (mediaDe.get(i.indicador.nome) ?? null) : null,
-        orcado: [],
+        // Os meses do comparado (16/10/2026), para o gráfico do indicador (o cenário × o comparado); sem comparado, vazio.
+        orcado: doComparado ? Array.from({ length: 12 }, (_, k) => comparados.get(i.indicador.nome)?.partes[k]?.valor ?? null) : [],
         totalOrcado: acumuladoComparado(i.indicador.nome),
       })),
     };

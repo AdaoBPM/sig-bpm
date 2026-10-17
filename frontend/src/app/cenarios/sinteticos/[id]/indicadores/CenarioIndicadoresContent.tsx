@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
+import { ChartColumn, Pencil } from "lucide-react";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
-import { TabelaIndicadores } from "@/app/relatorios/indicadores/TabelaIndicadores";
+import { TabelaIndicadores, valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
+import { GraficoIndicadorDialog } from "@/app/relatorios/indicadores/GraficoIndicadorDialog";
+import { RotulosDoGrafico, useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { LancamentoDialog } from "../../../components/IndicadoresManuais";
@@ -49,10 +51,17 @@ export function CenarioIndicadoresContent() {
   const [escolhida, setAba] = useState("metas");
   const aba = abas.some((a) => a.chave === escolhida) ? escolhida : (abas[0]?.chave ?? "");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
+  // O gráfico do indicador (16/10/2026), como em Resultados Empresariais: o cenário × o comparado, com o Tipo e os
+  // Rótulos guardados neste navegador (os do Painel de Bordo).
+  const [comGrafico, setComGrafico] = useState<IndicadorDoCenario | null>(null);
+  const [tipoGrafico] = useTipoGrafico();
+  const [comRotulos] = useRotulosDosValores();
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   const dados = consulta.data;
   const daAba = aba ? (dados?.indicadores.filter(DA_ABA[aba]) ?? []) : [];
   const manuais = aba === "manuais";
+  // Nos Indicadores Manuais que se editam, o clique digita os lançamentos; nos demais, abre o gráfico.
+  const digita = manuais && podeEditar;
 
   return (
     <div className="space-y-6">
@@ -69,6 +78,11 @@ export function CenarioIndicadoresContent() {
               do arquivo importado{analitico ? " ou do resultado realizado; digitam-se na tela Premissas, aba Indicadores Manuais (as células digitadas ficam em amarelo)" : podeEditar ? "; clique numa linha para digitar os meses (as células digitadas ficam em amarelo)" : ""}.
             </li>
             <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um dos grupos da aba, como a lista dos níveis em Resultados.</li>
+            <li>
+              Clique num indicador para ver o gráfico dele, como em Resultados Empresariais: os meses do cenário (em amarelo-ouro) e os do cenário comparado
+              (em preto), e o acumulado ao lado; sem cenário comparado, só o cenário. O Tipo e os Rótulos do gráfico são os escolhidos no Configurar Gráficos
+              do Painel de Bordo.{podeEditar ? " Nos Indicadores Manuais, o clique digita os lançamentos." : ""}
+            </li>
             <li>Use os filtros nos rótulos das colunas; as colunas Indicador, Sent. e Und. ficam fixas.</li>
             <li>Os indicadores sem numeração (os totais, como Custos de Produção: Matriz) ficam com a cor da faixa do grupo, e os de numeração par num tom mais fraco (amarelo nas colunas do realizado, cinza nas do comparado), para ajudar a seguir a linha. Nos Indicadores Manuais, as células digitadas ficam num amarelo mais forte.</li>
           </ul>
@@ -113,14 +127,27 @@ export function CenarioIndicadoresContent() {
           meses={dados.meses}
           indicadores={daAba}
           comparado={dados.comparado}
-          onClicar={manuais && podeEditar ? setEditando : undefined}
-          dicaDoClique="Digitar os lançamentos do indicador"
-          iconeDoClique={manuais && podeEditar ? Pencil : undefined}
+          onClicar={digita ? setEditando : setComGrafico}
+          dicaDoClique={digita ? "Digitar os lançamentos do indicador" : "Ver o gráfico do indicador"}
+          iconeDoClique={digita ? Pencil : ChartColumn}
           destacar={manuais ? (i, k) => i.digitados[k] : undefined}
           dicaDoDestaque="Valor digitado"
         />
       )}
       {editando && dados ? <LancamentoDialog id={id} indicador={editando} meses={dados.meses} onFechar={() => setEditando(null)} /> : null}
+      {comGrafico && dados ? (
+        <RotulosDoGrafico.Provider value={{ realizado: "Cenário", orcado: dados.comparado ? `Comparado (${dados.comparado.nome})` : "Comparado" }}>
+          <GraficoIndicadorDialog
+            indicador={comGrafico}
+            meses={dados.meses}
+            formatar={(v) => valor(comGrafico, v)}
+            formatarCurto={(v) => valorCurto(comGrafico, v)}
+            tipo={tipoGrafico}
+            comRotulos={comRotulos}
+            onFechar={() => setComGrafico(null)}
+          />
+        </RotulosDoGrafico.Provider>
+      ) : null}
     </div>
   );
 }

@@ -195,13 +195,15 @@ export function GradeDoRelatorio({
         onResizeStop={terminar}
       >
         {blocos.map((b) => (
-          <div key={b.id} className={`group relative ${ampliavel ? "hover:z-10" : ""}`}>
+          // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
+          <div key={b.id} className="group relative hover:z-10">
             {editavel ? (
               <BarraDoBloco b={b} onMudar={(m) => mudarBloco(b.id, m)} onConfigurar={() => setConfigurando(b.id)} onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))} />
             ) : null}
             {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca, sem sair da tela; o clique o amplia. */}
             <div
-              className={`h-full overflow-hidden ${ampliavel ? "cursor-zoom-in rounded-sm transition duration-200 hover:bg-background hover:shadow-lg" : ""}`}
+              // O card do Painel sem recorte (16/10/2026): a dica do mês, ao passar o mouse no gráfico, sai dos limites do card.
+              className={`h-full ${b.tipo === "PAINEL" ? "" : "overflow-hidden"} ${ampliavel ? "cursor-zoom-in rounded-sm transition duration-200 hover:bg-background hover:shadow-lg" : ""}`}
               style={realce?.id === b.id ? { transform: `scale(${realce.escala})`, transformOrigin: realce.origem } : undefined}
               onMouseEnter={ampliavel ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
               onMouseLeave={ampliavel ? () => setRealce(null) : undefined}
@@ -213,7 +215,7 @@ export function GradeDoRelatorio({
         ))}
       </Grade>
       {ampliado ? <BlocoAmpliado {...ampliado} onFechar={() => setAmpliado(null)}>
-        <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} onMudar={() => undefined} />
+        <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado onMudar={() => undefined} />
       </BlocoAmpliado> : null}
       {doCard?.tipo === "PAINEL" ? (
         <ConfigurarGraficoDialog
@@ -366,10 +368,13 @@ function ConteudoDoBloco({
   editavel,
   cores,
   tipo,
+  ampliado = false,
   onMudar,
 }: {
   relatorioId: string;
   b: Bloco;
+  /** No bloco ampliado da apresentação (16/10/2026): a legenda da foto com metade do tamanho. */
+  ampliado?: boolean;
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
   cores: Cores;
@@ -433,7 +438,11 @@ function ConteudoDoBloco({
             className="h-9 shrink-0 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-3 text-sm font-semibold text-gray-900 outline-none focus:border-gray-300 focus:border-l-bpm-primary"
           />
         ) : b.legenda ? (
-          <figcaption className="shrink-0 truncate rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-3 py-1.5 text-sm font-semibold text-gray-900" title={b.legenda}>
+          <figcaption
+            className="shrink-0 truncate rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-3 py-1.5 text-sm font-semibold text-gray-900"
+            style={ampliado ? { zoom: 0.5 } : undefined}
+            title={b.legenda}
+          >
             {b.legenda}
           </figcaption>
         ) : null}
