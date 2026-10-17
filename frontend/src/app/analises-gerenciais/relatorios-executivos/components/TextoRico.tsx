@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { AArrowDown, AArrowUp, Bold, ChevronDown, Italic, List, Palette, Underline } from "lucide-react";
+import { Bold, ChevronDown, Italic, List, Palette, Underline } from "lucide-react";
 
 /**
  * O texto formatado das anotações e das legendas das fotos dos Relatórios Executivos (17/10/2026): negrito, itálico,
@@ -125,8 +125,9 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
   campo.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-/** Os tamanhos da fonte, em px (17/10/2026: numerados na barra). O texto das anotações e das legendas é de 14. */
+/** Os tamanhos da fonte, em px (17/10/2026: numerados na barra). O texto das anotações e das legendas é de 14 (o padrão, com asterisco na lista). */
 export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36];
+export const TAMANHO_PADRAO = 14;
 
 /** O tamanho, em px, do texto onde está a seleção (ou do campo, sem seleção nele). */
 function tamanhoDaSelecao(campo: HTMLElement) {
@@ -246,12 +247,6 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
     aplicar(el, (s) => definirFonte(s, px, el));
     setTamanho(px);
   };
-  const passo = (d: 1 | -1) => {
-    const el = campo();
-    const atual = el ? tamanhoDaSelecao(el) : tamanho;
-    const proximo = d > 0 ? TAMANHOS.find((t) => t > atual) : [...TAMANHOS].reverse().find((t) => t < atual);
-    if (proximo) fonte(proximo);
-  };
   const semFoco = (e: React.MouseEvent) => e.preventDefault();
   const exec = (cmd: string, valor?: string, comCss = false) =>
     aplicar(campo(), () => {
@@ -270,10 +265,7 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
       <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("underline")} title="Sublinhado" aria-label="Sublinhado">
         <Underline className="size-4" />
       </button>
-      {/* O tamanho da fonte (17/10/2026): diminuir, o número (a lista dos tamanhos) e aumentar. */}
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => passo(-1)} title="Diminuir a fonte" aria-label="Diminuir a fonte">
-        <AArrowDown className="size-4" />
-      </button>
+      {/* O tamanho da fonte (17/10/2026): um botão só, com o número; a lista dos tamanhos, com o padrão marcado com asterisco. */}
       <span className="relative">
         <button
           type="button"
@@ -300,15 +292,13 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
                   setAberta(null);
                 }}
               >
-                {t}
+                {t === TAMANHO_PADRAO ? `${t}*` : t}
               </button>
             ))}
+            <span className="border-t border-gray-100 px-1 pt-1 text-center text-[10px] text-gray-500">* padrão</span>
           </span>
         ) : null}
       </span>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => passo(1)} title="Aumentar a fonte" aria-label="Aumentar a fonte">
-        <AArrowUp className="size-4" />
-      </button>
       <span className="relative">
         <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "cor" ? null : "cor"))} title="Cor da fonte" aria-label="Cor da fonte" aria-expanded={aberta === "cor"}>
           <Palette className="size-4" />
