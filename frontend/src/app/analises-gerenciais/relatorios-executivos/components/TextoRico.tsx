@@ -15,10 +15,14 @@ export const limparHtml = (html: string) => (typeof window === "undefined" ? "" 
 /** O texto simples de antes (sem formatação) em HTML: os caracteres escapados e as quebras de linha. */
 const deTexto = (texto: string) => texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
 
-/** As cores da fonte, na ordem pedida. */
+/**
+ * As cores da fonte, na ordem pedida. Padrão (17/10/2026; antes, Preto) tira a cor escolhida: o texto volta à cor do tema
+ * (preto; branco no Escuro). No Escuro, o cinza e o vermelho ficam mais claros (globals.css, `.texto-rico`).
+ */
+export const COR_PADRAO = "#111827";
 export const CORES_DA_FONTE = [
-  { nome: "Preto", cor: "#111827" },
-  { nome: "Cinza Médio", cor: "#6b7280" },
+  { nome: "Padrão", cor: COR_PADRAO },
+  { nome: "Cinza", cor: "#6b7280" },
   { nome: "Amarelo-Ouro", cor: "#ffcc00" },
   { nome: "Verde", cor: "#16a34a" },
   { nome: "Azul", cor: "#2563eb" },
@@ -36,7 +40,20 @@ export const MARCADORES = [
 ];
 
 /** As listas com os marcadores (o símbolo vem no estilo da lista) e o recuo delas. */
-const CLASSE_DO_TEXTO = "[&_ul]:pl-5 [&_ol]:pl-5 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:pl-0.5";
+const CLASSE_DO_TEXTO = "texto-rico [&_ul]:pl-5 [&_ol]:pl-5 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:pl-0.5";
+
+/** Tira a cor Padrão do texto (os trechos voltam à cor do tema) e desfaz os spans que ficaram sem estilo. */
+function tirarCorPadrao(campo: HTMLElement) {
+  campo.querySelectorAll<HTMLElement>("[style]").forEach((el) => {
+    if (el.style.color !== "rgb(17, 24, 39)") return;
+    el.style.removeProperty("color");
+    if (!el.getAttribute("style")?.trim()) el.removeAttribute("style");
+    if (el.tagName === "SPAN" && !el.attributes.length) el.replaceWith(...el.childNodes);
+  });
+  campo.querySelectorAll("font[color]").forEach((el) => {
+    if (el.getAttribute("color")?.toLowerCase() === COR_PADRAO) el.replaceWith(...el.childNodes);
+  });
+}
 
 /**
  * O texto formatado: na edição, um campo editável (o HTML vai ao `onMudar` a cada alteração, com o texto simples); na
@@ -187,11 +204,21 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
                 className={item}
                 onMouseDown={semFoco}
                 onClick={() => {
-                  exec("foreColor", c.cor, true);
+                  if (c.cor === COR_PADRAO) {
+                    const el = campo();
+                    aplicar(el, () => {
+                      document.execCommand("styleWithCSS", false, "true");
+                      document.execCommand("foreColor", false, COR_PADRAO);
+                      if (el) tirarCorPadrao(el);
+                    });
+                  } else exec("foreColor", c.cor, true);
                   setAberta(null);
                 }}
               >
-                <span className="size-3.5 shrink-0 rounded-[2px] border border-gray-300" style={{ background: c.cor }} />
+                <span
+                  className="size-3.5 shrink-0 rounded-[2px] border border-gray-300"
+                  style={{ background: c.cor === COR_PADRAO ? "linear-gradient(135deg, #111827 50%, #ffffff 50%)" : c.cor }}
+                />
                 {c.nome}
               </button>
             ))}

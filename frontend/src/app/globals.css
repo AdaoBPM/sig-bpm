@@ -331,3 +331,17 @@
   height: 1px;
   margin-top: -1px;
 }
+
+/*
+ * O texto formatado dos Relatórios Executivos no Escuro (17/10/2026; TextoRico.tsx): o preto (o Padrão de antes de
+ * ficar automático) vira branco, e o cinza e o vermelho ficam mais claros, para continuarem legíveis no fundo escuro.
+ */
+[data-tema="escuro"] .texto-rico [style*="color: rgb(17, 24, 39)"] {
+  color: #f3f4f6 !important;
+}
+[data-tema="escuro"] .texto-rico [style*="color: rgb(107, 114, 128)"] {
+  color: #b4bac2 !important;
+}
+[data-tema="escuro"] .texto-rico [style*="color: rgb(220, 38, 38)"] {
+  color: #f87171 !important;
+}
