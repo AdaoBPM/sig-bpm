@@ -100,7 +100,8 @@ export const NOTAS: Record<Nota, { rotulo: string; Icone: typeof ThumbsUp; class
     icone: (c) => (c === "daltonismo" ? "text-blue-700" : "text-green-600"),
   },
   // O vermelho mais escuro e o laranja (16/10/2026; antes, o amarelo, perto do amarelo-ouro da BPM).
-  NEGATIVO: { rotulo: "Negativo", Icone: ThumbsDown, classe: () => "border-l-red-700", icone: () => "text-red-800" },
+  // O ícone e o título negativos (17/10/2026): no Escuro, o mesmo vermelho do destaque e do texto (--cor-nota-negativa).
+  NEGATIVO: { rotulo: "Negativo", Icone: ThumbsDown, classe: () => "border-l-red-700", icone: () => "text-[var(--cor-nota-negativa)]" },
   ATENCAO: { rotulo: "Atenção", Icone: CircleAlert, classe: () => "border-l-orange-500", icone: () => "text-orange-600" },
 };
 

@@ -90,12 +90,12 @@ const SINAIS = {
   padrao: {
     1: { cor: "#92D050", fundo: "var(--cor-selo-verde)", selo: "text-green-800 border-green-200", texto: "Melhor que o" },
     0: { cor: "#FFFF00", fundo: "var(--cor-selo-amarelo)", selo: "text-yellow-800 border-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "#C00000", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
+    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
   },
   daltonismo: {
     1: { cor: "#0070C0", fundo: "var(--cor-selo-azul)", selo: "text-blue-800 border-blue-200", texto: "Melhor que o" },
     0: { cor: "#FFFF00", fundo: "var(--cor-selo-amarelo)", selo: "text-yellow-800 border-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "#C00000", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
+    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");

@@ -145,6 +145,10 @@
   --cor-selo-amarelo: #fef9c3;
   --cor-selo-vermelho: #fee2e2;
   --cor-selo-neutro: #f3f4f6;
+  /* O vermelho do sinal "pior que o orçado" (o quadradinho dos selos e da legenda) e o do ícone das anotações negativas
+     dos Relatórios Executivos (17/10/2026): no Escuro, o mesmo vermelho claro do texto (#f87171). */
+  --cor-sinal-vermelho: #c00000;
+  --cor-nota-negativa: #991b1b;
 }
 
 /* Claro: o menu lateral branco, separado das telas por uma sombra cinza clara. */
@@ -232,6 +236,8 @@
   --cor-selo-amarelo: #38331c;
   --cor-selo-vermelho: #3a2124;
   --cor-selo-neutro: #30343b;
+  --cor-sinal-vermelho: #f87171;
+  --cor-nota-negativa: #f87171;
 
   /* As partes pretas e cinzas do orçado e do comparado: brancas e cinza-claras, com o texto preto. */
   --cor-rotulo-orcado: #f3f4f6;
