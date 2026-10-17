@@ -7,7 +7,7 @@ import { ContasResultadoContent } from "./ContasResultadoContent";
 export default function ContasResultadoPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastro_contas_resultado:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_contabil.contas_resultado:ler" fallback={<SemLeitura />}>
         <ContasResultadoContent />
       </PermissionGuard>
     </ProtectedLayout>

@@ -28,7 +28,7 @@ export function BarraDeTelas({ grupo, atual }: Props) {
       {/* Quebra em duas linhas quando falta largura, sem rolar a página. */}
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
         {permitido.telas.map((t) => {
-          const ativa = t.href === atual;
+          const ativa = t.title === atual;
           return (
             <li key={t.href} className="flex shrink-0 items-center">
               <Link

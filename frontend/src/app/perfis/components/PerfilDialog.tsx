@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { navGrupos } from "@/lib/navigation-config";
+import { plural } from "@/lib/texto";
 
 import { mensagemDeErro, usuariosService, type Acao, type GrupoDeTelas, type OpcoesUsuarios, type Perfil, type Permissao } from "../../usuarios/services/usuariosService";
 
@@ -240,7 +241,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
                                   <span className="inline-flex items-center gap-1.5">
                                     {t.abas.length ? <Seta chave={t.codigo} rotulo={t.nome} /> : <span className="w-5" />}
                                     {t.nome}
-                                    {t.abas.length ? <span className="text-xs text-gray-500">({t.abas.length} abas)</span> : null}
+                                    {t.abas.length ? <span className="text-xs text-gray-500">({t.abas.length} {plural(t.abas.length, "aba", "abas")})</span> : null}
                                   </span>
                                 </td>
                                 {celulas(t.nome, chavesDaTela(t))}

@@ -76,7 +76,7 @@ function Formulario({
 }) {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const pode = hasPermission("cadastro_linhas:editar");
+  const pode = hasPermission("cadastro_controladoria.linhas:editar");
   const [itens, setItens] = useState(inicial);
   const mudar = (k: number, x: Partial<CorrespondenciaDeTarefa>) => setItens((a) => a.map((i, j) => (j === k ? { ...i, ...x } : i)));
   const repetidas = new Set(itens.map(chaveDe).filter((c, k, todas) => todas.indexOf(c) !== k));

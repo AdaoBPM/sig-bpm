@@ -52,6 +52,11 @@ export type NavItem = {
    * na primeira tela que o perfil alcança, e a barra no topo troca de tela.
    */
   telas?: NavItem[];
+  /**
+   * As abas de uma tela (17/10/2026: os Cadastros da Controladoria), cada uma com o endereço e a permissão dela: a tela
+   * abre na primeira aba que o perfil alcança, e as abas ficam logo abaixo do título (`AbasDaTela`).
+   */
+  abas?: NavItem[];
   /** Um processo ainda por fazer (14/10/2026): a tela diz "Tela em desenvolvimento." e o menu o mostra em cinza. */
   emDesenvolvimento?: boolean;
 };
@@ -141,13 +146,36 @@ export const navGrupos: NavGrupo[] = [
         icon: Database,
         recurso: "CADASTROS_CONTROLADORIA",
         telas: [
-          { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastro_unidades:ler" },
-          { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastro_linhas:ler" },
-          { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastro_centros_custo:ler" },
-          { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastro_contas_resultado:ler" },
-          { title: "Estrutura dos Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastro_estrutura_indicadores:ler" },
-          { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastro_regras_rateio:ler" },
-          { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastro_estrutura_dre:ler" },
+          // Três telas com abas (17/10/2026; antes, uma tela por cadastro). Os endereços dos cadastros continuam os mesmos.
+          {
+            title: "Contábil",
+            href: "/cadastros/unidades",
+            icon: Landmark,
+            permission: "cadastro_contabil:ler",
+            abas: [
+              { title: "Unidades", href: "/cadastros/unidades", icon: Landmark, permission: "cadastro_contabil.unidades:ler" },
+              { title: "Centros de Custo", href: "/cadastros/centros-custo", icon: Building2, permission: "cadastro_contabil.centros_custo:ler" },
+              { title: "Contas de Resultado", href: "/cadastros/contas-resultado", icon: Table2, permission: "cadastro_contabil.contas_resultado:ler" },
+            ],
+          },
+          {
+            title: "Controladoria",
+            href: "/cadastros/linhas",
+            icon: Rows3,
+            permission: "cadastro_controladoria:ler",
+            abas: [
+              { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastro_controladoria.linhas:ler" },
+              { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastro_controladoria.estrutura_dre:ler" },
+              { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastro_controladoria.regras_rateio:ler" },
+            ],
+          },
+          {
+            title: "Analítico",
+            href: "/cadastros/estrutura-indicadores",
+            icon: Gauge,
+            permission: "cadastro_analitico:ler",
+            abas: [{ title: "Estrutura dos Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastro_analitico.estrutura_indicadores:ler" }],
+          },
         ],
       },
       {
@@ -166,6 +194,16 @@ export const navGrupos: NavGrupo[] = [
 ];
 
 const naTela = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+/** A tela aberta: a do endereço ou, numa tela com abas, a de uma das abas. */
+const naTelaOuAba = (pathname: string, t: NavItem) => (t.abas ? t.abas.some((a) => naTela(pathname, a.href)) : naTela(pathname, t.href));
+
+/** A tela com as abas que o perfil alcança (abre na primeira); sem nenhuma, a tela some. */
+function telaPermitida(t: NavItem, pode: (p: string) => boolean): NavItem | null {
+  if (t.permission && !pode(t.permission)) return null;
+  if (!t.abas) return t;
+  const abas = t.abas.filter((a) => !a.permission || pode(a.permission));
+  return abas.length ? { ...t, href: abas[0].href, abas } : null;
+}
 
 /**
  * O item do menu com as telas que o perfil alcança: um grupo de telas abre na
@@ -173,24 +211,31 @@ const naTela = (pathname: string, href: string) => pathname === href || pathname
  */
 export function itemPermitido(item: NavItem, pode: (p: string) => boolean): NavItem | null {
   if (!item.telas) return !item.permission || pode(item.permission) ? item : null;
-  const telas = item.telas.filter((t) => !t.permission || pode(t.permission));
+  const telas = item.telas.map((t) => telaPermitida(t, pode)).filter((t): t is NavItem => t !== null);
   return telas.length > 0 ? { ...item, href: telas[0].href, telas } : null;
 }
 
-/** O grupo de telas da tela aberta, com a tela: a barra no topo e o caminho usam os dois. */
-export function grupoDaTela(pathname: string): { grupo: NavItem; tela: NavItem } | null {
+/** O grupo de telas da tela aberta, com a tela (e a aba, nas telas com abas): a barra no topo e o caminho usam os três. */
+export function grupoDaTela(pathname: string): { grupo: NavItem; tela: NavItem; aba: NavItem | null } | null {
   for (const g of navGrupos) {
     for (const item of g.itens) {
-      const tela = item.telas?.find((t) => naTela(pathname, t.href));
-      if (tela) return { grupo: item, tela };
+      const tela = item.telas?.find((t) => naTelaOuAba(pathname, t));
+      if (tela) return { grupo: item, tela, aba: tela.abas?.find((a) => naTela(pathname, a.href)) ?? null };
     }
   }
   return null;
 }
 
+/** As abas da tela aberta que o perfil alcança (17/10/2026), com a aberta; null fora das telas com abas. */
+export function abasDaTela(pathname: string, pode: (p: string) => boolean): { titulo: string; abas: NavItem[]; ativa: string } | null {
+  const doGrupo = grupoDaTela(pathname);
+  if (!doGrupo?.tela.abas || !doGrupo.aba) return null;
+  return { titulo: doGrupo.tela.title, abas: doGrupo.tela.abas.filter((a) => !a.permission || pode(a.permission)), ativa: doGrupo.aba.href };
+}
+
 /** O item do menu aceso: o da tela, ou o grupo de telas que a contém. */
 export function itemAtivo(pathname: string, item: NavItem): boolean {
-  return item.telas ? item.telas.some((t) => naTela(pathname, t.href)) : naTela(pathname, item.href);
+  return item.telas ? item.telas.some((t) => naTelaOuAba(pathname, t)) : naTela(pathname, item.href);
 }
 
 /**
@@ -204,13 +249,13 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/cadastros\/precos-contrato(\/|$)/, "cadastro_precos_contrato:ler"],
   [/^\/cadastros\/tipos-movimento(\/|$)/, "cadastro_tipos_movimento:ler"],
   [/^\/cadastros\/tabela-estacas(\/|$)/, "cadastro_tabela_estacas:ler"],
-  [/^\/cadastros\/unidades(\/|$)/, "cadastro_unidades:ler"],
-  [/^\/cadastros\/linhas(\/|$)/, "cadastro_linhas:ler"],
-  [/^\/cadastros\/centros-custo(\/|$)/, "cadastro_centros_custo:ler"],
-  [/^\/cadastros\/contas-resultado(\/|$)/, "cadastro_contas_resultado:ler"],
-  [/^\/cadastros\/estrutura-indicadores(\/|$)/, "cadastro_estrutura_indicadores:ler"],
-  [/^\/cadastros\/regras-rateio(\/|$)/, "cadastro_regras_rateio:ler"],
-  [/^\/cadastros\/estrutura-dre(\/|$)/, "cadastro_estrutura_dre:ler"],
+  [/^\/cadastros\/unidades(\/|$)/, "cadastro_contabil.unidades:ler"],
+  [/^\/cadastros\/linhas(\/|$)/, "cadastro_controladoria.linhas:ler"],
+  [/^\/cadastros\/centros-custo(\/|$)/, "cadastro_contabil.centros_custo:ler"],
+  [/^\/cadastros\/contas-resultado(\/|$)/, "cadastro_contabil.contas_resultado:ler"],
+  [/^\/cadastros\/estrutura-indicadores(\/|$)/, "cadastro_analitico.estrutura_indicadores:ler"],
+  [/^\/cadastros\/regras-rateio(\/|$)/, "cadastro_controladoria.regras_rateio:ler"],
+  [/^\/cadastros\/estrutura-dre(\/|$)/, "cadastro_controladoria.estrutura_dre:ler"],
   [/^\/cadastros(\/|$)/, "cadastros_controladoria:ler"],
   [/^\/usuarios(\/|$)/, "usuarios:ler"],
   [/^\/perfis(\/|$)/, "perfis:ler"],
@@ -264,7 +309,7 @@ export function primeiraTelaPermitida(pode: (p: string) => boolean): string | nu
   return null;
 }
 
-/** "unidades", "editar" → "cadastro_unidades:editar": a permissão da tela de um cadastro (14/10/2026; antes, do grupo). */
+/** "unidades", "editar" → "cadastro_contabil.unidades:editar": a permissão da tela (ou da aba) de um cadastro (14/10/2026; antes, do grupo). */
 export function permissaoDoCadastro(entidade: string, acao: "ler" | "editar"): string {
   const tela = permissaoDaTela(`/cadastros/${entidade}`) ?? "cadastros_controladoria:ler";
   return tela.replace(/:ler$/, `:${acao}`);
@@ -319,7 +364,7 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
     return [{ rotulo: "Relatórios Executivos", href: "/analises-gerenciais/relatorios-executivos" }, { rotulo: rotuloDoRelatorio ?? "Relatório" }];
   }
   const doGrupo = grupoDaTela(pathname);
-  if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }];
+  if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }, ...(doGrupo.aba ? [{ rotulo: doGrupo.aba.title }] : [])];
   return [{ rotulo: getPageTitle(pathname) }];
 }
 

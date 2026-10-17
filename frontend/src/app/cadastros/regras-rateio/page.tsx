@@ -7,7 +7,7 @@ import { RegrasRateioContent } from "./RegrasRateioContent";
 export default function RegrasRateioPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastro_regras_rateio:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_controladoria.regras_rateio:ler" fallback={<SemLeitura />}>
         <RegrasRateioContent
           comoUsar={
             <ul>

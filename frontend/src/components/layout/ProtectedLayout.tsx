@@ -15,7 +15,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { lerRotaDoMes } from "@/lib/etapasDoMes";
-import { grupoDaTela, permissaoDaTela, primeiraTelaPermitida } from "@/lib/navigation-config";
+import { abasDaTela, grupoDaTela, permissaoDaTela, primeiraTelaPermitida } from "@/lib/navigation-config";
+import { AbasDaTela } from "@/components/shared/AbasDaTela";
 
 type ProtectedLayoutProps = {
   children: ReactNode;
@@ -55,6 +56,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const doGrupo = grupoDaTela(pathname);
   // Nas telas de um cenário sintético, a barra do cenário (Resultados e Indicadores).
   const doCenario = lerRotaDoCenario(pathname);
+  // Nas telas com abas (17/10/2026: os Cadastros da Controladoria), o nome da tela e as abas que o perfil alcança.
+  const abas = abasDaTela(pathname, hasPermission);
 
   return (
     <SidebarProvider>
@@ -78,9 +81,15 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
         ) : null}
         <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
           {doMes && user ? <EtapasDoMes anoMes={doMes.anoMes} chave={doMes.chave} resto={doMes.resto} /> : null}
-          {doGrupo && user ? <BarraDeTelas grupo={doGrupo.grupo} atual={doGrupo.tela.href} /> : null}
+          {doGrupo && user ? <BarraDeTelas grupo={doGrupo.grupo} atual={doGrupo.tela.title} /> : null}
           {doCenario && user && !bloqueada ? <BarraDoCenario id={doCenario.id} tela={doCenario.tela} /> : null}
-          {isLoading && exigida ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : bloqueada ? <SemAcesso inicio={inicio} /> : children}
+          {isLoading && exigida ? (
+            <div className="h-40 animate-pulse rounded-sm bg-gray-100" />
+          ) : bloqueada ? (
+            <SemAcesso inicio={inicio} />
+          ) : (
+            <AbasDaTela.Provider value={abas}>{children}</AbasDaTela.Provider>
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

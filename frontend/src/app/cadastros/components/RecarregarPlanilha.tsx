@@ -95,7 +95,7 @@ function Secao({ nome, s }: { nome: string; s: SecaoRecarga }) {
  */
 export function RecarregarPlanilha() {
   const { hasPermission } = usePermissions();
-  const pode = ["cadastro_centros_custo:editar", "cadastro_contas_resultado:editar", "cadastro_estrutura_dre:editar"].every(hasPermission);
+  const pode = ["cadastro_contabil.centros_custo:editar", "cadastro_contabil.contas_resultado:editar", "cadastro_controladoria.estrutura_dre:editar"].every(hasPermission);
   const queryClient = useQueryClient();
   const [aberto, setAberto] = useState(false);
   const [arquivo, setArquivo] = useState<File | null>(null);

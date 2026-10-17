@@ -86,7 +86,7 @@ export function PercentuaisFixosDialog({ onFechar, inicial }: { onFechar: () => 
 function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () => void; inicial?: { chave: string; inicio: string } }) {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const pode = hasPermission("cadastro_regras_rateio:editar");
+  const pode = hasPermission("cadastro_controladoria.regras_rateio:editar");
   // Aberto pelo lápis de uma regra fixa (14/10/2026): já na chave e no conjunto dela.
   const doInicial = inicial ? (dados.conjuntos.find((x) => x.chave === inicial.chave && x.inicio === inicial.inicio) ?? null) : null;
   const [chave, setChave] = useState(doInicial?.chave ?? dados.chaves[0]?.chave ?? "");

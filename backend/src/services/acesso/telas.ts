@@ -134,14 +134,27 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
     recurso: "CADASTROS_CONTROLADORIA",
     nome: "Cadastros da Controladoria",
     area: "cadastros_controladoria",
+    // Três telas com abas (17/10/2026; antes, uma tela por cadastro): Contábil, Controladoria e Analítico.
     telas: [
-      { codigo: "cadastro_unidades", nome: "Unidades" },
-      { codigo: "cadastro_linhas", nome: "Linhas" },
-      { codigo: "cadastro_centros_custo", nome: "Centros de Custo" },
-      { codigo: "cadastro_contas_resultado", nome: "Contas de Resultado" },
-      { codigo: "cadastro_estrutura_indicadores", nome: "Estrutura dos Indicadores" },
-      { codigo: "cadastro_regras_rateio", nome: "Regras de Rateio" },
-      { codigo: "cadastro_estrutura_dre", nome: "Estrutura da DRE" },
+      {
+        codigo: "cadastro_contabil",
+        nome: "Contábil",
+        abas: [
+          { codigo: "unidades", nome: "Unidades" },
+          { codigo: "centros_custo", nome: "Centros de Custo" },
+          { codigo: "contas_resultado", nome: "Contas de Resultado" },
+        ],
+      },
+      {
+        codigo: "cadastro_controladoria",
+        nome: "Controladoria",
+        abas: [
+          { codigo: "linhas", nome: "Linhas" },
+          { codigo: "estrutura_dre", nome: "Estrutura da DRE" },
+          { codigo: "regras_rateio", nome: "Regras de Rateio" },
+        ],
+      },
+      { codigo: "cadastro_analitico", nome: "Analítico", abas: [{ codigo: "estrutura_indicadores", nome: "Estrutura dos Indicadores" }] },
     ],
   },
   {

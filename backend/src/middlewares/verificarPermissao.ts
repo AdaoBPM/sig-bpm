@@ -144,19 +144,22 @@ export function verificarPermissaoDoCenario(acao: "ler" | "editar", tela?: strin
   };
 }
 
-/** A tela de cada cadastro (14/10/2026; antes, o grupo): a chave é a entidade da rota (/cadastros/edicao/:entidade). */
+/**
+ * A tela de cada cadastro (14/10/2026; antes, o grupo): a chave é a entidade da rota (/cadastros/edicao/:entidade). Os
+ * da Controladoria são abas das telas Contábil, Controladoria e Analítico (17/10/2026).
+ */
 export const AREA_DO_CADASTRO: Record<string, string> = {
   reclassificacoes: "cadastro_reclassificacoes",
   "precos-contrato": "cadastro_precos_contrato",
   "tipos-movimento": "cadastro_tipos_movimento",
   "tabela-estacas": "cadastro_tabela_estacas",
-  unidades: "cadastro_unidades",
-  linhas: "cadastro_linhas",
-  "centros-custo": "cadastro_centros_custo",
-  "contas-resultado": "cadastro_contas_resultado",
-  "estrutura-indicadores": "cadastro_estrutura_indicadores",
-  "regras-rateio": "cadastro_regras_rateio",
-  "estrutura-dre": "cadastro_estrutura_dre",
+  unidades: "cadastro_contabil.unidades",
+  "centros-custo": "cadastro_contabil.centros_custo",
+  "contas-resultado": "cadastro_contabil.contas_resultado",
+  linhas: "cadastro_controladoria.linhas",
+  "estrutura-dre": "cadastro_controladoria.estrutura_dre",
+  "regras-rateio": "cadastro_controladoria.regras_rateio",
+  "estrutura-indicadores": "cadastro_analitico.estrutura_indicadores",
 };
 
 /** A permissão da tela do cadastro da rota (:entidade); entidade desconhecida segue adiante (a rota responde 404). */

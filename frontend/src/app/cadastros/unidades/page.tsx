@@ -7,7 +7,7 @@ import { ListaCadastroContent } from "../components/ListaCadastroContent";
 export default function UnidadesPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="cadastro_unidades:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="cadastro_contabil.unidades:ler" fallback={<SemLeitura />}>
         <ListaCadastroContent
           entidade="unidades"
           rota="/cadastros/unidades"

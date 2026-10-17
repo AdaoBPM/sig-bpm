@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Info } from "lucide-react";
 
+import { Abas } from "@/components/shared/Abas";
+import { useAbasDaTela } from "@/components/shared/AbasDaTela";
 import { PainelInformacao, SecaoPainel, TextoPainel } from "@/components/shared/PainelInformacao";
 
 type Props = {
@@ -29,6 +31,8 @@ type Props = {
  * direto do contêiner da página, que é o que tem a altura toda.
  */
 export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props) {
+  // Numa tela com abas (17/10/2026), o título é o nome da tela, e as abas vêm logo abaixo; o painel Sobre segue o da aba.
+  const daTela = useAbasDaTela();
   const ref = useRef<HTMLDivElement>(null);
   const [preso, setPreso] = useState(false);
   const [sobreAberto, setSobreAberto] = useState(false);
@@ -62,7 +66,7 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex items-center gap-1.5">
-            <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">{titulo}</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">{daTela?.titulo ?? titulo}</h1>
             {sobre || comoUsar ? (
               <button
                 type="button"
@@ -83,6 +87,7 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
           </div>
         ) : null}
       </div>
+      {daTela ? <Abas rotulo={`Abas de ${daTela.titulo}`} ativa={daTela.ativa} abas={daTela.abas.map((a) => ({ chave: a.href, rotulo: a.title, href: a.href }))} /> : null}
       {/* Painel lateral, da direita para a esquerda, como o relatório das importações em vigor. */}
       <PainelInformacao aberto={sobreAberto} onMudar={setSobreAberto} titulo="Sobre Esta Tela">
         {sobre ? <TextoPainel>{sobre}</TextoPainel> : null}
