@@ -58,7 +58,7 @@ export function PerfisContent() {
         titulo="Perfis de Usuário"
         comoUsar={
           <ul>
-            <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis de sistema só se inativam).</li>
+            <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis que vêm com a ferramenta — Administrador, Contador, Coordenador e Gestor — não têm a lixeira: só se inativam).</li>
             <li>
               O Administrador é um perfil de sistema com acesso total a todas as telas, sem recortes (as telas novas entram sozinhas): não se exclui
               nem se inativa, as permissões dele não mudam (só a descrição se edita), não fica sem usuário ativo, e só um Administrador promove outro
@@ -74,7 +74,7 @@ export function PerfisContent() {
           <p>
             Os tipos de usuário e o que cada um pode fazer: Ler ou Editar em cada tela do menu lateral (e nas etapas do mês) e em cada aba de conteúdo
             delas (as abas que só filtram a mesma lista, as das Listas e as dos modais seguem a tela). Até 14/10/2026, as permissões eram por grupo de
-            telas; cada tela e cada aba herdou a do grupo dela. Os perfis de sistema (Contábil, Alimentador, Gestão) podem ser
+            telas; cada tela e cada aba herdou a do grupo dela. Os perfis que vêm com a ferramenta (Contador, Coordenador e Gestor) podem ser
             editados e inativados, mas não excluídos.
           </p>
         }
@@ -115,7 +115,6 @@ export function PerfisContent() {
             <tr key={p.id} className={`border-b border-gray-100 hover:bg-gray-50 ${p.ativo ? "" : "text-gray-400"}`}>
               <td className="px-4 py-3 text-sm">
                 <span className="font-medium">{p.nome}</span>
-                {p.sistema ? <span className="ml-2 text-xs text-gray-500">sistema</span> : null}
                 {p.descricao ? <div className="text-xs text-gray-500">{p.descricao}</div> : null}
               </td>
               <td className="px-4 py-3 text-xs text-gray-600">{resumoPermissoes(p)}</td>
