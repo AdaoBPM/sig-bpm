@@ -57,7 +57,7 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "PAINEL"; aba: "resultados" | "performance"; quadro: string; titulo: string; sigla: string; comGrafico: boolean; /** As opções do gráfico do card (16/10/2026), como no Configurar Gráficos do Painel; sem elas, as do navegador. */ tipoGrafico?: "barras" | "area"; comRotulos?: boolean; cores?: "padrao" | "daltonismo" }
   | { tipo: "INDICADOR"; nome: string }
   | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string }
-  /** Uma foto (16/10/2026): o arquivo (na pasta do relatório), a legenda e a proporção (largura ÷ altura). */
+  /** Uma foto (16/10/2026): o arquivo (na pasta do relatório; vazio, o quadro esperando a imagem), a legenda e a proporção (largura ÷ altura). */
   | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
 );
 
@@ -87,7 +87,7 @@ const MAXIMO_DA_FOTO = 10 * 1024 * 1024;
  */
 async function limparFotos(relatorioId: string) {
   const abas = await getPrismaClient().relatorioExecutivoAba.findMany({ where: { relatorioId }, select: { blocos: true } });
-  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap((p) => p.blocos.flatMap((b) => (b.tipo === "FOTO" ? [b.arquivo] : [])))));
+  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap((p) => p.blocos.flatMap((b) => (b.tipo === "FOTO" && b.arquivo ? [b.arquivo] : [])))));
   const pasta = pastaDasFotos(relatorioId);
   const arquivos = await readdir(pasta).catch(() => [] as string[]);
   const umDia = Date.now() - 24 * 60 * 60 * 1000;
@@ -175,13 +175,13 @@ export const relatoriosExecutivosService = {
       throw new RelatorioExecutivoError(409, `${rotuloMes(dados.ano, dados.mes)} já tem relatório: abra-o na lista.`);
     }
     const origem = dados.importarDe ? await doRelatorio(dados.importarDe) : null;
-    // Sem "Manter Imagens e Anotações" (17/10/2026), só os cards (do Painel e dos Indicadores) vêm da origem.
+    // Sem "Manter Imagens e Anotações" (17/10/2026), as anotações vêm em branco (o tipo da nota e o título ficam) e as
+    // fotos, sem a imagem e sem a legenda (o quadro cinza, esperando a imagem); os cards vêm iguais.
     const manter = dados.manterImagensEAnotacoes !== false;
+    const esvaziar = (b: BlocoDoRelatorio): BlocoDoRelatorio =>
+      b.tipo === "ANOTACAO" ? { ...b, texto: "", html: undefined } : b.tipo === "FOTO" ? { ...b, arquivo: "", legenda: "", legendaHtml: undefined } : b;
     const daOrigem = new Map(
-      (origem?.abas ?? []).map((a) => [
-        a.departamento,
-        paginasDe(a.blocos).map((p) => (manter ? p : { ...p, blocos: p.blocos.filter((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") })),
-      ]),
+      (origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos).map((p) => (manter ? p : { ...p, blocos: p.blocos.map(esvaziar) }))]),
     );
     const r = await prisma.relatorioExecutivo.create({
       data: {
@@ -193,7 +193,7 @@ export const relatoriosExecutivosService = {
       },
     });
     // As fotos da origem vão para a pasta do relatório novo (a origem pode ser excluída depois).
-    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => p.blocos.some((b) => b.tipo === "FOTO")))) {
+    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => p.blocos.some((b) => b.tipo === "FOTO" && b.arquivo)))) {
       await cp(pastaDasFotos(origem.id), pastaDasFotos(r.id), { recursive: true }).catch(() => undefined);
     }
     await auditar({

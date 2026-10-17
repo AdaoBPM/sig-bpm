@@ -150,6 +150,20 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
   });
+  // A imagem de um quadro de foto vazio (17/10/2026: o relatório importado sem as imagens): entra no próprio bloco, que
+  // fica com a altura da proporção dela.
+  const imagemNoQuadro = useMutation({
+    mutationFn: async ({ arquivo }: { id: string; arquivo: File }) => {
+      const { foto: conteudo, proporcao } = await prepararFoto(arquivo);
+      const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorio.id, conteudo);
+      return { nome, proporcao };
+    },
+    onSuccess: ({ nome, proporcao }, { id }) => {
+      const largura = (area.current?.offsetWidth ?? 1200) + 24;
+      mudarPagina(daPagina.map((b) => (b.id === id && b.tipo === "FOTO" ? { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura) } : b)));
+    },
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
+  });
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
   const novaPagina = () => {
     const nova = { id: novoId(), blocos: [] };
@@ -463,7 +477,18 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           {editavel ? "A página está vazia: use “Adicionar”, na linha do título." : "Nada nesta página."}
         </p>
       ) : (
-        <GradeDoRelatorio key={pagina?.id} relatorioId={relatorio.id} blocos={daPagina} dados={dados.data} editavel={editavel} cores={cores} tipo={tipo} linhas={linhasDaPagina()} onMudar={mudarPagina} />
+        <GradeDoRelatorio
+          key={pagina?.id}
+          relatorioId={relatorio.id}
+          blocos={daPagina}
+          dados={dados.data}
+          editavel={editavel}
+          cores={cores}
+          tipo={tipo}
+          linhas={linhasDaPagina()}
+          onCarregarImagem={(id, arquivo) => imagemNoQuadro.mutate({ id, arquivo })}
+          onMudar={mudarPagina}
+        />
       )}
       {relatorio.podeExcluir ? (
         <div className="flex justify-end">

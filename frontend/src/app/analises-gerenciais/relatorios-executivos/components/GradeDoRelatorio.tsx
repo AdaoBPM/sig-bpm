@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
-import { ChartColumn, CircleAlert, GripVertical, Settings, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { ChartColumn, CircleAlert, GripVertical, ImagePlus, Settings, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -120,9 +120,12 @@ export function GradeDoRelatorio({
   tipo,
   linhas,
   ampliavel = false,
+  onCarregarImagem,
   onMudar,
 }: {
   relatorioId: string;
+  /** A imagem escolhida para um quadro de foto vazio (17/10/2026). */
+  onCarregarImagem?: (id: string, arquivo: File) => void;
   /** As linhas da página: os blocos não passam delas, e a página tem essa altura (o espaço útil da tela inteira). */
   linhas: number;
   /** Na apresentação (16/10/2026): o bloco se destaca sob o mouse e, clicado, se amplia na tela, com o fundo escurecido. */
@@ -229,6 +232,7 @@ export function GradeDoRelatorio({
                 cores={cores}
                 tipo={tipo}
                 registrar={(el) => (el ? campos.current.set(b.id, el) : campos.current.delete(b.id))}
+                onCarregarImagem={onCarregarImagem ? (arquivo) => onCarregarImagem(b.id, arquivo) : undefined}
                 onMudar={(m) => mudarBloco(b.id, m)}
               />
             </div>
@@ -468,6 +472,7 @@ function ConteudoDoBloco({
   soCard = false,
   semGrafico = false,
   registrar,
+  onCarregarImagem,
   onMudar,
 }: {
   relatorioId: string;
@@ -480,6 +485,8 @@ function ConteudoDoBloco({
   semGrafico?: boolean;
   /** O campo do texto formatado (anotação ou legenda), para a barra de formatação. */
   registrar?: (el: HTMLElement | null) => void;
+  /** A imagem escolhida no quadro de foto vazio. */
+  onCarregarImagem?: (arquivo: File) => void;
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
   cores: Cores;
@@ -530,8 +537,31 @@ function ConteudoDoBloco({
     return (
       <figure className="flex h-full flex-col gap-2">
         <div className="min-h-0 flex-1">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a foto vem do servidor, pelo proxy, com o login. */}
-          <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Foto"} draggable={false} className="h-full w-full object-contain" />
+          {b.arquivo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a foto vem do servidor, pelo proxy, com o login.
+            <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Foto"} draggable={false} className="h-full w-full object-contain" />
+          ) : (
+            // O quadro sem a imagem (17/10/2026: o relatório importado sem as imagens): cinza, com o botão de carregar.
+            <label
+              className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-sm bg-gray-200 text-gray-500 ${editavel && onCarregarImagem ? "cursor-pointer hover:bg-gray-300 hover:text-gray-700" : ""}`}
+              title={editavel ? "Carregar uma imagem neste quadro" : "Sem imagem"}
+            >
+              <ImagePlus className="size-8" />
+              {editavel ? <span className="text-xs font-medium">Carregar Imagem</span> : null}
+              {editavel && onCarregarImagem ? (
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const arquivo = e.target.files?.[0];
+                    e.target.value = "";
+                    if (arquivo) onCarregarImagem(arquivo);
+                  }}
+                />
+              ) : null}
+            </label>
+          )}
         </div>
         {/* A legenda formatada (17/10/2026; antes, só texto): a formatação na barra do bloco. */}
         {editavel || b.legenda ? (
