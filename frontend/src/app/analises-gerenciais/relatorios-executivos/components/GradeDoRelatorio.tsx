@@ -155,8 +155,10 @@ export function GradeDoRelatorio({
     if (mudou) onMudar(blocos.map((b) => ({ ...b, ...(pos.has(b.id) ? { x: pos.get(b.id)!.x, y: pos.get(b.id)!.y, w: pos.get(b.id)!.w, h: pos.get(b.id)!.h } : {}) })));
   };
   const doCard = blocos.find((b) => b.id === configurando);
-  // O bloco ampliado, com o tamanho dele na grade (sem a ampliação do mouse); Esc ou um clique o fecham.
-  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number } | null>(null);
+  // O bloco ampliado, com o tamanho dele na grade (sem a ampliação do mouse); Esc ou um clique o fecham. No card do Painel
+  // (17/10/2026), só o card (sem o nome do grupo) ou só o gráfico, conforme o ponto clicado: `recorte` é a parte do card
+  // que aparece (o gráfico), em px do card.
+  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number; soCard?: boolean; recorte?: Recorte } | null>(null);
   // O destaque sob o mouse (16/10/2026): o bloco cresce até 10%, a partir do ponto que o mantém dentro da tela.
   const [realce, setRealce] = useState<{ id: string; escala: number; origem: string } | null>(null);
   useEffect(() => {
@@ -207,16 +209,27 @@ export function GradeDoRelatorio({
               style={realce?.id === b.id ? { transform: `scale(${realce.escala})`, transformOrigin: realce.origem } : undefined}
               onMouseEnter={ampliavel ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
               onMouseLeave={ampliavel ? () => setRealce(null) : undefined}
-              onClick={ampliavel ? (e) => setAmpliado({ b, w: e.currentTarget.offsetWidth, h: e.currentTarget.offsetHeight }) : undefined}
+              onClick={ampliavel ? (e) => setAmpliado(oQueAmpliar(b, e.currentTarget, e.target as HTMLElement)) : undefined}
             >
               <ConteudoDoBloco relatorioId={relatorioId} b={b} dados={dados} editavel={editavel} cores={cores} tipo={tipo} onMudar={(m) => mudarBloco(b.id, m)} />
             </div>
           </div>
         ))}
       </Grade>
-      {ampliado ? <BlocoAmpliado {...ampliado} onFechar={() => setAmpliado(null)}>
-        <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado onMudar={() => undefined} />
-      </BlocoAmpliado> : null}
+      {ampliado ? (
+        <BlocoAmpliado w={ampliado.recorte?.w ?? ampliado.w} h={ampliado.recorte?.h ?? ampliado.h} onFechar={() => setAmpliado(null)}>
+          {ampliado.recorte ? (
+            // Só o gráfico: o card inteiro, no tamanho dele, deslocado para que só a área do gráfico fique à vista.
+            <div className="relative size-full overflow-hidden">
+              <div className="absolute" style={{ left: -ampliado.recorte.x, top: -ampliado.recorte.y, width: ampliado.w, height: ampliado.h }}>
+                <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado soCard onMudar={() => undefined} />
+              </div>
+            </div>
+          ) : (
+            <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado soCard={ampliado.soCard} onMudar={() => undefined} />
+          )}
+        </BlocoAmpliado>
+      ) : null}
       {doCard?.tipo === "PAINEL" ? (
         <ConfigurarGraficoDialog
           b={doCard}
@@ -253,6 +266,32 @@ function destaqueNaTela(r: DOMRect) {
   const x = eixo(r.left, r.width, window.innerWidth);
   const y = eixo(r.top, r.height, window.innerHeight);
   return { escala: Math.min(x.escala, y.escala), origem: `${x.o}px ${y.o}px` };
+}
+
+type Recorte = { x: number; y: number; w: number; h: number };
+
+/**
+ * O que ampliar ao clicar num bloco da apresentação (17/10/2026): no card do Painel, o gráfico (clicado nele) ou o card
+ * (clicado no resto), sem o nome do grupo; nos demais blocos, o bloco inteiro. As medidas saem do card na tela, divididas
+ * pela ampliação do destaque do mouse, para virem no tamanho da grade.
+ */
+function oQueAmpliar(b: Bloco, bloco: HTMLElement, alvo: HTMLElement) {
+  const inteiro = { b, w: bloco.offsetWidth, h: bloco.offsetHeight };
+  if (b.tipo !== "PAINEL") return inteiro;
+  const card = bloco.querySelector<HTMLElement>("[data-card-indicador]");
+  if (!card) return inteiro;
+  const rc = card.getBoundingClientRect();
+  const escala = rc.width / card.offsetWidth || 1;
+  const grafico = alvo.closest<HTMLElement>("[data-grafico-do-card]");
+  if (!grafico || !card.contains(grafico)) return { b, w: card.offsetWidth, h: card.offsetHeight, soCard: true };
+  const rg = grafico.getBoundingClientRect();
+  return {
+    b,
+    w: card.offsetWidth,
+    h: card.offsetHeight,
+    soCard: true,
+    recorte: { x: (rg.left - rc.left) / escala, y: (rg.top - rc.top) / escala, w: grafico.offsetWidth, h: grafico.offsetHeight },
+  };
 }
 
 /**
@@ -369,12 +408,15 @@ function ConteudoDoBloco({
   cores,
   tipo,
   ampliado = false,
+  soCard = false,
   onMudar,
 }: {
   relatorioId: string;
   b: Bloco;
   /** No bloco ampliado da apresentação (16/10/2026): a legenda da foto com metade do tamanho. */
   ampliado?: boolean;
+  /** No card do Painel ampliado (17/10/2026): só o card, sem o nome do grupo em cima. */
+  soCard?: boolean;
   dados: DadosDoRelatorio | undefined;
   editavel: boolean;
   cores: Cores;
@@ -453,12 +495,12 @@ function ConteudoDoBloco({
   if (b.tipo === "PAINEL") {
     const item = dados.painel.abas.find((a) => a.chave === b.aba)?.quadros.find((q) => q.titulo === b.quadro)?.itens.find((i) => i.titulo === b.titulo && i.sigla === b.sigla);
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
+    const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico} comRotulos={b.comRotulos ?? false} />;
+    if (soCard) return <div className="h-full">{card}</div>;
     return (
       <div className="flex h-full flex-col">
         <p className="truncate pb-1 text-xs font-bold tracking-wide text-gray-500 uppercase">{b.quadro}</p>
-        <div className="min-h-0 flex-1">
-          <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico} comRotulos={b.comRotulos ?? false} />
-        </div>
+        <div className="min-h-0 flex-1">{card}</div>
       </div>
     );
   }
