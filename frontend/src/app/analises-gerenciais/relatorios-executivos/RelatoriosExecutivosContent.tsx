@@ -74,7 +74,8 @@ export function RelatoriosExecutivosContent() {
             {pode ? (
               <li>
                 “Novo Relatório” cria o relatório de uma competência fechada que ainda não tem. Em Importar de, escolha o relatório de onde vêm os cards (com
-                os dados da competência nova), as fotos e as anotações das abas (de início, o mais recente), ou Nenhum, para começar com as abas vazias; depois,
+                os dados da competência nova), as fotos e as anotações das abas (de início, o mais recente), ou Nenhum, para começar com as abas vazias; sem
+                “Manter Imagens e Anotações”, só os cards vêm do relatório escolhido; depois,
                 cada gestor ajusta as abas dele.
               </li>
             ) : null}
@@ -158,8 +159,9 @@ function NovoRelatorioDialog({ dados, onFechar }: { dados: ListaDeRelatorios; on
   const [escolhida, setEscolhida] = useState(dados.livres[0] ? `${dados.livres[0].ano}|${dados.livres[0].mes}` : "");
   const [ano, mes] = escolhida.split("|").map(Number);
   const [importarDe, setImportarDe] = useState(dados.relatorios[0]?.id ?? "");
+  const [manter, setManter] = useState(true);
   const criar = useMutation({
-    mutationFn: () => relatoriosExecutivosService.criar(ano, mes, importarDe || null),
+    mutationFn: () => relatoriosExecutivosService.criar(ano, mes, importarDe || null, manter),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"] });
       toast.success(`Relatório de ${r.rotuloMes} criado.`);
@@ -196,7 +198,18 @@ function NovoRelatorioDialog({ dados, onFechar }: { dados: ListaDeRelatorios; on
             ))}
             <option value="">Nenhum (abas vazias)</option>
           </select>
-          <p className="text-xs text-gray-500">Os cards (com os dados da competência nova), as fotos e as anotações das abas do relatório escolhido.</p>
+          <p className="text-xs text-gray-500">
+            {manter || !importarDe
+              ? "Os cards (com os dados da competência nova), as fotos e as anotações das abas do relatório escolhido."
+              : "Só os cards (com os dados da competência nova) das abas do relatório escolhido."}
+          </p>
+          {/* Manter as fotos e as anotações da origem (17/10/2026); sem a marca, só os cards. */}
+          {importarDe ? (
+            <label className="flex items-center gap-2 pt-1 text-sm">
+              <input type="checkbox" className="accent-black" checked={manter} onChange={(e) => setManter(e.target.checked)} />
+              Manter Imagens e Anotações
+            </label>
+          ) : null}
         </div>
         <Erro erro={criar.isError ? mensagemDeErro(criar.error, "Não foi possível criar o relatório.") : null} />
         <DialogFooter>

@@ -125,24 +125,42 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
   campo.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+/** Os tamanhos da fonte, em px (17/10/2026: numerados na barra). O texto das anotações e das legendas é de 14. */
+export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36];
+
+/** O tamanho, em px, do texto onde está a seleção (ou do campo, sem seleção nele). */
+function tamanhoDaSelecao(campo: HTMLElement) {
+  const sel = window.getSelection();
+  let n: Node | null = sel && sel.rangeCount && campo.contains(sel.anchorNode) ? sel.anchorNode : campo;
+  if (n && n.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  return Math.round(parseFloat(getComputedStyle((n as HTMLElement) ?? campo).fontSize));
+}
+
 /**
- * Aumenta ou diminui a fonte da seleção (um passo de 20%). Se a seleção é todo o trecho que já tem um tamanho, muda o
- * tamanho dele (17/10/2026: antes, cada passo punha um span dentro do outro, e o de fora, maior, mantinha a linha alta
- * depois de diminuir); de volta ao tamanho normal, o trecho perde a marca. Senão, envolve a seleção num span novo.
+ * Põe a fonte da seleção no tamanho escolhido (em px). Se a seleção é todo o trecho que já tem um tamanho, muda o dele
+ * (sem um span dentro do outro, que deixava a linha alta); no tamanho do campo, o trecho perde a marca. Senão, envolve a
+ * seleção num span novo, tirando os tamanhos de dentro dela (o tamanho escolhido vale para todo o trecho).
  */
-function mudarFonte(sel: Selection, fator: number, campo: HTMLElement) {
+function definirFonte(sel: Selection, px: number, campo: HTMLElement) {
   const r = sel.getRangeAt(0);
-  const selecionar = (no: Node, conteudo = true) => {
+  const base = Math.round(parseFloat(getComputedStyle(campo).fontSize));
+  const selecionar = (no: Node) => {
     sel.removeAllRanges();
     const nova = document.createRange();
-    if (conteudo) nova.selectNodeContents(no);
-    else nova.selectNode(no);
+    nova.selectNodeContents(no);
     sel.addRange(nova);
+  };
+  const desfazer = (span: HTMLElement) => {
+    span.style.removeProperty("font-size");
+    if (span.getAttribute("style")?.trim()) return [span] as Node[];
+    const filhos = [...span.childNodes];
+    span.replaceWith(...filhos);
+    return filhos;
   };
   let n: Node | null = r.commonAncestorContainer;
   let trecho: HTMLElement | null = null;
   while (n && n !== campo) {
-    if (n instanceof HTMLElement && n.tagName === "SPAN" && n.style.fontSize.endsWith("em")) {
+    if (n instanceof HTMLElement && n.tagName === "SPAN" && n.style.fontSize) {
       trecho = n;
       break;
     }
@@ -150,28 +168,35 @@ function mudarFonte(sel: Selection, fator: number, campo: HTMLElement) {
   }
   const texto = sel.toString().trim();
   if (trecho && texto && trecho.textContent?.trim() === texto) {
-    const tamanho = parseFloat(trecho.style.fontSize) * fator;
-    if (Math.abs(tamanho - 1) < 0.01) {
-      trecho.style.removeProperty("font-size");
-      if (!trecho.getAttribute("style")?.trim()) {
-        const filhos = [...trecho.childNodes];
-        trecho.replaceWith(...filhos);
-        if (filhos.length) {
-          sel.removeAllRanges();
-          const nova = document.createRange();
-          nova.setStartBefore(filhos[0]);
-          nova.setEndAfter(filhos[filhos.length - 1]);
-          sel.addRange(nova);
-        }
-        return;
+    trecho.querySelectorAll<HTMLElement>("span").forEach((x) => x.style.fontSize && desfazer(x));
+    if (px === base) {
+      const nos = desfazer(trecho);
+      if (nos.length) {
+        sel.removeAllRanges();
+        const nova = document.createRange();
+        nova.setStartBefore(nos[0]);
+        nova.setEndAfter(nos[nos.length - 1]);
+        sel.addRange(nova);
       }
-    } else trecho.style.fontSize = `${Number(tamanho.toFixed(4))}em`;
+      return;
+    }
+    trecho.style.fontSize = `${px}px`;
     selecionar(trecho);
     return;
   }
+  const conteudo = r.extractContents();
+  conteudo.querySelectorAll<HTMLElement>("span").forEach((x) => x.style.fontSize && desfazer(x));
+  if (px === base) {
+    const marca = document.createElement("span");
+    marca.appendChild(conteudo);
+    r.insertNode(marca);
+    const filhos = [...marca.childNodes];
+    marca.replaceWith(...filhos);
+    return;
+  }
   const span = document.createElement("span");
-  span.style.fontSize = `${fator}em`;
-  span.appendChild(r.extractContents());
+  span.style.fontSize = `${px}px`;
+  span.appendChild(conteudo);
   r.insertNode(span);
   selecionar(span);
 }
@@ -203,7 +228,30 @@ function marcar(sel: Selection, campo: HTMLElement, simbolo: string) {
  * mesmo, sem menu (o menu levaria o foco).
  */
 export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null; botao: string }) {
-  const [aberta, setAberta] = useState<"cor" | "marcador" | null>(null);
+  const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | null>(null);
+  // O tamanho do texto onde está o cursor (o número entre os botões de diminuir e aumentar), a cada mudança da seleção.
+  const [tamanho, setTamanho] = useState(14);
+  useEffect(() => {
+    const aoSelecionar = () => {
+      const el = campo();
+      const sel = window.getSelection();
+      if (el && sel && sel.rangeCount && el.contains(sel.anchorNode)) setTamanho(tamanhoDaSelecao(el));
+    };
+    document.addEventListener("selectionchange", aoSelecionar);
+    return () => document.removeEventListener("selectionchange", aoSelecionar);
+  }, [campo]);
+  const fonte = (px: number) => {
+    const el = campo();
+    if (!el) return;
+    aplicar(el, (s) => definirFonte(s, px, el));
+    setTamanho(px);
+  };
+  const passo = (d: 1 | -1) => {
+    const el = campo();
+    const atual = el ? tamanhoDaSelecao(el) : tamanho;
+    const proximo = d > 0 ? TAMANHOS.find((t) => t > atual) : [...TAMANHOS].reverse().find((t) => t < atual);
+    if (proximo) fonte(proximo);
+  };
   const semFoco = (e: React.MouseEvent) => e.preventDefault();
   const exec = (cmd: string, valor?: string, comCss = false) =>
     aplicar(campo(), () => {
@@ -222,17 +270,44 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
       <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("underline")} title="Sublinhado" aria-label="Sublinhado">
         <Underline className="size-4" />
       </button>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => {
-          const el = campo();
-          if (el) aplicar(el, (s) => mudarFonte(s, 1.2, el));
-        }} title="Aumentar a fonte" aria-label="Aumentar a fonte">
-        <AArrowUp className="size-4" />
-      </button>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => {
-          const el = campo();
-          if (el) aplicar(el, (s) => mudarFonte(s, 1 / 1.2, el));
-        }} title="Diminuir a fonte" aria-label="Diminuir a fonte">
+      {/* O tamanho da fonte (17/10/2026): diminuir, o número (a lista dos tamanhos) e aumentar. */}
+      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => passo(-1)} title="Diminuir a fonte" aria-label="Diminuir a fonte">
         <AArrowDown className="size-4" />
+      </button>
+      <span className="relative">
+        <button
+          type="button"
+          className={`${botao} w-auto min-w-9 gap-0 px-1 text-xs font-semibold`}
+          onMouseDown={semFoco}
+          onClick={() => setAberta((a) => (a === "tamanho" ? null : "tamanho"))}
+          title="Tamanho da fonte"
+          aria-label={`Tamanho da fonte: ${tamanho}`}
+          aria-expanded={aberta === "tamanho"}
+        >
+          {tamanho}
+          <ChevronDown className="size-3" />
+        </button>
+        {aberta === "tamanho" ? (
+          <span className="absolute top-full right-0 z-20 mt-1 grid w-20 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
+            {TAMANHOS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`${item} justify-center ${t === tamanho ? "font-bold text-gray-900" : ""}`}
+                onMouseDown={semFoco}
+                onClick={() => {
+                  fonte(t);
+                  setAberta(null);
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </span>
+        ) : null}
+      </span>
+      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => passo(1)} title="Aumentar a fonte" aria-label="Aumentar a fonte">
+        <AArrowUp className="size-4" />
       </button>
       <span className="relative">
         <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "cor" ? null : "cor"))} title="Cor da fonte" aria-label="Cor da fonte" aria-expanded={aberta === "cor"}>

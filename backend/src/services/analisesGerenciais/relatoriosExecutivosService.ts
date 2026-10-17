@@ -167,7 +167,7 @@ export const relatoriosExecutivosService = {
    * (16/10/2026), com os blocos das abas de outro relatório — os cards (que trazem os dados do mês novo), as fotos
    * (copiadas para a pasta do relatório novo) e as anotações —, todas em elaboração.
    */
-  async criar(dados: { ano: number; mes: number; importarDe?: string | null }, usuario: UsuarioDoRelatorio) {
+  async criar(dados: { ano: number; mes: number; importarDe?: string | null; manterImagensEAnotacoes?: boolean }, usuario: UsuarioDoRelatorio) {
     const prisma = getPrismaClient();
     const competencia = await prisma.competencia.findFirst({ where: { ano: dados.ano, mes: dados.mes } });
     if (!competencia || competencia.status !== "FECHADA") throw new RelatorioExecutivoError(400, `A competência ${rotuloMes(dados.ano, dados.mes)} não está fechada: os relatórios são das competências fechadas.`);
@@ -175,7 +175,14 @@ export const relatoriosExecutivosService = {
       throw new RelatorioExecutivoError(409, `${rotuloMes(dados.ano, dados.mes)} já tem relatório: abra-o na lista.`);
     }
     const origem = dados.importarDe ? await doRelatorio(dados.importarDe) : null;
-    const daOrigem = new Map((origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos)]));
+    // Sem "Manter Imagens e Anotações" (17/10/2026), só os cards (do Painel e dos Indicadores) vêm da origem.
+    const manter = dados.manterImagensEAnotacoes !== false;
+    const daOrigem = new Map(
+      (origem?.abas ?? []).map((a) => [
+        a.departamento,
+        paginasDe(a.blocos).map((p) => (manter ? p : { ...p, blocos: p.blocos.filter((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") })),
+      ]),
+    );
     const r = await prisma.relatorioExecutivo.create({
       data: {
         ano: dados.ano,
@@ -195,7 +202,7 @@ export const relatoriosExecutivosService = {
       acao: "CRIACAO",
       entidade: "relatorio_executivo",
       entidadeId: r.id,
-      metadados: { mes: rotuloMes(r.ano, r.mes), importadoDe: origem ? rotuloMes(origem.ano, origem.mes) : null },
+      metadados: { mes: rotuloMes(r.ano, r.mes), importadoDe: origem ? rotuloMes(origem.ano, origem.mes) : null, imagensEAnotacoes: origem ? manter : null },
     });
     return { id: r.id, rotuloMes: rotuloMes(r.ano, r.mes) };
   },

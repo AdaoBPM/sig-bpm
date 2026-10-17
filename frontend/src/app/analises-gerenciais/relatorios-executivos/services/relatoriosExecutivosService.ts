@@ -88,7 +88,9 @@ const base = "/proxy/relatorios-executivos";
 export const relatoriosExecutivosService = {
   listar: async () => (await api.get<{ data: ListaDeRelatorios }>(base)).data.data,
   /** Com `importarDe` (16/10/2026), as abas começam com os blocos (cards, fotos e anotações) daquele relatório. */
-  criar: async (ano: number, mes: number, importarDe: string | null) => (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe })).data.data,
+  // Sem `manterImagensEAnotacoes` (17/10/2026), só os cards vêm do relatório de origem.
+  criar: async (ano: number, mes: number, importarDe: string | null, manterImagensEAnotacoes = true) =>
+    (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe, manterImagensEAnotacoes })).data.data,
   obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
   dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
   gravarAba: async (id: string, aba: string, paginas: Pagina[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas })).data.data,

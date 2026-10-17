@@ -50,7 +50,7 @@ export const relatoriosExecutivosController = {
   },
 
   criar(request: Request, response: Response) {
-    const corpo = z.object({ ano: z.number().int().min(2000).max(2100), mes: z.number().int().min(1).max(12), importarDe: z.string().uuid().nullish() }).safeParse(request.body);
+    const corpo = z.object({ ano: z.number().int().min(2000).max(2100), mes: z.number().int().min(1).max(12), importarDe: z.string().uuid().nullish(), manterImagensEAnotacoes: z.boolean().optional() }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Escolha a competência do relatório." });
     return responder(response, () => s.criar(corpo.data, usuario(request)), 201);
   },
