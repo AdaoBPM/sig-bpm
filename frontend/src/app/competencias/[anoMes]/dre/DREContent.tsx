@@ -505,7 +505,13 @@ export function DREContent() {
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados. A DRE do centro traz só os custos e as despesas de mão de obra, gastos gerais e depreciação.</li>
             <li>Em Obras, escolha a obra na lista à esquerda (o código do centro de custo da obra fica acima do nome; a busca aceita os dois): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, sem as margens e os resultados calculados.</li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
-            <li>O aviso amarelo “Entradas alteradas depois da apuração” lista o que mudou: reapure para usar. O aviso vermelho “Apuração bloqueada” aparece quando uma competência anterior tem entradas alteradas: reapure as anteriores, em ordem, pelos botões “Ir para MM/AAAA”.</li>
+            <li>
+              O aviso amarelo “Entradas ou cadastros alterados depois da apuração” lista o que mudou — as entradas do mês e, com a competência ainda
+              aberta, qualquer Cadastro da Controladoria (Unidades, Centros de Custo, Contas de Resultado, Linhas, Estrutura da DRE, Regras de
+              Rateio, Estrutura dos Indicadores e Painel de Bordo): reapure para usar; até lá, a competência não fecha. O aviso vermelho “Apuração
+              bloqueada” aparece quando uma competência anterior tem entradas ou cadastros alterados: reapure as anteriores, em ordem, pelos botões
+              “Ir para MM/AAAA”.
+            </li>
             <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo); “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF; em Excel, também um arquivo por centro de custo (num ZIP, com o departamento e o centro no nome de cada arquivo).</li>
           </ul>

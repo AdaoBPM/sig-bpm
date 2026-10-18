@@ -7,13 +7,20 @@
  * - [LISTA|código]: um totalizador das Listas Operacionais (Projetos Liberados: Matriz…; os "_TOTAL" somam a lista);
  * - [IND|nome]: um indicador importado ou digitado das abas Comercial e Administrativo (Venda: Total, Quadro de
  *   Lotação…);
- * - [META|nome]: a meta do mês de um indicador no cenário Orçamento Empresarial do exercício (zero sem ele).
+ * - [META|nome]: a meta do mês de um indicador no cenário Orçamento Empresarial do exercício (zero sem ele);
+ * - [INDICADOR|nome]: um indicador da Estrutura dos Indicadores — só na Metodologia dos itens do Painel de Bordo
+ *   (17/10/2026), onde o realizado usa o valor do indicador e o orçado, a meta dele.
  *
  * O valor do mês é a fórmula com os itens do mês; sem dado em algum item (mês não apurado, indicador não importado)
  * ou com divisão por zero, o indicador fica sem valor. O acumulado depende do modo do indicador (indicadores.ts).
  */
 
-export type Item = { tipo: "DRE"; unidade: number; codigo: string } | { tipo: "LISTA"; codigo: string } | { tipo: "IND"; nome: string } | { tipo: "META"; nome: string };
+export type Item =
+  | { tipo: "DRE"; unidade: number; codigo: string }
+  | { tipo: "LISTA"; codigo: string }
+  | { tipo: "IND"; nome: string }
+  | { tipo: "META"; nome: string }
+  | { tipo: "INDICADOR"; nome: string };
 
 type Token = { t: "num"; v: number } | { t: "item"; chave: string; item: Item } | { t: "op"; v: "+" | "-" | "*" | "/" } | { t: "(" } | { t: ")" };
 
@@ -25,7 +32,7 @@ export class FormulaInvalidaError extends Error {}
 export function lerItem(texto: string): Item {
   const [tipo, ...resto] = texto.split("|");
   if (tipo === "DRE" && resto.length === 2 && /^[0-5]$/.test(resto[0]) && resto[1]) return { tipo, unidade: Number(resto[0]), codigo: resto[1] };
-  if ((tipo === "LISTA" || tipo === "IND" || tipo === "META") && resto.length === 1 && resto[0]) {
+  if ((tipo === "LISTA" || tipo === "IND" || tipo === "META" || tipo === "INDICADOR") && resto.length === 1 && resto[0]) {
     return tipo === "LISTA" ? { tipo, codigo: resto[0] } : { tipo, nome: resto[0] };
   }
   throw new FormulaInvalidaError(`Item inválido na fórmula: [${texto}].`);

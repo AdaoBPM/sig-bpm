@@ -702,9 +702,9 @@ model Competencia {
   /// lançamentos, das listas e das importações ativas). Comparado com as
   /// entradas atuais, diz se algo mudou depois da apuração (Passo 21).
   entradasApuradas Json? @map("entradas_apuradas")
-  /// A assinatura do cadastro do Painel de Bordo na apuração (17/10/2026): se ele muda com a competência apurada e
-  /// ainda aberta, a situação pede reapurar (e o fechamento fica bloqueado até lá).
-  painelAssinatura String? @map("painel_assinatura")
+  /// JSON: a assinatura de cada cadastro da Controladoria na apuração (17/10/2026; antes, só a do Painel de Bordo): se
+  /// algum muda com a competência apurada e ainda aberta, a situação pede reapurar (e o fechamento fica bloqueado até lá).
+  cadastrosAssinatura String? @map("cadastros_assinatura")
 
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
@@ -2316,8 +2316,17 @@ model PainelItem {
   sigla        String
   /// ↑ | ↓.
   sentido      String
-  /// A chave do modelo de apuração.
-  modelo       String
+  /// A Metodologia (17/10/2026; antes, a chave de um modelo de apuração fixo): a fórmula sobre os indicadores.
+  formula      String
+  /// MILHOES | MILHARES | M3 | PISTAS | PCT | PCT_RL | RS_M3.
+  formato      String
+  /// O formato do acumulado, quando é outro (nulo: o do mês).
+  formatoAcumulado String? @map("formato_acumulado")
+  /// O percentual sob o valor (/RL): uma fórmula; nulo, sem percentual.
+  percentual   String?
+  casasPercentual Int    @default(1) @map("casas_percentual")
+  /// Um espaço antes do item (um novo bloco no quadro).
+  separar      Boolean  @default(false)
   ordem        Int      @default(0)
   ativo        Boolean  @default(true)
   criadoEm     DateTime @default(now()) @map("criado_em")

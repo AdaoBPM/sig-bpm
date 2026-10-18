@@ -55,6 +55,9 @@ function valorDoItem(m: DadosDoMes, i: Item): number {
       return m.importado(i.nome) ?? NaN;
     case "META":
       return m.meta?.(i.nome) ?? NaN;
+    // Só o Painel de Bordo usa indicadores na fórmula; num indicador, não vale (o cadastro recusa).
+    case "INDICADOR":
+      return NaN;
   }
 }
 

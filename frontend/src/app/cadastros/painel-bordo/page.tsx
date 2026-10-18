@@ -23,17 +23,27 @@ export default function PainelBordoPage() {
               </li>
               <li>
                 O Nome e a Abreviação aparecem no card; o Comportamento diz o lado bom (↑ quanto maior, melhor; ↓ quanto menor, melhor) e define o sinal
-                do desvio. O Modelo de Apuração é a conta que dá o valor (o realizado e o orçado), com o formato e o percentual sobre a receita; o nome
-                dele diz o item e o quadro de origem, como “Receita Operacional Líquida (ROL - Consolidado)”.
+                do desvio.
+              </li>
+              <li>
+                A Metodologia é a fórmula do item, montada como a dos Indicadores: escolha o indicador (da Estrutura dos Indicadores) e use “Inserir
+                Item”, os operadores (+ − × ÷), os parênteses e “Inserir Número”; “Apagar Último” e “Limpar” corrigem. Com os valores realizados dos
+                indicadores, a fórmula dá o realizado; com as metas do orçamento, o orçado; com os acumulados, o acumulado.
+              </li>
+              <li>
+                O Formato diz como o valor aparece (R$ em milhões ou milhares, m³, pistas, percentual, R$/m³); o Formato do Acumulado, quando é
+                outro. O Percentual sob o Valor é opcional: uma segunda fórmula, mostrada sob o realizado com o rótulo (/RL), com uma ou duas casas.
+                Espaço Antes começa um novo bloco no quadro.
               </li>
               <li>Use “Novo” para incluir um item; o lápis edita, e a exclusão fica dentro da edição. Inativo, o item sai do Painel de Bordo.</li>
               <li>
-                Mudar o cadastro com uma competência apurada e ainda não fechada pede reapurar: até lá, ela não fecha (a DRE mostra o aviso). Os cards dos
+                Mudar o cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá,
+                ela não fecha, e a DRE mostra o aviso. Os cards dos
                 Relatórios Executivos acham o item pelo quadro, pelo nome e pela abreviação: mudá-los tira o card do relatório.
               </li>
             </ul>
           }
-          descricao="Os itens do Painel de Bordo, como nas abas Painel (Resultados) e Painel (Performance) do SIG BPM 2026 - INDICADORES DE RESULTADO. O Painel de Bordo de Resultados Empresariais, o dos cenários e os cards dos Relatórios Executivos usam os itens ativos daqui. Carregado com os itens que a ferramenta já mostrava."
+          descricao="Os itens do Painel de Bordo, como nas abas Painel (Resultados) e Painel (Performance) do SIG BPM 2026 - INDICADORES DE RESULTADO. O Painel de Bordo de Resultados Empresariais, o dos cenários e os cards dos Relatórios Executivos usam os itens ativos daqui. Cada item tem a sua Metodologia, uma fórmula sobre os indicadores. Carregado com os itens e as contas que a ferramenta já mostrava."
         />
       </PermissionGuard>
     </ProtectedLayout>

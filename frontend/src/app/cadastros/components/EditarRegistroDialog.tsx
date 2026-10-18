@@ -120,7 +120,7 @@ function CampoForm({
 function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadastro; registro: Registro | null; entidade: string; onFechar: () => void }) {
   const queryClient = useQueryClient();
   const [valores, setValores] = useState<Record<string, unknown>>(() =>
-    Object.fromEntries(def.campos.map((c) => [c.nome, paraTela(c, registro ? registro[c.nome] : c.tipo === "booleano" ? true : undefined)])),
+    Object.fromEntries(def.campos.map((c) => [c.nome, paraTela(c, registro ? registro[c.nome] : (c.padrao ?? (c.tipo === "booleano" ? true : undefined)))])),
   );
   const [confirmaExclusao, setConfirmaExclusao] = useState(false);
   const travas = registro?.__travas;

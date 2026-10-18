@@ -242,7 +242,7 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
         <div className="flex items-start gap-2 rounded-sm border border-l-4 border-gray-200 border-l-yellow-600 bg-white px-4 py-2.5 text-sm text-gray-800">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600" />
           <div>
-            <p className="font-medium text-gray-900">Entradas alteradas depois da apuração. Os valores abaixo são os da apuração; reapure para incluir as mudanças.</p>
+            <p className="font-medium text-gray-900">Entradas ou cadastros alterados depois da apuração. Os valores abaixo são os da apuração; reapure para incluir as mudanças.</p>
             <ul className="list-disc pl-5">{s.mudancas.map((m) => <li key={m}>{m}</li>)}</ul>
           </div>
         </div>

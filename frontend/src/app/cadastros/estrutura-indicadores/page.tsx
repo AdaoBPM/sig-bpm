@@ -31,6 +31,7 @@ export default function EstruturaIndicadoresPage() {
               <li>A Descrição é o texto que a tela Indicadores mostra sob o nome.</li>
               <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os indicadores inativos (que saem das telas Indicadores e Painel de Bordo).</li>
               <li>O Nome de um indicador com metas em cenários, valores importados ou digitados, ou usado no Painel de Bordo, não muda, e o indicador não se exclui: inative-o.</li>
+              <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
           descricao="Os indicadores de resultado, como na aba Realizado (SIG) do INDICADORES DE RESULTADO, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento Empresarial (o cenário marcado no exercício). Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."

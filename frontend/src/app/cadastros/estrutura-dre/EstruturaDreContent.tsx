@@ -83,6 +83,7 @@ export function EstruturaDreContent() {
           <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
           <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
           <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Tipo, o Grupo, a Atribuição (e as siglas), a Descrição e as Unidades e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
+          <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
         </ul>
       }
       descricao="A DRE é cadastro, não código. Carregada da aba Realizado (Consolidado) e editável aqui; a composição é validada antes de gravar."

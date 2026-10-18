@@ -6,9 +6,9 @@ import { LINHAS_TOTAIS } from "../../volumes/totaisOperacao.js";
 import { NOME_DA_CHAVE } from "../../volumes/rateiosService.js";
 import { conflitoDeVigencia } from "../../volumes/vigenciasRateio.js";
 import { formulasPorExtenso, INDICADORES_DAS_LISTAS, TOTALIZADORES_DAS_LISTAS } from "../../relatorios/catalogoIndicadores.js";
-import { compilarFormula, FormulaInvalidaError } from "../../relatorios/formulaIndicador.js";
+import { compilarFormula, FormulaInvalidaError, formulaPorExtenso } from "../../relatorios/formulaIndicador.js";
 import { CALCULOS_SISTEMA } from "../../relatorios/indicadores.js";
-import { MODELO_DO_PAINEL, MODELOS_DO_PAINEL, NOMES_DO_PAINEL } from "../../relatorios/painelDeBordo.js";
+import { FORMATOS_DO_PAINEL, indicadoresDaFormula } from "../../relatorios/painelDeBordo.js";
 import { plural } from "../../../utils/plural.js";
 
 /**
@@ -63,6 +63,8 @@ export type Campo = {
   noFormulario?: boolean;
   /** No formulário, só aparece com um destes valores no outro campo (o peso, na média ponderada). */
   visivelSe?: { campo: string; valores: string[] };
+  /** O valor num registro novo (sem ele, as caixas de marcar começam marcadas, como o Ativo). */
+  padrao?: unknown;
   ajuda?: string;
   opcoes?: (db: Db) => Promise<Opcao[]>;
 };
@@ -735,7 +737,8 @@ async function validarFormula(db: Db, formula: string, rotulo: string, nomesDoCa
   const indicadores = new Set(INDICADORES_DAS_LISTAS);
   const metas = new Set(nomesDoCatalogo);
   for (const i of compilada.itens.values()) {
-    const ok = i.tipo === "DRE" ? codigos.has(i.codigo) : i.tipo === "LISTA" ? listas.has(i.codigo) : i.tipo === "IND" ? indicadores.has(i.nome) : metas.has(i.nome);
+    const ok =
+      i.tipo === "DRE" ? codigos.has(i.codigo) : i.tipo === "LISTA" ? listas.has(i.codigo) : i.tipo === "IND" ? indicadores.has(i.nome) : i.tipo === "META" && metas.has(i.nome);
     if (!ok) throw new RegraCadastroError(400, `${rotulo}: o item ${i.tipo === "DRE" ? i.codigo : i.tipo === "LISTA" ? i.codigo : i.nome} não existe.`);
   }
 }
@@ -828,7 +831,10 @@ const estruturaIndicadores: DefinicaoCadastro = {
       db.indicadorDigitado.count({ where: { nome: i.nome } }),
       db.indicadorImportado.count({ where: { nome: i.nome } }),
     ]);
-    const noPainel = NOMES_DO_PAINEL().includes(i.nome);
+    // Usado na Metodologia (ou no percentual) de algum item do Painel de Bordo (17/10/2026: o cadastro).
+    const noPainel = (await db.painelItem.findMany({ select: { formula: true, percentual: true } })).some(
+      (p) => indicadoresDaFormula(p.formula).includes(i.nome) || indicadoresDaFormula(p.percentual).includes(i.nome),
+    );
     if (!metas && !digitados && !importados && !noPainel) return null;
     const partes = [metas ? `${metas} ${plural(metas, "meta", "metas")} de cenários` : null, importados + digitados ? `${importados + digitados} ${plural(importados + digitados, "valor importado ou digitado", "valores importados ou digitados")}` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
     return `O indicador é usado por ${partes.join(", ")}.`;
@@ -981,13 +987,47 @@ const regras: DefinicaoCadastro = {
 // ------------------------------------------------------------ painel de bordo
 const GRUPOS_DO_PAINEL: Array<[string, string]> = [["RESULTADOS", "Resultados"], ["PERFORMANCE", "Performance"]];
 const SENTIDOS_DO_PAINEL: Array<[string, string]> = [["↑", "↑ Maior, melhor"], ["↓", "↓ Menor, melhor"]];
+const CASAS_DO_PERCENTUAL: Array<[string, string]> = [["1", "1 casa (48,4%)"], ["2", "2 casas (4,84%)"]];
+
+/** Os itens que a Metodologia do painel pode usar: os indicadores ativos da Estrutura dos Indicadores. */
+async function indicadoresDoPainel(db: Db): Promise<Opcao[]> {
+  const nomes = await db.indicadorEstrutura.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" }, select: { nome: true, grupo: true } });
+  return nomes.map((i) => ({ valor: `INDICADOR|${i.nome}`, rotulo: `${i.grupo} › ${i.nome}`, grupos: ["INDICADOR"] }));
+}
+
+/** Valida uma fórmula do painel: a escrita e os itens (só indicadores que existem no cadastro). */
+async function validarFormulaDoPainel(db: Db, formula: string, rotulo: string) {
+  let compilada: ReturnType<typeof compilarFormula>;
+  try {
+    compilada = compilarFormula(formula);
+  } catch (e) {
+    throw new RegraCadastroError(400, `${rotulo}: ${e instanceof FormulaInvalidaError ? e.message : "fórmula inválida."}`);
+  }
+  const nomes = new Set((await db.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome));
+  for (const i of compilada.itens.values()) {
+    if (i.tipo !== "INDICADOR") throw new RegraCadastroError(400, `${rotulo}: use só os indicadores da Estrutura dos Indicadores.`);
+    if (!nomes.has(i.nome)) throw new RegraCadastroError(400, `${rotulo}: o indicador “${i.nome}” não está na Estrutura dos Indicadores.`);
+  }
+}
+
+/** A fórmula do painel por extenso (os indicadores pelo nome). */
+function porExtensoNoPainel(formula: string | null) {
+  if (!formula) return null;
+  try {
+    return formulaPorExtenso(formula, (i) => ("nome" in i ? i.nome : i.codigo));
+  } catch {
+    return formula;
+  }
+}
+const comTextos = <T extends { formula: string; casasPercentual: number }>(i: T) => ({ ...i, casasPercentual: String(i.casasPercentual), metodologiaTexto: porExtensoNoPainel(i.formula) });
 
 /**
  * O cadastro do Painel de Bordo (17/10/2026; Analítico / Painel de Bordo): os itens das abas Resultados e Performance —
- * o nome, a abreviação, o comportamento, o grupo (a aba), o quadro, a ordem e o modelo de apuração (a conta, no código,
- * MODELOS_DO_PAINEL). Os Painéis de Bordo (Resultados Empresariais, cenários e os cards dos Relatórios Executivos) leem
- * os itens ativos daqui, na ordem; os quadros seguem a ordem do primeiro item de cada um. Mudar o cadastro com uma
- * competência apurada e ainda aberta pede reapurar (apuracaoService.situacao).
+ * o nome, a abreviação, o comportamento, o grupo (a aba), o quadro, a ordem e a Metodologia (a fórmula sobre os
+ * indicadores, montada como a dos Indicadores; antes, um modelo de apuração fixo), com o formato, o percentual sob o
+ * valor e o espaço antes. Os Painéis de Bordo (Resultados Empresariais, cenários e os cards dos Relatórios Executivos)
+ * leem os itens ativos daqui, na ordem; os quadros seguem a ordem do primeiro item de cada um. Mudar o cadastro com uma
+ * competência apurada e ainda aberta pede reapurar, como todos os Cadastros da Controladoria (assinaturaCadastros.ts).
  */
 const painelBordo: DefinicaoCadastro = {
   entidade: "painel-bordo",
@@ -1003,28 +1043,61 @@ const painelBordo: DefinicaoCadastro = {
     { nome: "sigla", rotulo: "Abreviação", rotuloColuna: "Abrev.", tipo: "texto", obrigatorio: true },
     { nome: "sentido", rotulo: "Comportamento", rotuloColuna: "Comp.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(SENTIDOS_DO_PAINEL) },
     {
-      nome: "modelo",
-      rotulo: "Modelo de Apuração",
-      tipo: "opcao",
+      nome: "formula",
+      rotulo: "Metodologia",
+      tipo: "formula",
       obrigatorio: true,
       larguraInteira: true,
-      opcoes: opcoesFixas(MODELOS_DO_PAINEL.map((m) => [m.chave, m.nome])),
-      ajuda: "A conta que dá o valor do item (o realizado e o orçado), com o formato e o percentual sobre a receita.",
+      naTabela: false,
+      opcoes: indicadoresDoPainel,
+      ajuda: "A fórmula sobre os indicadores: com os valores realizados, dá o realizado; com as metas, o orçado.",
     },
+    { nome: "metodologiaTexto", rotulo: "Metodologia", tipo: "texto", derivado: true, noFormulario: false },
+    { nome: "formato", rotulo: "Formato", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(FORMATOS_DO_PAINEL) },
+    {
+      nome: "formatoAcumulado",
+      rotulo: "Formato do Acumulado",
+      tipo: "opcao",
+      naTabela: false,
+      opcoes: opcoesFixas(FORMATOS_DO_PAINEL),
+      ajuda: "Vazio: o mesmo do mês (o Resultado Financeiro e as despesas fixas mostram o mês em milhares e o acumulado em milhões).",
+    },
+    {
+      nome: "percentual",
+      rotulo: "Percentual sob o Valor",
+      tipo: "formula",
+      larguraInteira: true,
+      naTabela: false,
+      opcoes: indicadoresDoPainel,
+      ajuda: "Opcional: o percentual que aparece sob o realizado, com o rótulo (/RL) — em geral, o item sobre a receita líquida do quadro.",
+    },
+    { nome: "casasPercentual", rotulo: "Casas do Percentual", tipo: "opcao", naTabela: false, padrao: "1", opcoes: opcoesFixas(CASAS_DO_PERCENTUAL) },
+    { nome: "separar", rotulo: "Espaço Antes", tipo: "booleano", naTabela: false, padrao: false, ajuda: "Começa um novo bloco no quadro." },
     { nome: "ativo", rotulo: "Ativo", tipo: "booleano" },
   ],
   async listar(db, busca) {
-    const itens = await db.painelItem.findMany({ orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
-    return itens.filter((i) => contem(busca, i.grupo, i.quadro, i.nome, i.sigla, MODELO_DO_PAINEL.get(i.modelo)?.nome));
+    const itens = (await db.painelItem.findMany({ orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] })).map(comTextos);
+    return itens.filter((i) => contem(busca, i.grupo, i.quadro, i.nome, i.sigla, i.metodologiaTexto));
   },
-  ler: (db, id) => db.painelItem.findUnique({ where: { id } }),
-  async preparar(_db, v) {
+  async ler(db, id) {
+    const i = await db.painelItem.findUnique({ where: { id } });
+    return i ? comTextos(i) : null;
+  },
+  async preparar(db, v) {
     const grupo = exigir(v.grupo, "O grupo");
     if (!GRUPOS_DO_PAINEL.some(([g]) => g === grupo)) throw new RegraCadastroError(400, "Grupo inválido.");
     const sentido = exigir(v.sentido, "O comportamento");
     if (!SENTIDOS_DO_PAINEL.some(([s]) => s === sentido)) throw new RegraCadastroError(400, "Comportamento inválido.");
-    const modelo = exigir(v.modelo, "O modelo de apuração");
-    if (!MODELO_DO_PAINEL.has(modelo)) throw new RegraCadastroError(400, "Modelo de apuração inválido.");
+    const formula = texto(v.formula);
+    if (!formula) throw new RegraCadastroError(400, "Monte a Metodologia (a fórmula do item).");
+    await validarFormulaDoPainel(db, formula, "Metodologia");
+    const formato = exigir(v.formato, "O formato");
+    const formatoAcumulado = texto(v.formatoAcumulado);
+    for (const f of [formato, formatoAcumulado]) if (f && !FORMATOS_DO_PAINEL.some(([x]) => x === f)) throw new RegraCadastroError(400, "Formato inválido.");
+    const percentual = texto(v.percentual);
+    if (percentual) await validarFormulaDoPainel(db, percentual, "Percentual sob o Valor");
+    const casas = texto(v.casasPercentual) ?? "1";
+    if (!CASAS_DO_PERCENTUAL.some(([c]) => c === casas)) throw new RegraCadastroError(400, "Casas do percentual inválidas.");
     return {
       ordem: inteiro(v.ordem, "A ordem") ?? undefined,
       grupo,
@@ -1032,7 +1105,12 @@ const painelBordo: DefinicaoCadastro = {
       nome: exigir(v.nome, "O nome"),
       sigla: exigir(v.sigla, "A abreviação"),
       sentido,
-      modelo,
+      formula,
+      formato,
+      formatoAcumulado: formatoAcumulado && formatoAcumulado !== formato ? formatoAcumulado : null,
+      percentual,
+      casasPercentual: Number(casas),
+      separar: v.separar === undefined ? false : booleano(v.separar),
       ativo: v.ativo === undefined ? true : booleano(v.ativo),
     };
   },

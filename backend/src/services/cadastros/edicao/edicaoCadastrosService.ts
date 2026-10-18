@@ -33,13 +33,22 @@ function definicao(entidade: string): DefinicaoCadastro {
   return d;
 }
 
-/** Depois de mudar um cadastro que classifica: reclassifica as não apuradas e diz quais apuradas precisam ser reapuradas. */
+/**
+ * Os Cadastros da Controladoria (17/10/2026): mudar qualquer um pede reapurar as competências apuradas e abertas
+ * (apuracao/assinaturaCadastros.ts); a tela diz quais, depois de gravar.
+ */
+const DA_CONTROLADORIA = new Set(["unidades", "centros-custo", "contas-resultado", "linhas", "estrutura-dre", "regras-rateio", "estrutura-indicadores", "painel-bordo"]);
+
+/**
+ * Depois de mudar um cadastro que classifica: reclassifica as não apuradas e diz quais apuradas precisam ser reapuradas.
+ * Num Cadastro da Controladoria que não classifica, só as apuradas a reapurar.
+ */
 async function aplicarNaClassificacao(d: DefinicaoCadastro) {
-  if (!d.reclassifica) return { reclassificadas: [], apuradasPorReapurar: [] };
+  if (!d.reclassifica && !DA_CONTROLADORIA.has(d.entidade)) return { reclassificadas: [], apuradasPorReapurar: [] };
   const prisma = getPrismaClient();
   const abertas = await prisma.competencia.findMany({ where: { status: { not: "FECHADA" } }, select: { id: true, ano: true, mes: true, apuradaEm: true }, orderBy: [{ ano: "asc" }, { mes: "asc" }] });
   const reclassificadas: string[] = [];
-  for (const c of abertas.filter((x) => !x.apuradaEm)) {
+  for (const c of d.reclassifica ? abertas.filter((x) => !x.apuradaEm) : []) {
     await classificacaoService.classificarCompetencia(c.id);
     reclassificadas.push(rotulo(c.ano, c.mes));
   }

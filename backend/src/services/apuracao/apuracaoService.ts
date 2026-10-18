@@ -7,7 +7,7 @@ import { receitaPreviaService } from "../receitaPrevia/receitaPreviaService.js";
 import { rateiosService } from "../volumes/rateiosService.js";
 import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
-import { assinaturaDoPainel } from "../relatorios/cadastroPainel.js";
+import { assinaturaDosCadastros, cadastrosMudados, fraseDosCadastros } from "./assinaturaCadastros.js";
 import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
 import { SEM_REGISTROS_NO_MES } from "../importacoes/listas/processarLista.js";
 import { plural } from "../../utils/plural.js";
@@ -47,7 +47,7 @@ const anterior = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes:
 async function competenciaPorAnoMes(ano: number, mes: number) {
   const c = await getPrismaClient().competencia.findUnique({
     where: { ano_mes: { ano, mes } },
-    select: { id: true, status: true, apuradaEm: true, apuracoes: true, entradasApuradas: true, painelAssinatura: true, fechadaEm: true, fechadaPor: true },
+    select: { id: true, status: true, apuradaEm: true, apuracoes: true, entradasApuradas: true, cadastrosAssinatura: true, fechadaEm: true, fechadaPor: true },
   });
   if (!c) throw new RegraApuracaoError(404, `A competência ${rotulo(ano, mes)} não existe.`);
   return c;
@@ -174,9 +174,10 @@ function mudancas(apurado: Retrato | null, atual: Retrato): string[] {
 
 /**
  * As competências anteriores a esta (de qualquer exercício) que estão
- * apuradas, não fechadas, e com as entradas alteradas depois da apuração — a
- * bola da etapa DRE —, ou com o mês anterior reapurado depois delas (o saldo
- * inicial do estoque). Em ordem, como "MM/AAAA".
+ * apuradas, não fechadas, e com as entradas (ou os Cadastros da Controladoria,
+ * desde 17/10/2026) alterados depois da apuração — a bola da etapa DRE —, ou
+ * com o mês anterior reapurado depois delas (o saldo inicial do estoque). Em
+ * ordem, como "MM/AAAA".
  *
  * Apurar uma competência com uma anterior assim usaria o estoque e os saldos
  * de um mês que não reflete as próprias entradas (pedido de 09/10/2026): a
@@ -188,16 +189,20 @@ async function anterioresDesatualizadas(ano: number, mes: number): Promise<strin
   const prisma = getPrismaClient();
   const todas = await prisma.competencia.findMany({
     where: { OR: [{ ano: { lt: ano } }, { ano, mes: { lt: mes } }] },
-    select: { id: true, ano: true, mes: true, status: true, apuradaEm: true, entradasApuradas: true },
+    select: { id: true, ano: true, mes: true, status: true, apuradaEm: true, entradasApuradas: true, cadastrosAssinatura: true },
     orderBy: [{ ano: "asc" }, { mes: "asc" }],
   });
+  const cadastros = await assinaturaDosCadastros();
   const apuradaEm = new Map(todas.map((c) => [`${c.ano}-${c.mes}`, c.apuradaEm]));
   const desatualizadas: string[] = [];
   for (const c of todas) {
     if (!c.apuradaEm || c.status === "FECHADA") continue;
     const a = anterior(c.ano, c.mes);
     const antes = apuradaEm.get(`${a.ano}-${a.mes}`);
-    const mudou = (antes && antes > c.apuradaEm) || mudancas(c.entradasApuradas as Retrato | null, await retratoEntradas(c.id)).length > 0;
+    const mudou =
+      (antes && antes > c.apuradaEm) ||
+      cadastrosMudados(c.cadastrosAssinatura, cadastros).length > 0 ||
+      mudancas(c.entradasApuradas as Retrato | null, await retratoEntradas(c.id)).length > 0;
     if (mudou) desatualizadas.push(rotulo(c.ano, c.mes));
   }
   return desatualizadas;
@@ -207,7 +212,7 @@ async function anterioresDesatualizadas(ano: number, mes: number): Promise<strin
 function bloqueioDaApuracao(ano: number, mes: number, anteriores: string[]): string | null {
   if (anteriores.length === 0) return null;
   const lista = anteriores.length === 1 ? `a competência ${anteriores[0]}` : `as competências ${anteriores.slice(0, -1).join(", ")} e ${anteriores[anteriores.length - 1]}`;
-  return `Não é possível apurar ${rotulo(ano, mes)}: ${lista} ${anteriores.length === 1 ? "tem" : "têm"} entradas alteradas depois da apuração. Reapure ${anteriores.length === 1 ? "essa competência" : "essas competências, em ordem,"} antes.`;
+  return `Não é possível apurar ${rotulo(ano, mes)}: ${lista} ${anteriores.length === 1 ? "tem" : "têm"} entradas ou cadastros alterados depois da apuração. Reapure ${anteriores.length === 1 ? "essa competência" : "essas competências, em ordem,"} antes.`;
 }
 
 /** Os quatro retratos da apuração: congela (ou descongela, para reapurar) todos de uma vez. */
@@ -230,11 +235,13 @@ async function congelar(competenciaId: string, congelado: boolean) {
 async function desatualizadas(competencias: { id: string; ano: number; mes: number; status: string; apuradaEm: Date | null }[]): Promise<Set<string>> {
   const prisma = getPrismaClient();
   const apuradaEm = new Map(competencias.map((c) => [`${c.ano}-${c.mes}`, c.apuradaEm]));
+  const cadastros = await assinaturaDosCadastros();
   const r = new Set<string>();
   for (const c of competencias) {
     if (!c.apuradaEm || c.status === "FECHADA") continue;
-    const { entradasApuradas } = await prisma.competencia.findUniqueOrThrow({ where: { id: c.id }, select: { entradasApuradas: true } });
-    let desatualizada = mudancas(entradasApuradas as Retrato | null, await retratoEntradas(c.id)).length > 0;
+    const { entradasApuradas, cadastrosAssinatura } = await prisma.competencia.findUniqueOrThrow({ where: { id: c.id }, select: { entradasApuradas: true, cadastrosAssinatura: true } });
+    // Os Cadastros da Controladoria alterados depois da apuração (17/10/2026) também pedem reapurar.
+    let desatualizada = cadastrosMudados(cadastrosAssinatura, cadastros).length > 0 || mudancas(entradasApuradas as Retrato | null, await retratoEntradas(c.id)).length > 0;
     // O mês anterior reapurado depois muda o saldo inicial do estoque (como na situação).
     const a = anterior(c.ano, c.mes);
     const antes = apuradaEm.has(`${a.ano}-${a.mes}`)
@@ -302,10 +309,9 @@ export const apuracaoService = {
     const apurada = c.apuradaEm !== null;
     const bloqueio = bloqueioDaApuracao(ano, mes, anteriores);
     const mudou = apurada ? mudancas(c.entradasApuradas as Retrato | null, atual) : [];
-    // O cadastro do Painel de Bordo mudou depois da apuração, com a competência ainda aberta (17/10/2026): reapurar.
-    if (apurada && c.status !== "FECHADA" && c.painelAssinatura !== (await assinaturaDoPainel())) {
-      mudou.push("O cadastro do Painel de Bordo (Cadastros da Controladoria / Analítico) mudou depois da apuração.");
-    }
+    // Algum Cadastro da Controladoria mudou depois da apuração, com a competência ainda aberta (17/10/2026): reapurar.
+    const cadastros = apurada && c.status !== "FECHADA" ? cadastrosMudados(c.cadastrosAssinatura, await assinaturaDosCadastros()) : [];
+    if (cadastros.length) mudou.push(fraseDosCadastros(cadastros));
     if (apurada && mesAnterior?.apuradaEm && mesAnterior.apuradaEm > c.apuradaEm!) {
       mudou.push(`A competência ${rotulo(a.ano, a.mes)} foi reapurada depois; o saldo inicial do estoque pode ter mudado.`);
     }
@@ -315,7 +321,7 @@ export const apuracaoService = {
     // Os rateios sem regra vigente no mês (14/10/2026).
     const semRegra = chavesSemRegra(await regrasDeRateio(), ano, mes);
     if (semRegra.length) motivosNaoFechar.push(`Rateios sem regra vigente no mês: ${semRegra.map((k) => NOME_DA_CHAVE_RATEIO[k] ?? k).join(", ")} (Cadastros da Controladoria / Regras de Rateio).`);
-    if (mudou.length) motivosNaoFechar.push("As entradas mudaram depois da apuração: reapure antes de fechar.");
+    if (mudou.length) motivosNaoFechar.push("As entradas ou os Cadastros da Controladoria mudaram depois da apuração: reapure antes de fechar.");
     if (pendentes) motivosNaoFechar.push(`Há ${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} com pendência de classificação.`);
     if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} ${plural(naoClassificados, "lançamento", "lançamentos")} sem classificação.`);
     // Todas as listas obrigatórias importadas (17/10/2026; a DRE do Comercial e o saldo inicial do estoque são opcionais).
@@ -391,6 +397,8 @@ export const apuracaoService = {
     // lista que termina de importar na fila) não entrou no cálculo e tem de
     // aparecer como mudança depois dela.
     const retrato = await retratoEntradas(c.id);
+    // Os Cadastros da Controladoria também (17/10/2026): mudar algum durante a apuração pede reapurar depois.
+    const cadastros = await assinaturaDosCadastros(true);
     await congelar(c.id, false);
     const etapas: Array<{ etapa: string; resumo: unknown }> = [];
     const avisos: string[] = [];
@@ -437,8 +445,8 @@ export const apuracaoService = {
         apuradaPor: usuarioId,
         apuracoes: { increment: 1 },
         entradasApuradas: retrato as Prisma.InputJsonValue,
-        // O cadastro do Painel de Bordo na apuração (17/10/2026), para pedir reapurar se ele mudar antes de fechar.
-        painelAssinatura: await assinaturaDoPainel(),
+        // Os Cadastros da Controladoria na apuração (17/10/2026), para pedir reapurar se algum mudar antes de fechar.
+        cadastrosAssinatura: JSON.stringify(cadastros),
         ...(c.status === "ABERTA" ? { status: "EM_CONFERENCIA" as const } : {}),
       },
     });

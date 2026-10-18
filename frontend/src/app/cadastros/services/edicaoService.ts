@@ -27,6 +27,8 @@ export type Campo = {
   noFormulario?: boolean;
   /** No formulário, só aparece com um destes valores no outro campo. */
   visivelSe?: { campo: string; valores: string[] };
+  /** O valor num registro novo (sem ele, as caixas de marcar começam marcadas). */
+  padrao?: unknown;
   ajuda?: string;
   opcoes?: Opcao[];
 };
@@ -53,10 +55,10 @@ export function mensagemDeErro(error: unknown, padrao: string) {
   return (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? padrao;
 }
 
-/** O aviso depois de gravar um cadastro que classifica. */
+/** O aviso depois de gravar um cadastro que classifica ou um Cadastro da Controladoria (17/10/2026: pede reapurar). */
 export function textoDoEfeito(e: Efeito) {
   const partes = [];
   if (e.reclassificadas.length) partes.push(`Reclassificadas: ${e.reclassificadas.join(", ")}.`);
-  if (e.apuradasPorReapurar.length) partes.push(`Apuradas, sem mudança até serem reapuradas: ${e.apuradasPorReapurar.join(", ")}.`);
+  if (e.apuradasPorReapurar.length) partes.push(`Reapure antes de fechar: ${e.apuradasPorReapurar.join(", ")}.`);
   return partes.join(" ");
 }
