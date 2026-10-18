@@ -90,7 +90,7 @@ export function CenarioIndicadoresContent() {
         sobre={
           <>
             <p>
-              Os indicadores do cenário, mês a mês e acumulados, com as fórmulas do cadastro Estrutura dos Indicadores — as mesmas de Resultados
+              Os indicadores do cenário, mês a mês e acumulados, com as fórmulas do cadastro Indicadores (Cadastros da Controladoria / Analítico) — as mesmas de Resultados
               Realizados — sobre a DRE do cenário e os lançamentos manuais. O acumulado também segue Resultados Empresariais: a soma dos meses ou,
               nas razões, a média ponderada; os de posição valem o último mês.
             </p>

@@ -1005,8 +1005,8 @@ async function validarFormulaDoPainel(db: Db, formula: string, rotulo: string) {
   }
   const nomes = new Set((await db.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome));
   for (const i of compilada.itens.values()) {
-    if (i.tipo !== "INDICADOR") throw new RegraCadastroError(400, `${rotulo}: use só os indicadores da Estrutura dos Indicadores.`);
-    if (!nomes.has(i.nome)) throw new RegraCadastroError(400, `${rotulo}: o indicador “${i.nome}” não está na Estrutura dos Indicadores.`);
+    if (i.tipo !== "INDICADOR") throw new RegraCadastroError(400, `${rotulo}: use só os indicadores do cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
+    if (!nomes.has(i.nome)) throw new RegraCadastroError(400, `${rotulo}: o indicador “${i.nome}” não está no cadastro Indicadores.`);
   }
 }
 

@@ -26,7 +26,7 @@ export default function PainelBordoPage() {
                 do desvio.
               </li>
               <li>
-                A Metodologia é a fórmula do item, montada como a dos Indicadores: escolha o indicador (da Estrutura dos Indicadores) e use “Inserir
+                A Metodologia é a fórmula do item, montada como a dos Indicadores: escolha o indicador (do cadastro Indicadores, a aba ao lado) e use “Inserir
                 Item”, os operadores (+ − × ÷), os parênteses e “Inserir Número”; “Apagar Último” e “Limpar” corrigem. Com os valores realizados dos
                 indicadores, a fórmula dá o realizado; com as metas do orçamento, o orçado; com os acumulados, o acumulado.
               </li>

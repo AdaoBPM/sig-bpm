@@ -38,7 +38,7 @@ const CADASTROS: Array<{ chave: string; nome: string; dados: () => Promise<unkno
     ],
   },
   { chave: "regras", nome: "Regras de Rateio", dados: () => getPrismaClient().regraRateio.findMany({ omit: sem, orderBy: { id: "asc" } }) },
-  { chave: "indicadores", nome: "Estrutura dos Indicadores", dados: () => getPrismaClient().indicadorEstrutura.findMany({ omit: sem, orderBy: { id: "asc" } }) },
+  { chave: "indicadores", nome: "Indicadores", dados: () => getPrismaClient().indicadorEstrutura.findMany({ omit: sem, orderBy: { id: "asc" } }) },
   { chave: "painel", nome: "Painel de Bordo", dados: () => getPrismaClient().painelItem.findMany({ omit: sem, orderBy: { id: "asc" } }) },
 ];
 

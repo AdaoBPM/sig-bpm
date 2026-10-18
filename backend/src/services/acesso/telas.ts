@@ -158,7 +158,8 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
         codigo: "cadastro_analitico",
         nome: "Analítico",
         abas: [
-          { codigo: "estrutura_indicadores", nome: "Estrutura dos Indicadores" },
+          // "Indicadores" desde 18/10/2026 (antes, Estrutura dos Indicadores); a chave não muda.
+          { codigo: "estrutura_indicadores", nome: "Indicadores" },
           // O cadastro dos itens do Painel de Bordo (17/10/2026).
           { codigo: "painel_bordo", nome: "Painel de Bordo" },
         ],

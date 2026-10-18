@@ -508,7 +508,7 @@ export function DREContent() {
             <li>
               O aviso amarelo “Entradas ou cadastros alterados depois da apuração” lista o que mudou — as entradas do mês e, com a competência ainda
               aberta, qualquer Cadastro da Controladoria (Unidades, Centros de Custo, Contas de Resultado, Linhas, Estrutura da DRE, Regras de
-              Rateio, Estrutura dos Indicadores e Painel de Bordo): reapure para usar; até lá, a competência não fecha. O aviso vermelho “Apuração
+              Rateio, Indicadores e Painel de Bordo): reapure para usar; até lá, a competência não fecha. O aviso vermelho “Apuração
               bloqueada” aparece quando uma competência anterior tem entradas ou cadastros alterados: reapure as anteriores, em ordem, pelos botões
               “Ir para MM/AAAA”.
             </li>

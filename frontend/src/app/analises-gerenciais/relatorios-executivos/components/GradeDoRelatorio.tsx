@@ -598,7 +598,7 @@ function ConteudoDoBloco({
     );
   }
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
-  if (!i) return indisponivel(`O indicador ${b.nome} não está mais na Estrutura dos Indicadores.`);
+  if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
   const ate = dados.indicadores.ate;
   const campo = (rotulo: string, v: number | null, destaque = false) => (
     <div className="flex items-baseline gap-1.5">

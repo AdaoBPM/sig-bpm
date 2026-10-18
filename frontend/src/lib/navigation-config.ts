@@ -175,7 +175,7 @@ export const navGrupos: NavGrupo[] = [
             icon: Gauge,
             permission: "cadastro_analitico:ler",
             abas: [
-              { title: "Estrutura dos Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastro_analitico.estrutura_indicadores:ler" },
+              { title: "Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastro_analitico.estrutura_indicadores:ler" },
               { title: "Painel de Bordo", href: "/cadastros/painel-bordo", icon: Gauge, permission: "cadastro_analitico.painel_bordo:ler" },
             ],
           },
@@ -328,7 +328,7 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/precos-contrato": "Preços do Contrato",
   "/cadastros/unidades": "Unidades de Negócio",
   "/cadastros/linhas": "Linhas",
-  "/cadastros/estrutura-indicadores": "Estrutura dos Indicadores",
+  "/cadastros/estrutura-indicadores": "Indicadores",
   "/cadastros/regras-rateio": "Regras de Rateio",
   "/cadastros/tipos-movimento": "Tipos de Movimento",
   "/cadastros/tabela-estacas": "Tabela de Estacas",
