@@ -36,7 +36,8 @@ import { abaConsolidado, type OrigensDasContas } from "./consolidadoDosCentros.j
 import { gerarXlsx, nomesDasAbas, type AbaEscrita } from "../../lib/xlsxEscrita.js";
 import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 import { montarPainel } from "../relatorios/painelService.js";
-import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, type Valor } from "../relatorios/painelDeBordo.js";
+import { type Valor } from "../relatorios/painelDeBordo.js";
+import { quadrosDoPainel } from "../relatorios/cadastroPainel.js";
 import { limiteDaLinha, linhasDasVisoes, mesesAcima, totaisDaDRE } from "./comparativoCenario.js";
 import { ABAS_DRE, ABAS_METAS, acharAba, lerAbaDRE, lerAbaMetas, MESES, type AbaDRELida, type AbaMetasLida } from "./leituraCenario.js";
 import {
@@ -750,6 +751,7 @@ export const cenariosService = {
     const cen = valores(doCenario);
     const comp = valores(doComparado);
     const periodos = { mes: [cen.doMes(ate), comp.doMes(ate)] as [Valor, Valor], acumulado: [cen.acumulado, comp.acumulado] as [Valor, Valor] };
+    const quadros = await quadrosDoPainel();
     const serie = Array.from({ length: ate }, (_, k) => ({ rotulo: MESES[k], realizado: cen.doMes(k + 1), orcado: comp.doMes(k + 1) }));
     return {
       ano: c.ano,
@@ -761,8 +763,9 @@ export const cenariosService = {
       mesesSemMeta: [],
       comparado: comparado ? { nome: comparado.nome, ano: comparado.ano } : null,
       abas: [
-        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(PAINEL_RESULTADOS, periodos, serie) },
-        { chave: "performance", titulo: "Performance", quadros: montarPainel(PAINEL_PERFORMANCE, periodos, serie) },
+        // Os itens do cadastro do Painel de Bordo (17/10/2026).
+        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(quadros.resultados, periodos, serie) },
+        { chave: "performance", titulo: "Performance", quadros: montarPainel(quadros.performance, periodos, serie) },
       ],
     };
   },

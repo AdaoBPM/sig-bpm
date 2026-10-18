@@ -7,6 +7,7 @@ import { receitaPreviaService } from "../receitaPrevia/receitaPreviaService.js";
 import { rateiosService } from "../volumes/rateiosService.js";
 import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
+import { assinaturaDoPainel } from "../relatorios/cadastroPainel.js";
 import { TIPOS_FORA_DA_APURACAO } from "../importacoes/indicadores/leituraIndicadores.js";
 import { SEM_REGISTROS_NO_MES } from "../importacoes/listas/processarLista.js";
 import { plural } from "../../utils/plural.js";
@@ -46,7 +47,7 @@ const anterior = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes:
 async function competenciaPorAnoMes(ano: number, mes: number) {
   const c = await getPrismaClient().competencia.findUnique({
     where: { ano_mes: { ano, mes } },
-    select: { id: true, status: true, apuradaEm: true, apuracoes: true, entradasApuradas: true, fechadaEm: true, fechadaPor: true },
+    select: { id: true, status: true, apuradaEm: true, apuracoes: true, entradasApuradas: true, painelAssinatura: true, fechadaEm: true, fechadaPor: true },
   });
   if (!c) throw new RegraApuracaoError(404, `A competência ${rotulo(ano, mes)} não existe.`);
   return c;
@@ -301,6 +302,10 @@ export const apuracaoService = {
     const apurada = c.apuradaEm !== null;
     const bloqueio = bloqueioDaApuracao(ano, mes, anteriores);
     const mudou = apurada ? mudancas(c.entradasApuradas as Retrato | null, atual) : [];
+    // O cadastro do Painel de Bordo mudou depois da apuração, com a competência ainda aberta (17/10/2026): reapurar.
+    if (apurada && c.status !== "FECHADA" && c.painelAssinatura !== (await assinaturaDoPainel())) {
+      mudou.push("O cadastro do Painel de Bordo (Cadastros da Controladoria / Analítico) mudou depois da apuração.");
+    }
     if (apurada && mesAnterior?.apuradaEm && mesAnterior.apuradaEm > c.apuradaEm!) {
       mudou.push(`A competência ${rotulo(a.ano, a.mes)} foi reapurada depois; o saldo inicial do estoque pode ter mudado.`);
     }
@@ -432,6 +437,8 @@ export const apuracaoService = {
         apuradaPor: usuarioId,
         apuracoes: { increment: 1 },
         entradasApuradas: retrato as Prisma.InputJsonValue,
+        // O cadastro do Painel de Bordo na apuração (17/10/2026), para pedir reapurar se ele mudar antes de fechar.
+        painelAssinatura: await assinaturaDoPainel(),
         ...(c.status === "ABERTA" ? { status: "EM_CONFERENCIA" as const } : {}),
       },
     });

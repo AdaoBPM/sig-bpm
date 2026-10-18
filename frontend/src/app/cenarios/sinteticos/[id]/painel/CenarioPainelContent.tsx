@@ -52,6 +52,7 @@ export function CenarioPainelContent() {
               ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>
             <li>
               Cada card traz o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Cenário
               (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o valor em destaque e, à direita, o selo do desvio e o valor do

@@ -8,7 +8,7 @@ import { conflitoDeVigencia } from "../../volumes/vigenciasRateio.js";
 import { formulasPorExtenso, INDICADORES_DAS_LISTAS, TOTALIZADORES_DAS_LISTAS } from "../../relatorios/catalogoIndicadores.js";
 import { compilarFormula, FormulaInvalidaError } from "../../relatorios/formulaIndicador.js";
 import { CALCULOS_SISTEMA } from "../../relatorios/indicadores.js";
-import { NOMES_DO_PAINEL } from "../../relatorios/painelDeBordo.js";
+import { MODELO_DO_PAINEL, MODELOS_DO_PAINEL, NOMES_DO_PAINEL } from "../../relatorios/painelDeBordo.js";
 import { plural } from "../../../utils/plural.js";
 
 /**
@@ -978,6 +978,73 @@ const regras: DefinicaoCadastro = {
 };
 
 // --------------------------------------------------------- tipos de movimento
+// ------------------------------------------------------------ painel de bordo
+const GRUPOS_DO_PAINEL: Array<[string, string]> = [["RESULTADOS", "Resultados"], ["PERFORMANCE", "Performance"]];
+const SENTIDOS_DO_PAINEL: Array<[string, string]> = [["↑", "↑ Maior, melhor"], ["↓", "↓ Menor, melhor"]];
+
+/**
+ * O cadastro do Painel de Bordo (17/10/2026; Analítico / Painel de Bordo): os itens das abas Resultados e Performance —
+ * o nome, a abreviação, o comportamento, o grupo (a aba), o quadro, a ordem e o modelo de apuração (a conta, no código,
+ * MODELOS_DO_PAINEL). Os Painéis de Bordo (Resultados Empresariais, cenários e os cards dos Relatórios Executivos) leem
+ * os itens ativos daqui, na ordem; os quadros seguem a ordem do primeiro item de cada um. Mudar o cadastro com uma
+ * competência apurada e ainda aberta pede reapurar (apuracaoService.situacao).
+ */
+const painelBordo: DefinicaoCadastro = {
+  entidade: "painel-bordo",
+  titulo: "Item do Painel de Bordo",
+  auditoria: "painel_item",
+  criar: true,
+  excluir: true,
+  campos: [
+    { nome: "ordem", rotulo: "Ordem", tipo: "inteiro", estreita: true },
+    { nome: "grupo", rotulo: "Grupo", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(GRUPOS_DO_PAINEL), ajuda: "A aba do Painel de Bordo." },
+    { nome: "quadro", rotulo: "Quadro", tipo: "texto", obrigatorio: true, ajuda: "O quadro da aba (Consolidado, Produção: Matriz…): os itens com o mesmo quadro ficam juntos." },
+    { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true },
+    { nome: "sigla", rotulo: "Abreviação", rotuloColuna: "Abrev.", tipo: "texto", obrigatorio: true },
+    { nome: "sentido", rotulo: "Comportamento", rotuloColuna: "Comp.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(SENTIDOS_DO_PAINEL) },
+    {
+      nome: "modelo",
+      rotulo: "Modelo de Apuração",
+      tipo: "opcao",
+      obrigatorio: true,
+      larguraInteira: true,
+      opcoes: opcoesFixas(MODELOS_DO_PAINEL.map((m) => [m.chave, m.nome])),
+      ajuda: "A conta que dá o valor do item (o realizado e o orçado), com o formato e o percentual sobre a receita.",
+    },
+    { nome: "ativo", rotulo: "Ativo", tipo: "booleano" },
+  ],
+  async listar(db, busca) {
+    const itens = await db.painelItem.findMany({ orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
+    return itens.filter((i) => contem(busca, i.grupo, i.quadro, i.nome, i.sigla, MODELO_DO_PAINEL.get(i.modelo)?.nome));
+  },
+  ler: (db, id) => db.painelItem.findUnique({ where: { id } }),
+  async preparar(_db, v) {
+    const grupo = exigir(v.grupo, "O grupo");
+    if (!GRUPOS_DO_PAINEL.some(([g]) => g === grupo)) throw new RegraCadastroError(400, "Grupo inválido.");
+    const sentido = exigir(v.sentido, "O comportamento");
+    if (!SENTIDOS_DO_PAINEL.some(([s]) => s === sentido)) throw new RegraCadastroError(400, "Comportamento inválido.");
+    const modelo = exigir(v.modelo, "O modelo de apuração");
+    if (!MODELO_DO_PAINEL.has(modelo)) throw new RegraCadastroError(400, "Modelo de apuração inválido.");
+    return {
+      ordem: inteiro(v.ordem, "A ordem") ?? undefined,
+      grupo,
+      quadro: exigir(v.quadro, "O quadro"),
+      nome: exigir(v.nome, "O nome"),
+      sigla: exigir(v.sigla, "A abreviação"),
+      sentido,
+      modelo,
+      ativo: v.ativo === undefined ? true : booleano(v.ativo),
+    };
+  },
+  async gravar(db, d, id) {
+    const dados = d as Prisma.PainelItemUncheckedCreateInput;
+    if (id) return (await db.painelItem.update({ where: { id }, data: dados })).id;
+    const ultima = await db.painelItem.aggregate({ _max: { ordem: true } });
+    return (await db.painelItem.create({ data: { ...dados, ordem: dados.ordem ?? (ultima._max.ordem ?? 0) + 1 } })).id;
+  },
+  remover: async (db, id) => void (await db.painelItem.delete({ where: { id } })),
+};
+
 const tipos: DefinicaoCadastro = {
   entidade: "tipos-movimento",
   titulo: "Tipo de movimento",
@@ -1046,7 +1113,7 @@ const estacas: DefinicaoCadastro = {
 };
 
 export const DEFINICOES: Record<string, DefinicaoCadastro> = Object.fromEntries(
-  [centros, contas, reclassificacoes, estrutura, unidades, linhas, estruturaIndicadores, regras, tipos, estacas].map((d) => [d.entidade, d]),
+  [centros, contas, reclassificacoes, estrutura, unidades, linhas, estruturaIndicadores, painelBordo, regras, tipos, estacas].map((d) => [d.entidade, d]),
 );
 
 /** Para a tela e para o log: Decimal e Date viram texto. */

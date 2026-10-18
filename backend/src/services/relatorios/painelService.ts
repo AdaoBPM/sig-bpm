@@ -3,7 +3,8 @@ import { acumular, type Parte } from "./indicadores.js";
 import { catalogoDeIndicadores } from "./catalogoIndicadores.js";
 import { dadosDoMes, encadearMeses } from "./indicadoresService.js";
 import { orcamentoDoExercicio } from "./orcamento.js";
-import { PAINEL_PERFORMANCE, PAINEL_RESULTADOS, sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
+import { quadrosDoPainel } from "./cadastroPainel.js";
+import { sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -72,6 +73,7 @@ export const painelService = {
     const orcadoAcum: Valor = (n) => (porNome.has(n) ? orcamento.acumulado(porNome.get(n)!, ultimo) : 0);
 
     const periodos = { mes: [realizadoMes, orcadoMes] as [Valor, Valor], acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor] };
+    const quadros = await quadrosDoPainel();
     // A série mês a mês (gráficos do painel, como os da planilha): o realizado e o orçado de cada mês até o de referência.
     const serie: MesDaSerie[] = meses.map((m, i) => ({
       rotulo: MESES[m.mes - 1],
@@ -88,8 +90,9 @@ export const painelService = {
       cenarioOrcado: orcamento.cenario?.nome ?? null,
       mesesSemMeta: meses.filter((m) => orcamento.mesesSemValor.includes(m.mes)).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
-        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(PAINEL_RESULTADOS, periodos, serie) },
-        { chave: "performance", titulo: "Performance", quadros: montarPainel(PAINEL_PERFORMANCE, periodos, serie) },
+        // Os itens do cadastro do Painel de Bordo (17/10/2026; antes, fixos no código).
+        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(quadros.resultados, periodos, serie) },
+        { chave: "performance", titulo: "Performance", quadros: montarPainel(quadros.performance, periodos, serie) },
       ],
     };
   },

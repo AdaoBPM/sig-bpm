@@ -702,6 +702,9 @@ model Competencia {
   /// lançamentos, das listas e das importações ativas). Comparado com as
   /// entradas atuais, diz se algo mudou depois da apuração (Passo 21).
   entradasApuradas Json? @map("entradas_apuradas")
+  /// A assinatura do cadastro do Painel de Bordo na apuração (17/10/2026): se ele muda com a competência apurada e
+  /// ainda aberta, a situação pede reapurar (e o fechamento fica bloqueado até lá).
+  painelAssinatura String? @map("painel_assinatura")
 
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
@@ -2299,4 +2302,26 @@ model RelatorioExecutivoAba {
 
   @@id([relatorioId, departamento])
   @@map("relatorios_executivos_abas")
+}
+
+/// O cadastro do Painel de Bordo (17/10/2026; Cadastros da Controladoria / Analítico / Painel de Bordo): os itens das
+/// abas Resultados e Performance, cada um com o nome, a abreviação, o comportamento, o grupo (a aba), o quadro e o modelo
+/// de apuração (a conta, no código: services/relatorios/painelDeBordo.ts, MODELOS_DO_PAINEL).
+model PainelItem {
+  id           String   @id @default(uuid())
+  /// RESULTADOS | PERFORMANCE.
+  grupo        String
+  quadro       String
+  nome         String
+  sigla        String
+  /// ↑ | ↓.
+  sentido      String
+  /// A chave do modelo de apuração.
+  modelo       String
+  ordem        Int      @default(0)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("painel_itens")
 }

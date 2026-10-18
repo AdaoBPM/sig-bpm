@@ -160,6 +160,7 @@ export const AREA_DO_CADASTRO: Record<string, string> = {
   "estrutura-dre": "cadastro_controladoria.estrutura_dre",
   "regras-rateio": "cadastro_controladoria.regras_rateio",
   "estrutura-indicadores": "cadastro_analitico.estrutura_indicadores",
+  "painel-bordo": "cadastro_analitico.painel_bordo",
 };
 
 /** A permissão da tela do cadastro da rota (:entidade); entidade desconhecida segue adiante (a rota responde 404). */

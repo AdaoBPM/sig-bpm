@@ -266,3 +266,60 @@ export function sinal(item: Pick<ItemPainel, "sentido">, realizado: number | nul
   const pior = item.sentido === "↑" ? realizado! < orcado! : realizado! > orcado!;
   return pior ? -1 : 1;
 }
+
+/**
+ * Os modelos de apuração dos itens do Painel de Bordo (17/10/2026: o cadastro Analítico / Painel de Bordo): cada item
+ * do painel de antes virou um modelo — a conta, a base (/RL), os formatos e o espaço antes dele —, e o cadastro escolhe
+ * o modelo e dá o nome, a abreviação, o comportamento, o grupo e o quadro. O nome do modelo diz o item e o quadro de
+ * origem ("Receita Operacional Líquida (ROL - Consolidado)"); a chave não muda.
+ */
+export type GrupoPainel = "RESULTADOS" | "PERFORMANCE";
+export type ModeloPainel = Omit<ItemPainel, "titulo" | "sigla" | "sentido"> & {
+  chave: string;
+  nome: string;
+  /** Os valores do item de origem (o cadastro começou com eles). */
+  padrao: { grupo: GrupoPainel; quadro: string; titulo: string; sigla: string; sentido: "↑" | "↓" };
+};
+
+const semAcento = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
+const chaveDoModelo = (grupo: GrupoPainel, quadro: string, sigla: string) =>
+  `${grupo.toLowerCase()}.${semAcento(`${quadro}.${sigla}`).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")}`;
+
+export const MODELOS_DO_PAINEL: ModeloPainel[] = (() => {
+  const lista = ([["RESULTADOS", PAINEL_RESULTADOS], ["PERFORMANCE", PAINEL_PERFORMANCE]] as const).flatMap(([grupo, quadros]) =>
+    quadros.flatMap((q) =>
+      q.itens.map(({ titulo, sigla, sentido, ...conta }) => ({
+        ...conta,
+        chave: chaveDoModelo(grupo, q.titulo, sigla),
+        nome: `${titulo} (${sigla} - ${q.titulo})`,
+        padrao: { grupo, quadro: q.titulo, titulo, sigla, sentido },
+      })),
+    ),
+  );
+  // O mesmo item e quadro nas duas abas (o Volume Produzido, por exemplo): o grupo entra no nome do modelo.
+  const repetidos = new Set(lista.filter((m, k) => lista.findIndex((x) => x.nome === m.nome) !== k).map((m) => m.nome));
+  return lista.map((m) => (repetidos.has(m.nome) ? { ...m, nome: `${m.nome.slice(0, -1)}, ${m.padrao.grupo === "RESULTADOS" ? "Resultados" : "Performance"})` } : m));
+})();
+export const MODELO_DO_PAINEL = new Map(MODELOS_DO_PAINEL.map((m) => [m.chave, m]));
+
+/** Um item do cadastro do Painel de Bordo (o que a tabela painel_itens guarda). */
+export type ItemDoCadastroPainel = { grupo: string; quadro: string; nome: string; sigla: string; sentido: string; modelo: string };
+
+/**
+ * Os quadros de cada aba a partir dos itens do cadastro (ativos, já na ordem): o item usa a conta do modelo e o nome, a
+ * abreviação e o comportamento do cadastro; os quadros seguem a ordem do primeiro item de cada um. Item com modelo
+ * desconhecido fica de fora.
+ */
+export function quadrosDoCadastro(itens: ItemDoCadastroPainel[]): Record<"resultados" | "performance", QuadroPainel[]> {
+  const r: Record<"resultados" | "performance", QuadroPainel[]> = { resultados: [], performance: [] };
+  for (const i of itens) {
+    const m = MODELO_DO_PAINEL.get(i.modelo);
+    if (!m) continue;
+    const { chave: _c, nome: _n, padrao: _p, ...conta } = m;
+    const quadros = r[i.grupo === "PERFORMANCE" ? "performance" : "resultados"];
+    let q = quadros.find((x) => x.titulo === i.quadro);
+    if (!q) quadros.push((q = { titulo: i.quadro, itens: [] }));
+    q.itens.push({ ...conta, titulo: i.nome, sigla: i.sigla, sentido: i.sentido === "↓" ? "↓" : "↑" });
+  }
+  return r;
+}

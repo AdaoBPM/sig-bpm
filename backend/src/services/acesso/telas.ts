@@ -154,7 +154,15 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
           { codigo: "regras_rateio", nome: "Regras de Rateio" },
         ],
       },
-      { codigo: "cadastro_analitico", nome: "Analítico", abas: [{ codigo: "estrutura_indicadores", nome: "Estrutura dos Indicadores" }] },
+      {
+        codigo: "cadastro_analitico",
+        nome: "Analítico",
+        abas: [
+          { codigo: "estrutura_indicadores", nome: "Estrutura dos Indicadores" },
+          // O cadastro dos itens do Painel de Bordo (17/10/2026).
+          { codigo: "painel_bordo", nome: "Painel de Bordo" },
+        ],
+      },
     ],
   },
   {
