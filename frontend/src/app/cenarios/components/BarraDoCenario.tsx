@@ -16,7 +16,7 @@ const ETIQUETA = "rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-med
 import { useTipoDoCenario } from "./tipoDoCenario";
 
 /** As telas de um cenário (sintético ou analítico), como as abas de Resultados Empresariais. */
-export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnaliticos?: boolean }> = [
+export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnaliticos?: boolean; /** O nome nos analíticos, quando é outro. */ rotuloAnalitico?: string }> = [
   // As configurações do cenário (12/10/2026). Cada tela aparece com a permissão dela (14/10/2026; antes, as Configurações
   // só para quem editava os cenários).
   { caminho: "configuracoes", rotulo: "Configurações" },
@@ -27,7 +27,8 @@ export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnalit
   // O Painel de Bordo do cenário (13/10/2026): o cenário × o comparado, como o de Resultados Empresariais.
   { caminho: "painel", rotulo: "Painel de Bordo" },
   // O histórico de reajustes do cenário (12/10/2026).
-  { caminho: "reajustes", rotulo: "Reajustes" },
+  // Nos analíticos, "Histórico" (19/10/2026).
+  { caminho: "reajustes", rotulo: "Reajustes", rotuloAnalitico: "Histórico" },
 ];
 
 /** A rota de uma tela de cenário (sintético ou analítico, 13/10/2026): o id e a tela. */
@@ -39,7 +40,7 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 /**
  * A barra de um cenário, no formato da barra de etapas do mês: o cenário em amarelo-ouro no início (com a troca
  * de cenário, que mantém a tela) e as telas Configurações, Resultados, Painel de Bordo (com a aba Indicadores) e
- * Reajustes (cada uma com a permissão dela no perfil), com a atual em destaque.
+ * Reajustes (Histórico, nos analíticos) — cada uma com a permissão dela no perfil —, com a atual em destaque.
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();
@@ -83,7 +84,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
                 aria-current={ativa ? "page" : undefined}
                 className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap ${ativa ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
               >
-                {x.rotulo}
+                {t.tipo === "ANALITICO" && x.rotuloAnalitico ? x.rotuloAnalitico : x.rotulo}
               </Link>
             </li>
           );

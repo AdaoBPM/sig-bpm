@@ -1945,6 +1945,11 @@ model Cenario {
   comparadoComId   String?  @map("comparado_com_id")
   /// A variação máxima (em %) de cada total da DRE no comparativo: { código do total: percentual }.
   variacoesMaximas Json?    @map("variacoes_maximas")
+  /// Os Índices de Reajuste do cenário analítico (19/10/2026; Configurações / Índices): [{ chave, descricao, observacao,
+  /// variacao (%) }]. No Comparativo dos analíticos, cada conta escolhe um índice (no lugar da variação digitada).
+  indicesReajuste  Json?    @map("indices_reajuste")
+  /// O índice de cada conta no Comparativo dos analíticos: { código da linha da DRE: chave do índice }.
+  indicesDoComparativo Json? @map("indices_do_comparativo")
   /// As movimentações do realizado fora dos padrões das premissas (cenário analítico, 14/10/2026): as da última carga
   /// do resultado realizado, as decisões de realocação (o grupo de centros de custo de cada conta; mantidas entre as
   /// cargas) e o que está somado nos centros por elas. Ver services/cenarios/realocacoesCenario.ts.

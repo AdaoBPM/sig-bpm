@@ -21,7 +21,7 @@ export function ConfiguracoesContent() {
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   // ?aba=comparativo (ou referencia) abre direto na aba: os avisos do comparativo levam para cá.
   const pedida = useSearchParams().get("aba");
-  const abaInicial: AbaDasConfiguracoes = pedida === "comparativo" || pedida === "referencia" || pedida === "manuais" ? pedida : "cenario";
+  const abaInicial: AbaDasConfiguracoes = pedida === "comparativo" || pedida === "referencia" || pedida === "manuais" || pedida === "indices" ? pedida : "cenario";
   const analitico = t.tipo === "ANALITICO";
   return (
     <div className="space-y-6">
@@ -84,11 +84,22 @@ export function ConfiguracoesContent() {
                 indicadores do cenário.
               </li>
             )}
-            <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas Resultados e Painel de Bordo.</li>
+            <li>Troque de cenário no nome dele, na barra do topo; ao lado, as telas {analitico ? "Premissas, Resultados, Painel de Bordo e Histórico" : "Resultados, Painel de Bordo e Reajustes"}.</li>
             <li>Aparecem só as abas que o seu perfil lê, e os botões de cada aba só com a permissão de editar nela (Controle de Usuários / Perfis); sem ela, a aba se lê, com um aviso.</li>
             <li>Só quem criou o cenário (ou o Administrador) altera as Configurações: num cenário público de outro usuário, as abas se leem, com um aviso que diz de quem é o cenário.</li>
             <li>Na Referência, os meses fechados do exercício aparecem resumidos (por exemplo, “Fechada: de Janeiro a Agosto.”).</li>
+            {analitico ? (
+              <li>
+                Na aba Índices, cadastre os Índices de Reajuste do cenário: a Descrição, a Observação e a Variação Máxima (em %, para mais ou para
+                menos). Use “Incluir Índice” para uma linha nova e a lixeira para excluir (um índice escolhido em contas do Comparativo só se exclui
+                depois de trocá-lo nelas: a coluna Contas diz quantas o usam); “Gravar Índices” grava a lista. No Comparativo, cada conta escolhe um
+                índice no lugar da variação digitada.
+              </li>
+            ) : null}
             <li>
+              {analitico
+                ? "Na aba Comparativo dos analíticos, a coluna Índice de Reajuste traz, em cada conta (ou num total ou numa atribuição, para as contas abaixo dele), a lista dos índices da aba Índices; o “Preencher Selecionados” aplica um índice às contas marcadas. O resto funciona como abaixo. "
+                : ""}
               Na aba Comparativo, escolha o cenário com que este se compara e a variação máxima (em %, para mais ou para menos) de cada conta, na
               estrutura da DRE vigente (totais, atribuições e contas, desde Produção e Serviços (PS), com os volumes; sem os totais que só somam
               outros, como CPV, MB, MC, DFO, EBITDA, EBIT, NOPAT, RF, DF e RL; a seta no rótulo da coluna escolhe até que nível mostrar, e as setas das linhas
@@ -100,7 +111,7 @@ export function ConfiguracoesContent() {
             </li>
             <li>
               Com um cenário comparado, a tela Resultados e a aba Indicadores do Painel de Bordo trazem, em preto e cinza depois do total, os totais dele (e, nos Resultados, a
-              Diferença, o Atingimento e a Eficiência), e a tela Reajustes ganha a aba Justificativas, com as contas acima da variação.
+              Diferença, o Atingimento e a Eficiência), e a tela {analitico ? "Histórico" : "Reajustes"} ganha a aba Justificativas, com as contas acima da variação.
             </li>
           </ul>
         }

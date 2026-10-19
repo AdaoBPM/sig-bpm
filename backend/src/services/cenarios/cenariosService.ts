@@ -230,6 +230,45 @@ async function familias() {
 }
 
 /** O cenário comparado (o comparativo), se houver. */
+/** Um Índice de Reajuste do cenário analítico (19/10/2026; Configurações / Índices): a variação máxima em %. */
+export type IndiceDeReajuste = { chave: string; descricao: string; observacao: string | null; variacao: number };
+type ComVariacoes = { tipo: string; variacoesMaximas: unknown; indicesReajuste: unknown; indicesDoComparativo: unknown };
+
+/** Os Índices de Reajuste do cenário (vazio nos sintéticos e nos analíticos sem índices). */
+export function indicesDe(c: { indicesReajuste: unknown }): IndiceDeReajuste[] {
+  return Array.isArray(c.indicesReajuste) ? (c.indicesReajuste as IndiceDeReajuste[]) : [];
+}
+
+/**
+ * As variações máximas (em %) de cada linha verificada no comparativo: nos analíticos (19/10/2026), a do índice escolhido
+ * para a conta (Configurações / Índices); nos sintéticos, a digitada.
+ */
+export function limitesDe(c: ComVariacoes): Record<string, number> {
+  if (c.tipo !== "ANALITICO") return (c.variacoesMaximas ?? {}) as Record<string, number>;
+  const variacao = new Map(indicesDe(c).map((i) => [i.chave, Number(i.variacao)]));
+  const escolhidos = (c.indicesDoComparativo ?? {}) as Record<string, string>;
+  return Object.fromEntries(Object.entries(escolhidos).flatMap(([codigo, chave]) => (variacao.has(chave) ? [[codigo, variacao.get(chave)!]] : [])));
+}
+
+/** O índice de uma linha verificada no Comparativo dos analíticos: o dela ou, sem ele, o do total ou da atribuição acima. */
+function indiceDaLinha(escolhidos: Record<string, string>, chaves: Set<string>, codigo: string, acima: string[]): string | null {
+  for (const k of [codigo, ...[...acima].reverse()]) if (escolhidos[k] && chaves.has(escolhidos[k])) return escolhidos[k];
+  return null;
+}
+
+/** Quantas contas (linhas verificadas) do Comparativo usam cada índice, contando as que o herdam de um total. */
+async function contasPorIndice(c: { indicesReajuste: unknown; indicesDoComparativo: unknown }): Promise<Map<string, number>> {
+  const chaves = new Set(indicesDe(c).map((i) => i.chave));
+  const escolhidos = (c.indicesDoComparativo ?? {}) as Record<string, string>;
+  const n = new Map<string, number>();
+  for (const l of totaisDaDRE(await estruturaDRE()).linhas) {
+    if (!l.folha) continue;
+    const chave = indiceDaLinha(escolhidos, chaves, l.linha.codigo, l.acima);
+    if (chave) n.set(chave, (n.get(chave) ?? 0) + 1);
+  }
+  return n;
+}
+
 async function comparadoDe(c: { comparadoComId: string | null }) {
   return c.comparadoComId ? getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
 }
@@ -385,7 +424,7 @@ const MESES_1_A_12 = Array.from({ length: 12 }, (_, k) => k + 1);
  * indicadores manuais, com a Média de Referência (o mês 0), os doze meses gravados (em branco: null), a variação máxima
  * da conta (do Comparativo) e a justificativa.
  */
-async function linhasDaPlanilha(c: { id: string; variacoesMaximas: unknown }): Promise<LinhaDaPlanilha[]> {
+async function linhasDaPlanilha(c: { id: string } & ComVariacoes): Promise<LinhaDaPlanilha[]> {
   const prisma = getPrismaClient();
   const [est, cadastro, premissas, centros, indicadores, grupos, justificativas, calculo] = await Promise.all([
     estruturaDRE(),
@@ -397,7 +436,7 @@ async function linhasDaPlanilha(c: { id: string; variacoesMaximas: unknown }): P
     prisma.cenarioPremissaJustificativa.findMany({ where: { cenarioId: c.id } }),
     calcularCenario(c.id),
   ]);
-  const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
+  const limites = limitesDe(c);
   const acimaDe = new Map(totaisDaDRE(est).linhas.map((l) => [l.linha.codigo, l.acima]));
   const limiteDa = (conta: string | null) => (conta && acimaDe.has(conta) ? limiteDaLinha(limites, conta, acimaDe.get(conta)!) : null);
   const justificativa = new Map(justificativas.map((j) => [j.chave, j.texto]));
@@ -1397,6 +1436,8 @@ export const cenariosService = {
             importadoEm: origem.importadoEm,
             comparadoComId: origem.comparadoComId,
             variacoesMaximas: origem.variacoesMaximas ?? undefined,
+            indicesReajuste: origem.indicesReajuste ?? undefined,
+            indicesDoComparativo: origem.indicesDoComparativo ?? undefined,
             realocacoes: origem.realocacoes ?? undefined,
             versao,
             familiaId: familia,
@@ -2331,9 +2372,15 @@ export const cenariosService = {
     const c = await obterOuFalhar(id, usuario);
     // Os dois tipos (13/10/2026): o analítico se compara também com um sintético (o Orçamento Empresarial, por exemplo).
     const outros = (await getPrismaClient().cenario.findMany({ where: { id: { not: id } }, orderBy: [{ ano: "desc" }, { criadoEm: "desc" }] })).filter((o) => alcanca(o, usuario));
-    const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
+    const limites = limitesDe(c);
     const { linhas } = totaisDaDRE(await estruturaDRE());
     const comparado = c.comparadoComId ? await getPrismaClient().cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
+    // Nos analíticos (19/10/2026), o índice escolhido em cada linha (o da conta ou, sem ele, o do total ou da atribuição acima).
+    const analitico = c.tipo === "ANALITICO";
+    const indices = indicesDe(c);
+    const escolhidos = (c.indicesDoComparativo ?? {}) as Record<string, string>;
+    const chaves = new Set(indices.map((i) => i.chave));
+    const indiceDa = (codigo: string, acima: string[]) => indiceDaLinha(escolhidos, chaves, codigo, acima);
     // A versão vigente (13/10/2026): a maior da família (o filtro "Apenas Vigentes" do modal de escolha).
     const ultimas = new Map<string, number>();
     for (const v of await getPrismaClient().cenario.findMany({ select: { id: true, familiaId: true, versao: true } })) {
@@ -2349,7 +2396,10 @@ export const cenariosService = {
         tipo: l.linha.tipo,
         verificada: l.folha,
         limite: l.folha ? limiteDaLinha(limites, l.linha.codigo, l.acima) : null,
+        indice: analitico && l.folha ? indiceDa(l.linha.codigo, l.acima) : null,
       })),
+      /** Os Índices de Reajuste (só nos analíticos; nulo nos sintéticos, que digitam a variação). */
+      indices: analitico ? indices : null,
     };
   },
 
@@ -2358,28 +2408,102 @@ export const cenariosService = {
    * variações máximas das linhas verificadas (as contas, e os totais e atribuições sem contas). Não vale para o cenário
    * travado (14/10/2026: marcado ou com a versão congelada; antes, valia).
    */
-  async gravarComparativo(id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }, usuario: Usuario) {
+  async gravarComparativo(
+    id: string,
+    dados: { comparadoComId: string | null; limites?: Record<string, number | null>; indices?: Record<string, string | null> },
+    usuario: Usuario,
+  ) {
     const antes = await obterOuFalhar(id, usuario);
     exigirQuemCriou(antes, usuario);
     exigirEditavel(antes);
     if (dados.comparadoComId === id) throw new CenarioError(400, "Escolha outro cenário para comparar.");
     if (dados.comparadoComId) await obterOuFalhar(dados.comparadoComId, usuario);
     const codigos = new Set(totaisDaDRE(await estruturaDRE()).verificadas.map((v) => v.linha.codigo));
-    const fora = Object.keys(dados.limites).filter((k) => !codigos.has(k));
+    // Nos analíticos (19/10/2026), o índice de cada conta (Configurações / Índices); nos sintéticos, a variação digitada.
+    const analitico = antes.tipo === "ANALITICO";
+    const escolhas = analitico ? (dados.indices ?? {}) : (dados.limites ?? {});
+    const fora = Object.keys(escolhas).filter((k) => !codigos.has(k));
     if (fora.length) throw new CenarioError(400, `Não são contas da DRE: ${fora.slice(0, 3).join(", ")}.`);
-    const variacoesMaximas = Object.fromEntries(Object.entries(dados.limites).filter((e): e is [string, number] => e[1] !== null));
-    const depois = await getPrismaClient().cenario.update({ where: { id }, data: { comparadoComId: dados.comparadoComId, variacoesMaximas } });
+    let data: Prisma.CenarioUncheckedUpdateInput;
+    if (analitico) {
+      const chaves = new Set(indicesDe(antes).map((i) => i.chave));
+      const desconhecido = Object.values(dados.indices ?? {}).find((v) => v !== null && !chaves.has(v));
+      if (desconhecido) throw new CenarioError(400, "Um dos índices escolhidos não existe mais: atualize a tela (Configurações / Índices).");
+      const indicesDoComparativo = Object.fromEntries(Object.entries(dados.indices ?? {}).filter((e): e is [string, string] => e[1] !== null));
+      data = { comparadoComId: dados.comparadoComId, indicesDoComparativo };
+    } else {
+      const variacoesMaximas = Object.fromEntries(Object.entries(dados.limites ?? {}).filter((e): e is [string, number] => e[1] !== null));
+      data = { comparadoComId: dados.comparadoComId, variacoesMaximas };
+    }
+    const depois = await getPrismaClient().cenario.update({ where: { id }, data });
     await auditar({
       usuarioId: usuario.id,
       usuarioNome: usuario.nome,
       acao: "ALTERACAO",
       entidade: "cenario",
       entidadeId: id,
-      antes: { comparadoComId: antes.comparadoComId, variacoesMaximas: antes.variacoesMaximas },
-      depois: { comparadoComId: depois.comparadoComId, variacoesMaximas: depois.variacoesMaximas },
+      antes: { comparadoComId: antes.comparadoComId, ...(analitico ? { indicesDoComparativo: antes.indicesDoComparativo } : { variacoesMaximas: antes.variacoesMaximas }) },
+      depois: { comparadoComId: depois.comparadoComId, ...(analitico ? { indicesDoComparativo: depois.indicesDoComparativo } : { variacoesMaximas: depois.variacoesMaximas }) },
       metadados: { comparativo: true },
     });
     return this.comparativo(id, usuario);
+  },
+
+  /**
+   * Os Índices de Reajuste do cenário analítico (19/10/2026; Configurações / Índices), com quantas contas do Comparativo
+   * usam cada um.
+   */
+  async indices(id: string, usuario: Usuario = SISTEMA) {
+    const c = await obterOuFalhar(id, usuario);
+    if (c.tipo !== "ANALITICO") throw new CenarioError(400, "Os Índices de Reajuste são dos cenários analíticos.");
+    const usos = await contasPorIndice(c);
+    return { indices: indicesDe(c).map((i) => ({ ...i, contas: usos.get(i.chave) ?? 0 })) };
+  },
+
+  /**
+   * Grava a lista inteira dos Índices de Reajuste (19/10/2026): os de chave conhecida mudam, os sem chave entram (com uma
+   * chave nova) e os que faltam saem — menos os que o Comparativo usa (troque o índice das contas antes). Vale o que vale
+   * para o comparativo: só quem criou o cenário (ou o Administrador) e com o cenário editável.
+   */
+  async gravarIndices(id: string, lista: Array<{ chave?: string | null; descricao: string; observacao?: string | null; variacao: number }>, usuario: Usuario) {
+    const antes = await obterOuFalhar(id, usuario);
+    if (antes.tipo !== "ANALITICO") throw new CenarioError(400, "Os Índices de Reajuste são dos cenários analíticos.");
+    exigirQuemCriou(antes, usuario);
+    exigirEditavel(antes);
+    const atuais = indicesDe(antes);
+    const conhecidas = new Set(atuais.map((i) => i.chave));
+    const repetida = lista.find((i, k) => lista.findIndex((x) => x.descricao.trim().toLowerCase() === i.descricao.trim().toLowerCase()) !== k);
+    if (repetida) throw new CenarioError(400, `O índice ${repetida.descricao.trim()} aparece duas vezes.`);
+    let proxima = Math.max(0, ...atuais.map((i) => Number(/^i(\d+)$/.exec(i.chave)?.[1] ?? 0))) + 1;
+    const novos: IndiceDeReajuste[] = lista.map((i) => ({
+      chave: i.chave && conhecidas.has(i.chave) ? i.chave : `i${proxima++}`,
+      descricao: i.descricao.trim(),
+      observacao: i.observacao?.trim() || null,
+      variacao: i.variacao,
+    }));
+    const ficam = new Set(novos.map((i) => i.chave));
+    // Em uso: escolhido em alguma linha do Comparativo (a contagem é a das contas, com as que o herdam de um total).
+    const usos = await contasPorIndice(antes);
+    const escolhidos = new Set(Object.values((antes.indicesDoComparativo ?? {}) as Record<string, string>));
+    const emUso = atuais.filter((i) => !ficam.has(i.chave) && escolhidos.has(i.chave));
+    if (emUso.length) {
+      throw new CenarioError(
+        409,
+        `${emUso.map((i) => `${i.descricao} (${usos.get(i.chave) ?? 0} ${usos.get(i.chave) === 1 ? "conta" : "contas"})`).join(", ")}: ${emUso.length === 1 ? "o índice está" : "os índices estão"} no Comparativo. Troque o índice dessas contas antes de excluir.`,
+      );
+    }
+    const depois = await getPrismaClient().cenario.update({ where: { id }, data: { indicesReajuste: novos as unknown as Prisma.InputJsonValue } });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "ALTERACAO",
+      entidade: "cenario",
+      entidadeId: id,
+      antes: { indicesReajuste: antes.indicesReajuste },
+      depois: { indicesReajuste: depois.indicesReajuste },
+      metadados: { indices: true },
+    });
+    return this.indices(id, usuario);
   },
 
   /**
@@ -2391,7 +2515,7 @@ export const cenariosService = {
     const c = await obterOuFalhar(id, usuario);
     const comparado = c.comparadoComId ? await prisma.cenario.findUnique({ where: { id: c.comparadoComId }, select: { id: true, nome: true, ano: true } }) : null;
     if (!comparado) return { comparadoCom: null, visoes: [] };
-    const limites = (c.variacoesMaximas ?? {}) as Record<string, number>;
+    const limites = limitesDe(c);
     const est = await estruturaDRE();
     const { verificadas, linhas } = totaisDaDRE(est);
     const acimaDe = new Map(linhas.map((l) => [l.linha.codigo, l.acima]));

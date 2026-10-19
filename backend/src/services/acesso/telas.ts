@@ -40,6 +40,8 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
       abas: [
         { codigo: "cenario", nome: "Cenário" },
         { codigo: "referencia", nome: "Referência" },
+        // Os Índices de Reajuste dos analíticos (19/10/2026), que o Comparativo deles usa no lugar da variação digitada.
+        ...(analitico ? [{ codigo: "indices", nome: "Índices" }] : []),
         { codigo: "comparativo", nome: "Comparativo" },
         // Os Indicadores Manuais dos sintéticos (19/10/2026; antes, no Painel de Bordo); nos analíticos, nas Premissas.
         ...(analitico ? [] : [{ codigo: "manuais", nome: "Indicadores Manuais" }]),
@@ -69,9 +71,10 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
     { codigo: `${base}_painel`, nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "metas", nome: "Indicadores" }] },
     {
       codigo: `${base}_reajustes`,
-      nome: "Reajustes",
+      // Nos analíticos, "Histórico", com a aba "Alterações" (19/10/2026); a chave não muda.
+      nome: analitico ? "Histórico" : "Reajustes",
       abas: [
-        { codigo: "historico", nome: "Histórico" },
+        { codigo: "historico", nome: analitico ? "Alterações" : "Histórico" },
         { codigo: "justificativas", nome: "Justificativas" },
       ],
     },

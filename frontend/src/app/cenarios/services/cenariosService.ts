@@ -224,8 +224,12 @@ export type Comparativo = {
    * As linhas da DRE vigente (14/10/2026; antes, só os totais): totais, atribuições e contas. `verificada`: a linha sem
    * nada embaixo (a conta, ou o total e a atribuição sem contas), a que tem a variação máxima.
    */
-  linhas: Array<{ codigo: string; descricao: string; tipo: string; verificada: boolean; limite: number | null }>;
+  linhas: Array<{ codigo: string; descricao: string; tipo: string; verificada: boolean; limite: number | null; /** Nos analíticos, a chave do índice da conta. */ indice: string | null }>;
+  /** Os Índices de Reajuste (19/10/2026): só nos analíticos, que escolhem um por conta; nulo nos sintéticos (a variação digitada). */
+  indices: IndiceDeReajuste[] | null;
 };
+/** Um Índice de Reajuste do cenário analítico (19/10/2026; Configurações / Índices). */
+export type IndiceDeReajuste = { chave: string; descricao: string; observacao: string | null; variacao: number };
 /** Uma linha acima da variação máxima: os meses (o valor, o comparado e a variação em %; nula sem base) e a justificativa. */
 export type ItemJustificativa = {
   codigo: string;
@@ -404,8 +408,13 @@ export const cenariosService = {
   /** Criar Revisão: a cópia da versão congelada numa versão nova, aberta para edição (devolve o cenário novo). */
   criarRevisao: async (id: string) => (await api.post<{ data: Cenario }>(`/proxy/cenarios/${id}/revisao`)).data.data,
   comparativo: async (id: string) => (await api.get<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`)).data.data,
-  gravarComparativo: async (id: string, dados: { comparadoComId: string | null; limites: Record<string, number | null> }) =>
+  /** Sintéticos: `limites` (a variação de cada conta); analíticos: `indices` (a chave do índice de cada conta). */
+  gravarComparativo: async (id: string, dados: { comparadoComId: string | null; limites?: Record<string, number | null>; indices?: Record<string, string | null> }) =>
     (await api.put<{ data: Comparativo }>(`/proxy/cenarios/${id}/comparativo`, dados)).data.data,
+  /** Os Índices de Reajuste do cenário analítico (19/10/2026), com quantas contas do Comparativo usam cada um. */
+  indices: async (id: string) => (await api.get<{ data: { indices: Array<IndiceDeReajuste & { contas: number }> } }>(`/proxy/cenarios/${id}/indices`)).data.data,
+  gravarIndices: async (id: string, indices: Array<{ chave: string | null; descricao: string; observacao: string | null; variacao: number }>) =>
+    (await api.put<{ data: { indices: Array<IndiceDeReajuste & { contas: number }> } }>(`/proxy/cenarios/${id}/indices`, { indices })).data.data,
   /** Grava as realocações das movimentações fora dos padrões (o grupo de cada conta, ou nulo). */
   gravarRealocacoes: async (id: string, decisoes: Record<string, string | null>) =>
     (await api.put<{ data: Cenario }>(`/proxy/cenarios/${id}/realocacoes`, { decisoes })).data.data,

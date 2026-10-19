@@ -57,6 +57,9 @@ cenariosRoutes.post("/:id/revisao", autenticacao, tela("resultados", "editar"), 
 // O comparativo com outro cenário e as justificativas (12/10/2026).
 cenariosRoutes.get("/:id/comparativo", autenticacao, tela("configuracoes", "ler", "comparativo"), asyncHandler(c.comparativo));
 cenariosRoutes.put("/:id/comparativo", autenticacao, tela("configuracoes", "editar", "comparativo"), express.json(), asyncHandler(c.gravarComparativo));
+// Os Índices de Reajuste dos analíticos (19/10/2026): a aba Índices das Configurações; o Comparativo também os lê.
+cenariosRoutes.get("/:id/indices", autenticacao, tela("configuracoes"), asyncHandler(c.indices));
+cenariosRoutes.put("/:id/indices", autenticacao, tela("configuracoes", "editar", "indices"), express.json(), asyncHandler(c.gravarIndices));
 cenariosRoutes.get("/:id/justificativas", autenticacao, tela("reajustes", "ler", "justificativas"), asyncHandler(c.justificativas));
 cenariosRoutes.put("/:id/justificativas", autenticacao, tela("reajustes", "editar", "justificativas"), express.json(), asyncHandler(c.gravarJustificativa));
 // As premissas dos cenários analíticos (13/10/2026).

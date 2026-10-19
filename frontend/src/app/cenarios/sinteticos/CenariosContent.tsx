@@ -87,7 +87,7 @@ const COMO_USAR_ANALITICOS = (
       alta de cada cenário e a da marcação (com o símbolo de marcação); as versões se congelam, se reabrem e se revisam na tela Resultados de cada
       cenário, como nos sintéticos.
     </li>
-    <li>Clique na linha para abrir o cenário, com as telas Configurações, Resultados, Indicadores, Painel de Bordo e Reajustes (as que o seu perfil lê).</li>
+    <li>Clique na linha para abrir o cenário, com as telas Configurações, Premissas, Resultados, Painel de Bordo e Histórico (as que o seu perfil lê).</li>
     <li>
       Marcação, exclusão, nome, descrição, visualização e comparativo ficam em Configurações, como nos sintéticos. Cada marcação (Orçamento Empresarial,
       Resultados Anteriores, Resultados Vendidos) fica ativa em um cenário só, sintético ou analítico: marcar um tira a marcação do anterior.
@@ -145,7 +145,7 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
               mais alta de cada cenário. As versões se congelam, se reabrem e se revisam na tela Resultados de cada cenário (Congelar Versão, Reabrir
               Versão e Criar Revisão); cada revisão é um cenário próprio na lista, com o mesmo nome e a versão seguinte.
             </li>
-            <li>Clique na linha para abrir o cenário, com as telas Configurações, Resultados, Indicadores e Reajustes (as que o seu perfil lê).</li>
+            <li>Clique na linha para abrir o cenário, com as telas Configurações, Resultados, Painel de Bordo e Reajustes (as que o seu perfil lê).</li>
             <li>
               Depois da etiqueta Vigente, a da marcação (com o símbolo de marcação) diz se o cenário é o Orçamento Empresarial, os Resultados Anteriores ou os Resultados Vendidos. Para marcar, excluir,
               importar um arquivo no cenário ou mudar o nome, a descrição, a visualização, a referência e o comparativo, abra o cenário e vá em

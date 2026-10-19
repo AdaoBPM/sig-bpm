@@ -144,7 +144,7 @@ export function PremissasContent() {
               investimentos mudam. Quando um trecho (uma unidade, um centro de custo, a depreciação de uma unidade…) aparece em mais de um arquivo, o
               quadro dos repetidos pede, em cada um, Ignorar (vale o primeiro arquivo) ou Sobrescrever (vale o último). Na aba Investimentos, os com o
               Nome de Referência de um investimento do cenário são atualizados e os de nome novo entram na sequência dos que já existem. “Importar” grava os meses (em branco apaga), as
-              justificativas e os investimentos, recalcula a DRE e registra no histórico (tela Reajustes).
+              justificativas e os investimentos, recalcula a DRE e registra no histórico (tela Histórico, aba Alterações).
             </li>
             <li>
               Cada tabela traz, mês a mês: a Jornada (os dias úteis, já calculados pelo calendário — segunda a sexta, menos os feriados nacionais), a

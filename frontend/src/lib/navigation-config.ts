@@ -362,7 +362,7 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
   // As telas de um cenário: "Cenários Sintéticos › Resultados" (ou "Cenários Analíticos › Resultados", 13/10/2026).
   const cenario = pathname.match(/^\/cenarios\/(sinteticos|analiticos)\/[^/]+\/([^/]+)/);
   if (cenario) {
-    const tela = cenario[2] === "premissas" ? "Premissas" : cenario[2] === "indicadores" ? "Indicadores" : cenario[2] === "configuracoes" ? "Configurações" : cenario[2] === "reajustes" ? "Reajustes" : cenario[2] === "painel" ? "Painel de Bordo" : "Resultados";
+    const tela = cenario[2] === "premissas" ? "Premissas" : cenario[2] === "indicadores" ? "Indicadores" : cenario[2] === "configuracoes" ? "Configurações" : cenario[2] === "reajustes" ? (cenario[1] === "analiticos" ? "Histórico" : "Reajustes") : cenario[2] === "painel" ? "Painel de Bordo" : "Resultados";
     const lista = cenario[1] === "analiticos" ? "Cenários Analíticos" : "Cenários Sintéticos";
     return [{ rotulo: lista, href: `/cenarios/${cenario[1]}` }, { rotulo: tela }];
   }

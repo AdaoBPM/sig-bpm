@@ -533,7 +533,12 @@ export const cenariosController = {
     const c = id(request, response);
     if (!c) return;
     const corpo = z
-      .object({ comparadoComId: idSchema.nullable(), limites: z.record(z.string(), z.number().finite().min(0, "A variação máxima não pode ser negativa.").max(100000).nullable()) })
+      .object({
+        comparadoComId: idSchema.nullable(),
+        // Nos sintéticos, a variação digitada; nos analíticos (19/10/2026), a chave do índice de cada conta.
+        limites: z.record(z.string(), z.number().finite().min(0, "A variação máxima não pode ser negativa.").max(100000).nullable()).optional(),
+        indices: z.record(z.string(), z.string().max(20).nullable()).optional(),
+      })
       .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Comparativo inválido." });
     return responder(response, () => cenariosService.gravarComparativo(c, corpo.data, usuario(request)));
@@ -546,6 +551,34 @@ export const cenariosController = {
     const corpo = z.object({ decisoes: z.record(z.string().max(300), z.string().trim().min(1).max(200).nullable()) }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Realocações inválidas." });
     return responder(response, () => cenariosService.gravarRealocacoes(c, corpo.data.decisoes, usuario(request)));
+  },
+
+  /** Os Índices de Reajuste do cenário analítico (19/10/2026). */
+  indices(request: Request, response: Response) {
+    const c = id(request, response);
+    return c ? responder(response, () => cenariosService.indices(c, usuario(request))) : undefined;
+  },
+
+  /** Grava a lista dos Índices de Reajuste: { indices: [{ chave?, descricao, observacao?, variacao (%) }] }. */
+  gravarIndices(request: Request, response: Response) {
+    const c = id(request, response);
+    if (!c) return;
+    const corpo = z
+      .object({
+        indices: z
+          .array(
+            z.object({
+              chave: z.string().max(20).nullable().optional(),
+              descricao: z.string().trim().min(1, "Toda linha precisa da descrição.").max(120),
+              observacao: z.string().max(500).nullable().optional(),
+              variacao: z.number().finite().min(0, "A variação máxima não pode ser negativa.").max(100000),
+            }),
+          )
+          .max(200),
+      })
+      .safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: corpo.error.issues[0]?.message ?? "Índices inválidos." });
+    return responder(response, () => cenariosService.gravarIndices(c, corpo.data.indices, usuario(request)));
   },
 
   /** As contas acima da variação máxima do comparativo, por visão, com as justificativas. */

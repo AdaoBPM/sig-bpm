@@ -107,13 +107,19 @@ export function ReajustesContent() {
   const [escolhida, setAba] = useState<"historico" | "justificativas">("historico");
   // As abas que o perfil lê (14/10/2026).
   const aba = comComparativo && (escolhida === "justificativas" || !podeHistorico) ? "justificativas" : podeHistorico ? "historico" : null;
+  // Nos analíticos (19/10/2026), a tela se chama Histórico e a aba do log, Alterações.
+  const analitico = t.tipo === "ANALITICO";
+  const doLog = analitico ? "Alterações" : "Histórico";
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Reajustes"
+        titulo={analitico ? "Histórico" : "Reajustes"}
         comoUsar={
           <ul>
-            <li>Na aba Histórico, cada linha é uma gravação na DRE do cenário (tela Resultados) ou a carga de uma referência (tela Configurações), do mais recente ao mais antigo. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>
+              Na aba {doLog}, cada linha é uma gravação na DRE do cenário ({analitico ? "as Premissas, os centros de custo, os investimentos, o recálculo" : "tela Resultados"}) ou a carga de
+              uma referência (tela Configurações), do mais recente ao mais antigo. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).
+            </li>
             <li>Tipo: Reajuste dos Marcados (o reajuste aplicado às contas e meses marcados), Edição de Valor (um valor clicado; Replicada quando copiado aos meses seguintes) ou Referência Carregada (um arquivo ou o resultado realizado, que substitui a DRE).</li>
             <li>Reajuste: o percentual ou o valor informado; “Valor digitado” quando o valor recalculado foi digitado direto. As somas são as dos valores alterados, antes e depois.</li>
             <li>
@@ -122,7 +128,7 @@ export function ReajustesContent() {
             </li>
             <li>
               Na aba Justificativas (só com um cenário comparado, em Configurações / Comparativo): escolha a aba da DRE (Consolidado ou cada unidade); acima
-              da tabela, quantas contas da aba passam da variação. Cada linha é uma conta com algum mês acima da variação máxima dela: os meses
+              da tabela, quantas contas da aba passam da variação{analitico ? " — a variação máxima de cada conta é a do Índice de Reajuste escolhido para ela no Comparativo (Configurações / Índices)" : ""}. Cada linha é uma conta com algum mês acima da variação máxima dela: os meses
               mostram a variação (passe o mouse para ver o valor do cenário e o do comparado; “sem base”: o comparado é zero no mês). Digite a
               justificativa e clique em “Gravar”; apagar o texto e gravar a apaga. “Só Sem Justificativa” esconde as já justificadas. Uma conta que
               deixa de passar da variação sai da lista (a justificativa fica guardada). Com o cenário marcado ou com a versão congelada, as
@@ -142,10 +148,10 @@ export function ReajustesContent() {
         }
       />
       <Abas
-        rotulo="Reajustes do cenário"
+        rotulo={analitico ? "Histórico do cenário" : "Reajustes do cenário"}
         ativa={aba ?? ""}
         onMudar={(a) => setAba(a as "historico" | "justificativas")}
-        abas={[...(podeHistorico ? [{ chave: "historico", rotulo: "Histórico" }] : []), ...(comComparativo ? [{ chave: "justificativas", rotulo: "Justificativas" }] : [])]}
+        abas={[...(podeHistorico ? [{ chave: "historico", rotulo: doLog }] : []), ...(comComparativo ? [{ chave: "justificativas", rotulo: "Justificativas" }] : [])]}
       />
       {aba === null ? (
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>

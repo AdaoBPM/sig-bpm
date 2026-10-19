@@ -31,7 +31,8 @@ const TITULO = "text-sm font-bold text-gray-900";
  * A aba Comparativo das Configurações do cenário (13/10/2026; antes, a aba Referência da tela Comparativo e, antes, a
  * aba Comparar dos Resultados): o cenário com que este se compara e a variação máxima (em %) de cada conta, na
  * estrutura da DRE vigente (14/10/2026; antes, só os totais). Com um cenário comparado, a aba Justificativas da tela
- * Reajustes lista as contas que passam da variação.
+ * Reajustes lista as contas que passam da variação. Nos analíticos (19/10/2026), cada conta escolhe um Índice de
+ * Reajuste (Configurações / Índices) no lugar da variação digitada; a tela Reajustes deles se chama Histórico.
  */
 export function ComparativoCenario({ id, podeEditar }: { id: string; podeEditar: boolean }) {
   const consulta = useQuery({ queryKey: ["cenarios", id, "comparativo"], queryFn: () => cenariosService.comparativo(id) });
@@ -47,7 +48,13 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   const [comparado, setComparado] = useState(dados.comparadoCom?.id ?? "");
   // As linhas verificadas (as contas, e os totais e atribuições sem contas) guardam a variação; as demais a repassam.
   const verificadas = dados.linhas.filter((l) => l.verificada);
-  const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(verificadas.map((l) => [l.codigo, l.limite === null ? "" : duasCasas(l.limite)])));
+  // Nos analíticos (19/10/2026), o valor de cada conta é a chave do índice escolhido; nos sintéticos, a variação digitada.
+  const indices = dados.indices;
+  const analitico = indices !== null;
+  const original = (l: LinhaDaVariacao) => (analitico ? (l.indice ?? "") : l.limite === null ? "" : duasCasas(l.limite));
+  const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(verificadas.map((l) => [l.codigo, original(l)])));
+  const daTela = analitico ? "Histórico" : "Reajustes";
+  const rotuloDoIndice = (i: { descricao: string; variacao: number }) => `${i.descricao} (${duasCasas(Number(i.variacao))}%)`;
   const [todos, setTodos] = useState("");
   // As contas marcadas (15/10/2026): o Preencher Selecionados e o Limpar valem só para elas (antes, para todas).
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set());
@@ -55,10 +62,10 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   // Os níveis da DRE (14/10/2026): totais, atribuições e contas, com as setas de abrir e fechar.
   const niveis = useNiveisDRE(dados.linhas, "sig.cenarios.variacaoMaxima.nivel");
   const escolhido = dados.opcoes.find((o) => o.id === comparado) ?? null;
-  const lidos = Object.fromEntries(Object.entries(limites).map(([c, t]) => [c, lerNumero(t)]));
-  const invalidos = verificadas.filter((l) => lidos[l.codigo] === undefined || (lidos[l.codigo] ?? 0) < 0);
-  const mudou = comparado !== (dados.comparadoCom?.id ?? "") || verificadas.some((l) => (lidos[l.codigo] ?? null) !== l.limite);
-  const comLimite = verificadas.filter((l) => typeof lidos[l.codigo] === "number").length;
+  const lidos = Object.fromEntries(Object.entries(limites).map(([c, t]) => [c, analitico ? t || null : lerNumero(t)]));
+  const invalidos = analitico ? [] : verificadas.filter((l) => lidos[l.codigo] === undefined || ((lidos[l.codigo] as number | null) ?? 0) < 0);
+  const mudou = comparado !== (dados.comparadoCom?.id ?? "") || verificadas.some((l) => (limites[l.codigo] ?? "") !== original(l));
+  const comLimite = verificadas.filter((l) => (analitico ? !!limites[l.codigo] : typeof lidos[l.codigo] === "number")).length;
   // As contas de um total ou de uma atribuição: a variação digitada nele vale para todas elas (14/10/2026).
   const contasDe = (l: LinhaDaVariacao) => (l.verificada ? [l.codigo] : niveis.abaixo(l).filter((x) => x.verificada).map((x) => x.codigo));
   // O campo do total ou da atribuição: a variação das contas dele, quando todas têm a mesma; senão, em branco ("Várias").
@@ -84,14 +91,16 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   const mudar = (l: LinhaDaVariacao, texto: string) => setLimites((atual) => ({ ...atual, ...Object.fromEntries(contasDe(l).map((c) => [c, texto])) }));
   // Sair com o comparativo mudado e não gravado pergunta antes (13/10/2026).
   useAlteracoesPendentes(mudou);
-  const valorTodos = lerNumero(todos);
+  const valorTodos = analitico ? (todos ? 0 : undefined) : lerNumero(todos);
 
   const gravar = useMutation({
     mutationFn: () =>
-      cenariosService.gravarComparativo(id, {
-        comparadoComId: comparado || null,
-        limites: Object.fromEntries(verificadas.map((l) => [l.codigo, (lidos[l.codigo] as number | null) ?? null])),
-      }),
+      cenariosService.gravarComparativo(
+        id,
+        analitico
+          ? { comparadoComId: comparado || null, indices: Object.fromEntries(verificadas.map((l) => [l.codigo, limites[l.codigo] || null])) }
+          : { comparadoComId: comparado || null, limites: Object.fromEntries(verificadas.map((l) => [l.codigo, (lidos[l.codigo] as number | null) ?? null])) },
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
       toast.success(comparado ? "Comparativo gravado." : "Comparativo desligado.");
@@ -130,8 +139,8 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
           </div>
           <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">
             {comparado
-              ? "Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima delas aparecem na aba Justificativas da tela Reajustes."
-              : "Sem cenário comparado, o comparativo fica desligado e a aba Justificativas (tela Reajustes) não aparece. As variações máximas ficam guardadas."}
+              ? `Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima delas aparecem na aba Justificativas da tela ${daTela}.`
+              : `Sem cenário comparado, o comparativo fica desligado e a aba Justificativas (tela ${daTela}) não aparece. ${analitico ? "Os índices das contas ficam guardados." : "As variações máximas ficam guardadas."}`}
           </p>
         </div>
       </section>
@@ -140,23 +149,38 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
         {/* O "Preencher Selecionados" à direita, ao lado do texto (13/10/2026; até 15/10/2026, "Preencher Todos Com"). */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h2 className={TITULO}>Variação Máxima</h2>
+            <h2 className={TITULO}>{analitico ? "Índices de Reajuste" : "Variação Máxima"}</h2>
             <p className="mt-1 text-xs text-gray-600">
-              A variação aceita (em %, para mais ou para menos) em cada conta, na estrutura da DRE vigente. Variações em branco não serão
-              verificadas.
+              {analitico
+                ? "O índice de cada conta, na estrutura da DRE vigente: a variação máxima dele (em %, para mais ou para menos) é a aceita na conta. Os índices se cadastram na aba Índices; contas sem índice não serão verificadas."
+                : "A variação aceita (em %, para mais ou para menos) em cada conta, na estrutura da DRE vigente. Variações em branco não serão verificadas."}
             </p>
+            {analitico && indices.length === 0 ? (
+              <p className="mt-1 text-xs font-medium text-red-700">Nenhum índice cadastrado: inclua os índices na aba Índices.</p>
+            ) : null}
           </div>
           {podeEditar ? (
             <div className="flex shrink-0 items-center gap-2">
               <Label htmlFor="cmp-todos">Preencher Selecionados</Label>
-              <Input id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} placeholder="%" inputMode="decimal" className="w-24 rounded-sm text-right" />
+              {analitico ? (
+                <select id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} className="h-9 max-w-64 rounded-sm border border-gray-300 bg-white px-2 text-sm">
+                  <option value="">Escolha o índice…</option>
+                  {indices.map((i) => (
+                    <option key={i.chave} value={i.chave}>
+                      {rotuloDoIndice(i)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} placeholder="%" inputMode="decimal" className="w-24 rounded-sm text-right" />
+              )}
               <Button
                 type="button"
                 variant="outline"
                 className="rounded-sm"
                 disabled={marcadas.size === 0 || typeof valorTodos !== "number" || valorTodos < 0}
                 title={marcadas.size === 0 ? "Marque as contas (a caixa de um total ou de uma atribuição marca as contas abaixo dele)" : undefined}
-                onClick={() => preencherMarcadas(duasCasas(valorTodos as number))}
+                onClick={() => preencherMarcadas(analitico ? todos : duasCasas(valorTodos as number))}
               >
                 Aplicar
               </Button>
@@ -164,7 +188,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                 type="button"
                 variant="outline"
                 className="rounded-sm"
-                disabled={![...marcadas].some((c) => typeof lidos[c] === "number")}
+                disabled={![...marcadas].some((c) => (analitico ? !!limites[c] : typeof lidos[c] === "number"))}
                 title={marcadas.size === 0 ? "Marque as contas que perdem a variação" : undefined}
                 onClick={() => preencherMarcadas("")}
               >
@@ -190,7 +214,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                     Linha da DRE
                   </span>
                 </th>
-                <th className="w-48 px-4 py-2.5 text-right text-xs font-bold text-gray-600">Variação Máxima (%)</th>
+                <th className={`${analitico ? "w-80" : "w-48"} px-4 py-2.5 text-right text-xs font-bold text-gray-600`}>{analitico ? "Índice de Reajuste" : "Variação Máxima (%)"}</th>
               </tr>
             </thead>
             <tbody>
@@ -211,6 +235,23 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                       </span>
                     </td>
                     <td className="px-4 py-1.5 text-right">
+                      {analitico ? (
+                        <select
+                          aria-label={`Índice de ${l.descricao}`}
+                          title={l.verificada ? undefined : "O índice escolhido vale para todas as contas abaixo"}
+                          value={texto}
+                          onChange={(e) => mudar(l, e.target.value)}
+                          disabled={!podeEditar}
+                          className="ml-auto h-8 w-full max-w-72 rounded-sm border border-gray-300 bg-white px-2 text-sm disabled:opacity-70"
+                        >
+                          <option value="">{varias ? "Vários" : "—"}</option>
+                          {indices.map((i) => (
+                            <option key={i.chave} value={i.chave}>
+                              {rotuloDoIndice(i)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
                       <Input
                         aria-label={`Variação máxima de ${l.descricao}`}
                         title={l.verificada ? undefined : "A variação digitada vale para todas as contas abaixo"}
@@ -226,6 +267,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
                         placeholder={varias ? "Várias" : "—"}
                         className={`ml-auto h-8 w-28 rounded-sm bg-white text-right ${invalido ? "border-red-400" : ""}`}
                       />
+                      )}
                     </td>
                   </tr>
                 );
@@ -243,7 +285,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
           <div className="flex items-center justify-end gap-3">
             <span className="text-xs text-gray-500">
               {marcadas.size ? `${marcadas.size} ${plural(marcadas.size, "conta marcada", "contas marcadas")} · ` : ""}
-              {comLimite} de {verificadas.length} {plural(verificadas.length, "conta", "contas")} com variação máxima.
+              {comLimite} de {verificadas.length} {plural(verificadas.length, "conta", "contas")} com {analitico ? "índice" : "variação máxima"}.
             </span>
             <Button type="button" className={botaoPrimario} disabled={!mudou || invalidos.length > 0 || gravar.isPending} onClick={() => gravar.mutate()}>
               {gravar.isPending ? "Gravando…" : "Gravar Comparativo"}

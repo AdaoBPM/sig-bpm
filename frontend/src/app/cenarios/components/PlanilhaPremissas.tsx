@@ -90,7 +90,7 @@ function ReplicarOuApagarDialog({ id, acao, onFechar }: { id: string; acao: "rep
                 </>
               )}
               <li>Vale para todas as abas das premissas: {ABAS_DA_PLANILHA}.</li>
-              <li>A DRE do cenário se recalcula, e a mudança fica no histórico (tela Reajustes).</li>
+              <li>A DRE do cenário se recalcula, e a mudança fica no histórico (tela Histórico, aba Alterações).</li>
             </ul>
           </DialogDescription>
         </DialogHeader>
@@ -235,7 +235,7 @@ type Item = { id: number; nome: string; estado: "analisando" | "pronto" | "erro"
  * trechos repetidos entre os arquivos (a mesma unidade, o mesmo centro…; 15/10/2026) aparecem num quadro, e o usuário
  * escolhe, em cada um, ignorar o repetido (vale o primeiro arquivo) ou sobrescrever (vale o último); os investimentos
  * não se conferem: os novos entram na sequência. Grava-se só em "Importar", como nas importações do Fechamento Mensal;
- * a importação fica no histórico (tela Reajustes).
+ * a importação fica no histórico (tela Histórico, aba Alterações).
  */
 function ImportarValoresDialog({ id, onFechar }: { id: string; onFechar: () => void }) {
   const queryClient = useQueryClient();

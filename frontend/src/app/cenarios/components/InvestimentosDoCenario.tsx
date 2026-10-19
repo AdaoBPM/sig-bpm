@@ -44,7 +44,7 @@ function ExcluirInvestimentosDialog({ id, investimentos, onFechar }: { id: strin
           <DialogTitle>Excluir Investimentos Selecionados</DialogTitle>
           <DialogDescription>
             {investimentos.length} {plural(investimentos.length, "investimento", "investimentos")}, com o valor total de {reais(total)}. A depreciação {plural(investimentos.length, "dele", "deles")} sai da DRE do
-            cenário, que se recalcula, e a exclusão fica no histórico (tela Reajustes).
+            cenário, que se recalcula, e a exclusão fica no histórico (tela Histórico, aba Alterações).
           </DialogDescription>
         </DialogHeader>
         <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">

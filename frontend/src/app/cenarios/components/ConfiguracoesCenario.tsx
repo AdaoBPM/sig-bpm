@@ -21,6 +21,7 @@ import { useTipoDoCenario } from "./tipoDoCenario";
 import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
 import { botaoPrimario, CampoVisualizacao, Erro, ExcluirCenarioDialog } from "./CenarioDialog";
 import { ComparativoCenario } from "./ComparativoCenario";
+import { IndicesCenario } from "./IndicesCenario";
 import { MarcarCenarioDialog } from "./MarcarCenarioDialog";
 import { ReferenciaAnalitica } from "./ReferenciaAnalitica";
 import { ReferenciaSintetica } from "./ReferenciaSintetica";
@@ -33,7 +34,7 @@ import { useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/component
  * resultado realizado ou outro analítico). Os quadros ocupam a largura da tela, com o
  * destaque amarelo-ouro à esquerda, e as opções ficam uma embaixo da outra, com o texto ao lado (13/10/2026).
  */
-export type AbaDasConfiguracoes = "cenario" | "referencia" | "comparativo" | "manuais";
+export type AbaDasConfiguracoes = "cenario" | "referencia" | "indices" | "comparativo" | "manuais";
 
 export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cenario: Cenario; abaInicial?: AbaDasConfiguracoes }) {
   const queryClient = useQueryClient();
@@ -55,7 +56,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
     !pode(a, "editar") ? `Seu perfil só lê ${oQue}.` : `Este cenário é de ${cenario.criadoPor ?? "outro usuário"}: só quem o criou (ou o Administrador) altera ${oQue}.`;
   const analitico = t.tipo === "ANALITICO";
   // Os Indicadores Manuais, só nos sintéticos (19/10/2026; antes, no Painel de Bordo; nos analíticos, ficam nas Premissas).
-  const abas = (["cenario", "referencia", "comparativo", ...(analitico ? [] : ["manuais"])] as AbaDasConfiguracoes[]).filter((a) => pode(a));
+  // Os Índices de Reajuste, só nos analíticos (19/10/2026), antes do Comparativo, que os usa.
+  const abas = (["cenario", "referencia", ...(analitico ? ["indices"] : []), "comparativo", ...(analitico ? [] : ["manuais"])] as AbaDasConfiguracoes[]).filter((a) => pode(a));
   const aba: AbaDasConfiguracoes | null = abas.includes(escolhida) ? escolhida : (abas[0] ?? null);
   // O Tipo e os Rótulos do gráfico do indicador, os do Painel de Bordo.
   const [tipoGrafico] = useTipoGrafico();
@@ -87,6 +89,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
         abas={[
           { chave: "cenario", rotulo: "Cenário" },
           { chave: "referencia", rotulo: "Referência" },
+          { chave: "indices", rotulo: "Índices" },
           // O comparativo com outro cenário (13/10/2026; antes, a aba Referência da tela Comparativo).
           { chave: "comparativo", rotulo: "Comparativo" },
           { chave: "manuais", rotulo: "Indicadores Manuais" },
@@ -170,6 +173,15 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
             <AvisoMarcado cenario={cenario} oQue="o comparativo" />
           ) : null}
           <ComparativoCenario id={cenario.id} podeEditar={edita("comparativo") && !travado} />
+        </div>
+      ) : aba === "indices" ? (
+        <div className="space-y-4">
+          {!edita("indices") ? (
+            <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">{soLe("indices", "os índices")}</p>
+          ) : travado ? (
+            <AvisoMarcado cenario={cenario} oQue="os índices" />
+          ) : null}
+          <IndicesCenario id={cenario.id} podeEditar={edita("indices") && !travado} />
         </div>
       ) : aba === "manuais" ? (
         <IndicadoresDoCenario id={cenario.id} aba="manuais" tipo={tipoGrafico} comRotulos={comRotulos} />
