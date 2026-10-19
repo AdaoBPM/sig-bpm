@@ -26,6 +26,33 @@ export const LISTAS_INDICADORES = [
   { tipo: "INDICADORES_ADMIN", slug: "administrativo", rotulo: "Administrativo" },
 ] as const;
 
+/**
+ * A aba Quadro de Lotação, depois das dos indicadores (19/10/2026): os colaboradores do mês por centro de custo,
+ * importados da aba de mesmo nome do LISTAS REALIZADO (OPERAÇÃO). O tipo é o da importação (o recorte por setor).
+ */
+export const LISTA_LOTACAO = { tipo: "QUADRO_LOTACAO", slug: "quadro-de-lotacao", rotulo: "Quadro de Lotação" } as const;
+
+export type CentroDaLotacao = {
+  id: string;
+  centroCusto: string;
+  /** O grupo do cadastro Centros de Custo (o dos cenários analíticos); null quando o nome não tem par. */
+  grupo: string | null;
+  unidade: string | null;
+  departamento: string | null;
+  atribuicao: string | null;
+  clt: number;
+  pj: number;
+  total: number;
+  linhaArquivo: number;
+};
+
+export type LotacaoDaLista = {
+  competencia: { id: string; ano: number; mes: number; status: StatusCompetencia };
+  importacao: { nomeArquivo: string; importadoEm: string; cargaRetroativa: boolean } | null;
+  itens: CentroDaLotacao[];
+  totais: { clt: number; pj: number; total: number };
+};
+
 export type IndicadoresDaLista = {
   competencia: { id: string; ano: number; mes: number; status: StatusCompetencia };
   importacao: { nomeArquivo: string; importadoEm: string } | null;
@@ -92,6 +119,10 @@ export const listasService = {
   },
   digitarIndicador: async (anoMes: string, slug: string, nome: string, valor: number) => {
     await api.post(`/proxy/competencias/${anoMes}/listas/indicadores/${slug}`, { nome, valor });
+  },
+  lotacao: async (anoMes: string) => {
+    const { data } = await api.get<{ data: LotacaoDaLista }>(`/proxy/competencias/${anoMes}/listas/quadro-de-lotacao`);
+    return data.data;
   },
   indicadores: async (anoMes: string, slug: string) => {
     const { data } = await api.get<{ data: IndicadoresDaLista }>(`/proxy/competencias/${anoMes}/listas/indicadores/${slug}`);

@@ -13,14 +13,15 @@ import type { GrupoDoCenario } from "./centrosCenario.js";
  *
  * MO Direta Total e MO Indireta Total = Matriz + Filial; MO Geral = Direta + Indireta; Quadro de Lotação Total = todos
  * os grupos. Com eles, as eficiências (volume e receita por colaborador) se calculam como no realizado.
+ *
+ * Na referência realizada (19/10/2026), os colaboradores de cada grupo vêm das listas do Quadro de Lotação dos meses
+ * (listas/lotacaoDosCentros.ts); antes, os quadros realizados (os indicadores) se dividiam entre os grupos pela mão de obra.
  */
 
 export const VENDA_LOTACAO = "LOTACAO";
 
 type Local = "Matriz" | "Filial" | "Montagem";
 type Atribuicao = "Direta" | "Indireta";
-const LOCAIS: Local[] = ["Matriz", "Filial", "Montagem"];
-const ATRIBUICOES: Atribuicao[] = ["Direta", "Indireta"];
 const nomeQuadro = (a: Atribuicao | "Geral", l: Local | "Total") => `Quadro de Lotação: MO ${a} ${l}`;
 export const QUADRO_TOTAL = "Quadro de Lotação Total";
 
@@ -71,62 +72,4 @@ export function quadrosDeLotacao(grupos: Array<Pick<GrupoDoCenario, "grupo" | "g
     });
   }
   return new Map([...QUADROS_DE_LOTACAO].map((nome) => [nome, (somas.get(nome) ?? Array<number>(12).fill(0)).map((v) => (v ? v : null))]));
-}
-
-/** Arredonda as partes para inteiros que somam o total arredondado (o maior resto fica com a sobra). */
-function inteiros(total: number, partes: Map<string, number>) {
-  const alvo = Math.round(total);
-  const soma = [...partes.values()].reduce((s, v) => s + v, 0);
-  const brutos = [...partes].map(([k, v]) => ({ k, v: soma ? (v / soma) * alvo : alvo / partes.size }));
-  const r = new Map(brutos.map((b) => [b.k, Math.floor(b.v)]));
-  let sobra = alvo - [...r.values()].reduce((s, v) => s + v, 0);
-  for (const b of [...brutos].sort((x, y) => y.v - Math.floor(y.v) - (x.v - Math.floor(x.v)))) {
-    if (sobra <= 0) break;
-    r.set(b.k, r.get(b.k)! + 1);
-    sobra--;
-  }
-  return r;
-}
-
-/**
- * A lotação de um mês do realizado nos grupos (14/10/2026, a referência realizada): o realizado não tem os colaboradores
- * por centro, só os quadros (os indicadores); cada quadro de local e atribuição (MO Direta Matriz…) se divide entre os
- * grupos dele pelo peso de cada um (a mão de obra do grupo no mês) e o que o Quadro de Lotação Total tem a mais vai para
- * os grupos de despesas e sem atribuição, em colaboradores inteiros. Devolve a lotação de cada grupo e os quadros sem
- * grupo para recebê-los.
- */
-export function distribuirLotacao(
-  grupos: Array<Pick<GrupoDoCenario, "grupo" | "grupoDRE" | "balde" | "unidade" | "atribuicao">>,
-  quadro: (nome: string) => number | null,
-  pesos: Map<string, number>,
-) {
-  const r = new Map<string, number>();
-  const semGrupo: string[] = [];
-  let classificados = 0;
-  const dividir = (nome: string, total: number, doQuadro: typeof grupos) => {
-    if (!total) return;
-    if (!doQuadro.length) {
-      semGrupo.push(nome);
-      return;
-    }
-    const partes = new Map(doQuadro.map((g) => [g.grupo, Math.max(0, pesos.get(g.grupo) ?? 0)]));
-    for (const [g, v] of inteiros(total, partes)) if (v) r.set(g, (r.get(g) ?? 0) + v);
-  };
-  for (const local of LOCAIS)
-    for (const atribuicao of ATRIBUICOES) {
-      const nome = nomeQuadro(atribuicao, local);
-      const total = quadro(nome) ?? 0;
-      classificados += Math.round(total);
-      dividir(
-        nome,
-        total,
-        grupos.filter((g) => {
-          const q = quadroDoGrupo(g);
-          return q.local === local && q.atribuicao === atribuicao;
-        }),
-      );
-    }
-  const resto = (quadro(QUADRO_TOTAL) ?? 0) - classificados;
-  if (resto > 0) dividir(QUADRO_TOTAL, resto, grupos.filter((g) => !quadroDoGrupo(g).local || !quadroDoGrupo(g).atribuicao));
-  return { lotacao: r, semGrupo };
 }

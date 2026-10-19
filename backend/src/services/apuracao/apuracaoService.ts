@@ -75,6 +75,8 @@ const LISTAS_OBRIGATORIAS: Array<[TipoImportacao, string]> = [
   ["MEDICAO", "Medições"],
   ["DEVOLUCAO", "Devoluções"],
   ["SAIDA", "Saídas"],
+  // 19/10/2026: o quadro de lotação por centro de custo (JAN–AGO/2026 entraram pela carga retroativa).
+  ["QUADRO_LOTACAO", "Quadro de Lotação"],
   ["INDICADORES_ADMIN", "Indicadores do Administrativo"],
   ["INDICADORES_COMERCIAL", "Indicadores do Comercial"],
 ];

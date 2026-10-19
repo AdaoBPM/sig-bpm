@@ -12,6 +12,7 @@ const editar = verificarPermissao("listas_operacionais:editar");
 export const listasDaCompetenciaRoutes = Router({ mergeParams: true });
 listasDaCompetenciaRoutes.get("/indicadores/:setor", autenticacao, ler, asyncHandler(c.indicadores));
 listasDaCompetenciaRoutes.post("/indicadores/:setor", autenticacao, editar, asyncHandler(c.digitarIndicador));
+listasDaCompetenciaRoutes.get("/quadro-de-lotacao", autenticacao, ler, asyncHandler(c.lotacao));
 listasDaCompetenciaRoutes.get("/:tipo", autenticacao, ler, asyncHandler(c.listar));
 listasDaCompetenciaRoutes.post("/:tipo", autenticacao, editar, asyncHandler(c.criar));
 listasDaCompetenciaRoutes.put("/:tipo/:id", autenticacao, editar, asyncHandler(c.atualizar));

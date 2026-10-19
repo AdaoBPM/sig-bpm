@@ -44,6 +44,7 @@ export const TIPOS: Array<{ valor: string; rotulo: string; disponivel: boolean; 
   { valor: "MEDICAO", rotulo: "Medições", disponivel: true, origem: `aba Medições do ${LISTAS}` },
   { valor: "DEVOLUCAO", rotulo: "Devoluções", disponivel: true, origem: `aba Devoluções (Resumo) do ${LISTAS}: por obra, linha e movimento` },
   { valor: "SAIDA", rotulo: "Saídas", disponivel: true, origem: `aba Saídas (Resumo) do ${LISTAS}: por obra, linha e movimento` },
+  { valor: "QUADRO_LOTACAO", rotulo: "Quadro de Lotação", disponivel: true, origem: `aba Quadro de Lotação do ${LISTAS}: os colaboradores do mês (CLT e PJ) por centro de custo, a referência do quadro de lotação dos Cenários Analíticos. Vão para a aba Quadro de Lotação das Listas; não entram na apuração nem nos indicadores de quadro de lotação (esses seguem a aba Indicadores (Admin.))` },
   { valor: "INDICADORES_ADMIN", rotulo: "Indicadores do Administrativo", disponivel: true, origem: `aba Indicadores (Admin.) do ${LISTAS}: quadro de lotação, fluxo de caixa, inadimplência, turnover, vagas e acidentes, na coluna do mês. Vão para a tela Indicadores; não entram na apuração` },
   { valor: "INDICADORES_COMERCIAL", rotulo: "Indicadores do Comercial", disponivel: true, origem: "aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL: vendas, receita líquida vendida, margem de contribuição, demanda e mix ampliado, na coluna do mês. Vão para a tela Indicadores; não entram na apuração" },
   // As Metas do Orçamento saíram da importação do mês (11/10/2026): ficam nos cenários (Cenários Sintéticos).

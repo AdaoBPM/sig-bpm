@@ -11,6 +11,7 @@ import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { localizarCabecalho } from "./listas/leituraListas.js";
 import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
+import { ABA_LOTACAO, lerLotacao, ROTULO_LOTACAO } from "./lotacao/leituraLotacao.js";
 import { escolherAba } from "./statusImportacao.js";
 import { plural } from "../../utils/plural.js";
 
@@ -133,6 +134,23 @@ const TIPOS: Tipo[] = [
     },
   },
   ...listas,
+  // Os colaboradores do mês por centro de custo (19/10/2026): a referência do quadro de lotação dos cenários analíticos.
+  {
+    tipo: "QUADRO_LOTACAO",
+    rotulo: ROTULO_LOTACAO,
+    abas: [ABA_LOTACAO],
+    alcance: "POR_MES",
+    ler(linhas, ano, mes) {
+      const l = lerLotacao(linhas, ano, mes);
+      if (!l.ok) throw new AbaInvalida(l.motivo);
+      if (l.itens.length === 0 && l.rejeicoes.length === 0) return null;
+      return {
+        registros: l.itens.length,
+        assinatura: assinar([...l.itens, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+        avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
+      };
+    },
+  },
   ...indicadores,
   // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do LISTAS REALIZADO (RESULTADOS) em 15/10/2026: o
   // balancete detalhado (CLI_FORN, EMISSAO e HISTORICO) traz o que elas traziam. As importações antigas ficam no histórico.

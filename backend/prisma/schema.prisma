@@ -659,6 +659,8 @@ enum TipoImportacao {
   REQUISICOES
   /// Os itens das notas fiscais do mês: aba Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS) (11/10/2026).
   NOTAS_FISCAIS
+  /// Os colaboradores do mês por centro de custo: aba Quadro de Lotação do LISTAS REALIZADO (OPERAÇÃO) (19/10/2026).
+  QUADRO_LOTACAO
 }
 
 /// ENUM: estado do processamento de uma importação.
@@ -727,6 +729,7 @@ model Competencia {
   requisicoes           RequisicaoItem[]
   notasFiscais          NotaFiscalItem[]
   indicadoresDigitados  IndicadorDigitado[]
+  lotacoes              LotacaoCentro[]
 
   projetos            Projeto[]
   producoes           Producao[]
@@ -819,6 +822,7 @@ model Importacao {
   metas           MetaImportada[]
   requisicoes     RequisicaoItem[]
   notasFiscais    NotaFiscalItem[]
+  lotacoes        LotacaoCentro[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -2209,6 +2213,32 @@ model RequisicaoItem {
   @@index([competenciaId, contaContabil])
   @@index([importacaoId])
   @@map("requisicoes_itens")
+}
+
+/// Os colaboradores do mês num centro de custo (aba Quadro de Lotação do LISTAS REALIZADO (OPERAÇÃO), 19/10/2026): a
+/// referência do quadro de lotação realizado por centro nos cenários analíticos. Não entra na apuração nem nos
+/// indicadores de quadro de lotação do mês (esses seguem a aba Indicadores (Admin.)).
+model LotacaoCentro {
+  id            String  @id @default(uuid())
+  competenciaId String  @map("competencia_id")
+  importacaoId  String  @map("importacao_id")
+  /// O centro de custo como veio na aba (o nome da controladoria: o grupo do cadastro Centros de Custo).
+  centroCusto   String  @map("centro_custo")
+  unidade       String?
+  departamento  String?
+  atribuicao    String?
+  clt           Int
+  pj            Int
+  /// CLT + PJ.
+  total         Int
+  linhaArquivo  Int     @map("linha_arquivo")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+
+  @@index([competenciaId])
+  @@index([importacaoId])
+  @@map("lotacoes_centros")
 }
 
 /// Um item de nota fiscal do mês (aba Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), 11/10/2026).

@@ -11,7 +11,8 @@ import { diasUteis, pascoa } from "../src/services/cenarios/calendario.js";
 import { calcularTabela, linhasDaTabela } from "../src/services/cenarios/premissasCenario.js";
 import { alocarCentros, contasDoGrupo, percentuaisDasBases, rateiosSemBase } from "../src/services/cenarios/centrosCenario.js";
 import { dividirPorLinhas, linhaDaTarefa, mediaDosMeses, mediaNosMesesComOcorrencia, vendaDaObra } from "../src/services/cenarios/referenciaAnalitico.js";
-import { distribuirLotacao, quadroDoGrupo, quadrosDeLotacao } from "../src/services/cenarios/lotacaoCenario.js";
+import { quadroDoGrupo, quadrosDeLotacao } from "../src/services/cenarios/lotacaoCenario.js";
+import { grupoDaLotacao } from "../src/services/listas/lotacaoDosCentros.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
 import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
 import { Prisma } from "../src/generated/prisma/client.js";
@@ -547,18 +548,13 @@ describe("quadro de lotação dos cenários analíticos (14/10/2026)", () => {
     assert.equal(q.size, 13);
   });
 
-  it("a referência divide cada quadro realizado entre os grupos dele pela mão de obra, em inteiros; o que sobra do Total vai para as despesas", () => {
-    const real: Record<string, number> = { "Quadro de Lotação: MO Direta Matriz": 10, "Quadro de Lotação: MO Indireta Matriz": 3, "Quadro de Lotação Total": 20 };
-    const grupos = [...GRUPOS, g("ACABAMENTO", "CPP", "MATRIZ", "DIRETA")];
-    const r = distribuirLotacao(grupos, (n) => real[n] ?? null, new Map([["ESTRUTURA", 2000], ["ACABAMENTO", 1000], ["FINANCEIRO", 500]]));
-    // 10 × 2/3 = 6,67 e 3,33: 7 e 3 (a sobra fica com o maior resto).
-    assert.equal(r.lotacao.get("ESTRUTURA"), 7);
-    assert.equal(r.lotacao.get("ACABAMENTO"), 3);
-    // A Indireta da Matriz sem peso: o único grupo dela fica com tudo.
-    assert.equal(r.lotacao.get("PCP (CRI)"), 3);
-    // O Total (20) − os classificados (13) = 7, entre as despesas e os sem atribuição pela mão de obra: só o Financeiro tem.
-    assert.equal(r.lotacao.get("FINANCEIRO"), 7);
-    assert.equal(r.lotacao.has("VEICULOS"), false);
-    assert.deepEqual(r.semGrupo, []);
+  it("a referência acha o grupo de cada centro da aba Quadro de Lotação: sem acentos e maiúsculas, e os três apelidos", () => {
+    const grupos = ["ESTACAS", "CONSOLES", "GENTE E GESTÃO", "SEGURANÇA (CRI)", "LABORATÓRIO", "LABORATÓRIO (CRI)"];
+    assert.equal(grupoDaLotacao("ESTACA", grupos), "ESTACAS");
+    assert.equal(grupoDaLotacao("CONSOLO (CRI)", grupos), "CONSOLES");
+    assert.equal(grupoDaLotacao("GENTE E GESTÃO (CRI)", grupos), "GENTE E GESTÃO");
+    assert.equal(grupoDaLotacao(" seguranca  (cri) ", grupos), "SEGURANÇA (CRI)");
+    assert.equal(grupoDaLotacao("LABORATÓRIO", grupos), "LABORATÓRIO");
+    assert.equal(grupoDaLotacao("TURN KEY - ADM", grupos), null);
   });
 });

@@ -22,9 +22,10 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { AvisoCongelado } from "../../../components/AvisoCongelado";
 import { inteiro, lerAnoMes } from "../../utils/formatacao";
 import { ListaIndicadores } from "../components/ListaIndicadores";
+import { ListaLotacao } from "../components/ListaLotacao";
 import { useAbasDasListas } from "../components/useAbasDasListas";
 import { RegistroListaDialog } from "../components/RegistroListaDialog";
-import { LISTAS, LISTAS_INDICADORES, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
+import { LISTA_LOTACAO, LISTAS, LISTAS_INDICADORES, listasService, mensagemDeErro, type RegistroLista } from "../services/listasService";
 
 const POR_PAGINA_INICIAL = 50;
 /** A lista inteira vem de uma vez: o filtro e a ordem das colunas valem para todos os registros. */
@@ -108,6 +109,7 @@ function colunasDepois(tipo: string): Coluna<RegistroLista>[] {
 export function ListaContent() {
   const { tipo } = useParams<{ tipo: string }>();
   if (LISTAS_INDICADORES.some((l) => l.slug === tipo)) return <ListaIndicadores key={tipo} />;
+  if (tipo === LISTA_LOTACAO.slug) return <ListaLotacao />;
   return <Lista key={tipo} />;
 }
 

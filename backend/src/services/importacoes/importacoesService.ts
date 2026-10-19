@@ -12,6 +12,7 @@ import { DEFINICOES_INDICADORES, ehTipoIndicadores } from "./indicadores/leitura
 import { processarIndicadores } from "./indicadores/processarIndicadores.js";
 import { DEFINICOES_DOCUMENTOS, ehTipoDocumentos } from "./documentos/leituraDocumentos.js";
 import { processarDocumentos } from "./documentos/processarDocumentos.js";
+import { processarLotacao } from "./lotacao/processarLotacao.js";
 import { DEFINICOES_LISTAS } from "./listas/definicoesListas.js";
 import { DEFINICOES_LISTAS_RECEITA } from "./listas/definicoesListasReceita.js";
 import { ehListaOperacional, processarLista } from "./listas/processarLista.js";
@@ -50,6 +51,8 @@ const TIPOS_DISPONIVEIS: TipoImportacao[] = [
   ...(Object.keys(DEFINICOES_LISTAS_RECEITA) as TipoImportacao[]),
   // As requisições e as notas fiscais do mês (11/10/2026): o extrato das contas na DRE.
   ...(Object.keys(DEFINICOES_DOCUMENTOS) as TipoImportacao[]),
+  // Os colaboradores do mês por centro de custo (19/10/2026).
+  "QUADRO_LOTACAO",
 ];
 
 function rotulo(ano: number, mes: number) {
@@ -218,7 +221,9 @@ export const importacoesService = {
                 ? processarIndicadores(importacao.id)
                 : ehTipoDocumentos(importacao.tipo)
                   ? processarDocumentos(importacao.id)
-                  : processarBalancete(importacao.id));
+                  : importacao.tipo === "QUADRO_LOTACAO"
+                    ? processarLotacao(importacao.id)
+                    : processarBalancete(importacao.id));
       } finally {
         // Auditoria (Passo 23): o arquivo, o que ele substituiu e o resultado do processamento.
         const fim = await getPrismaClient().importacao.findUnique({

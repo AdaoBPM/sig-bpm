@@ -6,6 +6,7 @@ import { alcancaLista } from "../../services/acesso/acesso.js";
 import { ehListaRateio, type TipoListaRateio } from "../../services/importacoes/listas/definicoesListas.js";
 import { digitarIndicador, ehSetorIndicadores, indicadoresDaLista, SETORES_INDICADORES } from "../../services/listas/indicadoresDasListas.js";
 import { listasService, RegraListaError } from "../../services/listas/listasService.js";
+import { lotacaoDaLista } from "../../services/listas/lotacaoDosCentros.js";
 
 const filtroSchema = z.object({
   busca: z.string().trim().max(120).optional(),
@@ -80,6 +81,18 @@ export const listasController = {
     try {
       await digitarIndicador(setor, c.ano, c.mes, corpo.data.nome, corpo.data.valor, request.user!.sub);
       return response.status(201).json({ data: { ok: true } });
+    } catch (error) {
+      return responderRegra(response, error);
+    }
+  },
+
+  /** Aba Quadro de Lotação: os colaboradores do mês por centro de custo, importados da aba de mesmo nome. */
+  async lotacao(request: Request, response: Response) {
+    if (!alcancaLista(request.user!.acesso, "QUADRO_LOTACAO")) return response.status(403).json({ error: "Esta lista não é de um setor seu." });
+    const c = competencia(request, response);
+    if (!c) return;
+    try {
+      return response.json({ data: await lotacaoDaLista(c.ano, c.mes) });
     } catch (error) {
       return responderRegra(response, error);
     }

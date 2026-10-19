@@ -213,8 +213,9 @@ export function PremissasContent() {
               ou Indireta pela atribuição mais comum dos centros dele; Matriz ou Filial pelo balde (o Unidade e os de rateio, pela filial em que os
               centros mais lançaram); Montagem nos grupos dos custos de montagem; as despesas e os grupos sem atribuição entram só no Quadro de Lotação
               Total. MO Direta Total e MO Indireta Total são Matriz + Filial, e MO Geral, Direta + Indireta; com eles se calculam as eficiências. Na
-              referência realizada, que só tem os quadros (não os colaboradores por centro), cada quadro se divide entre os grupos dele pela mão de
-              obra de cada um no mês, em colaboradores inteiros, e o que o Quadro de Lotação Total tem a mais vai para as despesas.
+              referência realizada, o Quadro de Lotação de cada grupo vem da lista Quadro de Lotação dos meses (Listas do mês; a aba de mesmo nome do
+              LISTAS REALIZADO (OPERAÇÃO)): a soma dos centros de custo do grupo em cada mês fechado, e a Média de Referência é a soma nos meses com a
+              lista ÷ o número deles. Os indicadores de quadro de lotação do realizado (aba Indicadores (Admin.)) não entram.
             </p>
             <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil

@@ -68,7 +68,8 @@ import {
 } from "./investimentosCenario.js";
 import { mediaDosMeses, mediaNosMesesComOcorrencia, referenciaDoRealizado } from "./referenciaAnalitico.js";
 import { diferencasDasDecisoes, lerRealocacoes, type Realocacoes } from "./realocacoesCenario.js";
-import { distribuirLotacao, QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } from "./lotacaoCenario.js";
+import { QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } from "./lotacaoCenario.js";
+import { lotacaoDosGrupos } from "../listas/lotacaoDosCentros.js";
 import { assinaturaDasRegras, avisosDosRateios, bloqueioPorRateios, mesesDoAno, percentuaisPelasRegras, regrasDeRateio, type RegraDoMes } from "../volumes/vigenciaDosRateios.js";
 
 /**
@@ -993,6 +994,27 @@ export const cenariosService = {
       return media ? medias : [...medias, ...xs];
     };
     const decimal = (v: number) => new Prisma.Decimal(v.toFixed(4));
+    // O quadro de lotação dos grupos (19/10/2026): os colaboradores de cada grupo nas listas do Quadro de Lotação (a aba
+    // de mesmo nome do LISTAS REALIZADO (OPERAÇÃO), nas Listas do mês) das competências do período — a soma dos centros
+    // da aba de cada grupo. A Média de Referência (o mês 0) é a soma nos meses com a lista ÷ o número deles; no Mês a
+    // Mês, também cada mês fechado no seu mês. Os indicadores de quadro de lotação do realizado não entram.
+    const lotacao: Array<{ cenarioId: string; unidade: number; venda: string; chave: string; mes: number; valor: Prisma.Decimal }> = [];
+    {
+      const { porCompetencia, semGrupo } = await lotacaoDosGrupos(fechadas.map((f) => f.id), grupos.map((g) => g.grupo));
+      const comLista = fechadas.filter((f) => porCompetencia.has(f.id));
+      const somas = new Map<string, number>();
+      for (const f of comLista)
+        for (const [grupo, v] of porCompetencia.get(f.id)!) {
+          somas.set(grupo, (somas.get(grupo) ?? 0) + v);
+          if (!media) lotacao.push({ cenarioId: id, unidade: 0, venda: VENDA_LOTACAO, chave: grupo, mes: f.mes, valor: new Prisma.Decimal(v) });
+        }
+      for (const [grupo, soma] of somas) lotacao.push({ cenarioId: id, unidade: 0, venda: VENDA_LOTACAO, chave: grupo, mes: 0, valor: decimal(soma / comLista.length) });
+      const semLista = fechadas.filter((f) => !porCompetencia.has(f.id)).map((f) => `${String(f.mes).padStart(2, "0")}/${ano}`);
+      if (!comLista.length) ref.avisos.push("Nenhum mês do período tem a lista do Quadro de Lotação (Listas do mês): o quadro de lotação dos grupos fica em branco.");
+      else if (semLista.length)
+        ref.avisos.push(`Sem a lista do Quadro de Lotação em ${semLista.join(", ")}: o quadro de lotação desses meses fica em branco, e a Média de Referência é a dos outros meses.`);
+      if (semGrupo.size) ref.avisos.push(`Quadro de lotação de centros de custo sem grupo no cadastro Centros de Custo (fica fora do cenário): ${[...semGrupo.keys()].join(", ")}.`);
+    }
     await prisma.$transaction(
       async (tx) => {
         await tx.cenarioPremissa.deleteMany({ where: { cenarioId: id } });
@@ -1022,29 +1044,8 @@ export const cenariosService = {
           return linhaDREId && Math.abs(x.valor) >= 0.00005 ? [{ cenarioId: id, grupo: x.grupo, linhaDREId, mes: x.mes, valor: decimal(x.valor) }] : [];
         });
         await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote }));
-        // O quadro de lotação dos grupos (14/10/2026): o realizado só tem os quadros (os indicadores), que se dividem
-        // entre os grupos de cada um pela mão de obra deles no mês.
-        const quadrosRealizados = new Map(realizados.indicadores.filter((i) => QUADROS_DE_LOTACAO.has(i.nome)).map((i) => [i.nome, i.meses]));
-        // O mês 0 é a Média de Referência (a média do período); no Mês a Mês, também cada mês fechado (15/10/2026).
-        const doQuadro = (nome: string, mes: number) => {
-          const vs = quadrosRealizados.get(nome) ?? [];
-          if (mes > 0) return vs[mes - 1] ?? null;
-          const doPeriodo = fechadas.map((f) => vs[f.mes - 1]).filter((v): v is number => v !== null && v !== undefined && Number.isFinite(v));
-          return doPeriodo.length ? doPeriodo.reduce((s, v) => s + v, 0) / doPeriodo.length : null;
-        };
-        const lotacao: Array<{ cenarioId: string; unidade: number; venda: string; chave: string; mes: number; valor: Prisma.Decimal }> = [];
-        const semGrupo = new Set<string>();
-        for (const mes of [0, ...(media ? [] : fechadas.map((f) => f.mes))]) {
-          const pesos = new Map<string, number>();
-          for (const x of centros) if (x.mes === mes) {
-            const codigo = [...idDaConta].find(([, i]) => i === x.linhaDREId)?.[0] ?? "";
-            if (/\.MO[DI]\./.test(codigo)) pesos.set(x.grupo, (pesos.get(x.grupo) ?? 0) + Number(x.valor));
-          }
-          const r = distribuirLotacao(grupos, (nome) => doQuadro(nome, mes), pesos);
-          r.semGrupo.forEach((n) => semGrupo.add(n));
-          for (const [chave, v] of r.lotacao) lotacao.push({ cenarioId: id, unidade: 0, venda: VENDA_LOTACAO, chave, mes, valor: new Prisma.Decimal(v) });
-        }
-        if (semGrupo.size) ref.avisos.push(`Quadro de lotação sem grupo de centros de custo para recebê-lo: ${[...semGrupo].join(", ")}.`);
+        // O quadro de lotação dos grupos (19/10/2026; antes, os indicadores divididos pela mão de obra dos grupos): as
+        // listas do Quadro de Lotação dos meses do período (lotacaoDosGrupos, calculada antes da transação).
         await gravarEmLotes(lotacao, (lote) => tx.cenarioPremissa.createMany({ data: lote }));
         await tx.cenarioIndicador.deleteMany({ where: { cenarioId: id } });
         // Os indicadores: a Média de Referência (o mês 0, a média dos meses do período com valor) e, no Mês a Mês, os

@@ -613,6 +613,28 @@ function ConcluidaDocumentos({ imp }: { imp: ImportacaoDetalhe }) {
   );
 }
 
+function ConcluidaLotacao({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as { aba: string; centros: number; clt: number; pj: number; total: number; zerados: number; modo?: string } | null;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Centros de Custo" valor={imp.linhasAceitas} destaque="ok" detalhe={resumo ? `${resumo.total.toLocaleString("pt-BR")} ${plural(resumo.total, "colaborador", "colaboradores")}` : undefined} />
+        <Contador rotulo="CLT" valor={resumo?.clt ?? 0} />
+        <Contador rotulo="PJ" valor={resumo?.pj ?? 0} />
+        <Contador rotulo="Rejeitadas" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
+      </div>
+      {resumo ? (
+        <p className="text-sm text-gray-600">
+          Aba lida: {resumo.aba}.{resumo.modo === "CARGA_RETROATIVA" ? " Carga retroativa (19/10/2026), sem reabrir a competência." : ""} Os centros aparecem na aba Quadro de
+          Lotação das Listas e são a referência do quadro de lotação dos Cenários Analíticos; não entram na apuração nem nos indicadores de quadro de
+          lotação (esses seguem a aba Indicadores (Admin.)).
+        </p>
+      ) : null}
+      <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />
+    </div>
+  );
+}
+
 function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
   const resumo = imp.resumo as ResumoIndicadores | null;
   const metas = imp.tipo === "METAS_ORCAMENTO";
@@ -735,6 +757,8 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
           <ConcluidaIndicadores imp={imp} />
         ) : imp.tipo === "REQUISICOES" || imp.tipo === "NOTAS_FISCAIS" ? (
           <ConcluidaDocumentos imp={imp} />
+        ) : imp.tipo === "QUADRO_LOTACAO" ? (
+          <ConcluidaLotacao imp={imp} />
         ) : (
           <ConcluidaLista imp={imp} />
         )

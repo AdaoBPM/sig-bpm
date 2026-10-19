@@ -229,6 +229,7 @@ const ARQUIVOS_DE_IMPORTACAO = [
       "Medições",
       "Devoluções (Resumo)",
       "Saídas (Resumo)",
+      "Quadro de Lotação",
       "Indicadores (Admin.)",
       "Estoque (2025)",
     ],
