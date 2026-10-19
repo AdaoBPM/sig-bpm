@@ -33,8 +33,7 @@ export function CenarioPainelContent() {
   useRegistrarAcessoTela(`${t.base}/${id}/painel`);
   const { hasPermission } = usePermissions();
   const [ate, setAte] = useState(12);
-  // As abas Metas, Indicadores de Resultados e Indicadores Manuais, depois de Performance (19/10/2026; antes, a tela
-  // Indicadores), as que o perfil lê.
+  // A aba Indicadores, depois de Performance (19/10/2026; antes, a tela Indicadores), se o perfil a lê.
   const abasDosIndicadores = useAbasDosIndicadoresDoCenario();
   // A aba pedida no endereço (?aba=indicadores, o endereço antigo da tela Indicadores: a primeira delas).
   const pedida = useSearchParams().get("aba");
@@ -59,15 +58,14 @@ export function CenarioPainelContent() {
               ficam antes do botão.
             </li>
             <li>
-              Troque entre as abas Resultados e Performance (os unitários) e as dos indicadores: Metas, Indicadores de Resultados e Indicadores
-              Manuais (antes, a tela Indicadores). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).
+              Troque entre as abas Resultados e Performance (os unitários) e Indicadores (antes, a tela Indicadores). Aparecem só as abas que o seu
+              perfil lê (Controle de Usuários / Perfis).
             </li>
             <li>
-              Nas abas dos indicadores, os indicadores do cenário mês a mês e acumulados, com a coluna Comparado Acum. (o acumulado do cenário
-              comparado): Metas (o compilado: os Indicadores de Resultados e os Indicadores Manuais, com as eficiências calculadas e os importados;
-              é o orçado de Resultados Empresariais quando o cenário é o Orçamento Empresarial), Indicadores de Resultados (os de Produção e
-              Serviços que saem da DRE do cenário) e Indicadores Manuais (os quadros de lotação e os do Comercial e do Administrativo, que se digitam{" "}
-              {analitico ? "na tela Premissas, aba Indicadores Manuais" : "clicando na linha"}; as células digitadas ficam em amarelo). Clique num
+              Na aba Indicadores, todos os indicadores do cenário mês a mês e acumulados, com a coluna Comparado Acum. (o acumulado do cenário
+              comparado): os que saem da DRE do cenário e os Indicadores Manuais (os quadros de lotação e os do Comercial e do Administrativo, que
+              se digitam {analitico ? "na tela Premissas, aba Indicadores Manuais" : "na tela Configurações, aba Indicadores Manuais"}), com as
+              eficiências calculadas e os importados. É o orçado de Resultados Empresariais quando o cenário é o Orçamento Empresarial. Clique num
               indicador para ver o gráfico dele (o cenário e o comparado), no Tipo e com os Rótulos do Configurar Gráficos daqui.
             </li>
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>

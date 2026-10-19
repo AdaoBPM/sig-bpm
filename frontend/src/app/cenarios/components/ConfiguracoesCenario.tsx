@@ -24,6 +24,8 @@ import { ComparativoCenario } from "./ComparativoCenario";
 import { MarcarCenarioDialog } from "./MarcarCenarioDialog";
 import { ReferenciaAnalitica } from "./ReferenciaAnalitica";
 import { ReferenciaSintetica } from "./ReferenciaSintetica";
+import { IndicadoresDoCenario } from "../sinteticos/[id]/indicadores/CenarioIndicadoresContent";
+import { useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 /**
  * As configurações do cenário, em duas abas (12/10/2026; antes, dois quadros lado a lado): Cenário (nome, descrição,
@@ -31,7 +33,7 @@ import { ReferenciaSintetica } from "./ReferenciaSintetica";
  * resultado realizado ou outro analítico). Os quadros ocupam a largura da tela, com o
  * destaque amarelo-ouro à esquerda, e as opções ficam uma embaixo da outra, com o texto ao lado (13/10/2026).
  */
-export type AbaDasConfiguracoes = "cenario" | "referencia" | "comparativo";
+export type AbaDasConfiguracoes = "cenario" | "referencia" | "comparativo" | "manuais";
 
 export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cenario: Cenario; abaInicial?: AbaDasConfiguracoes }) {
   const queryClient = useQueryClient();
@@ -51,9 +53,13 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
   const travado = estaTravado(cenario);
   const soLe = (a: AbaDasConfiguracoes, oQue: string) =>
     !pode(a, "editar") ? `Seu perfil só lê ${oQue}.` : `Este cenário é de ${cenario.criadoPor ?? "outro usuário"}: só quem o criou (ou o Administrador) altera ${oQue}.`;
-  const abas = (["cenario", "referencia", "comparativo"] as AbaDasConfiguracoes[]).filter((a) => pode(a));
-  const aba: AbaDasConfiguracoes | null = abas.includes(escolhida) ? escolhida : (abas[0] ?? null);
   const analitico = t.tipo === "ANALITICO";
+  // Os Indicadores Manuais, só nos sintéticos (19/10/2026; antes, no Painel de Bordo; nos analíticos, ficam nas Premissas).
+  const abas = (["cenario", "referencia", "comparativo", ...(analitico ? [] : ["manuais"])] as AbaDasConfiguracoes[]).filter((a) => pode(a));
+  const aba: AbaDasConfiguracoes | null = abas.includes(escolhida) ? escolhida : (abas[0] ?? null);
+  // O Tipo e os Rótulos do gráfico do indicador, os do Painel de Bordo.
+  const [tipoGrafico] = useTipoGrafico();
+  const [comRotulos] = useRotulosDosValores();
   // A marcação vale para os dois tipos (uma só por vez): o diálogo de marcar olha os sintéticos e os analíticos.
   const sinteticos = useQuery({ queryKey: ["cenarios", "SINTETICO"], queryFn: () => cenariosService.listar("SINTETICO") });
   const analiticos = useQuery({ queryKey: ["cenarios", "ANALITICO"], queryFn: () => cenariosService.listar("ANALITICO"), retry: false });
@@ -83,6 +89,7 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
           { chave: "referencia", rotulo: "Referência" },
           // O comparativo com outro cenário (13/10/2026; antes, a aba Referência da tela Comparativo).
           { chave: "comparativo", rotulo: "Comparativo" },
+          { chave: "manuais", rotulo: "Indicadores Manuais" },
         ].filter((a) => abas.includes(a.chave as AbaDasConfiguracoes))}
       />
       {aba === null ? (
@@ -164,6 +171,8 @@ export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cena
           ) : null}
           <ComparativoCenario id={cenario.id} podeEditar={edita("comparativo") && !travado} />
         </div>
+      ) : aba === "manuais" ? (
+        <IndicadoresDoCenario id={cenario.id} aba="manuais" tipo={tipoGrafico} comRotulos={comRotulos} />
       ) : analitico ? (
         // A referência dos analíticos (14/10/2026): o realizado (com as Médias de Referência e os centros de custo) ou outro analítico.
         <ReferenciaAnalitica cenario={cenario} podeEditar={edita("referencia")} aviso={soLe("referencia", "a referência")} />

@@ -422,18 +422,19 @@ export const cenariosController = {
   },
 
   /**
-   * Os indicadores do cenário, só os das abas permitidas (14/10/2026): as Metas são todos; os Indicadores de Resultados,
-   * os da DRE; os Indicadores Manuais, os manuais (no analítico, também pela aba das Premissas).
+   * Os indicadores do cenário, só os das abas permitidas (14/10/2026): a aba Indicadores do Painel de Bordo traz todos; a
+   * dos Indicadores Manuais (Configurações, nos sintéticos; Premissas, nos analíticos), os manuais.
    */
   indicadores(request: Request, response: Response) {
     const c = id(request, response);
     if (!c) return;
     const base = String(response.locals.areaDoCenario ?? "cenarios");
     const tem = (p: string) => request.user!.permissions.includes(`${p}:ler`);
-    // As abas dos Indicadores dentro do Painel de Bordo (19/10/2026).
+    // A aba Indicadores do Painel de Bordo traz todos; os Indicadores Manuais, a aba deles (19/10/2026: nos sintéticos, na
+    // tela Configurações; nos analíticos, nas Premissas).
     const todas = tem(`${base}_painel.metas`);
-    const resultados = todas || tem(`${base}_painel.indicadores_resultados`);
-    const manuais = todas || tem(`${base}_painel.manuais`) || (base === "cenarios_analiticos" && tem(`${base}_premissas.manuais`));
+    const resultados = todas;
+    const manuais = todas || tem(`${base}_${base === "cenarios_analiticos" ? "premissas" : "configuracoes"}.manuais`);
     return responder(response, async () => {
       const r = await cenariosService.indicadores(c, usuario(request));
       return { ...r, indicadores: todas ? r.indicadores : r.indicadores.filter((i) => (i.classe === "MANUAL" ? manuais : i.classe === "RESULTADO" ? resultados : false)) };

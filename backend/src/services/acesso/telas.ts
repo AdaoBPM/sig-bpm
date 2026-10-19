@@ -41,6 +41,8 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
         { codigo: "cenario", nome: "Cenário" },
         { codigo: "referencia", nome: "Referência" },
         { codigo: "comparativo", nome: "Comparativo" },
+        // Os Indicadores Manuais dos sintéticos (19/10/2026; antes, no Painel de Bordo); nos analíticos, nas Premissas.
+        ...(analitico ? [] : [{ codigo: "manuais", nome: "Indicadores Manuais" }]),
       ],
     },
     ...(analitico
@@ -62,18 +64,9 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
         ]
       : []),
     { codigo: `${base}_resultados`, nome: "Resultados", abas: UNIDADES },
-    // As abas Metas, Indicadores de Resultados e Indicadores Manuais no Painel de Bordo, depois de Performance (19/10/2026;
-    // antes, a tela Indicadores).
-    {
-      codigo: `${base}_painel`,
-      nome: "Painel de Bordo",
-      abas: [
-        ...PAINEL,
-        { codigo: "metas", nome: "Metas" },
-        { codigo: "indicadores_resultados", nome: "Indicadores de Resultados" },
-        { codigo: "manuais", nome: "Indicadores Manuais" },
-      ],
-    },
+    // A aba Indicadores no Painel de Bordo, depois de Performance (19/10/2026; antes, a tela Indicadores e, por um dia, a
+    // aba Metas; a chave continua `metas`): todos os indicadores do cenário.
+    { codigo: `${base}_painel`, nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "metas", nome: "Indicadores" }] },
     {
       codigo: `${base}_reajustes`,
       nome: "Reajustes",
