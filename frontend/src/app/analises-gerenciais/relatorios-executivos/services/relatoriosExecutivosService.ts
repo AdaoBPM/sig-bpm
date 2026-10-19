@@ -49,7 +49,16 @@ export type Bloco = Posicao &
       }
     | { tipo: "INDICADOR"; nome: string }
     /** O título da anotação (16/10/2026); sem ele, o nome da nota. */
-    | { tipo: "ANOTACAO"; nota: Nota; texto: string; titulo?: string; /** O texto formatado (17/10/2026), em HTML; `texto` fica com o texto simples. */ html?: string }
+    | {
+        tipo: "ANOTACAO";
+        nota: Nota;
+        texto: string;
+        titulo?: string;
+        /** O texto formatado (17/10/2026), em HTML; `texto` fica com o texto simples. */
+        html?: string;
+        /** O tamanho da fonte do título, em px (19/10/2026); sem ele, 12. */
+        tamanhoTitulo?: number;
+      }
     /** Uma foto (16/10/2026): o arquivo, guardado no servidor, a legenda e a proporção (largura ÷ altura). */
     | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
   );

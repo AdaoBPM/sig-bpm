@@ -128,6 +128,9 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
 /** Os tamanhos da fonte, em px (17/10/2026: numerados na barra). O texto das anotações e das legendas é de 14 (o padrão, com asterisco na lista). */
 export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36];
 export const TAMANHO_PADRAO = 14;
+/** Os tamanhos do título das anotações (19/10/2026): o padrão é 12 (o de antes, em maiúsculas e negrito). */
+export const TAMANHOS_DO_TITULO = [12, 14, 16, 18, 20, 24, 28, 32];
+export const TAMANHO_DO_TITULO = 12;
 
 /** O tamanho, em px, do texto onde está a seleção (ou do campo, sem seleção nele). */
 function tamanhoDaSelecao(campo: HTMLElement) {
@@ -135,6 +138,48 @@ function tamanhoDaSelecao(campo: HTMLElement) {
   let n: Node | null = sel && sel.rangeCount && campo.contains(sel.anchorNode) ? sel.anchorNode : campo;
   if (n && n.nodeType === Node.TEXT_NODE) n = n.parentNode;
   return Math.round(parseFloat(getComputedStyle((n as HTMLElement) ?? campo).fontSize));
+}
+
+/** O trecho com tamanho mais de fora que contém o nó (dentro do campo), ou null. */
+function trechoComTamanho(no: Node | null, campo: HTMLElement): HTMLElement | null {
+  let achado: HTMLElement | null = null;
+  for (let n = no; n && n !== campo; n = n.parentNode) if (n instanceof HTMLElement && n.tagName === "SPAN" && n.style.fontSize) achado = n;
+  return achado;
+}
+
+/**
+ * Tira o ponto da inserção (o range já recolhido) de dentro dos trechos com tamanho (19/10/2026): o trecho se divide ali,
+ * e o texto inserido fica entre as duas partes, sem herdar o tamanho dele (antes, diminuir uma seleção que começava num
+ * trecho aumentado devolvia o texto para dentro dele, e ele continuava grande).
+ */
+function sairDosTamanhos(r: Range, campo: HTMLElement) {
+  const trecho = trechoComTamanho(r.startContainer, campo);
+  if (!trecho) return;
+  const depois = document.createRange();
+  depois.setStart(r.startContainer, r.startOffset);
+  depois.setEnd(trecho, trecho.childNodes.length);
+  const resto = depois.extractContents();
+  if (resto.textContent) {
+    const copia = trecho.cloneNode(false) as HTMLElement;
+    copia.appendChild(resto);
+    trecho.after(copia);
+  }
+  const pai = trecho.parentNode!;
+  const indice = [...pai.childNodes].indexOf(trecho);
+  if (trecho.textContent) {
+    r.setStart(pai, indice + 1);
+  } else {
+    trecho.remove();
+    r.setStart(pai, indice);
+  }
+  r.collapse(true);
+}
+
+/** Tira os trechos com tamanho que ficaram vazios (sobras das divisões). */
+function tirarVazios(campo: HTMLElement) {
+  campo.querySelectorAll<HTMLElement>("span").forEach((s) => {
+    if (s.style.fontSize && !s.textContent && !s.querySelector("br")) s.remove();
+  });
 }
 
 /**
@@ -187,18 +232,29 @@ function definirFonte(sel: Selection, px: number, campo: HTMLElement) {
   }
   const conteudo = r.extractContents();
   conteudo.querySelectorAll<HTMLElement>("span").forEach((x) => x.style.fontSize && desfazer(x));
+  // O texto volta fora dos trechos com tamanho (divididos no ponto), para não herdar o tamanho deles.
+  sairDosTamanhos(r, campo);
   if (px === base) {
     const marca = document.createElement("span");
     marca.appendChild(conteudo);
     r.insertNode(marca);
     const filhos = [...marca.childNodes];
     marca.replaceWith(...filhos);
+    tirarVazios(campo);
+    if (filhos.length) {
+      sel.removeAllRanges();
+      const nova = document.createRange();
+      nova.setStartBefore(filhos[0]);
+      nova.setEndAfter(filhos[filhos.length - 1]);
+      sel.addRange(nova);
+    }
     return;
   }
   const span = document.createElement("span");
   span.style.fontSize = `${px}px`;
   span.appendChild(conteudo);
   r.insertNode(span);
+  tirarVazios(campo);
   selecionar(span);
 }
 
@@ -228,31 +284,66 @@ function marcar(sel: Selection, campo: HTMLElement, simbolo: string) {
  * cor e os marcadores. O clique não tira o foco do texto (a seleção fica); as listas de cores e de marcadores abrem ali
  * mesmo, sem menu (o menu levaria o foco).
  */
-export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null; botao: string }) {
+export function BarraDeTexto({
+  campo,
+  botao,
+  titulo,
+}: {
+  campo: () => HTMLElement | null;
+  botao: string;
+  /**
+   * O título da anotação (19/10/2026): com o cursor nele, o tamanho da fonte muda o dele (os demais botões não valem
+   * para o título).
+   */
+  titulo?: { campo: () => HTMLInputElement | null; tamanho: number; definir: (px: number) => void };
+}) {
   const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | null>(null);
-  // O tamanho do texto onde está o cursor (o número entre os botões de diminuir e aumentar), a cada mudança da seleção.
+  // O tamanho do texto onde está o cursor (o número do botão), a cada mudança da seleção; no título, o dele.
   const [tamanho, setTamanho] = useState(14);
+  // O título mais recente (para os eventos) e se o cursor está nele (para a lista dos tamanhos).
+  const doTitulo = useRef(titulo);
+  useEffect(() => {
+    doTitulo.current = titulo;
+  });
+  const [focoNoTitulo, setFocoNoTitulo] = useState(false);
+  const noTitulo = () => !!doTitulo.current && document.activeElement === doTitulo.current.campo();
   useEffect(() => {
     const aoSelecionar = () => {
       const el = campo();
       const sel = window.getSelection();
       if (el && sel && sel.rangeCount && el.contains(sel.anchorNode)) setTamanho(tamanhoDaSelecao(el));
     };
+    const aoFocar = () => {
+      const nele = !!doTitulo.current && document.activeElement === doTitulo.current.campo();
+      setFocoNoTitulo(nele);
+      if (nele) setTamanho(doTitulo.current!.tamanho);
+    };
     document.addEventListener("selectionchange", aoSelecionar);
-    return () => document.removeEventListener("selectionchange", aoSelecionar);
+    document.addEventListener("focusin", aoFocar);
+    return () => {
+      document.removeEventListener("selectionchange", aoSelecionar);
+      document.removeEventListener("focusin", aoFocar);
+    };
   }, [campo]);
   const fonte = (px: number) => {
+    if (noTitulo()) {
+      doTitulo.current!.definir(px);
+      setTamanho(px);
+      return;
+    }
     const el = campo();
     if (!el) return;
     aplicar(el, (s) => definirFonte(s, px, el));
     setTamanho(px);
   };
   const semFoco = (e: React.MouseEvent) => e.preventDefault();
-  const exec = (cmd: string, valor?: string, comCss = false) =>
+  const exec = (cmd: string, valor?: string, comCss = false) => {
+    if (noTitulo()) return;
     aplicar(campo(), () => {
       document.execCommand("styleWithCSS", false, comCss ? "true" : "false");
       document.execCommand(cmd, false, valor);
     });
+  };
   const item = "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-gray-700 hover:bg-gray-100";
   return (
     <>
@@ -281,7 +372,7 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
         </button>
         {aberta === "tamanho" ? (
           <span className="absolute top-full right-0 z-20 mt-1 grid w-20 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
-            {TAMANHOS.map((t) => (
+            {(titulo && focoNoTitulo ? TAMANHOS_DO_TITULO : TAMANHOS).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -292,7 +383,7 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
                   setAberta(null);
                 }}
               >
-                {t === TAMANHO_PADRAO ? `${t}*` : t}
+                {t === (titulo && focoNoTitulo ? TAMANHO_DO_TITULO : TAMANHO_PADRAO) ? `${t}*` : t}
               </button>
             ))}
             <span className="border-t border-gray-100 px-1 pt-1 text-center text-[10px] text-gray-500">* padrão</span>
@@ -313,6 +404,7 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
                 className={item}
                 onMouseDown={semFoco}
                 onClick={() => {
+                  if (noTitulo()) return setAberta(null);
                   if (c.cor === COR_PADRAO) {
                     const el = campo();
                     aplicar(el, () => {
@@ -349,7 +441,7 @@ export function BarraDeTexto({ campo, botao }: { campo: () => HTMLElement | null
                 onMouseDown={semFoco}
                 onClick={() => {
                   const el = campo();
-                  if (el) aplicar(el, (s) => marcar(s, el, m.simbolo));
+                  if (el && !noTitulo()) aplicar(el, (s) => marcar(s, el, m.simbolo));
                   setAberta(null);
                 }}
               >

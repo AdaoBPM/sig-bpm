@@ -17,7 +17,7 @@ import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Nota } from "../services/relatoriosExecutivosService";
-import { BarraDeTexto, TextoRico } from "./TextoRico";
+import { BarraDeTexto, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
 
 const Grade = WidthProvider(GridLayout);
 
@@ -205,7 +205,7 @@ export function GradeDoRelatorio({
       >
         {blocos.map((b) => (
           // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
-          <div key={b.id} className="group relative hover:z-10">
+          <div key={b.id} className="group relative focus-within:z-10 hover:z-10">
             {editavel ? (
               <BarraDoBloco
                 b={b}
@@ -419,8 +419,10 @@ function BarraDoBloco({
 }) {
   const botao = "inline-flex size-6 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900";
   return (
-    // Aparece com o mouse sobre o bloco e enquanto se escreve nele (o foco no texto).
-    <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white/95 p-0.5 opacity-0 shadow-sm transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 focus-within:opacity-100">
+    // Aparece com o mouse sobre o bloco e enquanto se escreve nele (o foco no texto), logo acima do bloco (19/10/2026; antes,
+    // por cima do canto dele, onde cobria a primeira linha do texto e atrapalhava a seleção). Sem a barra à vista, ela não
+    // pega o mouse (o bloco de cima continua clicável).
+    <div className="pointer-events-none absolute right-1 bottom-full z-10 flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white p-0.5 opacity-0 shadow-sm transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
       <span className={`alca-do-bloco cursor-move ${botao}`} title="Mover (arraste)" aria-label="Mover">
         <GripVertical className="size-4" />
       </span>
@@ -450,7 +452,19 @@ function BarraDoBloco({
       {b.tipo === "ANOTACAO" || b.tipo === "FOTO" ? (
         <>
           <span className="mx-0.5 h-4 w-px bg-gray-200" />
-          <BarraDeTexto campo={campo} botao={botao} />
+          <BarraDeTexto
+            campo={campo}
+            botao={botao}
+            titulo={
+              b.tipo === "ANOTACAO"
+                ? {
+                    campo: () => campo()?.closest(".group")?.querySelector<HTMLInputElement>("[data-titulo-da-anotacao]") ?? null,
+                    tamanho: b.tamanhoTitulo ?? TAMANHO_DO_TITULO,
+                    definir: (px) => onMudar({ tamanhoTitulo: px } as Partial<Bloco>),
+                  }
+                : undefined
+            }
+          />
           <span className="mx-0.5 h-4 w-px bg-gray-200" />
         </>
       ) : null}
@@ -501,8 +515,12 @@ function ConteudoDoBloco({
     const titulo = b.titulo?.trim() ? b.titulo : n.rotulo;
     return (
       <div className="flex h-full flex-col">
-        <header className={`flex h-5 shrink-0 items-center gap-1.5 pb-1 text-xs font-bold tracking-wide uppercase ${n.icone(cores)}`}>
-          <n.Icone className="size-3.5 shrink-0" />
+        {/* O título no tamanho escolhido na barra (19/10/2026; antes, sempre 12 px); o ícone acompanha. */}
+        <header
+          className={`flex min-h-5 shrink-0 items-center gap-1.5 pb-1 font-bold tracking-wide uppercase ${n.icone(cores)}`}
+          style={{ fontSize: b.tamanhoTitulo ?? TAMANHO_DO_TITULO, lineHeight: 1.2 }}
+        >
+          <n.Icone className="shrink-0" style={{ width: "1.15em", height: "1.15em" }} />
           {editavel ? (
             <input
               value={b.titulo ?? n.rotulo}
@@ -510,7 +528,8 @@ function ConteudoDoBloco({
               placeholder={n.rotulo}
               maxLength={120}
               aria-label="Título da anotação"
-              className="h-4 min-w-0 flex-1 rounded-sm bg-transparent font-bold tracking-wide uppercase outline-none placeholder:text-current placeholder:opacity-60 hover:bg-gray-100 focus:bg-gray-100"
+              data-titulo-da-anotacao
+              className="min-w-0 flex-1 rounded-sm bg-transparent font-bold tracking-wide uppercase outline-none placeholder:text-current placeholder:opacity-60 hover:bg-gray-100 focus:bg-gray-100"
             />
           ) : (
             <span className="min-w-0 truncate">{titulo}</span>
