@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChartColumn, Pencil } from "lucide-react";
 
-import { Abas } from "@/components/shared/Abas";
 import { usePermissions } from "@/context/PermissionContext";
 
 import { TabelaIndicadores, valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
@@ -17,33 +16,35 @@ import { AvisoMarcado, estaTravado } from "../../../components/AvisoMarcado";
 import { cenariosService, type IndicadorDoCenario } from "../../../services/cenariosService";
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
-/** As abas: os indicadores da DRE de Produção e Serviços, os lançamentos manuais e as metas orçadas (todos). */
-// As Metas primeiro (12/10/2026): o compilado dos indicadores, como o Consolidado nos Resultados. `permissao`: a aba do
-// Painel de Bordo no perfil (19/10/2026; antes, a da tela Indicadores).
+/**
+ * As abas dos indicadores no Painel de Bordo do cenário, depois de Performance (19/10/2026): as metas orçadas (todos),
+ * os indicadores da DRE de Produção e Serviços e os lançamentos manuais. A chave é a da aba no perfil.
+ */
+// As Metas primeiro (12/10/2026): o compilado dos indicadores, como o Consolidado nos Resultados.
 const ABAS = [
-  { chave: "metas", rotulo: "Metas", permissao: "metas" },
-  { chave: "resultados", rotulo: "Indicadores de Resultados", permissao: "indicadores_resultados" },
-  { chave: "manuais", rotulo: "Indicadores Manuais", permissao: "manuais" },
+  { chave: "metas", rotulo: "Metas" },
+  { chave: "indicadores_resultados", rotulo: "Indicadores de Resultados" },
+  { chave: "manuais", rotulo: "Indicadores Manuais" },
 ];
 const DA_ABA: Record<string, (i: IndicadorDoCenario) => boolean> = {
-  resultados: (i) => i.classe === "RESULTADO" && (i.grupo === "Produção" || i.grupo === "Serviços"),
+  indicadores_resultados: (i) => i.classe === "RESULTADO" && (i.grupo === "Produção" || i.grupo === "Serviços"),
   manuais: (i) => i.classe === "MANUAL",
   metas: () => true,
 };
 
-/** As abas dos Indicadores que o perfil lê (no Painel de Bordo do cenário): sem nenhuma, a aba Indicadores some. */
+/** As abas dos indicadores que o perfil lê (no Painel de Bordo do cenário). */
 export function useAbasDosIndicadoresDoCenario() {
   const t = useTipoDoCenario();
   const { hasPermission } = usePermissions();
-  return ABAS.filter((a) => hasPermission(t.perm("painel", "ler", a.permissao)));
+  return ABAS.filter((a) => hasPermission(t.perm("painel", "ler", a.chave)));
 }
 
 /**
- * Os Indicadores de um cenário (sintético ou analítico), a aba Indicadores do Painel de Bordo dele (19/10/2026; antes, a
- * tela Indicadores): as abas Metas, Indicadores de Resultados e Indicadores Manuais, a tabela e o gráfico de cada
- * indicador, com o Tipo e os Rótulos do Configurar Gráficos do Painel de Bordo.
+ * Uma aba de indicadores do Painel de Bordo de um cenário (sintético ou analítico; 19/10/2026, antes a tela Indicadores):
+ * Metas, Indicadores de Resultados ou Indicadores Manuais — a tabela e o gráfico de cada indicador, com o Tipo e os
+ * Rótulos do Configurar Gráficos do Painel de Bordo.
  */
-export function IndicadoresDoCenario({ id, tipo, comRotulos }: { id: string; tipo: TipoGrafico; comRotulos: boolean }) {
+export function IndicadoresDoCenario({ id, aba, tipo, comRotulos }: { id: string; aba: string; tipo: TipoGrafico; comRotulos: boolean }) {
   const t = useTipoDoCenario();
   const { hasPermission } = usePermissions();
   // O cenário marcado não se edita (12/10/2026): os Indicadores Manuais ficam só para leitura, com o aviso.
@@ -53,23 +54,18 @@ export function IndicadoresDoCenario({ id, tipo, comRotulos }: { id: string; tip
   // No analítico (14/10/2026), os Indicadores Manuais se editam na tela Premissas; aqui ficam só para leitura.
   const analitico = t.tipo === "ANALITICO";
   const podeEditar = hasPermission(t.perm("painel", "editar", "manuais")) && !!cenario.data && !travado && !analitico;
-  // As abas que o perfil lê (14/10/2026).
-  const abas = useAbasDosIndicadoresDoCenario();
-  const [escolhida, setAba] = useState("metas");
-  const aba = abas.some((a) => a.chave === escolhida) ? escolhida : (abas[0]?.chave ?? "");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
   // O gráfico do indicador (16/10/2026), como em Resultados Empresariais: o cenário × o comparado.
   const [comGrafico, setComGrafico] = useState<IndicadorDoCenario | null>(null);
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   const dados = consulta.data;
-  const daAba = aba ? (dados?.indicadores.filter(DA_ABA[aba]) ?? []) : [];
+  const daAba = DA_ABA[aba] ? (dados?.indicadores.filter(DA_ABA[aba]) ?? []) : [];
   const manuais = aba === "manuais";
   // Nos Indicadores Manuais que se editam, o clique digita os lançamentos; nos demais, abre o gráfico.
   const digita = manuais && podeEditar;
 
   return (
     <div className="space-y-6">
-      <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo }))} />
       {aba === "metas" ? (
         <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           As Metas são o compilado dos indicadores: os Indicadores de Resultados (que saem da DRE do cenário) e os Indicadores Manuais, com as

@@ -62,15 +62,16 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
         ]
       : []),
     { codigo: `${base}_resultados`, nome: "Resultados", abas: UNIDADES },
-    // Os Indicadores são uma aba do Painel de Bordo (19/10/2026; antes, uma tela), com as abas de dentro deles.
+    // As abas Metas, Indicadores de Resultados e Indicadores Manuais no Painel de Bordo, depois de Performance (19/10/2026;
+    // antes, a tela Indicadores).
     {
       codigo: `${base}_painel`,
       nome: "Painel de Bordo",
       abas: [
         ...PAINEL,
-        { codigo: "metas", nome: "Indicadores: Metas" },
-        { codigo: "indicadores_resultados", nome: "Indicadores: Indicadores de Resultados" },
-        { codigo: "manuais", nome: "Indicadores: Indicadores Manuais" },
+        { codigo: "metas", nome: "Metas" },
+        { codigo: "indicadores_resultados", nome: "Indicadores de Resultados" },
+        { codigo: "manuais", nome: "Indicadores Manuais" },
       ],
     },
     {
