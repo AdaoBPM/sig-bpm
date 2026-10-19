@@ -13,6 +13,35 @@ const TOPO_COM_ROTULOS = 34;
 const numero = (v: number | null): v is number => v !== null && Number.isFinite(v);
 
 /**
+ * O passo prático da escala (19/10/2026): o menor entre 0,1, 0,2, 0,5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1.000,
+ * 2.500… que não seja menor que o pedido (acima de 10, os múltiplos de 1, 2,5 e 5; abaixo, de 1, 2 e 5).
+ */
+export function passoPratico(bruto: number): number {
+  if (!(bruto > 0) || !Number.isFinite(bruto)) return 1;
+  const potencia = 10 ** Math.floor(Math.log10(bruto));
+  const multiplos = potencia >= 10 ? [1, 2.5, 5, 10] : [1, 2, 5, 10];
+  for (const m of multiplos) if (m * potencia >= bruto * (1 - 1e-9)) return m * potencia;
+  return 10 * potencia;
+}
+
+/**
+ * A escala prática (19/10/2026), na unidade mostrada (milhões, milhares, %, m³…): de um múltiplo do passo abaixo do menor
+ * valor (ou do zero) a um acima do maior, com uns quatro intervalos, e as casas das marcas (nenhuma com o passo inteiro).
+ */
+export function escalaPratica(menor: number, maior: number): { min: number; max: number; marcas: number[]; casas: number } {
+  const lo = Math.min(0, menor);
+  const hi = Math.max(0, maior);
+  const passo = passoPratico((hi - lo) / 4);
+  const min = Math.floor(lo / passo + 1e-9) * passo;
+  const max = hi > 0 ? Math.ceil(hi / passo - 1e-9) * passo : 0;
+  const topo = max - min > 0 ? max : passo;
+  const marcas: number[] = [];
+  for (let v = min; v <= topo + passo * 1e-6; v += passo) marcas.push(Math.abs(v) < passo * 1e-6 ? 0 : Number(v.toPrecision(12)));
+  const casas = passo >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(passo) - 1e-9));
+  return { min, max: topo, marcas, casas };
+}
+
+/**
  * O gráfico dos cards do Painel de Bordo e do indicador em Indicadores (13/10/2026; antes, o GraficoRealizadoOrcado, do Recharts): o mesmo
  * desenho — as colunas do realizado (amarelo-ouro) e do orçado (preto), ou a área do realizado com o degradê e a linha
  * do orçado — num SVG simples que se estica com a caixa (viewBox sem proporção fixa), sem medir a largura nem se
@@ -27,6 +56,7 @@ export function MiniGrafico({
   comRotulos = false,
   comEscala = false,
   topoComRotulos = TOPO_COM_ROTULOS,
+  fatorDaEscala = 1,
 }: {
   dados: MesDoGrafico[];
   /** O valor com a unidade (a dica do mês). */
@@ -40,14 +70,21 @@ export function MiniGrafico({
   comEscala?: boolean;
   /** O espaço em cima para os rótulos, em % da altura (o gráfico grande de Indicadores precisa de menos). */
   topoComRotulos?: number;
+  /**
+   * O fator do valor para a unidade mostrada na escala (19/10/2026): 1e-6 nos milhões, 1e-3 nos milhares, 100 nos
+   * percentuais; as marcas práticas se escolhem nessa unidade.
+   */
+  fatorDaEscala?: number;
 }) {
   const rotulos = useRotulosDoGrafico();
   const gradiente = `mini-${useId().replace(/:/g, "")}`;
   const [foco, setFoco] = useState<number | null>(null);
   const n = dados.length;
   const valores = dados.flatMap((d) => [d.realizado, d.orcado]).filter(numero);
-  const max = Math.max(0, ...valores);
-  const min = Math.min(0, ...valores);
+  // Com a escala, os limites são as marcas práticas em volta dos valores (19/10/2026; antes, o maior e o menor valor).
+  const escala = comEscala && !comRotulos ? escalaPratica(Math.min(0, ...valores) * fatorDaEscala, Math.max(0, ...valores) * fatorDaEscala) : null;
+  const max = escala ? escala.max / fatorDaEscala : Math.max(0, ...valores);
+  const min = escala ? escala.min / fatorDaEscala : Math.min(0, ...valores);
   const faixa = max - min || 1;
   // Com os rótulos, o espaço deles em cima dos positivos e, havendo negativos, também embaixo (13/10/2026: os rótulos dos
   // negativos saíam do gráfico, por cima dos meses).
@@ -71,8 +108,11 @@ export function MiniGrafico({
     dados.flatMap((d, i) => (numero(d[k]) ? [`${centro(i)},${y(d[k] as number)}`] : [])).join(" ");
   const realizados = dados.map((d, i) => ({ i, v: d.realizado })).filter((p): p is { i: number; v: number } => numero(p.v));
   const traco = { vectorEffect: "non-scaling-stroke" as const };
-  // A escala: o valor nas linhas da grade (em cima, a cada quarto e embaixo).
-  const linhasDaEscala = [0, 0.25, 0.5, 0.75, 1].map((f) => ({ topo: topo + f * util, valor: max - f * faixa }));
+  // A escala: as marcas práticas, sem casas decimais (só com o passo fracionário: 0,1, 0,2, 0,5…), nas linhas da grade.
+  const marca = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: escala?.casas ?? 0, maximumFractionDigits: escala?.casas ?? 0 });
+  const linhasDaEscala = escala
+    ? escala.marcas.map((m) => ({ topo: y(m / fatorDaEscala), texto: marca.format(m) }))
+    : [0, 0.25, 0.5, 0.75, 1].map((f) => ({ topo: topo + f * util, texto: formatarCurto(Math.abs(max - f * faixa) < faixa * 1e-9 ? 0 : max - f * faixa) }));
   const meses = (
     <div className="grid pt-1 text-center text-[10px] text-muted-foreground" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
       {dados.map((d, i) => (
@@ -94,7 +134,7 @@ export function MiniGrafico({
                 className="absolute right-1 -translate-y-1/2 text-[10px] leading-none font-bold whitespace-nowrap text-muted-foreground"
                 style={{ top: `${l.topo}%` }}
               >
-                {formatarCurto(Math.abs(l.valor) < faixa * 1e-9 ? 0 : l.valor)}
+                {l.texto}
               </span>
             ))}
           </div>
@@ -117,9 +157,10 @@ export function MiniGrafico({
             {/* A grade e a linha do zero (um pouco mais escura e grossa); com os Rótulos, só a linha do zero (14/10/2026). */}
             {comRotulos
               ? null
-              : [0.25, 0.5, 0.75].map((f) => (
-                  <line key={f} x1={0} x2={100} y1={topo + f * util} y2={topo + f * util} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />
-                ))}
+              : // As linhas da grade nas marcas da escala (as das pontas e a do zero, não).
+                (escala ? linhasDaEscala.slice(1, -1).map((l) => l.topo) : [0.25, 0.5, 0.75].map((f) => topo + f * util))
+                  .filter((t) => Math.abs(t - zero) > 0.01)
+                  .map((t) => <line key={t} x1={0} x2={100} y1={t} y2={t} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />)}
             {foco !== null ? <rect x={foco * faixaX} y={0} width={faixaX} height={100} style={{ fill: "var(--color-gray-100)" }} /> : null}
             {!area ? (
               dados.map((d, i) => {

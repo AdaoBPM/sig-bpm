@@ -78,7 +78,16 @@ export function GraficoIndicadorDialog({
           {/* Os meses e, depois do último, o acumulado (realizado × orçado), como nos cards do Painel de Bordo. */}
           <div className="flex h-80 gap-3">
             <div className="min-w-0 flex-1">
-              <MiniGrafico dados={dados} formatar={formatar} formatarCurto={formatarCurto} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} topoComRotulos={20} />
+              <MiniGrafico
+                dados={dados}
+                formatar={formatar}
+                formatarCurto={formatarCurto}
+                tipo={tipo}
+                comRotulos={comRotulos}
+                comEscala={!comRotulos}
+                topoComRotulos={20}
+                fatorDaEscala={i.unidade === "%" ? 100 : 1}
+              />
             </div>
             <div
               className={`${comRotulos ? "w-28" : "w-40"} shrink-0 border-l border-gray-100 pl-3`}
@@ -92,6 +101,7 @@ export function GraficoIndicadorDialog({
                 comRotulos={comRotulos}
                 comEscala={!comRotulos}
                 topoComRotulos={20}
+                fatorDaEscala={i.unidade === "%" ? 100 : 1}
               />
             </div>
           </div>

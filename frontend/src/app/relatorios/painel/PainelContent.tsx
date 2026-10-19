@@ -80,6 +80,9 @@ function formatarCurto(v: number | null, f: FormatoPainel) {
   }
 }
 
+/** O fator da escala dos gráficos de cada formato (19/10/2026): a unidade em que as marcas práticas se escolhem. */
+const fatorDaEscala = (f: FormatoPainel) => (f === "MILHOES" ? 1e-6 : f === "MILHARES" ? 1e-3 : f === "PCT" || f === "PCT_RL" ? 100 : 1);
+
 const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${n1.format(v * 100)}%`);
 
 /**
@@ -212,7 +215,15 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
       <div data-grafico-do-card className="relative min-h-32 min-w-0 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-gray-100">
         <div className="absolute inset-0 flex gap-3 lg:left-5">
           <div className="min-w-0 flex-1">
-            <MiniGrafico dados={i.serie} formatar={(v) => formatar(v, i.formato)} formatarCurto={(v) => formatarCurto(v, i.formato)} tipo={tipo} comRotulos={comRotulos} comEscala={!comRotulos} />
+            <MiniGrafico
+              dados={i.serie}
+              formatar={(v) => formatar(v, i.formato)}
+              formatarCurto={(v) => formatarCurto(v, i.formato)}
+              tipo={tipo}
+              comRotulos={comRotulos}
+              comEscala={!comRotulos}
+              fatorDaEscala={fatorDaEscala(i.formato)}
+            />
           </div>
           {/* O acumulado também com os rótulos ou com a escala; com a escala, um pouco mais largo. */}
           <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title={`Acumulado do exercício (${acumulado}): realizado × orçado`}>
@@ -223,6 +234,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
               tipo={tipo}
               comRotulos={comRotulos}
               comEscala={!comRotulos}
+              fatorDaEscala={fatorDaEscala(i.formatoAcumulado)}
             />
           </div>
         </div>
@@ -444,6 +456,7 @@ export function PainelContent() {
               gráficos)”) copia só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
             <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, o orçado fica zero.</li>
+            <li>Sem os Rótulos, a escala à esquerda de cada gráfico usa marcas práticas, sem casas decimais: múltiplos de 1, 2, 5, 10, 25, 50, 100, 250, 500, 1.000… (ou 0,1, 0,2, 0,5 quando os valores são pequenos), na unidade do card (milhões, milhares, %, m³…).</li>
           </ul>
         }
         sobre={
