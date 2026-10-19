@@ -1,15 +1,7 @@
-import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
-import { PermissionGuard } from "@/components/shared/PermissionGuard";
-import { SemLeitura } from "@/components/shared/SemLeitura";
+import { redirect } from "next/navigation";
 
-import { CenarioIndicadoresContent } from "./CenarioIndicadoresContent";
-
-export default function CenarioIndicadoresPage() {
-  return (
-    <ProtectedLayout>
-      <PermissionGuard permission="cenarios_indicadores:ler" fallback={<SemLeitura />}>
-        <CenarioIndicadoresContent />
-      </PermissionGuard>
-    </ProtectedLayout>
-  );
+/** A antiga tela Indicadores de um cenário: desde 19/10/2026, uma aba do Painel de Bordo dele. */
+export default async function CenarioIndicadoresPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(`/cenarios/sinteticos/${id}/painel?aba=indicadores`);
 }

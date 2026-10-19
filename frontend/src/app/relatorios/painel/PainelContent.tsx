@@ -2,15 +2,19 @@
 
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { usePermissions } from "@/context/PermissionContext";
 import { useAcessibilidade } from "@/lib/acessibilidade";
 
 import { MESES } from "../../competencias/[anoMes]/utils/formatacao";
 
 import { ConfigurarGraficos } from "../components/ConfigurarGraficos";
+import { ExportarRelatorio } from "../components/ExportarRelatorio";
+import { IndicadoresDoPainel } from "./IndicadoresDoPainel";
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
@@ -292,6 +296,7 @@ export function CorpoDoPainel({
   cores,
   aviso,
   comRotulos = false,
+  extras = [],
 }: {
   dados: Painel;
   aba: string;
@@ -301,19 +306,32 @@ export function CorpoDoPainel({
   aviso?: ReactNode;
   /** Os rótulos dos valores mensais nos gráficos (caixa Rótulos). */
   comRotulos?: boolean;
+  /** As abas depois de Resultados e Performance (19/10/2026: os Indicadores), com o conteúdo de cada uma. */
+  extras?: Array<{ chave: string; rotulo: string; conteudo: ReactNode }>;
 }) {
-  const atual = dados.abas.find((a) => a.chave === aba) ?? dados.abas[0];
-  // O servidor manda só as abas que o perfil lê (14/10/2026).
-  if (!atual) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>;
+  const extra = extras.find((e) => e.chave === aba);
+  const atual = extra ? null : (dados.abas.find((a) => a.chave === aba) ?? dados.abas[0]);
+  const daTela = extra ?? (atual ? null : extras[0]);
+  // O servidor manda só as abas que o perfil lê (14/10/2026); as de mais, a tela já filtrou.
+  if (!atual && !daTela) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>;
   return (
     <CoresDoPainel.Provider value={cores}>
-      <Abas rotulo="Painel de Bordo" ativa={atual.chave} onMudar={onAba} abas={dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo }))} />
+      <Abas
+        rotulo="Painel de Bordo"
+        ativa={daTela?.chave ?? atual!.chave}
+        onMudar={onAba}
+        abas={[...dados.abas.map((a) => ({ chave: a.chave, rotulo: a.titulo })), ...extras.map((e) => ({ chave: e.chave, rotulo: e.rotulo }))]}
+      />
       {aviso}
-      <div className="space-y-6">
-        {atual.quadros.map((q) => (
-          <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} />
-        ))}
-      </div>
+      {daTela ? (
+        daTela.conteudo
+      ) : (
+        <div className="space-y-6">
+          {atual!.quadros.map((q) => (
+            <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} />
+          ))}
+        </div>
+      )}
     </CoresDoPainel.Provider>
   );
 }
@@ -360,7 +378,11 @@ export function PainelContent() {
   const exercicios = useExercicios();
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
-  const [aba, setAba] = useState("resultados");
+  // A aba pedida no endereço (?aba=indicadores: o endereço antigo da tela Indicadores, 19/10/2026).
+  const pedida = useSearchParams().get("aba");
+  const [aba, setAba] = useState(pedida ?? "resultados");
+  const { hasPermission } = usePermissions();
+  const comIndicadores = hasPermission("relatorio_painel.indicadores:ler");
   // O tipo dos gráficos (Barras ou Área), lembrado neste navegador; as cores dos sinais, as da Acessibilidade do menu do usuário.
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
   const [comRotulos, setComRotulos] = useRotulosDosValores();
@@ -374,6 +396,10 @@ export function PainelContent() {
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
+  // A aba Indicadores (19/10/2026; antes, a tela Indicadores): o Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem nela.
+  const extras =
+    comIndicadores && ano && ate ? [{ chave: "indicadores", rotulo: "Indicadores", conteudo: <IndicadoresDoPainel ano={ano} ate={ate} tipo={tipoGrafico} comRotulos={comRotulos} /> }] : [];
+  const naAbaIndicadores = comIndicadores && (aba === "indicadores" || (dados ? dados.abas.length === 0 : false));
   const atual = dados?.abas.find((a) => a.chave === aba) ?? dados?.abas[0];
 
   return (
@@ -385,11 +411,18 @@ export function PainelContent() {
             <li>
               Em “Configurar Gráficos”, à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o
               acumulado vai de janeiro até ele), os Rótulos (Com: os valores de cada mês escritos nos gráficos, o realizado por cima do orçado), o
-              Tipo dos gráficos; cada escolha vale na hora. O Tipo e os Rótulos ficam guardados neste navegador (e valem também para o gráfico do
-              indicador em Indicadores). As legendas (as cores das séries e os sinais) ficam antes do botão.
+              Tipo dos gráficos; cada escolha vale na hora e também na aba Indicadores. O Tipo e os Rótulos ficam guardados neste navegador. As
+              legendas (as cores das séries e os sinais) ficam antes do botão.
             </li>
-            <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Troque entre as abas Resultados e Performance (os unitários) e Indicadores. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>
+            <li>
+              Na aba Indicadores (antes, a tela Indicadores), os indicadores do exercício mês a mês até o Período, com o acumulado e, nas colunas de
+              rótulo preto, o orçado do último mês e o acumulado do orçado. O Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem
+              também nela. Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo; use os filtros nos rótulos das colunas;
+              as colunas Indicador, Sent. e Und. ficam fixas. Clique num indicador para abrir o gráfico dele (o realizado e o orçado mês a mês e o
+              acumulado), que o botão ao lado do nome copia como imagem. Nesta aba, “Exportar” baixa os indicadores em Excel ou PDF.
+            </li>
             <li>
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em
               cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
@@ -420,7 +453,7 @@ export function PainelContent() {
               BPM 2026 - INDICADORES DE RESULTADO, com os gráficos mês a mês no padrão dos da planilha (realizado em amarelo-ouro, meta em preto).
             </p>
             <p>
-              O realizado sai dos mesmos valores da tela Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
+              O realizado sai dos mesmos valores da aba Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
               digitados nas Listas Operacionais). O orçado sai das Metas do cenário marcado como Orçamento Empresarial no exercício
               (Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem cenário marcado no
               exercício, ou sem o valor no cenário, o orçado é zero.
@@ -445,7 +478,14 @@ export function PainelContent() {
           // As legendas e o botão Configurar Gráficos, com as listas no modal (14/10/2026; antes, as listas na linha do título).
           ano && ate ? (
             <div className="flex flex-wrap items-center justify-end gap-4">
-              <LegendaDoPainel tipo={tipoGrafico} cores={cores} />
+              {/* Na aba Indicadores, só as cores das séries (os sinais são dos cards). */}
+              {naAbaIndicadores ? (
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+                  <LegendaRealizadoOrcado tipo={tipoGrafico} />
+                </div>
+              ) : (
+                <LegendaDoPainel tipo={tipoGrafico} cores={cores} />
+              )}
               <ConfigurarGraficos>
               <Seletor
                 rotulo="Exercício"
@@ -461,6 +501,13 @@ export function PainelContent() {
               <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
               </ConfigurarGraficos>
+              {naAbaIndicadores ? (
+                <ExportarRelatorio
+                  caminho="indicadores"
+                  padrao={`Indicadores ${ano}`}
+                  opcoes={[{ chave: "todos", excel: "Todos os Indicadores", pdf: "Todos os Indicadores", params: { ano, ate } }]}
+                />
+              ) : null}
             </div>
           ) : null
         }
@@ -476,13 +523,14 @@ export function PainelContent() {
         </div>
       ) : !dados ? (
         <div className="h-64 animate-pulse rounded-sm bg-gray-100" />
-      ) : !atual ? (
+      ) : !atual && extras.length === 0 ? (
         <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p>
       ) : (
         <CorpoDoPainel
           dados={dados}
-          aba={atual.chave}
+          aba={aba === "indicadores" ? aba : (atual?.chave ?? aba)}
           onAba={setAba}
+          extras={extras}
           tipo={tipoGrafico}
           cores={cores}
           comRotulos={comRotulos}

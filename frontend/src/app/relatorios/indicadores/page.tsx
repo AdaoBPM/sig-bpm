@@ -1,15 +1,6 @@
-import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
-import { PermissionGuard } from "@/components/shared/PermissionGuard";
-import { SemLeitura } from "@/components/shared/SemLeitura";
+import { redirect } from "next/navigation";
 
-import { IndicadoresContent } from "./IndicadoresContent";
-
+/** A antiga tela Indicadores de Resultados Empresariais: desde 19/10/2026, uma aba do Painel de Bordo. */
 export default function IndicadoresPage() {
-  return (
-    <ProtectedLayout>
-      <PermissionGuard permission="relatorio_indicadores:ler" fallback={<SemLeitura />}>
-        <IndicadoresContent />
-      </PermissionGuard>
-    </ProtectedLayout>
-  );
+  redirect("/relatorios/painel?aba=indicadores");
 }

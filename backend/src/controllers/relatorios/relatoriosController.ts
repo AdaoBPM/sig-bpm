@@ -54,7 +54,8 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
 const tem = (request: Request, p: string) => request.user!.permissions.includes(p);
 const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
 /** Os indicadores: a tela Indicadores dos Resultados Empresariais ou a etapa do Fechamento Mensal (?etapa=1). */
-const podeIndicadores = (request: Request) => tem(request, "relatorio_indicadores:ler") || (request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
+// A aba Indicadores do Painel de Bordo (19/10/2026; antes, a tela Indicadores).
+const podeIndicadores = (request: Request) => tem(request, "relatorio_painel.indicadores:ler") || (request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
 
 /** ?ano= e ?ate= (o último mês; sem ele, o último apurado). */
 function periodo(request: Request, response: Response) {

@@ -62,16 +62,17 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
         ]
       : []),
     { codigo: `${base}_resultados`, nome: "Resultados", abas: UNIDADES },
+    // Os Indicadores são uma aba do Painel de Bordo (19/10/2026; antes, uma tela), com as abas de dentro deles.
     {
-      codigo: `${base}_indicadores`,
-      nome: "Indicadores",
+      codigo: `${base}_painel`,
+      nome: "Painel de Bordo",
       abas: [
-        { codigo: "metas", nome: "Metas" },
-        { codigo: "resultados", nome: "Indicadores de Resultados" },
-        { codigo: "manuais", nome: "Indicadores Manuais" },
+        ...PAINEL,
+        { codigo: "metas", nome: "Indicadores: Metas" },
+        { codigo: "indicadores_resultados", nome: "Indicadores: Indicadores de Resultados" },
+        { codigo: "manuais", nome: "Indicadores: Indicadores Manuais" },
       ],
     },
-    { codigo: `${base}_painel`, nome: "Painel de Bordo", abas: PAINEL },
     {
       codigo: `${base}_reajustes`,
       nome: "Reajustes",
@@ -95,8 +96,8 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
     telas: [
       // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Empresariais.
       { codigo: "relatorio_resultados", nome: "Resultados", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
-      { codigo: "relatorio_indicadores", nome: "Indicadores" },
-      { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: PAINEL },
+      // Os Indicadores são uma aba do Painel de Bordo (19/10/2026; antes, uma tela).
+      { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "indicadores", nome: "Indicadores" }] },
     ],
   },
   {
@@ -158,10 +159,10 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
         codigo: "cadastro_analitico",
         nome: "Analítico",
         abas: [
+          // O cadastro dos itens do Painel de Bordo (17/10/2026); antes dos Indicadores desde 19/10/2026.
+          { codigo: "painel_bordo", nome: "Painel de Bordo" },
           // "Indicadores" desde 18/10/2026 (antes, Estrutura dos Indicadores); a chave não muda.
           { codigo: "estrutura_indicadores", nome: "Indicadores" },
-          // O cadastro dos itens do Painel de Bordo (17/10/2026).
-          { codigo: "painel_bordo", nome: "Painel de Bordo" },
         ],
       },
     ],

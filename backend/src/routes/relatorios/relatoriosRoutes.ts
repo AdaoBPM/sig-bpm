@@ -24,6 +24,6 @@ relatoriosRoutes.get("/resultados/exportar", autenticacao, verificarAba("relator
   return a ? [a] : null;
 }), asyncHandler(c.exportarResultados));
 // Os indicadores: a tela Indicadores dos Resultados Empresariais ou, na etapa do Fechamento Mensal (?etapa=1), a dela.
-relatoriosRoutes.get("/indicadores/exportar", autenticacao, verificarAlgumaPermissao("relatorio_indicadores:ler", "indicadores_mes:ler"), asyncHandler(c.exportarIndicadores));
-relatoriosRoutes.get("/indicadores", autenticacao, verificarAlgumaPermissao("relatorio_indicadores:ler", "indicadores_mes:ler"), asyncHandler(c.indicadores));
+relatoriosRoutes.get("/indicadores/exportar", autenticacao, verificarAlgumaPermissao("relatorio_painel.indicadores:ler", "indicadores_mes:ler"), asyncHandler(c.exportarIndicadores));
+relatoriosRoutes.get("/indicadores", autenticacao, verificarAlgumaPermissao("relatorio_painel.indicadores:ler", "indicadores_mes:ler"), asyncHandler(c.indicadores));
 relatoriosRoutes.get("/painel", autenticacao, verificarPermissao("relatorio_painel:ler"), asyncHandler(c.painel));

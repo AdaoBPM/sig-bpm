@@ -1,18 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChartColumn, Pencil } from "lucide-react";
 
 import { Abas } from "@/components/shared/Abas";
-import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { usePermissions } from "@/context/PermissionContext";
-import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { TabelaIndicadores, valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import { GraficoIndicadorDialog } from "@/app/relatorios/indicadores/GraficoIndicadorDialog";
-import { RotulosDoGrafico, useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
+import { RotulosDoGrafico, type TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { LancamentoDialog } from "../../../components/IndicadoresManuais";
@@ -21,11 +18,12 @@ import { cenariosService, type IndicadorDoCenario } from "../../../services/cena
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 /** As abas: os indicadores da DRE de Produção e Serviços, os lançamentos manuais e as metas orçadas (todos). */
-// As Metas primeiro (12/10/2026): o compilado dos indicadores, como o Consolidado nos Resultados.
+// As Metas primeiro (12/10/2026): o compilado dos indicadores, como o Consolidado nos Resultados. `permissao`: a aba do
+// Painel de Bordo no perfil (19/10/2026; antes, a da tela Indicadores).
 const ABAS = [
-  { chave: "metas", rotulo: "Metas" },
-  { chave: "resultados", rotulo: "Indicadores de Resultados" },
-  { chave: "manuais", rotulo: "Indicadores Manuais" },
+  { chave: "metas", rotulo: "Metas", permissao: "metas" },
+  { chave: "resultados", rotulo: "Indicadores de Resultados", permissao: "indicadores_resultados" },
+  { chave: "manuais", rotulo: "Indicadores Manuais", permissao: "manuais" },
 ];
 const DA_ABA: Record<string, (i: IndicadorDoCenario) => boolean> = {
   resultados: (i) => i.classe === "RESULTADO" && (i.grupo === "Produção" || i.grupo === "Serviços"),
@@ -33,11 +31,20 @@ const DA_ABA: Record<string, (i: IndicadorDoCenario) => boolean> = {
   metas: () => true,
 };
 
-/** A tela Indicadores de um cenário sintético. */
-export function CenarioIndicadoresContent() {
-  const { id } = useParams<{ id: string }>();
+/** As abas dos Indicadores que o perfil lê (no Painel de Bordo do cenário): sem nenhuma, a aba Indicadores some. */
+export function useAbasDosIndicadoresDoCenario() {
   const t = useTipoDoCenario();
-  useRegistrarAcessoTela(`${t.base}/${id}/indicadores`);
+  const { hasPermission } = usePermissions();
+  return ABAS.filter((a) => hasPermission(t.perm("painel", "ler", a.permissao)));
+}
+
+/**
+ * Os Indicadores de um cenário (sintético ou analítico), a aba Indicadores do Painel de Bordo dele (19/10/2026; antes, a
+ * tela Indicadores): as abas Metas, Indicadores de Resultados e Indicadores Manuais, a tabela e o gráfico de cada
+ * indicador, com o Tipo e os Rótulos do Configurar Gráficos do Painel de Bordo.
+ */
+export function IndicadoresDoCenario({ id, tipo, comRotulos }: { id: string; tipo: TipoGrafico; comRotulos: boolean }) {
+  const t = useTipoDoCenario();
   const { hasPermission } = usePermissions();
   // O cenário marcado não se edita (12/10/2026): os Indicadores Manuais ficam só para leitura, com o aviso.
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
@@ -45,17 +52,14 @@ export function CenarioIndicadoresContent() {
   const travado = !!cenario.data && estaTravado(cenario.data);
   // No analítico (14/10/2026), os Indicadores Manuais se editam na tela Premissas; aqui ficam só para leitura.
   const analitico = t.tipo === "ANALITICO";
-  const podeEditar = hasPermission(t.perm("indicadores", "editar", "manuais")) && !!cenario.data && !travado && !analitico;
+  const podeEditar = hasPermission(t.perm("painel", "editar", "manuais")) && !!cenario.data && !travado && !analitico;
   // As abas que o perfil lê (14/10/2026).
-  const abas = ABAS.filter((a) => hasPermission(t.perm("indicadores", "ler", a.chave)));
+  const abas = useAbasDosIndicadoresDoCenario();
   const [escolhida, setAba] = useState("metas");
   const aba = abas.some((a) => a.chave === escolhida) ? escolhida : (abas[0]?.chave ?? "");
   const [editando, setEditando] = useState<IndicadorDoCenario | null>(null);
-  // O gráfico do indicador (16/10/2026), como em Resultados Empresariais: o cenário × o comparado, com o Tipo e os
-  // Rótulos guardados neste navegador (os do Painel de Bordo).
+  // O gráfico do indicador (16/10/2026), como em Resultados Empresariais: o cenário × o comparado.
   const [comGrafico, setComGrafico] = useState<IndicadorDoCenario | null>(null);
-  const [tipoGrafico] = useTipoGrafico();
-  const [comRotulos] = useRotulosDosValores();
   const consulta = useQuery({ queryKey: ["cenarios", id, "indicadores"], queryFn: () => cenariosService.indicadores(id) });
   const dados = consulta.data;
   const daAba = aba ? (dados?.indicadores.filter(DA_ABA[aba]) ?? []) : [];
@@ -65,42 +69,6 @@ export function CenarioIndicadoresContent() {
 
   return (
     <div className="space-y-6">
-      <CabecalhoDaTela
-        titulo="Indicadores"
-        comoUsar={
-          <ul>
-            <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Resultados. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
-            <li>Com um cenário comparado (Configurações / Comparativo), a coluna Comparado Acum., em preto e cinza depois do Acumulado, traz o acumulado dele.</li>
-            <li>Metas: o compilado dos indicadores — os Indicadores de Resultados e os Indicadores Manuais juntos, com as eficiências calculadas e os importados. É o orçado que Resultados Empresariais usa quando o cenário é o Orçamento Empresarial. Não se edita: muda com a DRE (tela Resultados) e com os Indicadores Manuais.</li>
-            <li>Indicadores de Resultados: os de Produção e Serviços que saem da DRE do cenário (custos, volumes, mão de obra, matérias primas, gastos gerais, montagem).</li>
-            <li>
-              Indicadores Manuais: {analitico ? "os indicadores do Comercial e do Administrativo (os quadros de lotação saem do Quadro de Lotação dos centros de custo, nas Premissas)" : "os quadros de lotação e os indicadores do Comercial e do Administrativo"}, que não saem da DRE. Vêm da aba das metas
-              do arquivo importado{analitico ? " ou do resultado realizado; digitam-se na tela Premissas, aba Indicadores Manuais (as células digitadas ficam em amarelo)" : podeEditar ? "; clique numa linha para digitar os meses (as células digitadas ficam em amarelo)" : ""}.
-            </li>
-            <li>Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um dos grupos da aba, como a lista dos níveis em Resultados.</li>
-            <li>
-              Clique num indicador para ver o gráfico dele, como em Resultados Empresariais: os meses do cenário (em amarelo-ouro) e os do cenário comparado
-              (em preto), e o acumulado ao lado; sem cenário comparado, só o cenário. O Tipo e os Rótulos do gráfico são os escolhidos no Configurar Gráficos
-              do Painel de Bordo.{podeEditar ? " Nos Indicadores Manuais, o clique digita os lançamentos." : ""}
-            </li>
-            <li>Use os filtros nos rótulos das colunas; as colunas Indicador, Sent. e Und. ficam fixas.</li>
-            <li>Os indicadores sem numeração (os totais, como Custos de Produção: Matriz) ficam com a cor da faixa do grupo, e os de numeração par num tom mais fraco (amarelo nas colunas do realizado, cinza nas do comparado), para ajudar a seguir a linha. Nos Indicadores Manuais, as células digitadas ficam num amarelo mais forte.</li>
-          </ul>
-        }
-        sobre={
-          <>
-            <p>
-              Os indicadores do cenário, mês a mês e acumulados, com as fórmulas do cadastro Indicadores (Cadastros da Controladoria / Analítico) — as mesmas de Resultados
-              Realizados — sobre a DRE do cenário e os lançamentos manuais. O acumulado também segue Resultados Empresariais: a soma dos meses ou,
-              nas razões, a média ponderada; os de posição valem o último mês.
-            </p>
-            <p>
-              As eficiências (volume ou receita por colaborador) juntam a DRE e os quadros de lotação, e só aparecem nas Metas. A liberação
-              de projetos (que vem das Listas) e os GME 4 e 8 o cenário não tem como calcular: ficam com o valor da aba das metas importada.
-            </p>
-          </>
-        }
-      />
       <Abas rotulo="Indicadores do cenário" ativa={aba} onMudar={setAba} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo }))} />
       {aba === "metas" ? (
         <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
@@ -109,7 +77,7 @@ export function CenarioIndicadoresContent() {
           Indicadores Manuais.
         </p>
       ) : null}
-      {manuais && cenario.data && travado && hasPermission(t.perm("indicadores", "editar", "manuais")) ? <AvisoMarcado cenario={cenario.data} oQue="os Indicadores Manuais" /> : null}
+      {manuais && cenario.data && travado && hasPermission(t.perm("painel", "editar", "manuais")) ? <AvisoMarcado cenario={cenario.data} oQue="os Indicadores Manuais" /> : null}
       {manuais && analitico ? (
         <p className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2 text-sm text-gray-600">
           No cenário analítico, os Indicadores Manuais se digitam na tela Premissas, aba Indicadores Manuais.
@@ -142,7 +110,7 @@ export function CenarioIndicadoresContent() {
             meses={dados.meses}
             formatar={(v) => valor(comGrafico, v)}
             formatarCurto={(v) => valorCurto(comGrafico, v)}
-            tipo={tipoGrafico}
+            tipo={tipo}
             comRotulos={comRotulos}
             onFechar={() => setComGrafico(null)}
           />

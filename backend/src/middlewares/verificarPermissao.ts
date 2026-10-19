@@ -181,19 +181,20 @@ export async function verificarIndicadoresDoCenario(request: Request, response: 
     const base = await areaDoCenario(request);
     if (!base) return next();
     response.locals.areaDoCenario = base;
-    if (temPermissao(request, `${base}_indicadores:ler`) || (base === "cenarios_analiticos" && temPermissao(request, `${base}_premissas.manuais:ler`))) return next();
+    // Os Indicadores são uma aba do Painel de Bordo (19/10/2026): a tela dele (o controlador deixa só as abas permitidas).
+    if (temPermissao(request, `${base}_painel:ler`) || (base === "cenarios_analiticos" && temPermissao(request, `${base}_premissas.manuais:ler`))) return next();
     return response.status(403).json(SEM_PERMISSAO);
   } catch (error) {
     return next(error);
   }
 }
 
-/** A gravação dos Indicadores Manuais: no sintético, a aba da tela Indicadores; no analítico, a das Premissas. */
+/** A gravação dos Indicadores Manuais: no sintético, a aba do Painel de Bordo (19/10/2026); no analítico, a das Premissas. */
 export async function verificarManuaisDoCenario(request: Request, response: Response, next: NextFunction) {
   try {
     const base = await areaDoCenario(request);
     if (!base) return next();
-    const area = base === "cenarios_analiticos" ? `${base}_premissas.manuais` : `${base}_indicadores.manuais`;
+    const area = base === "cenarios_analiticos" ? `${base}_premissas.manuais` : `${base}_painel.manuais`;
     return verificarPermissao(`${area}:editar`)(request, response, next);
   } catch (error) {
     return next(error);

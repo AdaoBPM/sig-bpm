@@ -23,7 +23,7 @@ export const TELAS_DO_CENARIO: Array<{ caminho: string; rotulo: string; soAnalit
   // As premissas dos analíticos (13/10/2026), de onde a DRE deles se calcula.
   { caminho: "premissas", rotulo: "Premissas", soAnaliticos: true },
   { caminho: "resultados", rotulo: "Resultados" },
-  { caminho: "indicadores", rotulo: "Indicadores" },
+  // Os Indicadores são uma aba do Painel de Bordo desde 19/10/2026.
   // O Painel de Bordo do cenário (13/10/2026): o cenário × o comparado, como o de Resultados Empresariais.
   { caminho: "painel", rotulo: "Painel de Bordo" },
   // O histórico de reajustes do cenário (12/10/2026).
@@ -38,8 +38,8 @@ export function lerRotaDoCenario(pathname: string): { id: string; tela: string }
 
 /**
  * A barra de um cenário, no formato da barra de etapas do mês: o cenário em amarelo-ouro no início (com a troca
- * de cenário, que mantém a tela) e as telas Configurações, Resultados, Indicadores, Painel de
- * Bordo e Reajustes (cada uma com a permissão dela no perfil), com a atual em destaque.
+ * de cenário, que mantém a tela) e as telas Configurações, Resultados, Painel de Bordo (com a aba Indicadores) e
+ * Reajustes (cada uma com a permissão dela no perfil), com a atual em destaque.
  */
 export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const router = useRouter();

@@ -1,16 +1,7 @@
-import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
-import { PermissionGuard } from "@/components/shared/PermissionGuard";
-import { SemLeitura } from "@/components/shared/SemLeitura";
+import { redirect } from "next/navigation";
 
-import { CenarioIndicadoresContent } from "@/app/cenarios/sinteticos/[id]/indicadores/CenarioIndicadoresContent";
-
-/** A tela Indicadores de um cenário analítico (13/10/2026): a mesma tela dos sintéticos, com a permissão dos Cenários Analíticos. */
-export default function CenarioIndicadoresAnaliticoPage() {
-  return (
-    <ProtectedLayout>
-      <PermissionGuard permission="cenarios_analiticos_indicadores:ler" fallback={<SemLeitura />}>
-        <CenarioIndicadoresContent />
-      </PermissionGuard>
-    </ProtectedLayout>
-  );
+/** A antiga tela Indicadores de um cenário: desde 19/10/2026, uma aba do Painel de Bordo dele. */
+export default async function CenarioIndicadoresPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(`/cenarios/analiticos/${id}/painel?aba=indicadores`);
 }

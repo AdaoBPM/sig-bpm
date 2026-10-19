@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -17,6 +17,7 @@ import { ConfigurarGraficos } from "@/app/relatorios/components/ConfigurarGrafic
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { cenariosService } from "../../../services/cenariosService";
+import { IndicadoresDoCenario, useAbasDosIndicadoresDoCenario } from "../indicadores/CenarioIndicadoresContent";
 import { useTipoDoCenario } from "../../../components/tipoDoCenario";
 
 const ROTULOS = { realizado: "Cenário", orcado: "Comparado" };
@@ -32,7 +33,12 @@ export function CenarioPainelContent() {
   useRegistrarAcessoTela(`${t.base}/${id}/painel`);
   const { hasPermission } = usePermissions();
   const [ate, setAte] = useState(12);
-  const [aba, setAba] = useState("resultados");
+  // A aba pedida no endereço (?aba=indicadores: o endereço antigo da tela Indicadores, 19/10/2026).
+  const pedida = useSearchParams().get("aba");
+  const [aba, setAba] = useState(pedida ?? "resultados");
+  // A aba Indicadores (19/10/2026; antes, a tela Indicadores), com as abas de dentro dela que o perfil lê.
+  const comIndicadores = useAbasDosIndicadoresDoCenario().length > 0;
+  const analitico = t.tipo === "ANALITICO";
   const router = useRouter();
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();
   const [comRotulos, setComRotulos] = useRotulosDosValores();
@@ -51,7 +57,16 @@ export function CenarioPainelContent() {
               os mesmos do Painel de Bordo de Resultados Empresariais). As legendas (as cores das séries e os sinais)
               ficam antes do botão.
             </li>
-            <li>Troque entre as abas Resultados e Performance (os unitários). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Troque entre as abas Resultados e Performance (os unitários) e Indicadores. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>
+              Na aba Indicadores (antes, a tela Indicadores), os indicadores do cenário mês a mês e acumulados, com a coluna Comparado Acum. (o
+              acumulado do cenário comparado), em três abas: Metas (o compilado: os Indicadores de Resultados e os Indicadores Manuais, com as
+              eficiências calculadas e os importados; é o orçado de Resultados Empresariais quando o cenário é o Orçamento Empresarial), Indicadores
+              de Resultados (os de Produção e Serviços que saem da DRE do cenário) e Indicadores Manuais (os quadros de lotação e os do Comercial e
+              do Administrativo, que se digitam {analitico ? "na tela Premissas, aba Indicadores Manuais" : "clicando na linha"}; as células
+              digitadas ficam em amarelo). Clique num indicador para ver o gráfico dele (o cenário e o comparado), no Tipo e com os Rótulos do
+              Configurar Gráficos daqui.
+            </li>
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>
             <li>
               Cada card traz o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Cenário
@@ -118,6 +133,7 @@ export function CenarioPainelContent() {
             tipo={tipoGrafico}
             cores={cores}
             comRotulos={comRotulos}
+            extras={comIndicadores ? [{ chave: "indicadores", rotulo: "Indicadores", conteudo: <IndicadoresDoCenario id={id} tipo={tipoGrafico} comRotulos={comRotulos} /> }] : []}
             aviso={
               // Sem comparativo (13/10/2026): o quadro comum, com o destaque vermelho à esquerda e o botão Adicionar Comparativo.
               dados.comparado ? null : (

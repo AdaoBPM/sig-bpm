@@ -118,7 +118,7 @@ export const navGrupos: NavGrupo[] = [
         recurso: "RESULTADOS_REALIZADOS",
         telas: [
           { title: "Resultados", href: "/relatorios/resultados", icon: ListOrdered, permission: "relatorio_resultados:ler" },
-          { title: "Indicadores", href: "/relatorios/indicadores", icon: Gauge, permission: "relatorio_indicadores:ler" },
+          // Os Indicadores são uma aba do Painel de Bordo desde 19/10/2026.
           { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "relatorio_painel:ler" },
         ],
       },
@@ -174,9 +174,10 @@ export const navGrupos: NavGrupo[] = [
             href: "/cadastros/estrutura-indicadores",
             icon: Gauge,
             permission: "cadastro_analitico:ler",
+            // O Painel de Bordo antes dos Indicadores (19/10/2026).
             abas: [
-              { title: "Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastro_analitico.estrutura_indicadores:ler" },
               { title: "Painel de Bordo", href: "/cadastros/painel-bordo", icon: Gauge, permission: "cadastro_analitico.painel_bordo:ler" },
+              { title: "Indicadores", href: "/cadastros/estrutura-indicadores", icon: Gauge, permission: "cadastro_analitico.estrutura_indicadores:ler" },
             ],
           },
         ],
@@ -267,14 +268,17 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
-  [/^\/relatorios\/indicadores(\/|$)/, "relatorio_indicadores:ler"],
+  // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
+  [/^\/relatorios\/indicadores(\/|$)/, "relatorio_painel:ler"],
   [/^\/relatorios\/painel(\/|$)/, "relatorio_painel:ler"],
   [/^\/relatorios(\/|$)/, "resultados:ler"],
   // As telas de um cenário: a de cada uma (cenarios_resultados, cenarios_analiticos_premissas…); a lista, a dela.
   ...(["cenarios_analiticos", "cenarios"] as const).flatMap((base): Array<[RegExp, string]> => {
     const pasta = base === "cenarios" ? "sinteticos" : "analiticos";
     return [
-      [new RegExp(`^/cenarios/${pasta}/[^/]+/(configuracoes|premissas|resultados|indicadores|painel|reajustes)`), `${base}_$1:ler`],
+      // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
+      [new RegExp(`^/cenarios/${pasta}/[^/]+/indicadores`), `${base}_painel:ler`],
+      [new RegExp(`^/cenarios/${pasta}/[^/]+/(configuracoes|premissas|resultados|painel|reajustes)`), `${base}_$1:ler`],
       [new RegExp(`^/cenarios/${pasta}/?$`), `${base}_lista:ler`],
       [new RegExp(`^/cenarios/${pasta}(/|$)`), `${base}:ler`],
     ];
@@ -337,7 +341,6 @@ export const pageTitles: Record<string, string> = {
   "/auditoria": "Auditoria",
   "/divergencias": "Divergências",
   "/relatorios/resultados": "Resultados",
-  "/relatorios/indicadores": "Indicadores",
   "/relatorios/painel": "Painel de Bordo",
   "/cenarios/sinteticos": "Cenários Sintéticos",
   "/cenarios/analiticos": "Cenários Analíticos",
