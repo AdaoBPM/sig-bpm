@@ -152,7 +152,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
             <h2 className={TITULO}>{analitico ? "Índices de Reajuste" : "Variação Máxima"}</h2>
             <p className="mt-1 text-xs text-gray-600">
               {analitico
-                ? "O índice de cada conta, na estrutura da DRE vigente: a variação máxima dele (em %, para mais ou para menos) é a aceita na conta. Os índices se cadastram na aba Índices; contas sem índice não serão verificadas."
+                ? "O índice de reajuste de cada conta, na estrutura da DRE vigente. Contas sem índice não serão verificadas."
                 : "A variação aceita (em %, para mais ou para menos) em cada conta, na estrutura da DRE vigente. Variações em branco não serão verificadas."}
             </p>
             {analitico && indices.length === 0 ? (
