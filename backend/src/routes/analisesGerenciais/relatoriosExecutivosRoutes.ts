@@ -21,6 +21,9 @@ relatoriosExecutivosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.e
 // As fotos (16/10/2026): o arquivo cru no corpo (até 10 MB).
 relatoriosExecutivosRoutes.post("/:id/fotos", autenticacao, editar, express.raw({ type: () => true, limit: "10mb" }), asyncHandler(c.salvarFoto));
 relatoriosExecutivosRoutes.get("/:id/fotos/:arquivo", autenticacao, ler, asyncHandler(c.lerFoto));
+// Os vídeos (20/10/2026): o arquivo cru no corpo, gravado enquanto chega (até 200 MB), e a leitura em partes (Range).
+relatoriosExecutivosRoutes.post("/:id/videos", autenticacao, editar, asyncHandler(c.salvarVideo));
+relatoriosExecutivosRoutes.get("/:id/videos/:arquivo", autenticacao, ler, asyncHandler(c.lerVideo));
 relatoriosExecutivosRoutes.put("/:id/abas/:departamento", autenticacao, editar, asyncHandler(c.gravarAba));
 relatoriosExecutivosRoutes.post("/:id/abas/:departamento/finalizar", autenticacao, editar, asyncHandler(c.finalizarAba));
 relatoriosExecutivosRoutes.post("/:id/abas/:departamento/reabrir", autenticacao, ler, asyncHandler(c.reabrirAba));

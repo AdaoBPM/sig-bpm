@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { createWriteStream } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { Transform } from "node:stream";
 
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
@@ -59,6 +63,12 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string }
   /** Uma foto (16/10/2026): o arquivo (na pasta do relatório; vazio, o quadro esperando a imagem), a legenda e a proporção (largura ÷ altura). */
   | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
+  /**
+   * Um vídeo (20/10/2026): um arquivo do computador (na pasta do relatório, até 200 MB) ou um link do YouTube, Instagram,
+   * Facebook ou LinkedIn (`url`, o endereço colado; a tela monta o player incorporado), com a legenda e a proporção. Vazio
+   * (sem arquivo e sem link), o quadro esperando o vídeo.
+   */
+  | { tipo: "VIDEO"; origem: "ARQUIVO" | "LINK"; arquivo: string; url: string; legenda: string; proporcao: number; legendaHtml?: string }
 );
 
 /**
@@ -81,18 +91,26 @@ const TIPOS: Record<string, string> = Object.fromEntries(Object.entries(EXTENSOE
 const pastaDasFotos = (relatorioId: string) => join(diretorioUploads(), "relatorios-executivos", relatorioId);
 const MAXIMO_DA_FOTO = 10 * 1024 * 1024;
 
+/** Os vídeos (20/10/2026): na mesma pasta das fotos, com um nome sorteado; até 200 MB. */
+export const NOME_DO_VIDEO = /^[0-9a-f-]{36}\.(mp4|webm|mov|m4v|ogv)$/;
+const EXTENSOES_DE_VIDEO: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov", "video/x-m4v": "m4v", "video/ogg": "ogv" };
+const TIPOS_DE_VIDEO: Record<string, string> = Object.fromEntries(Object.entries(EXTENSOES_DE_VIDEO).map(([t, e]) => [e, t]));
+export const MAXIMO_DO_VIDEO = 200 * 1024 * 1024;
+/** Os sites dos links de vídeo (20/10/2026). */
+export const SITES_DE_VIDEO = /^https:\/\/([a-z0-9-]+\.)*(youtube\.com|youtu\.be|youtube-nocookie\.com|instagram\.com|facebook\.com|fb\.watch|linkedin\.com)(\/|$)/i;
+
 /**
  * Apaga as fotos que nenhuma aba usa (enviadas e não gravadas, ou tiradas da aba) com mais de um dia: as mais novas
  * podem estar numa aba ainda não gravada.
  */
 async function limparFotos(relatorioId: string) {
   const abas = await getPrismaClient().relatorioExecutivoAba.findMany({ where: { relatorioId }, select: { blocos: true } });
-  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap((p) => p.blocos.flatMap((b) => (b.tipo === "FOTO" && b.arquivo ? [b.arquivo] : [])))));
+  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap((p) => p.blocos.flatMap((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo ? [b.arquivo] : [])))));
   const pasta = pastaDasFotos(relatorioId);
   const arquivos = await readdir(pasta).catch(() => [] as string[]);
   const umDia = Date.now() - 24 * 60 * 60 * 1000;
   for (const arquivo of arquivos) {
-    if (usadas.has(arquivo) || !NOME_DA_FOTO.test(arquivo)) continue;
+    if (usadas.has(arquivo) || !(NOME_DA_FOTO.test(arquivo) || NOME_DO_VIDEO.test(arquivo))) continue;
     const info = await stat(join(pasta, arquivo)).catch(() => null);
     if (info && info.mtimeMs < umDia) await rm(join(pasta, arquivo), { force: true });
   }
@@ -179,7 +197,14 @@ export const relatoriosExecutivosService = {
     // fotos, sem a imagem e sem a legenda (o quadro cinza, esperando a imagem); os cards vêm iguais.
     const manter = dados.manterImagensEAnotacoes !== false;
     const esvaziar = (b: BlocoDoRelatorio): BlocoDoRelatorio =>
-      b.tipo === "ANOTACAO" ? { ...b, texto: "", html: undefined } : b.tipo === "FOTO" ? { ...b, arquivo: "", legenda: "", legendaHtml: undefined } : b;
+      b.tipo === "ANOTACAO"
+        ? { ...b, texto: "", html: undefined }
+        : b.tipo === "FOTO"
+          ? { ...b, arquivo: "", legenda: "", legendaHtml: undefined }
+          : // O vídeo (20/10/2026), como a foto: o quadro vazio, esperando o vídeo.
+            b.tipo === "VIDEO"
+            ? { ...b, arquivo: "", url: "", legenda: "", legendaHtml: undefined }
+            : b;
     const daOrigem = new Map(
       (origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos).map((p) => (manter ? p : { ...p, blocos: p.blocos.map(esvaziar) }))]),
     );
@@ -193,7 +218,7 @@ export const relatoriosExecutivosService = {
       },
     });
     // As fotos da origem vão para a pasta do relatório novo (a origem pode ser excluída depois).
-    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => p.blocos.some((b) => b.tipo === "FOTO" && b.arquivo)))) {
+    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => p.blocos.some((b) => (b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo)))) {
       await cp(pastaDasFotos(origem.id), pastaDasFotos(r.id), { recursive: true }).catch(() => undefined);
     }
     await auditar({
@@ -310,6 +335,51 @@ export const relatoriosExecutivosService = {
     const conteudo = await readFile(join(pastaDasFotos(id), arquivo)).catch(() => null);
     if (!conteudo) throw new RelatorioExecutivoError(404, "Foto não encontrada.");
     return { conteudo, tipo: TIPOS[arquivo.split(".").pop()!] };
+  },
+
+  /**
+   * Guarda um vídeo do relatório (20/10/2026; quem edita a tela; até 200 MB, MP4, WebM, MOV, M4V ou OGG), gravado no disco
+   * enquanto chega (sem guardar o arquivo inteiro na memória), e devolve o nome do arquivo.
+   */
+  async salvarVideo(id: string, corpo: Readable, tipo: string, tamanho: number | null, usuario: UsuarioDoRelatorio) {
+    await doRelatorio(id);
+    if (!usuario.edita) throw new RelatorioExecutivoError(403, "Seu perfil não edita os relatórios.");
+    const extensao = EXTENSOES_DE_VIDEO[tipo.split(";")[0].trim().toLowerCase()];
+    if (!extensao) throw new RelatorioExecutivoError(400, "O vídeo precisa ser MP4, WebM, MOV, M4V ou OGG.");
+    if (tamanho !== null && tamanho > MAXIMO_DO_VIDEO) throw new RelatorioExecutivoError(413, "O vídeo passa de 200 MB.");
+    const arquivo = `${randomUUID()}.${extensao}`;
+    await mkdir(pastaDasFotos(id), { recursive: true });
+    const caminho = join(pastaDasFotos(id), arquivo);
+    let recebido = 0;
+    const contador = new Transform({
+      transform(parte: Buffer, _codificacao, pronto) {
+        recebido += parte.length;
+        if (recebido > MAXIMO_DO_VIDEO) pronto(new RelatorioExecutivoError(413, "O vídeo passa de 200 MB."));
+        else pronto(null, parte);
+      },
+    });
+    try {
+      await pipeline(corpo, contador, createWriteStream(caminho));
+    } catch (error) {
+      await rm(caminho, { force: true });
+      if (error instanceof RelatorioExecutivoError) throw error;
+      throw new RelatorioExecutivoError(400, "O envio do vídeo foi interrompido. Tente de novo.");
+    }
+    if (!recebido) {
+      await rm(caminho, { force: true });
+      throw new RelatorioExecutivoError(400, "O arquivo do vídeo está vazio.");
+    }
+    return { arquivo };
+  },
+
+  /** Um vídeo do relatório (20/10/2026): o caminho no disco, o tamanho e o tipo (o controller o envia em partes, pelo Range). */
+  async lerVideo(id: string, arquivo: string) {
+    if (!NOME_DO_VIDEO.test(arquivo)) throw new RelatorioExecutivoError(400, "Vídeo inválido.");
+    await doRelatorio(id);
+    const caminho = join(pastaDasFotos(id), arquivo);
+    const info = await stat(caminho).catch(() => null);
+    if (!info) throw new RelatorioExecutivoError(404, "Vídeo não encontrado.");
+    return { caminho, tamanho: info.size, tipo: TIPOS_DE_VIDEO[arquivo.split(".").pop()!] };
   },
 
   /** Exclui o relatório (quem o criou ou o Administrador), enquanto nenhuma aba estiver finalizada. */

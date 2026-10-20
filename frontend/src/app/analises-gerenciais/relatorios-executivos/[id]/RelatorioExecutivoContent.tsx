@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FilePlus2, FileX2, ImagePlus, LayoutGrid, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2 } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FilePlus2, FileX2, ImagePlus, LayoutGrid, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -21,6 +21,7 @@ import { botaoPrimario, Erro } from "@/app/cenarios/components/CenarioDialog";
 import { AdicionarCardsDialog } from "../components/AdicionarCardsDialog";
 import { ApresentacaoDoRelatorio, entrarEmTelaInteira } from "../components/ApresentacaoDoRelatorio";
 import { EtiquetaSituacao } from "../components/EtiquetaSituacao";
+import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
 import { COLUNAS, GradeDoRelatorio, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Pagina, type Relatorio } from "../services/relatoriosExecutivosService";
 
@@ -95,6 +96,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const gravadas = Object.fromEntries(relatorio.abas.map((a) => [a.chave, a.paginas]));
   const [paginas, setPaginas] = useState<Record<string, Pagina[]>>(gravadas);
   const [adicionando, setAdicionando] = useState(false);
+  // O Adicionar Vídeo (20/10/2026): "novo" (um bloco novo) ou o id do quadro de vídeo vazio que recebe o vídeo.
+  const [escolhendoVideo, setEscolhendoVideo] = useState<string | null>(null);
+  // O andamento do envio do vídeo (0 a 1), no botão Adicionar.
+  const [enviando, setEnviando] = useState<number | null>(null);
   const [apresentando, setApresentando] = useState<number | null>(null);
   const [confirmar, setConfirmar] = useState<"finalizar" | "excluir" | "excluirPagina" | null>(null);
   // A página com o nome em edição (16/10/2026), na própria aba dela.
@@ -163,6 +168,32 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       mudarPagina(daPagina.map((b) => (b.id === id && b.tipo === "FOTO" ? { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura) } : b)));
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
+  });
+  // O vídeo (20/10/2026): o arquivo vai ao servidor (com o andamento no botão); o link entra direto. O bloco novo entra como a
+  // foto, ao lado do último bloco, se couber na linha, na altura da proporção dele; o quadro vazio recebe o vídeo no lugar.
+  const video = useMutation({
+    mutationFn: async ({ v }: { v: VideoEscolhido; quadro: string | null }) => {
+      if (v.origem === "LINK") return { origem: "LINK" as const, arquivo: "", url: v.url, proporcao: v.proporcao };
+      setEnviando(0);
+      try {
+        const { arquivo } = await relatoriosExecutivosService.enviarVideo(relatorio.id, v.arquivo, setEnviando);
+        return { origem: "ARQUIVO" as const, arquivo, url: "", proporcao: v.proporcao };
+      } finally {
+        setEnviando(null);
+      }
+    },
+    onSuccess: (m, { quadro }) => {
+      const largura = (area.current?.offsetWidth ?? 1200) + 24;
+      if (quadro) {
+        mudarPagina(daPagina.map((b) => (b.id === quadro && b.tipo === "VIDEO" ? { ...b, ...m, h: linhasDaFoto(b.w, m.proporcao, largura) } : b)));
+        return;
+      }
+      const t = tamanhoInicial({ tipo: "VIDEO" });
+      const h = linhasDaFoto(t.w, m.proporcao, largura);
+      const p = ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS ? { x: ultimo.x + ultimo.w, y: ultimo.y } : { x: 0, y: fim };
+      mudarPagina([...daPagina, { tipo: "VIDEO", ...m, legenda: "", id: novoId(), ...p, w: t.w, h }]);
+    },
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar o vídeo.")),
   });
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
   const novaPagina = () => {
@@ -244,9 +275,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button type="button" className={botaoPrimario} disabled={foto.isPending}>
+                    <Button type="button" className={botaoPrimario} disabled={foto.isPending || video.isPending}>
                       <Plus className="size-4" />
-                      {foto.isPending ? "Enviando…" : "Adicionar"}
+                      {enviando !== null ? `Enviando… ${Math.round(enviando * 100)}%` : foto.isPending || video.isPending ? "Enviando…" : "Adicionar"}
                       <ChevronDown className="size-4" />
                     </Button>
                   }
@@ -263,6 +294,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                   <DropdownMenuItem onClick={() => seletorDeFoto.current?.click()}>
                     <ImagePlus className="size-4" />
                     Foto
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
+                    <Video className="size-4" />
+                    Vídeo
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -319,9 +354,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
-              Na sua aba, “Adicionar” traz três opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
-              dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado): marque os que quiser; eles entram no fim da página. Os cards
-              trazem só as competências fechadas, até o mês do relatório.
+              Na sua aba, “Adicionar” traz quatro opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
+              dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado): marque os que quiser; eles entram no fim da página, os do
+              Painel com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
@@ -336,17 +371,28 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               diminui sempre na mesma proporção.
             </li>
             <li>
+              Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
+              envio) ou o link de um vídeo público do YouTube, do Instagram, do Facebook ou do LinkedIn (o endereço ou o código “incorporar” da
+              plataforma). Ele entra como a foto, com a legenda embaixo; o do computador e o do YouTube aumentam e diminuem na proporção do vídeo. Na edição
+              e na leitura, o vídeo tem os controles do player.
+            </li>
+            <li>
               Passe o mouse num bloco para ver os botões dele: a alça (arraste para mover), o gráfico (com ou sem, nos cards do Painel; sem ele, o card fica
-              mais estreito e o restante igual), as opções do gráfico (os rótulos e o tipo, neste card ou em toda a aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
+              mais estreito e o restante igual), as opções do gráfico (os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
               excluir. O canto de baixo, à direita, redimensiona o bloco, até um tamanho mínimo, para as informações não se amontoarem. Ao mover ou
               redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
             </li>
             <li>
-              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o título da aba (Introdução,
-              Performance da Produção…) e o nome do slide (o da página) à esquerda do topo e o relatório e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
+              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
+              Introdução, Performance da Produção…), em cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Relatório Executivo”, em
+              cinza, a seta, o período, em preto, e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
               o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
               ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
-              na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Na apresentação, os textos não se selecionam.
+              na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Num vídeo, o mouse sobre ele mostra, no centro de baixo,
+              Reproduzir (Pausar, tocando), Parar e Mudo; o clique o amplia, continuando de onde estava, com os controles do player (a barra para avançar
+              e recuar, o volume e a tela cheia; um clique fora do vídeo ou o Esc fecha, e o vídeo da página fica no ponto em que parou). No Instagram, no
+              Facebook e no LinkedIn, que não aceitam os botões da página, o vídeo toca ampliado, nos controles da plataforma. Na apresentação, os textos
+              não se selecionam.
             </li>
             <li>
               “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar Aba” grava a aba e a torna pública, só para
@@ -358,7 +404,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           <p>
             O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (a Introdução, o Demonstrativo de Resultados e as performances
             Comercial, da Produção, de Serviços e Administrativa), as páginas com os cards do Painel de Bordo e dos Indicadores de Resultados
-            Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção e as fotos. Criado por{" "}
+            Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção, as fotos e os vídeos. Criado por{" "}
             {relatorio.criadoPor}.
           </p>
         }
@@ -487,6 +533,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           tipo={tipo}
           linhas={linhasDaPagina()}
           onCarregarImagem={(id, arquivo) => imagemNoQuadro.mutate({ id, arquivo })}
+          onEscolherVideo={(id) => setEscolhendoVideo(id)}
           onMudar={mudarPagina}
         />
       )}
@@ -502,13 +549,23 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       {apresentando !== null ? (
         <ApresentacaoDoRelatorio
           relatorioId={relatorio.id}
-          titulo={`RE - ${relatorio.rotuloMes}`}
+          periodo={relatorio.rotuloMes}
           slides={slides}
           inicial={apresentando}
           dados={dados.data}
           cores={cores}
           tipo={tipo}
           onSair={() => setApresentando(null)}
+        />
+      ) : null}
+      {escolhendoVideo ? (
+        <VideoDialog
+          titulo={escolhendoVideo === "novo" ? "Adicionar Vídeo" : "Carregar Vídeo"}
+          onFechar={() => setEscolhendoVideo(null)}
+          onEscolher={(v) => {
+            video.mutate({ v, quadro: escolhendoVideo === "novo" ? null : escolhendoVideo });
+            setEscolhendoVideo(null);
+          }}
         />
       ) : null}
       {adicionando && dados.data ? (

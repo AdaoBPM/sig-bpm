@@ -53,7 +53,10 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
   const adicionar = () => {
     const novos: Novo[] = [...marcados].map((k) => {
       const [t, ...p] = k.split("|");
-      return t === "P" ? { tipo: "PAINEL", aba: p[0] as "resultados" | "performance", quadro: p[1], titulo: p[2], sigla: p[3], comGrafico } : { tipo: "INDICADOR", nome: p.join("|") };
+      // Os cards do Painel entram com os rótulos e em barras (20/10/2026); o Configurar Gráfico do card os muda.
+      return t === "P"
+        ? { tipo: "PAINEL", aba: p[0] as "resultados" | "performance", quadro: p[1], titulo: p[2], sigla: p[3], comGrafico, comRotulos: true, tipoGrafico: "barras" }
+        : { tipo: "INDICADOR", nome: p.join("|") };
     });
     onAdicionar(novos);
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Minimize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronRightIcon, ChevronsLeft, ChevronsRight, Minimize2 } from "lucide-react";
 
 import { BpmLogo } from "@/components/layout/BpmLogo";
 
@@ -27,7 +27,7 @@ export function entrarEmTelaInteira() {
  */
 export function ApresentacaoDoRelatorio({
   relatorioId,
-  titulo,
+  periodo,
   slides,
   inicial,
   dados,
@@ -36,7 +36,8 @@ export function ApresentacaoDoRelatorio({
   onSair,
 }: {
   relatorioId: string;
-  titulo: string;
+  /** O período do relatório (Agosto/2026…), à direita do topo, depois de "Relatório Executivo". */
+  periodo: string;
   slides: Slide[];
   inicial: number;
   dados: DadosDoRelatorio | undefined;
@@ -82,6 +83,8 @@ export function ApresentacaoDoRelatorio({
       if (!document.fullscreenElement) onSair();
     };
     const aoTeclar = (e: KeyboardEvent) => {
+      // Com um bloco ampliado (20/10/2026: o vídeo usa o teclado), as teclas são dele; o Esc fecha o ampliado (a grade).
+      if (document.querySelector("[data-bloco-ampliado]")) return;
       if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) ir(1);
       else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) ir(-1);
       else if (e.key === "Escape") sair();
@@ -98,17 +101,22 @@ export function ApresentacaoDoRelatorio({
   const slide = slides[k];
   const botao = "inline-flex size-9 items-center justify-center rounded-sm text-gray-100 hover:bg-gray-700 hover:text-white disabled:pointer-events-none disabled:opacity-40";
   return (
-    <div role="dialog" aria-modal aria-label={`Apresentação: ${titulo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
+    <div role="dialog" aria-modal aria-label={`Apresentação: Relatório Executivo de ${periodo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
       {/* O topo e as margens do slide: os de linhasDaPagina, para a página caber inteira na tela. */}
       <div className="px-8 pt-6 pb-6">
         {/*
-          À esquerda, o título da aba em preto e o nome do slide (o da página) em cinza; à direita, o relatório logo antes da
-          logo da BPM (16/10/2026). A logo, de 30 px, fica centrada na altura da barra, sem mudar a altura dela.
+          À esquerda, o grupo (o título da aba: Introdução…) em cinza, a seta dos caminhos do topo das telas, em cinza, e o
+          nome do slide (o da página) em preto; à direita, "Relatório Executivo" em cinza, a seta e o período em preto
+          (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
+          fica centrada na altura da barra, sem mudar a altura dela.
         */}
         <header className="mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
-          <h1 className="text-lg font-bold text-gray-900">{slide?.nome}</h1>
-          <span className="min-w-0 truncate text-lg font-semibold text-gray-500">- {slide?.pagina}</span>
-          <span className="ml-auto shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{titulo}</span>
+          <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{slide?.nome}</span>
+          <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
+          <h1 className="min-w-0 truncate text-lg font-bold text-gray-900">{slide?.pagina}</h1>
+          <span className="ml-auto shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">Relatório Executivo</span>
+          <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
+          <span className="shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{periodo}</span>
           <BpmLogo className="h-[30px] w-auto shrink-0" />
         </header>
         {slide ? (

@@ -61,6 +61,11 @@ export type Bloco = Posicao &
       }
     /** Uma foto (16/10/2026): o arquivo, guardado no servidor, a legenda e a proporção (largura ÷ altura). */
     | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
+    /**
+     * Um vídeo (20/10/2026): um arquivo do computador (`arquivo`, guardado no servidor, até 200 MB) ou um link do YouTube,
+     * Instagram, Facebook ou LinkedIn (`url`, o endereço colado), com a legenda e a proporção; vazio, o quadro esperando o vídeo.
+     */
+    | { tipo: "VIDEO"; origem: "ARQUIVO" | "LINK"; arquivo: string; url: string; legenda: string; proporcao: number; legendaHtml?: string }
   );
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
@@ -107,8 +112,19 @@ export const relatoriosExecutivosService = {
   reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
   enviarFoto: async (id: string, foto: Blob) =>
     (await api.post<{ data: { arquivo: string } }>(`${base}/${id}/fotos`, foto, { headers: { "Content-Type": foto.type } })).data.data,
+  /** O vídeo (20/10/2026): o arquivo cru, com o andamento do envio (0 a 1). */
+  enviarVideo: async (id: string, video: File, aoEnviar?: (fracao: number) => void) =>
+    (
+      await api.post<{ data: { arquivo: string } }>(`${base}/${id}/videos`, video, {
+        headers: { "Content-Type": video.type },
+        onUploadProgress: (e) => (e.total ? aoEnviar?.(e.loaded / e.total) : undefined),
+        timeout: 0,
+      })
+    ).data.data,
   excluir: async (id: string) => (await api.delete<{ data: { excluido: boolean } }>(`${base}/${id}`)).data.data,
 };
 
 /** O endereço de uma foto do relatório (pelo proxy, com o login). */
 export const enderecoDaFoto = (id: string, arquivo: string) => `/api${base}/${id}/fotos/${arquivo}`;
+/** O endereço de um vídeo do relatório (20/10/2026; pelo proxy, em partes). */
+export const enderecoDoVideo = (id: string, arquivo: string) => `/api${base}/${id}/videos/${arquivo}`;

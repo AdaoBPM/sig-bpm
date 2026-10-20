@@ -1,9 +1,11 @@
+import { createReadStream } from "node:fs";
+
 import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { temPermissao } from "../../middlewares/verificarPermissao.js";
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
-import { CHAVES_DAS_ABAS, NOME_DA_FOTO, RelatorioExecutivoError, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
+import { CHAVES_DAS_ABAS, NOME_DA_FOTO, NOME_DO_VIDEO, RelatorioExecutivoError, SITES_DE_VIDEO, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
 
 /** O usuário da requisição: se edita a tela e os departamentos do recorte (sem recorte, nulo: todos). */
 const usuario = (request: Request): UsuarioDoRelatorio => ({
@@ -41,6 +43,17 @@ const bloco = z.discriminatedUnion("tipo", [
   z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200) }),
   z.object({ ...posicao, tipo: z.literal("ANOTACAO"), nota: z.enum(["POSITIVO", "NEGATIVO", "ATENCAO"]), texto: z.string().max(5000), titulo: z.string().max(120).optional(), html: z.string().max(30000).optional(), tamanhoTitulo: z.number().int().min(8).max(48).optional() }),
   z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional() }),
+  // O vídeo (20/10/2026): o arquivo enviado ou o link de um dos sites aceitos (vazios, o quadro esperando o vídeo).
+  z.object({
+    ...posicao,
+    tipo: z.literal("VIDEO"),
+    origem: z.enum(["ARQUIVO", "LINK"]),
+    arquivo: z.union([z.literal(""), z.string().regex(NOME_DO_VIDEO)]),
+    url: z.union([z.literal(""), z.string().max(2000).regex(SITES_DE_VIDEO)]),
+    legenda: z.string().max(500),
+    proporcao: z.number().positive().max(50),
+    legendaHtml: z.string().max(5000).optional(),
+  }),
 ]);
 
 /** Os Relatórios Executivos (15/10/2026, Análises Gerenciais): montado em /relatorios-executivos. */
@@ -103,6 +116,45 @@ export const relatoriosExecutivosController = {
       response.setHeader("Content-Type", f.tipo);
       response.setHeader("Cache-Control", "private, max-age=86400");
       return response.send(f.conteudo);
+    } catch (error) {
+      if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message });
+      throw error;
+    }
+  },
+
+  /** Um vídeo novo (20/10/2026): o arquivo vai cru no corpo, com o tipo no Content-Type, e é gravado enquanto chega. */
+  salvarVideo(request: Request, response: Response) {
+    const r = id(request, response);
+    if (!r) return;
+    const tamanho = Number(request.headers["content-length"]);
+    return responder(response, () => s.salvarVideo(r, request, String(request.headers["content-type"] ?? ""), Number.isFinite(tamanho) ? tamanho : null, usuario(request)), 201);
+  },
+
+  /** Um vídeo (20/10/2026), em partes (o cabeçalho Range), para o player avançar e recuar sem baixar o arquivo inteiro. */
+  async lerVideo(request: Request, response: Response) {
+    const r = id(request, response);
+    if (!r) return;
+    try {
+      const v = await s.lerVideo(r, String(request.params.arquivo));
+      response.setHeader("Content-Type", v.tipo);
+      response.setHeader("Accept-Ranges", "bytes");
+      response.setHeader("Cache-Control", "private, max-age=86400");
+      const intervalo = /^bytes=(\d*)-(\d*)$/.exec(String(request.headers.range ?? ""));
+      if (!intervalo || (!intervalo[1] && !intervalo[2])) {
+        response.setHeader("Content-Length", String(v.tamanho));
+        return createReadStream(v.caminho).pipe(response);
+      }
+      // "bytes=início-fim", "bytes=início-" ou "bytes=-últimos".
+      const inicio = intervalo[1] ? Number(intervalo[1]) : Math.max(0, v.tamanho - Number(intervalo[2]));
+      const fim = intervalo[1] && intervalo[2] ? Math.min(Number(intervalo[2]), v.tamanho - 1) : v.tamanho - 1;
+      if (inicio >= v.tamanho || inicio > fim) {
+        response.setHeader("Content-Range", `bytes */${v.tamanho}`);
+        return response.status(416).end();
+      }
+      response.status(206);
+      response.setHeader("Content-Range", `bytes ${inicio}-${fim}/${v.tamanho}`);
+      response.setHeader("Content-Length", String(fim - inicio + 1));
+      return createReadStream(v.caminho, { start: inicio, end: fim }).pipe(response);
     } catch (error) {
       if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message });
       throw error;

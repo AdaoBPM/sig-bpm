@@ -3,6 +3,8 @@ const ALLOWED_PROXY_HEADERS = new Set([
   "accept-language",
   "content-type",
   "content-length",
+  // O pedido de uma parte do vídeo (20/10/2026, Relatórios Executivos).
+  "range",
 ]);
 
 export function buildProxyHeaders(

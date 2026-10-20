@@ -18,6 +18,8 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Nota } from "../services/relatoriosExecutivosService";
 import { BarraDeTexto, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
+import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
+import { videoDoLink } from "./videoIncorporado";
 
 const Grade = WidthProvider(GridLayout);
 
@@ -31,6 +33,7 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean }
   if (b.tipo === "PAINEL") return b.comGrafico ? { w: 12, h: 9 } : { w: 5, h: 9 };
   if (b.tipo === "INDICADOR") return { w: 4, h: 5 };
   if (b.tipo === "FOTO") return { w: 4, h: 6 };
+  if (b.tipo === "VIDEO") return { w: 6, h: 8 };
   return { w: 6, h: 6 };
 }
 
@@ -39,6 +42,7 @@ function tamanhoMinimo(b: Bloco) {
   if (b.tipo === "PAINEL") return b.comGrafico ? { minW: 10, minH: 6 } : { minW: 5, minH: 6 };
   if (b.tipo === "INDICADOR") return { minW: 3, minH: 4 };
   if (b.tipo === "FOTO") return { minW: 2, minH: 2 };
+  if (b.tipo === "VIDEO") return { minW: 3, minH: 3 };
   // A anotação baixa a ponto de mostrar uma linha só do texto (16/10/2026).
   return { minW: 3, minH: 2 };
 }
@@ -89,6 +93,13 @@ export function linhasDaFoto(w: number, proporcao: number, largura: number) {
 }
 
 /**
+ * O bloco se redimensiona na proporção (20/10/2026): a foto, o vídeo do computador e o do YouTube (o player tem a proporção
+ * do vídeo); os vídeos do Instagram, do Facebook e do LinkedIn (a publicação, com o texto dela), livres.
+ */
+const naProporcao = (b: Bloco | undefined): b is Extract<Bloco, { tipo: "FOTO" | "VIDEO" }> =>
+  b?.tipo === "FOTO" || (b?.tipo === "VIDEO" && (b.origem === "ARQUIVO" || !!videoDoLink(b.url)?.comandos));
+
+/**
  * As notas das anotações (15/10/2026): o ícone e as cores, no padrão do Painel de Bordo — positivo em verde (azul com a
  * Acessibilidade Daltonismo, do menu do usuário), negativo em vermelho e atenção em laranja. O rótulo é o título da anotação até alguém o mudar.
  */
@@ -107,7 +118,7 @@ export const NOTAS: Record<Nota, { rotulo: string; Icone: typeof ThumbsUp; class
 
 /**
  * A grade do relatório (15/10/2026): os blocos de uma aba — os cards do Painel de Bordo (com ou sem o gráfico), os
- * cards dos Indicadores (o destaque, como nas Listas), as anotações e as fotos. Na edição, cada bloco se move pela alça,
+ * cards dos Indicadores (o destaque, como nas Listas), as anotações, as fotos e os vídeos (20/10/2026). Na edição, cada bloco se move pela alça,
  * se redimensiona pelo canto (até o tamanho mínimo do tipo; a foto, na proporção dela) e tem os botões dele (com ou sem
  * gráfico, as opções do gráfico, a nota da anotação, excluir).
  */
@@ -121,9 +132,12 @@ export function GradeDoRelatorio({
   linhas,
   ampliavel = false,
   onCarregarImagem,
+  onEscolherVideo,
   onMudar,
 }: {
   relatorioId: string;
+  /** O vídeo de um quadro de vídeo vazio (20/10/2026): abre o Adicionar Vídeo para ele. */
+  onEscolherVideo?: (id: string) => void;
   /** A imagem escolhida para um quadro de foto vazio (17/10/2026). */
   onCarregarImagem?: (id: string, arquivo: File) => void;
   /** As linhas da página: os blocos não passam delas, e a página tem essa altura (o espaço útil da tela inteira). */
@@ -149,7 +163,7 @@ export function GradeDoRelatorio({
   // A foto se redimensiona pela largura: a altura acompanha, na proporção dela.
   const aoRedimensionar = (_l: Layout[], _antes: Layout, novo: Layout, sombra: Layout) => {
     const b = blocos.find((x) => x.id === novo.i);
-    if (b?.tipo !== "FOTO" || !caixa.current) return;
+    if (!naProporcao(b) || !caixa.current) return;
     novo.h = sombra.h = linhasDaFoto(novo.w, b.proporcao, caixa.current.offsetWidth);
   };
   const mudarBloco = (id: string, m: Partial<Bloco>) => onMudar(blocos.map((b) => (b.id === id ? ({ ...b, ...m } as Bloco) : b)));
@@ -165,7 +179,17 @@ export function GradeDoRelatorio({
   // O bloco ampliado, com o tamanho dele na grade (sem a ampliação do mouse); Esc ou um clique o fecham. No card do Painel
   // (17/10/2026), só o card (sem o nome do grupo) ou só o gráfico, conforme o ponto clicado: `recorte` é a parte do card
   // que aparece (o gráfico), em px do card.
-  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number; soCard?: boolean; semGrafico?: boolean; recorte?: Recorte } | null>(null);
+  // No vídeo (20/10/2026), `video`: de onde ele continua ampliado (o tempo e se estava tocando, na grade).
+  const [ampliado, setAmpliado] = useState<{ b: Bloco; w: number; h: number; soCard?: boolean; semGrafico?: boolean; recorte?: Recorte; video?: { tempo: number; tocando: boolean } } | null>(null);
+  // Fechar o ampliado: o vídeo da grade fica no tempo em que o ampliado parou (pausado).
+  const fechar = () => {
+    if (ampliado?.b.tipo === "VIDEO" && caixa.current) {
+      const { tempo } = estadoDoPlayer(document.querySelector("[data-bloco-ampliado] [data-video-do-bloco]"));
+      const daGrade = [...caixa.current.querySelectorAll(`[data-video-do-bloco="${ampliado.b.id}"]`)].find((el) => !el.closest("[data-bloco-ampliado]"));
+      irPara(daGrade ?? null, tempo);
+    }
+    setAmpliado(null);
+  };
   // O destaque sob o mouse (16/10/2026): o bloco cresce até 10%, a partir do ponto que o mantém dentro da tela.
   const [realce, setRealce] = useState<{ id: string; escala: number; origem: string } | null>(null);
   useEffect(() => {
@@ -173,11 +197,12 @@ export function GradeDoRelatorio({
     const aoTeclar = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.stopImmediatePropagation();
-      setAmpliado(null);
+      fechar();
     };
     window.addEventListener("keydown", aoTeclar, true);
     return () => window.removeEventListener("keydown", aoTeclar, true);
-  }, [ampliado]);
+    // A cada desenho (20/10/2026): o fechar do momento (o do vídeo ampliado lê o tempo dele).
+  });
   return (
     // A página na altura do espaço útil da tela inteira; na edição, com o contorno tracejado dela (o bloco que passa dele,
     // de antes do limite, aparece abaixo e volta para dentro ao ser movido). A sombra do bloco, em cinza.
@@ -231,8 +256,10 @@ export function GradeDoRelatorio({
                 editavel={editavel}
                 cores={cores}
                 tipo={tipo}
+                apresentacao={ampliavel}
                 registrar={(el) => (el ? campos.current.set(b.id, el) : campos.current.delete(b.id))}
                 onCarregarImagem={onCarregarImagem ? (arquivo) => onCarregarImagem(b.id, arquivo) : undefined}
+                onEscolherVideo={onEscolherVideo ? () => onEscolherVideo(b.id) : undefined}
                 onMudar={(m) => mudarBloco(b.id, m)}
               />
             </div>
@@ -240,7 +267,7 @@ export function GradeDoRelatorio({
         ))}
       </Grade>
       {ampliado ? (
-        <BlocoAmpliado w={ampliado.recorte?.w ?? ampliado.w} h={ampliado.recorte?.h ?? ampliado.h} onFechar={() => setAmpliado(null)}>
+        <BlocoAmpliado w={ampliado.recorte?.w ?? ampliado.w} h={ampliado.recorte?.h ?? ampliado.h} onFechar={fechar}>
           {ampliado.recorte ? (
             // Só o gráfico: o card inteiro, no tamanho dele, deslocado para que só a área do gráfico fique à vista.
             <div className="relative size-full overflow-hidden">
@@ -259,6 +286,7 @@ export function GradeDoRelatorio({
               ampliado
               soCard={ampliado.soCard}
               semGrafico={ampliado.semGrafico}
+              video={ampliado.video}
               onMudar={() => undefined}
             />
           )}
@@ -312,6 +340,13 @@ type Recorte = { x: number; y: number; w: number; h: number };
  */
 function oQueAmpliar(b: Bloco, bloco: HTMLElement, alvo: HTMLElement) {
   const inteiro = { b, w: bloco.offsetWidth, h: bloco.offsetHeight };
+  // O vídeo (20/10/2026): ampliado, continua de onde estava; o da grade pausa.
+  if (b.tipo === "VIDEO") {
+    const el = bloco.querySelector("[data-video-do-bloco]");
+    const video = estadoDoPlayer(el);
+    pausarPlayer(el);
+    return { ...inteiro, video };
+  }
   if (b.tipo !== "PAINEL") return inteiro;
   const card = bloco.querySelector<HTMLElement>("[data-card-indicador]");
   if (!card) return inteiro;
@@ -342,7 +377,8 @@ function BlocoAmpliado({ w, h, onFechar, children }: { w: number; h: number; onF
   const borda = 16;
   const escala = Math.min((window.innerWidth * 0.94) / (w + 2 * borda), (window.innerHeight * 0.92) / (h + 2 * borda));
   return (
-    <div role="dialog" aria-modal aria-label="Bloco ampliado" className="fixed inset-0 z-[70] flex cursor-zoom-out items-center justify-center bg-black/75" onClick={onFechar}>
+    // data-bloco-ampliado: com ele aberto, as setas e o espaço não mudam o slide (o vídeo ampliado usa o teclado).
+    <div role="dialog" aria-modal aria-label="Bloco ampliado" data-bloco-ampliado className="fixed inset-0 z-[70] flex cursor-zoom-out items-center justify-center bg-black/75" onClick={onFechar}>
       <div className="shrink-0 rounded-sm bg-background shadow-2xl" style={{ width: w + 2 * borda, height: h + 2 * borda, padding: borda, transform: `scale(${escala})` }}>
         {children}
       </div>
@@ -388,7 +424,7 @@ function ConfigurarGraficoDialog({
         <fieldset className="space-y-2">
           <legend className="mb-1.5 text-sm leading-none font-medium">Aplicar</legend>
           <OpcaoEmLinha nome="aplicar-grafico" marcada={!todos} onMarcar={() => setTodos(false)} rotulo="Neste Card" detalhe="Só o card escolhido." />
-          <OpcaoEmLinha nome="aplicar-grafico" marcada={todos} onMarcar={() => setTodos(true)} rotulo="Em Toda a Aba" detalhe="Todos os cards do Painel de Bordo desta aba." />
+          <OpcaoEmLinha nome="aplicar-grafico" marcada={todos} onMarcar={() => setTodos(true)} rotulo="Em Toda a Aba" detalhe="Todos os cards da aba." />
         </fieldset>
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
@@ -448,8 +484,8 @@ function BarraDoBloco({
             );
           })
         : null}
-      {/* A formatação do texto (17/10/2026), nas anotações e nas legendas das fotos. */}
-      {b.tipo === "ANOTACAO" || b.tipo === "FOTO" ? (
+      {/* A formatação do texto (17/10/2026), nas anotações e nas legendas das fotos e dos vídeos. */}
+      {b.tipo === "ANOTACAO" || b.tipo === "FOTO" || b.tipo === "VIDEO" ? (
         <>
           <span className="mx-0.5 h-4 w-px bg-gray-200" />
           <BarraDeTexto
@@ -485,12 +521,21 @@ function ConteudoDoBloco({
   ampliado = false,
   soCard = false,
   semGrafico = false,
+  apresentacao = false,
+  video,
   registrar,
   onCarregarImagem,
+  onEscolherVideo,
   onMudar,
 }: {
   relatorioId: string;
   b: Bloco;
+  /** Na apresentação (20/10/2026): o vídeo sem os controles do player, com os botões ao passar o mouse. */
+  apresentacao?: boolean;
+  /** No vídeo ampliado: de onde ele continua (o tempo e se estava tocando). */
+  video?: { tempo: number; tocando: boolean };
+  /** No quadro de vídeo vazio, na edição: escolher o vídeo. */
+  onEscolherVideo?: () => void;
   /** No bloco ampliado da apresentação (16/10/2026): a legenda da foto com metade do tamanho. */
   ampliado?: boolean;
   /** No card do Painel ampliado (17/10/2026): só o card, sem o nome do grupo em cima. */
@@ -594,6 +639,40 @@ function ConteudoDoBloco({
               editavel={editavel}
               placeholder="Escreva a legenda…"
               rotulo="Legenda da foto"
+              registrar={registrar}
+              onMudar={(html, texto) => onMudar({ legendaHtml: html, legenda: texto.slice(0, 500) } as Partial<Bloco>)}
+              className="px-3 py-1.5"
+            />
+          </figcaption>
+        ) : null}
+      </figure>
+    );
+  }
+  if (b.tipo === "VIDEO") {
+    // O vídeo (20/10/2026), como a foto: o player e, embaixo, a legenda no destaque das Listas.
+    return (
+      <figure className="flex h-full flex-col gap-2">
+        <div className="min-h-0 flex-1">
+          <PlayerDoVideo
+            relatorioId={relatorioId}
+            b={b}
+            modo={ampliado ? "ampliado" : editavel ? "edicao" : apresentacao ? "apresentacao" : "leitura"}
+            inicio={video?.tempo}
+            tocar={video?.tocando}
+            onEscolher={editavel ? onEscolherVideo : undefined}
+          />
+        </div>
+        {editavel || b.legenda ? (
+          <figcaption
+            className="max-h-[40%] min-h-9 shrink-0 overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white text-sm font-semibold text-gray-900"
+            style={ampliado ? { zoom: 0.5 } : undefined}
+          >
+            <TextoRico
+              html={b.legendaHtml}
+              texto={b.legenda}
+              editavel={editavel}
+              placeholder="Escreva a legenda…"
+              rotulo="Legenda do vídeo"
               registrar={registrar}
               onMudar={(html, texto) => onMudar({ legendaHtml: html, legenda: texto.slice(0, 500) } as Partial<Bloco>)}
               className="px-3 py-1.5"
