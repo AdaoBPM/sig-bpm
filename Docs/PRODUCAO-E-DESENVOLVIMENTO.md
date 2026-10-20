@@ -54,6 +54,8 @@ Nenhum desses arquivos vai para o git. Os modelos estão em `backend/.env.exampl
 6. Conferir a produção em http://localhost:3000.
 7. Enviar ao GitHub (padrão desde 15/10/2026, em toda publicação): `git push origin master` e a etiqueta da publicação
    (`git push origin publicado-…`), no repositório https://github.com/AdaoBPM/sig-bpm.
+8. Com migração, script de dados ou recarga pela tela: registrar em [SERVIDOR-DA-EMPRESA.md](./SERVIDOR-DA-EMPRESA.md)
+   o que o TI precisa repetir no servidor 192.168.0.16, com o comando exato e a conferência.
 
 ## Migração para o servidor da empresa (a fazer)
 
