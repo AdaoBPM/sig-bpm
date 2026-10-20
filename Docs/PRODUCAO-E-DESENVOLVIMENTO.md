@@ -1,6 +1,12 @@
 # Produção e Desenvolvimento
 
-Desde 15/10/2026 a ferramenta roda em dois ambientes separados, com bancos separados.
+> **Desde 20/10/2026, a produção é o servidor da empresa** (`srv-docker`, http://192.168.0.16:3010), com deploy
+> automático a cada envio à `master` do GitHub. **Publicar = enviar à `master`.** O notebook é só desenvolvimento: a
+> produção antiga dele (portas 3000/3001, `backend/prisma/dev.db`) foi desligada e não deve voltar a ser usada como
+> produção. As regras do servidor (o que pode e o que não pode, scripts de dados, back-up) estão em
+> [SERVIDOR-DA-EMPRESA.md](./SERVIDOR-DA-EMPRESA.md). A tabela e os comandos de produção abaixo são histórico (15 a 20/10/2026).
+
+De 15 a 20/10/2026 a ferramenta rodou no notebook em dois ambientes separados, com bancos separados.
 
 | | Produção | Desenvolvimento |
 |---|---|---|
@@ -43,21 +49,25 @@ Nenhum desses arquivos vai para o git. Os modelos estão em `backend/.env.exampl
 | `npm run db:migrar-producao` | Aplica as migrações no banco de **produção** (faça o back-up antes) |
 | `npx prisma migrate deploy` (em `backend`) | Aplica as migrações no banco de **desenvolvimento** |
 
-## Publicar uma alteração
+## Publicar uma alteração (desde 20/10/2026)
 
-1. Desenvolver e conferir em http://localhost:3100, com a cópia do banco.
-2. Com migração nova: aplicar primeiro no desenvolvimento (`npx prisma migrate deploy`, em `backend`) e conferir.
-3. Back-up da produção: `npm run db:backup -- "<pasta do back-up>"`.
-4. Com migração nova: `npm run db:migrar-producao`.
-5. Parar a produção, rodar `npm run producao:construir` e iniciar de novo com `npm run producao`. A produção fica fora
-   do ar por cerca de 2 minutos.
-6. Conferir a produção em http://localhost:3000.
-7. Enviar ao GitHub (padrão desde 15/10/2026, em toda publicação): `git push origin master` e a etiqueta da publicação
-   (`git push origin publicado-…`), no repositório https://github.com/AdaoBPM/sig-bpm.
-8. Com migração, script de dados ou recarga pela tela: registrar em [SERVIDOR-DA-EMPRESA.md](./SERVIDOR-DA-EMPRESA.md)
-   o que o TI precisa repetir no servidor 192.168.0.16, com o comando exato e a conferência.
+Só com a autorização do Adão (“publique”); cada autorização vale para uma publicação.
 
-## Migração para o servidor da empresa (a fazer)
+1. Desenvolver e conferir em http://localhost:3100, com a cópia do banco. Com migração nova, aplicar primeiro no
+   desenvolvimento (`npx prisma migrate deploy`, em `backend`) e conferir.
+2. Etiquetar o commit (`git tag publicado-AAAA-MM-DD-…`) e enviar: `git push origin "<tag>^{commit}:refs/heads/master"` e
+   `git push origin <tag>` (repositório https://github.com/AdaoBPM/sig-bpm). **Enviar à `master` já é publicar.**
+3. Acompanhar o deploy no servidor (a cada 2 minutos o timer confere a `master`; ele faz o back-up do banco, aplica as
+   migrações e troca os containers): `ssh srv-docker "cd /root/dados/sig-bpm && tail -20 deploy.log && docker compose ps"`.
+4. Com script de dados: seguir as regras do servidor (simular sem `--gravar` e mostrar ao Adão, aprovação, conferir que
+   não há deploy em andamento, back-up em `dados/backups/`, gravar e conferir) — em
+   [SERVIDOR-DA-EMPRESA.md](./SERVIDOR-DA-EMPRESA.md), onde a alteração também fica registrada.
+5. Conferir a produção em http://192.168.0.16:3010 e anotar a publicação nas NOTAS-MIGRACAO.
+
+Nunca usar `npm run producao`, `db:migrar-producao` nem `db:backup` do notebook para publicar: eles atuam na base antiga
+do notebook, não na produção.
+
+## Migração para o servidor da empresa (feita pelo TI em 19–20/10/2026; histórico)
 
 A produção foi separada já pensando no servidor, para que os usuários a usem com o notebook desligado. O que será preciso
 lá:

@@ -8,6 +8,34 @@ dados, recarga pela tela) precisa ser repetida no servidor.
 Este documento junta tudo o que o TI precisa: o estado da base do servidor, as alterações a aplicar nela, em ordem, e
 os pontos para a troca do SQLite pelo PostgreSQL. Ele é atualizado a cada publicação.
 
+## A produção agora é o servidor (20/10/2026, regras do TI — Eduardo Domingos)
+
+- **Produção:** http://192.168.0.16:3010 (servidor `srv-docker`). Banco SQLite em `/root/dados/sig-bpm/dados/dev.db`;
+  uploads em `/root/dados/sig-bpm/dados/uploads/`. O notebook é só desenvolvimento: não usar `npm run producao` nele
+  como produção, senão os dados se separam.
+- **Deploy automático:** a cada 2 minutos um timer do systemd verifica a `master`. Commit novo → build, back-up do
+  banco em `dados/backups/`, `prisma migrate deploy` e troca dos containers (log em `/root/dados/sig-bpm/deploy.log`).
+  Ou seja, **enviar à master é publicar**. O deploy faz `git reset --hard origin/master`: código nunca se edita no
+  servidor. Alterações de dados (scripts, recargas) continuam precisando rodar no servidor. Só o root (TI) para o timer.
+- **Acesso:** `ssh srv-docker` (usuário `adao`, chave `~/.ssh/srv-docker` no notebook). Liberado para ler e editar,
+  com as regras abaixo.
+- **Servidor compartilhado:** roda também GDoc, intranet, n8n, evolution-api, Rocket.Chat, zabbix-mcp-server e um CRM.
+  O usuário `adao` está no grupo `docker` (equivale a root). Disco em ~72% (22 GB livres); cada build gera imagens de
+  vários GB.
+- **Pode:** tudo dentro de `/root/dados/sig-bpm` e nos containers `sig-bpm-backend` e `sig-bpm-frontend`, sempre com
+  `docker compose …` a partir de `/root/dados/sig-bpm`; logs com `docker compose logs --tail=100 backend`; scripts com
+  `docker compose exec backend npx tsx scripts/<script>.ts …`; copiar arquivos para `/root/dados/sig-bpm/dados/`.
+- **Nunca:** `docker system prune`, `docker volume prune`, `docker image prune -a`, `docker rm`/`stop`/`restart` sem
+  `compose`, ou qualquer comando que atinja containers de fora do SIG; parar ou reiniciar o Docker ou o servidor; mexer
+  fora de `/root/dados/sig-bpm`; alterar `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `deploy.sh` ou
+  `sig-bpm.env` sem combinar com o TI (existem só no servidor); exibir ou copiar o `sig-bpm.env`.
+- **Antes de gravar no banco de produção:** (1) simular (sem `--gravar`) e mostrar ao Adão; (2) pedir a aprovação dele;
+  (3) conferir no `deploy.log` e no `docker compose ps` que não há deploy em andamento; (4) back-up:
+  `cp dados/dev.db "dados/backups/dev-$(date +%F-%H%M)-antes-<motivo>.db"`; (5) gravar e conferir na tela. Para voltar:
+  `docker compose stop backend && cp dados/backups/<arquivo>.db dados/dev.db && docker compose start backend`.
+- **Trocar o banco inteiro (notebook → servidor):** nunca sozinho; o TI para o timer e confere a auditoria antes.
+- **Em dúvida, ou se algo fora do SIG quebrar:** parar e avisar o TI (eduardo.domingos@bpm.com.br).
+
 ## Estado da base do servidor
 
 - **19/10/2026, 17:48:** cópia inteira da base de produção local para o servidor (`Backups/2026-10-19 copia para o
