@@ -41,7 +41,7 @@ function doNivel(b: Sumario, n: Nivel) {
 
 /**
  * O Sumário (20/10/2026): as telas marcadas, na ordem do relatório, com o número do primeiro slide de cada uma e, em
- * Telas e Slides, os slides delas. Os números são a contagem dos slides a partir da Introdução (a Capa não conta), a
+ * Telas e Slides, os slides delas. Os números são a contagem dos slides a partir da Introdução (a Capa e o Encerramento não contam), a
  * mesma do contador do topo dos slides; a tela marcada sem slides não aparece. Cada nível tem a sua formatação (na barra
  * do bloco), e o sublinhado entre o nome e o número é o escolhido no Configurar Sumário, na cor do texto.
  */
@@ -197,7 +197,7 @@ export function ConfigurarSumarioDialog({
       <DialogContent avisoAoSair className="rounded-sm sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{titulo}</DialogTitle>
-          <DialogDescription>A lista das telas do relatório, com o número do slide de cada uma (a contagem começa na Introdução; a Capa não conta).</DialogDescription>
+          <DialogDescription>A lista das telas do relatório, com o número do slide de cada uma (a contagem começa na Introdução; a Capa e o Encerramento não contam).</DialogDescription>
         </DialogHeader>
         <fieldset className="space-y-2">
           <legend className="mb-1.5 text-sm leading-none font-medium">Listar</legend>

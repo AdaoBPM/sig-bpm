@@ -58,9 +58,9 @@ const bloco = z.discriminatedUnion("tipo", [
     proporcao: z.number().positive().max(50),
     legendaHtml: z.string().max(5000).optional(),
   }),
-  // O Texto Livre e o Sumário (20/10/2026); as telas do Sumário são da Introdução em diante (sem a Capa).
+  // O Texto Livre e o Sumário (20/10/2026); as telas do Sumário são da Introdução às performances (sem a Capa e o Encerramento).
   z.object({ ...posicao, tipo: z.literal("TEXTO"), texto: z.string().max(5000), html: z.string().max(30000).optional(), espacamento }),
-  z.object({ ...posicao, tipo: z.literal("SUMARIO"), listar: z.enum(["TELAS", "TELAS_E_SLIDES"]), telas: z.array(departamento.exclude(["CAPA"])).max(CHAVES_DAS_ABAS.length), linha: z.enum(["PONTOS", "TRACOS", "LINHA", "NENHUM"]).optional(), estilos: z.object({ telas: estiloDoSumario.optional(), slides: estiloDoSumario.optional() }).optional() }),
+  z.object({ ...posicao, tipo: z.literal("SUMARIO"), listar: z.enum(["TELAS", "TELAS_E_SLIDES"]), telas: z.array(departamento.exclude(["CAPA", "ENCERRAMENTO"])).max(CHAVES_DAS_ABAS.length), linha: z.enum(["PONTOS", "TRACOS", "LINHA", "NENHUM"]).optional(), estilos: z.object({ telas: estiloDoSumario.optional(), slides: estiloDoSumario.optional() }).optional() }),
 ]);
 /** A Imagem de Fundo da página (20/10/2026): a foto, a proporção, o zoom (1 a 4) e a posição (0 a 1). */
 const fundo = z.object({ arquivo: z.string().regex(NOME_DA_FOTO), proporcao: z.number().positive().max(50), zoom: z.number().min(1).max(4), x: z.number().min(0).max(1), y: z.number().min(0).max(1) });

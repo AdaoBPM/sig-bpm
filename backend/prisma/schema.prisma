@@ -2322,6 +2322,9 @@ enum AbaRelatorioExecutivo {
   PRODUCAO
   SERVICOS
   ADMINISTRATIVO
+  /// O Encerramento (20/10/2026), geral como a Capa, depois das performances; os relatórios de antes dele o ganham ao
+  /// serem abertos (completarAbas).
+  ENCERRAMENTO
 }
 
 model RelatorioExecutivoAba {

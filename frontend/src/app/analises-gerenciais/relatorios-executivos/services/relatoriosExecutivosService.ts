@@ -104,6 +104,11 @@ export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele,
 /** A Capa (20/10/2026): a primeira aba; os slides dela não entram na contagem. */
 export const CHAVE_DA_CAPA = "CAPA";
 /**
+ * As abas fora da contagem dos slides e do Sumário, com o layout livre: a Capa e o Encerramento (20/10/2026, a última
+ * aba, geral como a Capa).
+ */
+export const ABAS_SEM_NUMERO = new Set<string>([CHAVE_DA_CAPA, "ENCERRAMENTO"]);
+/**
  * As telas e os slides para o Sumário (20/10/2026): as abas da Introdução em diante, com os slides de cada uma e o número
  * de cada slide (a contagem a partir da Introdução, a mesma do contador do topo dos slides); a aba sem slides vem sem eles.
  */

@@ -14,7 +14,7 @@ import type { Bloco, DadosDoRelatorio, Fundo, TelaDoSumario } from "../services/
 
 /**
  * Um slide: o título da aba (`nome`: Introdução, Performance da Produção…), o nome da página (`pagina`), os blocos e a
- * Imagem de Fundo (20/10/2026), e o número dele na contagem que começa na Introdução (`numero`, de `total`; nulo na Capa).
+ * Imagem de Fundo (20/10/2026), e o número dele na contagem que começa na Introdução (`numero`, de `total`; nulo na Capa e no Encerramento).
  */
 export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[]; fundo?: Fundo; numero: number | null; total: number };
 
@@ -117,7 +117,7 @@ export function ApresentacaoDoRelatorio({
           (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
           fica centrada na altura da barra, sem mudar a altura dela.
         */}
-        {/* O contador (20/10/2026), no centro: o número do slide e o total, contados da Introdução em diante; na Capa, sem ele. */}
+        {/* O contador (20/10/2026), no centro: o número do slide e o total, contados da Introdução em diante; na Capa e no Encerramento, sem ele. */}
         <header className="relative mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
           <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{slide?.nome}</span>
           <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />

@@ -16,8 +16,8 @@ import { painelService } from "../relatorios/painelService.js";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
- * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as sete abas (17/10/2026; a Capa, 20/10/2026;
- * antes, uma por departamento) — Introdução e Demonstrativo de Resultados, que todos os que editam a tela editam, e
+ * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as oito abas (17/10/2026; a Capa e o Encerramento, 20/10/2026;
+ * antes, uma por departamento) — Capa, Introdução, Demonstrativo de Resultados e Encerramento, que todos os que editam a tela editam, e
  * as performances Comercial, da Produção, de Serviços e Administrativa, que cada gestor edita pelo recorte de
  * departamentos (sem recorte, todas); cada aba tem a sua situação —
  * em elaboração, só quem a edita (e o Administrador) a vê; finalizada, todos —, e quem a edita a finaliza e a reabre (o
@@ -51,6 +51,8 @@ export const ABAS: Array<{ chave: AbaRelatorioExecutivo; nome: string; titulo: s
   { chave: "PRODUCAO", nome: "Produção", titulo: "Performance da Produção", departamento: "PRODUCAO" },
   { chave: "SERVICOS", nome: "Serviços", titulo: "Performance de Serviços", departamento: "SERVICOS" },
   { chave: "ADMINISTRATIVO", nome: "Administrativo", titulo: "Performance Administrativa", departamento: "ADMINISTRATIVO" },
+  // O Encerramento (20/10/2026), geral e no fim; como a Capa, os slides dele não entram na contagem nem no Sumário.
+  { chave: "ENCERRAMENTO", nome: "Encerramento", titulo: "Encerramento", departamento: null },
 ];
 export const CHAVES_DAS_ABAS = ABAS.map((a) => a.chave);
 const DA_ABA = new Map(ABAS.map((a) => [a.chave, a]));
@@ -202,7 +204,7 @@ export const relatoriosExecutivosService = {
       buscar(),
       prisma.competencia.findMany({ where: { status: "FECHADA" }, select: { ano: true, mes: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] }),
     ]);
-    // Os relatórios de antes da Capa (20/10/2026) a ganham aqui, para o andamento contar as sete abas.
+    // Os relatórios de antes da Capa e do Encerramento (20/10/2026) os ganham aqui, para o andamento contar as oito abas.
     let completou = false;
     for (const r of relatorios) completou = (await completarAbas(r)) || completou;
     if (completou) relatorios = await buscar();
@@ -231,7 +233,7 @@ export const relatoriosExecutivosService = {
   },
 
   /**
-   * Cria o relatório de uma competência fechada (um por competência), com as sete abas: vazias ou, com `importarDe`
+   * Cria o relatório de uma competência fechada (um por competência), com as oito abas: vazias ou, com `importarDe`
    * (16/10/2026), com os blocos das abas de outro relatório — os cards (que trazem os dados do mês novo), as fotos
    * (copiadas para a pasta do relatório novo) e as anotações —, todas em elaboração.
    */
