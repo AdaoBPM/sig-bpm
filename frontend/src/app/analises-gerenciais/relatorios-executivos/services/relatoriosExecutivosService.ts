@@ -59,6 +59,10 @@ export type Bloco = Posicao &
         html?: string;
         /** O tamanho da fonte do título, em px (19/10/2026); sem ele, 12. */
         tamanhoTitulo?: number;
+        /** A fonte do título (20/10/2026: a chave de FONTES); sem ela, a da ferramenta. */
+        fonteTitulo?: string;
+        /** O espaçamento entre as linhas do texto (20/10/2026: 0,5 a 2); sem ele, o de antes. */
+        espacamento?: number;
       }
     /** Uma foto (16/10/2026): o arquivo, guardado no servidor, a legenda e a proporção (largura ÷ altura). */
     | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
@@ -68,14 +72,25 @@ export type Bloco = Posicao &
      */
     | { tipo: "VIDEO"; origem: "ARQUIVO" | "LINK"; arquivo: string; url: string; legenda: string; proporcao: number; legendaHtml?: string }
     /** O Texto Livre (20/10/2026): o texto formatado das anotações, sem o destaque, o título, o ícone e o fundo. */
-    | { tipo: "TEXTO"; texto: string; html?: string }
+    | { tipo: "TEXTO"; texto: string; html?: string; /** O espaçamento entre as linhas (20/10/2026). */ espacamento?: number }
     /**
      * O Sumário (20/10/2026): as telas marcadas (da Introdução em diante), com o número do primeiro slide de cada uma, e, em
      * "TELAS_E_SLIDES", os slides delas; a lista e os números se montam a cada vez, com os slides do relatório.
      */
-    | { tipo: "SUMARIO"; listar: ListarDoSumario; telas: string[] }
+    | {
+        tipo: "SUMARIO";
+        listar: ListarDoSumario;
+        telas: string[];
+        /** O sublinhado entre o nome e o número (20/10/2026); sem ele, os pontos. */
+        linha?: LinhaDoSumario;
+        /** A formatação das telas e dos slides (20/10/2026); sem ela, a de início (as telas em negrito, maiores). */
+        estilos?: { telas?: EstiloDoSumario; slides?: EstiloDoSumario };
+      }
   );
 export type ListarDoSumario = "TELAS" | "TELAS_E_SLIDES";
+export type LinhaDoSumario = "PONTOS" | "TRACOS" | "LINHA" | "NENHUM";
+/** A formatação de um nível do Sumário (20/10/2026): o tamanho em px, a cor (#rrggbb) e a fonte (a chave de FONTES). */
+export type EstiloDoSumario = { negrito?: boolean; italico?: boolean; sublinhado?: boolean; tamanho?: number; cor?: string; fonte?: string };
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
 /**

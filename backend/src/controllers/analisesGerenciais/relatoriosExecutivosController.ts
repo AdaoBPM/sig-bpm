@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { temPermissao } from "../../middlewares/verificarPermissao.js";
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
-import { CHAVES_DAS_ABAS, NOME_DA_FOTO, NOME_DO_VIDEO, RelatorioExecutivoError, SITES_DE_VIDEO, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
+import { CHAVES_DAS_ABAS, FONTES_DO_TEXTO, NOME_DA_FOTO, NOME_DO_VIDEO, RelatorioExecutivoError, SITES_DE_VIDEO, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
 
 /** O usuário da requisição: se edita a tela e os departamentos do recorte (sem recorte, nulo: todos). */
 const usuario = (request: Request): UsuarioDoRelatorio => ({
@@ -38,10 +38,14 @@ function aba(request: Request, response: Response) {
   return r.success ? r.data : null;
 }
 const posicao = { id: z.string().min(1).max(60), x: z.number().int().min(0).max(24), y: z.number().int().min(0).max(2000), w: z.number().int().min(1).max(24), h: z.number().int().min(1).max(200) };
+// A fonte, o espaçamento entre as linhas e a formatação de um nível do Sumário (20/10/2026).
+const fonteDoTexto = z.enum(FONTES_DO_TEXTO);
+const espacamento = z.number().min(0.5).max(2).optional();
+const estiloDoSumario = z.object({ negrito: z.boolean().optional(), italico: z.boolean().optional(), sublinhado: z.boolean().optional(), tamanho: z.number().int().min(8).max(96).optional(), cor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(), fonte: fonteDoTexto.optional() });
 const bloco = z.discriminatedUnion("tipo", [
   z.object({ ...posicao, tipo: z.literal("PAINEL"), aba: z.enum(["resultados", "performance"]), quadro: z.string().max(200), titulo: z.string().max(200), sigla: z.string().max(60), comGrafico: z.boolean(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), cores: z.enum(["padrao", "daltonismo"]).optional() }),
   z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200) }),
-  z.object({ ...posicao, tipo: z.literal("ANOTACAO"), nota: z.enum(["POSITIVO", "NEGATIVO", "ATENCAO"]), texto: z.string().max(5000), titulo: z.string().max(120).optional(), html: z.string().max(30000).optional(), tamanhoTitulo: z.number().int().min(8).max(48).optional() }),
+  z.object({ ...posicao, tipo: z.literal("ANOTACAO"), nota: z.enum(["POSITIVO", "NEGATIVO", "ATENCAO"]), texto: z.string().max(5000), titulo: z.string().max(120).optional(), html: z.string().max(30000).optional(), tamanhoTitulo: z.number().int().min(8).max(48).optional(), fonteTitulo: fonteDoTexto.optional(), espacamento }),
   z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional() }),
   // O vídeo (20/10/2026): o arquivo enviado ou o link de um dos sites aceitos (vazios, o quadro esperando o vídeo).
   z.object({
@@ -55,8 +59,8 @@ const bloco = z.discriminatedUnion("tipo", [
     legendaHtml: z.string().max(5000).optional(),
   }),
   // O Texto Livre e o Sumário (20/10/2026); as telas do Sumário são da Introdução em diante (sem a Capa).
-  z.object({ ...posicao, tipo: z.literal("TEXTO"), texto: z.string().max(5000), html: z.string().max(30000).optional() }),
-  z.object({ ...posicao, tipo: z.literal("SUMARIO"), listar: z.enum(["TELAS", "TELAS_E_SLIDES"]), telas: z.array(departamento.exclude(["CAPA"])).max(CHAVES_DAS_ABAS.length) }),
+  z.object({ ...posicao, tipo: z.literal("TEXTO"), texto: z.string().max(5000), html: z.string().max(30000).optional(), espacamento }),
+  z.object({ ...posicao, tipo: z.literal("SUMARIO"), listar: z.enum(["TELAS", "TELAS_E_SLIDES"]), telas: z.array(departamento.exclude(["CAPA"])).max(CHAVES_DAS_ABAS.length), linha: z.enum(["PONTOS", "TRACOS", "LINHA", "NENHUM"]).optional(), estilos: z.object({ telas: estiloDoSumario.optional(), slides: estiloDoSumario.optional() }).optional() }),
 ]);
 /** A Imagem de Fundo da página (20/10/2026): a foto, a proporção, o zoom (1 a 4) e a posição (0 a 1). */
 const fundo = z.object({ arquivo: z.string().regex(NOME_DA_FOTO), proporcao: z.number().positive().max(50), zoom: z.number().min(1).max(4), x: z.number().min(0).max(1), y: z.number().min(0).max(1) });

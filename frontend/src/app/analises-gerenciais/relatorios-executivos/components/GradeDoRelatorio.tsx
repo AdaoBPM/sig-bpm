@@ -18,8 +18,8 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 import { CamadaDoFundo } from "./FundoDoSlide";
-import { ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
-import { BarraDeTexto, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
+import { BarraDoSumario, ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
+import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
 import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
 import { videoDoLink } from "./videoIncorporado";
 
@@ -320,7 +320,7 @@ export function GradeDoRelatorio({
       {doCard?.tipo === "SUMARIO" ? (
         <ConfigurarSumarioDialog
           titulo="Configurar Sumário"
-          inicial={{ listar: doCard.listar, telas: doCard.telas }}
+          inicial={{ listar: doCard.listar, telas: doCard.telas, linha: doCard.linha }}
           sumario={sumario}
           onFechar={() => setConfigurando(null)}
           onAplicar={(o) => {
@@ -516,6 +516,14 @@ function BarraDoBloco({
           <Settings className="size-4" />
         </button>
       ) : null}
+      {/* A formatação do Sumário (20/10/2026): a do texto, sem os marcadores, por nível (as telas ou os slides). */}
+      {b.tipo === "SUMARIO" ? (
+        <>
+          <span className="mx-0.5 h-4 w-px bg-gray-200" />
+          <BarraDoSumario b={b} botao={botao} onMudar={(m) => onMudar(m as Partial<Bloco>)} />
+          <span className="mx-0.5 h-4 w-px bg-gray-200" />
+        </>
+      ) : null}
       {b.tipo === "ANOTACAO"
         ? (Object.keys(NOTAS) as Nota[]).map((n) => {
             const { Icone, rotulo } = NOTAS[n];
@@ -533,12 +541,17 @@ function BarraDoBloco({
           <BarraDeTexto
             campo={campo}
             botao={botao}
+            // A fonte e o espaçamento entre as linhas (20/10/2026), nas anotações e no Texto Livre.
+            fontes={b.tipo === "ANOTACAO" || b.tipo === "TEXTO"}
+            espacamento={b.tipo === "ANOTACAO" || b.tipo === "TEXTO" ? { valor: b.espacamento, definir: (espacamento) => onMudar({ espacamento } as Partial<Bloco>) } : undefined}
             titulo={
               b.tipo === "ANOTACAO"
                 ? {
                     campo: () => campo()?.closest(".group")?.querySelector<HTMLInputElement>("[data-titulo-da-anotacao]") ?? null,
                     tamanho: b.tamanhoTitulo ?? TAMANHO_DO_TITULO,
                     definir: (px) => onMudar({ tamanhoTitulo: px } as Partial<Bloco>),
+                    fonte: b.fonteTitulo,
+                    definirFonte: (fonteTitulo) => onMudar({ fonteTitulo } as Partial<Bloco>),
                   }
                 : undefined
             }
@@ -608,7 +621,7 @@ function ConteudoDoBloco({
         {/* O título no tamanho escolhido na barra (19/10/2026; antes, sempre 12 px); o ícone acompanha. */}
         <header
           className={`flex min-h-5 shrink-0 items-center gap-1.5 pb-1 font-bold tracking-wide uppercase ${n.icone(cores)}`}
-          style={{ fontSize: b.tamanhoTitulo ?? TAMANHO_DO_TITULO, lineHeight: 1.2 }}
+          style={{ fontSize: b.tamanhoTitulo ?? TAMANHO_DO_TITULO, lineHeight: 1.2, fontFamily: familiaDa(b.fonteTitulo) }}
         >
           <n.Icone className="shrink-0" style={{ width: "1.15em", height: "1.15em" }} />
           {editavel ? (
@@ -632,6 +645,7 @@ function ConteudoDoBloco({
             texto={b.texto}
             editavel={editavel}
             placeholder="Escreva a anotação…"
+            estilo={{ lineHeight: alturaDaLinha(b.espacamento) }}
             rotulo={`Anotação (${titulo})`}
             registrar={registrar}
             onMudar={(html, texto) => onMudar({ html, texto } as Partial<Bloco>)}
@@ -650,6 +664,7 @@ function ConteudoDoBloco({
         texto={b.texto}
         editavel={editavel}
         placeholder="Escreva o texto…"
+        estilo={{ lineHeight: alturaDaLinha(b.espacamento) }}
         rotulo="Texto livre"
         registrar={registrar}
         onMudar={(html, texto) => onMudar({ html, texto } as Partial<Bloco>)}
@@ -657,7 +672,7 @@ function ConteudoDoBloco({
       />
     );
   }
-  if (b.tipo === "SUMARIO") return <ListaDoSumario opcoes={b} sumario={sumario} editavel={editavel} />;
+  if (b.tipo === "SUMARIO") return <ListaDoSumario b={b} sumario={sumario} editavel={editavel} />;
   if (b.tipo === "FOTO") {
     // A foto inteira (na proporção dela) e, embaixo, a legenda no destaque das Listas (16/10/2026).
     return (

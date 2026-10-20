@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { Bold, ChevronDown, Italic, List, Palette, Underline } from "lucide-react";
+import { Bold, CaseSensitive, ChevronDown, Italic, List, Palette, Underline, UnfoldVertical } from "lucide-react";
 
 /**
  * O texto formatado das anotações e das legendas das fotos dos Relatórios Executivos (17/10/2026): negrito, itálico,
@@ -32,6 +32,64 @@ export const CORES_DA_FONTE = [
   // O branco (20/10/2026), para os textos sobre a Imagem de Fundo.
   { nome: "Branco", cor: "#ffffff" },
 ];
+
+/**
+ * As fontes (20/10/2026): as cinco mais usadas em apresentações de empresa, todas do Windows e do Office (com as
+ * substitutas, onde faltarem); Padrão tira a escolhida e volta à fonte da ferramenta.
+ */
+export const FONTES = [
+  { chave: "ARIAL", nome: "Arial", familia: "Arial, Helvetica, sans-serif" },
+  { chave: "CALIBRI", nome: "Calibri", familia: "Calibri, Carlito, 'Segoe UI', sans-serif" },
+  { chave: "SEGOE", nome: "Segoe UI", familia: "'Segoe UI', Tahoma, sans-serif" },
+  { chave: "VERDANA", nome: "Verdana", familia: "Verdana, Geneva, sans-serif" },
+  { chave: "GEORGIA", nome: "Georgia", familia: "Georgia, 'Times New Roman', serif" },
+] as const;
+export type ChaveDaFonte = (typeof FONTES)[number]["chave"];
+export const familiaDa = (chave?: string) => FONTES.find((x) => x.chave === chave)?.familia;
+/** A marca da fonte Padrão, aplicada e logo tirada (o texto volta à fonte do campo). */
+const FONTE_PADRAO = "fonte-padrao";
+
+/**
+ * O espaçamento entre as linhas (20/10/2026), do texto todo do bloco: 1,00 é o simples do Office (a linha com 1,2 vez o
+ * tamanho da fonte); sem ele, o de antes.
+ */
+export const ESPACAMENTOS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+export const alturaDaLinha = (espacamento?: number) => (espacamento ? espacamento * 1.2 : undefined);
+export const rotuloDoEspacamento = (e: number) => e.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+
+/** A classe dos itens das listas da barra. */
+export const ITEM_DA_BARRA = "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-gray-700 hover:bg-gray-100";
+/** O clique nos botões da barra não tira o foco do texto (a seleção fica). */
+export const semFoco = (e: React.MouseEvent) => e.preventDefault();
+
+/** Uma lista da barra (20/10/2026): o botão, com a seta, e a lista logo abaixo dele, sem menu (o menu levaria o foco). */
+export function MenuDaBarra({
+  botao,
+  titulo,
+  gatilho,
+  aberto,
+  onAlternar,
+  largura = "w-40",
+  children,
+}: {
+  botao: string;
+  titulo: string;
+  gatilho: React.ReactNode;
+  aberto: boolean;
+  onAlternar: () => void;
+  largura?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="relative">
+      <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={onAlternar} title={titulo} aria-label={titulo} aria-expanded={aberto}>
+        {gatilho}
+        <ChevronDown className="size-3" />
+      </button>
+      {aberto ? <span className={`absolute top-full right-0 z-20 mt-1 grid ${largura} rounded-sm border border-gray-200 bg-white p-1 shadow-md`}>{children}</span> : null}
+    </span>
+  );
+}
 
 /** Os marcadores das listas: o símbolo antes de cada item. */
 export const MARCADORES = [
@@ -68,9 +126,12 @@ export function TextoRico({
   placeholder,
   rotulo,
   className,
+  estilo,
   registrar,
   onMudar,
 }: {
+  /** O estilo do campo (20/10/2026: a altura da linha do espaçamento). */
+  estilo?: React.CSSProperties;
   html?: string;
   texto: string;
   editavel: boolean;
@@ -91,7 +152,7 @@ export function TextoRico({
     if (el.innerHTML !== limpo) el.innerHTML = limpo;
   }, [conteudo, editavel]);
   if (!editavel) {
-    return <div className={`${CLASSE_DO_TEXTO} ${className ?? ""}`} dangerouslySetInnerHTML={{ __html: limparHtml(conteudo) }} />;
+    return <div className={`${CLASSE_DO_TEXTO} ${className ?? ""}`} style={estilo} dangerouslySetInnerHTML={{ __html: limparHtml(conteudo) }} />;
   }
   return (
     <div
@@ -101,6 +162,7 @@ export function TextoRico({
       }}
       contentEditable
       suppressContentEditableWarning
+      style={estilo}
       role="textbox"
       aria-multiline
       aria-label={rotulo}
@@ -261,6 +323,19 @@ function definirFonte(sel: Selection, px: number, campo: HTMLElement) {
   selecionar(span);
 }
 
+/** Tira a marca da fonte Padrão (os trechos voltam à fonte do campo) e desfaz os spans que ficaram sem estilo. */
+function tirarFontePadrao(campo: HTMLElement) {
+  campo.querySelectorAll<HTMLElement>("[style]").forEach((el) => {
+    if (!el.style.fontFamily.includes(FONTE_PADRAO)) return;
+    el.style.removeProperty("font-family");
+    if (!el.getAttribute("style")?.trim()) el.removeAttribute("style");
+    if (el.tagName === "SPAN" && !el.attributes.length) el.replaceWith(...el.childNodes);
+  });
+  campo.querySelectorAll("font[face]").forEach((el) => {
+    if (el.getAttribute("face")?.includes(FONTE_PADRAO)) el.replaceWith(...el.childNodes);
+  });
+}
+
 /** Põe (ou tira, se já tem o mesmo) a lista com o marcador na seleção. */
 function marcar(sel: Selection, campo: HTMLElement, simbolo: string) {
   const lista = () => {
@@ -291,16 +366,22 @@ export function BarraDeTexto({
   campo,
   botao,
   titulo,
+  fontes = false,
+  espacamento,
 }: {
   campo: () => HTMLElement | null;
   botao: string;
+  /** A fonte do trecho (20/10/2026: nas anotações e no Texto Livre; no título da anotação, a dele). */
+  fontes?: boolean;
+  /** O espaçamento entre as linhas do texto todo do bloco (20/10/2026: nas anotações e no Texto Livre). */
+  espacamento?: { valor?: number; definir: (e: number | undefined) => void };
   /**
    * O título da anotação (19/10/2026): com o cursor nele, o tamanho da fonte muda o dele (os demais botões não valem
    * para o título).
    */
-  titulo?: { campo: () => HTMLInputElement | null; tamanho: number; definir: (px: number) => void };
+  titulo?: { campo: () => HTMLInputElement | null; tamanho: number; definir: (px: number) => void; fonte?: string; definirFonte?: (chave: ChaveDaFonte | undefined) => void };
 }) {
-  const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | null>(null);
+  const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | "fonte" | "espacamento" | null>(null);
   // O tamanho do texto onde está o cursor (o número do botão), a cada mudança da seleção; no título, o dele.
   const [tamanho, setTamanho] = useState(14);
   // O título mais recente (para os eventos) e se o cursor está nele (para a lista dos tamanhos).
@@ -339,7 +420,6 @@ export function BarraDeTexto({
     aplicar(el, (s) => definirFonte(s, px, el));
     setTamanho(px);
   };
-  const semFoco = (e: React.MouseEvent) => e.preventDefault();
   const exec = (cmd: string, valor?: string, comCss = false) => {
     if (noTitulo()) return;
     aplicar(campo(), () => {
@@ -347,7 +427,20 @@ export function BarraDeTexto({
       document.execCommand(cmd, false, valor);
     });
   };
-  const item = "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-gray-700 hover:bg-gray-100";
+  const item = ITEM_DA_BARRA;
+  const alternar = (m: NonNullable<typeof aberta>) => () => setAberta((a) => (a === m ? null : m));
+  // A fonte (20/10/2026): no título da anotação, a dele; no texto, a do trecho (Padrão tira a escolhida).
+  const escolherFonte = (chave: ChaveDaFonte | undefined) => {
+    setAberta(null);
+    if (noTitulo()) return doTitulo.current?.definirFonte?.(chave);
+    if (chave) return exec("fontName", familiaDa(chave), true);
+    const el = campo();
+    aplicar(el, () => {
+      document.execCommand("styleWithCSS", false, "true");
+      document.execCommand("fontName", false, FONTE_PADRAO);
+      if (el) tirarFontePadrao(el);
+    });
+  };
   return (
     <>
       <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("bold")} title="Negrito" aria-label="Negrito">
@@ -393,6 +486,18 @@ export function BarraDeTexto({
           </span>
         ) : null}
       </span>
+      {fontes ? (
+        <MenuDaBarra botao={botao} titulo="Fonte" gatilho={<CaseSensitive className="size-4" />} aberto={aberta === "fonte"} onAlternar={alternar("fonte")} largura="w-36">
+          <button type="button" className={item} onMouseDown={semFoco} onClick={() => escolherFonte(undefined)}>
+            Padrão
+          </button>
+          {FONTES.map((x) => (
+            <button key={x.chave} type="button" className={`${item} text-sm`} style={{ fontFamily: x.familia }} onMouseDown={semFoco} onClick={() => escolherFonte(x.chave)}>
+              {x.nome}
+            </button>
+          ))}
+        </MenuDaBarra>
+      ) : null}
       <span className="relative">
         <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "cor" ? null : "cor"))} title="Cor da fonte" aria-label="Cor da fonte" aria-expanded={aberta === "cor"}>
           <Palette className="size-4" />
@@ -455,6 +560,35 @@ export function BarraDeTexto({
           </span>
         ) : null}
       </span>
+      {espacamento ? (
+        <MenuDaBarra botao={botao} titulo="Espaçamento entre linhas" gatilho={<UnfoldVertical className="size-4" />} aberto={aberta === "espacamento"} onAlternar={alternar("espacamento")} largura="w-24">
+          {ESPACAMENTOS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              className={`${item} justify-center ${e === espacamento.valor ? "font-bold text-gray-900" : ""}`}
+              onMouseDown={semFoco}
+              onClick={() => {
+                espacamento.definir(e);
+                setAberta(null);
+              }}
+            >
+              {rotuloDoEspacamento(e)}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`${item} justify-center border-t border-gray-100 ${espacamento.valor === undefined ? "font-bold text-gray-900" : ""}`}
+            onMouseDown={semFoco}
+            onClick={() => {
+              espacamento.definir(undefined);
+              setAberta(null);
+            }}
+          >
+            Padrão
+          </button>
+        </MenuDaBarra>
+      ) : null}
     </>
   );
 }

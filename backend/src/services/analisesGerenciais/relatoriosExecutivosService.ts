@@ -58,11 +58,17 @@ const nomeDaAba = (d: AbaRelatorioExecutivo) => DA_ABA.get(d)?.nome ?? d;
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
 
+/** As fontes dos textos (20/10/2026: as cinco da barra de formatação). */
+export const FONTES_DO_TEXTO = ["ARIAL", "CALIBRI", "SEGOE", "VERDANA", "GEORGIA"] as const;
+export type FonteDoTexto = (typeof FONTES_DO_TEXTO)[number];
+/** A formatação de um nível do Sumário (20/10/2026): o tamanho em px, a cor (#rrggbb) e a fonte. */
+export type EstiloDoSumario = { negrito?: boolean; italico?: boolean; sublinhado?: boolean; tamanho?: number; cor?: string; fonte?: FonteDoTexto };
+
 /** Um bloco da grade: a posição e o tamanho (em colunas e linhas) e o conteúdo. */
 export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h: number } & (
   | { tipo: "PAINEL"; aba: "resultados" | "performance"; quadro: string; titulo: string; sigla: string; comGrafico: boolean; /** As opções do gráfico do card (16/10/2026), como no Configurar Gráficos do Painel; sem elas, as do navegador. */ tipoGrafico?: "barras" | "area"; comRotulos?: boolean; cores?: "padrao" | "daltonismo" }
   | { tipo: "INDICADOR"; nome: string }
-  | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string }
+  | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string; tamanhoTitulo?: number; /** A fonte do título e o espaçamento entre as linhas (20/10/2026). */ fonteTitulo?: FonteDoTexto; espacamento?: number }
   /** Uma foto (16/10/2026): o arquivo (na pasta do relatório; vazio, o quadro esperando a imagem), a legenda e a proporção (largura ÷ altura). */
   | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
   /**
@@ -72,12 +78,13 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
    */
   | { tipo: "VIDEO"; origem: "ARQUIVO" | "LINK"; arquivo: string; url: string; legenda: string; proporcao: number; legendaHtml?: string }
   /** O Texto Livre (20/10/2026): o texto formatado das anotações, sem o destaque, o título, o ícone e o fundo. */
-  | { tipo: "TEXTO"; texto: string; html?: string }
+  | { tipo: "TEXTO"; texto: string; html?: string; espacamento?: number }
   /**
    * O Sumário (20/10/2026): a lista das telas (as abas, da Introdução em diante) marcadas, com o número do primeiro slide
    * de cada uma, e, em "TELAS_E_SLIDES", também os slides delas; a tela monta a lista e os números a cada vez.
    */
-  | { tipo: "SUMARIO"; listar: "TELAS" | "TELAS_E_SLIDES"; telas: AbaRelatorioExecutivo[] }
+  /** O sublinhado entre o nome e o número e a formatação das telas e dos slides (20/10/2026). */
+  | { tipo: "SUMARIO"; listar: "TELAS" | "TELAS_E_SLIDES"; telas: AbaRelatorioExecutivo[]; linha?: "PONTOS" | "TRACOS" | "LINHA" | "NENHUM"; estilos?: { telas?: EstiloDoSumario; slides?: EstiloDoSumario } }
 );
 
 /**
