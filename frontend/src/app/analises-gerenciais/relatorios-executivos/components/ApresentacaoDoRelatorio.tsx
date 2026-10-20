@@ -8,11 +8,15 @@ import { BpmLogo } from "@/components/layout/BpmLogo";
 import type { Cores } from "@/app/relatorios/painel/PainelContent";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
+import { CamadaDoFundo } from "./FundoDoSlide";
 import { GradeDoRelatorio, linhasDaPagina } from "./GradeDoRelatorio";
-import type { Bloco, DadosDoRelatorio } from "../services/relatoriosExecutivosService";
+import type { Bloco, DadosDoRelatorio, Fundo, TelaDoSumario } from "../services/relatoriosExecutivosService";
 
-/** Um slide: o título da aba (`nome`: Introdução, Performance da Produção…), o nome da página (`pagina`) e os blocos. */
-export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[] };
+/**
+ * Um slide: o título da aba (`nome`: Introdução, Performance da Produção…), o nome da página (`pagina`), os blocos e a
+ * Imagem de Fundo (20/10/2026), e o número dele na contagem que começa na Introdução (`numero`, de `total`; nulo na Capa).
+ */
+export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[]; fundo?: Fundo; numero: number | null; total: number };
 
 /** Entra na tela inteira do navegador (a página toda; a apresentação a cobre, sem o menu lateral). */
 export function entrarEmTelaInteira() {
@@ -29,6 +33,7 @@ export function ApresentacaoDoRelatorio({
   relatorioId,
   periodo,
   slides,
+  sumario,
   inicial,
   dados,
   cores,
@@ -39,6 +44,8 @@ export function ApresentacaoDoRelatorio({
   /** O período do relatório (Agosto/2026…), à direita do topo, depois de "Relatório Executivo". */
   periodo: string;
   slides: Slide[];
+  /** As telas e os slides, com os números, para os blocos de Sumário (20/10/2026). */
+  sumario: TelaDoSumario[];
   inicial: number;
   dados: DadosDoRelatorio | undefined;
   cores: Cores;
@@ -110,7 +117,8 @@ export function ApresentacaoDoRelatorio({
           (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
           fica centrada na altura da barra, sem mudar a altura dela.
         */}
-        <header className="mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
+        {/* O contador (20/10/2026), no centro: o número do slide e o total, contados da Introdução em diante; na Capa, sem ele. */}
+        <header className="relative mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
           <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{slide?.nome}</span>
           <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
           <h1 className="min-w-0 truncate text-lg font-bold text-gray-900">{slide?.pagina}</h1>
@@ -118,9 +126,21 @@ export function ApresentacaoDoRelatorio({
           <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
           <span className="shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{periodo}</span>
           <BpmLogo className="h-[30px] w-auto shrink-0" />
+          {slide?.numero ? (
+            <span className="pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center pb-3 text-lg font-semibold whitespace-nowrap text-gray-500">
+              {slide.numero}/{slide.total}
+            </span>
+          ) : null}
         </header>
+        {/*
+          A Imagem de Fundo (20/10/2026): o slide inteiro, por cima do cabeçalho (vem depois dele) e atrás dos blocos (a grade
+          vem depois dela).
+        */}
+        {slide?.fundo ? <CamadaDoFundo key={slide.chave} relatorioId={relatorioId} fundo={slide.fundo} className="absolute inset-0" /> : null}
         {slide ? (
-          <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} ampliavel onMudar={() => undefined} />
+          <div className="relative">
+            <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} livre={slide.numero === null || !!slide.fundo} sumario={sumario} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} ampliavel onMudar={() => undefined} />
+          </div>
         ) : null}
       </div>
       <nav

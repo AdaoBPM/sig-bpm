@@ -3,8 +3,9 @@ import { api } from "@/lib/api";
 import type { Indicadores, Painel } from "@/app/relatorios/services/relatoriosService";
 
 /**
- * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com seis abas (17/10/2026:
- * Introdução, Resultados, Comercial, Produção, Serviços e Administrativo); Introdução e Resultados todos os que editam a tela editam,
+ * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com sete abas (17/10/2026:
+ * Introdução, Resultados, Comercial, Produção, Serviços e Administrativo; 20/10/2026: a Capa, antes da Introdução); Capa,
+ * Introdução e Resultados todos os que editam a tela editam,
  * e as performances, cada gestor pelo recorte de departamentos; cada aba tem a sua situação.
  */
 export type Situacao = "EM_ELABORACAO" | "FINALIZADO";
@@ -66,11 +67,32 @@ export type Bloco = Posicao &
      * Instagram, Facebook ou LinkedIn (`url`, o endereço colado), com a legenda e a proporção; vazio, o quadro esperando o vídeo.
      */
     | { tipo: "VIDEO"; origem: "ARQUIVO" | "LINK"; arquivo: string; url: string; legenda: string; proporcao: number; legendaHtml?: string }
+    /** O Texto Livre (20/10/2026): o texto formatado das anotações, sem o destaque, o título, o ícone e o fundo. */
+    | { tipo: "TEXTO"; texto: string; html?: string }
+    /**
+     * O Sumário (20/10/2026): as telas marcadas (da Introdução em diante), com o número do primeiro slide de cada uma, e, em
+     * "TELAS_E_SLIDES", os slides delas; a lista e os números se montam a cada vez, com os slides do relatório.
+     */
+    | { tipo: "SUMARIO"; listar: ListarDoSumario; telas: string[] }
   );
+export type ListarDoSumario = "TELAS" | "TELAS_E_SLIDES";
 /** O conteúdo de um bloco, sem a posição (um bloco novo, antes de entrar na grade). */
 export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B, keyof Posicao> : never) : never;
+/**
+ * A Imagem de Fundo da página (20/10/2026): a foto cobre o slide inteiro, por cima do cabeçalho e atrás dos blocos. `zoom`
+ * (1 a 4) a aumenta a partir do tamanho que cobre a tela; `x` e `y` (0 a 1) a posicionam (0: encostada à esquerda ou em
+ * cima; 1: à direita ou embaixo).
+ */
+export type Fundo = { arquivo: string; proporcao: number; zoom: number; x: number; y: number };
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
-export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[] };
+export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo };
+/** A Capa (20/10/2026): a primeira aba; os slides dela não entram na contagem. */
+export const CHAVE_DA_CAPA = "CAPA";
+/**
+ * As telas e os slides para o Sumário (20/10/2026): as abas da Introdução em diante, com os slides de cada uma e o número
+ * de cada slide (a contagem a partir da Introdução, a mesma do contador do topo dos slides); a aba sem slides vem sem eles.
+ */
+export type TelaDoSumario = { chave: string; titulo: string; slides: Array<{ nome: string; numero: number }> };
 export type AbaDoRelatorio = AbaResumida & {
   /** O título da aba (17/10/2026): Introdução, Demonstrativo de Resultados, Performance Comercial… (`nome` é o curto, o da barra). */
   titulo: string;

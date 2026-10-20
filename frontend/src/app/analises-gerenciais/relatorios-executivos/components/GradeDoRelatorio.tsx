@@ -16,7 +16,9 @@ import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDi
 import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
-import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Nota } from "../services/relatoriosExecutivosService";
+import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
+import { CamadaDoFundo } from "./FundoDoSlide";
+import { ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
 import { BarraDeTexto, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
 import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
 import { videoDoLink } from "./videoIncorporado";
@@ -34,6 +36,8 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean }
   if (b.tipo === "INDICADOR") return { w: 4, h: 5 };
   if (b.tipo === "FOTO") return { w: 4, h: 6 };
   if (b.tipo === "VIDEO") return { w: 6, h: 8 };
+  if (b.tipo === "TEXTO") return { w: 6, h: 3 };
+  if (b.tipo === "SUMARIO") return { w: 6, h: 10 };
   return { w: 6, h: 6 };
 }
 
@@ -43,6 +47,9 @@ function tamanhoMinimo(b: Bloco) {
   if (b.tipo === "INDICADOR") return { minW: 3, minH: 4 };
   if (b.tipo === "FOTO") return { minW: 2, minH: 2 };
   if (b.tipo === "VIDEO") return { minW: 3, minH: 3 };
+  // O Texto Livre baixa até uma linha; o Sumário, até duas (20/10/2026).
+  if (b.tipo === "TEXTO") return { minW: 2, minH: 1 };
+  if (b.tipo === "SUMARIO") return { minW: 3, minH: 2 };
   // A anotação baixa a ponto de mostrar uma linha só do texto (16/10/2026).
   return { minW: 3, minH: 2 };
 }
@@ -131,11 +138,23 @@ export function GradeDoRelatorio({
   tipo,
   linhas,
   ampliavel = false,
+  sumario = [],
+  fundo,
+  livre = false,
   onCarregarImagem,
   onEscolherVideo,
   onMudar,
 }: {
   relatorioId: string;
+  /** As telas e os slides do relatório, com os números (20/10/2026), para os blocos de Sumário. */
+  sumario?: TelaDoSumario[];
+  /** A Imagem de Fundo da página (20/10/2026), atrás dos blocos (na edição; a apresentação a põe no slide inteiro). */
+  fundo?: Fundo;
+  /**
+   * Os blocos ficam onde se põem (20/10/2026: nas páginas da Capa e nas com a Imagem de Fundo, para o título ir ao meio do
+   * slide); nas demais, a grade os encosta em cima. A apresentação usa o mesmo, para o slide sair igual.
+   */
+  livre?: boolean;
   /** O vídeo de um quadro de vídeo vazio (20/10/2026): abre o Adicionar Vídeo para ele. */
   onEscolherVideo?: (id: string) => void;
   /** A imagem escolhida para um quadro de foto vazio (17/10/2026). */
@@ -210,6 +229,7 @@ export function GradeDoRelatorio({
       {editavel ? (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 rounded-sm border border-dashed border-gray-300" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} />
       ) : null}
+      {fundo ? <CamadaDoFundo relatorioId={relatorioId} fundo={fundo} className="absolute inset-x-0 top-0 rounded-sm" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} /> : null}
       {ajustando ? <GradeDeFundo largura={ajustando} /> : null}
       <Grade
         layout={layout}
@@ -220,7 +240,7 @@ export function GradeDoRelatorio({
         isDraggable={editavel}
         isResizable={editavel}
         draggableHandle=".alca-do-bloco"
-        compactType="vertical"
+        compactType={livre ? null : "vertical"}
         onLayoutChange={aoMudarLeiaute}
         onResize={aoRedimensionar}
         onDragStart={comecar}
@@ -228,7 +248,10 @@ export function GradeDoRelatorio({
         onResizeStart={comecar}
         onResizeStop={terminar}
       >
-        {blocos.map((b) => (
+        {blocos.map((b) => {
+          // O Texto Livre e o Sumário (20/10/2026) são da composição do slide: na apresentação, sem o destaque e sem ampliar.
+          const amplia = ampliavel && b.tipo !== "TEXTO" && b.tipo !== "SUMARIO";
+          return (
           // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
           <div key={b.id} className="group relative focus-within:z-10 hover:z-10">
             {editavel ? (
@@ -243,11 +266,11 @@ export function GradeDoRelatorio({
             {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca, sem sair da tela; o clique o amplia. */}
             <div
               // O card do Painel sem recorte (16/10/2026): a dica do mês, ao passar o mouse no gráfico, sai dos limites do card.
-              className={`h-full ${b.tipo === "PAINEL" ? "" : "overflow-hidden"} ${ampliavel ? "cursor-zoom-in rounded-sm transition duration-200 hover:bg-background hover:shadow-lg" : ""}`}
+              className={`h-full ${b.tipo === "PAINEL" ? "" : "overflow-hidden"} ${amplia ? "cursor-zoom-in rounded-sm transition duration-200 hover:bg-background hover:shadow-lg" : ""}`}
               style={realce?.id === b.id ? { transform: `scale(${realce.escala})`, transformOrigin: realce.origem } : undefined}
-              onMouseEnter={ampliavel ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
-              onMouseLeave={ampliavel ? () => setRealce(null) : undefined}
-              onClick={ampliavel ? (e) => setAmpliado(oQueAmpliar(b, e.currentTarget, e.target as HTMLElement)) : undefined}
+              onMouseEnter={amplia ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
+              onMouseLeave={amplia ? () => setRealce(null) : undefined}
+              onClick={amplia ? (e) => setAmpliado(oQueAmpliar(b, e.currentTarget, e.target as HTMLElement)) : undefined}
             >
               <ConteudoDoBloco
                 relatorioId={relatorioId}
@@ -257,6 +280,7 @@ export function GradeDoRelatorio({
                 cores={cores}
                 tipo={tipo}
                 apresentacao={ampliavel}
+                sumario={sumario}
                 registrar={(el) => (el ? campos.current.set(b.id, el) : campos.current.delete(b.id))}
                 onCarregarImagem={onCarregarImagem ? (arquivo) => onCarregarImagem(b.id, arquivo) : undefined}
                 onEscolherVideo={onEscolherVideo ? () => onEscolherVideo(b.id) : undefined}
@@ -264,7 +288,8 @@ export function GradeDoRelatorio({
               />
             </div>
           </div>
-        ))}
+          );
+        })}
       </Grade>
       {ampliado ? (
         <BlocoAmpliado w={ampliado.recorte?.w ?? ampliado.w} h={ampliado.recorte?.h ?? ampliado.h} onFechar={fechar}>
@@ -291,6 +316,18 @@ export function GradeDoRelatorio({
             />
           )}
         </BlocoAmpliado>
+      ) : null}
+      {doCard?.tipo === "SUMARIO" ? (
+        <ConfigurarSumarioDialog
+          titulo="Configurar Sumário"
+          inicial={{ listar: doCard.listar, telas: doCard.telas }}
+          sumario={sumario}
+          onFechar={() => setConfigurando(null)}
+          onAplicar={(o) => {
+            mudarBloco(doCard.id, o);
+            setConfigurando(null);
+          }}
+        />
       ) : null}
       {doCard?.tipo === "PAINEL" ? (
         <ConfigurarGraficoDialog
@@ -474,6 +511,11 @@ function BarraDoBloco({
           <Settings className="size-4" />
         </button>
       ) : null}
+      {b.tipo === "SUMARIO" ? (
+        <button type="button" className={botao} title="Configurar o sumário" aria-label="Configurar o sumário" onClick={onConfigurar}>
+          <Settings className="size-4" />
+        </button>
+      ) : null}
       {b.tipo === "ANOTACAO"
         ? (Object.keys(NOTAS) as Nota[]).map((n) => {
             const { Icone, rotulo } = NOTAS[n];
@@ -484,8 +526,8 @@ function BarraDoBloco({
             );
           })
         : null}
-      {/* A formatação do texto (17/10/2026), nas anotações e nas legendas das fotos e dos vídeos. */}
-      {b.tipo === "ANOTACAO" || b.tipo === "FOTO" || b.tipo === "VIDEO" ? (
+      {/* A formatação do texto (17/10/2026), nas anotações, no Texto Livre e nas legendas das fotos e dos vídeos. */}
+      {b.tipo === "ANOTACAO" || b.tipo === "TEXTO" || b.tipo === "FOTO" || b.tipo === "VIDEO" ? (
         <>
           <span className="mx-0.5 h-4 w-px bg-gray-200" />
           <BarraDeTexto
@@ -522,6 +564,7 @@ function ConteudoDoBloco({
   soCard = false,
   semGrafico = false,
   apresentacao = false,
+  sumario = [],
   video,
   registrar,
   onCarregarImagem,
@@ -532,6 +575,8 @@ function ConteudoDoBloco({
   b: Bloco;
   /** Na apresentação (20/10/2026): o vídeo sem os controles do player, com os botões ao passar o mouse. */
   apresentacao?: boolean;
+  /** As telas e os slides, com os números, para o Sumário (20/10/2026). */
+  sumario?: TelaDoSumario[];
   /** No vídeo ampliado: de onde ele continua (o tempo e se estava tocando). */
   video?: { tempo: number; tocando: boolean };
   /** No quadro de vídeo vazio, na edição: escolher o vídeo. */
@@ -596,6 +641,23 @@ function ConteudoDoBloco({
       </div>
     );
   }
+  if (b.tipo === "TEXTO") {
+    // O Texto Livre (20/10/2026): o texto formatado das anotações, sem o destaque, o título, o ícone e o fundo; na edição,
+    // o contorno tracejado com o mouse sobre ele.
+    return (
+      <TextoRico
+        html={b.html}
+        texto={b.texto}
+        editavel={editavel}
+        placeholder="Escreva o texto…"
+        rotulo="Texto livre"
+        registrar={registrar}
+        onMudar={(html, texto) => onMudar({ html, texto } as Partial<Bloco>)}
+        className={`h-full w-full overflow-auto text-sm text-gray-900 ${editavel ? "rounded-sm border border-dashed border-transparent px-1 hover:border-gray-300 focus:border-gray-300" : "px-1"}`}
+      />
+    );
+  }
+  if (b.tipo === "SUMARIO") return <ListaDoSumario opcoes={b} sumario={sumario} editavel={editavel} />;
   if (b.tipo === "FOTO") {
     // A foto inteira (na proporção dela) e, embaixo, a legenda no destaque das Listas (16/10/2026).
     return (

@@ -16,7 +16,7 @@ import { painelService } from "../relatorios/painelService.js";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
- * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as seis abas (17/10/2026;
+ * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as sete abas (17/10/2026; a Capa, 20/10/2026;
  * antes, uma por departamento) — Introdução e Demonstrativo de Resultados, que todos os que editam a tela editam, e
  * as performances Comercial, da Produção, de Serviços e Administrativa, que cada gestor edita pelo recorte de
  * departamentos (sem recorte, todas); cada aba tem a sua situação —
@@ -43,6 +43,8 @@ export type UsuarioDoRelatorio = { id: string; nome: string; admin: boolean; edi
  * recorte (nulo: geral, de todos os que editam a tela).
  */
 export const ABAS: Array<{ chave: AbaRelatorioExecutivo; nome: string; titulo: string; departamento: DepartamentoAcesso | null }> = [
+  // A Capa (20/10/2026), geral como a Introdução: os slides dela não entram na contagem (o contador e o Sumário começam na Introdução).
+  { chave: "CAPA", nome: "Capa", titulo: "Capa", departamento: null },
   { chave: "FATOS", nome: "Introdução", titulo: "Introdução", departamento: null },
   { chave: "RESULTADOS", nome: "Resultados", titulo: "Demonstrativo de Resultados", departamento: null },
   { chave: "COMERCIAL", nome: "Comercial", titulo: "Performance Comercial", departamento: "COMERCIAL" },
@@ -69,14 +71,28 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
    * (sem arquivo e sem link), o quadro esperando o vídeo.
    */
   | { tipo: "VIDEO"; origem: "ARQUIVO" | "LINK"; arquivo: string; url: string; legenda: string; proporcao: number; legendaHtml?: string }
+  /** O Texto Livre (20/10/2026): o texto formatado das anotações, sem o destaque, o título, o ícone e o fundo. */
+  | { tipo: "TEXTO"; texto: string; html?: string }
+  /**
+   * O Sumário (20/10/2026): a lista das telas (as abas, da Introdução em diante) marcadas, com o número do primeiro slide
+   * de cada uma, e, em "TELAS_E_SLIDES", também os slides delas; a tela monta a lista e os números a cada vez.
+   */
+  | { tipo: "SUMARIO"; listar: "TELAS" | "TELAS_E_SLIDES"; telas: AbaRelatorioExecutivo[] }
 );
+
+/**
+ * A Imagem de Fundo de uma página (20/10/2026): a foto (na pasta do relatório) cobre o slide inteiro, por cima do
+ * cabeçalho, atrás dos blocos. `zoom` (1 a 4) aumenta a imagem a partir do tamanho que cobre a tela, e `x` e `y` (0 a 1)
+ * a posicionam (0: encostada à esquerda ou em cima; 1: à direita ou embaixo).
+ */
+export type FundoDaPagina = { arquivo: string; proporcao: number; zoom: number; x: number; y: number };
 
 /**
  * As páginas de uma aba (16/10/2026): cada departamento tem uma ou mais páginas, cada uma com a sua grade de blocos. Ficam
  * na coluna `blocos` da aba; a lista antiga (só os blocos, de antes das páginas) vira uma página.
  */
 /** O nome da página (16/10/2026), o do slide na apresentação; sem ele, "Página N". */
-export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[] };
+export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[]; fundo?: FundoDaPagina };
 export function paginasDe(json: unknown): PaginaDoRelatorio[] {
   const lista = Array.isArray(json) ? json : [];
   if (!lista.length) return [{ id: "p1", blocos: [] }];
@@ -99,13 +115,19 @@ export const MAXIMO_DO_VIDEO = 200 * 1024 * 1024;
 /** Os sites dos links de vídeo (20/10/2026). */
 export const SITES_DE_VIDEO = /^https:\/\/([a-z0-9-]+\.)*(youtube\.com|youtu\.be|youtube-nocookie\.com|instagram\.com|facebook\.com|fb\.watch|linkedin\.com)(\/|$)/i;
 
+/** Os arquivos de uma página: as fotos, os vídeos e a Imagem de Fundo (20/10/2026). */
+const arquivosDaPagina = (p: PaginaDoRelatorio) => [
+  ...p.blocos.flatMap((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo ? [b.arquivo] : [])),
+  ...(p.fundo?.arquivo ? [p.fundo.arquivo] : []),
+];
+
 /**
  * Apaga as fotos que nenhuma aba usa (enviadas e não gravadas, ou tiradas da aba) com mais de um dia: as mais novas
  * podem estar numa aba ainda não gravada.
  */
 async function limparFotos(relatorioId: string) {
   const abas = await getPrismaClient().relatorioExecutivoAba.findMany({ where: { relatorioId }, select: { blocos: true } });
-  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap((p) => p.blocos.flatMap((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo ? [b.arquivo] : [])))));
+  const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap(arquivosDaPagina)));
   const pasta = pastaDasFotos(relatorioId);
   const arquivos = await readdir(pasta).catch(() => [] as string[]);
   const umDia = Date.now() - 24 * 60 * 60 * 1000;
@@ -129,10 +151,26 @@ const veAba = (u: UsuarioDoRelatorio, a: Aba) => a.situacao === "FINALIZADO" || 
 /** A situação do relatório: finalizado quando todas as abas estão. */
 const situacaoGeral = (abas: Aba[]) => (abas.length && abas.every((a) => a.situacao === "FINALIZADO") ? "FINALIZADO" : "EM_ELABORACAO");
 
+/**
+ * Cria as abas que faltam num relatório (20/10/2026: a Capa, nos de antes dela), vazias. Num relatório com todas as abas
+ * finalizadas, a nova já vem finalizada, para ele não voltar a Em Elaboração; quem a edita a reabre para montar. Devolve
+ * se criou alguma.
+ */
+async function completarAbas(r: { id: string; abas: Aba[] }) {
+  const faltam = CHAVES_DAS_ABAS.filter((d) => !r.abas.some((a) => a.departamento === d));
+  if (!faltam.length) return false;
+  const finalizado = situacaoGeral(r.abas) === "FINALIZADO";
+  await getPrismaClient().relatorioExecutivoAba.createMany({
+    data: faltam.map((departamento) => ({ relatorioId: r.id, departamento, blocos: paginasDe([]) as Prisma.InputJsonValue, ...(finalizado ? { situacao: "FINALIZADO" as const, finalizadoEm: new Date() } : {}) })),
+  });
+  return true;
+}
+
 async function doRelatorio(id: string) {
-  const r = await getPrismaClient().relatorioExecutivo.findUnique({ where: { id }, include: { abas: true } });
+  const buscar = () => getPrismaClient().relatorioExecutivo.findUnique({ where: { id }, include: { abas: true } });
+  const r = await buscar();
   if (!r) throw new RelatorioExecutivoError(404, "Relatório não encontrado.");
-  return r;
+  return (await completarAbas(r)) ? (await buscar())! : r;
 }
 
 /** A aba que o usuário pode alterar: a do recorte dele, em elaboração. */
@@ -152,10 +190,15 @@ export const relatoriosExecutivosService = {
    */
   async listar(usuario: UsuarioDoRelatorio) {
     const prisma = getPrismaClient();
-    const [relatorios, fechadas] = await Promise.all([
-      prisma.relatorioExecutivo.findMany({ include: { abas: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] }),
+    const buscar = () => prisma.relatorioExecutivo.findMany({ include: { abas: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] });
+    let [relatorios, fechadas] = await Promise.all([
+      buscar(),
       prisma.competencia.findMany({ where: { status: "FECHADA" }, select: { ano: true, mes: true }, orderBy: [{ ano: "desc" }, { mes: "desc" }] }),
     ]);
+    // Os relatórios de antes da Capa (20/10/2026) a ganham aqui, para o andamento contar as sete abas.
+    let completou = false;
+    for (const r of relatorios) completou = (await completarAbas(r)) || completou;
+    if (completou) relatorios = await buscar();
     const comRelatorio = new Set(relatorios.map((r) => `${r.ano}|${r.mes}`));
     return {
       relatorios: relatorios.map((r) => ({
@@ -206,7 +249,8 @@ export const relatoriosExecutivosService = {
             ? { ...b, arquivo: "", url: "", legenda: "", legendaHtml: undefined }
             : b;
     const daOrigem = new Map(
-      (origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos).map((p) => (manter ? p : { ...p, blocos: p.blocos.map(esvaziar) }))]),
+      // Sem as imagens, a página sai também sem a Imagem de Fundo (20/10/2026).
+      (origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos).map((p) => (manter ? p : { ...p, fundo: undefined, blocos: p.blocos.map(esvaziar) }))]),
     );
     const r = await prisma.relatorioExecutivo.create({
       data: {
@@ -218,7 +262,7 @@ export const relatoriosExecutivosService = {
       },
     });
     // As fotos da origem vão para a pasta do relatório novo (a origem pode ser excluída depois).
-    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => p.blocos.some((b) => (b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo)))) {
+    if (origem && [...daOrigem.values()].some((ps) => ps.some((p) => arquivosDaPagina(p).length))) {
       await cp(pastaDasFotos(origem.id), pastaDasFotos(r.id), { recursive: true }).catch(() => undefined);
     }
     await auditar({

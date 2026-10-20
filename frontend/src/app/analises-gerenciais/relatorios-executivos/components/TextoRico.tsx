@@ -29,6 +29,8 @@ export const CORES_DA_FONTE = [
   { nome: "Amarelo", cor: "#eab308" },
   { nome: "Laranja", cor: "#f97316" },
   { nome: "Vermelho", cor: "#dc2626" },
+  // O branco (20/10/2026), para os textos sobre a Imagem de Fundo.
+  { nome: "Branco", cor: "#ffffff" },
 ];
 
 /** Os marcadores das listas: o símbolo antes de cada item. */
@@ -126,7 +128,8 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
 }
 
 /** Os tamanhos da fonte, em px (17/10/2026: numerados na barra). O texto das anotações e das legendas é de 14 (o padrão, com asterisco na lista). */
-export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36];
+// Até 72 (20/10/2026), para os títulos da Capa no Texto Livre.
+export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72];
 export const TAMANHO_PADRAO = 14;
 /** Os tamanhos do título das anotações (19/10/2026): o padrão é 12 (o de antes, em maiúsculas e negrito). */
 export const TAMANHOS_DO_TITULO = [12, 14, 16, 18, 20, 24, 28, 32];

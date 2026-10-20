@@ -54,7 +54,12 @@ const bloco = z.discriminatedUnion("tipo", [
     proporcao: z.number().positive().max(50),
     legendaHtml: z.string().max(5000).optional(),
   }),
+  // O Texto Livre e o Sumário (20/10/2026); as telas do Sumário são da Introdução em diante (sem a Capa).
+  z.object({ ...posicao, tipo: z.literal("TEXTO"), texto: z.string().max(5000), html: z.string().max(30000).optional() }),
+  z.object({ ...posicao, tipo: z.literal("SUMARIO"), listar: z.enum(["TELAS", "TELAS_E_SLIDES"]), telas: z.array(departamento.exclude(["CAPA"])).max(CHAVES_DAS_ABAS.length) }),
 ]);
+/** A Imagem de Fundo da página (20/10/2026): a foto, a proporção, o zoom (1 a 4) e a posição (0 a 1). */
+const fundo = z.object({ arquivo: z.string().regex(NOME_DA_FOTO), proporcao: z.number().positive().max(50), zoom: z.number().min(1).max(4), x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 
 /** Os Relatórios Executivos (15/10/2026, Análises Gerenciais): montado em /relatorios-executivos. */
 export const relatoriosExecutivosController = {
@@ -83,7 +88,7 @@ export const relatoriosExecutivosController = {
     const d = r ? aba(request, response) : null;
     if (!r || !d) return;
     // As páginas da aba (16/10/2026), cada uma com os blocos dela.
-    const corpo = z.object({ paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200) })).min(1).max(30) }).safeParse(request.body);
+    const corpo = z.object({ paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200), fundo: fundo.optional() })).min(1).max(30) }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Páginas ou blocos inválidos." });
     return responder(response, () => s.gravarAba(r, d, corpo.data.paginas, usuario(request)));
   },

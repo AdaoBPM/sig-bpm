@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FilePlus2, FileX2, ImagePlus, LayoutGrid, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2, Video } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -19,25 +19,27 @@ import { useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrca
 import { botaoPrimario, Erro } from "@/app/cenarios/components/CenarioDialog";
 
 import { AdicionarCardsDialog } from "../components/AdicionarCardsDialog";
-import { ApresentacaoDoRelatorio, entrarEmTelaInteira } from "../components/ApresentacaoDoRelatorio";
+import { ApresentacaoDoRelatorio, entrarEmTelaInteira, type Slide } from "../components/ApresentacaoDoRelatorio";
 import { EtiquetaSituacao } from "../components/EtiquetaSituacao";
+import { AjustarFundoDialog } from "../components/FundoDoSlide";
+import { ConfigurarSumarioDialog } from "../components/SumarioDoRelatorio";
 import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
 import { COLUNAS, GradeDoRelatorio, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
-import { relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Pagina, type Relatorio } from "../services/relatoriosExecutivosService";
+import { CHAVE_DA_CAPA, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
 const novoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
 /**
- * A foto para o relatório (16/10/2026): reduzida a até 1600 px no lado maior e gravada em JPEG (o fundo das partes
- * transparentes, branco), com a proporção dela (largura ÷ altura).
+ * A foto para o relatório (16/10/2026): reduzida a até 1600 px no lado maior (a Imagem de Fundo, 20/10/2026, a até 2560,
+ * para cobrir a tela inteira) e gravada em JPEG (o fundo das partes transparentes, branco), com a proporção dela (largura ÷ altura).
  */
-async function prepararFoto(arquivo: File): Promise<{ foto: Blob; proporcao: number }> {
+async function prepararFoto(arquivo: File, maximo = 1600): Promise<{ foto: Blob; proporcao: number }> {
   const imagem = await createImageBitmap(arquivo).catch(() => {
     throw new Error("Não foi possível abrir a imagem: escolha uma foto em JPEG, PNG, WebP ou GIF.");
   });
-  const escala = Math.min(1, 1600 / Math.max(imagem.width, imagem.height));
+  const escala = Math.min(1, maximo / Math.max(imagem.width, imagem.height));
   const tela = document.createElement("canvas");
   tela.width = Math.max(1, Math.round(imagem.width * escala));
   tela.height = Math.max(1, Math.round(imagem.height * escala));
@@ -56,8 +58,9 @@ const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 
 type Aberta = { chave: string; pagina: string | null };
 
 /**
- * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as seis abas (17/10/2026: Introdução, Resultados,
- * Comercial, Produção, Serviços e Administrativo; na barra do topo, como as etapas do Fechamento Mensal) e, em cada uma, as
+ * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as sete abas (17/10/2026: Introdução, Resultados,
+ * Comercial, Produção, Serviços e Administrativo; 20/10/2026: a Capa, antes da Introdução; na barra do topo, como as etapas do
+ * Fechamento Mensal) e, em cada uma, as
  * páginas (16/10/2026), cada página com a grade dos blocos. Quem edita a aba (Introdução e Resultados, todos os que editam a
  * tela; as performances, o gestor do departamento, pelo recorte) inclui e exclui páginas, adiciona cards (do Painel de Bordo, com ou sem
  * gráfico, e dos Indicadores), anotações (positivas, negativas e de atenção) e fotos, move, redimensiona e exclui os
@@ -101,6 +104,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   // O andamento do envio do vídeo (0 a 1), no botão Adicionar.
   const [enviando, setEnviando] = useState<number | null>(null);
   const [apresentando, setApresentando] = useState<number | null>(null);
+  // A Imagem de Fundo em ajuste (20/10/2026) e o Adicionar Sumário aberto.
+  const [ajustandoFundo, setAjustandoFundo] = useState<Fundo | null>(null);
+  const [adicionandoSumario, setAdicionandoSumario] = useState(false);
   const [confirmar, setConfirmar] = useState<"finalizar" | "excluir" | "excluirPagina" | null>(null);
   // A página com o nome em edição (16/10/2026), na própria aba dela.
   const [renomeando, setRenomeando] = useState<string | null>(null);
@@ -117,6 +123,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     mudarPaginas(lista);
   };
   const seletorDeFoto = useRef<HTMLInputElement>(null);
+  const seletorDeFundo = useRef<HTMLInputElement>(null);
   const area = useRef<HTMLDivElement>(null);
   const chave = aberta.chave;
   const aba = relatorio.abas.find((a) => a.chave === chave);
@@ -130,6 +137,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const daPagina = pagina?.blocos ?? [];
   const mudarPaginas = (lista: Pagina[]) => setPaginas((p) => ({ ...p, [chave]: lista }));
   const mudarPagina = (blocos: Bloco[]) => mudarPaginas(daAba.map((p) => (p.id === pagina?.id ? { ...p, blocos } : p)));
+  // A Imagem de Fundo da página aberta (20/10/2026); sem ela, a página fica sem fundo.
+  const mudarFundo = (fundo: Fundo | undefined) => mudarPaginas(daAba.map((p) => (p.id === pagina?.id ? { ...p, fundo } : p)));
   // O bloco novo entra no fim da página (a grade o encosta em cima); a anotação e a foto, ao lado do último bloco, se couberem na linha.
   const fim = daPagina.reduce((m, b) => Math.max(m, b.y + b.h), 0);
   const ultimo = daPagina.reduce<Bloco | null>((u, b) => (!u || b.y > u.y || (b.y === u.y && b.x > u.x) ? b : u), null);
@@ -195,6 +204,16 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar o vídeo.")),
   });
+  // A Imagem de Fundo (20/10/2026): enviada como as fotos (até 2560 px) e logo ajustada no modal; só entra na página no Aplicar.
+  const imagemDeFundo = useMutation({
+    mutationFn: async (arquivo: File) => {
+      const { foto: conteudo, proporcao } = await prepararFoto(arquivo, 2560);
+      const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorio.id, conteudo);
+      return { arquivo: nome, proporcao, zoom: 1, x: 0.5, y: 0.5 };
+    },
+    onSuccess: (f) => setAjustandoFundo(f),
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a imagem.")),
+  });
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
   const novaPagina = () => {
     const nova = { id: novoId(), blocos: [] };
@@ -214,11 +233,20 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     const s = sequencia[aqui + d];
     if (s) setAberta(s);
   };
-  // Os slides da apresentação: as páginas com algum bloco das abas que o usuário vê (o que está na tela, gravado ou não).
-  const slides = relatorio.abas.flatMap((a) => {
+  // Os slides da apresentação: as páginas com algum bloco ou com a Imagem de Fundo (20/10/2026) das abas que o usuário vê
+  // (o que está na tela, gravado ou não). A contagem (o contador do topo dos slides e os números do Sumário) começa na
+  // Introdução: os slides da Capa não contam.
+  const comConteudo = relatorio.abas.flatMap((a) => {
     const ps = a.visivel ? (paginas[a.chave] ?? []) : [];
-    return ps.flatMap((p, k) => (p.blocos.length ? [{ chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos }] : []));
+    return ps.flatMap((p, k) => (p.blocos.length || p.fundo ? [{ aba: a.chave, chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos, fundo: p.fundo }] : []));
   });
+  const contados = comConteudo.filter((x) => x.aba !== CHAVE_DA_CAPA).length;
+  let contagem = 0;
+  const slides: Array<Slide & { aba: string }> = comConteudo.map((x) => ({ ...x, numero: x.aba === CHAVE_DA_CAPA ? null : ++contagem, total: contados }));
+  // O Sumário (20/10/2026): as telas da Introdução em diante, com os slides e os números de cada uma.
+  const sumario: TelaDoSumario[] = relatorio.abas
+    .filter((a) => a.chave !== CHAVE_DA_CAPA)
+    .map((a) => ({ chave: a.chave, titulo: a.titulo, slides: slides.filter((x) => x.aba === a.chave).map((x) => ({ nome: x.pagina, numero: x.numero ?? 0 })) }));
   const apresentar = () => {
     entrarEmTelaInteira();
     setApresentando(Math.max(0, slides.findIndex((s) => s.chave === `${chave}|${pagina?.id}`)));
@@ -275,14 +303,14 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button type="button" className={botaoPrimario} disabled={foto.isPending || video.isPending}>
+                    <Button type="button" className={botaoPrimario} disabled={foto.isPending || video.isPending || imagemDeFundo.isPending}>
                       <Plus className="size-4" />
-                      {enviando !== null ? `Enviando… ${Math.round(enviando * 100)}%` : foto.isPending || video.isPending ? "Enviando…" : "Adicionar"}
+                      {enviando !== null ? `Enviando… ${Math.round(enviando * 100)}%` : foto.isPending || video.isPending || imagemDeFundo.isPending ? "Enviando…" : "Adicionar"}
                       <ChevronDown className="size-4" />
                     </Button>
                   }
                 />
-                <DropdownMenuContent align="end" className="min-w-40">
+                <DropdownMenuContent align="end" className="min-w-44">
                   <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando(true)}>
                     <LayoutGrid className="size-4" />
                     Cards
@@ -291,6 +319,14 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                     <StickyNote className="size-4" />
                     Anotação
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => incluir([{ tipo: "TEXTO", texto: "" }])}>
+                    <Type className="size-4" />
+                    Texto Livre
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setAdicionandoSumario(true)}>
+                    <ListOrdered className="size-4" />
+                    Sumário
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => seletorDeFoto.current?.click()}>
                     <ImagePlus className="size-4" />
                     Foto
@@ -298,6 +334,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                   <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
                     <Video className="size-4" />
                     Vídeo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => seletorDeFundo.current?.click()}>
+                    <ImageUp className="size-4" />
+                    Imagem de Fundo
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -335,14 +375,26 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                 if (arquivo) foto.mutate(arquivo);
               }}
             />
+            <input
+              ref={seletorDeFundo}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const arquivo = e.target.files?.[0];
+                e.target.value = "";
+                if (arquivo) imagemDeFundo.mutate(arquivo);
+              }}
+            />
           </div>
         }
         comoUsar={
           <ul>
             <li>
-              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as seis abas: Introdução,
+              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as sete abas: Capa, Introdução,
               Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
-              Serviços) e Administrativo (Performance Administrativa). Introdução e Resultados são gerais: todos os que editam a tela os editam. As performances
+              Serviços) e Administrativo (Performance Administrativa). Capa, Introdução e Resultados são gerais: todos os que editam a tela os editam. Os slides
+              da Capa abrem a apresentação e não entram na contagem dos slides (o contador do topo e os números do Sumário começam na Introdução). As performances
               seguem o recorte de departamentos do seu usuário (Controle de Usuários): você edita as do seu recorte (sem recorte, todas); as dos outros
               aparecem quando o gestor delas as finaliza. O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
               finalizou e quando).
@@ -354,7 +406,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
-              Na sua aba, “Adicionar” traz quatro opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
+              Na sua aba, “Adicionar” traz sete opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
               dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado): marque os que quiser; eles entram no fim da página, os do
               Painel com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
@@ -367,6 +419,17 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
             </li>
             <li>
+              Texto Livre inclui um texto com a formatação das anotações (na barra do bloco; o tamanho vai até 72 e as cores incluem o branco, para os
+              textos sobre a Imagem de Fundo), mas sem o destaque lateral, o título, o ícone e o fundo: na edição, o contorno tracejado aparece com o mouse
+              sobre ele. Na apresentação, ele não se destaca nem se amplia.
+            </li>
+            <li>
+              Sumário abre o modal Adicionar Sumário: listar as Telas (cada uma com o número do primeiro slide dela) ou as Telas e Slides (abaixo de cada
+              tela, os slides, com os números), e as telas que entram (da Introdução em diante; de início, todas). A lista se monta sozinha, com os slides de
+              agora (as páginas com algum bloco ou com a Imagem de Fundo): os números são a contagem dos slides a partir da Introdução, a mesma do contador
+              do topo dos slides; a tela marcada sem slides não aparece. A engrenagem do bloco muda as opções.
+            </li>
+            <li>
               Foto envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px) e a inclui com a legenda embaixo, no destaque amarelo-ouro. A foto aumenta e
               diminui sempre na mesma proporção.
             </li>
@@ -377,6 +440,12 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               e na leitura, o vídeo tem os controles do player.
             </li>
             <li>
+              Imagem de Fundo envia uma imagem (reduzida a até 2560 px) e abre o modal Imagem de Fundo, com a miniatura da tela inteira: arraste a imagem
+              para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; Restaurar a centraliza no tamanho que cobre a tela. Ela
+              ocupa o fundo do slide inteiro, por cima do cabeçalho (a faixa tracejada da miniatura) e atrás dos blocos; cada página tem uma. Na página, ela
+              aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide.
+            </li>
+            <li>
               Passe o mouse num bloco para ver os botões dele: a alça (arraste para mover), o gráfico (com ou sem, nos cards do Painel; sem ele, o card fica
               mais estreito e o restante igual), as opções do gráfico (os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
               excluir. O canto de baixo, à direita, redimensiona o bloco, até um tamanho mínimo, para as informações não se amontoarem. Ao mover ou
@@ -385,7 +454,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
               Introdução, Performance da Produção…), em cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Relatório Executivo”, em
-              cinza, a seta, o período, em preto, e a logo da BPM à direita. Mova o mouse para ver os botões, no centro da base:
+              cinza, a seta, o período, em preto, e a logo da BPM à direita; no centro, em cinza, o contador dos slides (“1/10”: o slide e o total, contados da
+              Introdução em diante; nos slides da Capa, sem ele). Mova o mouse para ver os botões, no centro da base:
               o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
               ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
               na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Num vídeo, o mouse sobre ele mostra, no centro de baixo,
@@ -402,9 +472,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         }
         sobre={
           <p>
-            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (a Introdução, o Demonstrativo de Resultados e as performances
+            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (a Capa, a Introdução, o Demonstrativo de Resultados e as performances
             Comercial, da Produção, de Serviços e Administrativa), as páginas com os cards do Painel de Bordo e dos Indicadores de Resultados
-            Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção, as fotos e os vídeos. Criado por{" "}
+            Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção, os textos, o sumário, as fotos, os
+            vídeos e as imagens de fundo. Criado por{" "}
             {relatorio.criadoPor}.
           </p>
         }
@@ -501,6 +572,17 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                 >
                   <FileX2 className="size-4" />
                 </button>
+                {/* A Imagem de Fundo da página (20/10/2026): ajustar e remover, quando ela tem uma. */}
+                {pagina?.fundo ? (
+                  <>
+                    <button type="button" className={botaoIcone} onClick={() => setAjustandoFundo(pagina.fundo ?? null)} title="Ajustar a Imagem de Fundo da página" aria-label="Ajustar a Imagem de Fundo">
+                      <Crop className="size-4" />
+                    </button>
+                    <button type="button" className={`${botaoIcone} hover:text-red-700`} onClick={() => mudarFundo(undefined)} title="Remover a Imagem de Fundo da página" aria-label="Remover a Imagem de Fundo">
+                      <ImageOff className="size-4" />
+                    </button>
+                  </>
+                ) : null}
                 <span className="mx-1 h-5 w-px bg-gray-200" />
               </>
             ) : null}
@@ -518,7 +600,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
           A aba {aba?.nome} está em elaboração: aparece quando o gestor dela a finalizar.
         </p>
-      ) : daPagina.length === 0 ? (
+      ) : daPagina.length === 0 && !pagina?.fundo ? (
         <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
           {editavel ? "A página está vazia: use “Adicionar”, na linha do título." : "Nada nesta página."}
         </p>
@@ -527,6 +609,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           key={pagina?.id}
           relatorioId={relatorio.id}
           blocos={daPagina}
+          sumario={sumario}
+          fundo={pagina?.fundo}
+          livre={chave === CHAVE_DA_CAPA || !!pagina?.fundo}
           dados={dados.data}
           editavel={editavel}
           cores={cores}
@@ -551,11 +636,34 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           relatorioId={relatorio.id}
           periodo={relatorio.rotuloMes}
           slides={slides}
+          sumario={sumario}
           inicial={apresentando}
           dados={dados.data}
           cores={cores}
           tipo={tipo}
           onSair={() => setApresentando(null)}
+        />
+      ) : null}
+      {ajustandoFundo ? (
+        <AjustarFundoDialog
+          relatorioId={relatorio.id}
+          fundo={ajustandoFundo}
+          onFechar={() => setAjustandoFundo(null)}
+          onAplicar={(f) => {
+            mudarFundo(f);
+            setAjustandoFundo(null);
+          }}
+        />
+      ) : null}
+      {adicionandoSumario ? (
+        <ConfigurarSumarioDialog
+          titulo="Adicionar Sumário"
+          sumario={sumario}
+          onFechar={() => setAdicionandoSumario(false)}
+          onAplicar={(o) => {
+            incluir([{ tipo: "SUMARIO", ...o }]);
+            setAdicionandoSumario(false);
+          }}
         />
       ) : null}
       {escolhendoVideo ? (

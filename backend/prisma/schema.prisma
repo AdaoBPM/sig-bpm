@@ -2312,8 +2312,10 @@ model RelatorioExecutivo {
 /// Administrador) a vê; finalizada, todos; quem a edita a finaliza e a reabre.
 /// ENUM: as abas dos Relatórios Executivos (17/10/2026; antes, os sete departamentos): Fatos Relevantes e Demonstrativo
 /// de Resultados (gerais: quem edita a tela) e as performances Comercial, da Produção, de Serviços e Administrativa (pelo
-/// recorte de departamentos do usuário).
+/// recorte de departamentos do usuário). A Capa (20/10/2026), geral, vem antes da Introdução (FATOS); os relatórios de
+/// antes dela a ganham ao serem abertos (relatoriosExecutivosService.completarAbas).
 enum AbaRelatorioExecutivo {
+  CAPA
   FATOS
   RESULTADOS
   COMERCIAL
