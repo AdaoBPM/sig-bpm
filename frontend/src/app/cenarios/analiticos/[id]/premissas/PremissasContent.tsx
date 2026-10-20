@@ -87,10 +87,9 @@ export function PremissasContent() {
               tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). A conta Encargos e Benefícios não se digita: é a base
               (Remunerações CLT + Horas Extras) × [INSS + FGTS + Férias + Décimo Terceiro + (INSS + FGTS) × (Férias + Décimo Terceiro)] + os
               Benefícios Adicionais (estes, na mão de obra da atribuição do grupo); as Remunerações PJ não têm encargos. Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
-              baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum). “Exportar”, acima do grupo, baixa em Excel o centro
-              de custo atual, todos os centros (um por aba, com a aba Consolidado na frente) ou um arquivo por centro (num ZIP, com o departamento e o
-              centro no nome de cada arquivo), como a tabela: o Quadro de Lotação, os Encargos e Benefícios e as contas, com o Total de
-              Colaboradores, a conta Encargos e Benefícios e os totais em fórmula.
+              baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum; o balde vem do cadastro Centros de Custo, nos
+              Cadastros da Controladoria). Para baixar os centros em Excel, use “Exportar Premissas”, ao lado do título (um centro de custo por aba
+              ou um arquivo por centro).
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
