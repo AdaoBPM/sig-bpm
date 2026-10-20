@@ -37,7 +37,9 @@ const POR_PAGINA_INICIAL = 50;
 /** O mês inteiro da aba vem de uma vez: o filtro e a ordem das colunas valem para todos os lançamentos. */
 const TODOS = 5000;
 
-const textoValidacao = (v: Validacao) => (VALIDACOES[v].codigo === "-" ? VALIDACOES[v].rotulo : `${VALIDACOES[v].codigo} ${VALIDACOES[v].rotulo}`);
+const textoValidacao = (v: Validacao) => (VALIDACOES[v].codigo ? `${VALIDACOES[v].codigo} ${VALIDACOES[v].rotulo}` : VALIDACOES[v].rotulo);
+/** As pendências sem aba própria (20/10/2026): ficam só na aba Pendências. */
+const SEM_ABA = new Set<Validacao>(["ERRO_DEPARTAMENTO", "ERRO_ATRIBUICAO", "CENTRO_NAO_CADASTRADO"]);
 
 const adotada = (l: LancamentoClassificado) => l.contaAdotada ?? l.contaResultado;
 
@@ -104,7 +106,7 @@ function CelulaCentro({ l }: { l: LancamentoClassificado }) {
           <span className="text-xs text-gray-400">sem parâmetro</span>
         )
       ) : (
-        <span className="text-xs text-gray-400">{obra ? "obra" : "fora do cadastro"}</span>
+        <span className="text-xs text-gray-400">{obra ? "obra" : "sem cadastro"}</span>
       )}
     </div>
   );
@@ -197,7 +199,7 @@ export function ClassificacaoContent() {
   const quantidade = (v: Validacao) =>
     r?.porValidacao.find((g) => g.validacao === v)?.lancamentos ?? 0;
   const pendenciasPorTipo = (Object.keys(VALIDACOES) as Validacao[]).filter(
-    (v) => v !== "OK" && quantidade(v) > 0,
+    (v) => v !== "OK" && !SEM_ABA.has(v) && quantidade(v) > 0,
   );
   const fechada = r?.competencia.status === "FECHADA";
   // Apurada, a classificação faz parte do retrato congelado: só a reapuração a refaz.
@@ -215,7 +217,11 @@ export function ClassificacaoContent() {
         selo={fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
         comoUsar={
           <ul>
-            <li>A aba Todos, a primeira, mostra todos os lançamentos. Comece pela aba Pendências (a que abre); as abas seguintes separam cada tipo de pendência.</li>
+            <li>
+              A aba Todos, a primeira, mostra todos os lançamentos. Comece pela aba Pendências (a que abre), com todas as pendências; quando houver,
+              as abas &lt;ERRO!&gt; e Sem Destino na DRE separam esses dois tipos. Os demais (&lt;DEP.!&gt;, &lt;ATR.!&gt; e
+              Centro de Custo Sem Cadastro) ficam só na aba Pendências — filtre pela coluna Verificação.
+            </li>
             <li>Use os filtros nos rótulos das colunas (centro de custo, conta, classificação…) para achar os lançamentos.</li>
             <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>
             <li>Sem pendências, siga para a DRE e apure a competência.</li>

@@ -2,7 +2,8 @@ import type { Validacao } from "../services/classificacaoService";
 
 /**
  * A verificação do lançamento, com o mesmo código que a planilha mostra na
- * coluna LANÇ. OK? — é o vocabulário que o Contábil já conhece.
+ * coluna LANÇ. OK? — é o vocabulário que o Contábil já conhece. Sem código
+ * (OK e, desde 20/10/2026, o centro sem cadastro), a etiqueta é só o rótulo.
  */
 export const VALIDACOES: Record<
   Validacao,
@@ -10,7 +11,7 @@ export const VALIDACOES: Record<
 > = {
   OK: {
     rotulo: "OK",
-    codigo: "-",
+    codigo: "",
     explicacao: "Centro e conta coerentes.",
     classe: "border-green-200 bg-green-50 text-green-700",
   },
@@ -34,14 +35,14 @@ export const VALIDACOES: Record<
     classe: "border-red-200 bg-red-50 text-red-700",
   },
   SEM_DESTINO: {
-    rotulo: "Sem destino na DRE",
+    rotulo: "Sem Destino na DRE",
     codigo: "sem linha",
     explicacao: "A conta analítica não está vinculada a nenhuma linha da DRE.",
     classe: "border-red-200 bg-red-50 text-red-700",
   },
   CENTRO_NAO_CADASTRADO: {
-    rotulo: "Centro fora do cadastro",
-    codigo: "sem centro",
+    rotulo: "Centro de Custo Sem Cadastro",
+    codigo: "",
     explicacao:
       "O código do centro de custo não está no cadastro. Os centros de obra (1.98 e 1.99) não entram aqui.",
     classe: "border-yellow-200 bg-yellow-50 text-yellow-800",
@@ -55,7 +56,7 @@ export function ValidacaoBadge({ validacao }: { validacao: Validacao }) {
       title={v.explicacao}
       className={`inline-block whitespace-nowrap rounded-sm border px-2 py-0.5 text-xs font-medium ${v.classe}`}
     >
-      {v.codigo === "-" ? v.rotulo : `${v.codigo} ${v.rotulo}`}
+      {v.codigo ? `${v.codigo} ${v.rotulo}` : v.rotulo}
     </span>
   );
 }
