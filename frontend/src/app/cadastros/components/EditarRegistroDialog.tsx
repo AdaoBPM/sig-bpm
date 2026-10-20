@@ -60,7 +60,9 @@ function CampoForm({
   const id = `campo-${c.nome}`;
   if (c.tipo === "booleano") {
     return (
-      <label className="flex items-center gap-2 text-sm text-gray-900">
+      // Na altura de um campo (h-9) e encostada embaixo da célula: ao lado de uma lista ou de um campo com rótulo, a caixa
+      // fica na meia altura dele (20/10/2026).
+      <label className="flex h-9 items-center gap-2 text-sm text-gray-900">
         <input type="checkbox" checked={valor === true} disabled={travado} onChange={(e) => onMuda(e.target.checked)} className="size-4 accent-black" />
         {iniciaisMaiusculas(c.rotulo)}
       </label>
@@ -164,7 +166,7 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         {def.campos.filter((c) => c.noFormulario !== false && (!c.visivelSe || c.visivelSe.valores.includes(String(valores[c.visivelSe.campo] ?? "")))).map((c) => (
-          <div key={c.nome} className={c.larguraInteira || c.tipo === "multipla" || c.tipo === "formula" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : ""}>
+          <div key={c.nome} className={c.larguraInteira || c.tipo === "multipla" || c.tipo === "formula" || c.nome === "expressao" || c.nome === "definicao" ? "sm:col-span-2" : c.tipo === "booleano" ? "self-end" : ""}>
             <CampoForm
               c={c}
               valor={valores[c.nome]}

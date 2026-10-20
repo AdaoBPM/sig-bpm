@@ -20,8 +20,8 @@ export default function EstruturaIndicadoresPage() {
               <li>
                 Na Metodologia, monte a fórmula do indicador: escolha o tipo do item (uma linha da DRE, com a unidade; um totalizador das Listas;
                 um indicador do Comercial ou do Administrativo; uma meta do Orçamento Empresarial, o cenário marcado), busque, escolha e clique em “Inserir Item”; entre os
-                itens, use os operadores (+ − × ÷), os parênteses e “Inserir Número” (por exemplo, ÷ 1000 para milhares). “Apagar Último” desfaz
-                o último pedaço.
+                itens, use os operadores (+ − × ÷), os parênteses e o número digitado com “Inserir” (por exemplo, ÷ 1000 para milhares). “Apagar” desfaz
+                o último pedaço, e “Limpar” apaga a fórmula inteira.
               </li>
               <li>
                 Acumulado: Soma dos Meses (a fórmula sobre a soma de cada item; nas razões, a soma dos numeradores sobre a dos denominadores),

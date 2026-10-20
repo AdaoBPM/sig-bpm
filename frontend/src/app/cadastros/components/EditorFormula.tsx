@@ -129,7 +129,8 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
                 ))}
               </select>
             ) : null}
-            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar item…" className="h-9 w-40 rounded-sm" aria-label="Buscar item" />
+            {/* A busca ocupa o resto da linha, até a lateral do modal (20/10/2026). */}
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar item…" className="h-9 min-w-40 flex-1 rounded-sm" aria-label="Buscar item" />
           </div>
           <div className="flex items-center gap-2">
             <select aria-label="Item" value={item} onChange={(e) => setItem(e.target.value)} className={`${classeSelect} min-w-0 flex-1`}>
@@ -145,7 +146,7 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
               Inserir Item
             </Button>
           </div>
-          {/* Os operadores, os números e a correção. */}
+          {/* Os operadores, os números e a correção; Apagar e Limpar na linha do Inserir (20/10/2026: nomes curtos para caberem). */}
           <div className="flex flex-wrap items-center gap-1.5">
             {OPERADORES.map((o) => (
               <Button key={o.valor} type="button" variant="outline" className="h-9 w-9 rounded-sm px-0 text-base font-bold" title={o.dica} onClick={() => inserir(o.valor)}>
@@ -157,7 +158,7 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
               onChange={(e) => setNumero(e.target.value.replace(/[^0-9.,]/g, ""))}
               placeholder="Número"
               inputMode="decimal"
-              className="h-9 w-24 rounded-sm"
+              className="h-9 w-20 min-w-20 flex-1 rounded-sm"
               aria-label="Número"
             />
             <Button
@@ -170,11 +171,11 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
                 setNumero("");
               }}
             >
-              Inserir Número
+              Inserir
             </Button>
-            <Button type="button" variant="outline" className="ml-auto rounded-sm" disabled={lista.length === 0} onClick={() => onMuda(lista.slice(0, -1).join(" "))} title="Apagar o último pedaço">
+            <Button type="button" variant="outline" className="rounded-sm" disabled={lista.length === 0} onClick={() => onMuda(lista.slice(0, -1).join(" "))} title="Apagar o último pedaço da fórmula">
               <Delete className="size-4" />
-              Apagar Último
+              Apagar
             </Button>
             <Button type="button" variant="outline" className="rounded-sm" disabled={lista.length === 0} onClick={() => onMuda("")} title="Apagar a fórmula inteira">
               <Eraser className="size-4" />
