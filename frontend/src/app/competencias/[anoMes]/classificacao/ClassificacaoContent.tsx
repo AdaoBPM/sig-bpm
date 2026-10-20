@@ -38,8 +38,6 @@ const POR_PAGINA_INICIAL = 50;
 const TODOS = 5000;
 
 const textoValidacao = (v: Validacao) => (VALIDACOES[v].codigo ? `${VALIDACOES[v].codigo} ${VALIDACOES[v].rotulo}` : VALIDACOES[v].rotulo);
-/** As pendências sem aba própria (20/10/2026): ficam só na aba Pendências. */
-const SEM_ABA = new Set<Validacao>(["ERRO_DEPARTAMENTO", "ERRO_ATRIBUICAO", "CENTRO_NAO_CADASTRADO"]);
 
 const adotada = (l: LancamentoClassificado) => l.contaAdotada ?? l.contaResultado;
 
@@ -196,11 +194,6 @@ export function ClassificacaoContent() {
   }
 
   const r = resumo.data;
-  const quantidade = (v: Validacao) =>
-    r?.porValidacao.find((g) => g.validacao === v)?.lancamentos ?? 0;
-  const pendenciasPorTipo = (Object.keys(VALIDACOES) as Validacao[]).filter(
-    (v) => v !== "OK" && !SEM_ABA.has(v) && quantidade(v) > 0,
-  );
   const fechada = r?.competencia.status === "FECHADA";
   // Apurada, a classificação faz parte do retrato congelado: só a reapuração a refaz.
   const apurada = apuracao.data?.apurada ?? false;
@@ -218,9 +211,8 @@ export function ClassificacaoContent() {
         comoUsar={
           <ul>
             <li>
-              A aba Todos, a primeira, mostra todos os lançamentos. Comece pela aba Pendências (a que abre), com todas as pendências; quando houver,
-              as abas &lt;ERRO!&gt; e Sem Destino na DRE separam esses dois tipos. Os demais (&lt;DEP.!&gt;, &lt;ATR.!&gt; e
-              Centro de Custo Sem Cadastro) ficam só na aba Pendências — filtre pela coluna Verificação.
+              A aba Todos, a primeira, mostra todos os lançamentos. Comece pela aba Pendências (a que abre), com todas as pendências; para ver um
+              tipo só (&lt;ERRO!&gt;, &lt;DEP.!&gt;, &lt;ATR.!&gt;, Sem Destino na DRE ou Centro de Custo Sem Cadastro), filtre pela coluna Verificação.
             </li>
             <li>Use os filtros nos rótulos das colunas (centro de custo, conta, classificação…) para achar os lançamentos.</li>
             <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>
@@ -289,17 +281,14 @@ export function ClassificacaoContent() {
             ativa={situacao}
             onMudar={(c) => filtrar(c as Situacao)}
             abas={[
-              // Todos antes das Pendências (12/10/2026); a tela continua abrindo nas Pendências.
+              // Todos antes das Pendências (12/10/2026); a tela continua abrindo nas Pendências. Desde 20/10/2026, só as duas:
+              // os tipos de pendência se separam pelo filtro da coluna Verificação.
               { chave: "TODOS", rotulo: "Todos" },
               {
                 chave: "PENDENCIAS",
                 rotulo: "Pendências",
                 sinal: (r?.pendentes ?? 0) > 0 ? <span className="size-2 rounded-full bg-red-600" aria-hidden /> : undefined,
               },
-              ...pendenciasPorTipo.map((v) => ({
-                chave: v,
-                rotulo: VALIDACOES[v].codigo.startsWith("<") ? VALIDACOES[v].codigo : VALIDACOES[v].rotulo,
-              })),
             ]}
           />
           <QuadroTabela
