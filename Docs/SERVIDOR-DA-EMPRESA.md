@@ -70,6 +70,12 @@ Na ordem. Antes de cada bloco, guardar uma cópia da base do servidor.
 Os Relatórios Executivos aceitam vídeos de até 200 MB. O SIG BPM já aceita envios de até 210 MB; se houver um proxy na
 frente do servidor (nginx ou similar), ele precisa aceitar também (no nginx, `client_max_body_size 210m;`).
 
+### 5. Capa, Texto Livre, Sumário e Imagem de Fundo (publicação `publicado-2026-10-20-capa-e-sumario`)
+
+Nada a rodar no servidor: não há migração nem script. A aba Capa é criada sozinha em cada relatório quando ele é
+listado ou aberto (`completarAbas`); o valor novo `CAPA` do enum `AbaRelatorioExecutivo` não muda o SQLite (a coluna
+é texto). Na troca para o PostgreSQL, a migração inicial já cria o enum com ele.
+
 ### Alternativa: uma cópia nova da base
 
 Até 20/10/2026, nenhum usuário gravou dados na produção local depois da cópia de 19/10, além dos itens 1 e 3 acima
@@ -113,3 +119,4 @@ O código foi escrito para ser portável; o procedimento está em
 | 19/10/2026 | Cópia inteira da base local (`be82694`) | A confirmar |
 | 20/10/2026 | Recarga dos centros de custo | Item 1 acima |
 | 20/10/2026 | `publicado-2026-10-20-ql-encargos-e-video` | Itens 2 a 4 acima |
+| 20/10/2026 | `publicado-2026-10-20-capa-e-sumario` | Nada a rodar (item 5) |
