@@ -68,7 +68,7 @@ import {
 import { mediaDosMeses, mediaNosMesesComOcorrencia, referenciaDoRealizado } from "./referenciaAnalitico.js";
 import { diferencasDasDecisoes, lerRealocacoes, type Realocacoes } from "./realocacoesCenario.js";
 import { QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO_CLT, VENDA_LOTACAO_PJ, VENDAS_LOTACAO } from "./lotacaoCenario.js";
-import { ehContaDeEncargos, itemDosEncargos, ITENS_DOS_ENCARGOS, maosDeObraDoGrupo, VENDAS_DOS_ENCARGOS } from "./encargosCenario.js";
+import { beneficiosDaDiferenca, ehContaDeEncargos, itemDosEncargos, ITENS_DOS_ENCARGOS, maosDeObraDoGrupo, VENDAS_DOS_ENCARGOS } from "./encargosCenario.js";
 import { lotacaoDosGrupos } from "../listas/lotacaoDosCentros.js";
 import { assinaturaDasRegras, avisosDosRateios, bloqueioPorRateios, mesesDoAno, percentuaisPelasRegras, regrasDeRateio, type RegraDoMes } from "../volumes/vigenciaDosRateios.js";
 
@@ -503,9 +503,10 @@ async function linhasDaPlanilha(c: { id: string } & ComVariacoes): Promise<Linha
       const formula: LinhaDaPlanilha["formula"] = mo
         ? (ref) => {
             const item = (x: string) => `IF(${ref(`E|${g.grupo}|${x}`)}="",${ref(`E|${g.grupo}|${x}`, true)},${ref(`E|${g.grupo}|${x}`)})`;
-            const percentuais = ITENS_DOS_ENCARGOS.filter((x) => x.und === "%").map((x) => item(x.item)).join("+");
+            // 20/10/2026: com o INSS e o FGTS também sobre as férias e o décimo terceiro.
+            const [folha, provisoes] = [`(${item("INSS")}+${item("FGTS")})`, `(${item("FERIAS")}+${item("DECIMO_TERCEIRO")})`];
             const beneficios = mo.beneficios ? `+N(${ref(`E|${g.grupo}|BENEFICIOS`)})` : "";
-            return `(N(${ref(`C|${g.grupo}|${mo.remuneracoes}`)})+N(${ref(`C|${g.grupo}|${mo.horasExtras}`)}))*(${percentuais})${beneficios}`;
+            return `(N(${ref(`C|${g.grupo}|${mo.remuneracoes}`)})+N(${ref(`C|${g.grupo}|${mo.horasExtras}`)}))*(${folha}+${provisoes}+${folha}*${provisoes})${beneficios}`;
           }
         : undefined;
       add({ aba: "centros", grupo: g.grupo, chave: `C|${g.grupo}|${l.codigo}`, descricao: [g.grupo, atribuicao, l.descricao], und: "R$", conta: l.codigo, media: ler(0) ?? null, meses: doze(ler), calculada: !!mo, formula });
@@ -1107,6 +1108,21 @@ export const cenariosService = {
           return linhaDREId && Math.abs(x.valor) >= 0.00005 ? [{ cenarioId: id, grupo: x.grupo, linhaDREId, mes: x.mes, valor: decimal(x.valor) }] : [];
         });
         await gravarEmLotes(centros, (lote) => tx.cenarioCentro.createMany({ data: lote }));
+        // Os Benefícios Adicionais (20/10/2026, decisão do usuário): em cada grupo e mês da referência (a Média de
+        // Referência e, no Mês a Mês, os meses fechados), a diferença entre os encargos realizados e o cálculo com os
+        // percentuais padrão, para a conta Encargos e Benefícios calculada bater com o realizado.
+        const codigoDoId = new Map([...idDaConta].map(([codigo, idConta]) => [idConta, codigo]));
+        const valorDoCentro = new Map(centros.map((x) => [`${x.grupo}|${codigoDoId.get(x.linhaDREId)}|${x.mes}`, Number(x.valor)]));
+        const mesesDosCentros = [...new Set(centros.map((x) => x.mes))];
+        const estrutura = await estruturaDRE();
+        const beneficios = grupos.flatMap((g) => {
+          const codigos = contasDoGrupo(estrutura, g).map((l) => l.codigo);
+          return mesesDosCentros.flatMap((mes) => {
+            const v = beneficiosDaDiferenca(codigos, g.atribuicao, (codigo) => valorDoCentro.get(`${g.grupo}|${codigo}|${mes}`) ?? 0);
+            return Math.abs(v) >= 0.005 ? [{ cenarioId: id, unidade: 0, venda: itemDosEncargos("BENEFICIOS")!.venda, chave: g.grupo, mes, valor: decimal(v) }] : [];
+          });
+        });
+        await gravarEmLotes(beneficios, (lote) => tx.cenarioPremissa.createMany({ data: lote }));
         // O quadro de lotação dos grupos (19/10/2026; antes, os indicadores divididos pela mão de obra dos grupos): as
         // listas do Quadro de Lotação dos meses do período (lotacaoDosGrupos, calculada antes da transação).
         await gravarEmLotes(lotacao, (lote) => tx.cenarioPremissa.createMany({ data: lote }));
@@ -1734,7 +1750,9 @@ export const cenariosService = {
     };
     const fora = [...new Set(alteracoes.filter((a) => !premissa(a.linha) && (!contas.has(a.linha) || ehContaDeEncargos(a.linha))).map((a) => a.linha))];
     if (fora.length) throw new CenarioError(400, `Não são linhas que se digitam no grupo ${grupo}: ${fora.slice(0, 3).join(", ")}.`);
-    if (alteracoes.some((a) => premissa(a.linha) && a.valor !== null && a.valor < 0)) throw new CenarioError(400, "O quadro de lotação e os encargos não podem ser negativos.");
+    // Os Benefícios Adicionais podem ser negativos (20/10/2026: a diferença da referência quando o realizado fica abaixo do cálculo).
+    if (alteracoes.some((a) => premissa(a.linha) && a.linha !== "ENCARGOS|BENEFICIOS" && a.valor !== null && a.valor < 0))
+      throw new CenarioError(400, "O quadro de lotação e os percentuais dos encargos não podem ser negativos.");
     const finais = new Map(alteracoes.map((a) => [`${a.linha}|${a.mes}`, a]));
     const [anteriores, premissasAntes] = await Promise.all([
       prisma.cenarioCentro.findMany({ where: { cenarioId: id, grupo } }),

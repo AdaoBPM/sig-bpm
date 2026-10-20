@@ -154,7 +154,7 @@ function linhasDoCentro(dados: ContasDoCentro): LinhaDaPremissa[] {
     grupo: null,
     rotulo: c.descricao,
     und: "R$",
-    // A Encargos e Benefícios é calculada (19/10/2026): (Remunerações CLT + Horas Extras) × percentuais + Benefícios Adicionais.
+    // A Encargos e Benefícios é calculada (19/10/2026; 20/10/2026: com a incidência sobre as provisões; encargosCenario.ts).
     tipo: c.calculada ? "CALCULO" : "PREMISSA",
     negrito: false,
     casas: 2,

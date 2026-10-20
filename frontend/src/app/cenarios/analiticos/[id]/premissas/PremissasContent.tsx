@@ -84,9 +84,9 @@ export function PremissasContent() {
               Garantia (FGTS), Férias (+1/3) e Décimo Terceiro — em cinza, o padrão, 29%, 8%, 11,11% e 8,33%, até você digitar outro — e os
               Benefícios Adicionais, em R$); e os valores mensais das contas: mão de obra direta e indireta e gastos
               gerais diretos, indiretos e comerciais (a Mão de Obra Terceirizada, as Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas
-              tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). A conta Encargos e Benefícios não se digita: é (Remunerações
-              CLT + Horas Extras) × a soma dos percentuais + os Benefícios Adicionais (estes, na mão de obra da atribuição do grupo); as Remunerações
-              PJ não têm encargos. Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
+              tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). A conta Encargos e Benefícios não se digita: é a base
+              (Remunerações CLT + Horas Extras) × [INSS + FGTS + Férias + Décimo Terceiro + (INSS + FGTS) × (Férias + Décimo Terceiro)] + os
+              Benefícios Adicionais (estes, na mão de obra da atribuição do grupo); as Remunerações PJ não têm encargos. Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
               baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum). “Exportar”, acima do grupo, baixa em Excel o centro
               de custo atual, todos os centros (um por aba, com a aba Consolidado na frente) ou um arquivo por centro (num ZIP, com o departamento e o
               centro no nome de cada arquivo), como a tabela: o Quadro de Lotação, os Encargos e Benefícios e as contas, com o Total de
@@ -225,11 +225,14 @@ export function PremissasContent() {
               lista ÷ o número deles. Os indicadores de quadro de lotação do realizado (aba Indicadores (Admin.)) não entram.
             </p>
             <p>
-              A conta Encargos e Benefícios da mão de obra (direta e indireta) de cada grupo é calculada mês a mês: (Remunerações CLT + Horas Extras) ×
-              (INSS + FGTS + Férias (+1/3) + Décimo Terceiro) + Benefícios Adicionais. Os percentuais têm o mesmo padrão em todos os cenários (29%,
-              8%, 1/12 × 4/3 = 11,11% e 1/12 = 8,33%) e se editam por grupo e mês; os Benefícios Adicionais (vale-transporte, alimentação, plano de
-              saúde…) se digitam em R$ e entram na mão de obra da atribuição do grupo. A Média de Referência da conta continua a do realizado; nos
-              meses, vale o cálculo, também nos meses fechados carregados pela referência.
+              A conta Encargos e Benefícios da mão de obra (direta e indireta) de cada grupo é calculada mês a mês, com o INSS e o FGTS também sobre
+              as férias e o décimo terceiro: base × [INSS + FGTS + Férias (+1/3) + Décimo Terceiro + (INSS + FGTS) × (Férias + Décimo Terceiro)] +
+              Benefícios Adicionais, com a base = Remunerações CLT + Horas Extras (com o padrão, 63,64% da base). Os percentuais têm o mesmo padrão
+              em todos os cenários (29% — a confirmar com a contabilidade —, 8%, 1/12 × 4/3 = 11,11% e 1/12 = 8,33%) e se editam por grupo e mês; os
+              Benefícios Adicionais (vale-transporte, alimentação, plano de saúde…) se digitam em R$ e entram na mão de obra da atribuição do grupo.
+              Na referência realizada, os Benefícios Adicionais de cada mês fechado e a Média de Referência deles são a diferença entre os encargos
+              realizados do grupo e o cálculo com os percentuais padrão (negativa quando o realizado fica abaixo dele): assim, a conta calculada bate
+              com o realizado. A Média de Referência da conta continua a do realizado.
             </p>
             <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil

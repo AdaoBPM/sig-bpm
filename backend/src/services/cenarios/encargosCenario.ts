@@ -5,13 +5,18 @@ import type { GrupoDoCenario } from "./centrosCenario.js";
  * Benefícios" do Quadro de Lotação): na aba Centros de Custo das Premissas, embaixo do Quadro de Lotação, os percentuais
  * de cada grupo e mês — Previdência Social (INSS), Fundo de Garantia (FGTS), Férias (+1/3) e Décimo Terceiro, com o padrão
  * abaixo em todos os cenários, editáveis — e os Benefícios Adicionais (R$, digitados). A conta Encargos e Benefícios da
- * mão de obra (direta e indireta) é calculada, mês a mês:
+ * mão de obra (direta e indireta) é calculada, mês a mês, com o INSS e o FGTS também sobre as provisões de férias e de
+ * décimo terceiro (20/10/2026, o exemplo revisado pelo usuário):
  *
- *   (Remunerações CLT + Horas Extras) × (INSS + FGTS + Férias + Décimo Terceiro) + Benefícios Adicionais
+ *   base × (INSS + FGTS + Férias + Décimo Terceiro) + (INSS + FGTS) × (Férias + Décimo Terceiro) × base + Benefícios
+ *   Adicionais, com a base = Remunerações CLT + Horas Extras
  *
- * As Remunerações PJ não têm encargos. Os Benefícios Adicionais entram na mão de obra da atribuição do grupo (Direta: a
- * MOD; Indireta ou sem atribuição: a MOI; a outra, quando o grupo da DRE só tem uma). A Média de Referência da conta fica a
- * do realizado. Gravados nas premissas com a unidade 0, a venda de cada item e a chave o grupo; os percentuais, em fração.
+ * Com o padrão, o fator é 63,64% (antes, sem a incidência, 56,44%). As Remunerações PJ não têm encargos. Os Benefícios
+ * Adicionais entram na mão de obra da atribuição do grupo (Direta: a MOD; Indireta ou sem atribuição: a MOI; a outra, quando
+ * o grupo da DRE só tem uma); na referência realizada, são a diferença entre os encargos realizados e o cálculo
+ * (beneficiosDaDiferenca). A Média de Referência da conta fica a do realizado. Gravados nas premissas com a unidade 0, a
+ * venda de cada item e a chave o grupo; os percentuais, em fração. Os 29% do INSS (20% da cota patronal, o RAT × FAP e os
+ * terceiros) foram adotados pelo usuário em 20/10/2026, a confirmar com a contabilidade.
  */
 
 export type ItemDosEncargos = "INSS" | "FGTS" | "FERIAS" | "DECIMO_TERCEIRO" | "BENEFICIOS";
@@ -25,7 +30,18 @@ export const ITENS_DOS_ENCARGOS: Array<{ item: ItemDosEncargos; venda: string; r
 ];
 export const VENDAS_DOS_ENCARGOS = new Set(ITENS_DOS_ENCARGOS.map((i) => i.venda));
 export const itemDosEncargos = (item: string) => ITENS_DOS_ENCARGOS.find((i) => i.item === item);
-const PERCENTUAIS = ITENS_DOS_ENCARGOS.filter((i) => i.und === "%");
+
+/**
+ * O fator dos encargos sobre a base: (INSS + FGTS + Férias + Décimo Terceiro) + (INSS + FGTS) × (Férias + Décimo Terceiro).
+ * `valor(item)` lê o percentual (em fração).
+ */
+export function fatorDosEncargos(valor: (item: ItemDosEncargos) => number) {
+  const sobreAFolha = valor("INSS") + valor("FGTS");
+  const provisoes = valor("FERIAS") + valor("DECIMO_TERCEIRO");
+  return sobreAFolha + provisoes + sobreAFolha * provisoes;
+}
+/** O fator com os percentuais padrão (63,64%). */
+export const FATOR_PADRAO = fatorDosEncargos((item) => itemDosEncargos(item)!.padrao ?? 0);
 
 /** O sufixo das contas da mão de obra. */
 const REMUNERACOES_CLT = "REMUNERACOES_CLT";
@@ -71,11 +87,21 @@ export function encargosDoGrupo(
       mo.encargos,
       Array.from({ length: 12 }, (_, k) => {
         const mes = k + 1;
-        const percentual = PERCENTUAIS.reduce((s, i) => s + valorDoItem(i, gravado, mes), 0);
+        const fator = fatorDosEncargos((item) => valorDoItem(itemDosEncargos(item)!, gravado, mes));
         const base = conta(mo.remuneracoes, mes) + conta(mo.horasExtras, mes);
-        return base * percentual + (mo.beneficios ? valorDoItem(beneficios, gravado, mes) : 0);
+        return base * fator + (mo.beneficios ? valorDoItem(beneficios, gravado, mes) : 0);
       }),
     );
   }
   return r;
+}
+
+/**
+ * Os Benefícios Adicionais da referência realizada (20/10/2026, decisão do usuário): a diferença entre os encargos
+ * realizados do grupo e o cálculo com os percentuais padrão, (Remunerações CLT + Horas Extras) × FATOR_PADRAO, somada nas
+ * mãos de obra dele; assim, os meses fechados e a Média de Referência da conta Encargos e Benefícios batem com o realizado.
+ * Pode ser negativa (o realizado abaixo do cálculo). `conta(codigo)` lê o valor do mês.
+ */
+export function beneficiosDaDiferenca(codigos: string[], atribuicao: GrupoDoCenario["atribuicao"], conta: (codigo: string) => number) {
+  return maosDeObraDoGrupo(codigos, atribuicao).reduce((s, mo) => s + conta(mo.encargos) - (conta(mo.remuneracoes) + conta(mo.horasExtras)) * FATOR_PADRAO, 0);
 }

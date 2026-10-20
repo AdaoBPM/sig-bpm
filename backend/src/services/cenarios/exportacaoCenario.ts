@@ -96,8 +96,9 @@ type ContasDaAba = Array<{ codigo: string; linha: number; valores: number[] }>;
  * A aba de um grupo de centros (19/10/2026: como a tabela Premissas da tela): o Quadro de Lotação (Colaboradores CLT e PJ
  * e o Total de Colaboradores, em fórmula; no total, a média), os Encargos e Benefícios (os percentuais e os Benefícios
  * Adicionais) e as contas por atribuição, nos doze meses e no total. A conta Encargos e Benefícios vai em fórmula:
- * (Remunerações CLT + Horas Extras) × (INSS + FGTS + Férias + Décimo Terceiro) + Benefícios Adicionais (estes, na mão de
- * obra da atribuição do grupo); os subtotais e o total somam as contas, também em fórmula.
+ * base × [(INSS + FGTS + Férias + Décimo Terceiro) + (INSS + FGTS) × (Férias + Décimo Terceiro)] + Benefícios Adicionais
+ * (20/10/2026: com a incidência sobre as provisões; a base = Remunerações CLT + Horas Extras; os benefícios, na mão de obra
+ * da atribuição do grupo); os subtotais e o total somam as contas, também em fórmula.
  */
 function abaDoCentro(
   grupo: string,
@@ -149,7 +150,7 @@ function abaDoCentro(
   ]);
 
   // Os encargos e benefícios: os percentuais (em fração, no formato %; no total, a média) e os Benefícios Adicionais (R$).
-  secao("Encargos e Benefícios", "(Remunerações CLT + Horas Extras) × percentuais + Benefícios Adicionais");
+  secao("Encargos e Benefícios", "base × [(INSS + FGTS + Férias + 13º) + (INSS + FGTS) × (Férias + 13º)] + Benefícios Adicionais; base = Remunerações CLT + Horas Extras");
   const linhaDoItem = new Map<string, number>();
   for (const e of dados.encargos) {
     const r = proxima();
@@ -163,11 +164,12 @@ function abaDoCentro(
       percentual ? num(soma(valores) / 12, false, `AVERAGE(${cJan}${r}:${cDez}${r})`, true) : num(soma(valores), false, `SUM(${cJan}${r}:${cDez}${r})`),
     ]);
   }
-  const percentuais = (k: number) =>
-    dados.encargos
-      .filter((e) => e.und === "%")
-      .map((e) => `${cMes(k)}${linhaDoItem.get(e.item)}`)
-      .join("+");
+  // O fator (20/10/2026): (INSS + FGTS) + (Férias + 13º) + (INSS + FGTS) × (Férias + 13º).
+  const percentuais = (k: number) => {
+    const c = (item: string) => `${cMes(k)}${linhaDoItem.get(item)}`;
+    const [folha, provisoes] = [`(${c("INSS")}+${c("FGTS")})`, `(${c("FERIAS")}+${c("DECIMO_TERCEIRO")})`];
+    return `${folha}+${provisoes}+${folha}*${provisoes}`;
+  };
 
   // As contas por atribuição; a Encargos e Benefícios em fórmula, das linhas da mesma atribuição.
   const atribuicoes = [...new Set(dados.contas.map((x) => x.atribuicao))];
