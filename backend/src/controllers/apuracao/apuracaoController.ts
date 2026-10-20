@@ -43,6 +43,12 @@ export const apuracaoController = {
     return responder(response, () => apuracaoService.fechar(c.ano, c.mes, request.user!.sub));
   },
 
+  async excluir(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    return responder(response, () => apuracaoService.excluir(c.ano, c.mes, request.user!.sub));
+  },
+
   async reabrir(request: Request, response: Response) {
     const c = competencia(request, response);
     if (!c) return;

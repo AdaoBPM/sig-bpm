@@ -156,6 +156,36 @@ function exigirLivre(ano: number, mes: number) {
   }
 }
 
+/**
+ * Por que a competência não se exclui (20/10/2026), ou null: só a mais recente, em aberto (não fechada), sem apuração
+ * nem importação em andamento.
+ */
+async function motivoNaoExcluir(ano: number, mes: number, status: string, competenciaId: string): Promise<string | null> {
+  const prisma = getPrismaClient();
+  if (status === "FECHADA") return "A competência está fechada: só uma competência em aberto pode ser excluída.";
+  const posterior = await prisma.competencia.findFirst({
+    where: { OR: [{ ano: { gt: ano } }, { ano, mes: { gt: mes } }] },
+    orderBy: [{ ano: "desc" }, { mes: "desc" }],
+    select: { ano: true, mes: true },
+  });
+  if (posterior) return `Só a competência mais recente pode ser excluída (a mais recente é ${rotulo(posterior.ano, posterior.mes)}).`;
+  if (emApuracao.has(`${ano}-${mes}`)) return `A competência ${rotulo(ano, mes)} está sendo apurada agora.`;
+  if (await prisma.importacao.count({ where: { competenciaId, status: "PROCESSANDO" } })) return "Há uma importação em andamento na competência: espere terminar.";
+  return null;
+}
+
+/** O que a exclusão leva junto (as contagens para a confirmação e a auditoria). */
+async function paraExcluir(competenciaId: string) {
+  const prisma = getPrismaClient();
+  const [importacoes, lancamentos, manuais, divergencias] = await Promise.all([
+    prisma.importacao.count({ where: { competenciaId } }),
+    prisma.lancamentoContabil.count({ where: { competenciaId } }),
+    prisma.lancamentoManual.count({ where: { competenciaId } }),
+    prisma.divergencia.count({ where: { competenciaId } }),
+  ]);
+  return { importacoes, lancamentos, manuais, divergencias };
+}
+
 /** O que mudou nas entradas desde a apuração, em frases. */
 function mudancas(apurado: Retrato | null, atual: Retrato): string[] {
   if (!apurado) return [];
@@ -369,7 +399,33 @@ export const apuracaoService = {
       motivosNaoFechar,
       podeReabrir: c.status === "FECHADA",
       reaberturas: reaberturas.map((r) => ({ justificativa: r.justificativa, reabertaEm: r.reabertaEm, reabertaPor: r.usuario.nome, fechamentoAnteriorEm: r.fechamentoAnteriorEm })),
+      /** A exclusão da competência (20/10/2026): o motivo de não poder, ou null; e o que ela leva junto, para a confirmação. */
+      motivoNaoExcluir: await motivoNaoExcluir(ano, mes, c.status, c.id),
+      paraExcluir: c.status === "FECHADA" ? null : await paraExcluir(c.id),
     };
+  },
+
+  /**
+   * Exclui a competência (20/10/2026): só a mais recente e em aberto. Leva junto tudo o que é dela — as importações, os
+   * lançamentos do balancete, as listas, os lançamentos manuais, o estoque, a receita prévia, os rateios, a DRE apurada,
+   * as divergências e as reaberturas (as tabelas filhas apagam em cascata). Os arquivos importados ficam guardados (pelo
+   * hash, podem servir a outros meses). Fica na auditoria, com as contagens.
+   */
+  async excluir(ano: number, mes: number, usuarioId: string) {
+    const c = await competenciaPorAnoMes(ano, mes);
+    const motivo = await motivoNaoExcluir(ano, mes, c.status, c.id);
+    if (motivo) throw new RegraApuracaoError(409, motivo);
+    const levou = await paraExcluir(c.id);
+    await getPrismaClient().competencia.delete({ where: { id: c.id } });
+    await auditar({
+      usuarioId,
+      acao: "EXCLUSAO",
+      entidade: "competencia",
+      entidadeId: c.id,
+      antes: { status: c.status, apuradaEm: c.apuradaEm, apuracoes: c.apuracoes, ...levou },
+      metadados: { competencia: rotulo(ano, mes) },
+    });
+    return { ano, mes, ...levou };
   },
 
   /**

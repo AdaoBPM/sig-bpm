@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Calculator, History, LockKeyhole, LockKeyholeOpen } from "lucide-react";
+import { AlertTriangle, Calculator, History, LockKeyhole, LockKeyholeOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -14,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useAuth } from "@/context/AuthContext";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
-import { apuracaoService } from "../../../services/apuracaoService";
+import { apuracaoService, type ParaExcluir } from "../../../services/apuracaoService";
 import { dataHora } from "../../utils/formatacao";
 import { mensagemDeErro } from "../services/dreService";
 import { plural } from "@/lib/texto";
@@ -37,6 +38,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
   const { refresh } = useAuth();
   const [dialogo, setDialogo] = useState<"fechar" | "reabrir" | null>(null);
   const [historico, setHistorico] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [justificativa, setJustificativa] = useState("");
   const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
 
@@ -81,6 +83,23 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {/* Excluir Competência (20/10/2026): só a mais recente e em aberto; nas outras, apagado, com o motivo na dica. */}
+        {!fechada ? (
+          <PermissionGuard permission="competencias:editar">
+            <span title={s.motivoNaoExcluir ?? undefined}>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-sm border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+                disabled={s.motivoNaoExcluir !== null || apurar.isPending}
+                onClick={() => setExcluindo(true)}
+              >
+                <Trash2 className="size-4" />
+                Excluir Competência
+              </Button>
+            </span>
+          </PermissionGuard>
+        ) : null}
         {s.podeApurar ? (
           <PermissionGuard permission="dre:editar">
             <Button
@@ -91,7 +110,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
               className={botaoPrimario}
             >
               <Calculator className="size-4" />
-              {apurar.isPending ? "Apurando…" : s.apurada ? "Reapurar competência" : "Apurar competência"}
+              {apurar.isPending ? "Apurando…" : s.apurada ? "Reapurar Competência" : "Apurar Competência"}
             </Button>
           </PermissionGuard>
         ) : null}
@@ -105,7 +124,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
               onClick={() => setDialogo("fechar")}
             >
               <LockKeyhole className="size-4" />
-              Fechar competência
+              Fechar Competência
             </Button>
           </PermissionGuard>
         ) : null}
@@ -113,7 +132,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
           <PermissionGuard permission="competencias:editar">
             <Button type="button" className={botaoPrimario} onClick={() => setDialogo("reabrir")}>
               <LockKeyholeOpen className="size-4" />
-              Reabrir competência
+              Reabrir Competência
             </Button>
           </PermissionGuard>
         ) : null}
@@ -125,6 +144,9 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
         ) : null}
       </div>
       {historico ? <HistoricoReaberturas reaberturas={s.reaberturas} onFechar={() => setHistorico(false)} /> : null}
+      {excluindo && s.paraExcluir ? (
+        <ExcluirCompetencia anoMes={anoMes} ano={s.competencia.ano} mes={s.competencia.mes} paraExcluir={s.paraExcluir} onFechar={() => setExcluindo(false)} />
+      ) : null}
 
       <Dialog open={dialogo !== null} onOpenChange={(o) => (!o ? setDialogo(null) : undefined)}>
         <DialogContent avisoAoSair className="rounded-sm sm:max-w-lg">
@@ -248,6 +270,81 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A confirmação da exclusão da competência (20/10/2026): o que sai junto e a competência digitada (MM/AAAA) para
+ * liberar o botão. Excluída, a tela volta para a lista das competências.
+ */
+function ExcluirCompetencia({ anoMes, ano, mes, paraExcluir, onFechar }: { anoMes: string; ano: number; mes: number; paraExcluir: ParaExcluir; onFechar: () => void }) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { refresh } = useAuth();
+  const rotulo = `${String(mes).padStart(2, "0")}/${ano}`;
+  const [digitado, setDigitado] = useState("");
+  const excluir = useMutation({
+    mutationFn: () => apuracaoService.excluir(anoMes),
+    onSuccess: () => {
+      toast.success(`Competência ${rotulo} excluída.`);
+      onFechar();
+      router.replace("/competencias");
+      queryClient.removeQueries({ predicate: (q) => JSON.stringify(q.queryKey).includes(anoMes) });
+      void queryClient.invalidateQueries();
+      void refresh();
+    },
+  });
+  const p = paraExcluir;
+  const itens = [
+    p.importacoes ? `${p.importacoes} ${plural(p.importacoes, "importação", "importações")} (Em Vigor e Histórico)` : null,
+    p.lancamentos ? `${p.lancamentos.toLocaleString("pt-BR")} ${plural(p.lancamentos, "lançamento", "lançamentos")} do balancete, com a classificação` : null,
+    p.manuais ? `${p.manuais} ${plural(p.manuais, "lançamento manual", "lançamentos manuais")}` : null,
+    p.divergencias ? `${p.divergencias} ${plural(p.divergencias, "divergência", "divergências")}` : null,
+  ].filter((x): x is string => x !== null);
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent className="rounded-sm sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Excluir a Competência {rotulo}</DialogTitle>
+          <DialogDescription render={<div />}>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>A competência sai da lista, com tudo o que é dela: as listas, o estoque, a receita prévia, os rateios, a DRE apurada e as reaberturas.</li>
+              {itens.length ? <li>Saem também: {itens.join("; ")}.</li> : <li>Ela ainda não tem importações nem lançamentos.</li>}
+              <li>Os arquivos importados continuam guardados. A exclusão fica no log de auditoria e não se desfaz.</li>
+            </ul>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <label htmlFor="confirmar-exclusao" className="text-sm font-medium text-gray-900">
+            Para confirmar, digite a competência ({rotulo})
+          </label>
+          <input
+            id="confirmar-exclusao"
+            value={digitado}
+            onChange={(e) => setDigitado(e.target.value)}
+            autoComplete="off"
+            className="h-9 w-40 rounded-sm border border-gray-300 bg-white px-3 text-sm"
+            placeholder="MM/AAAA"
+          />
+        </div>
+        {excluir.isError ? (
+          <p className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{mensagemDeErro(excluir.error, "Não foi possível excluir a competência.")}</p>
+        ) : null}
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            className="rounded-sm bg-red-700 font-bold text-white hover:bg-red-800"
+            disabled={excluir.isPending || digitado.trim() !== rotulo}
+            onClick={() => excluir.mutate()}
+          >
+            {excluir.isPending ? "Excluindo…" : "Excluir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

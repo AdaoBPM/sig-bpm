@@ -22,7 +22,13 @@ export type SituacaoCompetencia = {
   motivosNaoFechar: string[];
   podeReabrir: boolean;
   reaberturas: Array<{ justificativa: string; reabertaEm: string; reabertaPor: string; fechamentoAnteriorEm: string | null }>;
+  /** Por que a competência não se exclui (só a mais recente, em aberto), ou null (20/10/2026). */
+  motivoNaoExcluir: string | null;
+  /** O que a exclusão leva junto (nula na fechada). */
+  paraExcluir: ParaExcluir | null;
 };
+
+export type ParaExcluir = { importacoes: number; lancamentos: number; manuais: number; divergencias: number };
 
 export type ResultadoApuracao = { apuradaEm: string; apuracoes: number; etapas: string[]; avisos: string[] };
 
@@ -39,6 +45,10 @@ export const apuracaoService = {
   },
   fechar: async (anoMes: string): Promise<SituacaoCompetencia> => {
     const { data } = await api.post<{ data: SituacaoCompetencia }>(`${base(anoMes)}/fechar`);
+    return data.data;
+  },
+  excluir: async (anoMes: string): Promise<ParaExcluir> => {
+    const { data } = await api.post<{ data: ParaExcluir }>(`${base(anoMes)}/excluir`);
     return data.data;
   },
   reabrir: async (anoMes: string, justificativa: string): Promise<SituacaoCompetencia> => {

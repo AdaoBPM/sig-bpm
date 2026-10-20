@@ -12,3 +12,5 @@ apuracaoRoutes.get("/", autenticacao, verificarPermissao("fechamento:ler"), asyn
 apuracaoRoutes.post("/apurar", autenticacao, verificarPermissao("dre:editar"), asyncHandler(c.apurar));
 apuracaoRoutes.post("/fechar", autenticacao, verificarPermissao("competencias:editar"), asyncHandler(c.fechar));
 apuracaoRoutes.post("/reabrir", autenticacao, verificarPermissao("competencias:editar"), asyncHandler(c.reabrir));
+// A exclusão da competência mais recente e em aberto (20/10/2026).
+apuracaoRoutes.post("/excluir", autenticacao, verificarPermissao("competencias:editar"), asyncHandler(c.excluir));

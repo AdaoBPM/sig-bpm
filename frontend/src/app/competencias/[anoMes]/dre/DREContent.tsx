@@ -504,6 +504,11 @@ export function DREContent() {
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados. A DRE do centro traz só os custos e as despesas de mão de obra, gastos gerais e depreciação.</li>
             <li>Em Obras, escolha a obra na lista à esquerda (o código do centro de custo da obra fica acima do nome; a busca aceita os dois): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, sem as margens e os resultados calculados.</li>
+            <li>
+              “Excluir Competência” apaga a competência com tudo o que é dela (importações, lançamentos, listas, apuração, divergências): só a mais
+              recente e em aberto (não fechada) — nas outras, o botão fica apagado, com o motivo na dica. A confirmação mostra o que sai e pede a
+              competência digitada (MM/AAAA); a exclusão fica no log de auditoria e não se desfaz.
+            </li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>
               O aviso amarelo “Entradas ou cadastros alterados depois da apuração” lista o que mudou — as entradas do mês e, com a competência ainda
