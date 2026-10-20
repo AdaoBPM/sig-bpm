@@ -22,7 +22,7 @@ const invalidar = (queryClient: ReturnType<typeof useQueryClient>) => {
 
 /** O que cada botão faz, nos modais e no Como Usar. */
 const ABAS_DA_PLANILHA =
-  "Matriz, Filial, Serviços, Centros de Custo (com o Quadro de Lotação), Investimentos (a Depreciação Base), Extra-Operacional e Indicadores Manuais";
+  "Matriz, Filial, Serviços, Centros de Custo (com o Quadro de Lotação e os Encargos e Benefícios), Investimentos (a Depreciação Base), Extra-Operacional e Indicadores Manuais";
 
 /**
  * Os botões Replicar Médias e Apagar Valores (15/10/2026; antes, um botão só, Replicar Médias / Apagar Valores, com a

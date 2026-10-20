@@ -72,7 +72,8 @@ function ExcluirInvestimentosDialog({ id, investimentos, onFechar }: { id: strin
 /**
  * A aba Investimentos das premissas de um cenário analítico (13/10/2026): em cima, a Depreciação Base de cada unidade
  * mês a mês (digitada, com a replicação e o reajuste das premissas), com a depreciação dos investimentos e a total; embaixo,
- * a lista dos investimentos (Novo Investimento; clicar numa linha edita ou exclui), com a depreciação mensal e o ROI. As
+ * a lista dos investimentos (Novo Investimento; clicar numa linha edita ou exclui), com a condição de pagamento e a
+ * depreciação mensal (19/10/2026: sem o Ganho Previsto, a Receita Bruta Prevista e o ROI). As
  * caixas da lista (15/10/2026) marcam os investimentos, e "Excluir Selecionados" exclui os marcados de uma vez. Cada
  * investimento tem o Nome de Referência, único no cenário, que o identifica na planilha das premissas.
  */
@@ -115,8 +116,7 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
           <div>
             <h2 className="text-base font-bold tracking-wide text-gray-900 uppercase">Investimentos</h2>
             <p className="text-xs text-gray-600">
-              Depreciação Mensal = (Valor Total − Valor Pós Uso) ÷ Vida Útil, a partir do Início; ROI = (Receita Bruta Prevista − Valor Total) ÷ Valor Total ×
-              100.
+              Depreciação Mensal = (Valor Total − Valor Pós Uso) ÷ Vida Útil, a partir do Início.
             </p>
           </div>
           {pode ? (
@@ -158,7 +158,7 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
                     />
                   </th>
                 ) : null}
-                {["Nome de Referência", "Unidade", "Conta", "Descrição", "Ganho Previsto", "Receita Bruta Prevista", "Início", "Valor Total", "Valor Pós Uso", "Vida Útil", "Depreciação Mensal", "ROI"].map((c, k) => (
+                {["Nome de Referência", "Unidade", "Conta", "Descrição", "Condição de Pagamento", "Início", "Valor Total", "Valor Pós Uso", "Vida Útil", "Depreciação Mensal"].map((c, k) => (
                   <th key={c} className={`px-3 py-2 text-xs font-bold ${k >= 5 ? "text-right" : "text-left"}`}>
                     {c}
                   </th>
@@ -168,7 +168,7 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
             <tbody>
               {dados.investimentos.length === 0 ? (
                 <tr>
-                  <td colSpan={pode ? 13 : 12} className="px-3 py-6 text-center text-gray-500">
+                  <td colSpan={pode ? 11 : 10} className="px-3 py-6 text-center text-gray-500">
                     Nenhum investimento no cenário.
                   </td>
                 </tr>
@@ -190,14 +190,12 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
                     <td className="px-3 py-1.5 whitespace-nowrap">{NOME_DA_UNIDADE[i.unidade]}</td>
                     <td className="px-3 py-1.5 whitespace-nowrap">{dados.contas.find((c) => c.unidade === i.unidade)?.rotulo}</td>
                     <td className="px-3 py-1.5 text-gray-900">{i.descricao}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{i.ganhoPrevisto ?? "—"}</td>
-                    <td className="px-3 py-1.5 text-right whitespace-nowrap">{reais(i.receitaBrutaPrevista)}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{i.condicaoPagamento ?? "—"}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{MESES[i.inicio - 1]}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{reais(i.valorTotal)}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{reais(i.valorPosUso)}</td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">{i.vidaUtil} meses</td>
-                    <td className="px-3 py-1.5 text-right whitespace-nowrap">{reais(i.depreciacaoMensal)}</td>
-                    <td className="px-3 py-1.5 text-right font-bold whitespace-nowrap">{i.roi === null ? "—" : `${i.roi.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`}</td>
+                    <td className="px-3 py-1.5 text-right font-bold whitespace-nowrap">{reais(i.depreciacaoMensal)}</td>
                   </tr>
                 ))
               )}
@@ -220,24 +218,22 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
   );
 }
 
-/** O formulário de um investimento (novo ou existente, com Excluir), com a depreciação mensal e o ROI calculados enquanto se digita. */
+/** O formulário de um investimento (novo ou existente, com Excluir), com a depreciação mensal calculada enquanto se digita. */
 function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string; dados: Dados; investimento: InvestimentoDoCenario | null; onFechar: () => void }) {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState(investimento?.nomeReferencia ?? "");
   const [unidade, setUnidade] = useState<number>(investimento?.unidade ?? 1);
   const [descricao, setDescricao] = useState(investimento?.descricao ?? "");
-  const [ganho, setGanho] = useState(investimento?.ganhoPrevisto ?? "");
-  const [receita, setReceita] = useState(paraCampo(investimento?.receitaBrutaPrevista));
+  const [condicao, setCondicao] = useState(investimento?.condicaoPagamento ?? "");
   const [inicio, setInicio] = useState(investimento?.inicio ?? 1);
   const [total, setTotal] = useState(paraCampo(investimento?.valorTotal));
   const [posUso, setPosUso] = useState(paraCampo(investimento?.valorPosUso ?? 0));
   const [vida, setVida] = useState(investimento ? String(investimento.vidaUtil) : "");
   const [excluir, setExcluir] = useState(false);
-  const n = { receita: lerNumero(receita), total: lerNumero(total), posUso: lerNumero(posUso), vida: lerNumero(vida) };
+  const n = { total: lerNumero(total), posUso: lerNumero(posUso), vida: lerNumero(vida) };
   const valido =
-    !!nome.trim() && !!descricao.trim() && typeof n.total === "number" && n.total > 0 && (n.posUso === null || (typeof n.posUso === "number" && n.posUso >= 0)) && typeof n.vida === "number" && n.vida >= 1 && Number.isInteger(n.vida) && n.receita !== undefined;
+    !!nome.trim() && !!descricao.trim() && typeof n.total === "number" && n.total > 0 && (n.posUso === null || (typeof n.posUso === "number" && n.posUso >= 0)) && typeof n.vida === "number" && n.vida >= 1 && Number.isInteger(n.vida);
   const mensal = typeof n.total === "number" && typeof n.vida === "number" && n.vida > 0 ? (n.total - (n.posUso ?? 0)) / n.vida : null;
-  const roi = typeof n.total === "number" && n.total > 0 && typeof n.receita === "number" ? ((n.receita - n.total) / n.total) * 100 : null;
   const gravar = useMutation({
     mutationFn: (apagar: boolean) => {
       if (apagar) return cenariosService.excluirInvestimento(id, investimento!.id);
@@ -245,8 +241,7 @@ function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string;
         nomeReferencia: nome.trim(),
         unidade: unidade as 1 | 2 | 3 | 4,
         descricao: descricao.trim(),
-        ganhoPrevisto: ganho.trim() || null,
-        receitaBrutaPrevista: typeof n.receita === "number" ? n.receita : null,
+        condicaoPagamento: condicao.trim() || null,
         inicio,
         valorTotal: n.total as number,
         valorPosUso: (n.posUso as number | null) ?? 0,
@@ -308,8 +303,7 @@ function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string;
             </select>
           </div>
           <div className="sm:col-span-2">{campo("Descrição", "inv-descricao", descricao, setDescricao)}</div>
-          <div className="sm:col-span-2">{campo("Ganho Previsto", "inv-ganho", ganho, setGanho, { placeholder: "Ex.: mais 30% de pistas na Filial" })}</div>
-          {campo("Receita Bruta Prevista (R$)", "inv-receita", receita, setReceita, { numero: true, invalido: n.receita === undefined })}
+          <div className="sm:col-span-2">{campo("Condição de Pagamento", "inv-condicao", condicao, setCondicao, { placeholder: "Ex.: entrada de 30% + 10 parcelas mensais" })}</div>
           <div className="space-y-1.5">
             <Label htmlFor="inv-inicio">Início</Label>
             <select id="inv-inicio" value={inicio} onChange={(e) => setInicio(Number(e.target.value))} className={classeSelect}>
@@ -323,14 +317,10 @@ function InvestimentoDialog({ id, dados, investimento, onFechar }: { id: string;
           {campo("Valor Total (R$)", "inv-total", total, setTotal, { numero: true, invalido: total !== "" && !(typeof n.total === "number" && n.total > 0) })}
           {campo("Valor Pós Uso (R$)", "inv-posuso", posUso, setPosUso, { numero: true, invalido: n.posUso === undefined })}
           {campo("Vida Útil (meses)", "inv-vida", vida, setVida, { numero: true, invalido: vida !== "" && !(typeof n.vida === "number" && n.vida >= 1 && Number.isInteger(n.vida)) })}
-          <div className="grid grid-cols-2 gap-3 rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm sm:col-span-2">
+          <div className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm sm:col-span-2">
             <p>
               <span className="text-gray-600">Depreciação Mensal: </span>
               <span className="font-bold text-gray-900">{reais(mensal)}</span>
-            </p>
-            <p>
-              <span className="text-gray-600">ROI: </span>
-              <span className="font-bold text-gray-900">{roi === null ? "—" : `${roi.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`}</span>
             </p>
           </div>
         </div>

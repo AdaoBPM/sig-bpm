@@ -4,6 +4,7 @@ import { estrutura } from "../dre/dreService.js";
 import { arquivoDeResultados, identificacaoLivre, type Bloco, type Formato } from "../relatorios/exportacaoRelatoriosService.js";
 import { CenarioError, cenariosService, rotuloVersao } from "./cenariosService.js";
 import { abaConsolidado, juntarOrigem, type OrigensDasContas } from "./consolidadoDosCentros.js";
+import { maosDeObraDoGrupo } from "./encargosCenario.js";
 
 type Usuario = NonNullable<Parameters<typeof cenariosService.obter>[1]>;
 
@@ -75,7 +76,7 @@ export const exportacaoCenarioService = {
           est: await estrutura(),
           informacoes: [
             `${nomeBase} · ${geracao}`,
-            "A DRE das contas dos centros de custo: cada conta é a soma dela nas abas dos centros (em fórmulas: acompanha os valores das abas); as atribuições, os grupos e o total somam as contas. Confira com a DRE do cenário (tela Resultados / Consolidado): o total bate; por conta, a parte dos rateios que vai para Serviços (Metalurgia, Armadura e Acompanhamento) está, na DRE, nas contas da CSM ou da CSC. O Quadro de Lotação não entra.",
+            "A DRE das contas dos centros de custo: cada conta é a soma dela nas abas dos centros (em fórmulas: acompanha os valores das abas); as atribuições, os grupos e o total somam as contas. Confira com a DRE do cenário (tela Resultados / Consolidado): o total bate; por conta, a parte dos rateios que vai para Serviços (Metalurgia, Armadura e Acompanhamento) está, na DRE, nas contas da CSM ou da CSC. O Quadro de Lotação e os Encargos e Benefícios (os percentuais) não entram; a conta Encargos e Benefícios, sim.",
           ],
           rotulos: lista.meses.map((m) => m.rotulo),
           total: [0, lista.meses.length - 1],
@@ -91,7 +92,13 @@ export const exportacaoCenarioService = {
 /** As contas de uma aba de centro, para o Consolidado: o código, a linha na aba e os doze meses. */
 type ContasDaAba = Array<{ codigo: string; linha: number; valores: number[] }>;
 
-/** A aba de um grupo de centros: o quadro de lotação e as contas por atribuição, nos doze meses e no total. */
+/**
+ * A aba de um grupo de centros (19/10/2026: como a tabela Premissas da tela): o Quadro de Lotação (Colaboradores CLT e PJ
+ * e o Total de Colaboradores, em fórmula; no total, a média), os Encargos e Benefícios (os percentuais e os Benefícios
+ * Adicionais) e as contas por atribuição, nos doze meses e no total. A conta Encargos e Benefícios vai em fórmula:
+ * (Remunerações CLT + Horas Extras) × (INSS + FGTS + Férias + Décimo Terceiro) + Benefícios Adicionais (estes, na mão de
+ * obra da atribuição do grupo); os subtotais e o total somam as contas, também em fórmula.
+ */
 function abaDoCentro(
   grupo: string,
   departamento: string,
@@ -103,36 +110,117 @@ function abaDoCentro(
   contasDaAba: ContasDaAba,
 ): AbaEscrita {
   const soma = (vs: number[]) => vs.reduce((s, v) => s + v, 0);
-  const num = (v: number, destaque: boolean): Celula => ({ valor: Math.round(v * 100) / 100, estilo: destaque ? ESTILO.destaqueNumero : ESTILO.itemNumero });
+  const arred = (v: number) => Math.round(v * 100) / 100;
+  const num = (v: number | null, destaque: boolean, formula?: string, percentual = false): Celula => ({
+    valor: v === null ? null : percentual ? v : arred(v),
+    estilo: percentual ? (destaque ? ESTILO.destaquePercentual : ESTILO.itemPercentual) : destaque ? ESTILO.destaqueNumero : ESTILO.itemNumero,
+    formula,
+  });
   const cab = (t: string) => ({ valor: t, estilo: ESTILO.cabecalhoDireita });
+  const cMes = (k: number) => coluna(2 + k);
+  const [cJan, cDez] = [cMes(0), cMes(11)];
   const linhas: Celula[][] = [
     [{ valor: `Centro de Custo ${grupo}`, estilo: ESTILO.titulo }],
     [{ valor: `${cenario} · ${departamento} · destino: ${destino}`, estilo: ESTILO.informacao }],
     [{ valor: `Centros: ${dados.grupo.centros.map((x) => `${x.codigo ?? "sem código"} ${x.nome}`).join("; ")}`, estilo: ESTILO.informacao }],
     [{ valor: geracao, estilo: ESTILO.informacao }],
     [],
-    [{ valor: "Atribuição", estilo: ESTILO.cabecalho }, { valor: "Conta", estilo: ESTILO.cabecalho }, ...meses.map((m) => cab(m.rotulo)), cab("Total")],
+    [{ valor: "Premissas", estilo: ESTILO.cabecalho }, { valor: "Linha", estilo: ESTILO.cabecalho }, ...meses.map((m) => cab(m.rotulo)), cab("Total")],
   ];
   const cabecalho = linhas.length;
+  // A linha seguinte (1 a n, como no Excel).
+  const proxima = () => linhas.length + 1;
+  const secao = (titulo: string, detalhe: string | null = null) =>
+    linhas.push([{ valor: titulo, estilo: ESTILO.destaque }, { valor: detalhe, estilo: ESTILO.destaque }, ...meses.map(() => ({ valor: null, estilo: ESTILO.destaque })), { valor: null, estilo: ESTILO.destaque }]);
+
   // O quadro de lotação: os colaboradores de cada mês; no total, a média.
+  secao("Quadro de Lotação", `Entra em: ${dados.lotacao.quadro}`);
+  const rClt = proxima();
+  linhas.push([{ valor: null, estilo: ESTILO.item }, { valor: "Colaboradores CLT", estilo: ESTILO.item }, ...dados.lotacao.clt.valores.map((v) => num(v, false)), num(soma(dados.lotacao.clt.valores) / 12, false, `AVERAGE(${cJan}${rClt}:${cDez}${rClt})`)]);
+  const rPj = proxima();
+  linhas.push([{ valor: null, estilo: ESTILO.item }, { valor: "Colaboradores PJ", estilo: ESTILO.item }, ...dados.lotacao.pj.valores.map((v) => num(v, false)), num(soma(dados.lotacao.pj.valores) / 12, false, `AVERAGE(${cJan}${rPj}:${cDez}${rPj})`)]);
+  const rTot = proxima();
+  const totalLot = dados.lotacao.clt.valores.map((v, k) => v + dados.lotacao.pj.valores[k]);
   linhas.push([
-    { valor: "Quadro de Lotação", estilo: ESTILO.destaque },
-    { valor: `${dados.lotacao.quadro} (colaboradores; no total, a média)`, estilo: ESTILO.item },
-    ...dados.lotacao.valores.map((v) => num(v, false)),
-    num(soma(dados.lotacao.valores) / 12, true),
+    { valor: null, estilo: ESTILO.destaque },
+    { valor: "Total de Colaboradores", estilo: ESTILO.destaque },
+    ...totalLot.map((v, k) => num(v, true, `${cMes(k)}${rClt}+${cMes(k)}${rPj}`)),
+    num(soma(totalLot) / 12, true, `AVERAGE(${cJan}${rTot}:${cDez}${rTot})`),
   ]);
+
+  // Os encargos e benefícios: os percentuais (em fração, no formato %; no total, a média) e os Benefícios Adicionais (R$).
+  secao("Encargos e Benefícios", "(Remunerações CLT + Horas Extras) × percentuais + Benefícios Adicionais");
+  const linhaDoItem = new Map<string, number>();
+  for (const e of dados.encargos) {
+    const r = proxima();
+    linhaDoItem.set(e.item, r);
+    const percentual = e.und === "%";
+    const valores = e.valores.map((v) => (percentual ? v / 100 : v));
+    linhas.push([
+      { valor: null, estilo: ESTILO.item },
+      { valor: e.rotulo, estilo: ESTILO.item },
+      ...valores.map((v) => num(v, false, undefined, percentual)),
+      percentual ? num(soma(valores) / 12, false, `AVERAGE(${cJan}${r}:${cDez}${r})`, true) : num(soma(valores), false, `SUM(${cJan}${r}:${cDez}${r})`),
+    ]);
+  }
+  const percentuais = (k: number) =>
+    dados.encargos
+      .filter((e) => e.und === "%")
+      .map((e) => `${cMes(k)}${linhaDoItem.get(e.item)}`)
+      .join("+");
+
+  // As contas por atribuição; a Encargos e Benefícios em fórmula, das linhas da mesma atribuição.
   const atribuicoes = [...new Set(dados.contas.map((x) => x.atribuicao))];
   const total = Array<number>(12).fill(0);
+  const subtotais: number[] = [];
   for (const a of atribuicoes) {
     const contas = dados.contas.filter((x) => x.atribuicao === a);
     const sub = Array.from({ length: 12 }, (_, k) => soma(contas.map((x) => x.valores[k])));
     sub.forEach((v, k) => (total[k] += v));
-    linhas.push([{ valor: a, estilo: ESTILO.destaque }, { valor: null, estilo: ESTILO.destaque }, ...sub.map((v) => num(v, true)), num(soma(sub), true)]);
+    const rSub = proxima();
+    subtotais.push(rSub);
+    const [primeira, ultima] = [rSub + 1, rSub + contas.length];
+    linhas.push([
+      { valor: a, estilo: ESTILO.destaque },
+      { valor: null, estilo: ESTILO.destaque },
+      ...sub.map((v, k) => num(v, true, `SUM(${cMes(k)}${primeira}:${cMes(k)}${ultima})`)),
+      num(soma(sub), true, `SUM(${cJan}${rSub}:${cDez}${rSub})`),
+    ]);
+    const linhaDaConta = new Map(contas.map((x, i) => [x.codigo, primeira + i]));
+    // As contas de base da Encargos e Benefícios desta atribuição (o prefixo "CPP.MOD"…).
+    const prefixo = (codigo: string) => codigo.split(".").slice(0, 2).join(".");
     for (const x of contas) {
-      linhas.push([{ valor: null, estilo: ESTILO.item }, { valor: x.descricao, estilo: ESTILO.item }, ...x.valores.map((v) => num(v, false)), num(soma(x.valores), false)]);
-      contasDaAba.push({ codigo: x.codigo, linha: linhas.length, valores: x.valores.map((v) => Math.round(v * 100) / 100) });
+      const r = proxima();
+      const rem = linhaDaConta.get(`${prefixo(x.codigo)}.REMUNERACOES_CLT`);
+      const he = linhaDaConta.get(`${prefixo(x.codigo)}.HORAS_EXTRAS`);
+      const comBeneficios = beneficiosNaConta(dados, x.codigo);
+      const formula = (k: number) =>
+        x.calculada
+          ? `(${rem ? `${cMes(k)}${rem}` : "0"}+${he ? `${cMes(k)}${he}` : "0"})*(${percentuais(k)})${comBeneficios ? `+${cMes(k)}${linhaDoItem.get("BENEFICIOS")}` : ""}`
+          : undefined;
+      linhas.push([
+        { valor: null, estilo: ESTILO.item },
+        { valor: x.calculada ? `${x.descricao} (calculada)` : x.descricao, estilo: ESTILO.item },
+        ...x.valores.map((v, k) => num(v, false, formula(k))),
+        num(soma(x.valores), false, `SUM(${cJan}${r}:${cDez}${r})`),
+      ]);
+      contasDaAba.push({ codigo: x.codigo, linha: r, valores: x.valores.map(arred) });
     }
   }
-  linhas.push([{ valor: "Total", estilo: ESTILO.destaque }, { valor: null, estilo: ESTILO.destaque }, ...total.map((v) => num(v, true)), num(soma(total), true)]);
-  return { nome: grupo, larguras: [26, 40, ...meses.map(() => 13), 15], linhas, linhaCabecalho: cabecalho, rodape: `${cenario} · Centro de Custo ${grupo}`, paisagem: true, congelarPrimeiraColuna: true };
+  const rTotal = proxima();
+  linhas.push([
+    { valor: "Total do Centro", estilo: ESTILO.destaque },
+    { valor: null, estilo: ESTILO.destaque },
+    ...total.map((v, k) => num(v, true, subtotais.length ? subtotais.map((r) => `${cMes(k)}${r}`).join("+") : undefined)),
+    num(soma(total), true, `SUM(${cJan}${rTotal}:${cDez}${rTotal})`),
+  ]);
+  return { nome: grupo, larguras: [26, 44, ...meses.map(() => 13), 15], linhas, linhaCabecalho: cabecalho, rodape: `${cenario} · Centro de Custo ${grupo}`, paisagem: true, congelarPrimeiraColuna: true };
+}
+
+/**
+ * A conta Encargos e Benefícios que leva os Benefícios Adicionais: a da mão de obra da atribuição do grupo (Direta: a MOD;
+ * Indireta ou sem atribuição: a MOI; a outra, quando o grupo só tem uma), como no cálculo (encargosCenario.ts).
+ */
+function beneficiosNaConta(dados: Awaited<ReturnType<typeof cenariosService.centro>>, codigo: string) {
+  return !!maosDeObraDoGrupo(dados.contas.map((x) => x.codigo), dados.grupo.atribuicao).find((m) => m.encargos === codigo)?.beneficios;
 }

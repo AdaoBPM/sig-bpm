@@ -2039,7 +2039,7 @@ model CenarioJustificativa {
 
 /// A justificativa de uma linha das premissas de um cenário analítico (15/10/2026): a coluna Justificativa do Exportar
 /// Premissas, que volta pelo Importar Valores. A chave é o código da linha na planilha (P|unidade|venda|premissa,
-/// C|grupo|conta, L|grupo, B|unidade|conta, X|unidade|conta ou I|indicador).
+/// C|grupo|conta, L|grupo|CLT ou PJ, E|grupo|item, B|unidade|conta, X|unidade|conta ou I|indicador).
 model CenarioPremissaJustificativa {
   cenarioId    String   @map("cenario_id")
   chave        String
@@ -2108,8 +2108,9 @@ model CenarioInvestimento {
   /// O Nome de Referência (15/10/2026): digitado, único no cenário; a planilha das premissas reconhece o investimento por ele.
   nomeReferencia       String   @default("") @map("nome_referencia")
   descricao            String
-  ganhoPrevisto        String?  @map("ganho_previsto")
-  receitaBrutaPrevista Decimal? @map("receita_bruta_prevista")
+  /// A condição de pagamento (19/10/2026; texto livre: à vista, 10x, entrada + 12x…). Antes, o Ganho Previsto e a Receita
+  /// Bruta Prevista (com o ROI), removidos.
+  condicaoPagamento    String?  @map("condicao_pagamento")
   /// O mês de início da depreciação (1 a 12, no exercício do cenário).
   inicio               Int
   valorTotal           Decimal  @map("valor_total")

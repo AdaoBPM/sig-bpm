@@ -3,7 +3,7 @@ import { unzipSync } from "fflate";
 import { ArquivoInvalidoError, lerAba, listarAbas, type ValorCelula } from "../../lib/xlsx.js";
 import { coluna, ESTILO, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
 import { juntarOrigem, type OrigensDasContas } from "./consolidadoDosCentros.js";
-import { CONTAS_DEPRECIACAO, depreciacaoMensal, roi } from "./investimentosCenario.js";
+import { CONTAS_DEPRECIACAO, depreciacaoMensal } from "./investimentosCenario.js";
 
 /**
  * A planilha das premissas de um cenário analítico (15/10/2026): o Exportar Premissas (só Excel) e o Importar Valores.
@@ -14,7 +14,7 @@ import { CONTAS_DEPRECIACAO, depreciacaoMensal, roi } from "./investimentosCenar
  * máxima em relação ao Total da Referência) e a Justificativa (texto livre). O Importar Valores lê os meses e a
  * Justificativa das linhas pela coluna Código; as colunas da referência e Justificar? não se importam. A aba
  * Investimentos (15/10/2026) traz a lista dos investimentos, com as listas suspensas da Unidade e da Conta e as fórmulas
- * da Depreciação Mensal e do ROI; importada, atualiza os investimentos pelo Nome de Referência e inclui os de nome novo.
+ * da Depreciação Mensal; importada, atualiza os investimentos pelo Nome de Referência e inclui os de nome novo.
  */
 
 export type AbaDasPremissas = "1" | "2" | "3" | "centros" | "investimentos" | "extra" | "manuais";
@@ -41,7 +41,10 @@ const COLUNAS: Record<AbaDasPremissas, Array<[string, number]>> = {
 
 export type LinhaDaPlanilha = {
   aba: AbaDasPremissas;
-  /** P|unidade|venda|premissa, C|grupo|conta, L|grupo, B|unidade|conta, X|unidade|conta ou I|indicador. */
+  /**
+   * P|unidade|venda|premissa, C|grupo|conta, L|grupo|CLT, L|grupo|PJ e L|grupo|TOTAL (19/10/2026; antes, L|grupo),
+   * E|grupo|item (os Encargos e Benefícios), B|unidade|conta, X|unidade|conta ou I|indicador.
+   */
   chave: string;
   descricao: string[];
   und: string;
@@ -55,6 +58,16 @@ export type LinhaDaPlanilha = {
   percentual?: boolean;
   /** Nos centros de custo, o grupo (para separar os centros em abas ou arquivos). */
   grupo?: string;
+  /**
+   * A linha é calculada (19/10/2026: o Total de Colaboradores e a conta Encargos e Benefícios): não se importa, não se
+   * replica e, na planilha, os meses vão em fórmula (`formula`).
+   */
+  calculada?: boolean;
+  /**
+   * A fórmula de um mês da linha, com `ref(chave)`, a célula do mesmo mês de outra linha da aba (`ref(chave, true)`: a
+   * Média de Referência dela).
+   */
+  formula?: (ref: (chave: string, media?: boolean) => string) => string;
   justificativa: string | null;
 };
 
@@ -62,7 +75,7 @@ export type LinhaDaPlanilha = {
 export function abaDaChave(chave: string): AbaDasPremissas | null {
   const [tipo, u] = chave.split("|");
   if (tipo === "P") return u === "1" || u === "2" || u === "3" ? u : null;
-  return ({ C: "centros", L: "centros", B: "investimentos", X: "extra", I: "manuais" } as const)[tipo as "C"] ?? null;
+  return ({ C: "centros", L: "centros", E: "centros", B: "investimentos", X: "extra", I: "manuais" } as const)[tipo as "C"] ?? null;
 }
 
 /**
@@ -105,7 +118,7 @@ export function departamentosDaLinha(l: Pick<LinhaDaPlanilha, "chave" | "descric
   if (tipo === "P") return departamentosDaUnidade(Number(a));
   if (tipo === "B") return departamentosDaUnidade(Number(a));
   if (tipo === "X") return ["EXTRA"];
-  if (tipo === "C" || tipo === "L") {
+  if (tipo === "C" || tipo === "L" || tipo === "E") {
     const d = DO_GRUPO_DRE[grupoDRE.get(a) ?? ""];
     return d ? [d] : [];
   }
@@ -123,7 +136,7 @@ export function departamentosDaLinha(l: Pick<LinhaDaPlanilha, "chave" | "descric
 export function blocoDaChave(chave: string, descricao: string[] = []) {
   const [tipo, a, b] = chave.split("|");
   if (tipo === "P") return NOME_DA_ABA[a as "1"] ?? "Premissas";
-  if (tipo === "C" || tipo === "L") return `Centro de Custo: ${a}`;
+  if (tipo === "C" || tipo === "L" || tipo === "E") return `Centro de Custo: ${a}`;
   if (tipo === "B") return `Depreciação Base: ${CONTAS_DEPRECIACAO.find((c) => String(c.unidade) === a)?.nomeUnidade ?? a}`;
   if (tipo === "X") return `Extra-Operacional: ${a === "5" ? "RN" : "Despesas e Extra"}`;
   if (tipo === "I") return `Indicadores Manuais${descricao[0] ? `: ${descricao[0]}` : ""}`;
@@ -160,6 +173,19 @@ export function abaDaPlanilha(nome: string, aba: AbaDasPremissas, linhas: LinhaD
   // doze meses, Justificar? e a Justificativa.
   const n = COLUNAS[aba].length;
   const [cMedia, cTotal, cVariacao, cJan, cDez] = [n + 2, n + 3, n + 4, n + 5, n + 16].map(coluna);
+  // As linhas calculadas (19/10/2026): a fórmula de cada mês aponta para as linhas da mesma aba pela chave.
+  const linhaDa = new Map(linhas.map((l, i) => [l.chave, PRIMEIRA_LINHA + i]));
+  const mesEmFormula = (l: LinhaDaPlanilha, k: number): string | undefined => {
+    if (!l.formula) return undefined;
+    let falta = false;
+    const ref = (chave: string, media = false) => {
+      const r = linhaDa.get(chave);
+      if (r === undefined) falta = true;
+      return `${media ? cMedia : coluna(n + 5 + k)}${r ?? 0}`;
+    };
+    const f = l.formula(ref);
+    return falta ? undefined : f;
+  };
   return {
     nome,
     larguras: [30, ...COLUNAS[aba].map(([, w]) => w), 10, 14, 14, 12, ...meses.map(() => 13), 12, 60],
@@ -196,7 +222,7 @@ export function abaDaPlanilha(nome: string, aba: AbaDasPremissas, linhas: LinhaD
           numero(l, l.media),
           { ...numero(l, l.media === null ? null : l.media * 12), formula: `IF(${m}="","",${m}*12)` },
           { valor: l.limite, estilo: ESTILO.itemNumero },
-          ...l.meses.map((x) => numero(l, x)),
+          ...l.meses.map((x, k) => ({ ...numero(l, x), formula: mesEmFormula(l, k) })),
           {
             valor: precisaJustificar(l) ? "Sim" : "Não",
             formula: `IF(OR(${m}="",${v}=""),"Não",IF(ABS(${t})<0.005,IF(ABS(${soma})<0.005,"Não","Sim"),IF(ROUND(ABS(${soma}-${t})/ABS(${t})*100,2)>${v},"Sim","Não")))`,
@@ -239,8 +265,7 @@ export type InvestimentoLido = {
   nomeReferencia: string;
   unidade: number;
   descricao: string;
-  ganhoPrevisto: string | null;
-  receitaBrutaPrevista: number | null;
+  condicaoPagamento: string | null;
   inicio: number;
   valorTotal: number;
   valorPosUso: number;
@@ -266,20 +291,22 @@ export const ABA_INVESTIMENTOS = "Investimentos";
 /** As colunas da aba Investimentos (a partir de A). */
 /** A primeira coluna da aba Investimentos (15/10/2026; antes, o Código). */
 const COLUNA_NOME_REFERENCIA = "Nome de Referência";
+/** A Condição de Pagamento (19/10/2026, no lugar do Ganho Previsto, da Receita Bruta Prevista e do ROI): opcional na leitura. */
+const COLUNA_CONDICAO = "Condição de Pagamento";
 const COLUNAS_INVESTIMENTOS: Array<[string, number]> = [
   [COLUNA_NOME_REFERENCIA, 30],
   ["Unidade", 18],
   ["Conta", 36],
   ["Descrição", 40],
-  ["Ganho Previsto", 30],
-  ["Receita Bruta Prevista", 18],
+  [COLUNA_CONDICAO, 30],
   ["Mês de Início (1 a 12)", 12],
   ["Valor Total", 16],
   ["Valor Pós Uso", 16],
   ["Vida Útil (meses)", 12],
   ["Depreciação Mensal", 16],
-  ["ROI (%)", 10],
 ];
+/** As colunas dos campos (sem a Depreciação Mensal, uma fórmula). */
+const CAMPOS_INVESTIMENTOS = COLUNAS_INVESTIMENTOS.slice(0, 9).map(([c]) => c);
 /** As linhas em branco, com as fórmulas e as listas, para incluir investimentos novos na planilha. */
 const LINHAS_NOVAS = 30;
 
@@ -287,17 +314,16 @@ export type InvestimentoDaPlanilha = Omit<InvestimentoLido, "aba" | "numero"> & 
 
 /**
  * A aba Investimentos (15/10/2026): os investimentos das unidades escolhidas, com o Nome de Referência (que identifica o
- * investimento na importação), a Unidade e a Conta em listas suspensas, os campos do investimento e, em fórmulas, a
- * Depreciação Mensal ((valor total − valor pós uso) ÷ vida útil) e o ROI ((receita bruta prevista − valor total) ÷ valor
- * total). Abaixo, linhas em branco para os investimentos novos.
+ * investimento na importação), a Unidade e a Conta em listas suspensas, os campos do investimento (com a Condição de
+ * Pagamento, 19/10/2026) e, em fórmula, a Depreciação Mensal ((valor total − valor pós uso) ÷ vida útil). Abaixo, linhas em
+ * branco para os investimentos novos.
  */
 export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], identificacao: string): AbaEscrita {
   const cab = (valor: string, direita = false): Celula => ({ valor, estilo: direita ? ESTILO.cabecalhoDireita : ESTILO.cabecalho });
   const nomeDaUnidade = (u: number) => CONTAS_DEPRECIACAO.find((c) => c.unidade === u)?.nomeUnidade ?? "";
   const rotuloDaConta = (u: number) => CONTAS_DEPRECIACAO.find((c) => c.unidade === u)?.rotulo ?? "";
   const formulas = (r: number) => ({
-    depreciacao: `IF(OR(H${r}="",J${r}="",J${r}=0),"",(H${r}-IF(I${r}="",0,I${r}))/J${r})`,
-    roi: `IF(OR(F${r}="",H${r}="",H${r}=0),"",(F${r}-H${r})/H${r})`,
+    depreciacao: `IF(OR(G${r}="",I${r}="",I${r}=0),"",(G${r}-IF(H${r}="",0,H${r}))/I${r})`,
   });
   const linhas: Celula[][] = [
     [{ valor: `Premissas · ${ABA_INVESTIMENTOS}`, estilo: ESTILO.titulo }],
@@ -305,12 +331,12 @@ export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], iden
     [
       {
         valor:
-          "Altere os investimentos ou inclua novos nas linhas em branco e importe o arquivo em Premissas / Importar Valores: com o Nome de Referência de um investimento do cenário, ele é atualizado; com um nome novo, é incluído (o nome não se repete no cenário). A Depreciação Mensal e o ROI são fórmulas e não se importam.",
+          "Altere os investimentos ou inclua novos nas linhas em branco e importe o arquivo em Premissas / Importar Valores: com o Nome de Referência de um investimento do cenário, ele é atualizado; com um nome novo, é incluído (o nome não se repete no cenário). A Depreciação Mensal é uma fórmula e não se importa.",
         estilo: ESTILO.informacao,
       },
     ],
     [],
-    COLUNAS_INVESTIMENTOS.map(([c], k) => cab(c, k >= 5 && k !== 4)),
+    COLUNAS_INVESTIMENTOS.map(([c], k) => cab(c, k >= 5)),
   ];
   investimentos.forEach((i, k) => {
     const r = PRIMEIRA_LINHA + k;
@@ -320,23 +346,20 @@ export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], iden
       { valor: nomeDaUnidade(i.unidade) },
       { valor: rotuloDaConta(i.unidade) },
       { valor: i.descricao },
-      { valor: i.ganhoPrevisto },
-      { valor: i.receitaBrutaPrevista, estilo: ESTILO.itemNumero },
+      { valor: i.condicaoPagamento },
       { valor: i.inicio },
       { valor: i.valorTotal, estilo: ESTILO.itemNumero },
       { valor: i.valorPosUso, estilo: ESTILO.itemNumero },
       { valor: i.vidaUtil },
       { valor: Math.round(depreciacaoMensal(i) * 100) / 100, estilo: ESTILO.itemNumero, formula: f.depreciacao },
-      { valor: roi(i) === null ? null : roi(i)! / 100, estilo: ESTILO.itemPercentual, formula: f.roi },
     ]);
   });
   for (let k = 0; k < LINHAS_NOVAS; k++) {
     const r = PRIMEIRA_LINHA + investimentos.length + k;
     const f = formulas(r);
     linhas.push([
-      ...Array.from({ length: 10 }, (): Celula => ({ valor: null })),
+      ...Array.from({ length: 9 }, (): Celula => ({ valor: null })),
       { valor: null, estilo: ESTILO.itemNumero, formula: f.depreciacao },
-      { valor: null, estilo: ESTILO.itemPercentual, formula: f.roi },
     ]);
   }
   const ultima = PRIMEIRA_LINHA + investimentos.length + LINHAS_NOVAS - 1;
@@ -351,28 +374,29 @@ export function abaDeInvestimentos(investimentos: InvestimentoDaPlanilha[], iden
     validacoes: [
       { celulas: intervalo("B"), lista: CONTAS_DEPRECIACAO.map((c) => c.nomeUnidade) },
       { celulas: intervalo("C"), lista: [...new Set(CONTAS_DEPRECIACAO.map((c) => c.rotulo))] },
-      { celulas: intervalo("G"), inteiro: [1, 12] },
-      { celulas: intervalo("J"), inteiro: [1, 600] },
+      { celulas: intervalo("F"), inteiro: [1, 12] },
+      { celulas: intervalo("I"), inteiro: [1, 600] },
     ],
   };
 }
 
-/** Lê a aba Investimentos: as linhas com algum campo (a Depreciação Mensal e o ROI, fórmulas, não contam). */
+/** Lê a aba Investimentos: as linhas com algum campo (a Depreciação Mensal, fórmula, não conta). A Condição de Pagamento é opcional (os arquivos de antes de 19/10/2026 não a têm). */
 function lerInvestimentos(nome: string, linhas: Array<{ numero: number; celulas: ValorCelula[] }>, i: number, r: ArquivoLido) {
   const rotulos = linhas[i].celulas.map((c) => String(c ?? "").trim());
   const col = (rotulo: string) => rotulos.indexOf(rotulo);
-  const iCampos = COLUNAS_INVESTIMENTOS.slice(0, 10).map(([c]) => col(c));
-  if (iCampos.some((x) => x < 0)) {
-    r.erros.push(`A aba ${nome} não tem as colunas do padrão (${COLUNAS_INVESTIMENTOS.slice(0, 10).map(([c]) => `“${c}”`).join(", ")}).`);
+  const iCampos = CAMPOS_INVESTIMENTOS.map((c) => col(c));
+  const obrigatorias = CAMPOS_INVESTIMENTOS.filter((c) => c !== COLUNA_CONDICAO);
+  if (obrigatorias.some((c) => col(c) < 0)) {
+    r.erros.push(`A aba ${nome} não tem as colunas do padrão (${obrigatorias.map((c) => `“${c}”`).join(", ")}).`);
     return;
   }
-  const [iNome, iUnidade, iConta, iDescricao, iGanho, iReceita, iInicio, iTotal, iPosUso, iVida] = iCampos;
+  const [iNome, iUnidade, iConta, iDescricao, iCondicao, iInicio, iTotal, iPosUso, iVida] = iCampos;
   const texto = (v: ValorCelula | undefined) => (v === null || v === undefined ? "" : String(v).trim());
   const nomes = new Set<string>();
   r.abas.push(nome);
   for (const l of linhas.slice(i + 1)) {
     const c = l.celulas;
-    if (iCampos.every((k) => texto(c[k]) === "")) continue;
+    if (iCampos.every((k) => k < 0 || texto(c[k]) === "")) continue;
     const erro = (m: string) => r.erros.push(`${nome}, linha ${l.numero}: ${m}`);
     const nomeReferencia = texto(c[iNome]).slice(0, 80);
     if (!nomeReferencia) {
@@ -404,12 +428,11 @@ function lerInvestimentos(nome: string, linhas: Array<{ numero: number; celulas:
       if (v === undefined) erro(`${rotulo}: “${texto(c[k])}” não é um número.`);
       return v;
     };
-    const receita = num(iReceita, "Receita Bruta Prevista");
     const inicio = num(iInicio, "Mês de Início");
     const total = num(iTotal, "Valor Total");
     const posUso = num(iPosUso, "Valor Pós Uso");
     const vida = num(iVida, "Vida Útil");
-    if ([receita, inicio, total, posUso, vida].includes(undefined)) continue;
+    if ([inicio, total, posUso, vida].includes(undefined)) continue;
     if (inicio === null || inicio === undefined || !Number.isInteger(inicio) || inicio < 1 || inicio > 12) {
       erro("o Mês de Início vai de 1 a 12.");
       continue;
@@ -426,18 +449,13 @@ function lerInvestimentos(nome: string, linhas: Array<{ numero: number; celulas:
       erro("o Valor Pós Uso vai de zero ao Valor Total.");
       continue;
     }
-    if (receita !== null && receita! < 0) {
-      erro("a Receita Bruta Prevista não pode ser negativa.");
-      continue;
-    }
     r.investimentos.push({
       aba: nome,
       numero: l.numero,
       nomeReferencia,
       unidade: unidade.unidade,
       descricao,
-      ganhoPrevisto: texto(c[iGanho]).slice(0, 500) || null,
-      receitaBrutaPrevista: receita ?? null,
+      condicaoPagamento: iCondicao < 0 ? null : texto(c[iCondicao]).slice(0, 500) || null,
       inicio: inicio!,
       valorTotal: total!,
       valorPosUso: posUso ?? 0,

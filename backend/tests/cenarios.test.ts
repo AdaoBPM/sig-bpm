@@ -14,7 +14,7 @@ import { dividirPorLinhas, linhaDaTarefa, mediaDosMeses, mediaNosMesesComOcorren
 import { quadroDoGrupo, quadrosDeLotacao } from "../src/services/cenarios/lotacaoCenario.js";
 import { grupoDaLotacao } from "../src/services/listas/lotacaoDosCentros.js";
 import { rateiosSemVolume } from "../src/services/dre/apuracaoUnidades.js";
-import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses, roi } from "../src/services/cenarios/investimentosCenario.js";
+import { calcularInvestimentosEExtra, depreciacaoMensal, depreciacaoNosMeses } from "../src/services/cenarios/investimentosCenario.js";
 import { Prisma } from "../src/generated/prisma/client.js";
 import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
 
@@ -147,28 +147,28 @@ describe("comparativo entre cenários", () => {
     assert.match(lerArquivoDePremissas("x.xlsx", gerarXlsx([{ nome: "Outra", larguras: [10], linhas: [[{ valor: "a" }]] }]))[0].erros[0], /não está no padrão/);
   });
   it("a aba Investimentos (15/10/2026): a lista volta igual; o Nome de Referência obrigatório e sem repetir; a conta tem de ser a da unidade", () => {
-    const inv = { id: "abc", nomeReferencia: "Notebooks 2026", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 };
+    const inv = { id: "abc", nomeReferencia: "Notebooks 2026", unidade: 4, descricao: "Notebooks", condicaoPagamento: "Entrada + 10x", inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 };
     const aba = abaDeInvestimentos([inv], "teste");
     // A linha nova (a primeira em branco), uma com a conta de outra unidade, uma sem nome e uma com o nome repetido.
-    aba.linhas[6] = [{ valor: "Ponte 2026" }, { valor: "Matriz" }, { valor: null }, { valor: "Ponte rolante" }, { valor: null }, { valor: null }, { valor: 5 }, { valor: 80000 }, { valor: null }, { valor: 120 }];
-    aba.linhas[7] = [{ valor: "Caminhão" }, { valor: "Serviços" }, { valor: "Depreciação do Patrimônio" }, { valor: "Caminhão" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 300000 }, { valor: 0 }, { valor: 60 }];
-    aba.linhas[8] = [{ valor: null }, { valor: "Matriz" }, { valor: null }, { valor: "Sem nome" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 10 }, { valor: 0 }, { valor: 6 }];
-    aba.linhas[9] = [{ valor: "notebooks 2026" }, { valor: "Matriz" }, { valor: null }, { valor: "Repetido" }, { valor: null }, { valor: null }, { valor: 1 }, { valor: 10 }, { valor: 0 }, { valor: 6 }];
+    aba.linhas[6] = [{ valor: "Ponte 2026" }, { valor: "Matriz" }, { valor: null }, { valor: "Ponte rolante" }, { valor: null }, { valor: 5 }, { valor: 80000 }, { valor: null }, { valor: 120 }];
+    aba.linhas[7] = [{ valor: "Caminhão" }, { valor: "Serviços" }, { valor: "Depreciação do Patrimônio" }, { valor: "Caminhão" }, { valor: null }, { valor: 1 }, { valor: 300000 }, { valor: 0 }, { valor: 60 }];
+    aba.linhas[8] = [{ valor: null }, { valor: "Matriz" }, { valor: null }, { valor: "Sem nome" }, { valor: null }, { valor: 1 }, { valor: 10 }, { valor: 0 }, { valor: 6 }];
+    aba.linhas[9] = [{ valor: "notebooks 2026" }, { valor: "Matriz" }, { valor: null }, { valor: "Repetido" }, { valor: null }, { valor: 1 }, { valor: 10 }, { valor: 0 }, { valor: 6 }];
     const [lido] = lerArquivoDePremissas("i.xlsx", gerarXlsx([aba]));
     assert.deepEqual(
       lido.investimentos.map(({ aba: _a, numero: _n, ...i }) => i),
       [
-        { nomeReferencia: "Notebooks 2026", unidade: 4, descricao: "Notebooks", ganhoPrevisto: "Agilidade", receitaBrutaPrevista: 15000, inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 },
-        { nomeReferencia: "Ponte 2026", unidade: 1, descricao: "Ponte rolante", ganhoPrevisto: null, receitaBrutaPrevista: null, inicio: 5, valorTotal: 80000, valorPosUso: 0, vidaUtil: 120 },
+        { nomeReferencia: "Notebooks 2026", unidade: 4, descricao: "Notebooks", condicaoPagamento: "Entrada + 10x", inicio: 3, valorTotal: 12000, valorPosUso: 2000, vidaUtil: 24 },
+        { nomeReferencia: "Ponte 2026", unidade: 1, descricao: "Ponte rolante", condicaoPagamento: null, inicio: 5, valorTotal: 80000, valorPosUso: 0, vidaUtil: 120 },
       ],
     );
     assert.equal(lido.erros.length, 3);
     assert.match(lido.erros[0], /Conta de Serviços é a Depreciação do Maquinário de Serviços/);
     assert.match(lido.erros[1], /dê um Nome de Referência/);
     assert.match(lido.erros[2], /se repete na aba/);
-    // As fórmulas da Depreciação Mensal e do ROI, com o valor calculado.
-    assert.equal(aba.linhas[5][10].valor, 416.67);
-    assert.equal(aba.linhas[5][11].valor, 0.25);
+    // A fórmula da Depreciação Mensal, com o valor calculado (19/10/2026: sem o ROI).
+    assert.equal(aba.linhas[5][9].valor, 416.67);
+    assert.equal(aba.linhas[5][9].formula, 'IF(OR(G6="",I6="",I6=0),"",(G6-IF(H6="",0,H6))/I6)');
   });
   it("a média dos centros conta só os meses com movimentação de cada grupo e conta", () => {
     const r = mediaNosMesesComOcorrencia(
@@ -436,18 +436,13 @@ describe("centros de custo dos cenários analíticos (13/10/2026)", () => {
 });
 
 describe("investimentos e extra-operacional dos cenários analíticos (13/10/2026)", () => {
-  const inv = { unidade: 2, conta: "CPP.D.DEPRECIACAO_DO_MAQUINARIO", inicio: 7, valorTotal: 3_100_000, valorPosUso: 100_000, vidaUtil: 120, receitaBrutaPrevista: 4_000_000 };
+  const inv = { unidade: 2, conta: "CPP.D.DEPRECIACAO_DO_MAQUINARIO", inicio: 7, valorTotal: 3_100_000, valorPosUso: 100_000, vidaUtil: 120 };
 
   it("a depreciação mensal = (valor total − valor pós uso) ÷ vida útil, do mês de início em diante", () => {
     assert.equal(depreciacaoMensal(inv), 25_000);
     assert.deepEqual(depreciacaoNosMeses(inv), [0, 0, 0, 0, 0, 0, 25_000, 25_000, 25_000, 25_000, 25_000, 25_000]);
     // A vida útil curta acaba antes do fim do ano.
     assert.deepEqual(depreciacaoNosMeses({ ...inv, inicio: 3, vidaUtil: 2, valorPosUso: 0, valorTotal: 1000 }), [0, 0, 500, 500, 0, 0, 0, 0, 0, 0, 0, 0]);
-  });
-
-  it("o ROI = (receita bruta prevista − valor total) ÷ valor total × 100; sem a receita, nulo", () => {
-    assert.equal(Math.round(roi(inv)! * 100) / 100, 29.03);
-    assert.equal(roi({ ...inv, receitaBrutaPrevista: null }), null);
   });
 
   it("a depreciação base, a dos investimentos e o extra-operacional vão para as contas das unidades", () => {

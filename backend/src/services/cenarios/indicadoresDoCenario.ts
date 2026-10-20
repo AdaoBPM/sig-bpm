@@ -5,7 +5,7 @@ import { compilarFormula } from "../relatorios/formulaIndicador.js";
 import { acumular, type DadosDoMes, type Indicador, type Parte } from "../relatorios/indicadores.js";
 import { acumularMeta } from "../relatorios/metasOrcamento.js";
 import { gruposDoCadastro } from "./centrosCenario.js";
-import { QUADROS_DE_LOTACAO, quadrosDeLotacao, VENDA_LOTACAO } from "./lotacaoCenario.js";
+import { QUADROS_DE_LOTACAO, quadrosDeLotacao, VENDAS_LOTACAO } from "./lotacaoCenario.js";
 
 /**
  * Os indicadores de um cenário sintético (11/10/2026), com as fórmulas do cadastro Estrutura dos Indicadores — as
@@ -77,12 +77,13 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
   const analitico = cenario.tipo === "ANALITICO";
   let quadros: Map<string, Array<number | null>> | null = null;
   if (analitico) {
-    const [grupos, lotacao] = await Promise.all([gruposDoCadastro(), prisma.cenarioPremissa.findMany({ where: { cenarioId, venda: VENDA_LOTACAO } })]);
+    const [grupos, lotacao] = await Promise.all([gruposDoCadastro(), prisma.cenarioPremissa.findMany({ where: { cenarioId, venda: { in: VENDAS_LOTACAO } } })]);
     const porGrupo = new Map<string, number[]>();
     for (const p of lotacao) {
       if (p.mes < 1 || p.mes > 12) continue;
       const lista = porGrupo.get(p.chave) ?? Array<number>(12).fill(0);
-      lista[p.mes - 1] = Number(p.valor);
+      // O Total de Colaboradores: CLT + PJ (19/10/2026).
+      lista[p.mes - 1] += Number(p.valor);
       porGrupo.set(p.chave, lista);
     }
     quadros = quadrosDeLotacao(grupos, porGrupo);

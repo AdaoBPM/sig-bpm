@@ -197,8 +197,7 @@ export const cenariosController = {
         nomeReferencia: z.string().trim().min(1, "Dê um Nome de Referência ao investimento.").max(80),
         unidade: z.number().int().min(1).max(4),
         descricao: z.string().trim().min(1, "Descreva o investimento.").max(200),
-        ganhoPrevisto: z.string().trim().max(500).nullish().transform((x) => x || null),
-        receitaBrutaPrevista: z.number().finite().min(0).nullable(),
+        condicaoPagamento: z.string().trim().max(500).nullish().transform((x) => x || null),
         inicio: z.number().int().min(1).max(12),
         valorTotal: z.number().finite().positive("O valor total precisa ser maior que zero."),
         valorPosUso: z.number().finite().min(0),
@@ -339,8 +338,7 @@ export const cenariosController = {
       nomeReferencia: z.string().trim().min(1).max(80),
       unidade: z.number().int().min(1).max(4),
       descricao: z.string().trim().min(1).max(200),
-      ganhoPrevisto: z.string().max(500).nullable(),
-      receitaBrutaPrevista: z.number().finite().min(0).nullable(),
+      condicaoPagamento: z.string().max(500).nullable(),
       inicio: z.number().int().min(1).max(12),
       valorTotal: z.number().finite().positive(),
       valorPosUso: z.number().finite().min(0),
@@ -594,18 +592,6 @@ export const cenariosController = {
     const corpo = z.object({ visao: visaoSchema, linha: z.string().min(1).max(200), texto: z.string().trim().max(2000) }).safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Justificativa inválida." });
     return responder(response, () => cenariosService.gravarJustificativa(c, corpo.data, usuario(request)));
-  },
-
-  gravarLotacao(request: Request, response: Response) {
-    const corpo = z
-      .object({
-        grupo: z.string().min(1),
-        alteracoes: z.array(z.object({ mes: z.number().int().min(1).max(12), valor: z.number().finite().nullable() })).min(1).max(12),
-        origem: z.object({ tipo: z.enum(["MARCADOS", "VALOR"]), modo: z.enum(["PERCENTUAL", "ABSOLUTO", "DIGITADO"]), reajuste: z.number().nullable(), replicado: z.boolean() }).optional(),
-      })
-      .safeParse(request.body);
-    if (!corpo.success) return response.status(400).json({ message: "Quadro de lotação inválido." });
-    return responder(response, () => cenariosService.gravarLotacao(String(request.params.id), corpo.data.grupo, corpo.data.alteracoes, usuario(request), corpo.data.origem));
   },
 
   referenciaCenario(request: Request, response: Response) {

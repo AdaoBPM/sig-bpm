@@ -2,8 +2,8 @@ import type { GrupoDoCenario } from "./centrosCenario.js";
 
 /**
  * O quadro de lotação dos cenários analíticos (14/10/2026): os colaboradores de cada grupo de centros de custo, mês a
- * mês (a tabela Quadro de Lotação na aba Centros de Custo das Premissas), gravados nas premissas com a venda LOTACAO e
- * a chave o nome do grupo. Os indicadores de quadro de lotação do cenário saem deles, pela classificação do grupo:
+ * mês (o Quadro de Lotação da tabela Premissas na aba Centros de Custo das Premissas), gravados nas premissas com as vendas
+ * LOTACAO_CLT e LOTACAO_PJ (19/10/2026) e a chave o nome do grupo. Os indicadores de quadro de lotação do cenário saem deles, pela classificação do grupo:
  *
  * - Direta ou Indireta: a atribuição mais comum dos centros do grupo;
  * - Matriz ou Filial: nos custos de produção (CPP), o balde MATRIZ ou FILIAL; nos demais (Unidade e os de rateio), a
@@ -18,7 +18,13 @@ import type { GrupoDoCenario } from "./centrosCenario.js";
  * (listas/lotacaoDosCentros.ts); antes, os quadros realizados (os indicadores) se dividiam entre os grupos pela mão de obra.
  */
 
-export const VENDA_LOTACAO = "LOTACAO";
+/**
+ * O quadro de lotação em Colaboradores CLT e Colaboradores PJ (19/10/2026; antes, só Colaboradores, a venda LOTACAO, que
+ * a migração passou para CLT): o Total de Colaboradores é a soma, de onde saem os quadros.
+ */
+export const VENDA_LOTACAO_CLT = "LOTACAO_CLT";
+export const VENDA_LOTACAO_PJ = "LOTACAO_PJ";
+export const VENDAS_LOTACAO = [VENDA_LOTACAO_CLT, VENDA_LOTACAO_PJ];
 
 type Local = "Matriz" | "Filial" | "Montagem";
 type Atribuicao = "Direta" | "Indireta";

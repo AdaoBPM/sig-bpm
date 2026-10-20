@@ -8,7 +8,7 @@ import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
  *   maquinário de produção na Matriz e na Filial (CPP), o de serviços em Serviços (CSM) e o patrimônio em Despesas e
  *   Extra (DA); gravada nas premissas com a venda BASE e a chave "unidade|conta";
  * - os investimentos: cada um deprecia, a partir do mês de início e pela vida útil, (valor total − valor pós uso) ÷ vida
- *   útil por mês, somado à depreciação base da conta; o ROI = (receita bruta prevista − valor total) ÷ valor total;
+ *   útil por mês, somado à depreciação base da conta (19/10/2026: sem o ROI, o Ganho Previsto e a Receita Bruta Prevista);
  * - o extra-operacional, mês a mês, como os Lançamentos Manuais do fechamento: o imposto de renda e a contribuição
  *   social e as receitas e despesas financeiras, em Despesas e Extra e no RN; gravado nas premissas com a venda EXTRA e
  *   a chave "unidade|conta".
@@ -36,7 +36,7 @@ const GRUPOS_EXTRA = new Set(["DML", "RFC", "RFNC", "DFC", "DFNC"]);
 /** As contas do extra-operacional de uma unidade: o IR e a CS e as receitas e despesas financeiras dela. */
 export const contasExtra = (est: LinhaEstrutura[], unidade: number) => est.filter((l) => l.tipo === "ITEM" && GRUPOS_EXTRA.has(l.grupoSigla) && l.unidades.includes(unidade));
 
-export type Investimento = { unidade: number; conta: string; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number; receitaBrutaPrevista: number | null };
+export type Investimento = { unidade: number; conta: string; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number };
 
 /** A depreciação mensal do investimento: (valor total − valor pós uso) ÷ vida útil. */
 export const depreciacaoMensal = (i: Pick<Investimento, "valorTotal" | "valorPosUso" | "vidaUtil">) => (i.vidaUtil > 0 ? (i.valorTotal - i.valorPosUso) / i.vidaUtil : 0);
@@ -46,10 +46,6 @@ export function depreciacaoNosMeses(i: Investimento): number[] {
   const m = depreciacaoMensal(i);
   return Array.from({ length: 12 }, (_, k) => (k + 1 >= i.inicio && k + 1 < i.inicio + i.vidaUtil ? m : 0));
 }
-
-/** O ROI, em %: (receita bruta prevista − valor total) ÷ valor total × 100; sem a receita ou sem o valor, nulo. */
-export const roi = (i: Pick<Investimento, "valorTotal" | "receitaBrutaPrevista">) =>
-  i.receitaBrutaPrevista === null || !i.valorTotal ? null : ((i.receitaBrutaPrevista - i.valorTotal) / i.valorTotal) * 100;
 
 /**
  * As contas da DRE que a depreciação base, os investimentos e o extra-operacional dão ("u|conta" → os doze meses).

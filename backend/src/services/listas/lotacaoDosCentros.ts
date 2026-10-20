@@ -28,15 +28,15 @@ export function grupoDaLotacao(centroCusto: string, grupos: Iterable<string>): s
 }
 
 /**
- * A lotação realizada dos grupos em cada competência: a soma dos colaboradores (CLT + PJ) dos centros da aba de cada
- * grupo. Os centros sem grupo entre `grupos` vão em `semGrupo`, com os colaboradores somados nas competências.
+ * A lotação realizada dos grupos em cada competência: a soma dos colaboradores CLT e PJ dos centros da aba de cada grupo
+ * (19/10/2026: separados). Os centros sem grupo entre `grupos` vão em `semGrupo`, com o total somado nas competências.
  */
 export async function lotacaoDosGrupos(competenciaIds: string[], grupos: string[]) {
   const linhas = await getPrismaClient().lotacaoCentro.findMany({
     where: { competenciaId: { in: competenciaIds }, importacao: { status: "CONCLUIDA", substituidaEm: null } },
-    select: { competenciaId: true, centroCusto: true, total: true },
+    select: { competenciaId: true, centroCusto: true, clt: true, pj: true, total: true },
   });
-  const porCompetencia = new Map<string, Map<string, number>>();
+  const porCompetencia = new Map<string, Map<string, { clt: number; pj: number }>>();
   const semGrupo = new Map<string, number>();
   for (const l of linhas) {
     const grupo = grupoDaLotacao(l.centroCusto, grupos);
@@ -44,8 +44,9 @@ export async function lotacaoDosGrupos(competenciaIds: string[], grupos: string[
       semGrupo.set(l.centroCusto, (semGrupo.get(l.centroCusto) ?? 0) + l.total);
       continue;
     }
-    const doMes = porCompetencia.get(l.competenciaId) ?? new Map<string, number>();
-    doMes.set(grupo, (doMes.get(grupo) ?? 0) + l.total);
+    const doMes = porCompetencia.get(l.competenciaId) ?? new Map<string, { clt: number; pj: number }>();
+    const atual = doMes.get(grupo) ?? { clt: 0, pj: 0 };
+    doMes.set(grupo, { clt: atual.clt + l.clt, pj: atual.pj + l.pj });
     porCompetencia.set(l.competenciaId, doMes);
   }
   return { porCompetencia, semGrupo };

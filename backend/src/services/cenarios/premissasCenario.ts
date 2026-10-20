@@ -3,7 +3,8 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { LinhaEstrutura } from "../dre/apuracaoUnidades.js";
 import { estrutura } from "../dre/dreService.js";
 import { diasUteis } from "./calendario.js";
-import { alocarCentros, gruposDoCadastro } from "./centrosCenario.js";
+import { alocarCentros, contasDoGrupo, gruposDoCadastro } from "./centrosCenario.js";
+import { ehContaDeEncargos, encargosDoGrupo, VENDAS_DOS_ENCARGOS } from "./encargosCenario.js";
 import { calcularInvestimentosEExtra } from "./investimentosCenario.js";
 import { recalcular, UNIDADES } from "./edicaoCenario.js";
 import { assinaturaDasRegras, percentuaisPelasRegras, regrasDeRateio } from "../volumes/vigenciaDosRateios.js";
@@ -340,6 +341,40 @@ export function calcularPremissas(est: LinhaEstrutura[], linhas: LinhaDoCadastro
 }
 
 /**
+ * A conta Encargos e Benefícios dos grupos (19/10/2026; encargosCenario.ts): calculada nos doze meses, das Remunerações CLT
+ * e das Horas Extras do grupo, dos percentuais e dos Benefícios Adicionais dele, e gravada nos centros do cenário (no lugar
+ * do que havia nela; a Média de Referência, o mês 0, fica a do realizado), para a tela, as exportações e a DRE a lerem como
+ * as outras contas. Devolve os valores dos meses dos centros, com os encargos calculados.
+ */
+async function materializarEncargos(
+  tx: Tx,
+  cenarioId: string,
+  est: LinhaEstrutura[],
+  grupos: Awaited<ReturnType<typeof gruposDoCadastro>>,
+  gravadas: Array<{ unidade: number; venda: string; chave: string; mes: number; valor: unknown }>,
+  meses: Array<{ grupo: string; codigo: string; mes: number; valor: number }>,
+) {
+  const idDaConta = new Map(est.map((l) => [l.codigo, l.id]));
+  const valor = new Map(meses.map((x) => [`${x.grupo}|${x.codigo}|${x.mes}`, x.valor]));
+  const premissa = new Map(gravadas.filter((p) => p.unidade === 0 && VENDAS_DOS_ENCARGOS.has(p.venda)).map((p) => [`${p.venda}|${p.chave}|${p.mes}`, Number(p.valor)]));
+  const calculados: Array<{ grupo: string; codigo: string; mes: number; valor: number }> = [];
+  const doCadastro = new Set<string>();
+  for (const g of grupos) {
+    doCadastro.add(g.grupo);
+    const codigos = contasDoGrupo(est, g).map((l) => l.codigo);
+    const r = encargosDoGrupo(codigos, g.atribuicao, (codigo, mes) => valor.get(`${g.grupo}|${codigo}|${mes}`) ?? 0, (venda, mes) => premissa.get(`${venda}|${g.grupo}|${mes}`));
+    for (const [codigo, lista] of r) lista.forEach((v, k) => (Math.abs(v) >= 0.00005 ? calculados.push({ grupo: g.grupo, codigo, mes: k + 1, valor: v }) : undefined));
+  }
+  const contasDeEncargos = est.filter((l) => l.tipo === "ITEM" && ehContaDeEncargos(l.codigo)).map((l) => l.id);
+  await tx.cenarioCentro.deleteMany({ where: { cenarioId, grupo: { in: [...doCadastro] }, mes: { gte: 1, lte: 12 }, linhaDREId: { in: contasDeEncargos } } });
+  for (let i = 0; i < calculados.length; i += 500)
+    await tx.cenarioCentro.createMany({
+      data: calculados.slice(i, i + 500).map((x) => ({ cenarioId, grupo: x.grupo, linhaDREId: idDaConta.get(x.codigo)!, mes: x.mes, valor: new Prisma.Decimal(x.valor.toFixed(4)) })),
+    });
+  return [...meses.filter((x) => !(doCadastro.has(x.grupo) && ehContaDeEncargos(x.codigo))), ...calculados];
+}
+
+/**
  * Recalcula a DRE do cenário analítico (13/10/2026): as contas das premissas de cada unidade (as de Global e Mercantil
  * somadas), as dos grupos de centros de custo, alocadas às unidades pelo balde e pelos rateios — com os percentuais
  * das bases das premissas (centrosCenario.ts) —, e a depreciação (a base e a dos investimentos) e o extra-operacional
@@ -359,11 +394,13 @@ export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   ]);
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
   const { somas, bases, juntar } = calcularPremissas(est, linhas, cenario.ano, gravadas);
+  // Só os meses: o mês 0 é a Média de Referência (15/10/2026).
+  const meses = valoresCentros.filter((x) => x.mes >= 1 && x.mes <= 12).map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) }));
+  const valoresDosCentros = await materializarEncargos(tx, cenarioId, est, grupos, gravadas, meses);
   const alocados = alocarCentros(
     est,
     grupos,
-    // Só os meses: o mês 0 é a Média de Referência (15/10/2026).
-    valoresCentros.filter((x) => x.mes >= 1 && x.mes <= 12).map((x) => ({ grupo: x.grupo, codigo: x.linhaDRE.codigo, mes: x.mes, valor: Number(x.valor) })),
+    valoresDosCentros,
     // Os percentuais pelas regras de rateio de cada mês (14/10/2026): o fixo, ou as bases entre os destinos das por volume.
     percentuaisPelasRegras(regras, cenario.ano, bases),
   );
@@ -373,7 +410,7 @@ export async function calcularAnalitico(tx: Tx, cenarioId: string) {
   // A depreciação base, a dos investimentos e o extra-operacional (etapa 4).
   const outros = calcularInvestimentosEExtra(
     gravadas,
-    investimentos.map((i) => ({ ...i, valorTotal: Number(i.valorTotal), valorPosUso: Number(i.valorPosUso), receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : Number(i.receitaBrutaPrevista) })),
+    investimentos.map((i) => ({ ...i, valorTotal: Number(i.valorTotal), valorPosUso: Number(i.valorPosUso) })),
   );
   for (const [k, lista] of outros) juntar(somas, k, lista);
   const novos: Array<{ cenarioId: string; visao: number; linhaDREId: string; mes: number; valor: Prisma.Decimal }> = [];

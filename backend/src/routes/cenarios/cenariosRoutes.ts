@@ -74,7 +74,6 @@ cenariosRoutes.put("/:id/premissas", autenticacao, express.json({ limit: "2mb" }
 cenariosRoutes.get("/:id/centros", autenticacao, tela("premissas", "ler", "centros"), asyncHandler(c.centros));
 cenariosRoutes.get("/:id/centros/contas", autenticacao, tela("premissas", "ler", "centros"), asyncHandler(c.centro));
 cenariosRoutes.put("/:id/centros", autenticacao, tela("premissas", "editar", "centros"), express.json({ limit: "2mb" }), asyncHandler(c.gravarCentro));
-cenariosRoutes.put("/:id/centros/lotacao", autenticacao, tela("premissas", "editar", "centros"), express.json(), asyncHandler(c.gravarLotacao));
 // Os rateios: a aba Rateios das Premissas; o aviso dos rateios sem base também aparece nas outras abas e nos Resultados.
 cenariosRoutes.get("/:id/rateios", autenticacao, verificarPermissaoDoCenario("ler", "premissas"), asyncHandler(c.rateios));
 // Os investimentos e o extra-operacional dos cenários analíticos (13/10/2026).

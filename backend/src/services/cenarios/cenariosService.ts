@@ -61,14 +61,14 @@ import {
   contasExtra,
   depreciacaoMensal,
   depreciacaoNosMeses,
-  roi,
   UNIDADES_EXTRA,
   VENDA_BASE,
   VENDA_EXTRA,
 } from "./investimentosCenario.js";
 import { mediaDosMeses, mediaNosMesesComOcorrencia, referenciaDoRealizado } from "./referenciaAnalitico.js";
 import { diferencasDasDecisoes, lerRealocacoes, type Realocacoes } from "./realocacoesCenario.js";
-import { QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO } from "./lotacaoCenario.js";
+import { QUADROS_DE_LOTACAO, quadroDoGrupo, VENDA_LOTACAO_CLT, VENDA_LOTACAO_PJ, VENDAS_LOTACAO } from "./lotacaoCenario.js";
+import { ehContaDeEncargos, itemDosEncargos, ITENS_DOS_ENCARGOS, maosDeObraDoGrupo, VENDAS_DOS_ENCARGOS } from "./encargosCenario.js";
 import { lotacaoDosGrupos } from "../listas/lotacaoDosCentros.js";
 import { assinaturaDasRegras, avisosDosRateios, bloqueioPorRateios, mesesDoAno, percentuaisPelasRegras, regrasDeRateio, type RegraDoMes } from "../volumes/vigenciaDosRateios.js";
 
@@ -457,12 +457,58 @@ async function linhasDaPlanilha(c: { id: string } & ComVariacoes): Promise<Linha
   const cen = new Map(centros.map((x) => [`${x.grupo}|${x.linhaDRE.codigo}|${x.mes}`, Number(x.valor)]));
   const totais = est.filter((l) => l.tipo !== "ITEM");
   for (const g of [...grupos].sort((a, b) => a.grupo.localeCompare(b.grupo, "pt-BR"))) {
-    const lotacao = (mes: number) => prem.get(`0|${VENDA_LOTACAO}|${g.grupo}|${mes}`);
-    add({ aba: "centros", grupo: g.grupo, chave: `L|${g.grupo}`, descricao: [g.grupo, "Quadro de Lotação", "Colaboradores"], und: "colab.", conta: null, media: lotacao(0) ?? null, meses: doze(lotacao) });
+    // O Quadro de Lotação (19/10/2026: Colaboradores CLT e PJ e o Total, em fórmula) e os Encargos e Benefícios (os
+    // percentuais em fração; o mês em branco vale a Média de Referência, o padrão).
+    for (const [venda, sufixo, rotulo] of [[VENDA_LOTACAO_CLT, "CLT", "Colaboradores CLT"], [VENDA_LOTACAO_PJ, "PJ", "Colaboradores PJ"]] as const) {
+      const ler = (mes: number) => prem.get(`0|${venda}|${g.grupo}|${mes}`);
+      add({ aba: "centros", grupo: g.grupo, chave: `L|${g.grupo}|${sufixo}`, descricao: [g.grupo, "Quadro de Lotação", rotulo], und: "colab.", conta: null, media: ler(0) ?? null, meses: doze(ler) });
+    }
+    const lot = (mes: number) => {
+      const vs = VENDAS_LOTACAO.map((v) => prem.get(`0|${v}|${g.grupo}|${mes}`));
+      return vs.every((v) => v === undefined) ? undefined : vs.reduce<number>((s, v) => s + (v ?? 0), 0);
+    };
+    add({
+      aba: "centros",
+      grupo: g.grupo,
+      chave: `L|${g.grupo}|TOTAL`,
+      descricao: [g.grupo, "Quadro de Lotação", "Total de Colaboradores"],
+      und: "colab.",
+      conta: null,
+      media: lot(0) ?? null,
+      meses: doze(lot),
+      calculada: true,
+      formula: (ref) => `N(${ref(`L|${g.grupo}|CLT`)})+N(${ref(`L|${g.grupo}|PJ`)})`,
+    });
+    for (const i of ITENS_DOS_ENCARGOS) {
+      const ler = (mes: number) => prem.get(`0|${i.venda}|${g.grupo}|${mes}`);
+      add({
+        aba: "centros",
+        grupo: g.grupo,
+        chave: `E|${g.grupo}|${i.item}`,
+        descricao: [g.grupo, "Encargos e Benefícios", i.rotulo],
+        und: i.und,
+        conta: null,
+        media: ler(0) ?? i.padrao,
+        meses: doze(ler),
+        percentual: i.und === "%",
+      });
+    }
+    const maos = new Map(maosDeObraDoGrupo(contasDoGrupo(est, g).map((l) => l.codigo), g.atribuicao).map((m) => [m.encargos, m]));
     for (const l of contasDoGrupo(est, g)) {
       const atribuicao = totais.find((t) => t.codigo.startsWith(`${l.codigo.split(".").slice(0, 2).join(".")}.`))?.descricao ?? l.atribuicao ?? "";
       const ler = (mes: number) => cen.get(`${g.grupo}|${l.codigo}|${mes}`);
-      add({ aba: "centros", grupo: g.grupo, chave: `C|${g.grupo}|${l.codigo}`, descricao: [g.grupo, atribuicao, l.descricao], und: "R$", conta: l.codigo, media: ler(0) ?? null, meses: doze(ler) });
+      // A conta Encargos e Benefícios é calculada (19/10/2026): em fórmula, das Remunerações CLT, das Horas Extras e dos
+      // Encargos e Benefícios do grupo; o mês em branco dos percentuais vale a Média de Referência (o padrão).
+      const mo = maos.get(l.codigo);
+      const formula: LinhaDaPlanilha["formula"] = mo
+        ? (ref) => {
+            const item = (x: string) => `IF(${ref(`E|${g.grupo}|${x}`)}="",${ref(`E|${g.grupo}|${x}`, true)},${ref(`E|${g.grupo}|${x}`)})`;
+            const percentuais = ITENS_DOS_ENCARGOS.filter((x) => x.und === "%").map((x) => item(x.item)).join("+");
+            const beneficios = mo.beneficios ? `+N(${ref(`E|${g.grupo}|BENEFICIOS`)})` : "";
+            return `(N(${ref(`C|${g.grupo}|${mo.remuneracoes}`)})+N(${ref(`C|${g.grupo}|${mo.horasExtras}`)}))*(${percentuais})${beneficios}`;
+          }
+        : undefined;
+      add({ aba: "centros", grupo: g.grupo, chave: `C|${g.grupo}|${l.codigo}`, descricao: [g.grupo, atribuicao, l.descricao], und: "R$", conta: l.codigo, media: ler(0) ?? null, meses: doze(ler), calculada: !!mo, formula });
     }
   }
   for (const d of CONTAS_DEPRECIACAO) {
@@ -508,12 +554,20 @@ async function aplicarMudancas(tx: Prisma.TransactionClient, cenarioId: string, 
   for (const m of mudancas) {
     const [tipo, ...resto] = m.chave.split("|");
     if (tipo === "P") prem.push({ unidade: Number(resto[0]), venda: resto[1], chave: resto.slice(2).join("|"), mes: m.mes, valor: m.valor });
-    else if (tipo === "L") prem.push({ unidade: 0, venda: VENDA_LOTACAO, chave: resto.join("|"), mes: m.mes, valor: m.valor });
+    else if (tipo === "L") {
+      // L|grupo|CLT e L|grupo|PJ (19/10/2026); o Total de Colaboradores é calculado e não se grava.
+      const sufixo = resto[resto.length - 1];
+      if (sufixo === "CLT" || sufixo === "PJ") prem.push({ unidade: 0, venda: sufixo === "CLT" ? VENDA_LOTACAO_CLT : VENDA_LOTACAO_PJ, chave: resto.slice(0, -1).join("|"), mes: m.mes, valor: m.valor });
+    } else if (tipo === "E") {
+      // Os Encargos e Benefícios (19/10/2026): E|grupo|item.
+      const item = itemDosEncargos(resto[resto.length - 1]);
+      if (item) prem.push({ unidade: 0, venda: item.venda, chave: resto.slice(0, -1).join("|"), mes: m.mes, valor: m.valor });
+    }
     else if (tipo === "B" || tipo === "X") prem.push({ unidade: Number(resto[0]), venda: tipo === "B" ? VENDA_BASE : VENDA_EXTRA, chave: resto.join("|"), mes: m.mes, valor: m.valor });
     else if (tipo === "C") {
       const linhaDREId = idDaConta.get(resto[resto.length - 1]);
-      // Nos centros, o zero também apaga (como na tela).
-      if (linhaDREId) cen.push({ grupo: resto.slice(0, -1).join("|"), linhaDREId, mes: m.mes, valor: m.valor || null });
+      // Nos centros, o zero também apaga (como na tela). A conta Encargos e Benefícios é calculada (19/10/2026).
+      if (linhaDREId && !ehContaDeEncargos(resto[resto.length - 1])) cen.push({ grupo: resto.slice(0, -1).join("|"), linhaDREId, mes: m.mes, valor: m.valor || null });
     } else if (tipo === "I") ind.push({ nome: resto.join("|"), mes: m.mes, valor: m.valor });
   }
   const emLotes = async <T>(xs: T[], fn: (lote: T[]) => Promise<unknown>) => {
@@ -1002,13 +1056,22 @@ export const cenariosService = {
     {
       const { porCompetencia, semGrupo } = await lotacaoDosGrupos(fechadas.map((f) => f.id), grupos.map((g) => g.grupo));
       const comLista = fechadas.filter((f) => porCompetencia.has(f.id));
+      // Os Colaboradores CLT e os PJ, cada um na sua venda (19/10/2026).
       const somas = new Map<string, number>();
+      const empilhar = (venda: string, grupo: string, mes: number, v: number) => {
+        if (!v) return;
+        somas.set(`${venda}|${grupo}`, (somas.get(`${venda}|${grupo}`) ?? 0) + v);
+        if (!media) lotacao.push({ cenarioId: id, unidade: 0, venda, chave: grupo, mes, valor: new Prisma.Decimal(v) });
+      };
       for (const f of comLista)
         for (const [grupo, v] of porCompetencia.get(f.id)!) {
-          somas.set(grupo, (somas.get(grupo) ?? 0) + v);
-          if (!media) lotacao.push({ cenarioId: id, unidade: 0, venda: VENDA_LOTACAO, chave: grupo, mes: f.mes, valor: new Prisma.Decimal(v) });
+          empilhar(VENDA_LOTACAO_CLT, grupo, f.mes, v.clt);
+          empilhar(VENDA_LOTACAO_PJ, grupo, f.mes, v.pj);
         }
-      for (const [grupo, soma] of somas) lotacao.push({ cenarioId: id, unidade: 0, venda: VENDA_LOTACAO, chave: grupo, mes: 0, valor: decimal(soma / comLista.length) });
+      for (const [k, soma] of somas) {
+        const [venda, ...grupo] = k.split("|");
+        lotacao.push({ cenarioId: id, unidade: 0, venda, chave: grupo.join("|"), mes: 0, valor: decimal(soma / comLista.length) });
+      }
       const semLista = fechadas.filter((f) => !porCompetencia.has(f.id)).map((f) => `${String(f.mes).padStart(2, "0")}/${ano}`);
       if (!comLista.length) ref.avisos.push("Nenhum mês do período tem a lista do Quadro de Lotação (Listas do mês): o quadro de lotação dos grupos fica em branco.");
       else if (semLista.length)
@@ -1603,35 +1666,43 @@ export const cenariosService = {
     };
   },
 
-  /** As contas de um grupo de centros no cenário, com os doze meses (13/10/2026). */
+  /**
+   * A tabela Premissas de um grupo de centros no cenário (13/10/2026; 19/10/2026: uma tabela só), com os doze meses: o
+   * Quadro de Lotação (Colaboradores CLT e PJ; o Total de Colaboradores a tela soma), os Encargos e Benefícios (os
+   * percentuais em %, com o padrão nos meses sem valor gravado, e os Benefícios Adicionais em R$) e as contas do grupo (a
+   * Encargos e Benefícios, calculada).
+   */
   async centro(id: string, grupo: string, usuario: Usuario = SISTEMA) {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
     const g = (await gruposDoCadastro()).find((x) => x.grupo === grupo);
     if (!g) throw new CenarioError(404, "Grupo de centros de custo não encontrado.");
-    const [est, gravados, lotacao] = await Promise.all([
+    const [est, gravados, premissas] = await Promise.all([
       estruturaDRE(),
       getPrismaClient().cenarioCentro.findMany({ where: { cenarioId: id, grupo } }),
-      getPrismaClient().cenarioPremissa.findMany({ where: { cenarioId: id, venda: VENDA_LOTACAO, chave: grupo } }),
+      getPrismaClient().cenarioPremissa.findMany({ where: { cenarioId: id, unidade: 0, chave: grupo, venda: { in: [...VENDAS_LOTACAO, ...VENDAS_DOS_ENCARGOS] } } }),
     ]);
     const porLinha = new Map(gravados.map((x) => [`${x.linhaDREId}|${x.mes}`, Number(x.valor)]));
-    const porMes = new Map(lotacao.map((x) => [x.mes, Number(x.valor)]));
+    const prem = new Map(premissas.map((x) => [`${x.venda}|${x.mes}`, Number(x.valor)]));
     const totais = est.filter((l) => l.tipo !== "ITEM");
+    // Os percentuais vão em % (a premissa grava a fração).
+    const serie = (venda: string, padrao: number | null, escala = 1) => ({
+      referencia: (prem.get(`${venda}|0`) ?? padrao) === null ? null : (prem.get(`${venda}|0`) ?? padrao)! * escala,
+      valores: Array.from({ length: 12 }, (_, k) => (prem.get(`${venda}|${k + 1}`) ?? padrao ?? 0) * escala),
+      gravados: Array.from({ length: 12 }, (_, k) => prem.has(`${venda}|${k + 1}`)),
+    });
     return {
       grupo: g,
-      // O quadro de lotação do grupo (14/10/2026): os colaboradores de cada mês e os quadros em que ele entra.
-      lotacao: {
-        // A Média de Referência (o mês 0; 15/10/2026).
-        referencia: porMes.get(0) ?? null,
-        valores: Array.from({ length: 12 }, (_, k) => porMes.get(k + 1) ?? 0),
-        gravados: Array.from({ length: 12 }, (_, k) => porMes.has(k + 1)),
-        quadro: quadroDoGrupo(g).descricao,
-      },
+      // O quadro de lotação do grupo (14/10/2026; 19/10/2026: CLT e PJ) e os quadros em que ele entra.
+      lotacao: { clt: serie(VENDA_LOTACAO_CLT, null), pj: serie(VENDA_LOTACAO_PJ, null), quadro: quadroDoGrupo(g).descricao },
+      encargos: ITENS_DOS_ENCARGOS.map((i) => ({ item: i.item, rotulo: i.rotulo, und: i.und, ...serie(i.venda, i.padrao, i.und === "%" ? 100 : 1) })),
       contas: contasDoGrupo(est, g).map((l) => ({
         codigo: l.codigo,
         descricao: l.descricao,
         // A atribuição (Mão de Obra Direta…), pelo total dela (CPP.MOD…).
         atribuicao: totais.find((t) => t.codigo.startsWith(`${l.codigo.split(".").slice(0, 2).join(".")}.`))?.descricao ?? l.atribuicao ?? "",
+        // A Encargos e Benefícios é calculada (19/10/2026): não se digita.
+        calculada: ehContaDeEncargos(l.codigo),
         referencia: porLinha.get(`${l.id}|0`) ?? null,
         valores: Array.from({ length: 12 }, (_, k) => porLinha.get(`${l.id}|${k + 1}`) ?? 0),
         gravados: Array.from({ length: 12 }, (_, k) => porLinha.has(`${l.id}|${k + 1}`)),
@@ -1640,8 +1711,10 @@ export const cenariosService = {
   },
 
   /**
-   * Grava valores de um grupo de centros (13/10/2026): o valor de cada (conta, mês) — nulo ou zero apaga — e recalcula a
-   * DRE do cenário. Só as contas do grupo se gravam. Vai para o histórico ("Centros de Custo · grupo").
+   * Grava valores da tabela Premissas de um grupo de centros (13/10/2026; 19/10/2026: também o quadro de lotação e os
+   * encargos, antes à parte): o valor de cada (linha, mês) — nulo ou zero apaga — e recalcula a DRE do cenário. As linhas
+   * são as contas do grupo (menos a Encargos e Benefícios, calculada), LOTACAO|CLT e LOTACAO|PJ (colaboradores) e
+   * ENCARGOS|item (os percentuais em %; os Benefícios Adicionais em R$). Vai para o histórico ("Centros de Custo · grupo").
    */
   async gravarCentro(id: string, grupo: string, alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, usuario: Usuario, origem?: OrigemDaGravacao) {
     const c = await obterOuFalhar(id, usuario);
@@ -1652,20 +1725,44 @@ export const cenariosService = {
     if (!g) throw new CenarioError(404, "Grupo de centros de custo não encontrado.");
     const est = await estruturaDRE();
     const contas = new Map(contasDoGrupo(est, g).map((l) => [l.codigo, l]));
-    const fora = [...new Set(alteracoes.filter((a) => !contas.has(a.linha)).map((a) => a.linha))];
-    if (fora.length) throw new CenarioError(400, `Não são contas do grupo ${grupo}: ${fora.slice(0, 3).join(", ")}.`);
+    // As premissas da tabela: a venda, o rótulo, a escala (os percentuais chegam em %) e se aceita negativo.
+    const premissa = (linha: string) => {
+      const [tipo, x] = linha.split("|");
+      if (tipo === "LOTACAO" && (x === "CLT" || x === "PJ")) return { venda: x === "CLT" ? VENDA_LOTACAO_CLT : VENDA_LOTACAO_PJ, rotulo: `Quadro de Lotação · Colaboradores ${x}`, escala: 1 };
+      const i = tipo === "ENCARGOS" ? itemDosEncargos(x) : undefined;
+      return i ? { venda: i.venda, rotulo: `Encargos e Benefícios · ${i.rotulo}`, escala: i.und === "%" ? 100 : 1 } : undefined;
+    };
+    const fora = [...new Set(alteracoes.filter((a) => !premissa(a.linha) && (!contas.has(a.linha) || ehContaDeEncargos(a.linha))).map((a) => a.linha))];
+    if (fora.length) throw new CenarioError(400, `Não são linhas que se digitam no grupo ${grupo}: ${fora.slice(0, 3).join(", ")}.`);
+    if (alteracoes.some((a) => premissa(a.linha) && a.valor !== null && a.valor < 0)) throw new CenarioError(400, "O quadro de lotação e os encargos não podem ser negativos.");
     const finais = new Map(alteracoes.map((a) => [`${a.linha}|${a.mes}`, a]));
-    const anteriores = await prisma.cenarioCentro.findMany({ where: { cenarioId: id, grupo } });
+    const [anteriores, premissasAntes] = await Promise.all([
+      prisma.cenarioCentro.findMany({ where: { cenarioId: id, grupo } }),
+      prisma.cenarioPremissa.findMany({ where: { cenarioId: id, unidade: 0, chave: grupo, venda: { in: [...VENDAS_LOTACAO, ...VENDAS_DOS_ENCARGOS] } } }),
+    ]);
     const antes = new Map(anteriores.map((x) => [`${x.linhaDREId}|${x.mes}`, Number(x.valor)]));
+    const premissaAntes = new Map(premissasAntes.map((x) => [`${x.venda}|${x.mes}`, Number(x.valor)]));
     let somaAntes = 0;
     let somaDepois = 0;
     for (const a of finais.values()) {
-      somaAntes += antes.get(`${contas.get(a.linha)!.id}|${a.mes}`) ?? 0;
+      const p = premissa(a.linha);
+      somaAntes += p ? (premissaAntes.get(`${p.venda}|${a.mes}`) ?? 0) * p.escala : (antes.get(`${contas.get(a.linha)!.id}|${a.mes}`) ?? 0);
       somaDepois += a.valor ?? 0;
     }
     await prisma.$transaction(
       async (tx) => {
         for (const a of finais.values()) {
+          const p = premissa(a.linha);
+          if (p) {
+            const chave = { cenarioId: id, unidade: 0, venda: p.venda, chave: grupo, mes: a.mes };
+            // Nos percentuais, o zero vale (0%); só o nulo apaga (volta ao padrão).
+            if (a.valor === null || (!a.valor && p.escala === 1)) await tx.cenarioPremissa.deleteMany({ where: chave });
+            else {
+              const valor = new Prisma.Decimal((a.valor / p.escala).toFixed(6));
+              await tx.cenarioPremissa.upsert({ where: { cenarioId_unidade_venda_chave_mes: chave }, create: { ...chave, valor }, update: { valor } });
+            }
+            continue;
+          }
           const chave = { cenarioId: id, grupo, linhaDREId: contas.get(a.linha)!.id, mes: a.mes };
           if (!a.valor) await tx.cenarioCentro.deleteMany({ where: chave });
           else {
@@ -1678,7 +1775,10 @@ export const cenariosService = {
       { timeout: 120_000 },
     );
     const meses = [...new Set([...finais.values()].map((a) => a.mes))].sort((x, y) => x - y);
-    const alteradas = [...new Set([...finais.values()].map((a) => a.linha))].map((codigo) => ({ codigo, descricao: `${grupo} · ${contas.get(codigo)!.descricao}` }));
+    const alteradas = [...new Set([...finais.values()].map((a) => a.linha))].map((codigo) => ({
+      codigo,
+      descricao: `${grupo} · ${premissa(codigo)?.rotulo ?? contas.get(codigo)!.descricao}`,
+    }));
     await prisma.cenarioReajuste.create({
       data: {
         cenarioId: id,
@@ -1708,59 +1808,6 @@ export const cenariosService = {
   },
 
   /**
-   * Grava o quadro de lotação de um grupo de centros (14/10/2026): os colaboradores de cada mês (nulo ou zero apaga). Os
-   * quadros de lotação dos indicadores saem deles; a DRE não muda. Vai para o histórico ("Centros de Custo · grupo ·
-   * Quadro de Lotação").
-   */
-  async gravarLotacao(id: string, grupo: string, alteracoes: Array<{ mes: number; valor: number | null }>, usuario: Usuario, origem?: OrigemDaGravacao) {
-    const c = await obterOuFalhar(id, usuario);
-    exigirAnalitico(c);
-    exigirEditavel(c);
-    const prisma = getPrismaClient();
-    if (!(await gruposDoCadastro()).some((x) => x.grupo === grupo)) throw new CenarioError(404, "Grupo de centros de custo não encontrado.");
-    if (alteracoes.some((a) => a.valor !== null && a.valor < 0)) throw new CenarioError(400, "O quadro de lotação não pode ser negativo.");
-    const finais = new Map(alteracoes.map((a) => [a.mes, a]));
-    const anteriores = await prisma.cenarioPremissa.findMany({ where: { cenarioId: id, venda: VENDA_LOTACAO, chave: grupo } });
-    const antes = new Map(anteriores.map((x) => [x.mes, Number(x.valor)]));
-    let somaAntes = 0;
-    let somaDepois = 0;
-    for (const a of finais.values()) {
-      somaAntes += antes.get(a.mes) ?? 0;
-      somaDepois += a.valor ?? 0;
-    }
-    await prisma.$transaction(async (tx) => {
-      for (const a of finais.values()) {
-        const chave = { cenarioId: id, unidade: 0, venda: VENDA_LOTACAO, chave: grupo, mes: a.mes };
-        if (!a.valor) await tx.cenarioPremissa.deleteMany({ where: chave });
-        else {
-          const valor = new Prisma.Decimal(a.valor.toFixed(4));
-          await tx.cenarioPremissa.upsert({ where: { cenarioId_unidade_venda_chave_mes: chave }, create: { ...chave, valor }, update: { valor } });
-        }
-      }
-    });
-    const meses = [...finais.keys()].sort((x, y) => x - y);
-    await prisma.cenarioReajuste.create({
-      data: {
-        cenarioId: id,
-        usuarioId: usuario.id || null,
-        usuarioNome: usuario.nome,
-        tipo: origem?.tipo ?? "VALOR",
-        modo: origem?.modo ?? "DIGITADO",
-        reajuste: origem?.reajuste ?? null,
-        replicado: !!origem?.replicado,
-        contas: [{ codigo: "LOTACAO", descricao: `${grupo} · Quadro de Lotação` }],
-        meses,
-        valores: finais.size,
-        somaAntes,
-        somaDepois,
-        descricao: `Centros de Custo · ${grupo} · Quadro de Lotação`,
-      },
-    });
-    await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "ALTERACAO", entidade: "cenario", entidadeId: id, metadados: { cenario: c.nome, grupo, lotacao: finais.size, meses, origem: origem ?? null } });
-    return { alteradas: finais.size, meses };
-  },
-
-  /**
    * A aba Investimentos de um cenário analítico (13/10/2026): por unidade, a Depreciação Base (digitada), a dos
    * investimentos e a total, mês a mês; e a lista dos investimentos, com a depreciação mensal e o ROI.
    */
@@ -1776,7 +1823,6 @@ export const cenariosService = {
       ...i,
       valorTotal: Number(i.valorTotal),
       valorPosUso: Number(i.valorPosUso),
-      receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : Number(i.receitaBrutaPrevista),
     }));
     const linhas = CONTAS_DEPRECIACAO.flatMap((d) => {
       const chave = `${d.unidade}|${d.conta}`;
@@ -1799,7 +1845,7 @@ export const cenariosService = {
       editavel: !c.marcacao && !c.versaoSalvaEm,
       contas: CONTAS_DEPRECIACAO,
       depreciacao: linhas,
-      investimentos: investimentos.map((i) => ({ ...i, depreciacaoMensal: depreciacaoMensal(i), roi: roi(i) })),
+      investimentos: investimentos.map((i) => ({ ...i, depreciacaoMensal: depreciacaoMensal(i) })),
     };
   },
 
@@ -1911,7 +1957,7 @@ export const cenariosService = {
   async gravarInvestimento(
     id: string,
     investimentoId: string | null,
-    dados: { nomeReferencia: string; unidade: number; descricao: string; ganhoPrevisto: string | null; receitaBrutaPrevista: number | null; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number } | null,
+    dados: { nomeReferencia: string; unidade: number; descricao: string; condicaoPagamento: string | null; inicio: number; valorTotal: number; valorPosUso: number; vidaUtil: number } | null,
     usuario: Usuario,
   ) {
     const c = await obterOuFalhar(id, usuario);
@@ -1938,8 +1984,7 @@ export const cenariosService = {
             unidade: dados.unidade,
             conta: contaDeDepreciacao(dados.unidade)!.conta,
             descricao: dados.descricao,
-            ganhoPrevisto: dados.ganhoPrevisto,
-            receitaBrutaPrevista: dados.receitaBrutaPrevista === null ? null : new Prisma.Decimal(dados.receitaBrutaPrevista.toFixed(2)),
+            condicaoPagamento: dados.condicaoPagamento,
             inicio: dados.inicio,
             valorTotal: new Prisma.Decimal(dados.valorTotal.toFixed(2)),
             valorPosUso: new Prisma.Decimal(dados.valorPosUso.toFixed(2)),
@@ -2050,7 +2095,8 @@ export const cenariosService = {
     const c = await obterOuFalhar(id, usuario);
     exigirAnalitico(c);
     exigirEditavel(c);
-    const linhas = await linhasDaPlanilha(c);
+    // As linhas calculadas (o Total de Colaboradores e a conta Encargos e Benefícios, 19/10/2026) não se replicam nem apagam.
+    const linhas = (await linhasDaPlanilha(c)).filter((l) => !l.calculada);
     const mudancas: MudancaDaPlanilha[] = linhas.flatMap((l) =>
       acao === "replicar"
         ? l.media === null
@@ -2096,7 +2142,7 @@ export const cenariosService = {
     const investimentos = abas.includes("investimentos")
       ? (await getPrismaClient().cenarioInvestimento.findMany({ where: { cenarioId: id }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] }))
           .filter((i) => dos(departamentosDaUnidade(i.unidade)))
-          .map((i) => ({ ...i, valorTotal: Number(i.valorTotal), valorPosUso: Number(i.valorPosUso), receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : Number(i.receitaBrutaPrevista) }))
+          .map((i) => ({ ...i, valorTotal: Number(i.valorTotal), valorPosUso: Number(i.valorPosUso) }))
       : null;
     if (!linhas.length && !investimentos) throw new CenarioError(400, "Nada a exportar: o seu perfil não lê as abas desses departamentos.");
     const meses = MESES_1_A_12.map((m) => rotuloMes(c.ano, m));
@@ -2200,6 +2246,8 @@ export const cenariosService = {
         }
         abasDasLinhas.add(atual.aba);
         const bloco = blocoDaChave(l.chave, atual.descricao);
+        // As linhas calculadas (19/10/2026) não se importam: só a justificativa.
+        if (atual.calculada) l.meses = [...atual.meses];
         blocos.add(bloco);
         l.meses.forEach((v, k) => {
           const chave = `${l.chave}|${k + 1}`;
@@ -2219,8 +2267,7 @@ export const cenariosService = {
         else if (
           atual.unidade !== i.unidade ||
           atual.descricao !== i.descricao ||
-          (atual.ganhoPrevisto ?? null) !== i.ganhoPrevisto ||
-          !iguais(atual.receitaBrutaPrevista === null ? null : Number(atual.receitaBrutaPrevista), i.receitaBrutaPrevista) ||
+          (atual.condicaoPagamento ?? null) !== i.condicaoPagamento ||
           atual.inicio !== i.inicio ||
           !iguais(Number(atual.valorTotal), i.valorTotal) ||
           !iguais(Number(atual.valorPosUso), i.valorPosUso) ||
@@ -2314,8 +2361,7 @@ export const cenariosService = {
       unidade: i.unidade,
       conta: contaDeDepreciacao(i.unidade)!.conta,
       descricao: i.descricao,
-      ganhoPrevisto: i.ganhoPrevisto,
-      receitaBrutaPrevista: i.receitaBrutaPrevista === null ? null : new Prisma.Decimal(i.receitaBrutaPrevista.toFixed(2)),
+      condicaoPagamento: i.condicaoPagamento,
       inicio: i.inicio,
       valorTotal: new Prisma.Decimal(i.valorTotal.toFixed(2)),
       valorPosUso: new Prisma.Decimal(i.valorPosUso.toFixed(2)),

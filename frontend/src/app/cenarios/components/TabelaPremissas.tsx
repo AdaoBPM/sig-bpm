@@ -27,6 +27,9 @@ function formatar(v: number | null, l: Pick<LinhaDaPremissa, "casas" | "und">) {
   return v.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
+/** A linha em negrito: a marcada (19/10/2026) ou, sem a marca, os cálculos em R$ (os totais). */
+const negrito = (l: LinhaDaPremissa) => l.negrito ?? (l.tipo === "CALCULO" && l.und === "R$");
+
 /** A caixa de marcar, com o estado "alguns" (indeterminado) dos subtítulos. */
 function Caixa({ marcada, alguns, rotulo, onMudar }: { marcada: boolean; alguns?: boolean; rotulo: string; onMudar: (marcar: boolean) => void }) {
   return (
@@ -89,7 +92,8 @@ export function TabelaEditavel({
   mensagem,
   comReferencia = true,
   item = ["premissa", "premissas"],
-  cabecalho = "PREMISSA",
+  // 19/10/2026: "PREMISSAS" (antes, "PREMISSA"), nas unidades e nos centros de custo.
+  cabecalho = "PREMISSAS",
 }: {
   titulo: string;
   subtitulo?: React.ReactNode;
@@ -194,7 +198,7 @@ export function TabelaEditavel({
     const marcada = linhas.has(l.chave);
     corpo.push(
       <tr key={l.chave} className="border-t border-gray-100">
-        <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 text-sm ${l.grupo ? "pl-9" : "pl-4"} ${ePremissa ? "text-gray-900" : "text-gray-600"} ${l.tipo === "CALCULO" && l.und === "R$" ? "font-bold" : ""}`}>
+        <td className={`sticky left-0 z-10 bg-white py-1.5 pr-3 text-sm ${l.grupo ? "pl-9" : "pl-4"} ${ePremissa ? "text-gray-900" : "text-gray-600"} ${negrito(l) ? "font-bold" : ""}`}>
           <span className="inline-flex items-center gap-2">
             {editavel && ePremissa ? <Caixa marcada={marcada} rotulo={`Marcar ${l.rotulo}`} onMudar={(m) => marcarLinhas([l.chave], m)} /> : editavel ? <span className="size-3.5 shrink-0" aria-hidden /> : null}
             {l.rotulo}
@@ -207,7 +211,7 @@ export function TabelaEditavel({
           // O mês sem valor gravado fica em branco (15/10/2026); o padrão diferente de zero (os dias úteis), em cinza.
           const texto = ePremissa && !l.gravados[i] && !v ? "" : formatar(v, l);
           const classe = `px-3 py-1.5 text-right text-sm whitespace-nowrap ${contornado ? "outline outline-1 -outline-offset-1 outline-gray-900" : ""} ${
-            ePremissa ? (l.gravados[i] ? "text-gray-900" : "text-gray-400") : l.tipo === "CALCULO" && l.und === "R$" ? "font-bold text-gray-900" : "text-gray-600"
+            ePremissa ? (l.gravados[i] ? "text-gray-900" : "text-gray-400") : negrito(l) ? "font-bold text-gray-900" : "text-gray-600"
           }`;
           return editavel && ePremissa ? (
             <td key={i} className={`${classe} cursor-pointer hover:bg-gray-100`} title={l.gravados[i] ? "Editar o valor" : texto ? "Valor padrão; clique para editar" : "Em branco; clique para editar"} onClick={() => setValor({ l, i })}>

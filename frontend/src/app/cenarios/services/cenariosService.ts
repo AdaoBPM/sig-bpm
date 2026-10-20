@@ -33,6 +33,8 @@ export type LinhaDaPremissa = {
   rotulo: string;
   und: string;
   tipo: "PREMISSA" | "CALCULO";
+  /** A linha em negrito (19/10/2026); sem ele, os cálculos em R$ (os totais). */
+  negrito?: boolean;
   casas: number;
   /** A Média de Referência (a média realizada da referência do cenário). */
   referencia: number | null;
@@ -92,11 +94,17 @@ export type Correspondencias = {
 export type CentrosDoCenario = { ano: number; meses: Array<{ mes: number; rotulo: string }>; editavel: boolean; grupos: GrupoDeCentros[] };
 export type ContasDoCentro = {
   grupo: Omit<GrupoDeCentros, "total">;
-  /** O quadro de lotação do grupo (14/10/2026): os colaboradores de cada mês e os quadros dos indicadores em que ele entra. */
-  /** `referencia`: a Média de Referência (o mês 0; 15/10/2026). */
-  lotacao: { referencia: number | null; valores: number[]; gravados: boolean[]; quadro: string };
-  contas: Array<{ codigo: string; descricao: string; atribuicao: string; referencia: number | null; valores: number[]; gravados: boolean[] }>;
+  /**
+   * O quadro de lotação do grupo (14/10/2026; 19/10/2026: Colaboradores CLT e PJ) e os quadros dos indicadores em que ele
+   * entra. `referencia`: a Média de Referência (o mês 0; 15/10/2026).
+   */
+  lotacao: { clt: SerieDoCentro; pj: SerieDoCentro; quadro: string };
+  /** Os Encargos e Benefícios (19/10/2026): os percentuais em %, com o padrão nos meses sem valor gravado, e os Benefícios Adicionais em R$. */
+  encargos: Array<SerieDoCentro & { item: string; rotulo: string; und: "%" | "R$" }>;
+  /** `calculada`: a conta Encargos e Benefícios (19/10/2026), que não se digita. */
+  contas: Array<SerieDoCentro & { codigo: string; descricao: string; atribuicao: string; calculada: boolean }>;
 };
+export type SerieDoCentro = { referencia: number | null; valores: number[]; gravados: boolean[] };
 export type RateiosDoCenario = {
   ano: number;
   meses: Array<{ mes: number; rotulo: string }>;
@@ -104,7 +112,7 @@ export type RateiosDoCenario = {
   /** Os valores dos grupos de rateio num mês em que a chave não tem base nas premissas (13/10/2026): ficam fora da DRE. */
   semBase: Array<{ chave: string; nome: string; mes: number; rotuloMes: string; valor: number }>;
 };
-/** Um investimento do cenário analítico (13/10/2026), com a depreciação mensal e o ROI (%) calculados. */
+/** Um investimento do cenário analítico (13/10/2026), com a depreciação mensal calculada (19/10/2026: sem o ROI). */
 export type InvestimentoDoCenario = {
   id: string;
   /** O Nome de Referência (15/10/2026): digitado, único no cenário; identifica o investimento na planilha das premissas. */
@@ -112,16 +120,15 @@ export type InvestimentoDoCenario = {
   unidade: 1 | 2 | 3 | 4;
   conta: string;
   descricao: string;
-  ganhoPrevisto: string | null;
-  receitaBrutaPrevista: number | null;
+  /** A condição de pagamento (19/10/2026), em texto livre. */
+  condicaoPagamento: string | null;
   inicio: number;
   valorTotal: number;
   valorPosUso: number;
   vidaUtil: number;
   depreciacaoMensal: number;
-  roi: number | null;
 };
-export type DadosDoInvestimento = Pick<InvestimentoDoCenario, "nomeReferencia" | "unidade" | "descricao" | "ganhoPrevisto" | "receitaBrutaPrevista" | "inicio" | "valorTotal" | "valorPosUso" | "vidaUtil">;
+export type DadosDoInvestimento = Pick<InvestimentoDoCenario, "nomeReferencia" | "unidade" | "descricao" | "condicaoPagamento" | "inicio" | "valorTotal" | "valorPosUso" | "vidaUtil">;
 export type InvestimentosDoCenario = {
   ano: number;
   meses: Array<{ mes: number; rotulo: string }>;
@@ -326,8 +333,6 @@ export const cenariosService = {
     api.get<Blob>(`/proxy/cenarios/${id}/premissas/exportar`, { params: { escopo, departamentos: departamentos.join(","), formato: "xlsx" }, responseType: "blob" }),
   centros: async (id: string) => (await api.get<{ data: CentrosDoCenario }>(`/proxy/cenarios/${id}/centros`)).data.data,
   centro: async (id: string, grupo: string) => (await api.get<{ data: ContasDoCentro }>(`/proxy/cenarios/${id}/centros/contas`, { params: { grupo } })).data.data,
-  gravarLotacao: async (id: string, grupo: string, alteracoes: Array<{ mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
-    (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/centros/lotacao`, { grupo, alteracoes, origem })).data.data,
   gravarCentro: async (id: string, grupo: string, alteracoes: Array<{ linha: string; mes: number; valor: number | null }>, origem?: OrigemDaGravacao) =>
     (await api.put<{ data: { alteradas: number; meses: number[] } }>(`/proxy/cenarios/${id}/centros`, { grupo, alteracoes, origem })).data.data,
   investimentos: async (id: string) => (await api.get<{ data: InvestimentosDoCenario }>(`/proxy/cenarios/${id}/investimentos`)).data.data,

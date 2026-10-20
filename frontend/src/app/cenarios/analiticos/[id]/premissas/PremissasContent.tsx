@@ -79,13 +79,18 @@ export function PremissasContent() {
             <li>Escolha a unidade nas abas: Matriz e Filial têm uma tabela para a venda Global e outra, embaixo, para a Mercantil; Serviços, só a Global. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
               Na aba Centros de Custo, escolha o grupo de centros da Controladoria na lista à esquerda (com a busca e o total do exercício; os centros de
-              estoque e de investimento não entram) e digite, à direita, o Quadro de Lotação dele (os colaboradores de cada mês) e os valores mensais
-              das contas dele: mão de obra direta e indireta e gastos
+              estoque e de investimento não entram) e digite, à direita, na tabela Premissas do grupo: o Quadro de Lotação (os Colaboradores CLT e PJ
+              de cada mês; o Total de Colaboradores é a soma); os Encargos e Benefícios (os percentuais de Previdência Social (INSS), Fundo de
+              Garantia (FGTS), Férias (+1/3) e Décimo Terceiro — em cinza, o padrão, 29%, 8%, 11,11% e 8,33%, até você digitar outro — e os
+              Benefícios Adicionais, em R$); e os valores mensais das contas: mão de obra direta e indireta e gastos
               gerais diretos, indiretos e comerciais (a Mão de Obra Terceirizada, as Matérias Primas, os Gastos Gerais Variáveis e o Estoque ficam nas
-              tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
+              tabelas das unidades, em R$ por unidade; a depreciação, nos investimentos). A conta Encargos e Benefícios não se digita: é (Remunerações
+              CLT + Horas Extras) × a soma dos percentuais + os Benefícios Adicionais (estes, na mão de obra da atribuição do grupo); as Remunerações
+              PJ não têm encargos. Embaixo do título, os centros do grupo, o balde e para onde vai o valor; o grupo com centros de
               baldes diferentes tem um asterisco na lista e o aviso (o valor vai pelo balde mais comum). “Exportar”, acima do grupo, baixa em Excel o centro
               de custo atual, todos os centros (um por aba, com a aba Consolidado na frente) ou um arquivo por centro (num ZIP, com o departamento e o
-              centro no nome de cada arquivo).
+              centro no nome de cada arquivo), como a tabela: o Quadro de Lotação, os Encargos e Benefícios e as contas, com o Total de
+              Colaboradores, a conta Encargos e Benefícios e os totais em fórmula.
             </li>
             <li>
               Na aba Rateios, a base de cada mês (das premissas) e o percentual de cada destino: Produção pelo m³ produzido; Projeto pelo m³ produzido da venda
@@ -98,8 +103,8 @@ export function PremissasContent() {
               {podeEditar
                 ? " Clique em “Novo Investimento” para incluir um, ou numa linha da lista para editá-lo ou excluí-lo; para excluir vários, marque as caixas da lista (a do rótulo marca todos) e clique em “Excluir Selecionados”."
                 : null} Cada investimento
-              tem o Nome de Referência (único no cenário; identifica o investimento na planilha), a unidade (a conta é a de depreciação dela), a descrição, o ganho previsto, a receita bruta prevista, o mês de início, o valor total, o
-              valor pós uso e a vida útil em meses; a lista mostra a depreciação mensal e o ROI.
+              tem o Nome de Referência (único no cenário; identifica o investimento na planilha), a unidade (a conta é a de depreciação dela), a descrição, a condição de pagamento (texto livre), o mês de início, o valor total, o
+              valor pós uso e a vida útil em meses; a lista mostra a depreciação mensal.
             </li>
             <li>
               Na aba Extra-Operacional, como nos Lançamentos Manuais do fechamento, os valores mensais do imposto de renda e da contribuição social e das
@@ -108,7 +113,7 @@ export function PremissasContent() {
             <li>
               Na aba Indicadores Manuais, os indicadores do Comercial e do Administrativo, que não saem da DRE
               {podeEditar ? ": clique numa linha para digitar os doze meses (as células digitadas ficam em amarelo)" : ""}. Os quadros de lotação não
-              se digitam: saem do Quadro de Lotação dos grupos de centros de custo.
+              se digitam: saem do Total de Colaboradores dos grupos de centros de custo.
             </li>
             <li>
               A base das premissas pode vir da referência (Configurações / Referência): o resultado realizado (as Médias de Referência, os centros de
@@ -133,7 +138,9 @@ export function PremissasContent() {
               indicadores manuais vão pelo grupo deles (o GME com o Comercial). Cada linha traz o Código, a descrição, a unidade, a Média de
               Referência, o Total da Referência (a média × 12), a Variação Máxima da conta (Configurações / Comparativo), os doze meses, Justificar?
               (uma fórmula: Sim quando o total dos doze meses passa da Variação Máxima em relação ao Total da Referência) e a Justificativa, em texto
-              livre. A aba Investimentos traz a lista, com a Unidade e a Conta em listas suspensas e a Depreciação Mensal e o ROI em fórmulas, e
+              livre. Nos centros de custo, o Quadro de Lotação (Colaboradores CLT e PJ; o Total de Colaboradores em fórmula), os Encargos e Benefícios
+              (os percentuais; o mês em branco vale a Média de Referência, o padrão) e as contas, com a Encargos e Benefícios em fórmula (as linhas
+              calculadas não se importam nem se replicam). A aba Investimentos traz a lista, com a Unidade e a Conta em listas suspensas, a Condição de Pagamento e a Depreciação Mensal em fórmula, e
               linhas em branco para os novos. No um centro de custo por aba, a primeira aba, Consolidado, traz a DRE das contas dos centros: cada
               conta somada em todas as abas dos centros (em fórmulas, que acompanham os valores das abas), para conferir com a DRE do cenário; o
               total bate, e a parte dos rateios que vai para Serviços está, na DRE, nas contas da CSM ou da CSC.
@@ -209,18 +216,24 @@ export function PremissasContent() {
               em % da receita bruta, por venda (as da unidade divididas entre a Global e a Mercantil pela receita bruta de cada uma).
             </p>
             <p>
-              Os quadros de lotação dos indicadores saem do Quadro de Lotação dos grupos de centros de custo, pela classificação de cada grupo: Direta
+              Os quadros de lotação dos indicadores saem do Total de Colaboradores (CLT + PJ) dos grupos de centros de custo, pela classificação de cada grupo: Direta
               ou Indireta pela atribuição mais comum dos centros dele; Matriz ou Filial pelo balde (o Unidade e os de rateio, pela filial em que os
               centros mais lançaram); Montagem nos grupos dos custos de montagem; as despesas e os grupos sem atribuição entram só no Quadro de Lotação
               Total. MO Direta Total e MO Indireta Total são Matriz + Filial, e MO Geral, Direta + Indireta; com eles se calculam as eficiências. Na
-              referência realizada, o Quadro de Lotação de cada grupo vem da lista Quadro de Lotação dos meses (Listas do mês; a aba de mesmo nome do
+              referência realizada, os Colaboradores CLT e PJ de cada grupo vêm da lista Quadro de Lotação dos meses (Listas do mês; a aba de mesmo nome do
               LISTAS REALIZADO (OPERAÇÃO)): a soma dos centros de custo do grupo em cada mês fechado, e a Média de Referência é a soma nos meses com a
               lista ÷ o número deles. Os indicadores de quadro de lotação do realizado (aba Indicadores (Admin.)) não entram.
             </p>
             <p>
+              A conta Encargos e Benefícios da mão de obra (direta e indireta) de cada grupo é calculada mês a mês: (Remunerações CLT + Horas Extras) ×
+              (INSS + FGTS + Férias (+1/3) + Décimo Terceiro) + Benefícios Adicionais. Os percentuais têm o mesmo padrão em todos os cenários (29%,
+              8%, 1/12 × 4/3 = 11,11% e 1/12 = 8,33%) e se editam por grupo e mês; os Benefícios Adicionais (vale-transporte, alimentação, plano de
+              saúde…) se digitam em R$ e entram na mão de obra da atribuição do grupo. A Média de Referência da conta continua a do realizado; nos
+              meses, vale o cálculo, também nos meses fechados carregados pela referência.
+            </p>
+            <p>
               A depreciação de cada unidade é a base digitada mais a dos investimentos: cada investimento deprecia (valor total − valor pós uso) ÷ vida útil
-              por mês, do mês de início até o fim da vida útil (ou do ano). O ROI do investimento é (receita bruta prevista − valor total) ÷ valor total ×
-              100.
+              por mês, do mês de início até o fim da vida útil (ou do ano).
             </p>
           </>
         }
