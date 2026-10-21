@@ -12,7 +12,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { MESES } from "@/app/competencias/[anoMes]/utils/formatacao";
 import { LegendaRealizadoOrcado, RotulosDoGrafico, SeletorRotulos, SeletorTipoGrafico, useRotulosDosValores, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { Seletor } from "@/app/relatorios/components/SeletorPeriodo";
-import { AVISO_DO_PAINEL, CorpoDoPainel, LegendaDoPainel, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
+import { AVISO_DO_PAINEL, CorpoDoPainel, EtiquetaDoComparado, LegendaDoPainel, useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
 import { ConfigurarGraficos } from "@/app/relatorios/components/ConfigurarGraficos";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
@@ -116,9 +116,10 @@ export function CenarioPainelContent() {
               {abasDosIndicadores.some((x) => x.chave === aba) ? (
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
                   <LegendaRealizadoOrcado tipo={tipoGrafico} />
+                  <EtiquetaDoComparado nome={dados?.comparado?.nome} />
                 </div>
               ) : (
-                <LegendaDoPainel tipo={tipoGrafico} cores={cores} />
+                <LegendaDoPainel tipo={tipoGrafico} cores={cores} comparado={dados?.comparado?.nome} />
               )}
             </RotulosDoGrafico.Provider>
             <ConfigurarGraficos>

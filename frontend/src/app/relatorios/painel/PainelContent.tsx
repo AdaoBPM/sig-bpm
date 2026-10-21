@@ -108,16 +108,17 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
  * todo na cor forte, com o texto em branco). O valor guardado continua "daltonismo", para manter a escolha já feita.
  */
 export type Cores = "padrao" | "daltonismo";
+// O rótulo curto é o da legenda (21/10/2026); o texto completo ("Melhor que o Orçado"), o das dicas.
 const SINAIS = {
   padrao: {
-    1: { cor: "var(--color-green-600)", texto: "Melhor que o" },
-    0: { cor: "var(--color-yellow-500)", texto: "Até 5% do" },
-    [-1]: { cor: "var(--color-red-600)", texto: "Pior que o" },
+    1: { cor: "var(--color-green-600)", texto: "Melhor que o", rotulo: "Melhor" },
+    0: { cor: "var(--color-yellow-500)", texto: "Até 5% do", rotulo: "Até 5% Var." },
+    [-1]: { cor: "var(--color-red-600)", texto: "Pior que o", rotulo: "Pior" },
   },
   daltonismo: {
-    1: { cor: "var(--color-blue-600)", texto: "Melhor que o" },
-    0: { cor: "var(--color-yellow-500)", texto: "Até 5% do" },
-    [-1]: { cor: "var(--color-red-600)", texto: "Pior que o" },
+    1: { cor: "var(--color-blue-600)", texto: "Melhor que o", rotulo: "Melhor" },
+    0: { cor: "var(--color-yellow-500)", texto: "Até 5% do", rotulo: "Até 5% Var." },
+    [-1]: { cor: "var(--color-red-600)", texto: "Pior que o", rotulo: "Pior" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -430,8 +431,9 @@ export function CorpoDoPainel({
 }
 
 /**
- * A legenda: as cores do gráfico e os sinais (a comparação com o orçado), na linha do título, antes do Configurar Gráficos
- * (14/10/2026); no fim, o cenário comparado, "(vs. <nome>)" (21/10/2026), quando há.
+ * A legenda, na linha do título, antes do Configurar Gráficos (14/10/2026): os sinais (Melhor, Até 5% Var. e Pior), as
+ * cores do gráfico (Realizado e Orçado ou Comparado) e, numa etiqueta, o cenário comparado, "(vs. <nome>)", quando há
+ * (21/10/2026; antes, as cores primeiro e os sinais com o texto completo).
  */
 export function LegendaDoPainel({ tipo, cores, comparado }: { tipo: TipoGrafico; cores: Cores; comparado?: string | null }) {
   return (
@@ -444,18 +446,24 @@ function ItensDaLegenda({ tipo, comparado }: { tipo: TipoGrafico; comparado?: st
   const SINAL = useSinais();
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600 lg:justify-end">
-      <LegendaRealizadoOrcado tipo={tipo} />
       <span className="inline-flex flex-wrap items-center gap-x-5 gap-y-1">
         {([1, 0, -1] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <Sinal s={s} />
-            {SINAL[s].texto}
+            {SINAL[s].rotulo}
           </span>
         ))}
-        {comparado ? <span>(vs. {comparado})</span> : null}
       </span>
+      <LegendaRealizadoOrcado tipo={tipo} />
+      <EtiquetaDoComparado nome={comparado} />
     </div>
   );
+}
+
+/** O cenário comparado no fim da legenda (21/10/2026), numa etiqueta: "(vs. <nome>)". */
+export function EtiquetaDoComparado({ nome }: { nome?: string | null }) {
+  if (!nome) return null;
+  return <span className="inline-flex rounded-sm border border-gray-300 bg-white px-1.5 py-px text-xs font-medium whitespace-nowrap text-gray-700">(vs. {nome})</span>;
 }
 
 /**
@@ -591,7 +599,7 @@ export function PainelContent() {
               {naAbaIndicadores ? (
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
                   <LegendaRealizadoOrcado tipo={tipoGrafico} />
-                  {dados?.cenarioOrcado ? <span>(vs. {dados.cenarioOrcado})</span> : null}
+                  <EtiquetaDoComparado nome={dados?.cenarioOrcado} />
                 </div>
               ) : (
                 <LegendaDoPainel tipo={tipoGrafico} cores={cores} comparado={dados?.cenarioOrcado} />
