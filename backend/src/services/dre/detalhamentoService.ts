@@ -1,7 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
-import type { Composicao, OrigemValor, ParcelaRateio } from "./apuracaoUnidades.js";
+import { manualNoSinalDoBalancete, type Composicao, type OrigemValor, type ParcelaRateio } from "./apuracaoUnidades.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
@@ -130,8 +130,42 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
   const blocos: Bloco[] = [];
   const naoRateio: Prisma.LancamentoContabilWhereInput = { OR: [{ alocacao: null }, { alocacao: { not: "RATEIO" } }] };
 
-  if (o.contabil) {
-    const f = o.contabil;
+  // Os lançamentos manuais (21/10/2026) entram nas abas como lançamentos do balancete: os do mesmo filtro aparecem num
+  // bloco à parte, com a parcela no sinal da DRE (o valor digitado, × o fator da regra levado ao sinal do balancete).
+  const CHAVES = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA", "ACOMPANHAMENTO"];
+  const selecaoManual = {
+    id: true,
+    filial: true,
+    balde: true,
+    descricao: true,
+    motivo: true,
+    valor: true,
+    centroCusto: { select: { codigoRM: true, nomeRM: true } },
+    contaResultado: { select: { reduzido: true, descricao: true } },
+  } as const;
+  type Manual = Prisma.LancamentoManualGetPayload<{ select: typeof selecaoManual }>;
+  const linhaManual = (m: Manual, parcela: Decimal): LancamentoDetalhe => ({
+    id: m.id,
+    filial: m.filial,
+    centro: m.centroCusto ? { codigoRM: m.centroCusto.codigoRM, nome: m.centroCusto.nomeRM } : null,
+    conta: m.contaResultado ?? { reduzido: "—", descricao: m.descricao },
+    contaAdotada: null,
+    balde: m.balde,
+    alocacao: "MANUAL",
+    descricao: `${m.motivo} · ${m.descricao}`,
+    valor: m.valor.toFixed(2),
+    parcela: parcela.toFixed(2),
+  });
+  const sinalDaLinhaManual = async (linhaId: string) =>
+    manualNoSinalDoBalancete((await prisma.linhaDRE.findUnique({ where: { id: linhaId }, select: { grupoSigla: true } }))?.grupoSigla ?? "", new Decimal(1));
+  const blocoManual = async (where: Prisma.LancamentoManualWhereInput, linhaId: string, multiplicador: Decimal, titulo: string, filtro: string) => {
+    const ms = await prisma.lancamentoManual.findMany({ where: { competenciaId, linhaDREId: linhaId, ...where }, select: selecaoManual });
+    if (!ms.length) return;
+    const m = (await sinalDaLinhaManual(linhaId)).times(multiplicador);
+    blocos.push({ tipo: "MANUAL", titulo, unidade, filtro, total: somar(ms.map((x) => x.valor.times(m))).toFixed(2), lancamentos: ms.map((x) => linhaManual(x, x.valor.times(m))).sort(porValor) });
+  };
+
+  const blocoContabil = async (f: NonNullable<OrigemValor["contabil"]>, titulo: string) => {
     const filtros: Prisma.LancamentoContabilWhereInput[] = [naoRateio];
     if (f.baldes) filtros.push({ balde: { in: f.baldes as never } });
     if (f.excetoBaldes) filtros.push({ OR: [{ balde: null }, { balde: { notIn: f.excetoBaldes as never } }] });
@@ -149,14 +183,23 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     ].filter(Boolean);
     blocos.push({
       tipo: "CONTABIL",
-      titulo: "Lançamentos Contábeis Diretos",
+      titulo,
       unidade,
       filtro: partes.join(" · "),
       fator: f.fator,
       total: somar(ls.map((l) => l.valorMovimento)).times(fator).toFixed(2),
       lancamentos: agrupar(ls).map((l) => paraDetalhe(l, fator)).sort(porValor),
     });
-  }
+    // Os manuais do mesmo filtro (fora do balde RN, que é da aba RN, e dos baldes de rateio).
+    const fm: Prisma.LancamentoManualWhereInput[] = [{ OR: [{ balde: null }, { balde: { notIn: ["RN", ...CHAVES] as never } }] }];
+    if (f.baldes) fm.push({ balde: { in: f.baldes as never } });
+    if (f.excetoBaldes) fm.push({ OR: [{ balde: null }, { balde: { notIn: f.excetoBaldes as never } }] });
+    if (f.pares) fm.push({ OR: f.pares.map((p) => ({ balde: p.balde as never, ...(p.filial !== undefined ? { filial: p.filial } : {}) })) });
+    await blocoManual({ ...(f.filial !== undefined ? { filial: f.filial } : {}), AND: fm }, f.linhaId, fator, titulo.replace("Lançamentos Contábeis", "Lançamentos Manuais"), partes.join(" · "));
+  };
+  if (o.contabil) await blocoContabil(o.contabil, "Lançamentos Contábeis Diretos");
+  // Os Complementares (21/10/2026): os diretos do balde COMPLEMENTAR da linha equivalente da Montagem.
+  if (o.contabilPar) await blocoContabil({ linhaId: o.contabilPar.linhaId, baldes: o.contabilPar.baldes }, "Lançamentos Contábeis Diretos da Linha da Montagem");
 
   for (const r of (c.rateios ?? []) as ParcelaRateio[]) {
     if (!r.linhaId) continue;
@@ -174,6 +217,8 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
       total: somar(ls.map((l) => l.valorMovimento)).times(p).toFixed(2),
       lancamentos: agrupar(ls).map((l) => paraDetalhe(l, p)).sort(porValor),
     });
+    // Os manuais do balde da chave (21/10/2026), na mesma linha de base, × o percentual.
+    await blocoManual({ balde: r.chave as never }, r.linhaId, p, `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}`, `balde ${r.chave}`);
   }
 
   if (o.manual) {

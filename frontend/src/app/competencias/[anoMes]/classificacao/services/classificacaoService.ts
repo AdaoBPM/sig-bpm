@@ -8,7 +8,8 @@ export type Validacao =
   | "ERRO_DEPARTAMENTO"
   | "ERRO_ATRIBUICAO"
   | "SEM_DESTINO"
-  | "CENTRO_NAO_CADASTRADO";
+  | "CENTRO_NAO_CADASTRADO"
+  | "SEM_ABA";
 
 export type Situacao = "PENDENCIAS" | "TODOS" | Validacao;
 

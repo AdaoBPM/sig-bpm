@@ -134,7 +134,7 @@ export const dreService = {
         where: { competenciaId: c.id },
         select: { filial: true, centroCustoId: true, linhaDREId: true, balde: true, alocacao: true, valorMovimento: true },
       }),
-      prisma.lancamentoManual.findMany({ where: { competenciaId: c.id }, select: { linhaDREId: true, balde: true, valor: true } }),
+      prisma.lancamentoManual.findMany({ where: { competenciaId: c.id }, select: { linhaDREId: true, balde: true, valor: true, filial: true } }),
       prisma.volumeOperacional.findMany({ where: { competenciaId: c.id }, select: { percentual: true, regraRateio: { select: { chave: true, destino: true } } } }),
       prisma.receitaPrevia.findMany({ where: { competenciaId: c.id }, select: { natureza: true, receitaBruta: true, receitaLiquida: true, unidadeNegocio: { select: { codigo: true } } } }),
       totaisDaCompetencia(c.id),
@@ -148,7 +148,7 @@ export const dreService = {
     const { resultados, avisos } = apurarUnidades({
       linhas,
       lancamentos: lancamentos.map((l) => ({ filial: l.filial, linhaDREId: l.linhaDREId, balde: l.balde, alocacao: l.alocacao, valor: l.valorMovimento })),
-      manuais: manuais.map((m) => ({ linhaDREId: m.linhaDREId, balde: m.balde, valor: m.valor })),
+      manuais: manuais.map((m) => ({ linhaDREId: m.linhaDREId, balde: m.balde, valor: m.valor, filial: m.filial })),
       percentuais: new Map(volumes.map((v) => [`${v.regraRateio.chave}|${v.regraRateio.destino}`, v.percentual])),
       totais: new Map(totais.map((t) => [t.codigo as string, t.quantidade])),
       receitas: receitas.map((r) => ({ unidade: r.unidadeNegocio.codigo, natureza: r.natureza, receitaBruta: r.receitaBruta, receitaLiquida: r.receitaLiquida })),

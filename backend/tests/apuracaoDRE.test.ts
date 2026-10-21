@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { Prisma } from "../src/generated/prisma/client.js";
-import { apurarUnidades, type LinhaEstrutura } from "../src/services/dre/apuracaoUnidades.js";
+import { abasQueSomam, apurarUnidades, type LinhaEstrutura } from "../src/services/dre/apuracaoUnidades.js";
 import { apurarCentros, consolidar } from "../src/services/dre/consolidacao.js";
 import { avaliarExpressao } from "../src/services/dre/expressao.js";
 
@@ -150,5 +150,71 @@ describe("consolidação e visão por centro de custo", () => {
     assert.equal(v("B", "CPP"), "7");
     assert.equal(v("A", "MB"), undefined); // margem (com subtração) fica de fora
     assert.equal(c.filter((x) => x.centroCustoId === null).length, 0);
+  });
+});
+
+describe("lançamentos manuais em todas as abas e a Montagem do balde Complementar (21/10/2026)", () => {
+  const linha = (codigo: string, grupo: string, grupoSigla: string, atribuicao: string, descricao: string, unidades: number[]): LinhaEstrutura => ({
+    id: codigo, codigo, tipo: "ITEM", grupo, grupoSigla, atribuicao, descricao, expressao: null, unidades,
+  });
+  const linhas = [
+    linha("CP.CLT", "CUSTOS DE PRODUÇÃO (CP)", "CPP", "Mão de Obra Direta", "Remunerações CLT", [1, 2]),
+    linha("CSM.PJ", "CUSTOS DE SERVIÇOS: MONTAGEM (CSM)", "CSM", "Mão de Obra Indireta", "Remunerações PJ", [3]),
+    linha("CSC.PJ", "CUSTOS DE SERVIÇOS: COMPLEMENTARES (CSC)", "CSC", "Mão de Obra Indireta", "Remunerações PJ", [3]),
+    linha("CSM.SO", "CUSTOS DE SERVIÇOS: MONTAGEM (CSM)", "CSM", "Mão de Obra Indireta", "Só na Montagem", [3]),
+    linha("RFNC", "RECEITAS FINANCERIAS NÃO CORRENTES (RFNC) (+)", "RFNC", "Receitas Financeiras Não Correntes (+)", "Receitas Financeiras Não Correntes", [4]),
+    linha("IRCS", "DEDUÇÕES DA MARGEM LÍQUIDA (DML)", "DML", "Imposto de Renda e Contribuição Social", "Imposto de Renda e Contribuição Social", [4, 5]),
+  ];
+  const base = { linhas, receitas: [], totais: new Map(), percentuais: new Map() };
+  const v = (r: ReturnType<typeof apurarUnidades>["resultados"], u: number, c: string) => Number(r.find((x) => x.unidade === u && x.codigo === c)?.valor ?? 0);
+
+  it("o manual entra na aba do balde, no sinal da DRE: zera a receita do balancete; o do balde RN só na RN", () => {
+    const { resultados, avisos } = apurarUnidades({
+      ...base,
+      lancamentos: [{ filial: 1, linhaDREId: "RFNC", balde: "EXTRA", alocacao: "DIRETO", valor: D(-150000) }],
+      manuais: [
+        { linhaDREId: "RFNC", balde: "EXTRA", valor: D(-150000), filial: 1 },
+        { linhaDREId: "CP.CLT", balde: "UNIDADE", valor: D(300), filial: 2 },
+        { linhaDREId: "IRCS", balde: "RN", valor: D(50), filial: 1 },
+      ],
+    });
+    assert.ok(v(resultados, 4, "RFNC") === 0); // 150.000 do balancete − 150.000 do manual (o zero pode vir com sinal)
+    assert.equal(v(resultados, 2, "CP.CLT"), 300);
+    assert.equal(v(resultados, 1, "CP.CLT"), 0);
+    assert.equal(v(resultados, 5, "IRCS"), 50);
+    assert.equal(v(resultados, 4, "IRCS"), 0); // o do balde RN não entra em Despesas e Extra
+    assert.equal(avisos.length, 0);
+  });
+
+  it("os Complementares somam a Montagem do balde COMPLEMENTAR na linha equivalente; sem ela, fica fora e o manual avisa", () => {
+    const { resultados, avisos } = apurarUnidades({
+      ...base,
+      lancamentos: [
+        { filial: 1, linhaDREId: "CSM.PJ", balde: "COMPLEMENTAR", alocacao: "DIRETO", valor: D(23664.16) },
+        { filial: 1, linhaDREId: "CSM.PJ", balde: "OBRAS", alocacao: "DIRETO", valor: D(1000) },
+        { filial: 1, linhaDREId: "CSC.PJ", balde: "COMPLEMENTAR", alocacao: "DIRETO", valor: D(10) },
+      ],
+      manuais: [{ linhaDREId: "CSM.SO", balde: "COMPLEMENTAR", valor: D(5), filial: 1 }],
+    });
+    assert.equal(v(resultados, 3, "CSC.PJ"), 23674.16);
+    assert.equal(v(resultados, 3, "CSM.PJ"), 1000);
+    const c = resultados.find((x) => x.unidade === 3 && x.codigo === "CSC.PJ")?.composicao;
+    assert.deepEqual(c?.origem?.contabilPar, { linhaId: "CSM.PJ", baldes: ["COMPLEMENTAR"] });
+    assert.equal(avisos.length, 1);
+    assert.match(avisos[0], /Só na Montagem/);
+  });
+
+  it("as abas que somam cada lançamento (a pendência Sem Aba de Resultado da Classificação)", () => {
+    const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
+    const abas = (c: string, balde: string, filial = 1, extra: { rateio?: boolean; manual?: boolean; parNaComplementar?: boolean } = {}) =>
+      abasQueSomam(porCodigo.get(c)!, { filial, balde, rateio: false, ...extra });
+    assert.deepEqual(abas("CSM.PJ", "COMPLEMENTAR"), []); // sem a linha equivalente informada
+    assert.deepEqual(abas("CSM.PJ", "COMPLEMENTAR", 1, { parNaComplementar: true }), [3]);
+    assert.deepEqual(abas("CSM.PJ", "OBRAS"), [3]);
+    assert.deepEqual(abas("CP.CLT", "UNIDADE", 2), [2]);
+    assert.deepEqual(abas("CP.CLT", "DESPESAS"), []);
+    assert.deepEqual(abas("CP.CLT", "PRODUCAO", 1, { rateio: true }), [1, 2]);
+    assert.deepEqual(abas("IRCS", "RN", 1, { manual: true }), [5]);
+    assert.deepEqual(abas("IRCS", "EXTRA"), [4]);
   });
 });

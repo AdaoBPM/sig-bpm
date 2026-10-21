@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { BaldeAlocacao } from "../../generated/prisma/enums.js";
 import type { LancamentoManualInput } from "../../schemas/lancamentosManuais/lancamentoManualSchema.js";
 import { auditar } from "../auditoriaService.js";
+import { abasQueSomam } from "../dre/apuracaoUnidades.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraLancamentoManualError extends Error {
@@ -77,7 +78,35 @@ async function resolver(input: LancamentoManualInput) {
     throw new RegraLancamentoManualError(400, "Centro de custo não encontrado.");
   }
   if (centro && !centro.ativo) throw new RegraLancamentoManualError(400, `O centro de custo ${centro.nomeRM} está inativo no cadastro.`);
-  return derivarLancamentoManual(conta, centro);
+  const derivados = derivarLancamentoManual(conta, centro);
+  await exigirAbaDeResultado(derivados, input.filial);
+  return derivados;
+}
+
+/**
+ * Os lançamentos manuais entram em todas as abas de resultado (21/10/2026), pela regra do balde, como o balancete: a
+ * combinação da linha da conta, do balde e da filial que nenhuma aba soma é recusada, com o motivo (antes, ficava fora do
+ * resultado sem aviso).
+ */
+async function exigirAbaDeResultado(d: { balde: BaldeAlocacao | null; linhaDREId: string | null }, filial: number) {
+  if (!d.linhaDREId) return;
+  const prisma = getPrismaClient();
+  const linha = await prisma.linhaDRE.findUnique({
+    where: { id: d.linhaDREId },
+    select: { tipo: true, grupoSigla: true, atribuicao: true, descricao: true, unidades: { select: { unidadeNegocio: { select: { codigo: true } } } } },
+  });
+  if (!linha) return;
+  const par =
+    linha.grupoSigla === "CSM" &&
+    (await prisma.linhaDRE.count({ where: { ativo: true, tipo: "ITEM", grupoSigla: "CSC", atribuicao: linha.atribuicao, descricao: linha.descricao } })) > 0;
+  const rateio = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA", "ACOMPANHAMENTO"].includes(d.balde ?? "");
+  const abas = abasQueSomam({ ...linha, unidades: linha.unidades.map((u) => u.unidadeNegocio.codigo) }, { filial, balde: d.balde, rateio, manual: true, parNaComplementar: par });
+  if (!abas.length) {
+    throw new RegraLancamentoManualError(
+      400,
+      `Nenhuma aba de resultado soma a linha "${linha.descricao}" com o balde ${d.balde ?? "vazio"} na filial ${filial}: o lançamento ficaria fora do resultado. Escolha outro centro de custo ou outra conta.`,
+    );
+  }
 }
 
 async function competenciaDoLancamento(id: string) {

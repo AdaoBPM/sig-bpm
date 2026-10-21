@@ -101,10 +101,15 @@ export function LancamentosManuaisContent() {
             <li>Use “Novo Lançamento” para incluir a RN e outros ajustes; o lápis e a lixeira editam e excluem.</li>
             <li>Num mês ainda sem lançamentos, “Copiar do Mês Anterior” traz os do mês anterior para revisar.</li>
             <li>Use os filtros nos rótulos das colunas; o total no rodapé da tabela acompanha o filtro.</li>
-            <li>Os lançamentos entram na DRE na próxima apuração.</li>
+            <li>
+              Os lançamentos entram na DRE na próxima apuração, na aba de resultado do balde (o do centro de custo ou, sem centro, o da conta), como um
+              lançamento do balancete: MATRIZ na Matriz, FILIAL na Filial, UNIDADE na da filial, OBRAS e COMPLEMENTAR em Serviços, DESPESAS e EXTRA em
+              Despesas e Extra, RN na RN, e os de rateio pelos percentuais. O valor é o da DRE: positivo soma à linha, negativo subtrai (numa receita, o
+              negativo a reduz). Uma combinação que nenhuma aba soma é recusada ao gravar, com o motivo.
+            </li>
           </ul>
         }
-        sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes. É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
+        sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes, em qualquer aba de resultado (desde 21/10/2026). É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
         acoes={
           !fechada && dados ? (
             <PermissionGuard permission="lancamentos_manuais:editar">

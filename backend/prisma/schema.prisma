@@ -919,6 +919,10 @@ enum ValidacaoLancamento {
   SEM_DESTINO
   /// Código de centro de custo que não está no cadastro (fora os de obra).
   CENTRO_NAO_CADASTRADO
+  /// A linha da DRE da conta e o balde do centro não se combinam em nenhuma aba de resultado (21/10/2026): o valor
+  /// ficaria fora do resultado (ex.: conta de Montagem com centro de balde COMPLEMENTAR, sem a linha equivalente nos
+  /// Complementares).
+  SEM_ABA
 }
 
 /// ENUM: unidade de medida das listas operacionais.

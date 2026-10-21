@@ -47,6 +47,14 @@ export const VALIDACOES: Record<
       "O código do centro de custo não está no cadastro. Os centros de obra (1.98 e 1.99) não entram aqui.",
     classe: "border-yellow-200 bg-yellow-50 text-yellow-800",
   },
+  // 21/10/2026: a combinação que nenhuma aba de resultado soma (o valor ficaria fora do resultado).
+  SEM_ABA: {
+    rotulo: "Sem Aba de Resultado",
+    codigo: "",
+    explicacao:
+      "Nenhuma aba de resultado soma a linha da DRE da conta com o balde do centro (ex.: conta de Montagem num centro de balde COMPLEMENTAR sem a linha equivalente nos Complementares, ou conta de custo de produção num centro de balde DESPESAS): o valor ficaria fora do resultado. Corrija o balde do centro ou a conta no cadastro.",
+    classe: "border-red-200 bg-red-50 text-red-700",
+  },
 };
 
 export function ValidacaoBadge({ validacao }: { validacao: Validacao }) {

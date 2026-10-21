@@ -212,7 +212,13 @@ export function ClassificacaoContent() {
           <ul>
             <li>
               A aba Todos, a primeira, mostra todos os lançamentos. Comece pela aba Pendências (a que abre), com todas as pendências; para ver um
-              tipo só (&lt;ERRO!&gt;, &lt;DEP.!&gt;, &lt;ATR.!&gt;, Sem Destino na DRE ou Centro de Custo Sem Cadastro), filtre pela coluna Verificação.
+              tipo só (&lt;ERRO!&gt;, &lt;DEP.!&gt;, &lt;ATR.!&gt;, Sem Destino na DRE, Centro de Custo Sem Cadastro ou Sem Aba de Resultado), filtre pela coluna Verificação.
+            </li>
+            <li>
+              “Sem Aba de Resultado” (21/10/2026) é o lançamento que nenhuma aba de resultado soma — a linha da DRE da conta não combina com o balde do
+              centro (por exemplo, uma conta de custo de produção num centro de balde DESPESAS) — e ficaria fora do resultado. Nos Serviços
+              Complementares, as contas de Montagem dos centros de balde COMPLEMENTAR entram na linha equivalente dos Complementares; sem ela, a pendência
+              aparece.
             </li>
             <li>Use os filtros nos rótulos das colunas (centro de custo, conta, classificação…) para achar os lançamentos.</li>
             <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>

@@ -7,6 +7,7 @@ import {
   type CentroParaClassificar,
   type ContaParaClassificar,
 } from "./regrasClassificacao.js";
+import { abasQueSomam } from "../dre/apuracaoUnidades.js";
 
 /** Erro de regra — vira 404/409 no controller, não 500. */
 export class RegraClassificacaoError extends Error {
@@ -24,6 +25,7 @@ export const VALIDACOES_PENDENTES: ValidacaoLancamento[] = [
   "ERRO_ATRIBUICAO",
   "SEM_DESTINO",
   "CENTRO_NAO_CADASTRADO",
+  "SEM_ABA",
 ];
 
 function rotulo(ano: number, mes: number) {
@@ -76,7 +78,7 @@ export const classificacaoService = {
     const [lancamentos, centros, contas, reclassificacoes] = await Promise.all([
       prisma.lancamentoContabil.findMany({
         where: { competenciaId },
-        select: { id: true, codigoCentroCusto: true, contaResultadoId: true },
+        select: { id: true, codigoCentroCusto: true, contaResultadoId: true, filial: true },
       }),
       prisma.centroCusto.findMany({
         where: { codigoRM: { not: null } },
@@ -114,6 +116,15 @@ export const classificacaoService = {
         { ...c, linhaDREDescricao: linhaDRE?.descricao ?? null },
       ]),
     );
+    // As linhas da DRE com as abas de cada uma (21/10/2026): a verificação "Sem Aba de Resultado".
+    const linhasDRE = await prisma.linhaDRE.findMany({
+      where: { ativo: true },
+      select: { id: true, tipo: true, grupo: true, grupoSigla: true, atribuicao: true, descricao: true, unidades: { select: { unidadeNegocio: { select: { codigo: true } } } } },
+    });
+    const linhaPorId = new Map(linhasDRE.map((l) => [l.id, { ...l, unidades: l.unidades.map((u) => u.unidadeNegocio.codigo) }]));
+    const tripla = (g: string, a: string | null, d: string) => `${g.trim().toUpperCase()}|${(a ?? "").trim().toUpperCase()}|${d.trim().toUpperCase()}`;
+    const complementares = new Set(linhasDRE.filter((l) => l.tipo === "ITEM" && l.grupoSigla === "CSC").map((l) => tripla("", l.atribuicao, l.descricao)));
+
     const destinoDe = new Map(
       reclassificacoes.map((r) => [`${r.codigoCentroCusto}|${r.contaOrigemId}`, r.contaDestinoId]),
     );
@@ -132,6 +143,12 @@ export const classificacaoService = {
         ? (centroPorCodigo.get(l.codigoCentroCusto) ?? null)
         : null;
       const c = classificarLancamento(l.codigoCentroCusto, centro, conta);
+      // Sem aba de resultado (21/10/2026): a combinação da linha e do balde que nenhuma aba soma.
+      const linha = c.linhaDREId ? linhaPorId.get(c.linhaDREId) : undefined;
+      if (c.validacao === "OK" && linha && linha.tipo === "ITEM") {
+        const par = linha.grupoSigla === "CSM" && complementares.has(tripla("", linha.atribuicao, linha.descricao));
+        if (!abasQueSomam(linha, { filial: l.filial, balde: c.balde, rateio: c.alocacao === "RATEIO", parNaComplementar: par }).length) c.validacao = "SEM_ABA";
+      }
       contagem.set(c.validacao, (contagem.get(c.validacao) ?? 0) + 1);
       return { id: l.id, data: { ...c, classificadoEm: agora } };
     });

@@ -13,6 +13,16 @@ type Decimal = Prisma.Decimal;
  * lançamentos manuais, com a regra da fórmula da planilha; subtotais e totais
  * saem das expressões da estrutura da DRE, avaliadas com os itens da unidade.
  *
+ * Os lançamentos manuais (21/10/2026; antes, só os do balde RN, na aba RN): os do balde RN continuam na aba RN; os
+ * demais entram como um lançamento do balancete do mesmo balde, filial e linha, com o valor digitado (o da DRE)
+ * levado ao sinal do balancete (nas receitas, o sinal trocado) — e passam pelas mesmas regras de cada aba, inclusive os
+ * rateios.
+ *
+ * Os Serviços Complementares (21/10/2026, pedido do usuário): cada linha de custo complementar (CSC) soma também os
+ * lançamentos diretos do balde COMPLEMENTAR na linha equivalente da Montagem (CSM, a mesma atribuição e descrição) — os
+ * centros complementares lançam nas contas de MO da Montagem, porque não há contas de resultado de MO para os
+ * Complementares (e uma conta complementar daria <DEP.!> na classificação).
+ *
  * O cálculo é puro: recebe os dados já lidos e devolve os valores com a
  * composição de cada um, para a memória de cálculo e o detalhamento.
  */
@@ -39,7 +49,7 @@ export type LancamentoClassificado = {
   valor: Decimal;
 };
 
-export type LancamentoManualApuracao = { linhaDREId: string | null; balde: string | null; valor: Decimal };
+export type LancamentoManualApuracao = { linhaDREId: string | null; balde: string | null; valor: Decimal; /** A filial (21/10/2026): a regra das abas usa a filial, como no balancete. */ filial?: number };
 
 export type ReceitaPreviaApuracao = { unidade: number; natureza: string; receitaBruta: Decimal; receitaLiquida: Decimal };
 
@@ -71,6 +81,8 @@ export type ParcelaUnidade = { unidade: number; nome: string; valor: string };
  */
 export type OrigemValor = {
   contabil?: { linhaId: string; filial?: number; baldes?: string[]; excetoBaldes?: string[]; pares?: ParBalde[]; fator?: string };
+  /** Na linha complementar (CSC), os diretos do balde COMPLEMENTAR da linha equivalente da Montagem (21/10/2026). */
+  contabilPar?: { linhaId: string; baldes: string[] };
   manual?: { linhaId: string; balde: string };
   previa?: Array<{ unidade: number; natureza: string; componente: "BRUTA" | "LIQUIDA"; sinal: 1 | -1 }>;
 };
@@ -136,6 +148,74 @@ export function rateiosSemVolume(d: Pick<DadosApuracao, "lancamentos" | "percent
 /** Chaves de rateio que cada unidade de produção recebe, e o destino dela. */
 const RATEIOS_PRODUCAO = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA"] as const;
 const DESTINO_DA_UNIDADE: Record<number, string> = { 1: "MATRIZ", 2: "FILIAL" };
+const CHAVES_DE_RATEIO = new Set<string>([...RATEIOS_PRODUCAO, "ACOMPANHAMENTO"]);
+
+/**
+ * Os grupos em que a DRE mostra o valor com o sinal trocado em relação ao balancete (as receitas: no balancete, a
+ * crédito, negativas). O lançamento manual é digitado no sinal da DRE (21/10/2026).
+ */
+const RECEITAS_DA_DRE = new Set(["ROB", "RFC", "RFNC"]);
+/** O valor do lançamento manual (no sinal da DRE) no sinal do balancete. */
+export const manualNoSinalDoBalancete = (grupoSigla: string, valor: Decimal) => (RECEITAS_DA_DRE.has(grupoSigla) ? valor.neg() : valor);
+
+/** As linhas que as abas calculam (não somam o balancete): as receitas da receita prévia e as líquidas. */
+const CALCULADAS = new Set(
+  [
+    "Receita Bruta de Frete",
+    "Receita Líquida de Frete",
+    "Receita Líquida do Pré-Fabricado",
+    "Receita Líquida de Devoluções e Inventários",
+    "Receita Bruta Complementar",
+    "Receita Líquida Complementar",
+    "Receita Líquida de Montagem",
+  ].map((x) => x.toUpperCase()),
+);
+
+/**
+ * As abas que somam um lançamento (21/10/2026), pela mesma regra da apuração: a linha da DRE dele, o balde e a filial.
+ * Vazio, o lançamento fica fora de todas as abas e do resultado (ex.: uma conta de Montagem num centro com o balde
+ * COMPLEMENTAR: Serviços soma a Montagem só do balde OBRAS, e a Complementar só nas linhas dela). Usado pela apuração (o
+ * aviso), pela Classificação (a pendência "Sem Aba de Resultado") e pelos lançamentos manuais (`manual`: o do balde RN
+ * vai só para a aba RN).
+ */
+export function abasQueSomam(
+  linha: Pick<LinhaEstrutura, "tipo" | "grupoSigla" | "descricao" | "unidades">,
+  l: { filial: number; balde: string | null; rateio: boolean; manual?: boolean; /** A linha de Montagem tem a equivalente nos Complementares (CSC). */ parNaComplementar?: boolean },
+): number[] {
+  if (linha.tipo !== "ITEM") return [];
+  const b = l.balde ?? "";
+  const desc = n(linha.descricao);
+  const g = linha.grupoSigla;
+  if (l.manual && b === "RN") return linha.unidades.includes(UNIDADE.RN) ? [UNIDADE.RN] : [];
+  if (g === "P" || g === "S" || CALCULADAS.has(desc)) return [];
+  const comissao = desc === n("Comissões de Representantes e Terceiros");
+  const impostos = desc === n("Impostos Operacionais");
+  const abas: number[] = [];
+  for (const u of linha.unidades) {
+    if (l.rateio) {
+      // Os rateios: a produção nas linhas da Matriz e da Filial (e nas de Serviços, pela linha de custo de produção); o
+      // acompanhamento na Montagem (a base dele) e nas financeiras de Despesas e Extra.
+      const producao = (RATEIOS_PRODUCAO as readonly string[]).includes(b);
+      if ((u === UNIDADE.MATRIZ || u === UNIDADE.FILIAL) && producao && !comissao && !impostos) abas.push(u);
+      else if (u === UNIDADE.SERVICOS && b === "ACOMPANHAMENTO" && g === "CSM") abas.push(u);
+      else if (u === UNIDADE.DESPESAS && b === "ACOMPANHAMENTO" && FINANCEIRAS.has(g)) abas.push(u);
+      continue;
+    }
+    if (u === UNIDADE.MATRIZ || u === UNIDADE.FILIAL) {
+      const destino = DESTINO_DA_UNIDADE[u];
+      const receita = impostos || desc === n("Receita Bruta do Pré-Fabricado") || desc === n("Receita Bruta de Devoluções e Inventários");
+      if (comissao || b === destino || (b === "UNIDADE" && l.filial === u) || (receita && b === "DESPESAS" && l.filial === u)) abas.push(u);
+    } else if (u === UNIDADE.SERVICOS) {
+      if (comissao || desc === n("Receita Bruta de Montagem")) abas.push(u);
+      else if (impostos) { if (b === "OBRAS") abas.push(u); }
+      else if (g === "CSM" && b === "OBRAS") abas.push(u);
+      else if (g === "CSC" && b === "COMPLEMENTAR") abas.push(u);
+      // A Montagem com o balde COMPLEMENTAR vai para a linha equivalente dos Complementares, quando ela existe.
+      else if (g === "CSM" && b === "COMPLEMENTAR" && l.parNaComplementar) abas.push(u);
+    } else if (u === UNIDADE.DESPESAS) abas.push(u);
+  }
+  return abas;
+}
 
 export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]; avisos: string[] } {
   const avisos: string[] = [];
@@ -143,13 +223,30 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   const porCodigo = new Map(d.linhas.map((l) => [l.codigo, l]));
   const linhaCP = (l: LinhaEstrutura) => porTripla.get(`${n("CUSTOS DE PRODUÇÃO (CP)")}|${n(l.atribuicao)}|${n(l.descricao)}`);
   const linhaCSM = (l: LinhaEstrutura) => porTripla.get(`${n("CUSTOS DE SERVIÇOS: MONTAGEM (CSM)")}|${n(l.atribuicao)}|${n(l.descricao)}`);
+  const linhaCSC = (l: LinhaEstrutura) => porTripla.get(`${n("CUSTOS DE SERVIÇOS: COMPLEMENTARES (CSC)")}|${n(l.atribuicao)}|${n(l.descricao)}`);
+
+  // Os lançamentos manuais fora do balde RN (21/10/2026): como lançamentos do balancete do mesmo balde, filial e linha,
+  // no sinal do balancete; os que nenhuma aba soma ficam num aviso.
+  const porId = new Map(d.linhas.map((l) => [l.id, l]));
+  const manuaisComoBalancete: LancamentoClassificado[] = [];
+  for (const m of d.manuais) {
+    const linha = m.linhaDREId ? porId.get(m.linhaDREId) : undefined;
+    if (!linha) continue;
+    const rateioManual = CHAVES_DE_RATEIO.has(m.balde ?? "");
+    if (!abasQueSomam(linha, { filial: m.filial ?? 1, balde: m.balde, rateio: rateioManual, manual: true, parNaComplementar: !!linhaCSC(linha) }).length) {
+      avisos.push(`Lançamento manual de ${m.valor.toFixed(2)} em "${linha.descricao}" (balde ${m.balde ?? "-"}, filial ${m.filial ?? "-"}): nenhuma aba de resultado soma essa combinação; ficou fora do resultado.`);
+    }
+    if (n(m.balde) === "RN") continue;
+    manuaisComoBalancete.push({ filial: m.filial ?? 1, linhaDREId: linha.id, balde: m.balde, alocacao: rateioManual ? "RATEIO" : "DIRETO", valor: manualNoSinalDoBalancete(linha.grupoSigla, m.valor) });
+  }
+  const lancamentos = [...d.lancamentos, ...manuaisComoBalancete];
 
   // Somas dos lançamentos, na forma dos SOMASES da Gastos (Contábil): os
   // diretos por filial, linha e balde; os de rateio por chave e linha.
   const direto = new Map<string, Decimal>();
   const rateio = new Map<string, Decimal>();
   const somar = (m: Map<string, Decimal>, k: string, v: Decimal) => m.set(k, (m.get(k) ?? zero()).plus(v));
-  for (const l of d.lancamentos) {
+  for (const l of lancamentos) {
     if (!l.linhaDREId) continue;
     if (l.alocacao === "RATEIO") somar(rateio, `${l.balde}|${l.linhaDREId}`, l.valor);
     else somar(direto, `${l.filial}|${l.linhaDREId}|${l.balde}`, l.valor);
@@ -363,7 +460,10 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       } else if (l.grupoSigla === "CSM" || l.grupoSigla === "CSC") {
         const montagem = l.grupoSigla === "CSM";
         const destino = montagem ? "MONTAGEM" : "COMPLEMENTAR";
-        const dir = somaDireto(l.id, { balde: (b) => b === (montagem ? "OBRAS" : "COMPLEMENTAR") });
+        // Nos Complementares, também os diretos do balde COMPLEMENTAR da linha equivalente da Montagem (21/10/2026).
+        const par = montagem ? undefined : linhaCSM(l);
+        const dirPar = par ? somaDireto(par.id, { balde: (b) => b === "COMPLEMENTAR" }) : zero();
+        const dir = somaDireto(l.id, { balde: (b) => b === (montagem ? "OBRAS" : "COMPLEMENTAR") }).plus(dirPar);
         let v = dir;
         const rateios: ParcelaRateio[] = [];
         const partes: Array<[string, LinhaEstrutura | undefined]> = [
@@ -385,10 +485,10 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
           v = v.plus(baseV.times(p));
         }
         gravar(u, l, v, {
-          regra: `Diretos do balde ${montagem ? "OBRAS" : "COMPLEMENTAR"} + rateios × percentual de ${destino.toLowerCase()}`,
+          regra: `Diretos do balde ${montagem ? "OBRAS" : "COMPLEMENTAR"}${par ? " (também os da linha da Montagem)" : ""} + rateios × percentual de ${destino.toLowerCase()}`,
           direto: dir.toFixed(2),
           rateios,
-          origem: { contabil: { linhaId: l.id, baldes: [montagem ? "OBRAS" : "COMPLEMENTAR"] } },
+          origem: { contabil: { linhaId: l.id, baldes: [montagem ? "OBRAS" : "COMPLEMENTAR"] }, ...(par ? { contabilPar: { linhaId: par.id, baldes: ["COMPLEMENTAR"] } } : {}) },
         });
       } else {
         gravar(u, l, zero(), { regra: "Linha sem regra na unidade" });
@@ -474,7 +574,7 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   // Todo custo e despesa vai para algum lugar: uma chave com lançamentos de rateio e sem volume no mês (todos os
   // percentuais zero) deixa esses lançamentos fora de todas as unidades. O aviso diz quanto ficou de fora. As receitas e
   // as despesas financeiras do acompanhamento vão inteiras para Despesas e Extra e não dependem dos percentuais.
-  for (const [chave, valor] of rateiosSemVolume(d)) {
+  for (const [chave, valor] of rateiosSemVolume({ ...d, lancamentos })) {
     avisos.push(`Rateio de ${NOME_DA_CHAVE[chave] ?? chave} sem volume no mês: ${valor.toFixed(2)} em lançamentos de rateio não foram para nenhuma unidade.`);
   }
 
