@@ -476,6 +476,19 @@ export function DREContent() {
   const cabecalho = leConsolidado ? consolidado.data : unidade.data;
   const consulta = visao === "consolidado" ? consolidado : unidade;
 
+  // O Exportar (21/10/2026: na linha do título, logo depois do Reabrir Competência; antes, ao lado das abas). Centros, sem
+  // centros e obras: o Exportar desde a importação do balancete (15/10/2026).
+  const exportar =
+    visao === "centros" ? (
+      grupoEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ grupo: grupoEscolhido }} /> : null
+    ) : visao === "sem_centros" ? (
+      semCentroEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ semCentro: semCentroEscolhido }} /> : null
+    ) : visao === "obras" ? (
+      obraEscolhida ? <ExportarDRE anoMes={anoMes} visao={{ obra: obraEscolhida }} /> : null
+    ) : visao !== null && cabecalho?.apuradoEm ? (
+      <ExportarDRE anoMes={anoMes} visao={visao} />
+    ) : null;
+
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -533,7 +546,7 @@ export function DREContent() {
             </p>
           </>
         }
-        acoes={<AcoesApuracao anoMes={anoMes} onAvisos={setAvisos} />}
+        acoes={<AcoesApuracao anoMes={anoMes} onAvisos={setAvisos} exportar={visao === null ? null : exportar} />}
       />
 
       <SituacaoApuracao anoMes={anoMes} />
@@ -557,16 +570,6 @@ export function DREContent() {
             abas={visoes.map((v) => ({ chave: String(v.visao), rotulo: v.nome }))}
           />
         </div>
-        {/* Centros, sem centros e obras: o Exportar desde a importação do balancete (15/10/2026). */}
-        {visao === "centros" ? (
-          grupoEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ grupo: grupoEscolhido }} /> : null
-        ) : visao === "sem_centros" ? (
-          semCentroEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ semCentro: semCentroEscolhido }} /> : null
-        ) : visao === "obras" ? (
-          obraEscolhida ? <ExportarDRE anoMes={anoMes} visao={{ obra: obraEscolhida }} /> : null
-        ) : cabecalho?.apuradoEm ? (
-          <ExportarDRE anoMes={anoMes} visao={visao} />
-        ) : null}
       </div>
 
       {visao === "centros" ? (

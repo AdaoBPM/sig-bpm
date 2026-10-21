@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,7 +20,7 @@ import { dataHora } from "../../utils/formatacao";
 import { mensagemDeErro } from "../services/dreService";
 import { plural } from "@/lib/texto";
 
-type Props = { anoMes: string; onAvisos: (avisos: string[]) => void };
+type Props = { anoMes: string; onAvisos: (avisos: string[]) => void; /** O Exportar da DRE (21/10/2026), logo depois do Reabrir Competência. */ exportar?: ReactNode };
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 
@@ -33,7 +33,7 @@ const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font
  * linha logo abaixo dele (SituacaoApuracao), para a DRE vir logo depois das
  * abas (E10 do levantamento de layout).
  */
-export function AcoesApuracao({ anoMes, onAvisos }: Props) {
+export function AcoesApuracao({ anoMes, onAvisos, exportar }: Props) {
   const queryClient = useQueryClient();
   const { refresh } = useAuth();
   const [dialogo, setDialogo] = useState<"fechar" | "reabrir" | null>(null);
@@ -136,6 +136,7 @@ export function AcoesApuracao({ anoMes, onAvisos }: Props) {
             </Button>
           </PermissionGuard>
         ) : null}
+        {exportar}
         {s.reaberturas.length > 0 ? (
           <Button type="button" className={botaoPrimario} onClick={() => setHistorico(true)}>
             <History className="size-4" />
@@ -254,9 +255,13 @@ export function SituacaoApuracao({ anoMes }: { anoMes: string }) {
         </div>
       ) : null}
       {fechada ? (
-        <p className="text-sm text-gray-600">
-          Fechada em {dataHora(s.fechadaEm!)}
-          {s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.
+        // No destaque das Listas (21/10/2026; antes, texto solto).
+        <p className="flex items-center gap-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-2.5 text-sm text-gray-700">
+          <LockKeyhole className="size-4 shrink-0 text-gray-500" />
+          <span>
+            Fechada em {dataHora(s.fechadaEm!)}
+            {s.fechadaPor ? ` por ${s.fechadaPor}` : ""}; para mudar qualquer valor, reabra com justificativa.
+          </span>
         </p>
       ) : null}
       {mudancas ? (
