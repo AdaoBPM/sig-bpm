@@ -73,7 +73,7 @@ export function CenarioPainelContent() {
               Cada card traz o nome e, à direita dele, a Metodologia (a fórmula do item) e o comportamento entre parênteses (o mês de referência
               fica ao lado do nome do grupo); embaixo, o Atual, do mês de referência, e o Acumulado, com a unidade no rótulo (Atual (R$ M)…),
               cada um com o valor em destaque e, à direita, o destaque do desvio — a
-              variação, “vs. Comparado” e o valor do cenário comparado, em branco sobre a cor do sinal; e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
+              variação, “vs. Comparado” e o valor do cenário comparado, num quadro cinza com uma faixa na cor do sinal à direita; e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
             </li>
             <li>
               Com os Rótulos, o valor do cenário fica à esquerda do centro de cada mês (e do acumulado) e o do comparado à direita, e os gráficos
@@ -101,9 +101,9 @@ export function CenarioPainelContent() {
               no lugar do orçado.
             </p>
             <p>
-              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O destaque fica verde (azul, com a Acessibilidade Daltonismo), com
-              um triângulo para cima, quando o cenário está do lado bom do comparado; vermelho, com um triângulo para baixo, do lado ruim; e amarelo,
-              com um quadrado, quando o desvio é de até 5%; o lado bom depende do sentido do
+              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. A faixa à direita do destaque e o ícone ficam verdes (azuis, com a
+              Acessibilidade Daltonismo), com um triângulo para cima, quando o cenário está do lado bom do comparado; vermelhos, com um triângulo para
+              baixo, do lado ruim; e amarelos, com um quadrado, quando o desvio é de até 5%; o lado bom depende do sentido do
               indicador (↑ ou ↓).
             </p>
           </>

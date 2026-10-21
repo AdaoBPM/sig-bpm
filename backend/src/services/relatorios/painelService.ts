@@ -42,7 +42,8 @@ export function montarPainel(quadros: QuadroPainel[], periodos: { mes: [Valor, V
       metodologia: metodologiaPorExtenso(i.formula),
       sentido: i.sentido,
       formato: i.formato,
-      formatoAcumulado: i.formatoAcumulado ?? i.formato,
+      // O mesmo formato no Atual e no Acumulado (21/10/2026; a coluna formato_acumulado do cadastro não vale mais).
+      formatoAcumulado: i.formato,
       base: i.base ? { rotulo: i.base.rotulo, casas: i.base.casas } : null,
       separar: i.separar ?? false,
       mes: bloco(i, ...periodos.mes),

@@ -40,9 +40,8 @@ export type ItemPainel = {
   sigla: string;
   /** ↑ quanto maior melhor; ↓ quanto menor melhor. */
   sentido: "↑" | "↓";
+  /** O formato do Atual e do Acumulado (21/10/2026: o mesmo nos dois; antes, o acumulado podia ter outro). */
   formato: Formato;
-  /** O formato do acumulado, quando é outro (o resultado financeiro e as despesas fixas: o mês em milhares, o acumulado em milhões). */
-  formatoAcumulado?: Formato;
   /** A Metodologia: a fórmula sobre os indicadores ([INDICADOR|nome]), como a dos Indicadores. */
   formula: string;
   conta: (x: Valor) => number | null;
@@ -158,7 +157,7 @@ const cpv = (nome: string, base: string) => itemDoPainel({ titulo: "Custos de Pr
 const margemBruta = (nome: string, base: string) => itemDoPainel({ titulo: "Margem Bruta", sigla: "MB", sentido: "↑", formato: "MILHOES", formula: I(nome), base: sobre(nome, base) });
 const volume = (titulo: string, sigla: string, nome: string, formato: Formato = "M3") => itemDoPainel({ titulo, sigla, sentido: "↑", formato, formula: I(nome) });
 const fixa = (titulo: string, sigla: string, pct: string) =>
-  itemDoPainel({ titulo, sigla, sentido: "↓", formato: "MILHARES", formatoAcumulado: "MILHOES", formula: despesa(pct), base: { formula: I(pct), casas: 2 } });
+  itemDoPainel({ titulo, sigla, sentido: "↓", formato: "MILHARES", formula: despesa(pct), base: { formula: I(pct), casas: 2 } });
 const unitario = (titulo: string, sigla: string, nome: string, separar?: boolean) => itemDoPainel({ titulo, sigla, sentido: "↓", formato: "RS_M3", formula: I(nome), separar });
 
 /**
@@ -176,7 +175,7 @@ export const PAINEL_RESULTADOS: QuadroPainel[] = [
       itemDoPainel({ titulo: "Margem de Contribuição", sigla: "MC", sentido: "↑", formato: "MILHOES", formula: I(N.MC), base: sobre(N.MC, N.RL_TOTAL) }),
       itemDoPainel({ titulo: "Lucro Operacional", sigla: "EBITDA", sentido: "↑", formato: "MILHOES", formula: I(N.EBITDA), base: sobre(N.EBITDA, N.RL_TOTAL) }),
       // O percentual é sobre a receita líquida (/RL), como os demais (13/10/2026; antes, sobre a Margem de Contribuição, I19/I13 na planilha).
-      itemDoPainel({ titulo: "Resultado Financeiro", sigla: "RF", sentido: "↑", formato: "MILHARES", formatoAcumulado: "MILHOES", formula: I(N.RF), base: sobre(N.RF, N.RL_TOTAL) }),
+      itemDoPainel({ titulo: "Resultado Financeiro", sigla: "RF", sentido: "↑", formato: "MILHARES", formula: I(N.RF), base: sobre(N.RF, N.RL_TOTAL) }),
       itemDoPainel({ titulo: "Resultado Líquido", sigla: "RL", sentido: "↑", formato: "MILHOES", formula: I(N.RL), base: sobre(N.RL, N.RL_TOTAL) }),
       itemDoPainel({ titulo: "FCO Líquido", sigla: "FCOL", sentido: "↑", formato: "MILHOES", formula: I(N.FCOL), base: sobre(N.FCOL, N.RL_TOTAL) }),
     ],
@@ -304,7 +303,6 @@ export type ItemDoCadastroPainel = {
   sentido: string;
   formula: string;
   formato: string;
-  formatoAcumulado: string | null;
   percentual: string | null;
   casasPercentual: number;
   separar: boolean;
@@ -327,7 +325,6 @@ export function quadrosDoCadastro(itens: ItemDoCadastroPainel[]): Record<"result
         sigla: i.sigla,
         sentido: i.sentido === "↓" ? "↓" : "↑",
         formato: (FORMATOS.has(i.formato) ? i.formato : "MILHOES") as Formato,
-        ...(i.formatoAcumulado && FORMATOS.has(i.formatoAcumulado) ? { formatoAcumulado: i.formatoAcumulado as Formato } : {}),
         formula: i.formula,
         ...(i.percentual ? { base: { formula: i.percentual, casas: i.casasPercentual === 2 ? 2 : 1 } } : {}),
         ...(i.separar ? { separar: true } : {}),

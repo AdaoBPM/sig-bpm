@@ -103,22 +103,21 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 
 /**
  * As cores do sinal (lista Cores, 11/10/2026): Padrão, verde, amarelo e vermelho; Daltonismo (a Acessibilidade do menu
- * do usuário, 16/10/2026), com azul no lugar do verde (melhor que o orçado). O destaque do desvio fica na cor forte, com
- * o texto, os valores e o ícone em branco (21/10/2026; antes, num tom claro da mesma cor, com um quadradinho colorido;
- * 14/10/2026: o fundo em SVG, pelas variáveis de cor, e o contorno como borda: no Firefox do usuário, o fundo em CSS saía
- * em branco na imagem copiada). O valor guardado continua "daltonismo", para manter a escolha já feita nos navegadores.
+ * do usuário, 16/10/2026), com azul no lugar do verde (melhor que o orçado). Desde 21/10/2026, o destaque do desvio é
+ * cinza (claro ou escuro, conforme o tema), e a cor do sinal fica na faixa à direita dele e no ícone (antes, o destaque
+ * todo na cor forte, com o texto em branco). O valor guardado continua "daltonismo", para manter a escolha já feita.
  */
 export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
   padrao: {
-    1: { fundo: "var(--color-green-800)", texto: "Melhor que o" },
-    0: { fundo: "var(--color-yellow-800)", texto: "Até 5% do" },
-    [-1]: { fundo: "var(--color-red-700)", texto: "Pior que o" },
+    1: { cor: "var(--color-green-600)", texto: "Melhor que o" },
+    0: { cor: "var(--color-yellow-500)", texto: "Até 5% do" },
+    [-1]: { cor: "var(--color-red-600)", texto: "Pior que o" },
   },
   daltonismo: {
-    1: { fundo: "var(--color-blue-800)", texto: "Melhor que o" },
-    0: { fundo: "var(--color-yellow-800)", texto: "Até 5% do" },
-    [-1]: { fundo: "var(--color-red-700)", texto: "Pior que o" },
+    1: { cor: "var(--color-blue-600)", texto: "Melhor que o" },
+    0: { cor: "var(--color-yellow-500)", texto: "Até 5% do" },
+    [-1]: { cor: "var(--color-red-600)", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -129,57 +128,57 @@ function useSinais() {
   return { 1: { ...base[1], texto: `${base[1].texto} ${orcado}` }, 0: { ...base[0], texto: `${base[0].texto} ${orcado}` }, [-1]: { ...base[-1], texto: `${base[-1].texto} ${orcado}` } } as const;
 }
 
-/** A forma do sinal (21/10/2026), num quadro de 12: ▲ melhor, ▼ pior e ■ até 5%. */
-function FormaDoSinal({ s }: { s: -1 | 0 | 1 }) {
-  if (s === 1) return <polygon points="6,1 11.5,11 0.5,11" style={{ fill: "white" }} />;
-  if (s === -1) return <polygon points="0.5,1 11.5,1 6,11" style={{ fill: "white" }} />;
-  return <rect x={1.5} y={1.5} width={9} height={9} style={{ fill: "white" }} />;
-}
-
-/** O sinal da legenda: o ícone em branco num quadradinho na cor forte, como no destaque dos cards. Em SVG, para sair no Copiar como Imagem. */
-function Sinal({ s }: { s: -1 | 0 | 1 }) {
+/** O ícone do sinal (21/10/2026), na cor dele: ▲ melhor, ▼ pior e ■ até 5%. Em SVG, para sair no Copiar como Imagem. */
+function IconeDoSinal({ s, titulo }: { s: -1 | 0 | 1; titulo?: string }) {
   const SINAL = useSinais();
+  const fill = SINAL[s].cor;
   return (
-    <svg viewBox="0 0 16 16" className="inline-block size-4 shrink-0" role="img" aria-label={SINAL[s].texto}>
-      <title>{SINAL[s].texto}</title>
-      <rect width={16} height={16} rx={2} style={{ fill: SINAL[s].fundo }} />
-      <g transform="translate(3.5 3.5) scale(0.75)">
-        <FormaDoSinal s={s} />
-      </g>
+    <svg viewBox="0 0 12 12" className="inline-block size-3 shrink-0" role={titulo ? "img" : undefined} aria-label={titulo} aria-hidden={titulo ? undefined : true}>
+      {titulo ? <title>{titulo}</title> : null}
+      {s === 1 ? (
+        <polygon points="6,1 11.5,11 0.5,11" style={{ fill }} />
+      ) : s === -1 ? (
+        <polygon points="0.5,1 11.5,1 6,11" style={{ fill }} />
+      ) : (
+        <rect x={1.5} y={1.5} width={9} height={9} style={{ fill }} />
+      )}
     </svg>
   );
 }
 
+/** O sinal da legenda: o ícone na cor do sinal, como no destaque dos cards. */
+function Sinal({ s }: { s: -1 | 0 | 1 }) {
+  return <IconeDoSinal s={s} titulo={useSinais()[s].texto} />;
+}
+
 /**
  * O destaque do desvio (21/10/2026; antes, só o selo da variação): a variação com o ícone do sinal, "vs. Orçado" (ou
- * "vs. Comparado") e o valor orçado, tudo em branco sobre a cor forte do sinal (cinza, sem orçado).
+ * "vs. Comparado") e o valor orçado, num quadro cinza (claro ou escuro, conforme o tema), com os valores em preto e o
+ * "vs." em cinza, e, à direita, a faixa na cor do sinal, com o triplo da espessura da faixa amarela à esquerda dos cards
+ * (12 px; sem orçado, cinza). A faixa é uma borda (no Copiar como Imagem do Firefox, o fundo em CSS saía em branco; o do
+ * quadro vai em SVG).
  */
 function DestaqueDoDesvio({ b, formato }: { b: BlocoPainel; formato: FormatoPainel }) {
   const SINAL = useSinais();
   const { orcado } = useRotulosDoGrafico();
-  const fundo = b.sinal === null ? "var(--color-gray-500)" : SINAL[b.sinal].fundo;
+  const cor = b.sinal === null ? "var(--color-gray-400)" : SINAL[b.sinal].cor;
   return (
     <div
-      className="relative flex shrink-0 flex-col items-end overflow-hidden rounded-sm border px-2 py-1 text-right text-white"
-      style={{ borderColor: fundo }}
+      className="relative flex shrink-0 flex-col items-end overflow-hidden rounded-sm border-r-[12px] px-2 py-1 text-right"
+      style={{ borderRightColor: cor }}
       title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}
     >
-      {/* O fundo em SVG, atrás do conteúdo, para sair no Copiar como Imagem. */}
       <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
-        <rect width="100%" height="100%" style={{ fill: fundo }} />
+        <rect width="100%" height="100%" style={{ fill: "var(--color-gray-100)" }} />
       </svg>
       {/* A variação 50% maior (21/10/2026; antes, 12 px). */}
-      <span className="relative inline-flex items-center gap-1.5 text-lg leading-snug font-bold">
-        {b.sinal === null ? null : (
-          <svg viewBox="0 0 12 12" className="inline-block size-3 shrink-0" aria-hidden>
-            <FormaDoSinal s={b.sinal} />
-          </svg>
-        )}
+      <span className="relative inline-flex items-center gap-1.5 text-lg leading-snug font-bold text-gray-900">
+        {b.sinal === null ? null : <IconeDoSinal s={b.sinal} />}
         {desvio(b.vsOrcado)}
       </span>
-      <span className="relative mt-0.5 text-xs whitespace-nowrap">vs. {orcado}</span>
+      <span className="relative mt-0.5 text-xs whitespace-nowrap text-gray-600">vs. {orcado}</span>
       {/* 25% maior (21/10/2026; antes, 14 px); sem a unidade, que fica no rótulo do período. */}
-      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap">{formatarCurto(b.orcado, formato)}</span>
+      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap text-gray-900">{formatarCurto(b.orcado, formato)}</span>
     </div>
   );
 }
@@ -204,7 +203,7 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
         </p>
         {/* 25% maior (21/10/2026; antes, 22 px até 1536 px e 26 px acima). */}
         <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatarCurto(b.realizado, formato)}</p>
-        <p className="h-4 text-xs text-gray-500">{base}</p>
+        <p className="h-4 text-xs whitespace-nowrap text-gray-500">{base}</p>
       </div>
       <DestaqueDoDesvio b={b} formato={formato} />
     </div>
@@ -523,8 +522,8 @@ export function PainelContent() {
             </li>
             <li>
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em cima, o nome e, à direita dele, a Metodologia (a fórmula do item) e o comportamento entre parênteses (o mês de referência fica ao lado do nome
-              do grupo); embaixo, o Atual e o Acumulado, com a unidade no rótulo (Atual (R$ M), Acumulado (m³)…), cada um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, em branco sobre a cor do
-              sinal; e, ao lado, o gráfico dos meses do exercício, com
+              do grupo); embaixo, o Atual e o Acumulado, com a unidade no rótulo (Atual (R$ M), Acumulado (m³)…), cada um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, num quadro cinza com uma
+              faixa na cor do sinal à direita; e, ao lado, o gráfico dos meses do exercício, com
               o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
             <li>
@@ -564,13 +563,13 @@ export function PainelContent() {
               exercício, ou sem o valor no cenário, o orçado é zero.
             </p>
             <p>
-              O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O destaque fica verde
-              (azul, com a Acessibilidade Daltonismo), com um triângulo para cima, quando o realizado está do lado bom do orçado; vermelho, com um
-              triângulo para baixo, do lado ruim; e amarelo, com um quadrado, quando o desvio é de até 5%. O lado bom depende
+              O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). A faixa à direita do destaque
+              e o ícone ficam verdes (azuis, com a Acessibilidade Daltonismo), com um triângulo para cima, quando o realizado está do lado bom do
+              orçado; vermelhos, com um triângulo para baixo, do lado ruim; e amarelos, com um quadrado, quando o desvio é de até 5%. O lado bom depende
               do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
             </p>
             <p>
-              O resultado financeiro e as despesas fixas aparecem em milhares (K) no mês e em milhões (M) no acumulado. O
+              O resultado financeiro e as despesas fixas aparecem em milhares de reais (R$ K), no Atual e no Acumulado. O
               percentual sob o resultado financeiro também é sobre a receita líquida (/RL), como os demais.
             </p>
             <p>

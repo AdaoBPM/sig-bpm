@@ -32,7 +32,7 @@ export default function PainelBordoPage() {
               </li>
               <li>
                 O Formato diz a unidade do Atual e do Acumulado (R$ em milhões ou milhares, m³, pistas, percentual, R$/m³), que aparece no rótulo
-                deles, e não nos valores; o Resultado Financeiro e as despesas fixas usam a opção de milhares no Atual e milhões no Acumulado. O Percentual sob o Valor é opcional: uma segunda fórmula, mostrada sob o realizado com o rótulo (/RL), com uma ou duas casas.
+                deles, e não nos valores; é o mesmo no Atual e no Acumulado. O Percentual sob o Valor é opcional: uma segunda fórmula, mostrada sob o realizado com o rótulo (/RL), com uma ou duas casas.
                 Espaço Antes começa um novo bloco no quadro.
               </li>
               <li>Use “Novo” para incluir um item; o lápis edita, e a exclusão fica dentro da edição. Inativo, o item sai do Painel de Bordo.</li>
