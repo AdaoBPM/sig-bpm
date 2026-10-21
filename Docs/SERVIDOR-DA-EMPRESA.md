@@ -53,8 +53,20 @@ os pontos para a troca do SQLite pelo PostgreSQL. Ele é atualizado a cada publi
   containers), a mesma faixa, no lugar dos erros, e ninguém sai do sistema. Antes de qualquer script de dados no servidor:
   `ssh srv-docker "touch /root/dados/sig-bpm/dados/.publicacao-em-andamento"` e, no fim, `rm -f` no mesmo caminho. Quando
   a função estiver publicada, **avisar o TI**, que põe no deploy.sh o ligar no início e o desligar no fim (com trap).
-- **Pendente:** recriar no servidor o que foi feito na porta 3000 do notebook depois de 15/10 15:12 (o cenário "Teste para o
-  Orçamento 2027", os índices…), sem trocar a base inteira. A produção da porta 3000 do notebook foi desligada em 20/10/2026.
+- **Feito em 21/10/2026, 12:22–12:30 (com a aprovação do Adão):** a sincronização do que foi feito na porta 3000 do notebook
+  depois de 15/10 15:12, sem trocar a base inteira. Pela auditoria das duas bases: o cenário "Teste para o Orçamento 2027"
+  (novo: 258 premissas, 354 linhas de centros, 180 resultados, 105 indicadores, 1 investimento, os índices Demanda + Inflação,
+  Inflação e Demanda e o comparativo com a Projeção), a "Projeção de Resultados" (a referência composta reimportada em 15/10;
+  atualizada no lugar, para o Cenário Orgânico e o Teste continuarem comparados com ela), a versão VER00 congelada do
+  "Orçamento Empresarial" e o Relatório Executivo de Agosto/2026 (16 blocos e a foto, em `dados/uploads/relatorios-executivos/`).
+  Os dois cenários "Teste" (analítico e sintético), excluídos no notebook em 15/10, **ficam no servidor** (decisão do Adão). O
+  perfil Gestor já era igual nas duas bases; o balancete detalhado, a recarga dos centros e as importações já estavam no
+  servidor. Pacote e roteiro em `dados/sincronizacao-2026-10-21/` (o script aplicador só simula sem `--gravar`); simulado,
+  ensaiado numa cópia do back-up das 10:53 e gravado com o sinal ligado, depois de conferir que não havia deploy. Back-up antes:
+  `dados/backups/dev-2026-10-21-1222-antes-sincronizacao.db`. Conferido: integrity_check ok, nenhuma chave estrangeira
+  quebrada, os índices nas mesmas contas do notebook (96, 100 e 6) e 202 contas com índice no Comparativo. Na auditoria, as
+  entradas com `"sincronizacao": "base antiga do notebook (21/10/2026)"`. A produção da porta 3000 do notebook foi desligada
+  em 20/10/2026.
 
 ## Estado da base do servidor
 
