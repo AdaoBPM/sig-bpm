@@ -490,7 +490,7 @@ export function PainelContent() {
               o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
             <li>
-              Tipo: Barras (colunas do realizado e do orçado, como na planilha) ou Área (o realizado numa área amarela, mais forte no máximo do
+              Tipo: Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, mais forte no máximo do
               período e transparente no zero, com o contorno em amarelo-ouro, e o orçado numa linha preta; no gráfico do acumulado, a coluna do
               realizado com o mesmo degradê e o orçado como uma linha preta). As cores dos sinais seguem a Acessibilidade, no menu do usuário (o
               nome no canto de cima, à direita): Padrão (verde, amarelo e vermelho) ou Daltonismo (azul no lugar do verde, para quem não distingue
@@ -516,8 +516,8 @@ export function PainelContent() {
         sobre={
           <>
             <p>
-              O realizado contra o orçado do mês e do acumulado do exercício, como as abas Painel (Resultados) e Painel (Performance) do SIG
-              BPM 2026 - INDICADORES DE RESULTADO, com os gráficos mês a mês no padrão dos da planilha (realizado em amarelo-ouro, meta em preto).
+              O realizado contra o orçado do mês e do acumulado do exercício, nos grupos Resultados e Performance, com os gráficos mês a mês
+              (realizado em amarelo-ouro, meta em preto).
             </p>
             <p>
               O realizado sai dos mesmos valores da aba Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
@@ -531,7 +531,7 @@ export function PainelContent() {
               do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
             </p>
             <p>
-              Como na planilha, o resultado financeiro e as despesas fixas aparecem em milhares (K) no mês e em milhões (M) no acumulado. O
+              O resultado financeiro e as despesas fixas aparecem em milhares (K) no mês e em milhões (M) no acumulado. O
               percentual sob o resultado financeiro também é sobre a receita líquida (/RL), como os demais.
             </p>
             <p>

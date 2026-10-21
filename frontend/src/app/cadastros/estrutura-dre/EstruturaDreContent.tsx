@@ -80,13 +80,13 @@ export function EstruturaDreContent() {
           <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>A composição das linhas de total é validada antes de gravar.</li>
-          <li>“Recarregar da Planilha” mostra o que muda em relação à planilha UNIDADES E CENTROS DE CUSTO antes de gravar.</li>
+          <li>“Recarregar da Planilha” mostra o que muda em relação ao arquivo enviado antes de gravar.</li>
           <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
           <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Tipo, o Grupo, a Atribuição (e as siglas), a Descrição e as Unidades e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
           <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
         </ul>
       }
-      descricao="A DRE é cadastro, não código. Carregada da aba Realizado (Consolidado) e editável aqui; a composição é validada antes de gravar."
+      descricao="A DRE é cadastro, não código. Editável aqui; a composição é validada antes de gravar."
       acoes={
         <div className="flex items-center gap-2">
           <RecarregarPlanilha />

@@ -21,7 +21,7 @@ export default function LinhasPage() {
               <li>Use “Novo” para incluir uma linha, escolhendo a unidade; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>As linhas de produto ficam na Matriz ou na Filial, e as de obra em Serviços: uma linha não passa de produto para obra.</li>
               <li>A Und. de Medida diz em que se mede a linha (m³, m³ e pistas, kg, m, m², dia ou %); será usada nos Cenários Analíticos. Escolha na lista, no lápis.</li>
-              <li>As outras telas e as importações acham a linha pelo nome (sem diferença de maiúsculas): o nome é o texto com que as planilhas das Listas citam a linha.</li>
+              <li>As outras telas e as importações acham a linha pelo nome (sem diferença de maiúsculas): o nome é o texto com que as listas importadas citam a linha.</li>
               <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
               <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Nome e a Unidade e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
               <li>

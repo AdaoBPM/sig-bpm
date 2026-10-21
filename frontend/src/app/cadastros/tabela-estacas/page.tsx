@@ -20,7 +20,7 @@ export default function TabelaEstacasPage() {
               <li>Os preços bruto e líquido (por m³) aparecem em R$, com duas casas decimais.</li>
             </ul>
           }
-          descricao="Os preços das estacas por seção e grupo, com vigência (aba Tabela de Estacas do UNIDADES E CENTROS DE CUSTO), que valoram a variação do estoque de estacas."
+          descricao="Os preços das estacas por seção e grupo, com vigência, que valoram a variação do estoque de estacas."
         />
       </PermissionGuard>
     </ProtectedLayout>

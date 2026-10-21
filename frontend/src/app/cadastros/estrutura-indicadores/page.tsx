@@ -34,7 +34,7 @@ export default function EstruturaIndicadoresPage() {
               <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="Os indicadores de resultado, como na aba Realizado (SIG) do INDICADORES DE RESULTADO, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar de Resultados Empresariais: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento Empresarial (o cenário marcado no exercício). Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
+          descricao="Os indicadores de resultado, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar de Resultados Empresariais: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento Empresarial (o cenário marcado no exercício). Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
         />
       </PermissionGuard>
     </ProtectedLayout>

@@ -39,7 +39,7 @@ export default function RegrasRateioPage() {
               <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="As chaves de rateio (aba Rateios do BASE REALIZADO (OPERAÇÃO)): por volume — o volume do destino sobre o da chave, nas listas do mês — ou, desde 14/10/2026, por percentuais fixos digitados, que somam 100% na chave. A chave e o destino são fixos depois de criada a regra; as vigências dizem de que mês a que mês cada regra vale. O volume continua apurado também nas regras fixas (os indicadores de volume leem dele)."
+          descricao="As chaves de rateio: por volume — o volume do destino sobre o da chave, nas listas do mês — ou, desde 14/10/2026, por percentuais fixos digitados, que somam 100% na chave. A chave e o destino são fixos depois de criada a regra; as vigências dizem de que mês a que mês cada regra vale. O volume continua apurado também nas regras fixas (os indicadores de volume leem dele)."
         />
       </PermissionGuard>
     </ProtectedLayout>

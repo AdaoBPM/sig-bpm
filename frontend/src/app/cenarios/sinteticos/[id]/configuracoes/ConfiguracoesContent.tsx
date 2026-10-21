@@ -63,7 +63,7 @@ export function ConfiguracoesContent() {
             ) : (
               <>
                 <li>
-                  Na aba Referência (opcional): importe um arquivo (como o ORÇAMENTO BPM) ou carregue até duas referências em Cenários e Realizados. A
+                  Na aba Referência (opcional): importe um arquivo ou carregue até duas referências em Cenários e Realizados. A
                   referência substitui a DRE e os indicadores do cenário, que depois se editam na tela Resultados.
                 </li>
                 <li>

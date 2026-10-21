@@ -43,7 +43,7 @@ export default function PainelBordoPage() {
               </li>
             </ul>
           }
-          descricao="Os itens do Painel de Bordo, como nas abas Painel (Resultados) e Painel (Performance) do SIG BPM 2026 - INDICADORES DE RESULTADO. O Painel de Bordo de Resultados Empresariais, o dos cenários e os cards dos Relatórios Executivos usam os itens ativos daqui. Cada item tem a sua Metodologia, uma fórmula sobre os indicadores. Carregado com os itens e as contas que a ferramenta já mostrava."
+          descricao="Os itens do Painel de Bordo (Resultados e Performance). O Painel de Bordo de Resultados Empresariais, o dos cenários e os cards dos Relatórios Executivos usam os itens ativos daqui. Cada item tem a sua Metodologia, uma fórmula sobre os indicadores. Carregado com os itens e as contas que a ferramenta já mostrava."
         />
       </PermissionGuard>
     </ProtectedLayout>

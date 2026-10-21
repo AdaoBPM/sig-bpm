@@ -141,7 +141,7 @@ export function RecarregarPlanilha() {
         className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
       >
         <FileSpreadsheet className="size-4" />
-        Recarregar da planilha
+        Recarregar da Planilha
       </Button>
 
       <Dialog open={aberto} onOpenChange={(o) => (!o ? fechar() : undefined)}>

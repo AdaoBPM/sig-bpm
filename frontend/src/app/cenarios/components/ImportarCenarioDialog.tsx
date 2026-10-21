@@ -186,8 +186,8 @@ export function ImportarCenarioDialog({ cenario, onFechar }: { cenario: Cenario 
         <DialogHeader>
           <DialogTitle>{cenario ? `Importar Arquivo no Cenário ${cenario.nome}` : "Importar Cenário"}</DialogTitle>
           <DialogDescription>
-            Escolha uma planilha (.xlsx) com as abas da DRE por unidade, como as do ORÇAMENTO BPM 2026 (Consolidado, Matriz, Filial, Serviços,
-            Desp.+Extra e Extra RN), e a aba das metas, como a Metas (Orçamento) do INDICADORES DE RESULTADO. A ferramenta lê o arquivo, confere as
+            Escolha um arquivo (.xlsx) com a DRE de cada unidade (Consolidado, Matriz, Filial, Serviços, Desp.+Extra e RN ou Extra RN, com a
+            descrição na coluna A e os meses JAN a DEZ no rótulo) e as metas (Metas ou Metas (Orçamento)). A ferramenta lê o arquivo, confere as
             abas e o exercício (os meses dos rótulos) e mostra o que vai entrar{cenario ? " e o que muda no cenário" : ""}. Nada é importado antes de você confirmar.
           </DialogDescription>
         </DialogHeader>

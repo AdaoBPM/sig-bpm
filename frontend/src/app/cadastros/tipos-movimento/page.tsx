@@ -19,7 +19,7 @@ export default function TiposMovimentoPage() {
               <li>Uma devolução só vira receita quando o tipo de movimento dela está aqui.</li>
             </ul>
           }
-          descricao="Os tipos de movimento de venda (aba Tipos de Movimento do UNIDADES E CENTROS DE CUSTO): uma devolução só vira receita quando o movimento está aqui."
+          descricao="Os tipos de movimento de venda: uma devolução só vira receita quando o movimento está aqui."
         />
       </PermissionGuard>
     </ProtectedLayout>

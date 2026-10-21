@@ -219,9 +219,9 @@ export function PremissasContent() {
               ou Indireta pela atribuição mais comum dos centros dele; Matriz ou Filial pelo balde (o Unidade e os de rateio, pela filial em que os
               centros mais lançaram); Montagem nos grupos dos custos de montagem; as despesas e os grupos sem atribuição entram só no Quadro de Lotação
               Total. MO Direta Total e MO Indireta Total são Matriz + Filial, e MO Geral, Direta + Indireta; com eles se calculam as eficiências. Na
-              referência realizada, os Colaboradores CLT e PJ de cada grupo vêm da lista Quadro de Lotação dos meses (Listas do mês; a aba de mesmo nome do
-              LISTAS REALIZADO (OPERAÇÃO)): a soma dos centros de custo do grupo em cada mês fechado, e a Média de Referência é a soma nos meses com a
-              lista ÷ o número deles. Os indicadores de quadro de lotação do realizado (aba Indicadores (Admin.)) não entram.
+              referência realizada, os Colaboradores CLT e PJ de cada grupo vêm da lista Quadro de Lotação dos meses (Listas do mês): a soma dos centros de custo do grupo em cada mês fechado, e a Média de
+              Referência é a soma nos meses com a lista ÷ o número deles. Os indicadores de quadro de lotação do realizado (os do Administrativo) não
+              entram.
             </p>
             <p>
               A conta Encargos e Benefícios da mão de obra (direta e indireta) de cada grupo é calculada mês a mês, com o INSS e o FGTS também sobre

@@ -79,20 +79,19 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
           <>
             <p>
               Os indicadores gerenciais do exercício, {periodoFixo ? "no mês da competência" : "mês a mês e acumulados"}, na ordem e com os nomes do
-              INDICADORES DE RESULTADO (aba Realizado (SIG)). O catálogo — grupo, numeração, nome, comportamento, unidade, a fórmula de cada indicador e a forma do acumulado — fica em Cadastros da Controladoria / Analítico / Indicadores, onde se edita.
+              cadastro. O catálogo — grupo, numeração, nome, comportamento, unidade, a fórmula de cada indicador e a forma do acumulado — fica em Cadastros da Controladoria / Analítico / Indicadores, onde se edita.
             </p>
             <p>
               Os valores saem da DRE apurada (congelada) de cada competência{periodoFixo ? "" : " fechada (as abertas e em conferência não entram em Resultados Empresariais)"}, dos volumes da apuração (projetos liberados) e dos indicadores
-              importados no fechamento: a aba Indicadores (Admin.) do LISTAS REALIZADO (OPERAÇÃO) — quadro de lotação, fluxo de caixa,
-              inadimplência, turnover, vagas e acidentes — e a aba Indicadores (Comercial) do CONTROLE DAS VENDAS - COMERCIAL — vendas, receita
-              vendida, margem, demanda e mix. O acumulado soma os meses ou, nos indicadores de razão (%, R$/m³, eficiências, margem das vendas,
-              turnover), é a média ponderada da planilha. Os de posição (quadro de lotação, inadimplência, vagas) valem o último mês.
+              importados no fechamento: os do Administrativo — quadro de lotação, fluxo de caixa, inadimplência, turnover, vagas e acidentes — e
+              os do Comercial — vendas, receita vendida, margem, demanda e mix. O acumulado soma os meses ou, nos indicadores de razão (%, R$/m³,
+              eficiências, margem das vendas, turnover), é a média ponderada. Os de posição (quadro de lotação, inadimplência, vagas) valem o último mês.
             </p>
             <p>
               Nas Metas Estratégicas (GME), a Média Móvel da Demanda Gerada e a da Demanda Expedida (GME 4) dividem a demanda e a expedição do mês
               pela capacidade de produção, que é a meta de Produção (Vol.): Total do mês; o Atingimento do FCOL e o da MC (GME 8) dividem o
               realizado de janeiro até o mês pelo orçado do mesmo período, e o acumulado é o do
-              último mês — como as linhas 112 a 115 da aba Realizado do INDICADORES DE RESULTADO.
+              último mês.
             </p>
             <p>
               O orçado (o gráfico do indicador) vem das Metas do cenário marcado como Orçamento Empresarial no exercício (Criação de
@@ -101,8 +100,8 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             </p>
             <p>
               Os indicadores numerados do Comercial e do Administrativo também podem ser digitados nas Listas Operacionais (abas Comercial e
-              Administrativo): o valor digitado substitui o importado até uma nova importação da aba. Um indicador importado fica sem valor no
-              mês em que a aba não foi importada nem o valor digitado.
+              Administrativo): o valor digitado substitui o importado até uma nova importação. Um indicador importado fica sem valor no
+              mês em que não foi importado nem digitado.
             </p>
           </>
         }

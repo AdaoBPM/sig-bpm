@@ -152,7 +152,7 @@ export function ReferenciaSintetica({ cenario, podeEditar, aviso }: { cenario: C
         {(
           [
             ["composta", "Cenários e Realizados", "Até duas referências, em meses distintos: o resultado realizado de um exercício (mês a mês ou a média de um período) ou outro cenário.", History],
-            ["arquivo", "Arquivo", "Uma planilha como o ORÇAMENTO BPM (abas Consolidado, Matriz, Filial, Serviços, Desp.+Extra, RN e Metas).", FileSpreadsheet],
+            ["arquivo", "Arquivo", "Um arquivo (.xlsx) com a DRE de cada unidade e as metas.", FileSpreadsheet],
           ] as const
         ).map(([v, rotulo, detalhe, Icone]) => (
           <OpcaoEmLinha key={v} nome="referencia" marcada={tipo === v} onMarcar={() => setTipo(v)} rotulo={rotulo} detalhe={detalhe} Icone={Icone} />

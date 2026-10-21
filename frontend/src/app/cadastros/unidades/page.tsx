@@ -22,7 +22,7 @@ export default function UnidadesPage() {
               <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="As unidades de negócio da DRE. O código é fixo; o nome, a ordem e a situação são editáveis. O nome identifica a unidade na carga da Estrutura da DRE (as abas Realizado (…) da planilha): ao renomear uma unidade, a carga deixa de reconhecê-la."
+          descricao="As unidades de negócio da DRE. O código é fixo; o nome, a ordem e a situação são editáveis. O nome identifica a unidade na carga da Estrutura da DRE: ao renomear uma unidade, a carga deixa de reconhecê-la."
         />
       </PermissionGuard>
     </ProtectedLayout>

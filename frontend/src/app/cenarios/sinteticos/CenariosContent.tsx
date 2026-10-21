@@ -169,12 +169,10 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
           <>
             <p>
               Os cenários sintéticos: cada um é uma DRE por unidade (Consolidado, Matriz, Filial, Serviços, Despesas e Extra e RN), mês a mês no
-              exercício, com as metas dos indicadores — como o ORÇAMENTO BPM 2026 - CENÁRIO ADOTADO e a aba Metas do INDICADORES DE RESULTADO.
+              exercício, com as metas dos indicadores.
             </p>
             <p>
-              A importação lê as abas pelo nome (o nome do arquivo não importa): Consolidado, Matriz, Filial, Serviços, Desp.+Extra e RN (ou Extra
-              RN), com a descrição na coluna A e os meses JAN a DEZ no rótulo, e a aba Metas (ou Metas (Orçamento)), com o INDICADOR e os meses.
-              Cada linha da DRE se liga à da Estrutura da DRE pela descrição, na ordem.
+              Na importação (Configurações / Referência), cada linha da DRE se liga à da Estrutura da DRE pela descrição, na ordem.
             </p>
             <p>Os cenários analíticos (montados pelas premissas) ficam em Cenários Analíticos.</p>
           </>
