@@ -199,8 +199,9 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
 
 /**
  * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git): o título e a legenda em cima do Atual e do Acumulado (2/5 do card, 1/5 cada) e o
- * gráfico dos meses do exercício, com o do acumulado ao lado (3/5). Em telas estreitas, um embaixo do outro.
+ * painel-cards-lado-a-lado do git): o título e a legenda em cima do Atual e do Acumulado (a metade do card, 1/4 cada;
+ * 21/10/2026, antes 2/5) e o gráfico dos meses do exercício, com o do acumulado ao lado (a outra metade; antes, 3/5). Nos
+ * cards dos Relatórios Executivos, continua 2/5 e 3/5 (CardDoPainel). Em telas estreitas, um embaixo do outro.
  */
 function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   const sentido = (
@@ -209,7 +210,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
     </span>
   );
   const acumulado = rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`;
-  // O espaço entre os blocos menor (12 px), para o rótulo, a tag e os valores caberem em 1/5 do card.
+  // O espaço entre os blocos menor (12 px), para o rótulo, a tag e os valores caberem em 1/4 do card.
   const coluna = "lg:border-l lg:border-gray-100 lg:pl-3";
   return (
     // O leiaute de 13/10/2026: o título e a legenda, maiores, em cima dos dois blocos (o Atual e o Acumulado); o gráfico
@@ -217,7 +218,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
     // data-card-indicador e data-grafico-do-card: a imagem sem os gráficos (globals.css, 14/10/2026).
     <article
       data-card-indicador
-      className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2"
+      className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2"
     >
       {/* O nome e, à direita dele, a sigla e o sentido, alinhados ao vs. Orçado do Acumulado; o mês fica no nome do grupo (13/10/2026). */}
       <header className="flex min-w-0 items-baseline justify-between gap-3 lg:col-span-2 lg:pr-3">
@@ -290,7 +291,10 @@ export function CardDoPainel({
 }) {
   return (
     <CoresDoPainel.Provider value={cores}>
-      <div className={`h-full [&>article]:h-full ${comGrafico ? "" : "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"}`}>
+      {/* Com o gráfico, os valores em 2/5 do card, como antes de 21/10/2026 (no Painel de Bordo, a metade). */}
+      <div
+        className={`h-full [&>article]:h-full ${comGrafico ? "lg:[&_[data-card-indicador]]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)]" : "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"}`}
+      >
         <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
       </div>
     </CoresDoPainel.Provider>
@@ -504,8 +508,8 @@ export function PainelContent() {
               acumulado), que o botão ao lado do nome copia como imagem. Nesta aba, “Exportar” baixa os indicadores em Excel ou PDF.
             </li>
             <li>
-              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em
-              cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
+              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela (o Atual e o
+              Acumulado na metade esquerda; os gráficos, na direita): em cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
               um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, em branco sobre a cor do
               sinal; e, ao lado, o gráfico dos meses do exercício, com
               o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
@@ -520,7 +524,7 @@ export function PainelContent() {
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
-              Em “Configurar Gráficos”, o “Compara Com” escolhe o cenário comparado entre os marcados do exercício (Orçamento Empresarial, o padrão,
+              Em “Configurar Gráficos”, a “Comparação” escolhe o cenário comparado entre os marcados do exercício (Orçamento Empresarial, o padrão,
               Resultados Anteriores, Resultados Vendidos e Previsão); fora do Orçamento Empresarial, os cards dizem “vs.” e o nome da marcação. A escolha vale
               também em Resultados.
             </li>

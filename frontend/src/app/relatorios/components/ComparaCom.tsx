@@ -7,7 +7,7 @@ import { relatoriosService, type MarcacaoComparavel } from "../services/relatori
 import { Seletor } from "./SeletorPeriodo";
 
 /**
- * O Compara Com de Resultados Empresariais (21/10/2026): o cenário comparado (as colunas pretas de Resultados e o
+ * A Comparação de Resultados Empresariais (21/10/2026; de início, "Compara Com"): o cenário comparado (as colunas pretas de Resultados e o
  * orçado do Painel de Bordo), entre os cenários marcados do exercício (Orçamento Empresarial, Resultados Anteriores,
  * Resultados Vendidos e Previsão). O padrão é o Orçamento Empresarial; a escolha fica guardada no navegador e vale nas
  * duas telas.
@@ -44,7 +44,7 @@ export function SeletorComparaCom({ valor, opcoes, onMudar }: { valor: MarcacaoC
   if (!opcoes.length) return null;
   return (
     <Seletor
-      rotulo="Compara Com"
+      rotulo="Comparação"
       valor={valor}
       largura="w-56"
       onMudar={(v) => onMudar(v as MarcacaoComparavel)}

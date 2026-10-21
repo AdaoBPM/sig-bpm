@@ -14,10 +14,10 @@ import { botaoPrimario, Erro } from "./CenarioDialog";
 
 /** O que cada marcação faz, embaixo da opção. */
 const EFEITO: Record<MarcacaoCenario, (c: Cenario) => string> = {
-  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado de Resultados Empresariais em ${c.ano} (Resultados e Painel de Bordo): o comparado padrão do Compara Com.`,
-  RESULTADOS_ANTERIORES: (c) => `Os resultados de comparação do exercício anterior; pode ser escolhido no Compara Com de Resultados Empresariais em ${c.ano}.`,
-  RESULTADOS_VENDIDOS: (c) => `Os resultados do que foi vendido; pode ser escolhido no Compara Com de Resultados Empresariais em ${c.ano}.`,
-  PREVISAO: (c) => `Uma previsão do exercício; pode ser escolhida no Compara Com de Resultados Empresariais em ${c.ano} (Resultados e Painel de Bordo).`,
+  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado de Resultados Empresariais em ${c.ano} (Resultados e Painel de Bordo): o comparado padrão da Comparação.`,
+  RESULTADOS_ANTERIORES: (c) => `Os resultados de comparação do exercício anterior; pode ser escolhido na Comparação de Resultados Empresariais em ${c.ano}.`,
+  RESULTADOS_VENDIDOS: (c) => `Os resultados do que foi vendido; pode ser escolhido na Comparação de Resultados Empresariais em ${c.ano}.`,
+  PREVISAO: (c) => `Uma previsão do exercício; pode ser escolhida na Comparação de Resultados Empresariais em ${c.ano} (Resultados e Painel de Bordo).`,
 };
 
 /**
