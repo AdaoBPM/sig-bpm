@@ -71,8 +71,8 @@ export function CenarioPainelContent() {
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>
             <li>
               Cada card traz o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Cenário
-              (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o valor em destaque e, à direita, o selo do desvio e o valor do
-              cenário comparado (vs. Comparado); e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
+              (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o valor em destaque e, à direita, o destaque do desvio — a
+              variação, “vs. Comparado” e o valor do cenário comparado, em branco sobre a cor do sinal; e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
             </li>
             <li>
               Com os Rótulos, o valor do cenário fica à esquerda do centro de cada mês (e do acumulado) e o do comparado à direita, e os gráficos
@@ -100,8 +100,9 @@ export function CenarioPainelContent() {
               no lugar do orçado.
             </p>
             <p>
-              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O sinal fica verde (azul, com a Acessibilidade Daltonismo) quando
-              o cenário está do lado bom do comparado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%; o lado bom depende do sentido do
+              O desvio (vs. Comparado) é o valor do cenário sobre o do comparado, menos 1. O destaque fica verde (azul, com a Acessibilidade Daltonismo), com
+              um triângulo para cima, quando o cenário está do lado bom do comparado; vermelho, com um triângulo para baixo, do lado ruim; e amarelo,
+              com um quadrado, quando o desvio é de até 5%; o lado bom depende do sentido do
               indicador (↑ ou ↓).
             </p>
           </>

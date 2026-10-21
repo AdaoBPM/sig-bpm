@@ -21,7 +21,6 @@ import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
-  Quadradinho,
   SeletorRotulos,
   SeletorTipoGrafico,
   useRotulosDosValores,
@@ -89,24 +88,23 @@ const fatorDaEscala = (f: FormatoPainel) => (f === "MILHOES" ? 1e-6 : f === "MIL
 const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${n1.format(v * 100)}%`);
 
 /**
- * As cores do sinal (lista Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde, amarelo e
- * vermelho); Daltonismo (a Acessibilidade do menu do usuário, 16/10/2026), com azul no lugar do verde (melhor que o
- * orçado), amarelo e vermelho. O selo do desvio fica na cor forte (21/10/2026: a que era a da fonte), com o texto em branco
- * (antes, num tom claro da mesma cor; 14/10/2026: o fundo em SVG, pelas variáveis de cor,
- * e o contorno como borda: no Firefox do usuário, o fundo em CSS saía em branco na imagem copiada). O valor guardado
- * continua "daltonismo", para manter a escolha já feita nos navegadores.
+ * As cores do sinal (lista Cores, 11/10/2026): Padrão, verde, amarelo e vermelho; Daltonismo (a Acessibilidade do menu
+ * do usuário, 16/10/2026), com azul no lugar do verde (melhor que o orçado). O destaque do desvio fica na cor forte, com
+ * o texto, os valores e o ícone em branco (21/10/2026; antes, num tom claro da mesma cor, com um quadradinho colorido;
+ * 14/10/2026: o fundo em SVG, pelas variáveis de cor, e o contorno como borda: no Firefox do usuário, o fundo em CSS saía
+ * em branco na imagem copiada). O valor guardado continua "daltonismo", para manter a escolha já feita nos navegadores.
  */
 export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
   padrao: {
-    1: { cor: "#92D050", fundo: "var(--color-green-800)", selo: "text-white border-green-800", texto: "Melhor que o" },
-    0: { cor: "#FFFF00", fundo: "var(--color-yellow-800)", selo: "text-white border-yellow-800", texto: "Até 5% do" },
-    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--color-red-700)", selo: "text-white border-red-700", texto: "Pior que o" },
+    1: { fundo: "var(--color-green-800)", texto: "Melhor que o" },
+    0: { fundo: "var(--color-yellow-800)", texto: "Até 5% do" },
+    [-1]: { fundo: "var(--color-red-700)", texto: "Pior que o" },
   },
   daltonismo: {
-    1: { cor: "#0070C0", fundo: "var(--color-blue-800)", selo: "text-white border-blue-800", texto: "Melhor que o" },
-    0: { cor: "#FFFF00", fundo: "var(--color-yellow-800)", selo: "text-white border-yellow-800", texto: "Até 5% do" },
-    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--color-red-700)", selo: "text-white border-red-700", texto: "Pior que o" },
+    1: { fundo: "var(--color-blue-800)", texto: "Melhor que o" },
+    0: { fundo: "var(--color-yellow-800)", texto: "Até 5% do" },
+    [-1]: { fundo: "var(--color-red-700)", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -117,32 +115,58 @@ function useSinais() {
   return { 1: { ...base[1], texto: `${base[1].texto} ${orcado}` }, 0: { ...base[0], texto: `${base[0].texto} ${orcado}` }, [-1]: { ...base[-1], texto: `${base[-1].texto} ${orcado}` } } as const;
 }
 
-function Sinal({ s }: { s: BlocoPainel["sinal"] }) {
-  const SINAL = useSinais();
-  const { orcado } = useRotulosDoGrafico();
-  if (s === null) return <span className="inline-block size-3 rounded-[2px] border border-gray-300" title={`Sem ${orcado.toLowerCase()}`} />;
-  // Em SVG (13/10/2026), para sair no Copiar como Imagem.
-  return <Quadradinho cor={SINAL[s].cor} titulo={SINAL[s].texto} />;
+/** A forma do sinal (21/10/2026), num quadro de 12: ▲ melhor, ▼ pior e ■ até 5%. */
+function FormaDoSinal({ s }: { s: -1 | 0 | 1 }) {
+  if (s === 1) return <polygon points="6,1 11.5,11 0.5,11" style={{ fill: "white" }} />;
+  if (s === -1) return <polygon points="0.5,1 11.5,1 6,11" style={{ fill: "white" }} />;
+  return <rect x={1.5} y={1.5} width={9} height={9} style={{ fill: "white" }} />;
 }
 
-/** O desvio contra o orçado num selo com a cor do sinal. */
-function SeloDesvio({ b }: { b: BlocoPainel }) {
+/** O sinal da legenda: o ícone em branco num quadradinho na cor forte, como no destaque dos cards. Em SVG, para sair no Copiar como Imagem. */
+function Sinal({ s }: { s: -1 | 0 | 1 }) {
+  const SINAL = useSinais();
+  return (
+    <svg viewBox="0 0 16 16" className="inline-block size-4 shrink-0" role="img" aria-label={SINAL[s].texto}>
+      <title>{SINAL[s].texto}</title>
+      <rect width={16} height={16} rx={2} style={{ fill: SINAL[s].fundo }} />
+      <g transform="translate(3.5 3.5) scale(0.75)">
+        <FormaDoSinal s={s} />
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * O destaque do desvio (21/10/2026; antes, só o selo da variação): a variação com o ícone do sinal, "vs. Orçado" (ou
+ * "vs. Comparado") e o valor orçado, tudo em branco sobre a cor forte do sinal (cinza, sem orçado).
+ */
+function DestaqueDoDesvio({ b, formato }: { b: BlocoPainel; formato: FormatoPainel }) {
   const SINAL = useSinais();
   const { orcado } = useRotulosDoGrafico();
-  const tom = b.sinal === null ? "text-white border-gray-500" : SINAL[b.sinal].selo;
   const fundo = b.sinal === null ? "var(--color-gray-500)" : SINAL[b.sinal].fundo;
   return (
-    // 50% maior (21/10/2026; antes, 12 px).
-    <span className={`relative inline-flex shrink-0 items-center gap-2 rounded-sm border px-2 py-0.5 text-lg leading-snug font-bold ${tom}`} title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}>
+    <div
+      className="relative flex shrink-0 flex-col items-end overflow-hidden rounded-sm border px-2 py-1 text-right text-white"
+      style={{ borderColor: fundo }}
+      title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}
+    >
       {/* O fundo em SVG, atrás do conteúdo, para sair no Copiar como Imagem. */}
       <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
         <rect width="100%" height="100%" style={{ fill: fundo }} />
       </svg>
-      <span className="relative inline-flex items-center gap-1.5">
-        <Sinal s={b.sinal} />
+      {/* A variação 50% maior (21/10/2026; antes, 12 px). */}
+      <span className="relative inline-flex items-center gap-1.5 text-lg leading-snug font-bold">
+        {b.sinal === null ? null : (
+          <svg viewBox="0 0 12 12" className="inline-block size-3 shrink-0" aria-hidden>
+            <FormaDoSinal s={b.sinal} />
+          </svg>
+        )}
         {desvio(b.vsOrcado)}
       </span>
-    </span>
+      <span className="relative mt-0.5 text-xs whitespace-nowrap">vs. {orcado}</span>
+      {/* 25% maior (21/10/2026; antes, 14 px). */}
+      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap">{formatar(b.orcado, formato)}</span>
+    </div>
   );
 }
 
@@ -152,13 +176,14 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
 
 /**
  * Um período do card (o Atual ou o Acumulado; 13/10/2026): à esquerda, "Realizado (Atual)" (ou "(Acumulado)"; nos
- * cenários, "Cenário"), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o selo do desvio e,
- * embaixo dele, "vs. Orçado" (ou "vs. Comparado") com o valor orçado.
+ * cenários, "Cenário"), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o destaque do desvio
+ * (a variação, "vs. Orçado" ou "vs. Comparado" e o valor orçado).
  */
 function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b: BlocoPainel; formato: FormatoPainel; base: string | null; dica?: string }) {
   const rotulos = useRotulosDoGrafico();
   return (
-    <div className="flex min-w-0 items-start justify-between gap-2" title={dica}>
+    // Sem espaço para os dois lado a lado (21/10/2026), o destaque do desvio desce para baixo do valor, em vez de cortá-lo.
+    <div className="flex min-w-0 flex-wrap items-start justify-between gap-2" title={dica}>
       <div className="min-w-0">
         <p className="text-xs whitespace-nowrap text-gray-600">
           {rotulos.realizado} ({periodo})
@@ -167,12 +192,7 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
         <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatar(b.realizado, formato)}</p>
         <p className="h-4 text-xs text-gray-500">{base}</p>
       </div>
-      <div className="flex shrink-0 flex-col items-end text-right">
-        <SeloDesvio b={b} />
-        <p className="mt-1.5 text-xs whitespace-nowrap text-gray-600">vs. {rotulos.orcado}</p>
-        {/* 25% maior (21/10/2026; antes, 14 px). */}
-        <p className="text-[17.5px] font-bold whitespace-nowrap text-gray-900">{formatar(b.orcado, formato)}</p>
-      </div>
+      <DestaqueDoDesvio b={b} formato={formato} />
     </div>
   );
 }
@@ -486,7 +506,8 @@ export function PainelContent() {
             <li>
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em
               cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
-              um com o valor em destaque e, à direita, o selo do desvio e o orçado (vs. Orçado); e, ao lado, o gráfico dos meses do exercício, com
+              um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, em branco sobre a cor do
+              sinal; e, ao lado, o gráfico dos meses do exercício, com
               o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
             <li>
@@ -526,8 +547,9 @@ export function PainelContent() {
               exercício, ou sem o valor no cenário, o orçado é zero.
             </p>
             <p>
-              O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O sinal fica verde
-              (azul, com a Acessibilidade Daltonismo) quando o realizado está do lado bom do orçado, vermelho do lado ruim, e amarelo quando o desvio é de até 5%. O lado bom depende
+              O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). O destaque fica verde
+              (azul, com a Acessibilidade Daltonismo), com um triângulo para cima, quando o realizado está do lado bom do orçado; vermelho, com um
+              triângulo para baixo, do lado ruim; e amarelo, com um quadrado, quando o desvio é de até 5%. O lado bom depende
               do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
             </p>
             <p>
