@@ -10,6 +10,7 @@ import { authRoutes } from "./routes/authRoutes.js";
 import { cadastrosRoutes } from "./routes/cadastros/cadastrosRoutes.js";
 import { classificacaoRoutes } from "./routes/classificacao/classificacaoRoutes.js";
 import { competenciasRoutes } from "./routes/competencias/competenciasRoutes.js";
+import { bloquearNaPublicacao } from "./middlewares/publicacao.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
 import { listasDaCompetenciaRoutes, listasRoutes } from "./routes/listas/listasRoutes.js";
 import {
@@ -60,6 +61,8 @@ app.use(express.json({ limit: "1mb" }));
 registerSwagger(app);
 
 app.use("/health", healthRoutes);
+// O modo de publicação (21/10/2026): com o sinal ligado, só consulta (as gravações recebem 503).
+app.use(bloquearNaPublicacao);
 app.use("/auth", authRoutes);
 app.use("/auditoria", auditoriaRoutes);
 app.use("/cadastros/edicao", edicaoCadastrosRoutes);

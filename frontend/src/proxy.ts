@@ -6,6 +6,8 @@ const PUBLIC_PATHS = [
   "/auth/login",
   "/api/auth/login",
   "/api/auth/logout",
+  // O estado do modo de publicação (21/10/2026): a faixa aparece também na tela de login.
+  "/api/publicacao",
 ];
 
 export function proxy(request: NextRequest) {

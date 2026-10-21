@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { AvisoDeSaida } from "@/components/layout/AvisoDeSaida";
 import { BarraDeTelas } from "@/components/layout/BarraDeTelas";
 import { EtapasDoMes } from "@/components/layout/EtapasDoMes";
+import { FaixaDaPublicacao } from "@/components/layout/FaixaDaPublicacao";
 import { BarraDoCenario, lerRotaDoCenario } from "@/app/cenarios/components/BarraDoCenario";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -67,6 +68,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
       {/* Fundo opaco (a mesma cor de antes), para o título fixo da tela cobrir o que passa por baixo. */}
       <SidebarInset className="min-w-0 bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))]">
         <AppHeader />
+        {/* O modo de publicação (21/10/2026): só consulta enquanto o servidor é atualizado. */}
+        <FaixaDaPublicacao />
         {user?.divergenciasAbertas && (pathname === "/competencias" || pathname.startsWith("/competencias/")) ? (
           // O aviso de divergência aberta (Passo 24), só nas telas de competência e do mês
           // (decisão D3 do levantamento de layout); leva ao mês com divergências abertas.

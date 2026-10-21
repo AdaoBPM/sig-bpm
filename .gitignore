@@ -39,3 +39,6 @@ backend/prisma/*.db-journal
 
 # Vercel
 .vercel
+
+# O sinal do modo de publicação (21/10/2026), ao lado do banco.
+.publicacao-em-andamento

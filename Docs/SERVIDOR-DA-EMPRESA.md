@@ -36,6 +36,26 @@ os pontos para a troca do SQLite pelo PostgreSQL. Ele é atualizado a cada publi
 - **Trocar o banco inteiro (notebook → servidor):** nunca sozinho; o TI para o timer e confere a auditoria antes.
 - **Em dúvida, ou se algo fora do SIG quebrar:** parar e avisar o TI (eduardo.domingos@bpm.com.br).
 
+## Atualização do TI (21/10/2026)
+
+- **Tempo do deploy:** num commit que muda só código, o `npm ci` vem do cache e a gravação da imagem leva ~11 s (deploy
+  de ~4 min). Num commit que muda dependências (`package.json`/`package-lock.json`), ou depois de o cache ser apagado, o
+  `npm ci` roda de novo e a camada do `node_modules` (~2,5 GB) é regravada: ~15 min só na gravação, ~20–25 min no total
+  (ex.: 7967aad, 21/10 10:30→10:54: npm ci 181 s, build 223 s, gravação 891 s). **Avisar o Adão antes de um deploy com
+  mudança de dependências e, se der, juntar essas mudanças num commit só.**
+- **Ajustes do TI:** o cache de build (10,6 GB) foi limpo (disco de 84% para ~78%); o deploy.sh mantém até 8 GB de cache
+  (`docker builder prune --max-used-space 8GB`); o relógio do servidor (9 min atrasado) sincroniza por NTP.
+- **Quanto levou um deploy:** `ssh srv-docker "grep -E '===|OK:' /root/dados/sig-bpm/deploy.log | tail -2"`.
+- **Nunca** `docker builder prune` nem outros prunes no servidor: zeram o cache e deixam o próximo deploy lento.
+- **Modo de publicação (somente leitura), aprovado:** o sinal é `/root/dados/sig-bpm/dados/.publicacao-em-andamento`
+  (no container, `/dados/.publicacao-em-andamento`). Com ele, a ferramenta recusa as gravações (503, com o aviso) e mostra a
+  faixa "Publicação em andamento" em todas as telas e no login; com o backend sem responder (o ~1 min da troca dos
+  containers), a mesma faixa, no lugar dos erros, e ninguém sai do sistema. Antes de qualquer script de dados no servidor:
+  `ssh srv-docker "touch /root/dados/sig-bpm/dados/.publicacao-em-andamento"` e, no fim, `rm -f` no mesmo caminho. Quando
+  a função estiver publicada, **avisar o TI**, que põe no deploy.sh o ligar no início e o desligar no fim (com trap).
+- **Pendente:** recriar no servidor o que foi feito na porta 3000 do notebook depois de 15/10 15:12 (o cenário "Teste para o
+  Orçamento 2027", os índices…), sem trocar a base inteira. A produção da porta 3000 do notebook foi desligada em 20/10/2026.
+
 ## Estado da base do servidor
 
 - **19/10/2026, 17:48:** cópia inteira da base de produção local para o servidor (`Backups/2026-10-19 copia para o
