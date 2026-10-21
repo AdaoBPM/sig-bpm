@@ -17,7 +17,7 @@ import { ConfigurarGraficos } from "../components/ConfigurarGraficos";
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { IndicadoresDoPainel } from "./IndicadoresDoPainel";
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
-import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
+import { useComparaCom } from "../components/ComparaCom";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
@@ -429,15 +429,18 @@ export function CorpoDoPainel({
   );
 }
 
-/** A legenda: as cores do gráfico e os sinais (a comparação com o orçado), na linha do título, antes do Configurar Gráficos (14/10/2026). */
-export function LegendaDoPainel({ tipo, cores }: { tipo: TipoGrafico; cores: Cores }) {
+/**
+ * A legenda: as cores do gráfico e os sinais (a comparação com o orçado), na linha do título, antes do Configurar Gráficos
+ * (14/10/2026); no fim, o cenário comparado, "(vs. <nome>)" (21/10/2026), quando há.
+ */
+export function LegendaDoPainel({ tipo, cores, comparado }: { tipo: TipoGrafico; cores: Cores; comparado?: string | null }) {
   return (
     <CoresDoPainel.Provider value={cores}>
-      <ItensDaLegenda tipo={tipo} />
+      <ItensDaLegenda tipo={tipo} comparado={comparado} />
     </CoresDoPainel.Provider>
   );
 }
-function ItensDaLegenda({ tipo }: { tipo: TipoGrafico }) {
+function ItensDaLegenda({ tipo, comparado }: { tipo: TipoGrafico; comparado?: string | null }) {
   const SINAL = useSinais();
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600 lg:justify-end">
@@ -449,6 +452,7 @@ function ItensDaLegenda({ tipo }: { tipo: TipoGrafico }) {
             {SINAL[s].texto}
           </span>
         ))}
+        {comparado ? <span>(vs. {comparado})</span> : null}
       </span>
     </div>
   );
@@ -536,9 +540,9 @@ export function PainelContent() {
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
-              Em “Configurar Gráficos”, a “Comparação” escolhe o cenário comparado entre os marcados do exercício (Orçamento Empresarial, o padrão,
-              Resultados Anteriores, Resultados Vendidos e Previsão); fora do Orçamento Empresarial, os cards dizem “vs.” e o nome da marcação. A escolha vale
-              também em Resultados.
+              O cenário comparado é o escolhido na “Comparação” da tela Resultados, entre os marcados do exercício (Orçamento Empresarial, o padrão,
+              Resultados Anteriores, Resultados Vendidos e Previsão), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento
+              Empresarial, os cards dizem “vs.” e o nome da marcação.
             </li>
             <li>
               Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
@@ -546,7 +550,7 @@ export function PainelContent() {
               imagem, para colar num e-mail ou numa apresentação; o botão seguinte (o mesmo ícone, com um asterisco: “Copiar o grupo como imagem (sem
               gráficos)”) copia só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
-            <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos); sem ele, o orçado fica zero.</li>
+            <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos), ou do escolhido na Comparação de Resultados; sem ele, o orçado fica zero.</li>
             <li>Sem os Rótulos, a escala à esquerda de cada gráfico usa marcas práticas, sem casas decimais: múltiplos de 1, 2, 5, 10, 25, 50, 100, 250, 500, 1.000… (ou 0,1, 0,2, 0,5 quando os valores são pequenos), na unidade do card (milhões, milhares, %, m³…).</li>
           </ul>
         }
@@ -587,9 +591,10 @@ export function PainelContent() {
               {naAbaIndicadores ? (
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
                   <LegendaRealizadoOrcado tipo={tipoGrafico} />
+                  {dados?.cenarioOrcado ? <span>(vs. {dados.cenarioOrcado})</span> : null}
                 </div>
               ) : (
-                <LegendaDoPainel tipo={tipoGrafico} cores={cores} />
+                <LegendaDoPainel tipo={tipoGrafico} cores={cores} comparado={dados?.cenarioOrcado} />
               )}
               <ConfigurarGraficos>
               <Seletor
@@ -603,7 +608,6 @@ export function PainelContent() {
                 opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
               />
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
-              <SeletorComparaCom valor={comparacao.comparaCom} opcoes={comparacao.opcoes} onMudar={comparacao.mudar} />
               <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
               </ConfigurarGraficos>
