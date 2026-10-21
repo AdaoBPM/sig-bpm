@@ -65,7 +65,7 @@ export type Bloco = Posicao &
         espacamento?: number;
       }
     /** Uma foto (16/10/2026): o arquivo, guardado no servidor, a legenda e a proporção (largura ÷ altura). */
-    | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean }
+    | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean; /** Os ajustes da imagem (21/10/2026). */ ajustes?: AjustesDeImagem }
     /**
      * Um vídeo (20/10/2026): um arquivo do computador (`arquivo`, guardado no servidor, até 200 MB) ou um link do YouTube,
      * Instagram, Facebook ou LinkedIn (`url`, o endereço colado), com a legenda e a proporção; vazio, o quadro esperando o vídeo.
@@ -98,7 +98,9 @@ export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B,
  * (1 a 4) a aumenta a partir do tamanho que cobre a tela; `x` e `y` (0 a 1) a posicionam (0: encostada à esquerda ou em
  * cima; 1: à direita ou embaixo).
  */
-export type Fundo = { arquivo: string; proporcao: number; zoom: number; x: number; y: number };
+/** Os ajustes de uma imagem (21/10/2026): brilho e saturação em % (100 = como veio), matiz em graus, desfoque em px e transparência em %; sem um deles, o padrão. */
+export type AjustesDeImagem = { brilho?: number; matiz?: number; saturacao?: number; desfoque?: number; transparencia?: number };
+export type Fundo = { arquivo: string; proporcao: number; zoom: number; x: number; y: number; ajustes?: AjustesDeImagem };
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
 export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo };
 /** A Capa (20/10/2026): a primeira aba; os slides dela não entram na contagem. */

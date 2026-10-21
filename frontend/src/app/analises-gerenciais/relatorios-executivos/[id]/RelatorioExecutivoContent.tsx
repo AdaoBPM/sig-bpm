@@ -331,19 +331,19 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => seletorDeFoto.current?.click()}>
                     <ImagePlus className="size-4" />
-                    Foto
+                    Imagem com Legenda
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => seletorDeImagem.current?.click()}>
                     <Imagem className="size-4" />
                     Imagem Livre
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
-                    <Video className="size-4" />
-                    Vídeo
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => seletorDeFundo.current?.click()}>
                     <ImageUp className="size-4" />
                     Imagem de Fundo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
+                    <Video className="size-4" />
+                    Vídeo
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -451,11 +451,13 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               ela muda (de início, as telas em negrito, com 16, e os slides com 14).
             </li>
             <li>
-              Foto envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px) e a inclui com a legenda embaixo, no destaque amarelo-ouro. A foto aumenta e
-              diminui sempre na mesma proporção.
+              Imagem com Legenda (antes, Foto) envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px) e a inclui com a legenda embaixo, no destaque
+              amarelo-ouro. A imagem aumenta e diminui sempre na mesma proporção. Nas imagens (com legenda, livres e de fundo), o botão de ajustes da barra do
+              bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; “Restaurar Ajustes” volta à imagem como
+              veio.
             </li>
             <li>
-              Imagem Livre envia uma imagem como a Foto, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
+              Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
               slide). Ela aumenta e diminui na mesma proporção e, na apresentação, como o Texto Livre, não se destaca nem se amplia.
             </li>
             <li>

@@ -7,6 +7,15 @@ import { temPermissao } from "../../middlewares/verificarPermissao.js";
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
 import { CHAVES_DAS_ABAS, FONTES_DO_TEXTO, NOME_DA_FOTO, NOME_DO_VIDEO, RelatorioExecutivoError, SITES_DE_VIDEO, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
 
+/** Os ajustes de uma imagem (21/10/2026): brilho e saturação de 0 a 200%, matiz de −180° a 180°, desfoque até 20 px e transparência até 100%. */
+const ajustesDeImagem = z.object({
+  brilho: z.number().min(0).max(200).optional(),
+  matiz: z.number().min(-180).max(180).optional(),
+  saturacao: z.number().min(0).max(200).optional(),
+  desfoque: z.number().min(0).max(20).optional(),
+  transparencia: z.number().min(0).max(100).optional(),
+});
+
 /** O usuário da requisição: se edita a tela e os departamentos do recorte (sem recorte, nulo: todos). */
 const usuario = (request: Request): UsuarioDoRelatorio => ({
   id: request.user!.sub,
@@ -46,7 +55,7 @@ const bloco = z.discriminatedUnion("tipo", [
   z.object({ ...posicao, tipo: z.literal("PAINEL"), aba: z.enum(["resultados", "performance"]), quadro: z.string().max(200), titulo: z.string().max(200), sigla: z.string().max(60), comGrafico: z.boolean(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), cores: z.enum(["padrao", "daltonismo"]).optional() }),
   z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200) }),
   z.object({ ...posicao, tipo: z.literal("ANOTACAO"), nota: z.enum(["POSITIVO", "NEGATIVO", "ATENCAO"]), texto: z.string().max(5000), titulo: z.string().max(120).optional(), html: z.string().max(30000).optional(), tamanhoTitulo: z.number().int().min(8).max(48).optional(), fonteTitulo: fonteDoTexto.optional(), espacamento }),
-  z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional(), livre: z.boolean().optional() }),
+  z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional(), livre: z.boolean().optional(), ajustes: ajustesDeImagem.optional() }),
   // O vídeo (20/10/2026): o arquivo enviado ou o link de um dos sites aceitos (vazios, o quadro esperando o vídeo).
   z.object({
     ...posicao,
@@ -63,7 +72,7 @@ const bloco = z.discriminatedUnion("tipo", [
   z.object({ ...posicao, tipo: z.literal("SUMARIO"), listar: z.enum(["TELAS", "TELAS_E_SLIDES"]), telas: z.array(departamento.exclude(["CAPA", "ENCERRAMENTO"])).max(CHAVES_DAS_ABAS.length), linha: z.enum(["PONTOS", "TRACOS", "LINHA", "NENHUM"]).optional(), estilos: z.object({ telas: estiloDoSumario.optional(), slides: estiloDoSumario.optional() }).optional() }),
 ]);
 /** A Imagem de Fundo da página (20/10/2026): a foto, a proporção, o zoom (1 a 4) e a posição (0 a 1). */
-const fundo = z.object({ arquivo: z.string().regex(NOME_DA_FOTO), proporcao: z.number().positive().max(50), zoom: z.number().min(1).max(4), x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
+const fundo = z.object({ arquivo: z.string().regex(NOME_DA_FOTO), proporcao: z.number().positive().max(50), zoom: z.number().min(1).max(4), x: z.number().min(0).max(1), y: z.number().min(0).max(1), ajustes: ajustesDeImagem.optional() });
 
 /** Os Relatórios Executivos (15/10/2026, Análises Gerenciais): montado em /relatorios-executivos. */
 export const relatoriosExecutivosController = {

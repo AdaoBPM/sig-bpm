@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
-import { ChartColumn, CircleAlert, GripVertical, ImagePlus, Settings, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { ChartColumn, CircleAlert, GripVertical, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -17,6 +17,7 @@ import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
+import { AjustesDaImagemDialog, estiloDosAjustes } from "./AjustesDaImagem";
 import { CamadaDoFundo } from "./FundoDoSlide";
 import { BarraDoSumario, ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
 import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
@@ -319,6 +320,18 @@ export function GradeDoRelatorio({
           )}
         </BlocoAmpliado>
       ) : null}
+      {doCard?.tipo === "FOTO" && doCard.arquivo ? (
+        <AjustesDaImagemDialog
+          relatorioId={relatorioId}
+          arquivo={doCard.arquivo}
+          inicial={doCard.ajustes}
+          onFechar={() => setConfigurando(null)}
+          onAplicar={(ajustes) => {
+            mudarBloco(doCard.id, { ajustes } as Partial<Bloco>);
+            setConfigurando(null);
+          }}
+        />
+      ) : null}
       {doCard?.tipo === "SUMARIO" ? (
         <ConfigurarSumarioDialog
           titulo="Configurar Sumário"
@@ -513,6 +526,12 @@ function BarraDoBloco({
           <Settings className="size-4" />
         </button>
       ) : null}
+      {/* Os ajustes da imagem (21/10/2026): brilho, matiz, saturação, desfoque e transparência. */}
+      {b.tipo === "FOTO" && b.arquivo ? (
+        <button type="button" className={`${botao} ${b.ajustes ? "text-gray-900" : ""}`} title="Ajustes da imagem" aria-label="Ajustes da imagem" onClick={onConfigurar}>
+          <SlidersHorizontal className="size-4" />
+        </button>
+      ) : null}
       {b.tipo === "SUMARIO" ? (
         <button type="button" className={botao} title="Configurar o sumário" aria-label="Configurar o sumário" onClick={onConfigurar}>
           <Settings className="size-4" />
@@ -680,7 +699,7 @@ function ConteudoDoBloco({
     // transparente sobre o slide).
     return (
       // eslint-disable-next-line @next/next/no-img-element -- a imagem vem do servidor, pelo proxy, com o login.
-      <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" draggable={false} className="h-full w-full object-contain" />
+      <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" draggable={false} className="h-full w-full object-contain" style={estiloDosAjustes(b.ajustes)} />
     );
   }
   if (b.tipo === "FOTO") {
@@ -690,7 +709,7 @@ function ConteudoDoBloco({
         <div className="min-h-0 flex-1">
           {b.arquivo ? (
             // eslint-disable-next-line @next/next/no-img-element -- a foto vem do servidor, pelo proxy, com o login.
-            <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Foto"} draggable={false} className="h-full w-full object-contain" />
+            <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Imagem"} draggable={false} className="h-full w-full object-contain" style={estiloDosAjustes(b.ajustes)} />
           ) : (
             // O quadro sem a imagem (17/10/2026: o relatório importado sem as imagens): cinza, com o botão de carregar.
             <label

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import { enderecoDaFoto, type Fundo } from "../services/relatoriosExecutivosService";
+import { ControlesDosAjustes, estiloDosAjustes } from "./AjustesDaImagem";
 
 /** O zoom da Imagem de Fundo: de 1 (o tamanho que cobre a tela) a 4. */
 const ZOOM_MAXIMO = 4;
@@ -29,7 +30,7 @@ export function CamadaDoFundo({ relatorioId, fundo, className, style }: { relato
         alt=""
         draggable={false}
         className="size-full max-w-none object-cover select-none"
-        style={{ objectPosition: ponto, transform: `scale(${fundo.zoom})`, transformOrigin: ponto }}
+        style={{ objectPosition: ponto, transform: `scale(${fundo.zoom})`, transformOrigin: ponto, ...estiloDosAjustes(fundo.ajustes) }}
       />
     </div>
   );
@@ -68,7 +69,7 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
           <DialogTitle>Imagem de Fundo</DialogTitle>
           <DialogDescription>
             A imagem cobre o slide inteiro, por cima do cabeçalho, atrás dos blocos. Arraste-a para posicionar; o Tamanho (ou a roda do mouse sobre ela) a
-            aumenta.
+            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -116,6 +117,8 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
             Restaurar
           </Button>
         </div>
+        {/* Os ajustes da imagem (21/10/2026). */}
+        <ControlesDosAjustes ajustes={f.ajustes} onMudar={(ajustes) => mudar({ ajustes })} />
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
