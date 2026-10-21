@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { Abas } from "@/components/shared/Abas";
@@ -88,21 +89,22 @@ const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}$
 /**
  * As cores do sinal (lista Cores, 11/10/2026): Padrão, as da formatação condicional da planilha (verde, amarelo e
  * vermelho); Daltonismo (a Acessibilidade do menu do usuário, 16/10/2026), com azul no lugar do verde (melhor que o
- * orçado), amarelo e vermelho. O selo do desvio fica num tom claro da mesma cor (14/10/2026: o fundo em SVG, pelas variáveis --cor-selo-*,
+ * orçado), amarelo e vermelho. O selo do desvio fica na cor forte (21/10/2026: a que era a da fonte), com o texto em branco
+ * (antes, num tom claro da mesma cor; 14/10/2026: o fundo em SVG, pelas variáveis de cor,
  * e o contorno como borda: no Firefox do usuário, o fundo em CSS saía em branco na imagem copiada). O valor guardado
  * continua "daltonismo", para manter a escolha já feita nos navegadores.
  */
 export type Cores = "padrao" | "daltonismo";
 const SINAIS = {
   padrao: {
-    1: { cor: "#92D050", fundo: "var(--cor-selo-verde)", selo: "text-green-800 border-green-200", texto: "Melhor que o" },
-    0: { cor: "#FFFF00", fundo: "var(--cor-selo-amarelo)", selo: "text-yellow-800 border-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
+    1: { cor: "#92D050", fundo: "var(--color-green-800)", selo: "text-white border-green-800", texto: "Melhor que o" },
+    0: { cor: "#FFFF00", fundo: "var(--color-yellow-800)", selo: "text-white border-yellow-800", texto: "Até 5% do" },
+    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--color-red-700)", selo: "text-white border-red-700", texto: "Pior que o" },
   },
   daltonismo: {
-    1: { cor: "#0070C0", fundo: "var(--cor-selo-azul)", selo: "text-blue-800 border-blue-200", texto: "Melhor que o" },
-    0: { cor: "#FFFF00", fundo: "var(--cor-selo-amarelo)", selo: "text-yellow-800 border-yellow-200", texto: "Até 5% do" },
-    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--cor-selo-vermelho)", selo: "text-red-700 border-red-200", texto: "Pior que o" },
+    1: { cor: "#0070C0", fundo: "var(--color-blue-800)", selo: "text-white border-blue-800", texto: "Melhor que o" },
+    0: { cor: "#FFFF00", fundo: "var(--color-yellow-800)", selo: "text-white border-yellow-800", texto: "Até 5% do" },
+    [-1]: { cor: "var(--cor-sinal-vermelho)", fundo: "var(--color-red-700)", selo: "text-white border-red-700", texto: "Pior que o" },
   },
 } as const;
 const CoresDoPainel = createContext<Cores>("padrao");
@@ -125,10 +127,11 @@ function Sinal({ s }: { s: BlocoPainel["sinal"] }) {
 function SeloDesvio({ b }: { b: BlocoPainel }) {
   const SINAL = useSinais();
   const { orcado } = useRotulosDoGrafico();
-  const tom = b.sinal === null ? "text-gray-600 border-gray-200" : SINAL[b.sinal].selo;
-  const fundo = b.sinal === null ? "var(--cor-selo-neutro)" : SINAL[b.sinal].fundo;
+  const tom = b.sinal === null ? "text-white border-gray-500" : SINAL[b.sinal].selo;
+  const fundo = b.sinal === null ? "var(--color-gray-500)" : SINAL[b.sinal].fundo;
   return (
-    <span className={`relative inline-flex shrink-0 items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-xs font-bold ${tom}`} title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}>
+    // 50% maior (21/10/2026; antes, 12 px).
+    <span className={`relative inline-flex shrink-0 items-center gap-2 rounded-sm border px-2 py-0.5 text-lg leading-snug font-bold ${tom}`} title={b.sinal === null ? `Sem ${orcado.toLowerCase()}` : SINAL[b.sinal].texto}>
       {/* O fundo em SVG, atrás do conteúdo, para sair no Copiar como Imagem. */}
       <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
         <rect width="100%" height="100%" style={{ fill: fundo }} />
@@ -158,14 +161,15 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
         <p className="text-xs whitespace-nowrap text-gray-600">
           {rotulos.realizado} ({periodo})
         </p>
-        {/* 22 px até 1536 px (26 px acima), para o valor e o orçado caberem lado a lado em 1/5 do card. */}
-        <p className="text-[22px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[26px]">{formatar(b.realizado, formato)}</p>
+        {/* 25% maior (21/10/2026; antes, 22 px até 1536 px e 26 px acima). */}
+        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatar(b.realizado, formato)}</p>
         <p className="h-4 text-xs text-gray-500">{base}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end text-right">
         <SeloDesvio b={b} />
         <p className="mt-1.5 text-xs whitespace-nowrap text-gray-600">vs. {rotulos.orcado}</p>
-        <p className="text-sm font-bold whitespace-nowrap text-gray-900">{formatar(b.orcado, formato)}</p>
+        {/* 25% maior (21/10/2026; antes, 14 px). */}
+        <p className="text-[17.5px] font-bold whitespace-nowrap text-gray-900">{formatar(b.orcado, formato)}</p>
       </div>
     </div>
   );
@@ -271,13 +275,51 @@ export function CardDoPainel({
   );
 }
 
+/** Os grupos recolhidos do Painel de Bordo (21/10/2026), pelo título, guardados no navegador. */
+const CHAVE_DOS_RECOLHIDOS = "sig.painel.recolhidos";
+function lerRecolhidos(): Set<string> {
+  try {
+    return new Set(JSON.parse(window.localStorage.getItem(CHAVE_DOS_RECOLHIDOS) ?? "[]") as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function useGrupoRecolhido(titulo: string): [boolean, () => void] {
+  const [recolhido, setRecolhido] = useState(() => (typeof window === "undefined" ? false : lerRecolhidos().has(titulo)));
+  const alternar = () => {
+    const novo = !recolhido;
+    setRecolhido(novo);
+    try {
+      const todos = lerRecolhidos();
+      if (novo) todos.add(titulo);
+      else todos.delete(titulo);
+      window.localStorage.setItem(CHAVE_DOS_RECOLHIDOS, JSON.stringify([...todos]));
+    } catch {
+      // Sem o armazenamento do navegador, vale só nesta tela.
+    }
+  };
+  return [recolhido, alternar];
+}
+
 /** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção abaixo da outra. */
 function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   const secao = useRef<HTMLElement>(null);
+  const [recolhido, alternar] = useGrupoRecolhido(q.titulo);
   return (
     <section ref={secao}>
       {/* O nome do grupo e o mês de referência (13/10/2026; antes, em cada card): o mês em cinza; ao lado, o botão de copiar o grupo. Em 24 px (14/10/2026; antes, 16). */}
       <div className="mb-2 flex items-center gap-2">
+        {/* Recolher e expandir o grupo (21/10/2026). */}
+        <button
+          type="button"
+          onClick={alternar}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          title={recolhido ? "Expandir o grupo" : "Recolher o grupo"}
+          aria-label={recolhido ? `Expandir ${q.titulo}` : `Recolher ${q.titulo}`}
+          aria-expanded={!recolhido}
+        >
+          {recolhido ? <ChevronRight className="size-5" /> : <ChevronDown className="size-5" />}
+        </button>
         <h2 className="text-2xl font-bold tracking-wide text-gray-900 uppercase">
           {q.titulo}
           <span className="font-semibold text-gray-500"> · {rotuloMes}</span>
@@ -286,7 +328,7 @@ function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes:
         {/* Ao lado, o grupo sem os gráficos: só os valores dos cards (14/10/2026). */}
         <CopiarComoImagem alvo={secao} nome={`${q.titulo} ${rotuloMes}`} dica="Copiar o grupo como imagem (sem gráficos)" semGraficos />
       </div>
-      <div className="space-y-3">
+      <div className={recolhido ? "hidden" : "space-y-3"}>
         {q.itens.map((i) => (
           <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
         ))}
@@ -449,6 +491,7 @@ export function PainelContent() {
               o verde do vermelho); a legenda acompanha.
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
+            <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
               Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
               ficam sem as linhas da escala (só a do zero). O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como
