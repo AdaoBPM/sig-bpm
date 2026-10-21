@@ -46,7 +46,7 @@ const bloco = z.discriminatedUnion("tipo", [
   z.object({ ...posicao, tipo: z.literal("PAINEL"), aba: z.enum(["resultados", "performance"]), quadro: z.string().max(200), titulo: z.string().max(200), sigla: z.string().max(60), comGrafico: z.boolean(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), cores: z.enum(["padrao", "daltonismo"]).optional() }),
   z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200) }),
   z.object({ ...posicao, tipo: z.literal("ANOTACAO"), nota: z.enum(["POSITIVO", "NEGATIVO", "ATENCAO"]), texto: z.string().max(5000), titulo: z.string().max(120).optional(), html: z.string().max(30000).optional(), tamanhoTitulo: z.number().int().min(8).max(48).optional(), fonteTitulo: fonteDoTexto.optional(), espacamento }),
-  z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional() }),
+  z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional(), livre: z.boolean().optional() }),
   // O vídeo (20/10/2026): o arquivo enviado ou o link de um dos sites aceitos (vazios, o quadro esperando o vídeo).
   z.object({
     ...posicao,

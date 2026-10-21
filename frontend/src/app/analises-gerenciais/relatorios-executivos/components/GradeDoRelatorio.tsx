@@ -93,9 +93,10 @@ const ALTURA_DA_LEGENDA = 44;
  * As linhas de uma foto com `w` colunas na grade de `largura` px (16/10/2026): a altura da foto na proporção dela, mais a
  * legenda — a foto aumenta e diminui sempre na mesma proporção.
  */
-export function linhasDaFoto(w: number, proporcao: number, largura: number) {
+export function linhasDaFoto(w: number, proporcao: number, largura: number, semLegenda = false) {
   const coluna = (largura - MARGEM * (COLUNAS - 1) - MARGEM * 2) / COLUNAS;
-  const alto = (coluna * w + MARGEM * (w - 1)) / proporcao + ALTURA_DA_LEGENDA;
+  // A Imagem Livre (21/10/2026) não tem a legenda: a altura é só a da imagem.
+  const alto = (coluna * w + MARGEM * (w - 1)) / proporcao + (semLegenda ? 0 : ALTURA_DA_LEGENDA);
   return Math.max(2, Math.round((alto + MARGEM) / (ALTURA_DA_LINHA + MARGEM)));
 }
 
@@ -183,7 +184,7 @@ export function GradeDoRelatorio({
   const aoRedimensionar = (_l: Layout[], _antes: Layout, novo: Layout, sombra: Layout) => {
     const b = blocos.find((x) => x.id === novo.i);
     if (!naProporcao(b) || !caixa.current) return;
-    novo.h = sombra.h = linhasDaFoto(novo.w, b.proporcao, caixa.current.offsetWidth);
+    novo.h = sombra.h = linhasDaFoto(novo.w, b.proporcao, caixa.current.offsetWidth, b.tipo === "FOTO" && !!b.livre);
   };
   const mudarBloco = (id: string, m: Partial<Bloco>) => onMudar(blocos.map((b) => (b.id === id ? ({ ...b, ...m } as Bloco) : b)));
   const aoMudarLeiaute = (novo: Layout[]) => {
@@ -249,8 +250,9 @@ export function GradeDoRelatorio({
         onResizeStop={terminar}
       >
         {blocos.map((b) => {
-          // O Texto Livre e o Sumário (20/10/2026) são da composição do slide: na apresentação, sem o destaque e sem ampliar.
-          const amplia = ampliavel && b.tipo !== "TEXTO" && b.tipo !== "SUMARIO";
+          // O Texto Livre e o Sumário (20/10/2026) e a Imagem Livre (21/10/2026) são da composição do slide: na apresentação,
+          // sem o destaque do fundo e sem ampliar.
+          const amplia = ampliavel && b.tipo !== "TEXTO" && b.tipo !== "SUMARIO" && !(b.tipo === "FOTO" && b.livre);
           return (
           // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
           <div key={b.id} className="group relative focus-within:z-10 hover:z-10">
@@ -535,7 +537,7 @@ function BarraDoBloco({
           })
         : null}
       {/* A formatação do texto (17/10/2026), nas anotações, no Texto Livre e nas legendas das fotos e dos vídeos. */}
-      {b.tipo === "ANOTACAO" || b.tipo === "TEXTO" || b.tipo === "FOTO" || b.tipo === "VIDEO" ? (
+      {b.tipo === "ANOTACAO" || b.tipo === "TEXTO" || (b.tipo === "FOTO" && !b.livre) || b.tipo === "VIDEO" ? (
         <>
           <span className="mx-0.5 h-4 w-px bg-gray-200" />
           <BarraDeTexto
@@ -673,6 +675,14 @@ function ConteudoDoBloco({
     );
   }
   if (b.tipo === "SUMARIO") return <ListaDoSumario b={b} sumario={sumario} editavel={editavel} />;
+  if (b.tipo === "FOTO" && b.livre && b.arquivo) {
+    // A Imagem Livre (21/10/2026): só a imagem, na proporção dela, sem a legenda e sem o fundo (o PNG transparente continua
+    // transparente sobre o slide).
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- a imagem vem do servidor, pelo proxy, com o login.
+      <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" draggable={false} className="h-full w-full object-contain" />
+    );
+  }
   if (b.tipo === "FOTO") {
     // A foto inteira (na proporção dela) e, embaixo, a legenda no destaque das Listas (16/10/2026).
     return (
@@ -704,8 +714,8 @@ function ConteudoDoBloco({
             </label>
           )}
         </div>
-        {/* A legenda formatada (17/10/2026; antes, só texto): a formatação na barra do bloco. */}
-        {editavel || b.legenda ? (
+        {/* A legenda formatada (17/10/2026; antes, só texto): a formatação na barra do bloco. A Imagem Livre não a tem. */}
+        {!b.livre && (editavel || b.legenda) ? (
           <figcaption
             className="max-h-[40%] min-h-9 shrink-0 overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white text-sm font-semibold text-gray-900"
             style={ampliado ? { zoom: 0.5 } : undefined}

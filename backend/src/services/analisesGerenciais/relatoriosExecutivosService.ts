@@ -72,7 +72,7 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "INDICADOR"; nome: string }
   | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string; tamanhoTitulo?: number; /** A fonte do título e o espaçamento entre as linhas (20/10/2026). */ fonteTitulo?: FonteDoTexto; espacamento?: number }
   /** Uma foto (16/10/2026): o arquivo (na pasta do relatório; vazio, o quadro esperando a imagem), a legenda e a proporção (largura ÷ altura). */
-  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string }
+  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean }
   /**
    * Um vídeo (20/10/2026): um arquivo do computador (na pasta do relatório, até 200 MB) ou um link do YouTube, Instagram,
    * Facebook ou LinkedIn (`url`, o endereço colado; a tela monta o player incorporado), com a legenda e a proporção. Vazio

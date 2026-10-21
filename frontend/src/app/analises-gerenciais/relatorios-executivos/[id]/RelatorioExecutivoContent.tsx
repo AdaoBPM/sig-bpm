@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2, Type, Video } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -123,6 +123,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     mudarPaginas(lista);
   };
   const seletorDeFoto = useRef<HTMLInputElement>(null);
+  const seletorDeImagem = useRef<HTMLInputElement>(null);
   const seletorDeFundo = useRef<HTMLInputElement>(null);
   const area = useRef<HTMLDivElement>(null);
   const chave = aberta.chave;
@@ -149,18 +150,19 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   };
   const incluir = (novos: ConteudoDoBloco[]) => mudarPagina([...daPagina, ...novos.map((n, k) => ({ ...n, id: novoId(), ...posicao(n, k) }) as Bloco)]);
   // A foto (16/10/2026): reduzida no navegador, enviada ao servidor e incluída como as anotações, na altura da proporção dela.
+  // A Imagem Livre (21/10/2026) é a foto com `livre`: só a imagem, sem a legenda (a altura, só a da imagem).
   const foto = useMutation({
-    mutationFn: async (arquivo: File) => {
+    mutationFn: async ({ arquivo }: { arquivo: File; livre: boolean }) => {
       const { foto: conteudo, proporcao } = await prepararFoto(arquivo);
       const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorio.id, conteudo);
       return { nome, proporcao };
     },
-    onSuccess: ({ nome, proporcao }) => {
+    onSuccess: ({ nome, proporcao }, { livre }) => {
       const t = tamanhoInicial({ tipo: "FOTO" });
       // A grade tem 24 px a mais que a área (as margens de fora dos blocos).
-      const h = linhasDaFoto(t.w, proporcao, (area.current?.offsetWidth ?? 1200) + 24);
+      const h = linhasDaFoto(t.w, proporcao, (area.current?.offsetWidth ?? 1200) + 24, livre);
       const p = ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS ? { x: ultimo.x + ultimo.w, y: ultimo.y } : { x: 0, y: fim };
-      mudarPagina([...daPagina, { tipo: "FOTO", arquivo: nome, legenda: "", proporcao, id: novoId(), ...p, w: t.w, h }]);
+      mudarPagina([...daPagina, { tipo: "FOTO", arquivo: nome, legenda: "", proporcao, ...(livre ? { livre: true } : {}), id: novoId(), ...p, w: t.w, h }]);
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
   });
@@ -174,7 +176,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     },
     onSuccess: ({ nome, proporcao }, { id }) => {
       const largura = (area.current?.offsetWidth ?? 1200) + 24;
-      mudarPagina(daPagina.map((b) => (b.id === id && b.tipo === "FOTO" ? { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura) } : b)));
+      mudarPagina(daPagina.map((b) => (b.id === id && b.tipo === "FOTO" ? { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura, !!b.livre) } : b)));
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
   });
@@ -331,6 +333,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                     <ImagePlus className="size-4" />
                     Foto
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => seletorDeImagem.current?.click()}>
+                    <Imagem className="size-4" />
+                    Imagem Livre
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
                     <Video className="size-4" />
                     Vídeo
@@ -372,7 +378,18 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               onChange={(e) => {
                 const arquivo = e.target.files?.[0];
                 e.target.value = "";
-                if (arquivo) foto.mutate(arquivo);
+                if (arquivo) foto.mutate({ arquivo, livre: false });
+              }}
+            />
+            <input
+              ref={seletorDeImagem}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const arquivo = e.target.files?.[0];
+                e.target.value = "";
+                if (arquivo) foto.mutate({ arquivo, livre: true });
               }}
             />
             <input
@@ -407,7 +424,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
-              Na sua aba, “Adicionar” traz sete opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
+              Na sua aba, “Adicionar” traz oito opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
               dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado): marque os que quiser; eles entram no fim da página, os do
               Painel com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
@@ -436,6 +453,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Foto envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px) e a inclui com a legenda embaixo, no destaque amarelo-ouro. A foto aumenta e
               diminui sempre na mesma proporção.
+            </li>
+            <li>
+              Imagem Livre envia uma imagem como a Foto, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
+              slide). Ela aumenta e diminui na mesma proporção e, na apresentação, como o Texto Livre, não se destaca nem se amplia.
             </li>
             <li>
               Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
