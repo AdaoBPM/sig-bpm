@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Carregando, ErroCarga } from "@/components/shared/Estados";
-import { BarraDeFiltros } from "@/components/shared/Filtros";
 import { PainelFiltro } from "@/components/shared/TabelaFiltravel";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
@@ -99,32 +98,30 @@ export function AuditoriaContent() {
         titulo="Auditoria"
         comoUsar={
           <ul>
-            <li>Informe o período em De e Até e use os filtros nos rótulos das colunas.</li>
-            <li>Marque “Incluir Acessos às Telas” para ver também as visitas às telas.</li>
+            <li>Informe o período em De e Até, à direita do título, e use os filtros nos rótulos das colunas (cada um se limpa no próprio rótulo).</li>
+            <li>Marque “Incluir Acessos às Telas”, ao lado do período, para ver também as visitas às telas.</li>
             <li>Clique numa linha para ver cada campo alterado, com o antes e o depois.</li>
           </ul>
         }
         sobre={<p>Quem fez o quê, quando e em qual registro, com o estado antes e depois. O log é imutável: nenhum perfil altera ou apaga um registro.</p>}
+        // O período e os acessos à direita, na altura do título (21/10/2026; antes, numa barra abaixo, com o Limpar Filtros).
+        acoes={
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="a-de" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              De
+              <Input id="a-de" type="date" value={filtro.de ?? ""} onChange={(e) => muda({ de: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
+            </label>
+            <label htmlFor="a-ate" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              Até
+              <Input id="a-ate" type="date" value={filtro.ate ?? ""} onChange={(e) => muda({ ate: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
+            </label>
+            <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={filtro.incluirAcessos} onChange={(e) => muda({ incluirAcessos: e.target.checked })} className="size-4 accent-black" />
+              Incluir Acessos às Telas
+            </label>
+          </div>
+        }
       />
-
-      {/* Filtros no padrão (G8 do levantamento de layout). */}
-      <BarraDeFiltros
-        ativos={!!(filtro.de || filtro.ate || filtro.usuarioId || filtro.entidade || filtro.acao || filtro.ordem || filtro.incluirAcessos)}
-        onLimpar={() => setFiltro({ incluirAcessos: false, pagina: 1 })}
-      >
-        <div className="space-y-1">
-          <label htmlFor="a-de" className="block text-xs font-medium text-gray-600">De</label>
-          <Input id="a-de" type="date" value={filtro.de ?? ""} onChange={(e) => muda({ de: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="a-ate" className="block text-xs font-medium text-gray-600">Até</label>
-          <Input id="a-ate" type="date" value={filtro.ate ?? ""} onChange={(e) => muda({ ate: e.target.value || undefined })} className="h-9 w-40 rounded-sm" />
-        </div>
-        <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={filtro.incluirAcessos} onChange={(e) => muda({ incluirAcessos: e.target.checked })} className="size-4 accent-black" />
-          Incluir Acessos às Telas
-        </label>
-      </BarraDeFiltros>
 
       <QuadroTabela
         rodape={log.data && log.data.total > 0 ? <Paginacao total={log.data.total} pagina={filtro.pagina} porPagina={log.data.porPagina} onPagina={(p) => muda({ pagina: p })} carregando={log.isFetching} /> : null}
