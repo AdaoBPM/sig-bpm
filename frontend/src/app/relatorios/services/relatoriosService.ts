@@ -80,6 +80,8 @@ export type BlocoPainel = { realizado: number | null; orcado: number | null; bas
 export type ItemPainel = {
   titulo: string;
   sigla: string;
+  /** A Metodologia por extenso (21/10/2026), no lugar da abreviação no card. */
+  metodologia?: string;
   sentido: "↑" | "↓";
   formato: FormatoPainel;
   formatoAcumulado: FormatoPainel;

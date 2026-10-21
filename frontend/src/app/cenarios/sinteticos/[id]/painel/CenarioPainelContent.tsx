@@ -68,10 +68,11 @@ export function CenarioPainelContent() {
               eficiências calculadas e os importados. É o orçado de Resultados Empresariais quando o cenário é o Orçamento Empresarial. Clique num
               indicador para ver o gráfico dele (o cenário e o comparado), no Tipo e com os Rótulos do Configurar Gráficos daqui.
             </li>
-            <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>
+            <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, comportamento, grupo, quadro, Metodologia e formato.</li>
             <li>
-              Cada card traz o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Cenário
-              (Atual), do mês de referência, e o Cenário (Acumulado), cada um com o valor em destaque e, à direita, o destaque do desvio — a
+              Cada card traz o nome e, à direita dele, a Metodologia (a fórmula do item) e o comportamento entre parênteses (o mês de referência
+              fica ao lado do nome do grupo); embaixo, o Atual, do mês de referência, e o Acumulado, com a unidade no rótulo (Atual (R$ M)…),
+              cada um com o valor em destaque e, à direita, o destaque do desvio — a
               variação, “vs. Comparado” e o valor do cenário comparado, em branco sobre a cor do sinal; e os gráficos dos meses e do acumulado (o cenário em amarelo-ouro, o comparado em preto).
             </li>
             <li>

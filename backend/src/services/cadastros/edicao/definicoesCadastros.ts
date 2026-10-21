@@ -66,6 +66,8 @@ export type Campo = {
   /** O valor num registro novo (sem ele, as caixas de marcar começam marcadas, como o Ativo). */
   padrao?: unknown;
   ajuda?: string;
+  /** A ajuda ao lado do campo, e não embaixo (21/10/2026; o Formato do Painel de Bordo). */
+  ajudaAoLado?: boolean;
   opcoes?: (db: Db) => Promise<Opcao[]>;
 };
 
@@ -1019,7 +1021,23 @@ function porExtensoNoPainel(formula: string | null) {
     return formula;
   }
 }
-const comTextos = <T extends { formula: string; casasPercentual: number }>(i: T) => ({ ...i, casasPercentual: String(i.casasPercentual), metodologiaTexto: porExtensoNoPainel(i.formula) });
+/**
+ * O Formato do cadastro (21/10/2026; antes, Formato e Formato do Acumulado): um campo só, para o Atual e o Acumulado; o
+ * Resultado Financeiro e as despesas fixas, com o Atual em milhares e o Acumulado em milhões, têm uma opção própria, que
+ * se grava como antes (formato MILHARES e formatoAcumulado MILHOES).
+ */
+const MILHARES_E_MILHOES = "MILHARES_MILHOES";
+const FORMATOS_DO_CADASTRO: Array<[string, string]> = FORMATOS_DO_PAINEL.flatMap(([f, r]): Array<[string, string]> =>
+  f === "MILHARES" ? [[f, r], [MILHARES_E_MILHOES, "R$ em Milhares (K); Acumulado em Milhões (M)"]] : [[f, r]],
+);
+const formatoDoCadastro = (i: { formato: string; formatoAcumulado: string | null }) =>
+  i.formato === "MILHARES" && i.formatoAcumulado === "MILHOES" ? MILHARES_E_MILHOES : i.formato;
+const comTextos = <T extends { formula: string; casasPercentual: number; formato: string; formatoAcumulado: string | null }>(i: T) => ({
+  ...i,
+  formato: formatoDoCadastro(i),
+  casasPercentual: String(i.casasPercentual),
+  metodologiaTexto: porExtensoNoPainel(i.formula),
+});
 
 /**
  * O cadastro do Painel de Bordo (17/10/2026; Analítico / Painel de Bordo): os itens das abas Resultados e Performance —
@@ -1053,14 +1071,15 @@ const painelBordo: DefinicaoCadastro = {
       ajuda: "A fórmula sobre os indicadores: com os valores realizados, dá o realizado; com as metas, o orçado.",
     },
     { nome: "metodologiaTexto", rotulo: "Metodologia", tipo: "texto", derivado: true, noFormulario: false },
-    { nome: "formato", rotulo: "Formato", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(FORMATOS_DO_PAINEL) },
     {
-      nome: "formatoAcumulado",
-      rotulo: "Formato do Acumulado",
+      nome: "formato",
+      rotulo: "Formato",
       tipo: "opcao",
-      naTabela: false,
-      opcoes: opcoesFixas(FORMATOS_DO_PAINEL),
-      ajuda: "Vazio: o mesmo do mês (o Resultado Financeiro e as despesas fixas mostram o mês em milhares e o acumulado em milhões).",
+      obrigatorio: true,
+      larguraInteira: true,
+      ajudaAoLado: true,
+      opcoes: opcoesFixas(FORMATOS_DO_CADASTRO),
+      ajuda: "O mesmo no Atual e no Acumulado; o Resultado Financeiro e as despesas fixas usam milhares no Atual e milhões no Acumulado. A unidade vai no rótulo do card (Atual (R$ M)…).",
     },
     {
       nome: "percentual",
@@ -1091,9 +1110,9 @@ const painelBordo: DefinicaoCadastro = {
     const formula = texto(v.formula);
     if (!formula) throw new RegraCadastroError(400, "Monte a Metodologia (a fórmula do item).");
     await validarFormulaDoPainel(db, formula, "Metodologia");
-    const formato = exigir(v.formato, "O formato");
-    const formatoAcumulado = texto(v.formatoAcumulado);
-    for (const f of [formato, formatoAcumulado]) if (f && !FORMATOS_DO_PAINEL.some(([x]) => x === f)) throw new RegraCadastroError(400, "Formato inválido.");
+    const escolhido = exigir(v.formato, "O formato");
+    if (!FORMATOS_DO_CADASTRO.some(([x]) => x === escolhido)) throw new RegraCadastroError(400, "Formato inválido.");
+    const [formato, formatoAcumulado] = escolhido === MILHARES_E_MILHOES ? ["MILHARES", "MILHOES"] : [escolhido, null];
     const percentual = texto(v.percentual);
     if (percentual) await validarFormulaDoPainel(db, percentual, "Percentual sob o Valor");
     const casas = texto(v.casasPercentual) ?? "1";
@@ -1107,7 +1126,7 @@ const painelBordo: DefinicaoCadastro = {
       sentido,
       formula,
       formato,
-      formatoAcumulado: formatoAcumulado && formatoAcumulado !== formato ? formatoAcumulado : null,
+      formatoAcumulado,
       percentual,
       casasPercentual: Number(casas),
       separar: v.separar === undefined ? false : booleano(v.separar),

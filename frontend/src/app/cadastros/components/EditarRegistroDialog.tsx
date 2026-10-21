@@ -77,14 +77,18 @@ function CampoForm({
       {c.tipo === "formula" ? (
         <EditorFormula id={id} valor={String(valor ?? "")} onMuda={onMuda} opcoes={c.opcoes ?? []} travado={travado} />
       ) : c.tipo === "opcao" && !travado ? (
-        <select id={id} value={String(valor ?? "")} onChange={(e) => onMuda(e.target.value)} className={classeSelect}>
-          <option value="">{semFiltro ? `Escolha antes: ${semFiltro}` : c.obrigatorio ? "Escolha…" : "—"}</option>
-          {opcoes?.map((o) => (
-            <option key={o.valor} value={o.valor}>
-              {o.rotulo}
-            </option>
-          ))}
-        </select>
+        // Com a ajuda ao lado (21/10/2026), a lista na metade da linha e a explicação na outra.
+        <div className={c.ajudaAoLado ? "grid items-center gap-x-4 gap-y-1.5 sm:grid-cols-2" : undefined}>
+          <select id={id} value={String(valor ?? "")} onChange={(e) => onMuda(e.target.value)} className={classeSelect}>
+            <option value="">{semFiltro ? `Escolha antes: ${semFiltro}` : c.obrigatorio ? "Escolha…" : "—"}</option>
+            {opcoes?.map((o) => (
+              <option key={o.valor} value={o.valor}>
+                {o.rotulo}
+              </option>
+            ))}
+          </select>
+          {c.ajudaAoLado && c.ajuda ? <p className="text-xs text-gray-500">{c.ajuda}</p> : null}
+        </div>
       ) : c.tipo === "multipla" ? (
         <div className="flex flex-wrap gap-3">
           {c.opcoes?.map((o) => {
@@ -114,7 +118,7 @@ function CampoForm({
           className="rounded-sm"
         />
       )}
-      {c.ajuda ? <p className="text-xs text-gray-500">{c.ajuda}</p> : null}
+      {c.ajuda && !(c.ajudaAoLado && c.tipo === "opcao" && !travado) ? <p className="text-xs text-gray-500">{c.ajuda}</p> : null}
     </div>
   );
 }

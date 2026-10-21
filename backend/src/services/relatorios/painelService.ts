@@ -8,6 +8,7 @@ import { ROTULO_DA_MARCACAO } from "../cenarios/indicadoresDoCenario.js";
 import { quadrosDoPainel } from "./cadastroPainel.js";
 import { sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
 import { mesesDoExercicio } from "./resultadosService.js";
+import { formulaPorExtenso } from "./formulaIndicador.js";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
@@ -16,6 +17,15 @@ function bloco(item: ItemPainel, realizado: Valor, orcado: Valor) {
   const r = item.conta(realizado);
   const o = item.conta(orcado);
   return { realizado: r, orcado: o, base: item.base?.conta(realizado) ?? null, vsOrcado: vsOrcado(r, o), sinal: sinal(item, r, o) };
+}
+
+/** A Metodologia do item por extenso (os indicadores pelo nome; × e ÷ nas contas). */
+function metodologiaPorExtenso(formula: string) {
+  try {
+    return formulaPorExtenso(formula, (x) => ("nome" in x ? x.nome : x.codigo));
+  } catch {
+    return formula;
+  }
 }
 
 /** Os meses do exercício até o de referência, para os gráficos: o realizado e o orçado de cada um. */
@@ -28,6 +38,8 @@ export function montarPainel(quadros: QuadroPainel[], periodos: { mes: [Valor, V
     itens: q.itens.map((i) => ({
       titulo: i.titulo,
       sigla: i.sigla,
+      // A Metodologia por extenso (21/10/2026), que o card mostra no lugar da abreviação.
+      metodologia: metodologiaPorExtenso(i.formula),
       sentido: i.sentido,
       formato: i.formato,
       formatoAcumulado: i.formatoAcumulado ?? i.formato,

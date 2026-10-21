@@ -30,6 +30,8 @@ export type Campo = {
   /** O valor num registro novo (sem ele, as caixas de marcar começam marcadas). */
   padrao?: unknown;
   ajuda?: string;
+  /** A ajuda ao lado do campo, e não embaixo (21/10/2026). */
+  ajudaAoLado?: boolean;
   opcoes?: Opcao[];
 };
 export type DefinicaoCadastro = { entidade: string; titulo: string; criar: boolean; excluir: boolean; reclassifica: boolean; campos: Campo[]; explicacao?: string | null };

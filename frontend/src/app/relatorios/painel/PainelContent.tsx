@@ -82,6 +82,20 @@ function formatarCurto(v: number | null, f: FormatoPainel) {
   }
 }
 
+/**
+ * A unidade de cada formato (21/10/2026), no rótulo do Atual e do Acumulado: os valores dos cards vão sem ela. O espaço
+ * inquebrável não parte "R$ M" em duas linhas.
+ */
+const UNIDADE_DO_FORMATO: Record<FormatoPainel, string> = {
+  MILHOES: "R$ M",
+  MILHARES: "R$ K",
+  M3: "m³",
+  PISTAS: "pst",
+  PCT: "%",
+  PCT_RL: "%/RL",
+  RS_M3: "R$/m³",
+};
+
 /** O fator da escala dos gráficos de cada formato (19/10/2026): a unidade em que as marcas práticas se escolhem. */
 const fatorDaEscala = (f: FormatoPainel) => (f === "MILHOES" ? 1e-6 : f === "MILHARES" ? 1e-3 : f === "PCT" || f === "PCT_RL" ? 100 : 1);
 
@@ -164,8 +178,8 @@ function DestaqueDoDesvio({ b, formato }: { b: BlocoPainel; formato: FormatoPain
         {desvio(b.vsOrcado)}
       </span>
       <span className="relative mt-0.5 text-xs whitespace-nowrap">vs. {orcado}</span>
-      {/* 25% maior (21/10/2026; antes, 14 px). */}
-      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap">{formatar(b.orcado, formato)}</span>
+      {/* 25% maior (21/10/2026; antes, 14 px); sem a unidade, que fica no rótulo do período. */}
+      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap">{formatarCurto(b.orcado, formato)}</span>
     </div>
   );
 }
@@ -175,21 +189,21 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
   i.base ? `${b.base === null ? "—" : `${(i.base.casas === 2 ? n2 : n1).format(b.base * 100)}%`} ${i.base.rotulo}` : null;
 
 /**
- * Um período do card (o Atual ou o Acumulado; 13/10/2026): à esquerda, "Realizado (Atual)" (ou "(Acumulado)"; nos
- * cenários, "Cenário"), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o destaque do desvio
+ * Um período do card (o Atual ou o Acumulado; 13/10/2026): à esquerda, "Atual (R$ M)" (ou "Acumulado"; 21/10/2026: antes,
+ * "Realizado (Atual)", e o valor com a unidade), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o destaque do desvio
  * (a variação, "vs. Orçado" ou "vs. Comparado" e o valor orçado).
  */
 function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b: BlocoPainel; formato: FormatoPainel; base: string | null; dica?: string }) {
-  const rotulos = useRotulosDoGrafico();
   return (
     // Sem espaço para os dois lado a lado (21/10/2026), o destaque do desvio desce para baixo do valor, em vez de cortá-lo.
     <div className="flex min-w-0 flex-wrap items-start justify-between gap-2" title={dica}>
-      <div className="min-w-0">
-        <p className="text-xs whitespace-nowrap text-gray-600">
-          {rotulos.realizado} ({periodo})
+      {/* Na largura mínima do conteúdo (21/10/2026): apertado, o rótulo quebra antes de o destaque descer para baixo do valor. */}
+      <div className="min-w-min flex-1 basis-0">
+        <p className="text-xs text-gray-600">
+          {periodo} ({UNIDADE_DO_FORMATO[formato]})
         </p>
         {/* 25% maior (21/10/2026; antes, 22 px até 1536 px e 26 px acima). */}
-        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatar(b.realizado, formato)}</p>
+        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatarCurto(b.realizado, formato)}</p>
         <p className="h-4 text-xs text-gray-500">{base}</p>
       </div>
       <DestaqueDoDesvio b={b} formato={formato} />
@@ -199,18 +213,17 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
 
 /**
  * Um indicador num card da largura da tela (09/10/2026; a versão com os cards lado a lado está na etiqueta
- * painel-cards-lado-a-lado do git): o título e a legenda em cima do Atual e do Acumulado (a metade do card, 1/4 cada;
- * 21/10/2026, antes 2/5) e o gráfico dos meses do exercício, com o do acumulado ao lado (a outra metade; antes, 3/5). Nos
- * cards dos Relatórios Executivos, continua 2/5 e 3/5 (CardDoPainel). Em telas estreitas, um embaixo do outro.
+ * painel-cards-lado-a-lado do git): o título e a Metodologia em cima do Atual e do Acumulado (2/5 do card, 1/5 cada) e o
+ * gráfico dos meses do exercício, com o do acumulado ao lado (3/5). Em telas estreitas, um embaixo do outro.
  */
 function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
   const sentido = (
-    <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold text-gray-700">
+    <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold">
       {i.sentido}
     </span>
   );
   const acumulado = rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`;
-  // O espaço entre os blocos menor (12 px), para o rótulo, a tag e os valores caberem em 1/4 do card.
+  // O espaço entre os blocos menor (12 px), para o rótulo, a tag e os valores caberem em 1/5 do card.
   const coluna = "lg:border-l lg:border-gray-100 lg:pl-3";
   return (
     // O leiaute de 13/10/2026: o título e a legenda, maiores, em cima dos dois blocos (o Atual e o Acumulado); o gráfico
@@ -218,15 +231,19 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
     // data-card-indicador e data-grafico-do-card: a imagem sem os gráficos (globals.css, 14/10/2026).
     <article
       data-card-indicador
-      className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2"
+      className="grid gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-0 lg:gap-y-2"
     >
-      {/* O nome e, à direita dele, a sigla e o sentido, alinhados ao vs. Orçado do Acumulado; o mês fica no nome do grupo (13/10/2026). */}
+      {/*
+        O nome e, à direita dele, a Metodologia e o comportamento entre parênteses, no texto do Atual e do Acumulado
+        (21/10/2026; antes, a abreviação e a seta); o mês fica no nome do grupo (13/10/2026).
+      */}
       <header className="flex min-w-0 items-baseline justify-between gap-3 lg:col-span-2 lg:pr-3">
-        <h3 className="text-xl leading-snug font-bold text-gray-900" title={i.titulo}>
+        <h3 className="shrink-0 text-xl leading-snug font-bold text-gray-900" title={i.titulo}>
           {i.titulo}
         </h3>
-        <p className="shrink-0 text-sm whitespace-nowrap text-gray-500">
-          {i.sigla} {sentido}
+        <p className="min-w-0 text-right text-xs text-gray-600" title={i.metodologia ? `Metodologia: ${i.metodologia}` : undefined}>
+          {/* O espaço inquebrável: a seta não fica sozinha numa linha. */}
+          {i.metodologia ? `${i.metodologia} ` : ""}({sentido})
         </p>
       </header>
       <div className="self-end lg:col-start-1 lg:row-start-2 lg:pr-3">
@@ -291,10 +308,7 @@ export function CardDoPainel({
 }) {
   return (
     <CoresDoPainel.Provider value={cores}>
-      {/* Com o gráfico, os valores em 2/5 do card, como antes de 21/10/2026 (no Painel de Bordo, a metade). */}
-      <div
-        className={`h-full [&>article]:h-full ${comGrafico ? "lg:[&_[data-card-indicador]]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,3fr)]" : "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"}`}
-      >
+      <div className={`h-full [&>article]:h-full ${comGrafico ? "" : "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"}`}>
         <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
       </div>
     </CoresDoPainel.Provider>
@@ -499,7 +513,7 @@ export function PainelContent() {
               legendas (as cores das séries e os sinais) ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários) e Indicadores. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
-            <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, abreviação, comportamento, grupo, quadro e modelo de apuração.</li>
+            <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, comportamento, grupo, quadro, Metodologia e formato.</li>
             <li>
               Na aba Indicadores (antes, a tela Indicadores), os indicadores do exercício mês a mês até o Período, com o acumulado e, nas colunas de
               rótulo preto, o orçado do último mês e o acumulado do orçado. O Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem
@@ -508,9 +522,8 @@ export function PainelContent() {
               acumulado), que o botão ao lado do nome copia como imagem. Nesta aba, “Exportar” baixa os indicadores em Excel ou PDF.
             </li>
             <li>
-              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela (o Atual e o
-              Acumulado na metade esquerda; os gráficos, na direita): em cima, o nome e, à direita dele, a sigla e o sentido (o mês de referência fica ao lado do nome do grupo); embaixo, o Realizado (Atual) e o Realizado (Acumulado), cada
-              um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, em branco sobre a cor do
+              Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em cima, o nome e, à direita dele, a Metodologia (a fórmula do item) e o comportamento entre parênteses (o mês de referência fica ao lado do nome
+              do grupo); embaixo, o Atual e o Acumulado, com a unidade no rótulo (Atual (R$ M), Acumulado (m³)…), cada um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, em branco sobre a cor do
               sinal; e, ao lado, o gráfico dos meses do exercício, com
               o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
             </li>
