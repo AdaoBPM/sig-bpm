@@ -58,10 +58,11 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
 
   return (
     <>
+      {/* Na camada 40 (21/10/2026; antes, 20): a sombra fica por cima dos rótulos fixos das tabelas (camada 30); os menus e os modais, na 50, continuam por cima dele. */}
       <div
         ref={ref}
-        className={`sticky top-0 z-20 -mx-4 flex flex-col gap-3 border-b bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))] px-4 py-2 sm:flex-row sm:items-center sm:justify-between md:-mx-6 md:px-6 ${
-          preso ? "border-gray-200 shadow-sm" : "border-transparent"
+        className={`sticky top-0 z-40 -mx-4 flex flex-col gap-3 border-b bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))] px-4 py-2 sm:flex-row sm:items-center sm:justify-between md:-mx-6 md:px-6 ${
+          preso ? "border-gray-200 shadow-md" : "border-transparent"
         }`}
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
