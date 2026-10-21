@@ -159,6 +159,23 @@ export function AcoesApuracao({ anoMes, onAvisos, exportar }: Props) {
                 : "A reabertura fica registrada, com a justificativa. Os valores continuam os da apuração até a competência ser reapurada."}
             </DialogDescription>
           </DialogHeader>
+          {/* As telas do mês sem nenhum valor (21/10/2026): um aviso, que não impede o fechamento. */}
+          {dialogo === "fechar" && s.telasSemValor.length ? (
+            <div className="flex items-start gap-2 rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-3 py-2 text-sm text-gray-800">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600" />
+              <div>
+                <p className="font-medium text-gray-900">
+                  {s.telasSemValor.length === 1 ? "Uma tela do mês está sem nenhum valor:" : `${s.telasSemValor.length} telas do mês estão sem nenhum valor:`}
+                </p>
+                <ul className="list-disc pl-5">
+                  {s.telasSemValor.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+                <p className="mt-1">Confira se é isso mesmo antes de fechar.</p>
+              </div>
+            </div>
+          ) : null}
           {dialogo === "reabrir" ? (
             <div className="space-y-1.5">
               <label htmlFor="justificativa" className="text-sm font-medium text-gray-900">

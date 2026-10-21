@@ -530,7 +530,7 @@ export function DREContent() {
               bloqueada” aparece quando uma competência anterior tem entradas ou cadastros alterados: reapure as anteriores, em ordem, pelos botões
               “Ir para MM/AAAA”.
             </li>
-            <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo); “Reaberturas” mostra o histórico das reaberturas.</li>
+            <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo). Na confirmação, um aviso lista as telas do mês sem nenhum valor (Lançamentos, Receita, Indicadores, Estoque, Conferência), para conferir antes de fechar; ele não impede o fechamento. “Exportar”, na linha do título, baixa a DRE; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF; em Excel, também um arquivo por centro de custo (num ZIP, com o departamento e o centro no nome de cada arquivo).</li>
           </ul>
         }

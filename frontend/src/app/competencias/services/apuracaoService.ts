@@ -24,6 +24,8 @@ export type SituacaoCompetencia = {
   reaberturas: Array<{ justificativa: string; reabertaEm: string; reabertaPor: string; fechamentoAnteriorEm: string | null }>;
   /** Por que a competência não se exclui (só a mais recente, em aberto), ou null (20/10/2026). */
   motivoNaoExcluir: string | null;
+  /** As telas do mês sem nenhum valor (21/10/2026): o aviso do Fechar Competência. */
+  telasSemValor: string[];
   /** O que a exclusão leva junto (nula na fechada). */
   paraExcluir: ParaExcluir | null;
 };

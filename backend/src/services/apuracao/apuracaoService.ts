@@ -174,6 +174,29 @@ async function motivoNaoExcluir(ano: number, mes: number, status: string, compet
   return null;
 }
 
+/**
+ * As telas do mês sem nenhum valor (21/10/2026): o aviso do Fechar Competência (não impede o fechamento). As listas
+ * obrigatórias e o balancete já têm regra própria; aqui, as que o mês pode ter vazias por esquecimento.
+ */
+async function telasSemValor(competenciaId: string): Promise<string[]> {
+  const prisma = getPrismaClient();
+  const [manuais, receita, importados, digitados, estoque, conferencia] = await Promise.all([
+    prisma.lancamentoManual.count({ where: { competenciaId } }),
+    prisma.lancamentoReceita.count({ where: { competenciaId } }),
+    prisma.indicadorImportado.count({ where: { competenciaId } }),
+    prisma.indicadorDigitado.count({ where: { competenciaId } }),
+    prisma.estoqueSaldo.count({ where: { competenciaId } }),
+    prisma.conferenciaPlanilha.count({ where: { competenciaId } }),
+  ]);
+  return [
+    manuais ? null : "Lançamentos (nenhum lançamento manual)",
+    receita ? null : "Receita (nenhum lançamento de receita)",
+    importados + digitados ? null : "Indicadores (nenhum indicador importado ou digitado)",
+    estoque ? null : "Estoque (nenhum saldo)",
+    conferencia ? null : "Conferência (a planilha não foi enviada)",
+  ].filter((x): x is string => x !== null);
+}
+
 /** O que a exclusão leva junto (as contagens para a confirmação e a auditoria). */
 async function paraExcluir(competenciaId: string) {
   const prisma = getPrismaClient();
@@ -401,6 +424,8 @@ export const apuracaoService = {
       reaberturas: reaberturas.map((r) => ({ justificativa: r.justificativa, reabertaEm: r.reabertaEm, reabertaPor: r.usuario.nome, fechamentoAnteriorEm: r.fechamentoAnteriorEm })),
       /** A exclusão da competência (20/10/2026): o motivo de não poder, ou null; e o que ela leva junto, para a confirmação. */
       motivoNaoExcluir: await motivoNaoExcluir(ano, mes, c.status, c.id),
+      /** As telas do mês sem nenhum valor (21/10/2026): o aviso do Fechar Competência. */
+      telasSemValor: c.status === "FECHADA" ? [] : await telasSemValor(c.id),
       paraExcluir: c.status === "FECHADA" ? null : await paraExcluir(c.id),
     };
   },
