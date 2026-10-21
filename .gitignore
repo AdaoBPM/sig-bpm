@@ -8,6 +8,8 @@ node_modules/
 # Os ambientes do backend (15/10/2026): .env.development e .env.production, como o .env, ficam fora do git.
 .env.development
 .env.production
+# O teste (21/10/2026), como os outros ambientes.
+.env.teste
 !.env.example
 
 # Build

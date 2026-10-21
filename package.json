@@ -12,6 +12,8 @@
     "dev": "concurrently -k -n backend,frontend -c yellow,cyan \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "producao": "concurrently -k -n backend,frontend -c green,blue \"npm run start --prefix backend\" \"npm run start --prefix frontend\"",
     "producao:construir": "npm run build",
+    "teste": "node scripts/teste.mjs",
+    "teste:construir": "node scripts/teste.mjs construir",
     "db:copiar-producao": "npm run db:copiar-producao --prefix backend",
     "db:migrar-producao": "npm run db:migrar-producao --prefix backend",
     "dev:frontend": "npm run dev -w frontend",
