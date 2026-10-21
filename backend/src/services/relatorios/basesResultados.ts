@@ -12,7 +12,7 @@
  *   resto sobre a ROL. As linhas de volume (PS) não têm %.
  * - R$/m³: a receita do pré-fabricado e os custos de produção sobre a
  *   produção (m³); a receita de montagem e os custos de montagem sobre a
- *   montagem (m³). As demais linhas não têm.
+ *   montagem (m³); o Frete e Descarga sobre a expedição (m³) (21/10/2026). As demais linhas não têm.
  *
  * Em Despesas e Extra e no RN, a base é a ROL do Consolidado (a primeira linha
  * dessas abas); nos centros de custo, as do Consolidado.
@@ -32,6 +32,7 @@ export const COD = {
   FRETE: "DVV.GGV.FRETE_E_DESCARGA",
   PRODUCAO: "P.PRODUCAO_DO_PRE_FABRICADO_M",
   MONTAGEM: "S.MONTAGEM_DO_PRE_FABRICADO_M",
+  EXPEDICAO: "S.EXPEDICAO_DO_PRE_FABRICADO_M",
 } as const;
 
 /** 0 Consolidado, 1 Matriz, 2 Filial, 3 Serviços, 4 Despesas e Extra, 5 RN, ou os centros de custo. */
@@ -59,6 +60,8 @@ export function baseDoPercentual(visao: VisaoResultados, l: Linha): string | nul
 export function baseDoUnitario(l: Linha): string | null {
   if (l.codigo === COD.RBPF || l.codigo === COD.RLPF || l.grupoSigla === "CPP") return COD.PRODUCAO;
   if (l.codigo === COD.RBM || l.codigo === COD.RLM || l.grupoSigla === "CSM") return COD.MONTAGEM;
+  // O Frete e Descarga sobre o volume expedido (21/10/2026).
+  if (l.codigo === COD.FRETE) return COD.EXPEDICAO;
   return null;
 }
 

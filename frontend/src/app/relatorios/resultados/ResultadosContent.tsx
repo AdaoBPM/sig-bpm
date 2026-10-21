@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Fragment, useState, useSyncExternalStore, type ReactNode, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
@@ -156,6 +156,10 @@ function Caixa({ marcada, alguns, rotulo, onMudar }: { marcada: boolean; alguns?
   );
 }
 
+/** Os dois totais da ROL da estrutura (21/10/2026): o primeiro (no topo) sai da tabela quando o segundo está nela. */
+const CODIGO_DO_PRIMEIRO_TOTAL_DA_ROL = "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL";
+const CODIGO_DA_ROL = "ROL.RECEITA_OPERACIONAL_LIQUIDA_ROL";
+
 export function TabelaResultados({
   dados,
   titulo,
@@ -181,7 +185,15 @@ export function TabelaResultados({
    */
   doCenario?: boolean;
 }) {
-  const niveis = useNiveisDRE(dados.linhas, "sig.resultados.nivel");
+  // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
+  // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
+  const linhasDaTabela = useMemo(
+    () => (dados.linhas.some((l) => l.codigo === CODIGO_DA_ROL) ? dados.linhas.filter((l) => l.codigo !== CODIGO_DO_PRIMEIRO_TOTAL_DA_ROL) : dados.linhas),
+    [dados.linhas],
+  );
+  const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel");
+  // Sem o R$/m³ em Despesas e Extra e no RN (21/10/2026).
+  const comUnitario = !("unidade" in visao && (visao.unidade === 4 || visao.unidade === 5));
   // Na edição, as contas da linha que a caixa dela marca: ela mesma (se se edita) e as editáveis abaixo dela.
   const contasDaLinha = (l: LinhaResultado) => (edicao ? [l, ...niveis.abaixo(l)].filter(edicao.editavel).map((x) => x.codigo) : []);
   const [consulta, setConsulta] = useState<{ linha: LinhaResultado; mes: MesRelatorio } | null>(null);
@@ -193,7 +205,7 @@ export function TabelaResultados({
   const [recolhido, alternarMeses] = useMesesRecolhidos();
   const mostra = (i: number) => !recolhido || (i === referencia && !doCenario);
   // O R$/m³ do mês de referência (Resultados Empresariais); nos cenários, só no total.
-  const unitarioNoMes = !doCenario;
+  const unitarioNoMes = !doCenario && comUnitario;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
   const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
@@ -225,7 +237,7 @@ export function TabelaResultados({
   };
   // Colunas estreitas (12/10/2026): numa tela de 1920 px, o mês de referência, o orçado dele, os totais, o orçado
   // total e as variações cabem juntos; os rótulos do orçado quebram em duas linhas (ORÇADO / MAR/26).
-  const LARGURAS_DO_ORCADO = [100, 52, 64];
+  const LARGURAS_DO_ORCADO = comUnitario ? [100, 52, 64] : [100, 52];
   const LARGURAS_DA_VARIACAO = [96, 96, 84];
   const th = "px-1.5 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
@@ -238,7 +250,7 @@ export function TabelaResultados({
     ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, ...(unitarioNoMes ? [64] : []), ...(comOrcadoNoMes ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
     104,
     52,
-    64,
+    ...(comUnitario ? [64] : []),
     ...(comOrcado ? [104, ...LARGURAS_DO_ORCADO.slice(1), ...LARGURAS_DA_VARIACAO] : []),
   ];
   /** Os rótulos do orçado (pretos) e, nos totais, da variação (amarelo-ouro, como os demais). */
@@ -248,7 +260,7 @@ export function TabelaResultados({
         {rotulo}
       </th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>%</th>
-      <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th>
+      {comUnitario ? <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th> : null}
       {variacao ? (
         <>
           <th className={`${th} border-l border-gray-300`}>DIFERENÇA</th>
@@ -301,7 +313,7 @@ export function TabelaResultados({
             )}
             <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
             <th className={th}>%</th>
-            <th className={th}>R$/m³</th>
+            {comUnitario ? <th className={th}>R$/m³</th> : null}
             {comOrcado ? rotulosDoOrcado(rotuloDoOrcadoTotal, true) : null}
           </tr>
         }
@@ -319,7 +331,7 @@ export function TabelaResultados({
               <>
                 <td className={`${td} ${fundoDoOrcado(l)}`}>{orcadoDa(l, o?.valor ?? undefined)}</td>
                 <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? fracao(l, o.pct, temPct(l)) : ""}</td>
-                <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? unitario(l, o.unitario) : ""}</td>
+                {comUnitario ? <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? unitario(l, o.unitario) : ""}</td> : null}
                 {variacao ? (
                   <>
                     <td className={`${td} border-l border-gray-100 ${fundo}`}>{diferenca(l, r, o)}</td>
@@ -383,7 +395,7 @@ export function TabelaResultados({
                 })}
                 <td className={`${td} border-l border-gray-300 ${fundo}`}>{valorDa(l, l.total)}</td>
                 <td className={`${pct} ${fundo}`}>{fracao(l, l.total.pct, temPct(l))}</td>
-                <td className={`${pct} ${fundo}`}>{unitario(l, l.total.unitario)}</td>
+                {comUnitario ? <td className={`${pct} ${fundo}`}>{unitario(l, l.total.unitario)}</td> : null}
                 {comOrcado ? celulasDoOrcado(l, l.total, l.orcado?.total, true) : null}
               </tr>
             );
