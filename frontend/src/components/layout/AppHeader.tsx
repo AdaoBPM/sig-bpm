@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { useTema, type Tema } from "@/lib/tema";
 import { useAcessibilidade, type Acessibilidade } from "@/lib/acessibilidade";
-import { Accessibility, KeyRound, LogOut, Palette } from "lucide-react";
+import { Eye, KeyRound, LogOut, Palette } from "lucide-react";
 
 import {
   Avatar,
@@ -174,7 +174,7 @@ export function AppHeader() {
             */}
             <div className="flex items-center justify-between gap-2 px-1.5 py-1 text-sm">
               <span className="flex items-center gap-1.5">
-                <Accessibility className="size-4 shrink-0" />
+                <Eye className="size-4 shrink-0" />
                 Acessibilidade
               </span>
               <span className="flex overflow-hidden rounded-sm border border-gray-300" role="radiogroup" aria-label="Acessibilidade">
