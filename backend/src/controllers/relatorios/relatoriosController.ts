@@ -7,6 +7,7 @@ import { indicadoresService } from "../../services/relatorios/indicadoresService
 import { painelService } from "../../services/relatorios/painelService.js";
 import { RelatorioError, resultadosService } from "../../services/relatorios/resultadosService.js";
 import { veObras } from "../../services/acesso/recorteDepartamento.js";
+import { cenariosMarcados } from "../../services/cenarios/indicadoresDoCenario.js";
 import { ehGrupoSemCentro, veSemCentros, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
 
 const anoSchema = z.coerce.number().int().min(2025).max(2100);
@@ -68,7 +69,22 @@ function periodo(request: Request, response: Response) {
   return { ano: ano.data, ate: ate.data };
 }
 
+/** O Compara Com (21/10/2026): ?comparaCom= a marcação do cenário comparado; sem ele, o Orçamento Empresarial; inválido, false. */
+const comparaComSchema = z.enum(["ORCAMENTO_EMPRESARIAL", "RESULTADOS_ANTERIORES", "RESULTADOS_VENDIDOS", "PREVISAO"]);
+function comparaComDe(request: Request) {
+  if (request.query.comparaCom === undefined || request.query.comparaCom === "") return "ORCAMENTO_EMPRESARIAL" as const;
+  const r = comparaComSchema.safeParse(request.query.comparaCom);
+  return r.success ? r.data : false;
+}
+
 export const relatoriosController = {
+  /** Os cenários marcados do exercício ?ano= (21/10/2026): as opções do Compara Com. */
+  async comparaveis(request: Request, response: Response) {
+    const ano = Number(request.query.ano);
+    if (!Number.isInteger(ano)) return response.status(400).json({ error: "Exercício inválido" });
+    return responder(response, () => cenariosMarcados(ano));
+  },
+
   /**
    * ?visao=0..5 (0 Consolidado) ou ?visao=centros: sem ?grupo, a lista dos agrupamentos; com ele, o agrupamento. Ou
    * ?visao=obras: sem ?obra, a lista das obras; com ela (o código do centro 1.98 ou 1.99), a obra.
@@ -97,7 +113,9 @@ export const relatoriosController = {
       return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso, true) : resultadosService.listarCentros(p.ano, p.ate, acesso, true)));
     }
     const visao = v.data as 0 | 1 | 2 | 3 | 4 | 5;
-    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso, true));
+    const comparaCom = comparaComDe(request);
+    if (comparaCom === false) return response.status(400).json({ error: "Compara Com inválido" });
+    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso, true, comparaCom));
   },
 
   /**
@@ -153,16 +171,20 @@ export const relatoriosController = {
     if (!podeIndicadores(request)) return response.status(403).json({ error: "Sem permissão para esta ação" });
     const p = periodo(request, response);
     if (!p) return;
-    return responder(response, () => indicadoresService.listar(p.ano, p.ate, somenteFechadas(request)));
+    const comparaCom = comparaComDe(request);
+    if (comparaCom === false) return response.status(400).json({ error: "Compara Com inválido" });
+    return responder(response, () => indicadoresService.listar(p.ano, p.ate, somenteFechadas(request), comparaCom));
   },
 
   /** O Painel de Bordo do mês ?ate= (sem ele, o último apurado). */
   async painel(request: Request, response: Response) {
     const p = periodo(request, response);
     if (!p) return;
+    const comparaCom = comparaComDe(request);
+    if (comparaCom === false) return response.status(400).json({ error: "Compara Com inválido" });
     // Só as abas permitidas (Resultados, Performance; 14/10/2026).
     return responder(response, async () => {
-      const r = await painelService.painel(p.ano, p.ate, true);
+      const r = await painelService.painel(p.ano, p.ate, true, comparaCom);
       return { ...r, abas: r.abas.filter((a) => tem(request, `relatorio_painel.${a.chave}:ler`)) };
     });
   },

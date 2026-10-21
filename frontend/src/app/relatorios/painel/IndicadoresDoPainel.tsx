@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChartColumn } from "lucide-react";
 
 import type { TipoGrafico } from "../components/GraficoRealizadoOrcado";
-import { mensagemDeErro, relatoriosService, type Indicador } from "../services/relatoriosService";
+import { mensagemDeErro, relatoriosService, type Indicador, type MarcacaoComparavel } from "../services/relatoriosService";
 import { GraficoIndicadorDialog } from "../indicadores/GraficoIndicadorDialog";
 import { TabelaIndicadores, valor, valorCurto } from "../indicadores/TabelaIndicadores";
 
@@ -14,8 +14,8 @@ import { TabelaIndicadores, valor, valorCurto } from "../indicadores/TabelaIndic
  * indicadores do exercício até o Período do Configurar Gráficos do painel, com o orçado, e o gráfico de cada um no Tipo
  * e com os Rótulos escolhidos lá.
  */
-export function IndicadoresDoPainel({ ano, ate, tipo, comRotulos }: { ano: number; ate: number; tipo: TipoGrafico; comRotulos: boolean }) {
-  const consulta = useQuery({ queryKey: ["relatorios", "indicadores", ano, ate], queryFn: () => relatoriosService.indicadores(ano, ate) });
+export function IndicadoresDoPainel({ ano, ate, tipo, comRotulos, comparaCom }: { ano: number; ate: number; tipo: TipoGrafico; comRotulos: boolean; /** O Compara Com (21/10/2026). */ comparaCom?: MarcacaoComparavel }) {
+  const consulta = useQuery({ queryKey: ["relatorios", "indicadores", ano, ate, comparaCom], queryFn: () => relatoriosService.indicadores(ano, ate, false, comparaCom) });
   const dados = consulta.data;
   const [comGrafico, setComGrafico] = useState<Indicador | null>(null);
   if (consulta.isError) {

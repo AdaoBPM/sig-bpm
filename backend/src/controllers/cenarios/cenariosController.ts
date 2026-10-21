@@ -25,7 +25,7 @@ const descricaoSchema = z
   .transform((d) => d || null);
 const anoSchema = z.coerce.number().int().min(2020).max(2100);
 const visaoSchema = z.coerce.number().int().min(0).max(5);
-const marcacaoSchema = z.enum(["ORCAMENTO_EMPRESARIAL", "RESULTADOS_ANTERIORES", "RESULTADOS_VENDIDOS"]).nullable();
+const marcacaoSchema = z.enum(["ORCAMENTO_EMPRESARIAL", "RESULTADOS_ANTERIORES", "RESULTADOS_VENDIDOS", "PREVISAO"]).nullable();
 const visualizacaoSchema = z.enum(["PARTICULAR", "PUBLICA"]).optional();
 const tipoSchema = z.enum(["SINTETICO", "ANALITICO"]);
 

@@ -2,12 +2,14 @@ import { api } from "@/lib/api";
 
 import type { Indicador, MesRelatorio, Painel, Resultados } from "@/app/relatorios/services/relatoriosService";
 
-export type MarcacaoCenario = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS";
+export type MarcacaoCenario = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS" | "PREVISAO";
 
 export const MARCACOES: Array<{ valor: MarcacaoCenario; rotulo: string }> = [
   { valor: "ORCAMENTO_EMPRESARIAL", rotulo: "Orçamento Empresarial" },
   { valor: "RESULTADOS_ANTERIORES", rotulo: "Resultados Anteriores" },
   { valor: "RESULTADOS_VENDIDOS", rotulo: "Resultados Vendidos" },
+  // 21/10/2026: escolhida no Compara Com de Resultados Empresariais.
+  { valor: "PREVISAO", rotulo: "Previsão" },
 ];
 export const rotuloMarcacao = (m: MarcacaoCenario | null) => MARCACOES.find((x) => x.valor === m)?.rotulo ?? null;
 /** O rótulo da versão do cenário (13/10/2026): VER00, VER01… */

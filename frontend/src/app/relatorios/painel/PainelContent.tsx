@@ -17,6 +17,7 @@ import { ConfigurarGraficos } from "../components/ConfigurarGraficos";
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { IndicadoresDoPainel } from "./IndicadoresDoPainel";
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
+import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
@@ -24,6 +25,7 @@ import {
   SeletorRotulos,
   SeletorTipoGrafico,
   useRotulosDosValores,
+  RotulosDoGrafico,
   useRotulosDoGrafico,
   useTipoGrafico,
   type TipoGrafico,
@@ -444,19 +446,23 @@ export function PainelContent() {
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
+  // O cenário comparado (21/10/2026): o Compara Com, entre os marcados do exercício (o mesmo de Resultados).
+  const comparacao = useComparaCom(ano ?? null);
   const consulta = useQuery({
-    queryKey: ["relatorios", "painel", ano, ate],
-    queryFn: () => relatoriosService.painel(ano!, ate),
+    queryKey: ["relatorios", "painel", ano, ate, comparacao.comparaCom],
+    queryFn: () => relatoriosService.painel(ano!, ate, comparacao.comparaCom),
     enabled: !!ano && !!ate,
   });
   const dados = consulta.data;
   // A aba Indicadores (19/10/2026; antes, a tela Indicadores): o Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem nela.
   const extras =
-    comIndicadores && ano && ate ? [{ chave: "indicadores", rotulo: "Indicadores", conteudo: <IndicadoresDoPainel ano={ano} ate={ate} tipo={tipoGrafico} comRotulos={comRotulos} /> }] : [];
+    comIndicadores && ano && ate ? [{ chave: "indicadores", rotulo: "Indicadores", conteudo: <IndicadoresDoPainel ano={ano} ate={ate} tipo={tipoGrafico} comRotulos={comRotulos} comparaCom={comparacao.comparaCom} /> }] : [];
   const naAbaIndicadores = comIndicadores && (aba === "indicadores" || (dados ? dados.abas.length === 0 : false));
   const atual = dados?.abas.find((a) => a.chave === aba) ?? dados?.abas[0];
 
   return (
+    // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
+    <RotulosDoGrafico.Provider value={{ realizado: "Realizado", orcado: dados?.rotuloComparado ?? "Orçado" }}>
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Painel de Bordo"
@@ -492,6 +498,11 @@ export function PainelContent() {
             </li>
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
+            <li>
+              Em “Configurar Gráficos”, o “Compara Com” escolhe o cenário comparado entre os marcados do exercício (Orçamento Empresarial, o padrão,
+              Resultados Anteriores, Resultados Vendidos e Previsão); fora do Orçamento Empresarial, os cards dizem “vs.” e o nome da marcação. A escolha vale
+              também em Resultados.
+            </li>
             <li>
               Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
               ficam sem as linhas da escala (só a do zero). O botão ao lado do nome de cada grupo copia o grupo inteiro (o nome e os cards) como
@@ -554,6 +565,7 @@ export function PainelContent() {
                 opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
               />
               <Seletor rotulo="Período" valor={String(ate)} onMudar={(v) => setAte(Number(v))} largura="w-36" opcoes={meses.map((m) => ({ valor: String(m), rotulo: MESES[m - 1] }))} />
+              <SeletorComparaCom valor={comparacao.comparaCom} opcoes={comparacao.opcoes} onMudar={comparacao.mudar} />
               <SeletorRotulos com={comRotulos} onMudar={setComRotulos} />
               <SeletorTipoGrafico tipo={tipoGrafico} onMudar={setTipoGrafico} />
               </ConfigurarGraficos>
@@ -607,5 +619,6 @@ export function PainelContent() {
         />
       )}
     </div>
+    </RotulosDoGrafico.Provider>
   );
 }

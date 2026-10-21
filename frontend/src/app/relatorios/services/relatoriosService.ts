@@ -28,6 +28,8 @@ export type Resultados = {
   ate: number;
   /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
   cenarioOrcado?: string | null;
+  /** O nome do comparado nos rótulos (21/10/2026): "Orçado" ou o nome da marcação escolhida no Compara Com. */
+  rotuloComparado?: string;
   /** Nos cenários (13/10/2026): o cenário comparado, cujos totais vêm no lugar do orçado. */
   comparado?: { nome: string; ano: number } | null;
   meses: MesRelatorio[];
@@ -65,6 +67,8 @@ export type Indicadores = {
   ate: number;
   /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
   cenarioOrcado?: string | null;
+  /** O nome do comparado nos rótulos (21/10/2026): "Orçado" ou o nome da marcação escolhida no Compara Com. */
+  rotuloComparado?: string;
   meses: MesRelatorio[];
   indicadores: Indicador[];
 };
@@ -96,14 +100,22 @@ export type Painel = {
   mesesSemMeta: string[];
   /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
   cenarioOrcado: string | null;
+  rotuloComparado?: string;
   abas: Array<{ chave: string; titulo: string; quadros: QuadroPainel[] }>;
 };
 
 const periodo = (ano: number, ate?: number) => ({ ano, ...(ate ? { ate } : {}) });
 
+/** As marcações dos cenários que o Compara Com escolhe (21/10/2026). */
+export type MarcacaoComparavel = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS" | "PREVISAO";
+export type Comparavel = { marcacao: MarcacaoComparavel; rotulo: string; cenario: { id: string; nome: string } };
+const comparado = (comparaCom?: MarcacaoComparavel) => (comparaCom && comparaCom !== "ORCAMENTO_EMPRESARIAL" ? { comparaCom } : {});
+
 export const relatoriosService = {
-  resultados: async (ano: number, ate: number | undefined, visao: number) =>
-    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao } })).data.data,
+  resultados: async (ano: number, ate: number | undefined, visao: number, comparaCom?: MarcacaoComparavel) =>
+    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao, ...comparado(comparaCom) } })).data.data,
+  /** Os cenários marcados do exercício (21/10/2026): as opções do Compara Com. */
+  comparaveis: async (ano: number) => (await api.get<{ data: Comparavel[] }>("/proxy/relatorios/comparaveis", { params: { ano } })).data.data,
   centros: async (ano: number, ate: number | undefined) =>
     (await api.get<{ data: CentrosResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros" } })).data.data,
   semCentros: async (ano: number, ate: number | undefined) =>
@@ -117,10 +129,10 @@ export const relatoriosService = {
   centro: async (ano: number, ate: number | undefined, grupo: string) =>
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros", grupo } })).data.data,
   /** `etapa`: a etapa Indicadores do Fechamento Mensal, que vê o mês aberto; sem ela, só as competências fechadas. */
-  indicadores: async (ano: number, ate: number | undefined, etapa = false) =>
-    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: { ...periodo(ano, ate), ...(etapa ? { etapa: 1 } : {}) } })).data.data,
-  painel: async (ano: number, ate: number | undefined) =>
-    (await api.get<{ data: Painel }>("/proxy/relatorios/painel", { params: periodo(ano, ate) })).data.data,
+  indicadores: async (ano: number, ate: number | undefined, etapa = false, comparaCom?: MarcacaoComparavel) =>
+    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: { ...periodo(ano, ate), ...(etapa ? { etapa: 1 } : {}), ...comparado(comparaCom) } })).data.data,
+  painel: async (ano: number, ate: number | undefined, comparaCom?: MarcacaoComparavel) =>
+    (await api.get<{ data: Painel }>("/proxy/relatorios/painel", { params: { ...periodo(ano, ate), ...comparado(comparaCom) } })).data.data,
 };
 
 export function mensagemDeErro(error: unknown, padrao: string) {

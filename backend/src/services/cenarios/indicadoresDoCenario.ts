@@ -148,3 +148,20 @@ export function metasPorMes(c: CalculoDoCenario): Array<Map<string, number> | nu
 export async function cenarioMarcado(ano: number, marcacao: MarcacaoCenario) {
   return getPrismaClient().cenario.findFirst({ where: { ano, marcacao }, select: { id: true, nome: true } });
 }
+
+/** O nome de cada marcação (21/10/2026: o Compara Com de Resultados Empresariais e os rótulos do comparado). */
+export const ROTULO_DA_MARCACAO: Record<MarcacaoCenario, string> = {
+  ORCAMENTO_EMPRESARIAL: "Orçamento Empresarial",
+  RESULTADOS_ANTERIORES: "Resultados Anteriores",
+  RESULTADOS_VENDIDOS: "Resultados Vendidos",
+  PREVISAO: "Previsão",
+};
+
+/** Os cenários marcados do exercício (21/10/2026): as opções do Compara Com de Resultados Empresariais. */
+export async function cenariosMarcados(ano: number) {
+  const cs = await getPrismaClient().cenario.findMany({ where: { ano, marcacao: { not: null } }, select: { id: true, nome: true, marcacao: true } });
+  const ordem = Object.keys(ROTULO_DA_MARCACAO);
+  return cs
+    .map((c) => ({ marcacao: c.marcacao!, rotulo: ROTULO_DA_MARCACAO[c.marcacao!], cenario: { id: c.id, nome: c.nome } }))
+    .sort((a, b) => ordem.indexOf(a.marcacao) - ordem.indexOf(b.marcacao));
+}

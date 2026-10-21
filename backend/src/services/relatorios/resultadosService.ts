@@ -1,7 +1,8 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerLinhaNaObra, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
-import { cenarioMarcado } from "../cenarios/indicadoresDoCenario.js";
+import { cenarioMarcado, ROTULO_DA_MARCACAO } from "../cenarios/indicadoresDoCenario.js";
+import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
 import { obrasService } from "../dre/obrasService.js";
 import { GRUPOS_SEM_CENTRO, nomeDoGrupoSemCentro, semCentroService, type GrupoSemCentro } from "../dre/semCentroService.js";
@@ -67,8 +68,8 @@ export async function estrutura(): Promise<LinhaEstrutura[]> {
  * referência e o acumulado de janeiro até ele, da visão e do Consolidado (as bases do % e do R$/m³ em Despesas e
  * Extra e no RN). Sem cenário marcado, nenhum (as linhas mostram zero).
  */
-async function orcadoDaVisao(ano: number, visao: number, ate: number) {
-  const cenario = await cenarioMarcado(ano, "ORCAMENTO_EMPRESARIAL");
+async function orcadoDaVisao(ano: number, visao: number, ate: number, marcacao: MarcacaoCenario = "ORCAMENTO_EMPRESARIAL") {
+  const cenario = await cenarioMarcado(ano, marcacao);
   const vazio = () => ({ mes: new Map<string, number>(), total: new Map<string, number>() });
   const daVisao = vazio();
   const doConsolidado = vazio();
@@ -158,7 +159,8 @@ export function montar(
 
 export const resultadosService = {
   /** Uma visão da DRE (0 Consolidado, 1..5 as unidades) mês a mês, até o mês `ate`. */
-  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false) {
+  /** `comparaCom` (21/10/2026): a marcação do cenário comparado (as colunas pretas); sem ela, o Orçamento Empresarial. */
+  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false, comparaCom: MarcacaoCenario = "ORCAMENTO_EMPRESARIAL") {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const competencias = meses.map((m) => m.competenciaId);
     const [linhas, valores] = await Promise.all([estrutura(), valoresDaVisao(competencias, visao)]);
@@ -166,7 +168,7 @@ export const resultadosService = {
     // Em Despesas e Extra e no RN, a ROL do Consolidado abre a tabela, como nas abas da planilha.
     if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
     const apurado = meses.map((m) => m.competenciaId !== null);
-    const orcado = await orcadoDaVisao(ano, visao, ultimo);
+    const orcado = await orcadoDaVisao(ano, visao, ultimo, comparaCom);
     // O % e o R$/m³ do orçado sobre as bases do próprio orçado (em Despesas e Extra e no RN, as do Consolidado).
     const basesOrcado = basesDoConsolidado(visao) ? orcado.doConsolidado : orcado.daVisao;
     const celulaOrcada = (l: LinhaEstrutura, periodo: "mes" | "total") => {
@@ -182,6 +184,8 @@ export const resultadosService = {
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
       cenarioOrcado: orcado.cenario?.nome ?? null,
+      // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
+      rotuloComparado: comparaCom === "ORCAMENTO_EMPRESARIAL" ? "Orçado" : ROTULO_DA_MARCACAO[comparaCom],
       linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, new Set(orcado.daVisao.total.keys())).map((l) => ({
         ...l,
         /** O orçado do mês de referência e o acumulado de janeiro até ele, com o % e o R$/m³ (zero sem o cenário ou sem a linha nele). */

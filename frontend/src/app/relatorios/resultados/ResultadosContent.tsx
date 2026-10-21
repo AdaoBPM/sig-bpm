@@ -3,6 +3,7 @@
 import { Fragment, useState, useSyncExternalStore, type ReactNode, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
 
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -20,7 +21,7 @@ import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreS
 import { ExportarRelatorio, type OpcaoExportar } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { TabelaLarga } from "../components/TabelaLarga";
-import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type MesRelatorio, type Resultados } from "../services/relatoriosService";
+import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type MesRelatorio, type Resultados, type MarcacaoComparavel } from "../services/relatoriosService";
 
 /** As visões da DRE, como as abas Resultados (…) da planilha, e os centros de custo. */
 const VISOES = [
@@ -214,7 +215,9 @@ export function TabelaResultados({
   const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
   // Nos cenários (13/10/2026), o cenário comparado no lugar do orçado: só depois do total (os 12 meses se olham inteiros).
   const comOrcadoNoMes = comOrcado && !dados.comparado;
-  const rotuloDoOrcadoTotal = dados.comparado ? `COMPARADO TOTAL/${String(dados.comparado.ano).slice(2)}` : `ORÇADO TOTAL/${ano}`;
+  // O nome do comparado (21/10/2026): "ORÇADO" no Orçamento Empresarial; nos outros cenários do Compara Com, o nome da marcação.
+  const ROTULO = (dados.rotuloComparado ?? "Orçado").toUpperCase();
+  const rotuloDoOrcadoTotal = dados.comparado ? `COMPARADO TOTAL/${String(dados.comparado.ano).slice(2)}` : `${ROTULO} TOTAL/${ano}`;
   const orcadoDa = (l: LinhaResultado, v: number | undefined) => (l.tipo === "SECAO" || v === undefined ? "" : l.volume ? formato.valor(v) : formato.inteiro(v));
   /** O texto com o sinal: + nos positivos (o − dos negativos vem do formato); o que arredonda para zero fica sem sinal. */
   const comSinal = (v: number, texto: string) => (v > 0 && /[1-9]/.test(texto) ? `+${texto}` : texto);
@@ -307,7 +310,7 @@ export function TabelaResultados({
                 </th>
                 <th className={th}>%</th>
                 {i === referencia && unitarioNoMes ? <th className={th}>R$/m³</th> : null}
-                {i === referencia && comOrcadoNoMes ? rotulosDoOrcado(`ORÇADO ${m.rotulo}`, false) : null}
+                {i === referencia && comOrcadoNoMes ? rotulosDoOrcado(`${ROTULO} ${m.rotulo}`, false) : null}
               </Fragment>
               ),
             )}
@@ -601,8 +604,8 @@ function VisaoObras({ ano, ate, escolhida, onEscolher: setEscolhida }: { ano: nu
   );
 }
 
-function VisaoUnidade({ ano, ate, visao, nome }: { ano: number; ate: number; visao: number; nome: string }) {
-  const consulta = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "visao", visao], queryFn: () => relatoriosService.resultados(ano, ate, visao) });
+function VisaoUnidade({ ano, ate, visao, nome, comparaCom }: { ano: number; ate: number; visao: number; nome: string; comparaCom: MarcacaoComparavel }) {
+  const consulta = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "visao", visao, comparaCom], queryFn: () => relatoriosService.resultados(ano, ate, visao, comparaCom) });
   if (consulta.isError) return <Erro erro={consulta.error} padrao="Erro ao carregar os resultados." />;
   if (consulta.isPending) return <Carregando />;
   return <TabelaResultados key={visao} dados={consulta.data} titulo={`Resultados · ${nome}`} visao={visao === 0 ? { consolidado: true } : { unidade: visao }} nomeVisao={nome} />;
@@ -671,6 +674,7 @@ export function ResultadosContent() {
     ...(veObrasNaAba ? [{ chave: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)", params: { ...periodo, escopo: "obras" } }] : []),
   ];
 
+  const comparacao = useComparaCom(ano ?? null);
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -696,8 +700,10 @@ export function ResultadosContent() {
             <li>
               Nas unidades e no Consolidado, as colunas de rótulo preto trazem o orçado (valor, % e R$/m³): depois do mês de referência, o do mês;
               depois do total, o acumulado de janeiro até ele. Depois do orçado acumulado, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷
-              orçado) e Eficiência (% realizado − % orçado, em pontos percentuais). O orçado é o do cenário marcado como Orçamento Empresarial no
-              exercício (Criação de Cenários / Cenários Sintéticos); sem ele, zero. Os centros de custo não têm orçado.
+              orçado) e Eficiência (% realizado − % orçado, em pontos percentuais). O orçado é o do cenário escolhido em “Compara Com”, ao lado do
+              período, entre os cenários marcados do exercício (Orçamento Empresarial, o padrão, Resultados Anteriores, Resultados Vendidos e Previsão, em
+              Criação de Cenários); fora do Orçamento Empresarial, as colunas trazem o nome da marcação (PREVISÃO AGO/26…). Sem cenário, zero. A escolha vale
+              também no Painel de Bordo. Os centros de custo não têm orçado.
             </li>
             <li>Clique no valor de um mês, numa linha com lupa, para ver os lançamentos de origem daquele mês (ou, nas linhas de volume, as listas somadas por obra); clicar na descrição abre o mês de referência.</li>
             <li>
@@ -747,6 +753,8 @@ export function ResultadosContent() {
               }}
               onAte={setAte}
             />
+            {/* O cenário comparado (21/10/2026), entre os marcados do exercício. */}
+            <SeletorComparaCom valor={comparacao.comparaCom} opcoes={comparacao.opcoes} onMudar={comparacao.mudar} />
             {opcoesExportar.length && visoes.length ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
             </div>
           ) : null
@@ -774,7 +782,7 @@ export function ResultadosContent() {
           ) : visao === "obras" ? (
             <VisaoObras ano={ano} ate={ate} escolhida={obra} onEscolher={setObra} />
           ) : (
-            <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} />
+            <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} comparaCom={comparacao.comparaCom} />
           )}
         </>
       )}

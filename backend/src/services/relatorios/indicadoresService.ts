@@ -3,6 +3,8 @@ import { acumular, type DadosDoMes } from "./indicadores.js";
 import { catalogoDeIndicadores, TOTAIS_SINTETICOS } from "./catalogoIndicadores.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { orcamentoDoExercicio } from "./orcamento.js";
+import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
+import { ROTULO_DA_MARCACAO } from "../cenarios/indicadoresDoCenario.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
 /**
@@ -61,7 +63,7 @@ export const indicadoresService = {
    * Os indicadores do exercício, mês a mês até `ate`, com o acumulado. Com `somenteFechadas` (Resultados Empresariais),
    * só os meses de competência fechada têm valor.
    */
-  async listar(ano: number, ate?: number, somenteFechadas = false) {
+  async listar(ano: number, ate?: number, somenteFechadas = false, comparaCom: MarcacaoCenario = "ORCAMENTO_EMPRESARIAL") {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const fechados = new Set(meses.filter((m) => m.competenciaId !== null).map((m) => m.mes));
     const competencias = new Map(
@@ -70,7 +72,7 @@ export const indicadoresService = {
         .map((c) => [c.mes, c.id]),
     );
     // O orçado de cada mês, para o gráfico do indicador, como no Painel de Bordo: o cenário Orçamento Empresarial (sem ele, zero).
-    const orcamento = await orcamentoDoExercicio(ano);
+    const orcamento = await orcamentoDoExercicio(ano, comparaCom);
     const metas = meses.map((m) => orcamento.porMes[m.mes - 1]);
     // Os indicadores do cadastro Estrutura dos Indicadores, com as fórmulas.
     const catalogo = await catalogoDeIndicadores();
@@ -82,6 +84,8 @@ export const indicadoresService = {
       ate: ultimo,
       /** O cenário do orçado (null: nenhum cenário Orçamento Empresarial no exercício; o orçado é zero). */
       cenarioOrcado: orcamento.cenario?.nome ?? null,
+      // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
+      rotuloComparado: comparaCom === "ORCAMENTO_EMPRESARIAL" ? "Orçado" : ROTULO_DA_MARCACAO[comparaCom],
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       indicadores: catalogo.map((i) => {
         const partes = dados.map((d) => (d ? i.calculo(d) : null));

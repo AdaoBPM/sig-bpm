@@ -27,3 +27,5 @@ relatoriosRoutes.get("/resultados/exportar", autenticacao, verificarAba("relator
 relatoriosRoutes.get("/indicadores/exportar", autenticacao, verificarAlgumaPermissao("relatorio_painel.indicadores:ler", "indicadores_mes:ler"), asyncHandler(c.exportarIndicadores));
 relatoriosRoutes.get("/indicadores", autenticacao, verificarAlgumaPermissao("relatorio_painel.indicadores:ler", "indicadores_mes:ler"), asyncHandler(c.indicadores));
 relatoriosRoutes.get("/painel", autenticacao, verificarPermissao("relatorio_painel:ler"), asyncHandler(c.painel));
+// O Compara Com (21/10/2026): os cenários marcados do exercício.
+relatoriosRoutes.get("/comparaveis", autenticacao, verificarAlgumaPermissao("relatorio_resultados:ler", "relatorio_painel:ler"), asyncHandler(c.comparaveis));

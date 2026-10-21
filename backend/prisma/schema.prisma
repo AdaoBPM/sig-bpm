@@ -1920,6 +1920,8 @@ enum MarcacaoCenario {
   ORCAMENTO_EMPRESARIAL
   RESULTADOS_ANTERIORES
   RESULTADOS_VENDIDOS
+  /// A Previsão (21/10/2026): um cenário que se escolhe no Compara Com de Resultados Empresariais.
+  PREVISAO
 }
 
 /// Quem vê o cenário (11/10/2026): PARTICULAR, só quem o criou e o Administrador (Editar no Controle de Usuários);
