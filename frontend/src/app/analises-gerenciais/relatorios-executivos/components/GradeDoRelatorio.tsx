@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import GridLayout, { type Layout } from "react-grid-layout";
 import { ChartColumn, CircleAlert, GripVertical, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
@@ -24,7 +24,6 @@ import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } 
 import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
 import { videoDoLink } from "./videoIncorporado";
 
-const Grade = WidthProvider(GridLayout);
 
 /** A grade: 12 colunas, linhas de 24 px, 12 px entre os blocos. */
 export const COLUNAS = 12;
@@ -82,6 +81,17 @@ export function linhasDaPagina() {
   const grade = altura - 24 - 40 - 16 - 24;
   // A grade: 12 px em cima e embaixo, e cada linha com 12 px entre elas.
   return Math.max(8, Math.floor((grade - MARGEM) / (ALTURA_DA_LINHA + MARGEM)));
+}
+
+/**
+ * A largura da grade do slide (22/10/2026): a da apresentação — a tela inteira menos as margens de 32 px, mais os 12 px de
+ * cada lado da grade. A grade tem sempre essa largura; na edição, o slide inteiro se reduz na mesma proporção para caber
+ * na tela, e sai igual na apresentação (antes, a grade tinha a largura da área da tela e as linhas, a mesma altura: na tela
+ * inteira, os blocos ficavam mais largos e mais baixos, e a imagem, na proporção dela, mais estreita que a legenda).
+ */
+export function larguraDoSlide() {
+  const largura = typeof window === "undefined" ? 1920 : window.screen.width;
+  return largura - 64 + 24;
 }
 
 /** O card do Painel sem o gráfico fica com 2/5 da largura (as duas colunas dos valores, do mesmo tamanho); com ele, 5/2. */
@@ -173,7 +183,26 @@ export function GradeDoRelatorio({
   onMudar: (blocos: Bloco[]) => void;
 }) {
   const [configurando, setConfigurando] = useState<string | null>(null);
+  // O slide na largura da tela inteira (caixa) e a escala dele no espaço da tela (area): 1 na apresentação, menor na edição.
+  const LARGURA = larguraDoSlide();
+  const area = useRef<HTMLDivElement>(null);
   const caixa = useRef<HTMLDivElement>(null);
+  const alturaDaPagina = linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM;
+  const [escala, setEscala] = useState(1);
+  const [alturaDoSlide, setAlturaDoSlide] = useState(alturaDaPagina);
+  useLayoutEffect(() => {
+    const a = area.current;
+    const c = caixa.current;
+    if (!a || !c) return;
+    const medir = () => {
+      setEscala(a.clientWidth / LARGURA || 1);
+      setAlturaDoSlide(c.offsetHeight);
+    };
+    const obs = new ResizeObserver(medir);
+    obs.observe(a);
+    obs.observe(c);
+    return () => obs.disconnect();
+  }, [LARGURA]);
   // Os campos de texto formatado dos blocos (anotações e legendas), para a barra de formatação de cada um.
   const campos = useRef(new Map<string, HTMLElement>());
   // A largura da grade enquanto um bloco se move ou se redimensiona (para a grade de fundo); fora disso, null.
@@ -227,14 +256,21 @@ export function GradeDoRelatorio({
   return (
     // A página na altura do espaço útil da tela inteira; na edição, com o contorno tracejado dela (o bloco que passa dele,
     // de antes do limite, aparece abaixo e volta para dentro ao ser movido). A sombra do bloco, em cinza.
-    <div ref={caixa} className="relative -mx-3 [&_.react-grid-placeholder]:!bg-gray-400" style={{ minHeight: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }}>
+    <div ref={area} className="relative -mx-3" style={{ height: alturaDoSlide * escala }}>
+      <div
+        ref={caixa}
+        className="absolute top-0 left-0 [&_.react-grid-placeholder]:!bg-gray-400"
+        style={{ width: LARGURA, minHeight: alturaDaPagina, transform: escala === 1 ? undefined : `scale(${escala})`, transformOrigin: "top left" }}
+      >
       {editavel ? (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 rounded-sm border border-dashed border-gray-300" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} />
       ) : null}
       {fundo ? <CamadaDoFundo relatorioId={relatorioId} fundo={fundo} className="absolute inset-x-0 top-0 rounded-sm" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} /> : null}
       {ajustando ? <GradeDeFundo largura={ajustando} /> : null}
-      <Grade
+      <GridLayout
         layout={layout}
+        width={LARGURA}
+        transformScale={escala}
         cols={COLUNAS}
         rowHeight={ALTURA_DA_LINHA}
         maxRows={linhas}
@@ -293,7 +329,8 @@ export function GradeDoRelatorio({
           </div>
           );
         })}
-      </Grade>
+      </GridLayout>
+      </div>
       {ampliado ? (
         <BlocoAmpliado w={ampliado.recorte?.w ?? ampliado.w} h={ampliado.recorte?.h ?? ampliado.h} onFechar={fechar}>
           {ampliado.recorte ? (

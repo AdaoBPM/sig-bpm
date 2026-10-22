@@ -24,7 +24,7 @@ import { EtiquetaSituacao } from "../components/EtiquetaSituacao";
 import { AjustarFundoDialog } from "../components/FundoDoSlide";
 import { ConfigurarSumarioDialog } from "../components/SumarioDoRelatorio";
 import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
-import { COLUNAS, GradeDoRelatorio, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
+import { COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
@@ -172,7 +172,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     onSuccess: ({ nome, proporcao }, { livre }) => {
       const t = tamanhoInicial({ tipo: "FOTO" });
       // A grade tem 24 px a mais que a área (as margens de fora dos blocos).
-      const h = linhasDaFoto(t.w, proporcao, (area.current?.offsetWidth ?? 1200) + 24, livre);
+      const h = linhasDaFoto(t.w, proporcao, larguraDoSlide(), livre);
       const p = ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS ? { x: ultimo.x + ultimo.w, y: ultimo.y } : { x: 0, y: fim };
       mudarPagina([...daPagina, { tipo: "FOTO", arquivo: nome, legenda: "", proporcao, ...(livre ? { livre: true } : {}), id: novoId(), ...p, w: t.w, h }]);
     },
@@ -187,7 +187,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       return { nome, proporcao };
     },
     onSuccess: ({ nome, proporcao }, { id }) => {
-      const largura = (area.current?.offsetWidth ?? 1200) + 24;
+      const largura = larguraDoSlide();
       mudarPagina(daPagina.map((b) => (b.id === id && b.tipo === "FOTO" ? { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura, !!b.livre) } : b)));
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
@@ -206,7 +206,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       }
     },
     onSuccess: (m, { quadro }) => {
-      const largura = (area.current?.offsetWidth ?? 1200) + 24;
+      const largura = larguraDoSlide();
       if (quadro) {
         mudarPagina(daPagina.map((b) => (b.id === quadro && b.tipo === "VIDEO" ? { ...b, ...m, h: linhasDaFoto(b.w, m.proporcao, largura) } : b)));
         return;
