@@ -407,7 +407,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             </li>
             <li>
               Na sua aba, “Adicionar” traz oito opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
-              dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
+              dos Indicadores (o card de destaque, com o valor do mês e o acumulado, cada um com o orçado num quadro cinza e a faixa de melhor ou pior, como no Painel), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
               Painel com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
             <li>

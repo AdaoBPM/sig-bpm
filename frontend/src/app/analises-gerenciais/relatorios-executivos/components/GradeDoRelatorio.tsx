@@ -10,7 +10,7 @@ import "react-resizable/css/styles.css";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { CardDoPainel, type Cores } from "@/app/relatorios/painel/PainelContent";
+import { CardDoPainel, DestaqueDoIndicador, type Cores } from "@/app/relatorios/painel/PainelContent";
 import { SeletorRotulos, SeletorTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 import { valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
@@ -60,7 +60,8 @@ function proximoGrafico(b: Extract<Bloco, { tipo: "PAINEL" | "INDICADOR" }>): Pa
 /** O tamanho inicial de cada tipo de bloco (colunas × linhas); o card do Painel sem o gráfico, 2/5 dele com o gráfico. */
 export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; grafico?: "MESES" | "ACUMULADO" }) {
   if (b.tipo === "PAINEL") return b.comGrafico ? { w: 12, h: 9 } : { w: 5, h: 9 };
-  if (b.tipo === "INDICADOR") return b.grafico ? { w: 10, h: 6 } : { w: 4, h: 5 };
+  // O indicador com o destaque do desvio no mês e no acumulado (22/10/2026), um embaixo do outro: 7 linhas.
+  if (b.tipo === "INDICADOR") return b.grafico ? { w: 10, h: 7 } : { w: 4, h: 7 };
   if (b.tipo === "FOTO") return { w: 4, h: 6 };
   if (b.tipo === "VIDEO") return { w: 6, h: 8 };
   if (b.tipo === "TEXTO") return { w: 6, h: 3 };
@@ -71,7 +72,7 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; 
 /** O tamanho mínimo de cada tipo de bloco (16/10/2026), para as informações não se amontoarem. */
 function tamanhoMinimo(b: Bloco) {
   if (b.tipo === "PAINEL") return { minW: MINIMO.PAINEL[modoDoGrafico(b)], minH: 6 };
-  if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: 4 };
+  if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: 6 };
   if (b.tipo === "FOTO") return { minW: 2, minH: 2 };
   if (b.tipo === "VIDEO") return { minW: 3, minH: 3 };
   // O Texto Livre baixa até uma linha; o Sumário, até duas (20/10/2026).
@@ -877,11 +878,15 @@ function ConteudoDoBloco({
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
   if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
   const ate = dados.indicadores.ate;
-  // Os valores 50% maiores (22/10/2026; antes, 24 px o do mês e 16 px os demais).
-  const campo = (rotulo: string, v: number | null, destaque = false) => (
-    <div className="flex items-baseline gap-1.5">
-      <span className={destaque ? "text-[36px] leading-tight font-extrabold text-gray-900" : "text-2xl font-bold text-gray-800"}>{valor(i, v)}</span>
-      <span className="text-xs text-gray-600">{rotulo}</span>
+  // O mês e o acumulado (22/10/2026), cada um com o rótulo em cima e o valor (50% maior: 36 px o do mês, 24 px o acumulado),
+  // e, à direita, na altura deles, o destaque do desvio do Painel de Bordo: o orçado em cinza, com a faixa de melhor ou pior.
+  const periodo = (rotulo: string, v: number | null, o: number | null, principal = false) => (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0">
+        <p className="text-xs whitespace-nowrap text-gray-600">{rotulo}</p>
+        <p className={`whitespace-nowrap ${principal ? "text-[36px] leading-tight font-extrabold text-gray-900" : "text-2xl leading-tight font-bold text-gray-800"}`}>{valor(i, v)}</p>
+      </div>
+      <DestaqueDoIndicador realizado={v} orcado={o} sentido={i.sentido} cores={cores} formatar={(x) => valor(i, x)} />
     </div>
   );
   // O gráfico (22/10/2026): os meses do exercício até o do relatório e o acumulado (ou só o acumulado), realizado × orçado,
@@ -905,10 +910,9 @@ function ConteudoDoBloco({
             {i.grupo} · {i.unidade} {i.sentido}
           </p>
         </header>
-        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
-          {campo(dados.painel.rotuloMes, i.meses[ate - 1] ?? null, true)}
-          {campo(i.acumulado === "ACUM" ? "Acumulado" : "Atual", i.total)}
-          {campo("Orçado", i.orcado[ate - 1] ?? null)}
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+          {periodo(dados.painel.rotuloMes, i.meses[ate - 1] ?? null, i.orcado[ate - 1] ?? null, true)}
+          {periodo(i.acumulado === "ACUM" ? "Acumulado" : "Atual", i.total, i.totalOrcado)}
         </div>
       </div>
       {modo === "NENHUM" ? null : (

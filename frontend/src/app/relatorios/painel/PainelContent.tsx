@@ -159,7 +159,7 @@ function Sinal({ s }: { s: -1 | 0 | 1 }) {
  * (12 px; sem orçado, cinza). A faixa é uma borda (no Copiar como Imagem do Firefox, o fundo em CSS saía em branco; o do
  * quadro vai em SVG).
  */
-function DestaqueDoDesvio({ b, formato }: { b: BlocoPainel; formato: FormatoPainel }) {
+function DestaqueDoDesvio({ b, formatarOrcado }: { b: Pick<BlocoPainel, "orcado" | "vsOrcado" | "sinal">; formatarOrcado: (v: number | null) => string }) {
   const SINAL = useSinais();
   const { orcado } = useRotulosDoGrafico();
   const cor = b.sinal === null ? "var(--color-gray-400)" : SINAL[b.sinal].cor;
@@ -179,8 +179,25 @@ function DestaqueDoDesvio({ b, formato }: { b: BlocoPainel; formato: FormatoPain
       </span>
       <span className="relative mt-0.5 text-xs whitespace-nowrap text-gray-600">vs. {orcado}</span>
       {/* 25% maior (21/10/2026; antes, 14 px); sem a unidade, que fica no rótulo do período. */}
-      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap text-gray-900">{formatarCurto(b.orcado, formato)}</span>
+      <span className="relative text-[17.5px] leading-tight font-bold whitespace-nowrap text-gray-900">{formatarOrcado(b.orcado)}</span>
     </div>
+  );
+}
+
+/**
+ * O destaque do desvio fora do painel (22/10/2026: os cards de Indicadores dos Relatórios Executivos): o realizado contra o
+ * orçado com a mesma regra do painel (o desvio é o realizado sobre o orçado, menos 1, com o sinal invertido no orçado
+ * negativo; até 5%, amarelo; senão, melhor ou pior conforme o sentido — ↑ quanto maior, melhor; ↓ quanto menor, melhor;
+ * nos indicadores de acompanhamento, sem sinal, em cinza).
+ */
+export function DestaqueDoIndicador({ realizado, orcado, sentido, cores, formatar }: { realizado: number | null; orcado: number | null; sentido: string; cores: Cores; formatar: (v: number | null) => string }) {
+  const vsOrcado = realizado === null || orcado === null || orcado === 0 ? null : (realizado / orcado - 1) * (orcado < 0 ? -1 : 1);
+  const sinal: BlocoPainel["sinal"] =
+    vsOrcado === null || (sentido !== "↑" && sentido !== "↓") ? null : Math.abs(vsOrcado) <= 0.05 ? 0 : (sentido === "↑" ? realizado! < orcado! : realizado! > orcado!) ? -1 : 1;
+  return (
+    <CoresDoPainel.Provider value={cores}>
+      <DestaqueDoDesvio b={{ orcado, vsOrcado, sinal }} formatarOrcado={formatar} />
+    </CoresDoPainel.Provider>
   );
 }
 
@@ -206,7 +223,7 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
         <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatarCurto(b.realizado, formato)}</p>
         <p className="h-4 text-xs whitespace-nowrap text-gray-500">{base}</p>
       </div>
-      <DestaqueDoDesvio b={b} formato={formato} />
+      <DestaqueDoDesvio b={b} formatarOrcado={(v) => formatarCurto(v, formato)} />
     </div>
   );
 }
