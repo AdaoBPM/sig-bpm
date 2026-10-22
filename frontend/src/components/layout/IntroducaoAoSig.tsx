@@ -93,8 +93,8 @@ const ETAPAS: Etapa[] = [
             desenvolvimento nunca são publicadas e nunca afetam o banco de produção.
           </li>
           <li>
-            <b>Produção:</b> a “base real”, que roda no servidor e é atualizada pelas publicações. É a base que os demais
-            usuários enxergam e editam, com um banco de dados próprio, também no servidor, sem ligação com o das outras bases.
+            <b>Produção:</b> a “base real”, que roda no servidor e é atualizada pelas publicações. É a base que os usuários
+            comuns (não administradores) enxergam e editam, com um banco de dados próprio, também no servidor, sem ligação com o das outras bases.
           </li>
         </ul>
       </>
