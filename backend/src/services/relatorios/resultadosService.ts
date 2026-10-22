@@ -67,8 +67,8 @@ export async function estrutura(): Promise<LinhaEstrutura[]> {
  * referência e o acumulado de janeiro até ele, da visão e do Consolidado (as bases do % e do R$/m³ em Despesas e
  * Extra e no RN). Sem cenário marcado, nenhum (as linhas mostram zero).
  */
-async function orcadoDaVisao(ano: number, visao: number, ate: number, comparacao: Comparacao = "ORCAMENTO_EMPRESARIAL") {
-  const cenario = await cenarioDaComparacao(ano, comparacao);
+async function orcadoDaVisao(visao: number, ate: number, comparacao: Comparacao = "ORCAMENTO_EMPRESARIAL") {
+  const cenario = await cenarioDaComparacao(comparacao);
   const vazio = () => ({ mes: new Map<string, number>(), total: new Map<string, number>() });
   const daVisao = vazio();
   const doConsolidado = vazio();
@@ -167,7 +167,7 @@ export const resultadosService = {
     // Em Despesas e Extra e no RN, a ROL do Consolidado abre a tabela, como nas abas da planilha.
     if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
     const apurado = meses.map((m) => m.competenciaId !== null);
-    const orcado = await orcadoDaVisao(ano, visao, ultimo, comparaCom);
+    const orcado = await orcadoDaVisao(visao, ultimo, comparaCom);
     // O % e o R$/m³ do orçado sobre as bases do próprio orçado (em Despesas e Extra e no RN, as do Consolidado).
     const basesOrcado = basesDoConsolidado(visao) ? orcado.doConsolidado : orcado.daVisao;
     const celulaOrcada = (l: LinhaEstrutura, periodo: "mes" | "total") => {

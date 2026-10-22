@@ -71,7 +71,7 @@ export const indicadoresService = {
         .map((c) => [c.mes, c.id]),
     );
     // O orçado de cada mês, para o gráfico do indicador, como no Painel de Bordo: o cenário Orçamento Empresarial (sem ele, zero).
-    const orcamento = await orcamentoDoExercicio(ano, comparaCom);
+    const orcamento = await orcamentoDoExercicio(comparaCom);
     const metas = meses.map((m) => orcamento.porMes[m.mes - 1]);
     // Os indicadores do cadastro Estrutura dos Indicadores, com as fórmulas.
     const catalogo = await catalogoDeIndicadores();

@@ -110,7 +110,8 @@ const periodo = (ano: number, ate?: number) => ({ ano, ...(ate ? { ate } : {}) }
 
 /** As marcações dos cenários que o Compara Com escolhe (21/10/2026). */
 export type MarcacaoComparavel = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS" | "PREVISAO";
-export type Comparavel = { marcacao: MarcacaoComparavel; rotulo: string; cenario: { id: string; nome: string } };
+/** Um cenário marcado (o Compara Com): de qualquer exercício (22/10/2026), com o ano dele. */
+export type Comparavel = { marcacao: MarcacaoComparavel; rotulo: string; cenario: { id: string; nome: string; ano: number } };
 const comparado = (comparaCom?: MarcacaoComparavel) => (comparaCom && comparaCom !== "ORCAMENTO_EMPRESARIAL" ? { comparaCom } : {});
 
 export const relatoriosService = {

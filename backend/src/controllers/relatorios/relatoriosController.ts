@@ -78,11 +78,9 @@ function comparaComDe(request: Request) {
 }
 
 export const relatoriosController = {
-  /** Os cenários marcados do exercício ?ano= (21/10/2026): as opções do Compara Com. */
-  async comparaveis(request: Request, response: Response) {
-    const ano = Number(request.query.ano);
-    if (!Number.isInteger(ano)) return response.status(400).json({ error: "Exercício inválido" });
-    return responder(response, () => cenariosMarcados(ano));
+  /** Os cenários marcados (21/10/2026; desde 22/10/2026, de qualquer exercício): as opções do Compara Com. */
+  async comparaveis(_request: Request, response: Response) {
+    return responder(response, () => cenariosMarcados());
   },
 
   /**

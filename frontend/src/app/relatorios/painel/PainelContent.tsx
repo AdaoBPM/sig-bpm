@@ -562,7 +562,7 @@ export function PainelContent() {
   const ano = anoEscolhido ?? exercicios.anos[0];
   const meses = ano ? exercicios.mesesDe(ano) : [];
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
-  // O cenário comparado (21/10/2026): o Compara Com, entre os marcados do exercício (o mesmo de Resultados).
+  // O cenário comparado (21/10/2026): o Compara Com, entre os marcados (de qualquer exercício; o mesmo de Resultados).
   const comparacao = useComparaCom(ano ?? null);
   const consulta = useQuery({
     queryKey: ["relatorios", "painel", ano, ate, comparacao.comparaCom],
@@ -615,7 +615,7 @@ export function PainelContent() {
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
-              O cenário comparado é o escolhido na “Comparação” da tela Resultados, entre os marcados do exercício (Orçamento Empresarial, o padrão,
+              O cenário comparado é o escolhido na “Comparação” da tela Resultados, entre os cenários marcados, de qualquer exercício (Orçamento Empresarial, o padrão,
               Resultados Anteriores, Resultados Vendidos e Previsão), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento
               Empresarial, os cards dizem “vs.” e o nome da marcação.
             </li>

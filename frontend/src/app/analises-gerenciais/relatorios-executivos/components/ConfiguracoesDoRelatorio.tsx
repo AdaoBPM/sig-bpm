@@ -53,7 +53,7 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
         <h2 className="text-base font-bold text-gray-900">Cenário de Comparação</h2>
         <p className="mt-1 text-sm text-gray-600">
           O orçado dos cards do Painel de Bordo e dos Indicadores (o destaque do desvio e os gráficos) e das tabelas de Resultados. Escolha a marcação Orçamento
-          Empresarial (o cenário marcado em {c.ano}, qualquer que seja) ou um dos cenários; num cenário de outro exercício, valem os mesmos meses dele.
+          Empresarial (o cenário marcado, qualquer que seja, de qualquer exercício) ou um dos cenários; num cenário de outro exercício, valem os mesmos meses dele.
         </p>
       </div>
       {/* Todos os cenários (22/10/2026), com o ano, o tipo e a marcação em etiquetas; o escolhido em destaque. */}
@@ -74,10 +74,10 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
               <td className="px-3 py-2">
                 <span className="font-semibold text-gray-900">Orçamento Empresarial (a marcação)</span>
                 <span className="block text-xs text-gray-500">
-                  {c.marcado ? `Hoje, o cenário ${c.marcado.nome}; se a marcação mudar de cenário, o relatório acompanha.` : `Nenhum cenário de ${c.ano} está marcado como Orçamento Empresarial: os cards ficam sem o orçado.`}
+                  {c.marcado ? `Hoje, o cenário ${c.marcado.nome}; se a marcação mudar de cenário, o relatório acompanha.` : "Nenhum cenário está marcado como Orçamento Empresarial: os cards ficam sem o orçado."}
                 </span>
               </td>
-              <td className="px-3 py-2 text-gray-700">{c.ano}</td>
+              <td className="px-3 py-2 text-gray-700">{c.marcado?.ano ?? "—"}</td>
               <td className="px-3 py-2" />
               <td className="px-3 py-2">
                 <Etiqueta classe={ETIQUETA_DA_MARCACAO}>Orçamento Empresarial</Etiqueta>

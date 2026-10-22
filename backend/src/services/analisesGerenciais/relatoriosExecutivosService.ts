@@ -377,7 +377,7 @@ export const relatoriosExecutivosService = {
         orderBy: [{ ano: "desc" }, { nome: "asc" }],
         select: { id: true, nome: true, ano: true, tipo: true, marcacao: true },
       }),
-      cenarioMarcado(r.ano, "ORCAMENTO_EMPRESARIAL"),
+      cenarioMarcado("ORCAMENTO_EMPRESARIAL"),
     ]);
     // O escolhido que deixou de existir (ou ficou particular) volta à marcação.
     const escolhido = r.cenarioComparadoId && cenarios.some((c) => c.id === r.cenarioComparadoId) ? r.cenarioComparadoId : null;

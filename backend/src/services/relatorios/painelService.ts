@@ -76,7 +76,7 @@ export const painelService = {
       (c) => !somenteFechadas || fechados.has(c.mes),
     );
     const porMes = new Map(competencias.map((c) => [c.mes, c]));
-    const orcamento = await orcamentoDoExercicio(ano, comparaCom);
+    const orcamento = await orcamentoDoExercicio(comparaCom);
     const dados = encadearMeses(
       await Promise.all(
         meses.map((m) => (porMes.has(m.mes) ? dadosDoMes(porMes.get(m.mes)!.id, m.competenciaId !== null, orcamento.porMes[m.mes - 1]) : null)),
