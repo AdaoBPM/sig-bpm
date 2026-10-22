@@ -348,6 +348,9 @@ export function GradeDoRelatorio({
         // colunas, isBounded).
         compactType={null}
         isBounded
+        // A grade com a altura da página, no mínimo (22/10/2026): o isBounded limita o arrasto à altura da grade, que sem
+        // isso era só a do bloco mais baixo (numa página com poucos blocos, eles não desciam).
+        style={{ minHeight: alturaDaPagina }}
         onLayoutChange={aoMudarLeiaute}
         onResize={aoRedimensionar}
         onDragStart={comecarArrasto}

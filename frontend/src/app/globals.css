@@ -166,10 +166,11 @@
 }
 /*
  * A sombra que separa o menu lateral das telas, em todos os temas (13/10/2026), acima de tudo o que rola nas telas — o
- * título fixo (z-20) e os rótulos fixos das tabelas (z-30) não a cortam; os menus e os modais (z-50) ficam acima dela.
+ * título fixo e o cabeçalho do topo (z-40, desde 21/10/2026) e os rótulos fixos das tabelas (z-30) não a cortam; os menus e
+ * os modais (z-50) ficam acima dela. Na camada 45 (22/10/2026; antes, 40, a mesma do título, que a cobria).
  */
 [data-slot="sidebar-container"] {
-  z-index: 40;
+  z-index: 45;
   box-shadow: 2px 0 10px rgb(0 0 0 / 0.08);
 }
 [data-tema="escuro"] [data-slot="sidebar-container"] {
