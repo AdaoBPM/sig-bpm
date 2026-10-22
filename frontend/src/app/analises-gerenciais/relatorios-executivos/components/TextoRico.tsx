@@ -200,9 +200,9 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
 // Até 72 (20/10/2026), para os títulos da Capa no Texto Livre; 84, 108 e 144 desde 22/10/2026.
 export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72, 84, 108, 144];
 export const TAMANHO_PADRAO = 14;
-/** Os tamanhos do título das anotações (19/10/2026): o padrão é 12 (o de antes, em maiúsculas e negrito). */
+/** Os tamanhos do título das anotações (19/10/2026), em maiúsculas e negrito: o padrão é 18 (22/10/2026; antes, 12). */
 export const TAMANHOS_DO_TITULO = [12, 14, 16, 18, 20, 24, 28, 32];
-export const TAMANHO_DO_TITULO = 12;
+export const TAMANHO_DO_TITULO = 18;
 
 /** O tamanho, em px, do texto onde está a seleção (ou do campo, sem seleção nele). */
 function tamanhoDaSelecao(campo: HTMLElement) {

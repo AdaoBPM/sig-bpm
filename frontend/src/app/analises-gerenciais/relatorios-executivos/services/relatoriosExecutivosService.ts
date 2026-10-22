@@ -50,8 +50,11 @@ export type Bloco = Posicao &
         comRotulos?: boolean;
         cores?: "padrao" | "daltonismo";
       }
-    /** O gráfico do card do indicador (22/10/2026): os meses e o acumulado ou só o acumulado; sem ele, só os valores. */
-    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO" }
+    /**
+     * O gráfico do card do indicador (22/10/2026): os meses e o acumulado ou só o acumulado; sem ele, só os valores. As
+     * opções do gráfico, como as dos cards do Painel.
+     */
+    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO"; tipoGrafico?: "barras" | "area"; comRotulos?: boolean }
     /** O título da anotação (16/10/2026); sem ele, o nome da nota. */
     | {
         tipo: "ANOTACAO";

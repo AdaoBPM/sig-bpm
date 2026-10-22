@@ -428,16 +428,20 @@ export function GradeDoRelatorio({
           }}
         />
       ) : null}
-      {doCard?.tipo === "PAINEL" ? (
+      {doCard?.tipo === "PAINEL" || doCard?.tipo === "INDICADOR" ? (
         <ConfigurarGraficoDialog
           b={doCard}
           tipo={tipo}
           cores={cores}
           onFechar={() => setConfigurando(null)}
           onAplicar={(opcoes, todos) => {
-            // Neste card ou em todos os cards do Painel de Bordo da aba.
-            // As cores próprias do card (de antes de 16/10/2026) saem: valem as da Acessibilidade.
-            onMudar(blocos.map((x) => (x.tipo === "PAINEL" && (todos || x.id === doCard.id) ? { ...x, ...opcoes, cores: undefined } : x)));
+            // Neste card ou em todos os cards da aba (os do Painel de Bordo e, desde 22/10/2026, os dos Indicadores).
+            // As cores próprias do card do Painel (de antes de 16/10/2026) saem: valem as da Acessibilidade.
+            onMudar(
+              blocos.map((x) =>
+                !(todos || x.id === doCard.id) ? x : x.tipo === "PAINEL" ? { ...x, ...opcoes, cores: undefined } : x.tipo === "INDICADOR" ? { ...x, ...opcoes } : x,
+              ),
+            );
             setConfigurando(null);
           }}
         />
@@ -525,9 +529,9 @@ function BlocoAmpliado({ w, h, onFechar, children }: { w: number; h: number; onF
 type OpcoesDoGrafico = { tipoGrafico: TipoGrafico; comRotulos: boolean };
 
 /**
- * O Configurar Gráfico de um card do Painel de Bordo (16/10/2026): as opções do Configurar Gráficos do Painel — os
- * Rótulos e o Tipo (as cores são as da Acessibilidade, 16/10/2026) —, aplicadas a este card ou a todos os cards do Painel
- * da aba.
+ * O Configurar Gráfico de um card do Painel de Bordo (16/10/2026) ou dos Indicadores (22/10/2026): as opções do Configurar
+ * Gráficos do Painel — os Rótulos e o Tipo (as cores são as da Acessibilidade, 16/10/2026) —, aplicadas a este card ou a
+ * todos os cards da aba.
  */
 function ConfigurarGraficoDialog({
   b,
@@ -536,7 +540,7 @@ function ConfigurarGraficoDialog({
   onAplicar,
   onFechar,
 }: {
-  b: Extract<Bloco, { tipo: "PAINEL" }>;
+  b: Extract<Bloco, { tipo: "PAINEL" | "INDICADOR" }>;
   tipo: TipoGrafico;
   cores: Cores;
   onAplicar: (o: OpcoesDoGrafico, todos: boolean) => void;
@@ -550,7 +554,7 @@ function ConfigurarGraficoDialog({
         <DialogHeader>
           <DialogTitle>Configurar Gráfico</DialogTitle>
           <DialogDescription>
-            {b.titulo} ({b.quadro}): as opções do Configurar Gráficos do Painel de Bordo.
+            {b.tipo === "PAINEL" ? `${b.titulo} (${b.quadro})` : b.nome}: as opções do Configurar Gráficos do Painel de Bordo.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 [&_label]:justify-between [&_label>span]:text-sm [&_[data-slot=select-trigger]]:w-40">
@@ -602,8 +606,8 @@ function BarraDoBloco({
       {b.tipo === "PAINEL" || b.tipo === "INDICADOR" ? (
         <BotaoDoGrafico modo={modoDoGrafico(b)} botao={botao} onClicar={() => onMudar(proximoGrafico(b))} />
       ) : null}
-      {/* As opções do gráfico (16/10/2026), nos cards com o gráfico. */}
-      {b.tipo === "PAINEL" && b.comGrafico ? (
+      {/* As opções do gráfico (16/10/2026), nos cards com o gráfico (os do Painel e, desde 22/10/2026, os dos Indicadores). */}
+      {(b.tipo === "PAINEL" || b.tipo === "INDICADOR") && modoDoGrafico(b) !== "NENHUM" ? (
         <button type="button" className={botao} title="Configurar o gráfico" aria-label="Configurar o gráfico" onClick={onConfigurar}>
           <Settings className="size-4" />
         </button>
@@ -900,7 +904,16 @@ function ConteudoDoBloco({
   };
   return (
     <div className="h-full">
-      <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={tipo} cores={cores} comGrafico={modo !== "NENHUM" && !semGrafico} soAcumulado={modo === "ACUMULADO"} formatacao={{ mes: f, acumulado: f }} />
+      <CardDoPainel
+        i={item}
+        rotuloMes={dados.painel.rotuloMes}
+        tipo={b.tipoGrafico ?? tipo}
+        cores={cores}
+        comGrafico={modo !== "NENHUM" && !semGrafico}
+        soAcumulado={modo === "ACUMULADO"}
+        comRotulos={b.comRotulos ?? false}
+        formatacao={{ mes: f, acumulado: f }}
+      />
     </div>
   );
 }
