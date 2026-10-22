@@ -146,7 +146,7 @@ export function metasPorMes(c: CalculoDoCenario): Array<Map<string, number> | nu
 
 /** O cenário com a marcação no exercício (o Orçamento Empresarial dá o orçado de Resultados Empresariais). */
 export async function cenarioMarcado(ano: number, marcacao: MarcacaoCenario) {
-  return getPrismaClient().cenario.findFirst({ where: { ano, marcacao }, select: { id: true, nome: true } });
+  return getPrismaClient().cenario.findFirst({ where: { ano, marcacao }, select: { id: true, nome: true, marcacao: true } });
 }
 
 /**
@@ -156,10 +156,18 @@ export async function cenarioMarcado(ano: number, marcacao: MarcacaoCenario) {
 export type Comparacao = MarcacaoCenario | { cenarioId: string };
 export async function cenarioDaComparacao(ano: number, c: Comparacao) {
   if (typeof c === "string") return cenarioMarcado(ano, c);
-  return getPrismaClient().cenario.findUnique({ where: { id: c.cenarioId }, select: { id: true, nome: true } });
+  return getPrismaClient().cenario.findUnique({ where: { id: c.cenarioId }, select: { id: true, nome: true, marcacao: true } });
 }
-/** O nome do comparado nos rótulos: "Orçado" no Orçamento Empresarial e no cenário escolhido; nos outros, o da marcação. */
-export const rotuloDaComparacao = (c: Comparacao) => (typeof c !== "string" || c === "ORCAMENTO_EMPRESARIAL" ? "Orçado" : ROTULO_DA_MARCACAO[c]);
+/**
+ * O nome do comparado nos rótulos (as colunas das tabelas e o "vs." dos cards): "Orçado" no Orçamento Empresarial; nas
+ * outras marcações, o nome dela; no cenário escolhido (22/10/2026: os Relatórios Executivos), o da marcação dele ("Orçado" no
+ * Orçamento Empresarial) ou, sem marcação, o nome do cenário.
+ */
+export function rotuloDaComparacao(c: Comparacao, cenario?: { nome: string; marcacao: MarcacaoCenario | null } | null) {
+  const marcacao = typeof c === "string" ? c : (cenario?.marcacao ?? null);
+  if (typeof c !== "string" && !marcacao) return cenario?.nome ?? "Orçado";
+  return !marcacao || marcacao === "ORCAMENTO_EMPRESARIAL" ? "Orçado" : ROTULO_DA_MARCACAO[marcacao];
+}
 
 /** O nome de cada marcação (21/10/2026: o Compara Com de Resultados Empresariais e os rótulos do comparado). */
 export const ROTULO_DA_MARCACAO: Record<MarcacaoCenario, string> = {

@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { calcularCenario, cenarioDaComparacao, metasPorMes, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
+import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
 import type { Indicador } from "./indicadores.js";
 
 /**
@@ -10,7 +11,7 @@ import type { Indicador } from "./indicadores.js";
  */
 export type Orcamento = {
   /** O cenário de onde vem o orçado; null: nenhum cenário marcado no exercício (o orçado é zero). */
-  cenario: { id: string; nome: string } | null;
+  cenario: { id: string; nome: string; marcacao: MarcacaoCenario | null } | null;
   /** O orçado de cada mês, JAN a DEZ, de todos os indicadores (zero sem valor). */
   porMes: Array<Map<string, number>>;
   /** Os meses em que o cenário não tem nenhum valor (só com cenário). */

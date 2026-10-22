@@ -184,7 +184,7 @@ export const resultadosService = {
       /** O cenário do orçado (o Orçamento Empresarial do exercício); null: nenhum (o orçado é zero). */
       cenarioOrcado: orcado.cenario?.nome ?? null,
       // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
-      rotuloComparado: rotuloDaComparacao(comparaCom),
+      rotuloComparado: rotuloDaComparacao(comparaCom, orcado.cenario),
       linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, new Set(orcado.daVisao.total.keys())).map((l) => ({
         ...l,
         /** O orçado do mês de referência e o acumulado de janeiro até ele, com o % e o R$/m³ (zero sem o cenário ou sem a linha nele). */

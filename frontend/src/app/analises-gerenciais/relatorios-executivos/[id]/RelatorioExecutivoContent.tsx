@@ -15,7 +15,7 @@ import { podeSair, useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
-import { useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
+import { RotulosDoGrafico, useTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { botaoPrimario, Erro } from "@/app/cenarios/components/CenarioDialog";
 
 import { AdicionarCardsDialog } from "../components/AdicionarCardsDialog";
@@ -281,7 +281,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const vazia = daAba.every((p) => p.blocos.length === 0);
   const botaoIcone = "inline-flex size-8 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40";
   return (
-    // A largura da área (a da grade, menos as margens de fora), para a altura da foto nova.
+    // O nome do comparado (22/10/2026: o cenário das Configurações) no "vs." dos cards e na legenda, na tela, na apresentação e no PDF.
+    <RotulosDoGrafico.Provider value={{ realizado: "Realizado", orcado: dados.data?.painel.rotuloComparado ?? "Orçado" }}>
+    {/* A largura da área (a da grade, menos as margens de fora), para a altura da foto nova. */}
     <div ref={area} className="space-y-6">
       {/* Saindo das Configurações com a escolha não gravada, pergunta antes (22/10/2026). */}
       <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => (chave !== CONFIGURACOES || podeSair()) && setAberta({ chave: c, pagina: null })} />
@@ -803,6 +805,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         </Dialog>
       ) : null}
     </div>
+    </RotulosDoGrafico.Provider>
   );
 }
 

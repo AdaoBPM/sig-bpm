@@ -84,7 +84,7 @@ export const indicadoresService = {
       /** O cenário do orçado (null: nenhum cenário Orçamento Empresarial no exercício; o orçado é zero). */
       cenarioOrcado: orcamento.cenario?.nome ?? null,
       // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
-      rotuloComparado: rotuloDaComparacao(comparaCom),
+      rotuloComparado: rotuloDaComparacao(comparaCom, orcamento.cenario),
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
       indicadores: catalogo.map((i) => {
         const partes = dados.map((d) => (d ? i.calculo(d) : null));

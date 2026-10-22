@@ -115,7 +115,7 @@ export const painelService = {
       /** O cenário do orçado (null: nenhum cenário Orçamento Empresarial no exercício; o orçado é zero). */
       cenarioOrcado: orcamento.cenario?.nome ?? null,
       // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
-      rotuloComparado: rotuloDaComparacao(comparaCom),
+      rotuloComparado: rotuloDaComparacao(comparaCom, orcamento.cenario),
       mesesSemMeta: meses.filter((m) => orcamento.mesesSemValor.includes(m.mes)).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
         // Os itens do cadastro do Painel de Bordo (17/10/2026; antes, fixos no código).
