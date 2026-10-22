@@ -105,12 +105,23 @@ function fechadosAte(n: Nivel, nivel: Map<string, number>, comFilhos: Set<string
 }
 
 /**
- * As linhas de resultado da DRE (a primeira ROL, CPV, MB, MC, DFO, EBITDA,
- * EBIT, NOPAT, RF, DF e RL): um pouco mais escuras que os demais totais, e
- * mais claras que os rótulos (pedido de 08/10/2026), na DRE e em Resultados.
+ * Os dois totais da ROL da estrutura: o primeiro (no topo) sai das tabelas quando o segundo (depois da receita bruta e
+ * dos impostos) está nelas — em Resultados e nos cenários desde 21/10/2026, na DRE do Fechamento Mensal desde
+ * 22/10/2026. Nas visões com um só (Despesas e Extra e RN), ele fica.
+ */
+const PRIMEIRO_TOTAL_DA_ROL = "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL";
+const TOTAL_DA_ROL = "ROL.RECEITA_OPERACIONAL_LIQUIDA_ROL";
+export const semPrimeiroTotalDaRol = <L extends Linha>(linhas: L[]) =>
+  linhas.some((l) => l.codigo === TOTAL_DA_ROL) ? linhas.filter((l) => l.codigo !== PRIMEIRO_TOTAL_DA_ROL) : linhas;
+
+/**
+ * As linhas de resultado da DRE (a ROL, CPV, MB, MC, DFO, EBITDA, EBIT, NOPAT, RF, DF e RL): um pouco mais escuras que
+ * os demais totais, e mais claras que os rótulos (pedido de 08/10/2026), na DRE e em Resultados. A ROL é a que fica na
+ * tabela: a segunda (22/10/2026), ou a primeira nas visões que só têm ela.
  */
 export const LINHAS_DE_RESULTADO = new Set([
-  "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL",
+  PRIMEIRO_TOTAL_DA_ROL,
+  TOTAL_DA_ROL,
   "CPV.CUSTO_DE_PRODUTO_VENDIDO_CPV",
   "MB.MARGEM_BRUTA_MB",
   "MC.MARGEM_DE_CONTRIBUICAO_MC",
@@ -123,10 +134,10 @@ export const LINHAS_DE_RESULTADO = new Set([
   "RL.RESULTADO_LIQUIDO_RL",
 ]);
 /**
- * O fundo da linha (09/10/2026): os totais no amarelo da etiqueta "Em Conferência" (yellow-50); as linhas de
- * resultado um tom acima (yellow-100), mais claras que os rótulos (amarelo-ouro); as contas em branco.
+ * O fundo da linha: os totais em yellow-100 e as linhas de resultado um tom acima (yellow-200), mais claras que os
+ * rótulos (amarelo-ouro); as contas em branco (22/10/2026: um tom mais fortes; antes, yellow-50 e yellow-100).
  */
-export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-yellow-100" : l.tipo !== "ITEM" ? "bg-yellow-50" : "bg-white");
+export const fundoDaLinha = (l: { codigo: string; tipo: string }) => (LINHAS_DE_RESULTADO.has(l.codigo) ? "bg-yellow-200" : l.tipo !== "ITEM" ? "bg-yellow-100" : "bg-white");
 
 /**
  * O fundo das colunas do orçado (Resultados Empresariais, 11/10/2026): a mesma escala do amarelo, em cinza — os rótulos

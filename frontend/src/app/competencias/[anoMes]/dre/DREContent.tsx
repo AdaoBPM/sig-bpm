@@ -18,7 +18,7 @@ import { ExportarDRE } from "./components/ExportarDRE";
 import { AcoesApuracao, SituacaoApuracao, TextoApuracao } from "./components/PainelApuracao";
 import { InfoAgrupamento } from "./components/InfoAgrupamento";
 import { VolumesDialog } from "./components/VolumesDialog";
-import { Agrupador, fundoDaLinha, SeletorNivel, useNiveisDRE } from "./components/NiveisDRE";
+import { Agrupador, fundoDaLinha, SeletorNivel, semPrimeiroTotalDaRol, useNiveisDRE } from "./components/NiveisDRE";
 import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type VisaoDetalhe } from "./services/dreService";
 
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
@@ -89,8 +89,10 @@ function TabelaDRE({
   /** Conteúdo logo depois do título (o botão de informação do centro de custo). */
   aoLadoDoTitulo?: ReactNode;
 }) {
-  // Os níveis (Totais, Atribuições, Contas) e os agrupadores, como no contorno da planilha.
-  const niveis = useNiveisDRE(todas, "sig.dre.nivel");
+  // Os níveis (Totais, Atribuições, Contas) e os agrupadores, como no contorno da planilha; sem o primeiro total da ROL,
+  // que repete o segundo (22/10/2026).
+  const semRolRepetida = useMemo(() => semPrimeiroTotalDaRol(todas), [todas]);
+  const niveis = useNiveisDRE(semRolRepetida, "sig.dre.nivel");
 
   const [aberta, setAberta] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<string | null>(null);
@@ -521,6 +523,11 @@ export function DREContent() {
               “Excluir Competência” apaga a competência com tudo o que é dela (importações, lançamentos, listas, apuração, divergências): só a mais
               recente e em aberto (não fechada) — nas outras, o botão fica apagado, com o motivo na dica. A confirmação mostra o que sai e pede a
               competência digitada (MM/AAAA); a exclusão fica no log de auditoria e não se desfaz.
+            </li>
+            <li>
+              A Receita Operacional Líquida (ROL) aparece uma vez, depois da receita bruta e dos impostos (o total do topo, que a repetia, não aparece;
+              nas visões que só têm ele, fica). Os totais ficam em amarelo, e as linhas de resultado (ROL, CPV, MB, MC, DFO, EBITDA, EBIT, NOPAT,
+              RF, DF e RL), num amarelo mais forte.
             </li>
             <li>Use “Apurar Competência” (ou “Reapurar Competência”) depois de importar, classificar e lançar os ajustes do mês.</li>
             <li>

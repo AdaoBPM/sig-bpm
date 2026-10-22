@@ -15,7 +15,7 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { DetalheDialog } from "../../competencias/[anoMes]/dre/components/DetalheDialog";
 import { InfoAgrupamento } from "../../competencias/[anoMes]/dre/components/InfoAgrupamento";
-import { Agrupador, fundoDaLinha, fundoDoOrcado, ROTULO_DO_ORCADO, SeletorNivel, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
+import { Agrupador, fundoDaLinha, fundoDoOrcado, ROTULO_DO_ORCADO, SeletorNivel, semPrimeiroTotalDaRol, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
 import { VolumesDialog } from "../../competencias/[anoMes]/dre/components/VolumesDialog";
 import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreService";
 import { ExportarRelatorio, type OpcaoExportar } from "../components/ExportarRelatorio";
@@ -157,10 +157,6 @@ function Caixa({ marcada, alguns, rotulo, onMudar }: { marcada: boolean; alguns?
   );
 }
 
-/** Os dois totais da ROL da estrutura (21/10/2026): o primeiro (no topo) sai da tabela quando o segundo está nela. */
-const CODIGO_DO_PRIMEIRO_TOTAL_DA_ROL = "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL";
-const CODIGO_DA_ROL = "ROL.RECEITA_OPERACIONAL_LIQUIDA_ROL";
-
 export function TabelaResultados({
   dados,
   titulo,
@@ -188,10 +184,7 @@ export function TabelaResultados({
 }) {
   // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
   // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
-  const linhasDaTabela = useMemo(
-    () => (dados.linhas.some((l) => l.codigo === CODIGO_DA_ROL) ? dados.linhas.filter((l) => l.codigo !== CODIGO_DO_PRIMEIRO_TOTAL_DA_ROL) : dados.linhas),
-    [dados.linhas],
-  );
+  const linhasDaTabela = useMemo(() => semPrimeiroTotalDaRol(dados.linhas), [dados.linhas]);
   const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel");
   // Sem o R$/m³ em Despesas e Extra e no RN (21/10/2026).
   const comUnitario = !("unidade" in visao && (visao.unidade === 4 || visao.unidade === 5));
