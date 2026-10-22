@@ -154,3 +154,9 @@ export const formato = {
   inteiro: (v: number) => n0.format(v),
   umaCasa: (v: number) => n1.format(v),
 };
+
+/**
+ * A escala do gráfico na unidade do indicador (22/10/2026): os percentuais em %, o R$ M em milhões e o R$ K em milhares
+ * (como os valores aparecem).
+ */
+export const fatorDaEscalaDa = (unidade: string) => (unidade === "%" ? 100 : unidade === "R$ M" ? 1e-6 : unidade === "R$ K" ? 1e-3 : 1);

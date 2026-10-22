@@ -12,11 +12,14 @@ import { formulaPorExtenso } from "./formulaIndicador.js";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
-/** O item num período (o mês ou o acumulado): realizado, orçado, o percentual sob o realizado, o desvio e o sinal. */
-function bloco(item: ItemPainel, realizado: Valor, orcado: Valor) {
+/**
+ * O item num período (o mês ou o acumulado): realizado, orçado, o percentual sob o realizado, o desvio e o sinal.
+ * `comOrcado` falso: o orçado zero é a falta dele (sem o sinal da meta zero).
+ */
+function bloco(item: ItemPainel, realizado: Valor, orcado: Valor, comOrcado = true) {
   const r = item.conta(realizado);
   const o = item.conta(orcado);
-  return { realizado: r, orcado: o, base: item.base?.conta(realizado) ?? null, vsOrcado: vsOrcado(r, o), sinal: sinal(item, r, o) };
+  return { realizado: r, orcado: o, base: item.base?.conta(realizado) ?? null, vsOrcado: vsOrcado(r, o), sinal: sinal(item, r, o, comOrcado) };
 }
 
 /** A Metodologia do item por extenso (os indicadores pelo nome; × e ÷ nas contas). */
@@ -32,7 +35,11 @@ function metodologiaPorExtenso(formula: string) {
 export type MesDaSerie = { rotulo: string; realizado: Valor; orcado: Valor };
 
 /** Os quadros do painel; exportada para o Painel de Bordo dos cenários (13/10/2026: o cenário × o comparado). */
-export function montarPainel(quadros: QuadroPainel[], periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor] }, serie: MesDaSerie[]) {
+export function montarPainel(
+  quadros: QuadroPainel[],
+  periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor]; comOrcado?: { mes: boolean; acumulado: boolean } },
+  serie: MesDaSerie[],
+) {
   return quadros.map((q) => ({
     titulo: q.titulo,
     itens: q.itens.map((i) => ({
@@ -46,8 +53,8 @@ export function montarPainel(quadros: QuadroPainel[], periodos: { mes: [Valor, V
       formatoAcumulado: i.formato,
       base: i.base ? { rotulo: i.base.rotulo, casas: i.base.casas } : null,
       separar: i.separar ?? false,
-      mes: bloco(i, ...periodos.mes),
-      acumulado: bloco(i, ...periodos.acumulado),
+      mes: bloco(i, ...periodos.mes, periodos.comOrcado?.mes),
+      acumulado: bloco(i, ...periodos.acumulado, periodos.comOrcado?.acumulado),
       serie: serie.map((m) => ({ mes: m.rotulo, realizado: i.conta(m.realizado), orcado: i.conta(m.orcado) })),
     })),
   }));
@@ -87,7 +94,12 @@ export const painelService = {
     const orcadoMes: Valor = (n) => metas[ultimo - 1].get(n) ?? 0;
     const orcadoAcum: Valor = (n) => (porNome.has(n) ? orcamento.acumulado(porNome.get(n)!, ultimo) : 0);
 
-    const periodos = { mes: [realizadoMes, orcadoMes] as [Valor, Valor], acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor] };
+    // Sem o cenário (ou, no mês, sem o valor nele), o orçado zero é a falta dele: sem o sinal da meta zero (22/10/2026).
+    const periodos = {
+      mes: [realizadoMes, orcadoMes] as [Valor, Valor],
+      acumulado: [realizadoAcum, orcadoAcum] as [Valor, Valor],
+      comOrcado: { mes: !!orcamento.cenario && !orcamento.mesesSemValor.includes(ultimo), acumulado: !!orcamento.cenario },
+    };
     const quadros = await quadrosDoPainel();
     // A série mês a mês (gráficos do painel, como os da planilha): o realizado e o orçado de cada mês até o de referência.
     const serie: MesDaSerie[] = meses.map((m, i) => ({

@@ -71,6 +71,11 @@ export function valor(i: Pick<Indicador, "unidade">, v: number | null) {
       return formato.pct(v);
     case "R$":
       return formato.inteiro(v);
+    // Em milhões ou em milhares, com uma casa (22/10/2026), como nos cards do Painel de Bordo (a unidade diz R$ M ou R$ K).
+    case "R$ M":
+      return formato.umaCasa(v / 1e6);
+    case "R$ K":
+      return formato.umaCasa(v / 1e3);
     case "colab.":
     case "ocorr.":
       return formato.inteiro(v);

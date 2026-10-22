@@ -212,6 +212,16 @@ function tamanhoDaSelecao(campo: HTMLElement) {
   return Math.round(parseFloat(getComputedStyle((n as HTMLElement) ?? campo).fontSize));
 }
 
+/** A fonte do texto onde está o cursor (22/10/2026), entre as da lista; nenhuma delas, a Padrão (undefined). */
+function fonteDaSelecao(campo: HTMLElement): ChaveDaFonte | undefined {
+  const sel = window.getSelection();
+  let n: Node | null = sel && sel.rangeCount && campo.contains(sel.anchorNode) ? sel.anchorNode : campo;
+  if (n && n.nodeType === Node.TEXT_NODE) n = n.parentNode;
+  const limpa = (f: string) => f.replace(/["'s]/g, "").toLowerCase();
+  const atual = limpa(getComputedStyle((n as HTMLElement) ?? campo).fontFamily);
+  return FONTES.find((x) => limpa(x.familia) === atual)?.chave;
+}
+
 /** O trecho com tamanho mais de fora que contém o nó (dentro do campo), ou null. */
 function trechoComTamanho(no: Node | null, campo: HTMLElement): HTMLElement | null {
   let achado: HTMLElement | null = null;
@@ -391,6 +401,8 @@ export function BarraDeTexto({
   const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | "fonte" | "espacamento" | null>(null);
   // O tamanho do texto onde está o cursor (o número do botão), a cada mudança da seleção; no título, o dele.
   const [tamanho, setTamanho] = useState(14);
+  // A fonte do texto onde está o cursor (22/10/2026), destacada na lista das fontes; no título, a dele.
+  const [fonteAtual, setFonteAtual] = useState<ChaveDaFonte | undefined>(undefined);
   // O título mais recente (para os eventos) e se o cursor está nele (para a lista dos tamanhos).
   const doTitulo = useRef(titulo);
   useEffect(() => {
@@ -402,7 +414,10 @@ export function BarraDeTexto({
     const aoSelecionar = () => {
       const el = campo();
       const sel = window.getSelection();
-      if (el && sel && sel.rangeCount && el.contains(sel.anchorNode)) setTamanho(tamanhoDaSelecao(el));
+      if (el && sel && sel.rangeCount && el.contains(sel.anchorNode)) {
+        setTamanho(tamanhoDaSelecao(el));
+        setFonteAtual(fonteDaSelecao(el));
+      }
     };
     const aoFocar = () => {
       const nele = !!doTitulo.current && document.activeElement === doTitulo.current.campo();
@@ -440,14 +455,21 @@ export function BarraDeTexto({
   const escolherFonte = (chave: ChaveDaFonte | undefined) => {
     setAberta(null);
     if (noTitulo()) return doTitulo.current?.definirFonte?.(chave);
-    if (chave) return exec("fontName", familiaDa(chave), true);
+    if (chave) {
+      setFonteAtual(chave);
+      return exec("fontName", familiaDa(chave), true);
+    }
     const el = campo();
     aplicar(el, () => {
       document.execCommand("styleWithCSS", false, "true");
       document.execCommand("fontName", false, FONTE_PADRAO);
       if (el) tirarFontePadrao(el);
     });
+    setFonteAtual(undefined);
   };
+  // A fonte destacada na lista: a do título, com o cursor nele; senão, a do texto.
+  const fonteMarcada = titulo && focoNoTitulo ? titulo.fonte : fonteAtual;
+  const marcada = (chave?: string) => (fonteMarcada === chave ? "bg-gray-100 font-bold text-gray-900" : "");
   return (
     <>
       <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("bold")} title="Negrito" aria-label="Negrito">
@@ -495,11 +517,20 @@ export function BarraDeTexto({
       </span>
       {fontes ? (
         <MenuDaBarra botao={botao} titulo="Fonte" gatilho={<CaseSensitive className="size-4" />} aberto={aberta === "fonte"} onAlternar={alternar("fonte")} largura="w-36">
-          <button type="button" className={item} onMouseDown={semFoco} onClick={() => escolherFonte(undefined)}>
+          {/* A fonte atual destacada (22/10/2026), em negrito e com o fundo cinza. */}
+          <button type="button" className={`${item} ${marcada(undefined)}`} aria-current={fonteMarcada === undefined} onMouseDown={semFoco} onClick={() => escolherFonte(undefined)}>
             Padrão
           </button>
           {FONTES.map((x) => (
-            <button key={x.chave} type="button" className={`${item} text-sm`} style={{ fontFamily: x.familia }} onMouseDown={semFoco} onClick={() => escolherFonte(x.chave)}>
+            <button
+              key={x.chave}
+              type="button"
+              className={`${item} text-sm ${marcada(x.chave)}`}
+              aria-current={fonteMarcada === x.chave}
+              style={{ fontFamily: x.familia }}
+              onMouseDown={semFoco}
+              onClick={() => escolherFonte(x.chave)}
+            >
               {x.nome}
             </button>
           ))}

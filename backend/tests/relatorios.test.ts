@@ -138,6 +138,15 @@ describe("metas do orçamento (aba Metas (Orçamento)) e Painel de Bordo", () =>
     assert.equal(sinal({ sentido: "↓" }, 90, 100), 1);
     assert.equal(sinal({ sentido: "↓" }, 120, null), null);
   });
+
+  it("com a meta zero, sem o desvio, o sinal pelo lado do realizado (sem o cenário orçado, sem sinal)", () => {
+    assert.equal(vsOrcado(1, 0), null);
+    assert.equal(sinal({ sentido: "↓" }, 1, 0), -1);
+    assert.equal(sinal({ sentido: "↓" }, 0, 0), 0);
+    assert.equal(sinal({ sentido: "↑" }, 5, 0), 1);
+    assert.equal(sinal({ sentido: "↑" }, -5, 0), -1);
+    assert.equal(sinal({ sentido: "↓" }, 1, 0, false), null);
+  });
 });
 
 describe("GME 4 e GME 8 (aba Realizado, linhas 112 a 115)", () => {

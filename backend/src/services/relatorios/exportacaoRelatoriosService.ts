@@ -177,8 +177,10 @@ function abaIndicadores(dados: Indicadores, id: Identificacao, acumulado = true)
       grupo = i.grupo;
       linhas.push([{ valor: (NOME_DO_GRUPO[grupo] ?? grupo).toUpperCase(), estilo: ESTILO.destaque }]);
     }
+    // R$ M e R$ K (22/10/2026): em milhões ou em milhares, como a coluna Und. diz.
+    const escala = i.unidade === "R$ M" ? 1e-6 : i.unidade === "R$ K" ? 1e-3 : 1;
     const valor = (v: number | null): Celula =>
-      v === null ? { valor: null, estilo: ESTILO.itemDireita } : { valor: v, estilo: i.unidade === "%" ? ESTILO.itemPercentual : ESTILO.itemNumero };
+      v === null ? { valor: null, estilo: ESTILO.itemDireita } : { valor: v * escala, estilo: i.unidade === "%" ? ESTILO.itemPercentual : ESTILO.itemNumero };
     linhas.push([
       { valor: i.nome, estilo: ESTILO.item },
       { valor: i.numero || null },
@@ -284,6 +286,9 @@ function valorIndicador(unidade: string, v: number | null) {
   if (unidade === "%") return pct(v);
   if (unidade === "R$" || unidade === "colab." || unidade === "ocorr.") return n0.format(v);
   if (unidade === "pistas") return n1.format(v);
+  // Em milhões ou em milhares, com uma casa (22/10/2026), como nos cards do Painel de Bordo.
+  if (unidade === "R$ M") return n1.format(v / 1e6);
+  if (unidade === "R$ K") return n1.format(v / 1e3);
   return n2.format(v);
 }
 

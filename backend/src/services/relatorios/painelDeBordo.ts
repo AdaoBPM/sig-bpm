@@ -285,8 +285,18 @@ export function vsOrcado(realizado: number | null, orcado: number | null): numbe
   return (realizado / orcado - 1) * (orcado < 0 ? -1 : 1);
 }
 
-/** O sinal do painel: 0 com desvio de até 5%; senão 1 quando o realizado está do lado bom do orçado, −1 do outro. */
-export function sinal(item: Pick<ItemPainel, "sentido">, realizado: number | null, orcado: number | null): -1 | 0 | 1 | null {
+/**
+ * O sinal do painel: 0 com desvio de até 5%; senão 1 quando o realizado está do lado bom do orçado, −1 do outro. Com o
+ * orçado zero (22/10/2026: a meta zero, como a de Acidentes c/ Afastamento), sem o desvio, o sinal pelo lado do
+ * realizado: 0 se também for zero; senão melhor ou pior conforme o sentido. `comOrcado` falso (o exercício sem o cenário
+ * orçado ou o mês sem valor nele: o zero é a falta do orçado), sem sinal.
+ */
+export function sinal(item: Pick<ItemPainel, "sentido">, realizado: number | null, orcado: number | null, comOrcado = true): -1 | 0 | 1 | null {
+  if (orcado === 0 && realizado !== null) {
+    if (!comOrcado || (item.sentido !== "↑" && item.sentido !== "↓")) return null;
+    if (realizado === 0) return 0;
+    return (item.sentido === "↑" ? realizado > 0 : realizado < 0) ? 1 : -1;
+  }
   const vs = vsOrcado(realizado, orcado);
   if (vs === null) return null;
   if (Math.abs(vs) <= 0.05) return 0;

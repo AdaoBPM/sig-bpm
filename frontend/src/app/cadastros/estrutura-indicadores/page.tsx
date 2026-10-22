@@ -24,6 +24,10 @@ export default function EstruturaIndicadoresPage() {
                 o último pedaço, e “Limpar” apaga a fórmula inteira.
               </li>
               <li>
+                Unidade de Medida: R$ em Milhões (M) e R$ em Milhares (K) mostram o valor em reais em milhões ou em milhares, com uma
+                casa, como nos cards do Painel de Bordo (a fórmula continua em reais, sem dividir por 1000).
+              </li>
+              <li>
                 Acumulado: Soma dos Meses (a fórmula sobre a soma de cada item; nas razões, a soma dos numeradores sobre a dos denominadores),
                 Média Ponderada (pelo Peso da Média, montado como a Metodologia) ou Último Mês (os de posição, como o quadro de lotação). Os de
                 Cálculo do Sistema têm a conta no código.

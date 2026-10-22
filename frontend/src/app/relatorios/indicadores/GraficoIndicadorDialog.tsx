@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
 import { MiniGrafico } from "../components/MiniGrafico";
-import type { Indicador, MesRelatorio } from "../services/relatoriosService";
+import { fatorDaEscalaDa, type Indicador, type MesRelatorio } from "../services/relatoriosService";
 
 // O comportamento com iniciais maiúsculas (13/10/2026), como os nomes.
 const SENTIDO: Record<string, string> = { "↑": "Quanto Maior, Melhor", "↓": "Quanto Menor, Melhor", "=": "Acompanhamento", "-": "Sem Sentido Definido" };
@@ -86,7 +86,7 @@ export function GraficoIndicadorDialog({
                 comRotulos={comRotulos}
                 comEscala={!comRotulos}
                 topoComRotulos={20}
-                fatorDaEscala={i.unidade === "%" ? 100 : 1}
+                fatorDaEscala={fatorDaEscalaDa(i.unidade)}
               />
             </div>
             <div
@@ -101,7 +101,7 @@ export function GraficoIndicadorDialog({
                 comRotulos={comRotulos}
                 comEscala={!comRotulos}
                 topoComRotulos={20}
-                fatorDaEscala={i.unidade === "%" ? 100 : 1}
+                fatorDaEscala={fatorDaEscalaDa(i.unidade)}
               />
             </div>
           </div>

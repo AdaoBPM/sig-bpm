@@ -33,6 +33,12 @@ function valor(i: Indicador) {
       return `${(i.valor * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
     case "R$":
       return `${i.valor < 0 ? "-" : ""}R$ ${Math.abs(i.valor).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+    // Em milhões ou em milhares, com uma casa (22/10/2026), como nos cards do Painel de Bordo.
+    case "R$ M":
+    case "R$ K": {
+      const x = Math.abs(i.valor) / (i.unidade === "R$ M" ? 1e6 : 1e3);
+      return `${i.valor < 0 ? "-" : ""}R$ ${x.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${i.unidade === "R$ M" ? "M" : "K"}`;
+    }
     case "colab.":
     case "ocorr.":
     case "pistas":

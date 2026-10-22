@@ -710,8 +710,21 @@ const linhas: DefinicaoCadastro = {
  */
 const GRUPOS_DE_INDICADORES = ["Produção", "Serviços", "Logística", "Técnico", "Comercial", "Administrativo", "Geral", "GME"];
 const SENTIDOS: Array<[string, string]> = [["↑", "↑ Maior, melhor"], ["↓", "↓ Menor, melhor"], ["=", "= Acompanhamento"], ["-", "- Sem sentido"]];
-// As unidades que as telas sabem mostrar (formatação dos valores).
-const UNIDADES_DE_INDICADOR = ["%", "R$", "R$/m³", "R$ (K)/colab.", "m³", "m³/colab.", "pistas", "colab.", "ocorr."];
+// As unidades que as telas sabem mostrar (formatação dos valores). R$ M e R$ K (22/10/2026): o valor em R$ mostrado em
+// milhões ou em milhares, com uma casa, como nos cards do Painel de Bordo.
+const UNIDADES_DE_INDICADOR: Array<[string, string]> = [
+  ["%", "%"],
+  ["R$", "R$"],
+  ["R$ M", "R$ em Milhões (M)"],
+  ["R$ K", "R$ em Milhares (K)"],
+  ["R$/m³", "R$/m³"],
+  ["R$ (K)/colab.", "R$ (K)/colab."],
+  ["m³", "m³"],
+  ["m³/colab.", "m³/colab."],
+  ["pistas", "pistas"],
+  ["colab.", "colab."],
+  ["ocorr.", "ocorr."],
+];
 const MODOS_DO_ACUMULADO: Array<[string, string]> = [["SOMA", "Soma dos meses"], ["MEDIA_PONDERADA", "Média ponderada"], ["ULTIMO", "Último mês"], ["SISTEMA", "Cálculo do sistema"]];
 
 /** Os itens que a fórmula pode usar (as opções do montador): valor "TIPO|chave", grupo pelo tipo do item. */
@@ -757,7 +770,7 @@ const estruturaIndicadores: DefinicaoCadastro = {
     { nome: "numero", rotulo: "Numeração", rotuloColuna: "Nº", tipo: "texto", ajuda: "Vazia nos indicadores principais do grupo." },
     { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, travaComMovimento: true },
     { nome: "sentido", rotulo: "Comportamento", rotuloColuna: "Comp.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(SENTIDOS) },
-    { nome: "unidade", rotulo: "Unidade de Medida", rotuloColuna: "Und.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(UNIDADES_DE_INDICADOR.map((u) => [u, u])) },
+    { nome: "unidade", rotulo: "Unidade de Medida", rotuloColuna: "Und.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(UNIDADES_DE_INDICADOR) },
     { nome: "descricao", rotulo: "Descrição", tipo: "texto", larguraInteira: true, naTabela: false, ajuda: "O texto que a tela Indicadores mostra sob o nome." },
     { nome: "formula", rotulo: "Metodologia", tipo: "formula", larguraInteira: true, naTabela: false, opcoes: itensDaFormula },
     { nome: "metodologiaTexto", rotulo: "Metodologia", tipo: "texto", derivado: true, noFormulario: false },
@@ -784,7 +797,7 @@ const estruturaIndicadores: DefinicaoCadastro = {
     const sentido = exigir(v.sentido, "O comportamento");
     if (!SENTIDOS.some(([s]) => s === sentido)) throw new RegraCadastroError(400, "Comportamento inválido.");
     const unidade = exigir(v.unidade, "A unidade de medida");
-    if (!UNIDADES_DE_INDICADOR.includes(unidade)) throw new RegraCadastroError(400, "Unidade de medida inválida.");
+    if (!UNIDADES_DE_INDICADOR.some(([u]) => u === unidade)) throw new RegraCadastroError(400, "Unidade de medida inválida.");
     const modo = exigir(v.modo, "O acumulado");
     if (!MODOS_DO_ACUMULADO.some(([m]) => m === modo)) throw new RegraCadastroError(400, "Acumulado inválido.");
     const nomes = (await db.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome).concat(nome);

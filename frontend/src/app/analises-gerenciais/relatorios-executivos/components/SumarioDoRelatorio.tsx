@@ -145,14 +145,15 @@ export function BarraDoSumario({ b, botao, onMudar }: { b: Sumario; botao: strin
         ))}
       </MenuDaBarra>
       <MenuDaBarra botao={botao} titulo="Fonte" gatilho={<CaseSensitive className="size-4" />} aberto={aberta === "fonte"} onAlternar={alternar("fonte")} largura="w-36">
-        <button type="button" className={`${ITEM_DA_BARRA} ${estilo.fonte ? "" : "font-bold text-gray-900"}`} onMouseDown={semFoco} onClick={() => mudar({ fonte: undefined })}>
+        {/* A fonte atual destacada (22/10/2026: também com o fundo cinza, como na barra do texto). */}
+        <button type="button" className={`${ITEM_DA_BARRA} ${estilo.fonte ? "" : "bg-gray-100 font-bold text-gray-900"}`} onMouseDown={semFoco} onClick={() => mudar({ fonte: undefined })}>
           Padrão
         </button>
         {FONTES.map((x) => (
           <button
             key={x.chave}
             type="button"
-            className={`${ITEM_DA_BARRA} text-sm ${estilo.fonte === x.chave ? "font-bold text-gray-900" : ""}`}
+            className={`${ITEM_DA_BARRA} text-sm ${estilo.fonte === x.chave ? "bg-gray-100 font-bold text-gray-900" : ""}`}
             style={{ fontFamily: x.familia }}
             onMouseDown={semFoco}
             onClick={() => mudar({ fonte: x.chave as ChaveDaFonte })}

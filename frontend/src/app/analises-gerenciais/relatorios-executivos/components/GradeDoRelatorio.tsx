@@ -16,6 +16,7 @@ import type { ItemPainel } from "@/app/relatorios/services/relatoriosService";
 import { SeletorRotulos, SeletorTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 import { valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
+import { fatorDaEscalaDa } from "@/app/relatorios/services/relatoriosService";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
@@ -916,7 +917,7 @@ function ConteudoDoBloco({
   // o grupo e o comportamento. Nos percentuais, a escala dos gráficos em % (antes, em fração: 0,05 no lugar de 5).
   const modo = modoDoGrafico(b);
   const daSerie = dados.indicadores.meses.slice(0, ate).map((m, k) => ({ mes: m.rotulo.split("/")[0], realizado: i.meses[k] ?? null, orcado: i.orcado[k] ?? null }));
-  const f: FormatacaoDoCard = { unidade: i.unidade, formatar: (v) => valor(i, v), formatarCurto: (v) => valorCurto(i, v), fatorDaEscala: i.unidade === "%" ? 100 : 1 };
+  const f: FormatacaoDoCard = { unidade: i.unidade, formatar: (v) => valor(i, v), formatarCurto: (v) => valorCurto(i, v), fatorDaEscala: fatorDaEscalaDa(i.unidade) };
   const item: ItemPainel = {
     titulo: i.nome,
     sigla: "",
@@ -926,8 +927,8 @@ function ConteudoDoBloco({
     formatoAcumulado: "PCT",
     base: null,
     separar: false,
-    mes: blocoComparado(i.meses[ate - 1] ?? null, i.orcado[ate - 1] ?? null, i.sentido),
-    acumulado: blocoComparado(i.total, i.totalOrcado, i.sentido),
+    mes: blocoComparado(i.meses[ate - 1] ?? null, i.orcado[ate - 1] ?? null, i.sentido, !!dados.indicadores.cenarioOrcado),
+    acumulado: blocoComparado(i.total, i.totalOrcado, i.sentido, !!dados.indicadores.cenarioOrcado),
     serie: daSerie,
   };
   return (

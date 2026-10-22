@@ -198,10 +198,28 @@ function DestaqueDoDesvio({ b, formatarOrcado }: { b: Pick<BlocoPainel, "orcado"
  * amarelo; senão, melhor ou pior conforme o sentido — ↑ quanto maior, melhor; ↓ quanto menor, melhor; nos indicadores
  * de acompanhamento, sem sinal (cinza).
  */
-export function blocoComparado(realizado: number | null, orcado: number | null, sentido: string): BlocoPainel {
+export function blocoComparado(realizado: number | null, orcado: number | null, sentido: string, comOrcado = true): BlocoPainel {
   const vsOrcado = realizado === null || orcado === null || orcado === 0 ? null : (realizado / orcado - 1) * (orcado < 0 ? -1 : 1);
+  const comSentido = sentido === "↑" || sentido === "↓";
+  // Com o orçado zero (22/10/2026: a meta zero, como a de Acidentes c/ Afastamento), sem o desvio, o sinal pelo lado do
+  // realizado: até 5% se também for zero; senão melhor ou pior conforme o sentido (sem o cenário orçado, `comOrcado`
+  // falso, o zero é a falta dele: sem sinal). É a regra do painelDeBordo.sinal do backend.
   const sinal: BlocoPainel["sinal"] =
-    vsOrcado === null || (sentido !== "↑" && sentido !== "↓") ? null : Math.abs(vsOrcado) <= 0.05 ? 0 : (sentido === "↑" ? realizado! < orcado! : realizado! > orcado!) ? -1 : 1;
+    orcado === 0 && realizado !== null
+      ? !comOrcado || !comSentido
+        ? null
+        : realizado === 0
+          ? 0
+          : (sentido === "↑" ? realizado > 0 : realizado < 0)
+            ? 1
+            : -1
+      : vsOrcado === null || !comSentido
+        ? null
+        : Math.abs(vsOrcado) <= 0.05
+          ? 0
+          : (sentido === "↑" ? realizado! < orcado! : realizado! > orcado!)
+            ? -1
+            : 1;
   return { realizado, orcado, base: null, vsOrcado, sinal };
 }
 
@@ -626,7 +644,8 @@ export function PainelContent() {
               O desvio (vs. Orçado) é o realizado sobre o orçado, menos 1 (com o orçado negativo, o sinal se inverte). A faixa à direita do destaque
               e o ícone ficam verdes (azuis, com a Acessibilidade Daltonismo), com um triângulo para cima, quando o realizado está do lado bom do
               orçado; vermelhos, com um triângulo para baixo, do lado ruim; e amarelos, com um quadrado, quando o desvio é de até 5%. O lado bom depende
-              do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor.
+              do sentido do indicador: ↑ quanto maior, melhor; ↓ quanto menor, melhor. Com o orçado zero (uma meta zero, como a de acidentes), o
+              desvio não se calcula (—), mas o destaque ainda tem a cor: amarelo se o realizado também for zero; senão, verde ou vermelho pelo sentido.
             </p>
             <p>
               O resultado financeiro e as despesas fixas aparecem em milhares de reais (R$ K), no Atual e no Acumulado. O
