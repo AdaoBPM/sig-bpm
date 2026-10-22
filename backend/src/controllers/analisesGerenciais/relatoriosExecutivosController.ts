@@ -7,13 +7,21 @@ import { temPermissao } from "../../middlewares/verificarPermissao.js";
 import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
 import { CHAVES_DAS_ABAS, FONTES_DO_TEXTO, NOME_DA_FOTO, NOME_DO_VIDEO, RelatorioExecutivoError, SITES_DE_VIDEO, relatoriosExecutivosService as s, type UsuarioDoRelatorio } from "../../services/analisesGerenciais/relatoriosExecutivosService.js";
 
-/** Os ajustes de uma imagem (21/10/2026): brilho e saturação de 0 a 200%, matiz de −180° a 180°, desfoque até 20 px e transparência até 100%. */
+/**
+ * Os ajustes de uma imagem (21/10/2026): brilho e saturação de 0 a 200%, matiz de −180° a 180°, desfoque até 20 px e
+ * transparência até 100%; a borda (espessura até 20 px e a cor) e o sombreamento centralizado (intensidade até 100% e
+ * desfoque até 60 px), desde 22/10/2026.
+ */
 const ajustesDeImagem = z.object({
   brilho: z.number().min(0).max(200).optional(),
   matiz: z.number().min(-180).max(180).optional(),
   saturacao: z.number().min(0).max(200).optional(),
   desfoque: z.number().min(0).max(20).optional(),
   transparencia: z.number().min(0).max(100).optional(),
+  bordaEspessura: z.number().min(0).max(20).optional(),
+  bordaCor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+  sombraIntensidade: z.number().min(0).max(100).optional(),
+  sombraDesfoque: z.number().min(0).max(60).optional(),
 });
 
 /** O usuário da requisição: se edita a tela e os departamentos do recorte (sem recorte, nulo: todos). */

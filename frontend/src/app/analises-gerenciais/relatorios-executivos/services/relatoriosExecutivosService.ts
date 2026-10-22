@@ -99,7 +99,19 @@ export type ConteudoDoBloco = Bloco extends infer B ? (B extends Bloco ? Omit<B,
  * cima; 1: à direita ou embaixo).
  */
 /** Os ajustes de uma imagem (21/10/2026): brilho e saturação em % (100 = como veio), matiz em graus, desfoque em px e transparência em %; sem um deles, o padrão. */
-export type AjustesDeImagem = { brilho?: number; matiz?: number; saturacao?: number; desfoque?: number; transparencia?: number };
+export type AjustesDeImagem = {
+  brilho?: number;
+  matiz?: number;
+  saturacao?: number;
+  desfoque?: number;
+  transparencia?: number;
+  /** A borda (22/10/2026; só as imagens com legenda e as livres): a espessura, em px, e a cor (#rrggbb). */
+  bordaEspessura?: number;
+  bordaCor?: string;
+  /** O sombreamento centralizado (22/10/2026): a intensidade (0 a 100%) e o desfoque, em px. */
+  sombraIntensidade?: number;
+  sombraDesfoque?: number;
+};
 export type Fundo = { arquivo: string; proporcao: number; zoom: number; x: number; y: number; ajustes?: AjustesDeImagem };
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
 export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo };

@@ -22,6 +22,7 @@ import { AdicionarCardsDialog } from "../components/AdicionarCardsDialog";
 import { ApresentacaoDoRelatorio, entrarEmTelaInteira, type Slide } from "../components/ApresentacaoDoRelatorio";
 import { EtiquetaSituacao } from "../components/EtiquetaSituacao";
 import { AjustarFundoDialog } from "../components/FundoDoSlide";
+import { prepararFoto } from "../components/enviarImagem";
 import { ConfigurarSumarioDialog } from "../components/SumarioDoRelatorio";
 import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
 import { COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
@@ -30,38 +31,6 @@ import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type Conteudo
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
 const novoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-
-/**
- * A foto para o relatório (16/10/2026): reduzida a até 1600 px no lado maior (a Imagem de Fundo, 20/10/2026, a até 2560,
- * para cobrir a tela inteira), com a proporção dela (largura ÷ altura). Em JPEG; a imagem com partes transparentes
- * (22/10/2026; antes, o fundo delas ficava branco), em PNG — ou em WebP, se o PNG passar do limite do envio.
- */
-async function prepararFoto(arquivo: File, maximo = 1600): Promise<{ foto: Blob; proporcao: number }> {
-  const imagem = await createImageBitmap(arquivo).catch(() => {
-    throw new Error("Não foi possível abrir a imagem: escolha uma foto em JPEG, PNG, WebP ou GIF.");
-  });
-  const escala = Math.min(1, maximo / Math.max(imagem.width, imagem.height));
-  const tela = document.createElement("canvas");
-  tela.width = Math.max(1, Math.round(imagem.width * escala));
-  tela.height = Math.max(1, Math.round(imagem.height * escala));
-  const ctx = tela.getContext("2d")!;
-  ctx.drawImage(imagem, 0, 0, tela.width, tela.height);
-  const gerar = (tipo: string, qualidade?: number) =>
-    new Promise<Blob>((ok, erro) => tela.toBlob((b) => (b ? ok(b) : erro(new Error("Não foi possível preparar a foto."))), tipo, qualidade));
-  // Algum pixel transparente: PNG (ou WebP, menor, se o PNG passar de 9 MB; o envio aceita até 10 MB).
-  const pixels = ctx.getImageData(0, 0, tela.width, tela.height).data;
-  let transparente = false;
-  for (let i = 3; i < pixels.length && !transparente; i += 4) transparente = pixels[i] < 255;
-  if (transparente) {
-    const png = await gerar("image/png");
-    return { foto: png.size <= 9 * 1024 * 1024 ? png : await gerar("image/webp", 0.9), proporcao: imagem.width / imagem.height };
-  }
-  // Sem transparência: JPEG, sobre o branco (o canvas começa transparente).
-  ctx.globalCompositeOperation = "destination-over";
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, tela.width, tela.height);
-  return { foto: await gerar("image/jpeg", 0.85), proporcao: imagem.width / imagem.height };
-}
 
 /** O nome da página: o escolhido ou, sem ele, "Página N". */
 const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 1}`;
@@ -466,8 +435,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Imagem com Legenda (antes, Foto) envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
               amarelo-ouro. A imagem aumenta e diminui sempre na mesma proporção. Nas imagens (com legenda, livres e de fundo), o botão de ajustes da barra do
-              bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; “Restaurar Ajustes” volta à imagem como
-              veio.
+              bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; nas com legenda e nas livres, também a Borda (a
+              espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). “Restaurar Ajustes” volta à imagem como veio, e “Trocar
+              Imagem” põe outra imagem no lugar, com os ajustes de agora (o bloco fica na proporção da nova).
             </li>
             <li>
               Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o

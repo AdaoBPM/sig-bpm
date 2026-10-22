@@ -17,7 +17,7 @@ import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
-import { AjustesDaImagemDialog, estiloDosAjustes } from "./AjustesDaImagem";
+import { AjustesDaImagemDialog, ImagemComMoldura } from "./AjustesDaImagem";
 import { CamadaDoFundo } from "./FundoDoSlide";
 import { BarraDoSumario, ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
 import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
@@ -363,10 +363,14 @@ export function GradeDoRelatorio({
         <AjustesDaImagemDialog
           relatorioId={relatorioId}
           arquivo={doCard.arquivo}
+          proporcao={doCard.proporcao}
           inicial={doCard.ajustes}
+          comMoldura
           onFechar={() => setConfigurando(null)}
-          onAplicar={(ajustes) => {
-            mudarBloco(doCard.id, { ajustes } as Partial<Bloco>);
+          onAplicar={(ajustes, troca) => {
+            // Com a imagem trocada (22/10/2026), o bloco fica com a altura da proporção da nova; os ajustes ficam.
+            const nova = troca ? { arquivo: troca.arquivo, proporcao: troca.proporcao, h: linhasDaFoto(doCard.w, troca.proporcao, LARGURA, !!doCard.livre) } : {};
+            mudarBloco(doCard.id, { ajustes, ...nova } as Partial<Bloco>);
             setConfigurando(null);
           }}
         />
@@ -737,8 +741,7 @@ function ConteudoDoBloco({
     // A Imagem Livre (21/10/2026): só a imagem, na proporção dela, sem a legenda e sem o fundo (o PNG transparente continua
     // transparente sobre o slide).
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- a imagem vem do servidor, pelo proxy, com o login.
-      <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" draggable={false} className="h-full w-full object-contain" style={estiloDosAjustes(b.ajustes)} />
+      <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" proporcao={b.proporcao} ajustes={b.ajustes} />
     );
   }
   if (b.tipo === "FOTO") {
@@ -747,8 +750,7 @@ function ConteudoDoBloco({
       <figure className="flex h-full flex-col gap-2">
         <div className="min-h-0 flex-1">
           {b.arquivo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a foto vem do servidor, pelo proxy, com o login.
-            <img src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Imagem"} draggable={false} className="h-full w-full object-contain" style={estiloDosAjustes(b.ajustes)} />
+            <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Imagem"} proporcao={b.proporcao} ajustes={b.ajustes} />
           ) : (
             // O quadro sem a imagem (17/10/2026: o relatório importado sem as imagens): cinza, com o botão de carregar.
             <label

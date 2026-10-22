@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { ImageUp, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +11,7 @@ import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import { enderecoDaFoto, type Fundo } from "../services/relatoriosExecutivosService";
 import { ControlesDosAjustes, estiloDosAjustes } from "./AjustesDaImagem";
+import { enviarImagem } from "./enviarImagem";
 
 /** O zoom da Imagem de Fundo: de 1 (o tamanho que cobre a tela) a 4. */
 const ZOOM_MAXIMO = 4;
@@ -62,6 +64,19 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
     return { x: Math.max(cw, ch * f.proporcao) * f.zoom - cw, y: Math.max(ch, cw / f.proporcao) * f.zoom - ch };
   };
   const mudar = (m: Partial<Fundo>) => setF((x) => ({ ...x, ...m }));
+  // Trocar Imagem (22/10/2026): a nova imagem no lugar, com a posição, o tamanho e os ajustes de agora.
+  const seletor = useRef<HTMLInputElement>(null);
+  const [enviando, setEnviando] = useState(false);
+  const trocar = async (arquivo: File) => {
+    setEnviando(true);
+    try {
+      mudar(await enviarImagem(relatorioId, arquivo, 2560));
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : "Não foi possível enviar a imagem.");
+    } finally {
+      setEnviando(false);
+    }
+  };
   return (
     <Dialog open onOpenChange={(a) => (!a ? onFechar() : undefined)}>
       <DialogContent avisoAoSair className="rounded-sm sm:max-w-3xl">
@@ -69,7 +84,7 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
           <DialogTitle>Imagem de Fundo</DialogTitle>
           <DialogDescription>
             A imagem cobre o slide inteiro, por cima do cabeçalho, atrás dos blocos. Arraste-a para posicionar; o Tamanho (ou a roda do mouse sobre ela) a
-            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência.
+            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência. “Trocar Imagem” põe outra imagem no lugar, com a posição, o tamanho e os ajustes.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -119,13 +134,30 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
         </div>
         {/* Os ajustes da imagem (21/10/2026). */}
         <ControlesDosAjustes ajustes={f.ajustes} onMudar={(ajustes) => mudar({ ajustes })} />
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          <Button type="button" variant="outline" className="rounded-sm" disabled={enviando} onClick={() => seletor.current?.click()} title="Outra imagem no lugar desta, com a posição, o tamanho e os ajustes de agora">
+            <ImageUp className="size-4" />
+            {enviando ? "Enviando…" : "Trocar Imagem"}
+          </Button>
+          <input
+            ref={seletor}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const arquivo = e.target.files?.[0];
+              e.target.value = "";
+              if (arquivo) void trocar(arquivo);
+            }}
+          />
+          <div className="flex gap-2">
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} onClick={() => onAplicar(f)}>
+          <Button type="button" className={botaoPrimario} disabled={enviando} onClick={() => onAplicar(f)}>
             Aplicar
           </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
