@@ -106,6 +106,19 @@ export const relatoriosExecutivosController = {
     return r ? responder(response, () => s.dados(r)) : undefined;
   },
 
+  configuracoes(request: Request, response: Response) {
+    const r = id(request, response);
+    return r ? responder(response, () => s.configuracoes(r, usuario(request))) : undefined;
+  },
+
+  gravarConfiguracoes(request: Request, response: Response) {
+    const r = id(request, response);
+    if (!r) return;
+    const corpo = z.object({ cenarioComparadoId: z.string().uuid().nullable() }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Escolha o cenário de comparação." });
+    return responder(response, () => s.gravarConfiguracoes(r, corpo.data, usuario(request)));
+  },
+
   resultados(request: Request, response: Response) {
     const r = id(request, response);
     if (!r) return;

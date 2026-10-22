@@ -2307,6 +2307,9 @@ model RelatorioExecutivo {
   criadoPorNome String                  @map("criado_por_nome")
   criadoEm      DateTime                @default(now()) @map("criado_em")
   atualizadoEm  DateTime                @updatedAt @map("atualizado_em")
+  /// O cenário de comparação dos cards e das tabelas (22/10/2026; a aba Configurações): sem ele, o cenário marcado como
+  /// Orçamento Empresarial no exercício. Sem chave estrangeira: com o cenário excluído, volta à marcação.
+  cenarioComparadoId String?               @map("cenario_comparado_id")
   abas          RelatorioExecutivoAba[]
 
   @@unique([ano, mes])

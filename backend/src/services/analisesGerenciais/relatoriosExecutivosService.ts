@@ -15,6 +15,7 @@ import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { painelService } from "../relatorios/painelService.js";
 import { resultadosService } from "../relatorios/resultadosService.js";
 import { ACESSO_TOTAL } from "../acesso/acesso.js";
+import { cenarioMarcado, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
@@ -184,6 +185,9 @@ async function completarAbas(r: { id: string; abas: Aba[] }) {
   return true;
 }
 
+/** O cenário de comparação do relatório (22/10/2026): o escolhido nas Configurações; sem ele, o Orçamento Empresarial. */
+const comparacaoDo = (r: { cenarioComparadoId: string | null }): Comparacao => (r.cenarioComparadoId ? { cenarioId: r.cenarioComparadoId } : "ORCAMENTO_EMPRESARIAL");
+
 async function doRelatorio(id: string) {
   const buscar = () => getPrismaClient().relatorioExecutivo.findUnique({ where: { id }, include: { abas: true } });
   const r = await buscar();
@@ -276,6 +280,8 @@ export const relatoriosExecutivosService = {
         mes: dados.mes,
         criadoPorId: usuario.id,
         criadoPorNome: usuario.nome,
+        // O cenário de comparação da origem (22/10/2026), no mesmo exercício.
+        cenarioComparadoId: origem && origem.ano === dados.ano ? origem.cenarioComparadoId : null,
         abas: { create: CHAVES_DAS_ABAS.map((departamento) => ({ departamento, blocos: (daOrigem.get(departamento) ?? paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: origem ? usuario.nome : null })) },
       },
     });
@@ -335,7 +341,9 @@ export const relatoriosExecutivosService = {
   /** Os dados dos cards: o Painel de Bordo e os Indicadores até o mês do relatório, só das competências fechadas. */
   async dados(id: string) {
     const r = await doRelatorio(id);
-    const [painel, indicadores] = await Promise.all([painelService.painel(r.ano, r.mes, true), indicadoresService.listar(r.ano, r.mes, true)]);
+    // Comparados com o cenário das Configurações (22/10/2026).
+    const c = comparacaoDo(r);
+    const [painel, indicadores] = await Promise.all([painelService.painel(r.ano, r.mes, true, c), indicadoresService.listar(r.ano, r.mes, true, c)]);
     return { painel, indicadores };
   },
 
@@ -345,7 +353,44 @@ export const relatoriosExecutivosService = {
    */
   async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
     const r = await doRelatorio(id);
-    return resultadosService.unidade(r.ano, visao, r.mes, ACESSO_TOTAL, true);
+    return resultadosService.unidade(r.ano, visao, r.mes, ACESSO_TOTAL, true, comparacaoDo(r));
+  },
+
+  /**
+   * As Configurações do relatório (22/10/2026): o cenário de comparação (nulo: o marcado como Orçamento Empresarial, que
+   * vem em `marcado`) e as opções — os cenários públicos do exercício do relatório (os particulares só o dono vê).
+   */
+  async configuracoes(id: string, usuario: UsuarioDoRelatorio) {
+    const r = await doRelatorio(id);
+    const [cenarios, marcado] = await Promise.all([
+      getPrismaClient().cenario.findMany({ where: { ano: r.ano, visualizacao: "PUBLICA" }, orderBy: [{ tipo: "desc" }, { nome: "asc" }], select: { id: true, nome: true, tipo: true, marcacao: true } }),
+      cenarioMarcado(r.ano, "ORCAMENTO_EMPRESARIAL"),
+    ]);
+    // O escolhido que deixou de existir (ou de ser público) volta à marcação.
+    const escolhido = r.cenarioComparadoId && cenarios.some((c) => c.id === r.cenarioComparadoId) ? r.cenarioComparadoId : null;
+    return { ano: r.ano, cenarioComparadoId: escolhido, marcado, cenarios, podeEditar: usuario.edita };
+  },
+
+  /** Grava o cenário de comparação (de quem edita a tela; nulo: volta ao Orçamento Empresarial). */
+  async gravarConfiguracoes(id: string, dados: { cenarioComparadoId: string | null }, usuario: UsuarioDoRelatorio) {
+    if (!usuario.edita) throw new RelatorioExecutivoError(403, "Só quem edita os Relatórios Executivos muda as configurações.");
+    const r = await doRelatorio(id);
+    if (dados.cenarioComparadoId) {
+      const c = await getPrismaClient().cenario.findUnique({ where: { id: dados.cenarioComparadoId }, select: { ano: true, visualizacao: true } });
+      if (!c || c.ano !== r.ano || c.visualizacao !== "PUBLICA") throw new RelatorioExecutivoError(400, `Escolha um cenário público de ${r.ano}.`);
+    }
+    await getPrismaClient().relatorioExecutivo.update({ where: { id }, data: { cenarioComparadoId: dados.cenarioComparadoId } });
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "EDICAO",
+      entidade: "relatorio_executivo",
+      entidadeId: id,
+      antes: { cenarioComparadoId: r.cenarioComparadoId },
+      depois: { cenarioComparadoId: dados.cenarioComparadoId },
+      metadados: { mes: rotuloMes(r.ano, r.mes), configuracoes: true },
+    });
+    return this.configuracoes(id, usuario);
   },
 
   /** Grava as páginas de uma aba, com os blocos de cada uma (de quem a edita, em elaboração). */

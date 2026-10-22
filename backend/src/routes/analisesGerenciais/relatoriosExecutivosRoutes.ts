@@ -17,6 +17,9 @@ relatoriosExecutivosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
 relatoriosExecutivosRoutes.post("/", autenticacao, editar, asyncHandler(c.criar));
 relatoriosExecutivosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 relatoriosExecutivosRoutes.get("/:id/dados", autenticacao, ler, asyncHandler(c.dados));
+// As Configurações (22/10/2026): o cenário de comparação dos cards e das tabelas.
+relatoriosExecutivosRoutes.get("/:id/configuracoes", autenticacao, ler, asyncHandler(c.configuracoes));
+relatoriosExecutivosRoutes.put("/:id/configuracoes", autenticacao, editar, asyncHandler(c.gravarConfiguracoes));
 // A tabela de Resultados de uma visão (22/10/2026), para os blocos de tabela.
 relatoriosExecutivosRoutes.get("/:id/resultados", autenticacao, ler, asyncHandler(c.resultados));
 relatoriosExecutivosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));

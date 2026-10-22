@@ -149,6 +149,18 @@ export async function cenarioMarcado(ano: number, marcacao: MarcacaoCenario) {
   return getPrismaClient().cenario.findFirst({ where: { ano, marcacao }, select: { id: true, nome: true } });
 }
 
+/**
+ * O cenário comparado (22/10/2026): o da marcação no exercício (o Compara Com de Resultados Empresariais) ou um cenário
+ * escolhido (as Configurações dos Relatórios Executivos).
+ */
+export type Comparacao = MarcacaoCenario | { cenarioId: string };
+export async function cenarioDaComparacao(ano: number, c: Comparacao) {
+  if (typeof c === "string") return cenarioMarcado(ano, c);
+  return getPrismaClient().cenario.findUnique({ where: { id: c.cenarioId }, select: { id: true, nome: true } });
+}
+/** O nome do comparado nos rótulos: "Orçado" no Orçamento Empresarial e no cenário escolhido; nos outros, o da marcação. */
+export const rotuloDaComparacao = (c: Comparacao) => (typeof c !== "string" || c === "ORCAMENTO_EMPRESARIAL" ? "Orçado" : ROTULO_DA_MARCACAO[c]);
+
 /** O nome de cada marcação (21/10/2026: o Compara Com de Resultados Empresariais e os rótulos do comparado). */
 export const ROTULO_DA_MARCACAO: Record<MarcacaoCenario, string> = {
   ORCAMENTO_EMPRESARIAL: "Orçamento Empresarial",

@@ -1,6 +1,5 @@
 import { getPrismaClient } from "../../config/prisma.js";
-import { calcularCenario, cenarioMarcado, metasPorMes } from "../cenarios/indicadoresDoCenario.js";
-import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
+import { calcularCenario, cenarioDaComparacao, metasPorMes, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
 import type { Indicador } from "./indicadores.js";
 
 /**
@@ -20,10 +19,10 @@ export type Orcamento = {
   acumulado: (i: Pick<Indicador, "nome" | "acumulado">, ate: number) => number;
 };
 
-/** `marcacao` (21/10/2026): o cenário do Compara Com; sem ela, o Orçamento Empresarial. */
-export async function orcamentoDoExercicio(ano: number, marcacao: MarcacaoCenario = "ORCAMENTO_EMPRESARIAL"): Promise<Orcamento> {
+/** `comparacao` (21/10/2026): o cenário do Compara Com (22/10/2026: ou um cenário escolhido); sem ela, o Orçamento Empresarial. */
+export async function orcamentoDoExercicio(ano: number, comparacao: Comparacao = "ORCAMENTO_EMPRESARIAL"): Promise<Orcamento> {
   const nomes = (await getPrismaClient().indicadorEstrutura.findMany({ where: { ativo: true }, select: { nome: true } })).map((i) => i.nome);
-  const cenario = await cenarioMarcado(ano, marcacao);
+  const cenario = await cenarioDaComparacao(ano, comparacao);
   if (!cenario) {
     const zeros = Array.from({ length: 12 }, () => new Map(nomes.map((n) => [n, 0])));
     return { cenario: null, porMes: zeros, mesesSemValor: [], acumulado: () => 0 };

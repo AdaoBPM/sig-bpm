@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 
 import type { Indicadores, Painel, Resultados } from "@/app/relatorios/services/relatoriosService";
+import type { MarcacaoCenario } from "@/app/cenarios/services/cenariosService";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com sete abas (17/10/2026:
@@ -175,6 +176,17 @@ export type Relatorio = {
   podeExcluir: boolean;
 };
 export type DadosDoRelatorio = { painel: Painel; indicadores: Indicadores };
+/**
+ * As Configurações do relatório (22/10/2026): o cenário de comparação (nulo: o marcado como Orçamento Empresarial,
+ * `marcado`), os cenários públicos do exercício e se o usuário pode mudar.
+ */
+export type ConfiguracoesDoRelatorio = {
+  ano: number;
+  cenarioComparadoId: string | null;
+  marcado: { id: string; nome: string } | null;
+  cenarios: Array<{ id: string; nome: string; tipo: string; marcacao: MarcacaoCenario | null }>;
+  podeEditar: boolean;
+};
 
 const base = "/proxy/relatorios-executivos";
 export const relatoriosExecutivosService = {
@@ -185,6 +197,9 @@ export const relatoriosExecutivosService = {
     (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe, manterImagensEAnotacoes })).data.data,
   obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
   dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
+  configuracoes: async (id: string) => (await api.get<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`)).data.data,
+  gravarConfiguracoes: async (id: string, cenarioComparadoId: string | null) =>
+    (await api.put<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`, { cenarioComparadoId })).data.data,
   /** A tabela de Resultados de uma visão (22/10/2026), até o mês do relatório, para os blocos de tabela. */
   resultados: async (id: string, visao: VisaoDaTabela) => (await api.get<{ data: Resultados }>(`${base}/${id}/resultados`, { params: { visao } })).data.data,
   gravarAba: async (id: string, aba: string, paginas: Pagina[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas })).data.data,

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -26,6 +26,7 @@ import { prepararFoto } from "../components/enviarImagem";
 import { ConfigurarSumarioDialog } from "../components/SumarioDoRelatorio";
 import { ConfigurarTabelaDialog } from "../components/TabelaDoRelatorio";
 import { ExportarPdfDoRelatorio } from "../components/ExportarPdfDoRelatorio";
+import { CONFIGURACOES, ConfiguracoesDoRelatorio } from "../components/ConfiguracoesDoRelatorio";
 import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
 import { COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
@@ -274,17 +275,22 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     },
   });
   const editavel = aba?.podeEditar ?? false;
+  // A aba Configurações (22/10/2026), antes da Capa: só o painel dela, sem páginas.
+  const configuracoes = chave === CONFIGURACOES;
   const emConfirmacao = confirmar === "finalizar" ? situacao : excluir;
   const vazia = daAba.every((p) => p.blocos.length === 0);
   const botaoIcone = "inline-flex size-8 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40";
   return (
     // A largura da área (a da grade, menos as margens de fora), para a altura da foto nova.
     <div ref={area} className="space-y-6">
-      <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => setAberta({ chave: c, pagina: null })} />
+      {/* Saindo das Configurações com a escolha não gravada, pergunta antes (22/10/2026). */}
+      <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => (chave !== CONFIGURACOES || podeSair()) && setAberta({ chave: c, pagina: null })} />
       <CabecalhoDaTela
         // O título da tela é o da aba aberta (17/10/2026: Introdução, Performance da Produção…); o mês fica na barra do topo.
-        titulo={aba?.titulo ?? `RE - ${relatorio.rotuloMes}`}
+        titulo={configuracoes ? "Configurações" : (aba?.titulo ?? `RE - ${relatorio.rotuloMes}`)}
         acoes={
+          // Na aba Configurações (22/10/2026), sem as ações: ela não tem páginas nem slides (não se apresenta nem se exporta).
+          configuracoes ? undefined : (
           <div className="flex flex-wrap items-center gap-2">
             {editavel ? (
               <DropdownMenu>
@@ -405,6 +411,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               }}
             />
           </div>
+          )
         }
         comoUsar={
           <ul>
@@ -417,6 +424,12 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               seguem o recorte de departamentos do seu usuário (Controle de Usuários): você edita as do seu recorte (sem recorte, todas); as dos outros
               aparecem quando o gestor delas as finaliza. O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
               finalizou e quando).
+            </li>
+            <li>
+              Configurações, antes da Capa, é preliminar à apresentação: não tem páginas, não conta nos slides e não entra na tela inteira nem no PDF. Nela, o
+              Cenário de Comparação é o orçado dos cards (Painel de Bordo e Indicadores) e das tabelas: de início, o cenário marcado como Orçamento Empresarial no
+              exercício; escolha um dos cenários públicos do exercício para o relatório ficar com ele, mesmo que a marcação mude de cenário. Quem edita a tela grava
+              (“Gravar”); os demais só veem.
             </li>
             <li>
               Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
@@ -527,7 +540,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         As páginas da aba (16/10/2026), no formato das abas das telas, com o nome de cada uma (o do slide; na sua aba, dois
         cliques ou o lápis o editam) e, na altura delas, os botões só com ícones: renomear, incluir, excluir, recuar e avançar.
       */}
-      {aba?.visivel ? (
+      {configuracoes ? <ConfiguracoesDoRelatorio relatorioId={relatorio.id} /> : null}
+      {!configuracoes && aba?.visivel ? (
         <div className="flex items-end">
           <div role="tablist" aria-label={`Páginas de ${aba.nome}`} data-tour="abas" className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
             {daAba.map((p, k) => {
@@ -639,7 +653,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         </div>
       ) : null}
       {dados.isError ? <Erro erro={mensagemDeErro(dados.error, "Erro ao carregar os dados dos cards.")} /> : null}
-      {!aba?.visivel ? (
+      {configuracoes ? null : !aba?.visivel ? (
         <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
           A aba {aba?.nome} está em elaboração: aparece quando o gestor dela a finalizar.
         </p>
@@ -830,6 +844,19 @@ function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio;
       </div>
       {/* Quebra em duas linhas quando falta largura, sem rolar a página. */}
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
+        {/* Configurações (22/10/2026), antes da Capa: preliminar à apresentação (sem slides). */}
+        <li className="flex shrink-0 items-center">
+          <button
+            type="button"
+            aria-current={chave === CONFIGURACOES ? "page" : undefined}
+            title="Configurações do relatório (o cenário de comparação)"
+            onClick={() => onMudar(CONFIGURACOES)}
+            className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap ${chave === CONFIGURACOES ? "bg-black font-bold text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}`}
+          >
+            <Settings className="size-4" />
+            Configurações
+          </button>
+        </li>
         {relatorio.abas.map((a) => {
           const ativa = a.chave === chave;
           return (
