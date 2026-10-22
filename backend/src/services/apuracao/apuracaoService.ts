@@ -180,8 +180,11 @@ async function motivoNaoExcluir(ano: number, mes: number, status: string, compet
  */
 async function telasSemValor(competenciaId: string): Promise<string[]> {
   const prisma = getPrismaClient();
-  const [manuais, receita, importados, digitados, estoque, conferencia] = await Promise.all([
+  // A Receita (22/10/2026): a receita calculada das listas (as prévias) ou os ajustes manuais; antes, só os ajustes, que
+  // são opcionais — e o mês com a receita calculada e sem ajuste dava o aviso.
+  const [manuais, receitaCalculada, receitaManual, importados, digitados, estoque, conferencia] = await Promise.all([
     prisma.lancamentoManual.count({ where: { competenciaId } }),
+    prisma.receitaPrevia.count({ where: { competenciaId } }),
     prisma.lancamentoReceita.count({ where: { competenciaId } }),
     prisma.indicadorImportado.count({ where: { competenciaId } }),
     prisma.indicadorDigitado.count({ where: { competenciaId } }),
@@ -190,7 +193,7 @@ async function telasSemValor(competenciaId: string): Promise<string[]> {
   ]);
   return [
     manuais ? null : "Lançamentos (nenhum lançamento manual)",
-    receita ? null : "Receita (nenhum lançamento de receita)",
+    receitaCalculada + receitaManual ? null : "Receita (nenhuma receita calculada nem ajuste manual)",
     importados + digitados ? null : "Indicadores (nenhum indicador importado ou digitado)",
     estoque ? null : "Estoque (nenhum saldo)",
     conferencia ? null : "Conferência (a planilha não foi enviada)",
