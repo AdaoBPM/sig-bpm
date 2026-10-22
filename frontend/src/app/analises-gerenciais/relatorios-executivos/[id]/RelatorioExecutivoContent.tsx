@@ -471,7 +471,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             </li>
             <li>
               Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
-              slide). Ela aumenta e diminui na mesma proporção e, na apresentação, como o Texto Livre, não se destaca nem se amplia.
+              slide). Ela aumenta e diminui na mesma proporção e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
             </li>
             <li>
               Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do

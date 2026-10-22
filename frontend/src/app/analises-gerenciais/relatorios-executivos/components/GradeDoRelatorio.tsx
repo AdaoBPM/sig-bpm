@@ -287,9 +287,11 @@ export function GradeDoRelatorio({
         onResizeStop={terminar}
       >
         {blocos.map((b) => {
-          // O Texto Livre e o Sumário (20/10/2026) e a Imagem Livre (21/10/2026) são da composição do slide: na apresentação,
-          // sem o destaque do fundo e sem ampliar.
-          const amplia = ampliavel && b.tipo !== "TEXTO" && b.tipo !== "SUMARIO" && !(b.tipo === "FOTO" && b.livre);
+          // O Texto Livre e o Sumário (20/10/2026) são da composição do slide: na apresentação, sem o destaque e sem ampliar. A
+          // Imagem Livre se destaca e se amplia como as demais (22/10/2026; antes, como o Texto Livre), sem o fundo atrás dela
+          // e com a sombra no contorno da imagem (o PNG transparente continua transparente).
+          const amplia = ampliavel && b.tipo !== "TEXTO" && b.tipo !== "SUMARIO";
+          const imagemLivre = b.tipo === "FOTO" && !!b.livre;
           return (
           // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
           <div key={b.id} className="group relative focus-within:z-10 hover:z-10">
@@ -305,7 +307,7 @@ export function GradeDoRelatorio({
             {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca, sem sair da tela; o clique o amplia. */}
             <div
               // O card do Painel sem recorte (16/10/2026): a dica do mês, ao passar o mouse no gráfico, sai dos limites do card.
-              className={`h-full ${b.tipo === "PAINEL" ? "" : "overflow-hidden"} ${amplia ? "cursor-zoom-in rounded-sm transition duration-200 hover:bg-background hover:shadow-lg" : ""}`}
+              className={`h-full ${b.tipo === "PAINEL" ? "" : "overflow-hidden"} ${amplia ? `cursor-zoom-in rounded-sm transition duration-200 ${imagemLivre ? "hover:drop-shadow-lg" : "hover:bg-background hover:shadow-lg"}` : ""}`}
               style={realce?.id === b.id ? { transform: `scale(${realce.escala})`, transformOrigin: realce.origem } : undefined}
               onMouseEnter={amplia ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
               onMouseLeave={amplia ? () => setRealce(null) : undefined}
