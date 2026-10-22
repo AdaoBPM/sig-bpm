@@ -834,13 +834,8 @@ function ConteudoDoBloco({
     const item = dados.painel.abas.find((a) => a.chave === b.aba)?.quadros.find((q) => q.titulo === b.quadro)?.itens.find((i) => i.titulo === b.titulo && i.sigla === b.sigla);
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
     const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} comRotulos={b.comRotulos ?? false} />;
-    if (soCard) return <div className="h-full">{card}</div>;
-    return (
-      <div className="flex h-full flex-col">
-        <p className="truncate pb-1 text-xs font-bold tracking-wide text-gray-500 uppercase">{b.quadro}</p>
-        <div className="min-h-0 flex-1">{card}</div>
-      </div>
-    );
+    // Sem o nome do grupo em cima do card (22/10/2026; antes, "PRODUÇÃO: MATRIZ"…): o card ocupa o bloco inteiro.
+    return <div className="h-full">{card}</div>;
   }
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
   if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
