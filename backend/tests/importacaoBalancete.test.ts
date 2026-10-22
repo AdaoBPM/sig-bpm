@@ -200,4 +200,33 @@ describe("o balancete detalhado (15/10/2026)", () => {
     assert.equal(r.ignoradas.subtotais, 4);
     assert.equal(conferirTotal(r.somaArquivo, r.totalGeral), null);
   });
+
+  // Duas tabelas dinâmicas na aba, uma embaixo da outra (22/10/2026): agosto numa, setembro noutra, cada uma com a sua Total Geral.
+  const movSet = (conta: string, set: number): ValorCelula[] => [1, "1.01.00000001", "CENTRO", "3.02", conta, `CONTA ${conta}`, "FORNECEDOR B", 46270, "NF 9", null, set, set];
+  const duasTabelas = [
+    cab,
+    mov("2855", "FORNECEDOR A", 46240, "NF 123", -100),
+    ["Total Geral", null, null, null, null, null, null, null, null, -100, null, -100],
+    movSet("2855", -30),
+    movSet("2856", -20),
+    ["Total Geral", null, null, null, null, null, null, null, null, null, -50, -50],
+  ].map((celulas, i) => ({ numero: i + 1, celulas }));
+
+  it("com duas tabelas na aba, confere cada mês com a Total Geral da tabela dele", () => {
+    for (const [mes, total] of [[8, "-100.00"], [9, "-50.00"]] as const) {
+      const r = interpretarBalancete(duasTabelas, 2026, mes);
+      assert.ok(r.ok);
+      assert.equal(r.totalGeral?.toFixed(2), total);
+      assert.equal(r.tabelasDoMes, 1);
+      assert.equal(conferirTotal(r.somaArquivo, r.totalGeral, r.tabelasDoMes), null);
+    }
+  });
+
+  it("recusa o mesmo mês em duas tabelas da aba", () => {
+    const repetido = [...duasTabelas.map((l) => l.celulas), mov("2855", "FORNECEDOR A", 46240, "NF 123", -100), ["Total Geral", null, null, null, null, null, null, null, null, -100, null, -100]].map((celulas, i) => ({ numero: i + 1, celulas }));
+    const r = interpretarBalancete(repetido, 2026, 8);
+    assert.ok(r.ok);
+    assert.equal(r.tabelasDoMes, 2);
+    assert.match(conferirTotal(r.somaArquivo, r.totalGeral, r.tabelasDoMes) ?? "", /aparece em 2 tabelas/);
+  });
 });

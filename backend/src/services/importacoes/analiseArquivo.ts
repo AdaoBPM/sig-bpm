@@ -124,7 +124,7 @@ const TIPOS: Tipo[] = [
       const l = interpretarBalancete(linhas, ano, mes);
       if (!l.ok) throw new AbaInvalida(l.motivo);
       if (l.lancamentos.length === 0 && l.rejeicoes.length === 0) return null;
-      const total = conferirTotal(l.somaArquivo, l.totalGeral);
+      const total = conferirTotal(l.somaArquivo, l.totalGeral, l.tabelasDoMes);
       if (total) throw new AbaInvalida(total);
       return {
         registros: l.lancamentos.length,

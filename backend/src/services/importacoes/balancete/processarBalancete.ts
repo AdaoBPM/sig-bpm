@@ -55,7 +55,7 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
       linhasIgnoradas: leitura.ignoradas.subtotais + leitura.ignoradas.semMovimento,
     };
 
-    const divergenciaTotal = conferirTotal(leitura.somaArquivo, leitura.totalGeral);
+    const divergenciaTotal = conferirTotal(leitura.somaArquivo, leitura.totalGeral, leitura.tabelasDoMes);
     if (divergenciaTotal) {
       await recusar(importacaoId, divergenciaTotal, contagemLeitura);
       return;

@@ -22,7 +22,10 @@ type Decimal = Prisma.Decimal;
  * emissão e o histórico), e a mesma filial, centro e conta se repetem — não é
  * duplicidade. Sem elas, uma linha por filial, centro e conta, como antes. As linhas de subtotal
  * da tabela dinâmica ("3.01 Total", "1 Total", "Total Geral") não são
- * lançamento; a última delas serve para conferir o arquivo.
+ * lançamento; a Total Geral serve para conferir o arquivo. A aba pode ter mais
+ * de uma tabela dinâmica, uma embaixo da outra (22/10/2026: janeiro a agosto
+ * numa e setembro noutra), cada uma com a sua Total Geral: o total do mês é a
+ * soma delas, e o mês só pode estar numa tabela.
  *
  * Esta função é pura: não consulta cadastro. Verificar se a conta e o centro
  * existem é do serviço de importação.
@@ -74,8 +77,10 @@ export type LeituraBalancete =
       ignoradas: { subtotais: number; semMovimento: number };
       /** Soma da movimentação de todas as linhas de dado legíveis. */
       somaArquivo: Decimal;
-      /** O "Total Geral" do próprio arquivo, quando ele existe. */
+      /** O "Total Geral" do próprio arquivo no mês, quando ele existe: a soma das Total Geral de todas as tabelas da aba. */
       totalGeral: Decimal | null;
+      /** Quantas tabelas da aba trazem o mês (as Total Geral com valor na coluna dele); mais de uma é duplicidade. */
+      tabelasDoMes: number;
     };
 
 const COLUNAS_OBRIGATORIAS = {
@@ -250,6 +255,7 @@ export function interpretarBalancete(
   let linhasLidas = 0;
   let somaArquivo = new Decimal(0);
   let totalGeral: Decimal | null = null;
+  let tabelasDoMes = 0;
 
   for (const linha of linhas) {
     if (linha.numero <= cabecalho.numero) continue;
@@ -257,8 +263,11 @@ export function interpretarBalancete(
     const celula = (i: number) => c[i] ?? null;
     linhasLidas++;
 
+    // A Total Geral de cada tabela da aba (22/10/2026; antes, valia só a última): somam-se; a que não tem o mês, vazia, não conta.
     if (normalizar(celula(0)) === "TOTAL GERAL") {
-      totalGeral = decimal(celula(colTotal)) ?? new Decimal(0);
+      const doMes = decimal(celula(colTotal));
+      if (doMes) tabelasDoMes++;
+      totalGeral = (totalGeral ?? new Decimal(0)).plus(doMes ?? 0);
       ignoradas.subtotais++;
       continue;
     }
@@ -375,18 +384,28 @@ export function interpretarBalancete(
     ignoradas,
     somaArquivo,
     totalGeral,
+    tabelasDoMes,
   };
 }
 
 /**
  * A conferência do arquivo contra ele mesmo: a soma das linhas tem de bater
- * com o Total Geral da tabela dinâmica. Se não bate, o arquivo foi editado à
- * mão ou cortado, e gravar metade dele seria pior do que recusar.
+ * com o Total Geral das tabelas dinâmicas. Se não bate, o arquivo foi editado à
+ * mão ou cortado, e gravar metade dele seria pior do que recusar. O mesmo mês
+ * em duas tabelas da aba (`tabelasDoMes`) também se recusa: as linhas dele
+ * entrariam duas vezes.
  */
 export function conferirTotal(
   somaArquivo: Decimal,
   totalGeral: Decimal | null,
+  tabelasDoMes = 1,
 ): string | null {
+  if (tabelasDoMes > 1) {
+    return (
+      `O mês aparece em ${tabelasDoMes} tabelas da aba (${tabelasDoMes} linhas Total Geral com valor nele): ` +
+      "as linhas dele entrariam mais de uma vez. Deixe o mês numa tabela só."
+    );
+  }
   if (totalGeral === null) return null;
   const diferenca = somaArquivo.minus(totalGeral);
   if (diferenca.abs().lessThanOrEqualTo(CENTAVO)) return null;

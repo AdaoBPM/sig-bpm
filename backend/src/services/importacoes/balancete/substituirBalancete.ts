@@ -92,7 +92,7 @@ export async function substituirBalanceteDetalhado(opcoes: {
       continue;
     }
     const recusa =
-      conferirTotal(leitura.somaArquivo, leitura.totalGeral) ??
+      conferirTotal(leitura.somaArquivo, leitura.totalGeral, leitura.tabelasDoMes) ??
       (leitura.rejeicoes.length ? `${leitura.rejeicoes.length} linhas recusadas (a primeira: ${leitura.rejeicoes[0].mensagem}).` : null) ??
       (leitura.lancamentos.some((l) => l.reduzido && !contaPorReduzido.has(l.reduzido)) ? "Há conta fora do cadastro de contas de resultado." : null) ??
       (leitura.lancamentos.every((l) => l.cliForn === null && l.emissao === null && l.historico === null) ? "O arquivo não é o balancete detalhado (sem CLI_FORN, EMISSAO e HISTORICO)." : null);
