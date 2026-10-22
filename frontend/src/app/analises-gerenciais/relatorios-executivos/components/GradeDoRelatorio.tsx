@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
+import { moveElement } from "react-grid-layout/build/utils";
 import { ChartColumn, CircleAlert, GripVertical, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
@@ -246,6 +247,31 @@ export function GradeDoRelatorio({
   const [ajustando, setAjustando] = useState<number | null>(null);
   const comecar = () => setAjustando(caixa.current?.offsetWidth ?? null);
   const terminar = () => setAjustando(null);
+  // O arrasto (22/10/2026): os blocos empurrados voltam ao lugar quando o arrastado sai de cima deles. A grade acumula os
+  // empurrões a cada passo do arrasto; aqui, a cada passo, os outros blocos voltam à posição do início do arrasto e só os
+  // que o bloco encobre agora são empurrados (a mesma regra da grade, no próprio leiaute, antes de ela o guardar).
+  const doInicio = useRef<Map<string, { x: number; y: number }> | null>(null);
+  const comecarArrasto = (l: Layout[]) => {
+    doInicio.current = new Map(l.map((b) => [b.i, { x: b.x, y: b.y }]));
+    comecar();
+  };
+  const aoArrastar = (l: Layout[], _antes: Layout, arrastado: Layout) => {
+    const inicio = doInicio.current;
+    if (!inicio) return;
+    const { x, y } = arrastado;
+    for (const b of l) {
+      const p = inicio.get(b.i);
+      if (!p) continue;
+      b.x = p.x;
+      b.y = p.y;
+      b.moved = false;
+    }
+    moveElement(l, arrastado, x, y, true, false, null, COLUNAS, false);
+  };
+  const terminarArrasto = () => {
+    doInicio.current = null;
+    terminar();
+  };
   const layout: Layout[] = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, ...tamanhoMinimo(b) }));
   // A foto se redimensiona pela largura: a altura acompanha, na proporção dela.
   const aoRedimensionar = (_l: Layout[], _antes: Layout, novo: Layout, sombra: Layout) => {
@@ -317,13 +343,15 @@ export function GradeDoRelatorio({
         draggableHandle=".alca-do-bloco"
         // Os blocos ficam onde se põem, em todas as páginas (22/10/2026; antes, só na Capa, no Encerramento e nas com a
         // Imagem de Fundo — nas demais, a grade os encostava em cima): sem se sobrepor (o bloco arrastado sobre outro o
-        // empurra) e dentro da página (as linhas dela e as colunas, isBounded).
+        // empurra; e, se o arrasto continua, o empurrado volta ao lugar, 22/10/2026) e dentro da página (as linhas dela e as
+        // colunas, isBounded).
         compactType={null}
         isBounded
         onLayoutChange={aoMudarLeiaute}
         onResize={aoRedimensionar}
-        onDragStart={comecar}
-        onDragStop={terminar}
+        onDragStart={comecarArrasto}
+        onDrag={aoArrastar}
+        onDragStop={terminarArrasto}
         onResizeStart={comecar}
         onResizeStop={terminar}
       >

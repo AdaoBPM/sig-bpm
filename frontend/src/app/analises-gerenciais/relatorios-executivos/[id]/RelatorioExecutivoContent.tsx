@@ -459,7 +459,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               Passe o mouse num bloco para ver os botões dele: a alça (arraste para mover), o gráfico (nos cards do Painel e dos Indicadores, em ciclo: os meses e o acumulado →
               só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), as opções do gráfico (os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
               excluir. O canto de baixo, à direita, redimensiona o bloco, até um tamanho mínimo, para as informações não se amontoarem. Ao mover ou
-              redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
+              redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos. O bloco arrastado sobre outro o empurra; se você continua
+              arrastando e sai de cima dele, o empurrado volta ao lugar.
             </li>
             <li>
               “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
