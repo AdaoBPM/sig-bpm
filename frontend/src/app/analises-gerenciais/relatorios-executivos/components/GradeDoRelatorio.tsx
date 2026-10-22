@@ -878,13 +878,13 @@ function ConteudoDoBloco({
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
   if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
   const ate = dados.indicadores.ate;
-  // O mês e o acumulado (22/10/2026), cada um com o rótulo em cima e o valor (50% maior: 36 px o do mês, 24 px o acumulado),
-  // e, à direita, na altura deles, o destaque do desvio do Painel de Bordo: o orçado em cinza, com a faixa de melhor ou pior.
-  const periodo = (rotulo: string, v: number | null, o: number | null, principal = false) => (
+  // O mês e o acumulado (22/10/2026), cada um com o rótulo em cima e o valor, nos tamanhos dos cards do Painel de Bordo, e,
+  // à direita, na altura deles, o destaque do desvio do Painel: o orçado em cinza, com a faixa de melhor ou pior.
+  const periodo = (rotulo: string, v: number | null, o: number | null) => (
     <div className="flex items-start gap-2">
       <div className="min-w-0">
         <p className="text-xs whitespace-nowrap text-gray-600">{rotulo}</p>
-        <p className={`whitespace-nowrap ${principal ? "text-[36px] leading-tight font-extrabold text-gray-900" : "text-2xl leading-tight font-bold text-gray-800"}`}>{valor(i, v)}</p>
+        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{valor(i, v)}</p>
       </div>
       <DestaqueDoIndicador realizado={v} orcado={o} sentido={i.sentido} cores={cores} formatar={(x) => valor(i, x)} />
     </div>
@@ -902,16 +902,15 @@ function ConteudoDoBloco({
       className={`grid h-full gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 ${modo === "MESES" ? "grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : modo === "ACUMULADO" ? "grid-cols-[minmax(0,2fr)_minmax(0,1fr)]" : ""}`}
     >
       <div className="flex min-w-0 flex-col justify-between gap-2">
-        <header>
-          <h3 className="text-sm leading-snug font-bold text-gray-900" title={i.metodologia}>
+        {/* O nome no tamanho do título dos cards do Painel e, à direita dele, na altura, o grupo, a unidade e o comportamento (22/10/2026). */}
+        <header className="flex min-w-0 items-baseline justify-between gap-3">
+          <h3 className="text-xl leading-snug font-bold text-gray-900" title={i.metodologia}>
             {i.nome}
           </h3>
-          <p className="text-xs text-gray-500">
-            {i.grupo} · {i.unidade} {i.sentido}
-          </p>
+          <p className="shrink-0 text-right text-xs whitespace-nowrap text-gray-600">{[i.grupo, i.unidade, i.sentido].filter(Boolean).join(" · ")}</p>
         </header>
         <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-          {periodo(dados.painel.rotuloMes, i.meses[ate - 1] ?? null, i.orcado[ate - 1] ?? null, true)}
+          {periodo(dados.painel.rotuloMes, i.meses[ate - 1] ?? null, i.orcado[ate - 1] ?? null)}
           {periodo(i.acumulado === "ACUM" ? "Acumulado" : "Atual", i.total, i.totalOrcado)}
         </div>
       </div>

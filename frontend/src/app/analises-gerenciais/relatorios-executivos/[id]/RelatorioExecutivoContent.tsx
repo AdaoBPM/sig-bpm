@@ -464,7 +464,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
               Introdução, Performance da Produção…), em cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Relatório Executivo”, em
-              cinza, a seta, o período, em preto, e a logo da BPM à direita; no centro, em cinza, o contador dos slides (“1/10”: o slide e o total, contados da
+              cinza, a seta, o período, em preto, e a logo da BPM à direita; embaixo, o rodapé, com o separador igual ao do cabeçalho: à esquerda, a legenda dos cards (nos slides
+              com cards do Painel ou dos Indicadores), e, à direita, o contador dos slides (“1/10”: o slide em preto e negrito e o total, contados da
               Introdução em diante; nos slides da Capa e do Encerramento, sem ele). Mova o mouse para ver os botões, no centro da base:
               o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
               ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
