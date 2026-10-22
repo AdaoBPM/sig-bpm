@@ -139,7 +139,7 @@ export function ApresentacaoDoRelatorio({
         {slide?.fundo ? <CamadaDoFundo key={slide.chave} relatorioId={relatorioId} fundo={slide.fundo} className="absolute inset-0" /> : null}
         {slide ? (
           <div className="relative">
-            <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} livre={slide.numero === null || !!slide.fundo} sumario={sumario} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} ampliavel onMudar={() => undefined} />
+            <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} sumario={sumario} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} ampliavel onMudar={() => undefined} />
           </div>
         ) : null}
       </div>

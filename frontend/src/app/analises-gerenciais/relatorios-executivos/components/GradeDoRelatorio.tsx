@@ -152,7 +152,6 @@ export function GradeDoRelatorio({
   ampliavel = false,
   sumario = [],
   fundo,
-  livre = false,
   onCarregarImagem,
   onEscolherVideo,
   onMudar,
@@ -162,11 +161,6 @@ export function GradeDoRelatorio({
   sumario?: TelaDoSumario[];
   /** A Imagem de Fundo da página (20/10/2026), atrás dos blocos (na edição; a apresentação a põe no slide inteiro). */
   fundo?: Fundo;
-  /**
-   * Os blocos ficam onde se põem (20/10/2026: nas páginas da Capa e nas com a Imagem de Fundo, para o título ir ao meio do
-   * slide); nas demais, a grade os encosta em cima. A apresentação usa o mesmo, para o slide sair igual.
-   */
-  livre?: boolean;
   /** O vídeo de um quadro de vídeo vazio (20/10/2026): abre o Adicionar Vídeo para ele. */
   onEscolherVideo?: (id: string) => void;
   /** A imagem escolhida para um quadro de foto vazio (17/10/2026). */
@@ -278,7 +272,11 @@ export function GradeDoRelatorio({
         isDraggable={editavel}
         isResizable={editavel}
         draggableHandle=".alca-do-bloco"
-        compactType={livre ? null : "vertical"}
+        // Os blocos ficam onde se põem, em todas as páginas (22/10/2026; antes, só na Capa, no Encerramento e nas com a
+        // Imagem de Fundo — nas demais, a grade os encostava em cima): sem se sobrepor (o bloco arrastado sobre outro o
+        // empurra) e dentro da página (as linhas dela e as colunas, isBounded).
+        compactType={null}
+        isBounded
         onLayoutChange={aoMudarLeiaute}
         onResize={aoRedimensionar}
         onDragStart={comecar}

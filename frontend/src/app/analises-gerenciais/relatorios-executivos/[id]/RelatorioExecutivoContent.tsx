@@ -121,7 +121,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const mudarPagina = (blocos: Bloco[]) => mudarPaginas(daAba.map((p) => (p.id === pagina?.id ? { ...p, blocos } : p)));
   // A Imagem de Fundo da página aberta (20/10/2026); sem ela, a página fica sem fundo.
   const mudarFundo = (fundo: Fundo | undefined) => mudarPaginas(daAba.map((p) => (p.id === pagina?.id ? { ...p, fundo } : p)));
-  // O bloco novo entra no fim da página (a grade o encosta em cima); a anotação e a foto, ao lado do último bloco, se couberem na linha.
+  // O bloco novo entra logo abaixo do último bloco da página; a anotação e a foto, ao lado do último bloco, se couberem na linha.
   const fim = daPagina.reduce((m, b) => Math.max(m, b.y + b.h), 0);
   const ultimo = daPagina.reduce<Bloco | null>((u, b) => (!u || b.y > u.y || (b.y === u.y && b.x > u.x) ? b : u), null);
   const posicao = (n: ConteudoDoBloco, k: number) => {
@@ -621,7 +621,6 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           blocos={daPagina}
           sumario={sumario}
           fundo={pagina?.fundo}
-          livre={ABAS_SEM_NUMERO.has(chave) || !!pagina?.fundo}
           dados={dados.data}
           editavel={editavel}
           cores={cores}
