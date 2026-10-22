@@ -184,7 +184,7 @@ export type ConfiguracoesDoRelatorio = {
   ano: number;
   cenarioComparadoId: string | null;
   marcado: { id: string; nome: string } | null;
-  cenarios: Array<{ id: string; nome: string; tipo: string; marcacao: MarcacaoCenario | null }>;
+  cenarios: Array<{ id: string; nome: string; ano: number; tipo: string; marcacao: MarcacaoCenario | null }>;
   podeEditar: boolean;
 };
 

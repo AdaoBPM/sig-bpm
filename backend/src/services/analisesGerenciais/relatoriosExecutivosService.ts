@@ -185,8 +185,15 @@ async function completarAbas(r: { id: string; abas: Aba[] }) {
   return true;
 }
 
-/** O cenário de comparação do relatório (22/10/2026): o escolhido nas Configurações; sem ele, o Orçamento Empresarial. */
-const comparacaoDo = (r: { cenarioComparadoId: string | null }): Comparacao => (r.cenarioComparadoId ? { cenarioId: r.cenarioComparadoId } : "ORCAMENTO_EMPRESARIAL");
+/**
+ * O cenário de comparação do relatório (22/10/2026): o escolhido nas Configurações; sem ele (ou com ele excluído ou
+ * particular), o Orçamento Empresarial, como a tela das Configurações mostra.
+ */
+async function comparacaoDo(r: { cenarioComparadoId: string | null }): Promise<Comparacao> {
+  if (!r.cenarioComparadoId) return "ORCAMENTO_EMPRESARIAL";
+  const c = await getPrismaClient().cenario.findFirst({ where: { id: r.cenarioComparadoId, visualizacao: "PUBLICA" }, select: { id: true } });
+  return c ? { cenarioId: c.id } : "ORCAMENTO_EMPRESARIAL";
+}
 
 async function doRelatorio(id: string) {
   const buscar = () => getPrismaClient().relatorioExecutivo.findUnique({ where: { id }, include: { abas: true } });
@@ -342,7 +349,7 @@ export const relatoriosExecutivosService = {
   async dados(id: string) {
     const r = await doRelatorio(id);
     // Comparados com o cenário das Configurações (22/10/2026).
-    const c = comparacaoDo(r);
+    const c = await comparacaoDo(r);
     const [painel, indicadores] = await Promise.all([painelService.painel(r.ano, r.mes, true, c), indicadoresService.listar(r.ano, r.mes, true, c)]);
     return { painel, indicadores };
   },
@@ -353,21 +360,26 @@ export const relatoriosExecutivosService = {
    */
   async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
     const r = await doRelatorio(id);
-    return resultadosService.unidade(r.ano, visao, r.mes, ACESSO_TOTAL, true, comparacaoDo(r));
+    return resultadosService.unidade(r.ano, visao, r.mes, ACESSO_TOTAL, true, await comparacaoDo(r));
   },
 
   /**
-   * As Configurações do relatório (22/10/2026): o cenário de comparação (nulo: o marcado como Orçamento Empresarial, que
-   * vem em `marcado`) e as opções — os cenários marcados do exercício do relatório (22/10/2026: só os marcados; e o
-   * escolhido antes, se perdeu a marcação, para continuar à vista).
+   * As Configurações do relatório (22/10/2026): o cenário de comparação (nulo: o marcado como Orçamento Empresarial no
+   * exercício, que vem em `marcado`) e as opções — todos os cenários públicos (de todos os exercícios), com o ano, o tipo
+   * (sintético ou analítico) e a marcação; os particulares ficam de fora (os dados do comparado aparecem a todos os que
+   * leem o relatório).
    */
   async configuracoes(id: string, usuario: UsuarioDoRelatorio) {
     const r = await doRelatorio(id);
     const [cenarios, marcado] = await Promise.all([
-      getPrismaClient().cenario.findMany({ where: { ano: r.ano, visualizacao: "PUBLICA", OR: [{ marcacao: { not: null } }, { id: r.cenarioComparadoId ?? "" }] }, orderBy: [{ tipo: "desc" }, { nome: "asc" }], select: { id: true, nome: true, tipo: true, marcacao: true } }),
+      getPrismaClient().cenario.findMany({
+        where: { visualizacao: "PUBLICA" },
+        orderBy: [{ ano: "desc" }, { nome: "asc" }],
+        select: { id: true, nome: true, ano: true, tipo: true, marcacao: true },
+      }),
       cenarioMarcado(r.ano, "ORCAMENTO_EMPRESARIAL"),
     ]);
-    // O escolhido que deixou de existir (ou de ser público) volta à marcação.
+    // O escolhido que deixou de existir (ou ficou particular) volta à marcação.
     const escolhido = r.cenarioComparadoId && cenarios.some((c) => c.id === r.cenarioComparadoId) ? r.cenarioComparadoId : null;
     return { ano: r.ano, cenarioComparadoId: escolhido, marcado, cenarios, podeEditar: usuario.edita };
   },
@@ -377,10 +389,9 @@ export const relatoriosExecutivosService = {
     if (!usuario.edita) throw new RelatorioExecutivoError(403, "Só quem edita os Relatórios Executivos muda as configurações.");
     const r = await doRelatorio(id);
     if (dados.cenarioComparadoId) {
-      const c = await getPrismaClient().cenario.findUnique({ where: { id: dados.cenarioComparadoId }, select: { ano: true, visualizacao: true, marcacao: true } });
-      // Só os marcados (22/10/2026); o escolhido antes continua valendo mesmo sem a marcação.
-      const valido = !!c && c.ano === r.ano && c.visualizacao === "PUBLICA" && (c.marcacao !== null || dados.cenarioComparadoId === r.cenarioComparadoId);
-      if (!valido) throw new RelatorioExecutivoError(400, `Escolha um cenário marcado de ${r.ano}.`);
+      const c = await getPrismaClient().cenario.findUnique({ where: { id: dados.cenarioComparadoId }, select: { visualizacao: true } });
+      // Qualquer cenário público (22/10/2026), de qualquer exercício.
+      if (c?.visualizacao !== "PUBLICA") throw new RelatorioExecutivoError(400, "Escolha um dos cenários públicos da lista.");
     }
     await getPrismaClient().relatorioExecutivo.update({ where: { id }, data: { cenarioComparadoId: dados.cenarioComparadoId } });
     await auditar({
