@@ -428,7 +428,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Configurações, antes da Capa, é preliminar à apresentação: não tem páginas, não conta nos slides e não entra na tela inteira nem no PDF. Nela, o
               Cenário de Comparação é o orçado dos cards (Painel de Bordo e Indicadores) e das tabelas: de início, o cenário marcado como Orçamento Empresarial no
-              exercício; escolha um dos cenários públicos do exercício para o relatório ficar com ele, mesmo que a marcação mude de cenário. Quem edita a tela grava
+              exercício; escolha um dos cenários marcados do exercício (Orçamento Empresarial, Previsão…) para o relatório ficar com ele, mesmo que a marcação mude de cenário. Quem edita a tela grava
               (“Gravar”); os demais só veem.
             </li>
             <li>

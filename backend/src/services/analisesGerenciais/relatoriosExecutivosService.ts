@@ -358,12 +358,13 @@ export const relatoriosExecutivosService = {
 
   /**
    * As Configurações do relatório (22/10/2026): o cenário de comparação (nulo: o marcado como Orçamento Empresarial, que
-   * vem em `marcado`) e as opções — os cenários públicos do exercício do relatório (os particulares só o dono vê).
+   * vem em `marcado`) e as opções — os cenários marcados do exercício do relatório (22/10/2026: só os marcados; e o
+   * escolhido antes, se perdeu a marcação, para continuar à vista).
    */
   async configuracoes(id: string, usuario: UsuarioDoRelatorio) {
     const r = await doRelatorio(id);
     const [cenarios, marcado] = await Promise.all([
-      getPrismaClient().cenario.findMany({ where: { ano: r.ano, visualizacao: "PUBLICA" }, orderBy: [{ tipo: "desc" }, { nome: "asc" }], select: { id: true, nome: true, tipo: true, marcacao: true } }),
+      getPrismaClient().cenario.findMany({ where: { ano: r.ano, visualizacao: "PUBLICA", OR: [{ marcacao: { not: null } }, { id: r.cenarioComparadoId ?? "" }] }, orderBy: [{ tipo: "desc" }, { nome: "asc" }], select: { id: true, nome: true, tipo: true, marcacao: true } }),
       cenarioMarcado(r.ano, "ORCAMENTO_EMPRESARIAL"),
     ]);
     // O escolhido que deixou de existir (ou de ser público) volta à marcação.
@@ -376,8 +377,10 @@ export const relatoriosExecutivosService = {
     if (!usuario.edita) throw new RelatorioExecutivoError(403, "Só quem edita os Relatórios Executivos muda as configurações.");
     const r = await doRelatorio(id);
     if (dados.cenarioComparadoId) {
-      const c = await getPrismaClient().cenario.findUnique({ where: { id: dados.cenarioComparadoId }, select: { ano: true, visualizacao: true } });
-      if (!c || c.ano !== r.ano || c.visualizacao !== "PUBLICA") throw new RelatorioExecutivoError(400, `Escolha um cenário público de ${r.ano}.`);
+      const c = await getPrismaClient().cenario.findUnique({ where: { id: dados.cenarioComparadoId }, select: { ano: true, visualizacao: true, marcacao: true } });
+      // Só os marcados (22/10/2026); o escolhido antes continua valendo mesmo sem a marcação.
+      const valido = !!c && c.ano === r.ano && c.visualizacao === "PUBLICA" && (c.marcacao !== null || dados.cenarioComparadoId === r.cenarioComparadoId);
+      if (!valido) throw new RelatorioExecutivoError(400, `Escolha um cenário marcado de ${r.ano}.`);
     }
     await getPrismaClient().relatorioExecutivo.update({ where: { id }, data: { cenarioComparadoId: dados.cenarioComparadoId } });
     await auditar({

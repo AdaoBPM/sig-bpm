@@ -21,7 +21,7 @@ export const CONFIGURACOES = "CONFIGURACOES";
  * A aba Configurações do relatório (22/10/2026): preliminar à apresentação — não tem páginas, não conta nos slides e não
  * entra na tela inteira nem no PDF. O Cenário de Comparação: o orçado dos cards (Painel de Bordo e Indicadores) e das
  * tabelas; de início, o cenário marcado como Orçamento Empresarial no exercício (a marcação pode mudar de cenário: o
- * relatório escolhe um cenário público do exercício e fica com ele). Quem edita a tela grava; os demais só veem.
+ * relatório escolhe um cenário marcado do exercício e fica com ele). Quem edita a tela grava; os demais só veem.
  */
 export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string }) {
   const queryClient = useQueryClient();
@@ -52,7 +52,7 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
       <div>
         <h2 className="text-base font-bold text-gray-900">Cenário de Comparação</h2>
         <p className="mt-1 text-sm text-gray-600">
-          O orçado dos cards do Painel de Bordo e dos Indicadores (o destaque do desvio e os gráficos) e das tabelas de Resultados. Os cenários públicos de {c.ano}.
+          O orçado dos cards do Painel de Bordo e dos Indicadores (o destaque do desvio e os gráficos) e das tabelas de Resultados. Os cenários marcados de {c.ano}.
         </p>
       </div>
       <fieldset className="space-y-2" disabled={!c.podeEditar || gravar.isPending}>
@@ -71,7 +71,7 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
             marcada={atual === x.id}
             onMarcar={() => setEscolhido(x.id)}
             rotulo={x.nome}
-            detalhe={[tipo(x.tipo), rotuloMarcacao(x.marcacao)].filter(Boolean).join(" · ")}
+            detalhe={[tipo(x.tipo), rotuloMarcacao(x.marcacao) ?? "Sem marcação agora (o escolhido antes continua valendo)"].join(" · ")}
           />
         ))}
       </fieldset>
