@@ -96,8 +96,16 @@ const UNIDADE_DO_FORMATO: Record<FormatoPainel, string> = {
   RS_M3: "R$/m³",
 };
 
+/**
+ * A formatação de um card (22/10/2026): a unidade (no rótulo do Atual e do Acumulado), o valor com e sem a unidade e o
+ * fator da escala dos gráficos — a do formato do item do painel ou, nos cards de Indicadores dos Relatórios Executivos, a
+ * do indicador.
+ */
+export type FormatacaoDoCard = { unidade: string; formatar: (v: number | null) => string; formatarCurto: (v: number | null) => string; fatorDaEscala: number };
+
 /** O fator da escala dos gráficos de cada formato (19/10/2026): a unidade em que as marcas práticas se escolhem. */
 const fatorDaEscala = (f: FormatoPainel) => (f === "MILHOES" ? 1e-6 : f === "MILHARES" ? 1e-3 : f === "PCT" || f === "PCT_RL" ? 100 : 1);
+const formatacaoDo = (f: FormatoPainel): FormatacaoDoCard => ({ unidade: UNIDADE_DO_FORMATO[f], formatar: (v) => formatar(v, f), formatarCurto: (v) => formatarCurto(v, f), fatorDaEscala: fatorDaEscala(f) });
 
 const desvio = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${n1.format(v * 100)}%`);
 
@@ -185,20 +193,16 @@ function DestaqueDoDesvio({ b, formatarOrcado }: { b: Pick<BlocoPainel, "orcado"
 }
 
 /**
- * O destaque do desvio fora do painel (22/10/2026: os cards de Indicadores dos Relatórios Executivos): o realizado contra o
- * orçado com a mesma regra do painel (o desvio é o realizado sobre o orçado, menos 1, com o sinal invertido no orçado
- * negativo; até 5%, amarelo; senão, melhor ou pior conforme o sentido — ↑ quanto maior, melhor; ↓ quanto menor, melhor;
- * nos indicadores de acompanhamento, sem sinal, em cinza).
+ * O realizado contra o orçado fora do painel (22/10/2026: os cards de Indicadores dos Relatórios Executivos), com a mesma
+ * regra do painel: o desvio é o realizado sobre o orçado, menos 1, com o sinal invertido no orçado negativo; até 5%,
+ * amarelo; senão, melhor ou pior conforme o sentido — ↑ quanto maior, melhor; ↓ quanto menor, melhor; nos indicadores
+ * de acompanhamento, sem sinal (cinza).
  */
-export function DestaqueDoIndicador({ realizado, orcado, sentido, cores, formatar }: { realizado: number | null; orcado: number | null; sentido: string; cores: Cores; formatar: (v: number | null) => string }) {
+export function blocoComparado(realizado: number | null, orcado: number | null, sentido: string): BlocoPainel {
   const vsOrcado = realizado === null || orcado === null || orcado === 0 ? null : (realizado / orcado - 1) * (orcado < 0 ? -1 : 1);
   const sinal: BlocoPainel["sinal"] =
     vsOrcado === null || (sentido !== "↑" && sentido !== "↓") ? null : Math.abs(vsOrcado) <= 0.05 ? 0 : (sentido === "↑" ? realizado! < orcado! : realizado! > orcado!) ? -1 : 1;
-  return (
-    <CoresDoPainel.Provider value={cores}>
-      <DestaqueDoDesvio b={{ orcado, vsOrcado, sinal }} formatarOrcado={formatar} />
-    </CoresDoPainel.Provider>
-  );
+  return { realizado, orcado, base: null, vsOrcado, sinal };
 }
 
 /** O percentual sob o realizado (▪ 48,4% (/RL)), quando o item tem. */
@@ -210,20 +214,21 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
  * "Realizado (Atual)", e o valor com a unidade), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o destaque do desvio
  * (a variação, "vs. Orçado" ou "vs. Comparado" e o valor orçado).
  */
-function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b: BlocoPainel; formato: FormatoPainel; base: string | null; dica?: string }) {
+function GrupoPeriodo({ periodo, b, f, base, dica }: { periodo: string; b: BlocoPainel; f: FormatacaoDoCard; base: string | null; dica?: string }) {
   return (
     // Sem espaço para os dois lado a lado (21/10/2026), o destaque do desvio desce para baixo do valor, em vez de cortá-lo.
     <div className="flex min-w-0 flex-wrap items-start justify-between gap-2" title={dica}>
       {/* Na largura mínima do conteúdo (21/10/2026): apertado, o rótulo quebra antes de o destaque descer para baixo do valor. */}
       <div className="min-w-min flex-1 basis-0">
         <p className="text-xs text-gray-600">
-          {periodo} ({UNIDADE_DO_FORMATO[formato]})
+          {periodo}
+          {f.unidade ? ` (${f.unidade})` : ""}
         </p>
         {/* 25% maior (21/10/2026; antes, 22 px até 1536 px e 26 px acima). */}
-        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{formatarCurto(b.realizado, formato)}</p>
+        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{f.formatarCurto(b.realizado)}</p>
         <p className="h-4 text-xs whitespace-nowrap text-gray-500">{base}</p>
       </div>
-      <DestaqueDoDesvio b={b} formatarOrcado={(v) => formatarCurto(v, formato)} />
+      <DestaqueDoDesvio b={b} formatarOrcado={f.formatarCurto} />
     </div>
   );
 }
@@ -233,9 +238,24 @@ function GrupoPeriodo({ periodo, b, formato, base, dica }: { periodo: string; b:
  * painel-cards-lado-a-lado do git): o título e a Metodologia em cima do Atual e do Acumulado (2/5 do card, 1/5 cada) e o
  * gráfico dos meses do exercício, com o do acumulado ao lado (3/5). Em telas estreitas, um embaixo do outro.
  */
-function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
+function CardIndicador({
+  i,
+  rotuloMes,
+  tipo,
+  comRotulos,
+  formatacao,
+}: {
+  i: ItemPainel;
+  rotuloMes: string;
+  tipo: TipoGrafico;
+  comRotulos: boolean;
+  /** A formatação do Atual e do Acumulado, quando não é a do formato do item (os cards de Indicadores, 22/10/2026). */
+  formatacao?: { mes: FormatacaoDoCard; acumulado: FormatacaoDoCard };
+}) {
+  const fm = formatacao?.mes ?? formatacaoDo(i.formato);
+  const fa = formatacao?.acumulado ?? formatacaoDo(i.formatoAcumulado);
   const sentido = (
-    <span title={i.sentido === "↑" ? "Quanto maior, melhor" : "Quanto menor, melhor"} className="font-bold">
+    <span title={i.sentido === "↑" ? "Quanto maior, melhor" : i.sentido === "↓" ? "Quanto menor, melhor" : "Acompanhamento"} className="font-bold">
       {i.sentido}
     </span>
   );
@@ -264,10 +284,10 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
         </p>
       </header>
       <div className="self-end lg:col-start-1 lg:row-start-2 lg:pr-3">
-        <GrupoPeriodo periodo="Atual" b={i.mes} formato={i.formato} base={percentualDaBase(i, i.mes)} dica={`Atual: ${rotuloMes}`} />
+        <GrupoPeriodo periodo="Atual" b={i.mes} f={fm} base={percentualDaBase(i, i.mes)} dica={`Atual: ${rotuloMes}`} />
       </div>
       <div className={`self-end lg:col-start-2 lg:row-start-2 lg:pr-3 ${coluna}`}>
-        <GrupoPeriodo periodo="Acumulado" b={i.acumulado} formato={i.formatoAcumulado} base={percentualDaBase(i, i.acumulado)} dica={`Acumulado: ${acumulado}`} />
+        <GrupoPeriodo periodo="Acumulado" b={i.acumulado} f={fa} base={percentualDaBase(i, i.acumulado)} dica={`Acumulado: ${acumulado}`} />
       </div>
       {/*
         O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha, na altura do card: os meses e
@@ -278,24 +298,24 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
           <div data-grafico-dos-meses className="min-w-0 flex-1">
             <MiniGrafico
               dados={i.serie}
-              formatar={(v) => formatar(v, i.formato)}
-              formatarCurto={(v) => formatarCurto(v, i.formato)}
+              formatar={fm.formatar}
+              formatarCurto={fm.formatarCurto}
               tipo={tipo}
               comRotulos={comRotulos}
               comEscala={!comRotulos}
-              fatorDaEscala={fatorDaEscala(i.formato)}
+              fatorDaEscala={fm.fatorDaEscala}
             />
           </div>
           {/* O acumulado também com os rótulos ou com a escala; com a escala, um pouco mais largo. */}
           <div data-grafico-acumulado className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title={`Acumulado do exercício (${acumulado}): realizado × orçado`}>
             <MiniGrafico
               dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
-              formatar={(v) => formatar(v, i.formatoAcumulado)}
-              formatarCurto={(v) => formatarCurto(v, i.formatoAcumulado)}
+              formatar={fa.formatar}
+              formatarCurto={fa.formatarCurto}
               tipo={tipo}
               comRotulos={comRotulos}
               comEscala={!comRotulos}
-              fatorDaEscala={fatorDaEscala(i.formatoAcumulado)}
+              fatorDaEscala={fa.fatorDaEscala}
             />
           </div>
         </div>
@@ -316,6 +336,7 @@ export function CardDoPainel({
   comGrafico,
   soAcumulado = false,
   comRotulos = false,
+  formatacao,
 }: {
   i: ItemPainel;
   rotuloMes: string;
@@ -325,6 +346,8 @@ export function CardDoPainel({
   /** Só o gráfico do acumulado (22/10/2026), na terceira coluna, da largura dos valores. */
   soAcumulado?: boolean;
   comRotulos?: boolean;
+  /** A formatação do indicador (os cards de Indicadores dos Relatórios Executivos, 22/10/2026). */
+  formatacao?: { mes: FormatacaoDoCard; acumulado: FormatacaoDoCard };
 }) {
   const doGrafico = !comGrafico
     ? "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"
@@ -334,7 +357,7 @@ export function CardDoPainel({
   return (
     <CoresDoPainel.Provider value={cores}>
       <div className={`h-full [&>article]:h-full ${doGrafico}`}>
-        <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
+        <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} formatacao={formatacao} />
       </div>
     </CoresDoPainel.Provider>
   );
