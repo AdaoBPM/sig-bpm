@@ -167,7 +167,8 @@ export function ExportarPdfDoRelatorio({
       {/* O slide em desenho, fora da tela, no tamanho da tela inteira (o da apresentação). */}
       {fila ? (
         <div aria-hidden className="pointer-events-none fixed top-0 left-[-100000px] select-none" style={{ width: largura, height: altura }}>
-          <div ref={area} className="relative size-full overflow-hidden bg-background">
+          {/* isolate: o fundo do slide fica atrás do separador do rodapé (que fica atrás da Imagem de Fundo). */}
+          <div ref={area} className="relative isolate size-full overflow-hidden bg-background">
             <SlideDoRelatorio key={fila.slides[k]?.chave} relatorioId={relatorioId} periodo={periodo} slide={fila.slides[k]} sumario={sumario} dados={dados} cores={cores} tipo={tipo} paraImagem />
           </div>
         </div>

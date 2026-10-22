@@ -214,7 +214,12 @@ export function SlideDoRelatorio({
         de Bordo (só nos slides com cards do Painel ou dos Indicadores); à direita, o contador dos slides, com o número do
         slide em preto e negrito (antes, no centro do cabeçalho); na Capa e no Encerramento, sem ele.
       */}
-      <footer className="relative mt-auto flex min-h-6 flex-1 items-center justify-between gap-4 border-t border-gray-200">
+      <footer className="relative mt-auto flex min-h-6 flex-1 items-center justify-between gap-4">
+        {/*
+          O separador atrás da Imagem de Fundo (22/10/2026): numa camada abaixo das posicionadas (a imagem a cobre); a legenda
+          e o contador ficam por cima dela.
+        */}
+        <span aria-hidden className="absolute inset-x-0 top-0 -z-10 border-t border-gray-200" />
         <div>{slide?.blocos.some((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") ? <LegendaDoPainel tipo={tipo} cores={cores} comparado={dados?.painel.cenarioOrcado} /> : null}</div>
         {slide?.numero ? (
           <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">

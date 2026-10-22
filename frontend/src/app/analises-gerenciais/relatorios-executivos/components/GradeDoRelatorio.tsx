@@ -75,10 +75,16 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; 
   return { w: 6, h: 6 };
 }
 
-/** O tamanho mínimo de cada tipo de bloco (16/10/2026), para as informações não se amontoarem. */
-function tamanhoMinimo(b: Bloco) {
+/** O tamanho mínimo de cada tipo de bloco (16/10/2026), para as informações não se amontoarem; `largura`, a da grade. */
+function tamanhoMinimo(b: Bloco, largura: number) {
   if (b.tipo === "PAINEL") return { minW: MINIMO.PAINEL[modoDoGrafico(b)], minH: 6 };
   if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: 6 };
+  // A Imagem Livre (22/10/2026) diminui até duas linhas de altura ou uma coluna de largura, o que vier antes (a altura
+  // acompanha a largura, na proporção da imagem); a com legenda, até 2 × 2.
+  if (b.tipo === "FOTO" && b.livre) {
+    const minW = Array.from({ length: COLUNAS }, (_, k) => k + 1).find((w) => linhasSemMinimo(w, b.proporcao, largura) >= 2) ?? COLUNAS;
+    return { minW, minH: linhasDaFoto(minW, b.proporcao, largura, true) };
+  }
   if (b.tipo === "FOTO") return { minW: 2, minH: 2 };
   if (b.tipo === "VIDEO") return { minW: 3, minH: 3 };
   // O Texto Livre baixa até uma linha; o Sumário, até duas (20/10/2026).
@@ -140,10 +146,15 @@ const ALTURA_DA_LEGENDA = 44;
  * legenda — a foto aumenta e diminui sempre na mesma proporção.
  */
 export function linhasDaFoto(w: number, proporcao: number, largura: number, semLegenda = false) {
-  const coluna = (largura - MARGEM * (COLUNAS - 1) - MARGEM * 2) / COLUNAS;
   // A Imagem Livre (21/10/2026) não tem a legenda: a altura é só a da imagem.
-  const alto = (coluna * w + MARGEM * (w - 1)) / proporcao + (semLegenda ? 0 : ALTURA_DA_LEGENDA);
-  return Math.max(2, Math.round((alto + MARGEM) / (ALTURA_DA_LINHA + MARGEM)));
+  return Math.max(2, linhasSemMinimo(w, proporcao, largura, semLegenda ? 0 : ALTURA_DA_LEGENDA));
+}
+
+/** As linhas da imagem com `w` colunas, na proporção dela (mais `extra` px), sem o mínimo de duas. */
+function linhasSemMinimo(w: number, proporcao: number, largura: number, extra = 0) {
+  const coluna = (largura - MARGEM * (COLUNAS - 1) - MARGEM * 2) / COLUNAS;
+  const alto = (coluna * w + MARGEM * (w - 1)) / proporcao + extra;
+  return Math.round((alto + MARGEM) / (ALTURA_DA_LINHA + MARGEM));
 }
 
 /**
@@ -280,7 +291,7 @@ export function GradeDoRelatorio({
     doInicio.current = null;
     terminar();
   };
-  const layout: Layout[] = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, ...tamanhoMinimo(b) }));
+  const layout: Layout[] = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, ...tamanhoMinimo(b, LARGURA) }));
   // A foto se redimensiona pela largura: a altura acompanha, na proporção dela.
   const aoRedimensionar = (_l: Layout[], _antes: Layout, novo: Layout, sombra: Layout) => {
     const b = blocos.find((x) => x.id === novo.i);
@@ -949,7 +960,8 @@ function ConteudoDoBloco({
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
     const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} soAcumulado={!!b.soAcumulado} comRotulos={b.comRotulos ?? false} />;
     // Sem o nome do grupo em cima do card (22/10/2026; antes, "PRODUÇÃO: MATRIZ"…): o card ocupa o bloco inteiro.
-    return <div className="h-full">{card}</div>;
+    // A Metodologia em até metade da largura dos valores (22/10/2026), quebrando as linhas.
+    return <div className="h-full [&_[data-metodologia]]:max-w-[50%]">{card}</div>;
   }
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
   if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
@@ -974,7 +986,7 @@ function ConteudoDoBloco({
     serie: daSerie,
   };
   return (
-    <div className="h-full">
+    <div className="h-full [&_[data-metodologia]]:max-w-[50%]">
       <CardDoPainel
         i={item}
         rotuloMes={dados.painel.rotuloMes}

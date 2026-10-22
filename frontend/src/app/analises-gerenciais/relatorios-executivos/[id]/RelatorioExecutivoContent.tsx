@@ -443,7 +443,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               Na sua aba, “Adicionar” traz nove opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
               dos Indicadores (o card de destaque, com o valor do mês e o acumulado, cada um com o orçado num quadro cinza e a faixa de melhor ou pior, como no Painel), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
-              Painel e os dos Indicadores com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
+              Painel e os dos Indicadores com os rótulos e em barras (o Configurar Gráfico do card muda); a Metodologia, à direita do nome, ocupa até metade da largura dos valores, quebrando as linhas. Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
@@ -483,7 +483,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             </li>
             <li>
               Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
-              slide). Ela aumenta e diminui na mesma proporção e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
+              slide). Ela aumenta e diminui na mesma proporção (até duas linhas de altura ou uma coluna de largura, o que vier antes) e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
             </li>
             <li>
               Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
@@ -507,7 +507,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
               Introdução, Performance da Produção…), em cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Relatório Executivo”, em
-              cinza, a seta, o período, em preto, e a logo da BPM à direita; embaixo, o rodapé, com o separador igual ao do cabeçalho: à esquerda, a legenda dos cards (nos slides
+              cinza, a seta, o período, em preto, e a logo da BPM à direita; embaixo, o rodapé, com o separador igual ao do cabeçalho (atrás da Imagem de Fundo, como o do cabeçalho): à esquerda, a legenda dos cards (nos slides
               com cards do Painel ou dos Indicadores), e, à direita, o contador dos slides (“1/10”: o slide em preto e negrito e o total, contados da
               Introdução em diante; nos slides da Capa e do Encerramento, sem ele). Mova o mouse para ver os botões, no centro da base:
               o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para

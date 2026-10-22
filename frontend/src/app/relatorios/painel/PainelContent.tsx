@@ -296,7 +296,8 @@ function CardIndicador({
         <h3 className="shrink-0 text-xl leading-snug font-bold text-gray-900" title={i.titulo}>
           {i.titulo}
         </h3>
-        <p className="min-w-0 text-right text-xs text-gray-600" title={i.metodologia ? `Metodologia: ${i.metodologia}` : undefined}>
+        {/* data-metodologia: nos Relatórios Executivos, em até metade da largura (22/10/2026). */}
+        <p data-metodologia className="min-w-0 text-right text-xs text-gray-600" title={i.metodologia ? `Metodologia: ${i.metodologia}` : undefined}>
           {/* O espaço inquebrável: a seta não fica sozinha numa linha. */}
           {i.metodologia ? `${i.metodologia} ` : ""}({sentido})
         </p>
