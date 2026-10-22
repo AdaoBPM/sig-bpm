@@ -35,7 +35,9 @@ export const CORES_DA_FONTE = [
 
 /**
  * As fontes (20/10/2026): as cinco mais usadas em apresentações de empresa, todas do Windows e do Office (com as
- * substitutas, onde faltarem); Padrão tira a escolhida e volta à fonte da ferramenta.
+ * substitutas, onde faltarem); Padrão tira a escolhida e volta à fonte da ferramenta. Desde 22/10/2026, também cinco
+ * fontes abertas (licença OFL/Apache) das mais usadas em dashboards e apresentações — Roboto, Open Sans, Montserrat,
+ * Lato e Poppins —, servidas pela própria ferramenta (public/fontes, fontesDosRelatorios.css), sem depender da internet.
  */
 export const FONTES = [
   { chave: "ARIAL", nome: "Arial", familia: "Arial, Helvetica, sans-serif" },
@@ -43,6 +45,11 @@ export const FONTES = [
   { chave: "SEGOE", nome: "Segoe UI", familia: "'Segoe UI', Tahoma, sans-serif" },
   { chave: "VERDANA", nome: "Verdana", familia: "Verdana, Geneva, sans-serif" },
   { chave: "GEORGIA", nome: "Georgia", familia: "Georgia, 'Times New Roman', serif" },
+  { chave: "ROBOTO", nome: "Roboto", familia: "Roboto, Arial, sans-serif" },
+  { chave: "OPEN_SANS", nome: "Open Sans", familia: "'Open Sans', Arial, sans-serif" },
+  { chave: "MONTSERRAT", nome: "Montserrat", familia: "Montserrat, Arial, sans-serif" },
+  { chave: "LATO", nome: "Lato", familia: "Lato, Arial, sans-serif" },
+  { chave: "POPPINS", nome: "Poppins", familia: "Poppins, Arial, sans-serif" },
 ] as const;
 export type ChaveDaFonte = (typeof FONTES)[number]["chave"];
 export const familiaDa = (chave?: string) => FONTES.find((x) => x.chave === chave)?.familia;
@@ -190,8 +197,8 @@ function aplicar(campo: HTMLElement | null, fazer: (sel: Selection) => void) {
 }
 
 /** Os tamanhos da fonte, em px (17/10/2026: numerados na barra). O texto das anotações e das legendas é de 14 (o padrão, com asterisco na lista). */
-// Até 72 (20/10/2026), para os títulos da Capa no Texto Livre.
-export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72];
+// Até 72 (20/10/2026), para os títulos da Capa no Texto Livre; 84, 108 e 144 desde 22/10/2026.
+export const TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72, 84, 108, 144];
 export const TAMANHO_PADRAO = 14;
 /** Os tamanhos do título das anotações (19/10/2026): o padrão é 12 (o de antes, em maiúsculas e negrito). */
 export const TAMANHOS_DO_TITULO = [12, 14, 16, 18, 20, 24, 28, 32];

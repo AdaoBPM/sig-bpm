@@ -33,7 +33,8 @@ const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateSt
 
 /**
  * A foto para o relatório (16/10/2026): reduzida a até 1600 px no lado maior (a Imagem de Fundo, 20/10/2026, a até 2560,
- * para cobrir a tela inteira) e gravada em JPEG (o fundo das partes transparentes, branco), com a proporção dela (largura ÷ altura).
+ * para cobrir a tela inteira), com a proporção dela (largura ÷ altura). Em JPEG; a imagem com partes transparentes
+ * (22/10/2026; antes, o fundo delas ficava branco), em PNG — ou em WebP, se o PNG passar do limite do envio.
  */
 async function prepararFoto(arquivo: File, maximo = 1600): Promise<{ foto: Blob; proporcao: number }> {
   const imagem = await createImageBitmap(arquivo).catch(() => {
@@ -44,11 +45,22 @@ async function prepararFoto(arquivo: File, maximo = 1600): Promise<{ foto: Blob;
   tela.width = Math.max(1, Math.round(imagem.width * escala));
   tela.height = Math.max(1, Math.round(imagem.height * escala));
   const ctx = tela.getContext("2d")!;
+  ctx.drawImage(imagem, 0, 0, tela.width, tela.height);
+  const gerar = (tipo: string, qualidade?: number) =>
+    new Promise<Blob>((ok, erro) => tela.toBlob((b) => (b ? ok(b) : erro(new Error("Não foi possível preparar a foto."))), tipo, qualidade));
+  // Algum pixel transparente: PNG (ou WebP, menor, se o PNG passar de 9 MB; o envio aceita até 10 MB).
+  const pixels = ctx.getImageData(0, 0, tela.width, tela.height).data;
+  let transparente = false;
+  for (let i = 3; i < pixels.length && !transparente; i += 4) transparente = pixels[i] < 255;
+  if (transparente) {
+    const png = await gerar("image/png");
+    return { foto: png.size <= 9 * 1024 * 1024 ? png : await gerar("image/webp", 0.9), proporcao: imagem.width / imagem.height };
+  }
+  // Sem transparência: JPEG, sobre o branco (o canvas começa transparente).
+  ctx.globalCompositeOperation = "destination-over";
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, tela.width, tela.height);
-  ctx.drawImage(imagem, 0, 0, tela.width, tela.height);
-  const foto = await new Promise<Blob>((ok, erro) => tela.toBlob((b) => (b ? ok(b) : erro(new Error("Não foi possível preparar a foto."))), "image/jpeg", 0.85));
-  return { foto, proporcao: imagem.width / imagem.height };
+  return { foto: await gerar("image/jpeg", 0.85), proporcao: imagem.width / imagem.height };
 }
 
 /** O nome da página: o escolhido ou, sem ele, "Página N". */
@@ -312,7 +324,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                     </Button>
                   }
                 />
-                <DropdownMenuContent align="end" className="min-w-44">
+                {/* Na largura das opções, sem quebrar linha (22/10/2026: "Imagem com Legenda" quebrava). */}
+                <DropdownMenuContent align="end" className="w-max min-w-44 [&_[role=menuitem]]:whitespace-nowrap">
                   <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando(true)}>
                     <LayoutGrid className="size-4" />
                     Cards
@@ -432,12 +445,12 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
               nele para mudar) e o texto no card com o destaque da cor. Na barra do bloco (logo acima dele, com o mouse sobre ele ou escrevendo nele), a formatação do
               texto da anotação e da legenda da foto: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
-              verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 72; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana ou Georgia) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
+              verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 144; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana, Georgia e as abertas Roboto, Open Sans, Montserrat, Lato e Poppins) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
               para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12, o padrão, a 32), e o da fonte, a dele. No canto do bloco, escolha Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
               Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
             </li>
             <li>
-              Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (na barra do bloco; o tamanho até 72 e o
+              Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (na barra do bloco; o tamanho até 144 e o
               branco servem aos textos sobre a Imagem de Fundo), mas sem o destaque lateral, o título, o ícone e o fundo: na edição, o contorno tracejado aparece com o mouse
               sobre ele. Na apresentação, ele não se destaca nem se amplia.
             </li>
@@ -451,7 +464,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               ela muda (de início, as telas em negrito, com 16, e os slides com 14).
             </li>
             <li>
-              Imagem com Legenda (antes, Foto) envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px) e a inclui com a legenda embaixo, no destaque
+              Imagem com Legenda (antes, Foto) envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
               amarelo-ouro. A imagem aumenta e diminui sempre na mesma proporção. Nas imagens (com legenda, livres e de fundo), o botão de ajustes da barra do
               bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; “Restaurar Ajustes” volta à imagem como
               veio.

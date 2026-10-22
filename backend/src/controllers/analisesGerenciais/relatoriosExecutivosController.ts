@@ -50,7 +50,7 @@ const posicao = { id: z.string().min(1).max(60), x: z.number().int().min(0).max(
 // A fonte, o espaçamento entre as linhas e a formatação de um nível do Sumário (20/10/2026).
 const fonteDoTexto = z.enum(FONTES_DO_TEXTO);
 const espacamento = z.number().min(0.5).max(2).optional();
-const estiloDoSumario = z.object({ negrito: z.boolean().optional(), italico: z.boolean().optional(), sublinhado: z.boolean().optional(), tamanho: z.number().int().min(8).max(96).optional(), cor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(), fonte: fonteDoTexto.optional() });
+const estiloDoSumario = z.object({ negrito: z.boolean().optional(), italico: z.boolean().optional(), sublinhado: z.boolean().optional(), tamanho: z.number().int().min(8).max(144).optional(), cor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(), fonte: fonteDoTexto.optional() });
 const bloco = z.discriminatedUnion("tipo", [
   z.object({ ...posicao, tipo: z.literal("PAINEL"), aba: z.enum(["resultados", "performance"]), quadro: z.string().max(200), titulo: z.string().max(200), sigla: z.string().max(60), comGrafico: z.boolean(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), cores: z.enum(["padrao", "daltonismo"]).optional() }),
   z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200) }),

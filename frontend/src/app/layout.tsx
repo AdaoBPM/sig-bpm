@@ -6,6 +6,7 @@ import { SCRIPT_DO_TEMA } from "@/lib/temaScript";
 import { Providers } from "@/providers";
 
 import "./globals.css";
+import "./fontesDosRelatorios.css";
 
 const inter = Inter({
   subsets: ["latin"],

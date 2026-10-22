@@ -60,8 +60,8 @@ const nomeDaAba = (d: AbaRelatorioExecutivo) => DA_ABA.get(d)?.nome ?? d;
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
 
-/** As fontes dos textos (20/10/2026: as cinco da barra de formatação). */
-export const FONTES_DO_TEXTO = ["ARIAL", "CALIBRI", "SEGOE", "VERDANA", "GEORGIA"] as const;
+/** As fontes dos textos (20/10/2026: as cinco da barra de formatação; 22/10/2026, mais cinco abertas). */
+export const FONTES_DO_TEXTO = ["ARIAL", "CALIBRI", "SEGOE", "VERDANA", "GEORGIA", "ROBOTO", "OPEN_SANS", "MONTSERRAT", "LATO", "POPPINS"] as const;
 export type FonteDoTexto = (typeof FONTES_DO_TEXTO)[number];
 /** A formatação de um nível do Sumário (20/10/2026): o tamanho em px, a cor (#rrggbb) e a fonte. */
 export type EstiloDoSumario = { negrito?: boolean; italico?: boolean; sublinhado?: boolean; tamanho?: number; cor?: string; fonte?: FonteDoTexto };
