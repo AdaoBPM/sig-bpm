@@ -11,6 +11,7 @@ import { AvisoDeSaida } from "@/components/layout/AvisoDeSaida";
 import { BarraDeTelas } from "@/components/layout/BarraDeTelas";
 import { EtapasDoMes } from "@/components/layout/EtapasDoMes";
 import { FaixaDaPublicacao } from "@/components/layout/FaixaDaPublicacao";
+import { IntroducaoDoLayout } from "@/components/layout/IntroducaoAoSig";
 import { BarraDoCenario, lerRotaDoCenario } from "@/app/cenarios/components/BarraDoCenario";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -64,6 +65,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
     <SidebarProvider>
       {/* O aviso ao sair com alterações não gravadas (13/10/2026), em todas as telas. */}
       <AvisoDeSaida />
+      {/* A Introdução ao SIG (21/10/2026), aberta pelo menu do usuário: por cima do menu lateral e da tela. */}
+      <IntroducaoDoLayout />
       <AppSidebar />
       {/* Fundo opaco (a mesma cor de antes), para o título fixo da tela cobrir o que passa por baixo. */}
       <SidebarInset className="min-w-0 bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))]">

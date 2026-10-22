@@ -25,7 +25,7 @@ type Props = { abas: Aba[]; ativa: string; onMudar?: (chave: string) => void; ro
  */
 export function Abas({ abas, ativa, onMudar, rotulo }: Props) {
   return (
-    <div role="tablist" aria-label={rotulo} className="flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
+    <div role="tablist" aria-label={rotulo} data-tour="abas" className="flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
       {abas.map((a) => {
         const atual = a.chave === ativa;
         const classe = `-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap ${

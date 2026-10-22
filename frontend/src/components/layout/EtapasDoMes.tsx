@@ -63,7 +63,7 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
     );
 
   return (
-    <nav aria-label="Etapas do mês" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
+    <nav aria-label="Etapas do mês" data-tour="barra-de-atividades" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
       <div className="flex shrink-0 items-center gap-1.5 px-1">
         <DropdownMenu>
           <DropdownMenuTrigger

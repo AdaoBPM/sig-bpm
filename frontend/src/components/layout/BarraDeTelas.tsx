@@ -18,7 +18,7 @@ export function BarraDeTelas({ grupo, atual }: Props) {
   const permitido = itemPermitido(grupo, hasPermission);
   if (!permitido?.telas) return null;
   return (
-    <nav aria-label={grupo.title} className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
+    <nav aria-label={grupo.title} data-tour="barra-de-atividades" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
       <div className="flex shrink-0 items-center px-1">
         <span className="bg-bpm-primary inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-sm font-bold whitespace-nowrap text-black">
           <grupo.icon className="size-4" />

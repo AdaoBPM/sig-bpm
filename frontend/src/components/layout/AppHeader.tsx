@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { useTema, type Tema } from "@/lib/tema";
 import { useAcessibilidade, type Acessibilidade } from "@/lib/acessibilidade";
-import { Eye, KeyRound, LogOut, Palette } from "lucide-react";
+import { Eye, GraduationCap, KeyRound, LogOut, Palette } from "lucide-react";
 
 import {
   Avatar,
@@ -42,6 +42,7 @@ import { migalhas } from "@/lib/navigation-config";
 import { relatoriosExecutivosService } from "@/app/analises-gerenciais/relatorios-executivos/services/relatoriosExecutivosService";
 
 import { EtiquetaDoDesenvolvimento } from "./AmbienteDeDesenvolvimento";
+import { abrirIntroducao } from "./IntroducaoAoSig";
 import { TrocarSenhaDialog } from "./TrocarSenhaDialog";
 
 function getInitials(name: string) {
@@ -123,6 +124,7 @@ export function AppHeader() {
                 variant="ghost"
                 className="h-9 gap-2 px-2"
                 aria-label="Menu do usuário"
+                data-tour="menu-do-usuario"
               />
             }
           >
@@ -194,6 +196,11 @@ export function AppHeader() {
               </span>
             </div>
             <DropdownMenuSeparator />
+            {/* A Introdução ao SIG (21/10/2026): o tour sobre a tela atual (o layout o desenha). */}
+            <DropdownMenuItem onClick={abrirIntroducao}>
+              <GraduationCap />
+              Introdução ao SIG
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setTrocandoSenha(true)}>
               <KeyRound />
               Trocar senha

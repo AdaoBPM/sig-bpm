@@ -67,7 +67,7 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
       >
         {/* O título não quebra (21/10/2026): sem espaço, quem quebra são as ações (a legenda do Painel de Bordo…). */}
         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <div className="flex items-center gap-1.5">
+          <div data-tour="titulo-da-tela" className="flex items-center gap-1.5">
             <h1 className="text-2xl font-extrabold tracking-tight whitespace-nowrap text-gray-900">{daTela?.titulo ?? titulo}</h1>
             {sobre || comoUsar ? (
               <button
@@ -83,7 +83,7 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
           </div>
         </div>
         {selo || acoes ? (
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <div data-tour="acoes-da-tela" className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {selo}
             {acoes}
           </div>

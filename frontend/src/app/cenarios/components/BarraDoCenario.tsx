@@ -50,7 +50,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
   const lista = useQuery({ queryKey: ["cenarios", t.tipo], queryFn: () => cenariosService.listar(t.tipo) });
   const atual = lista.data?.find((c) => c.id === id);
   return (
-    <nav aria-label="Telas do cenário" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
+    <nav aria-label="Telas do cenário" data-tour="barra-de-atividades" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
       <div className="flex shrink-0 items-center gap-2 px-1">
         <DropdownMenu>
           <DropdownMenuTrigger

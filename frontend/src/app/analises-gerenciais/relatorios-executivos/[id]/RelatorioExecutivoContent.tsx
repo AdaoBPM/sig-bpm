@@ -513,7 +513,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       */}
       {aba?.visivel ? (
         <div className="flex items-end">
-          <div role="tablist" aria-label={`Páginas de ${aba.nome}`} className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
+          <div role="tablist" aria-label={`Páginas de ${aba.nome}`} data-tour="abas" className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
             {daAba.map((p, k) => {
               const atual = p.id === pagina?.id;
               const classe = `-mb-px inline-flex shrink-0 items-center border-b-2 px-3 py-2 text-sm whitespace-nowrap ${atual ? "border-black font-bold text-gray-900" : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900"}`;
@@ -774,7 +774,7 @@ function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio;
   const router = useRouter();
   const lista = useQuery({ queryKey: ["relatorios-executivos"], queryFn: () => relatoriosExecutivosService.listar() });
   return (
-    <nav aria-label="Abas do relatório" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
+    <nav aria-label="Abas do relatório" data-tour="barra-de-atividades" className="flex min-w-0 flex-col gap-1 rounded-sm border border-gray-200 bg-white px-2 py-1.5 xl:flex-row xl:items-center">
       <div className="flex shrink-0 items-center gap-1.5 px-1">
         <DropdownMenu>
           <DropdownMenuTrigger
