@@ -10,7 +10,7 @@ import { Seletor } from "./SeletorPeriodo";
  * A Comparação de Resultados Empresariais (21/10/2026; de início, "Compara Com"): o cenário comparado (as colunas pretas de Resultados e o
  * orçado do Painel de Bordo), entre os cenários marcados (de qualquer exercício, desde 22/10/2026: num de outro, valem os
  * mesmos meses dele; o ano aparece na opção) (Orçamento Empresarial, Resultados Anteriores,
- * Resultados Vendidos e Previsão). O padrão é o Orçamento Empresarial; a escolha fica guardada no navegador e vale nas
+ * Resultados Vendidos e Previsão de Resultados). O padrão é o Orçamento Empresarial; a escolha fica guardada no navegador e vale nas
  * duas telas.
  */
 const CHAVE = "sig.comparaCom";

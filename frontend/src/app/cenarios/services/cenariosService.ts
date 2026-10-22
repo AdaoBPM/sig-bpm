@@ -9,7 +9,8 @@ export const MARCACOES: Array<{ valor: MarcacaoCenario; rotulo: string }> = [
   { valor: "RESULTADOS_ANTERIORES", rotulo: "Resultados Anteriores" },
   { valor: "RESULTADOS_VENDIDOS", rotulo: "Resultados Vendidos" },
   // 21/10/2026: escolhida no Compara Com de Resultados Empresariais.
-  { valor: "PREVISAO", rotulo: "Previsão" },
+  // "Previsão de Resultados" (22/10/2026; antes, "Previsão").
+  { valor: "PREVISAO", rotulo: "Previsão de Resultados" },
 ];
 export const rotuloMarcacao = (m: MarcacaoCenario | null) => MARCACOES.find((x) => x.valor === m)?.rotulo ?? null;
 /** O rótulo da versão do cenário (13/10/2026): VER00, VER01… */

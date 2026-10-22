@@ -14,10 +14,11 @@ import { botaoPrimario, Erro } from "./CenarioDialog";
 
 /** O que cada marcação faz, embaixo da opção. */
 const EFEITO: Record<MarcacaoCenario, (c: Cenario) => string> = {
-  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado de Resultados Empresariais em ${c.ano} (Resultados e Painel de Bordo): o comparado padrão da Comparação.`,
-  RESULTADOS_ANTERIORES: (c) => `Os resultados de comparação do exercício anterior; pode ser escolhido na Comparação de Resultados Empresariais em ${c.ano}.`,
-  RESULTADOS_VENDIDOS: (c) => `Os resultados do que foi vendido; pode ser escolhido na Comparação de Resultados Empresariais em ${c.ano}.`,
-  PREVISAO: (c) => `Uma previsão do exercício; pode ser escolhida na Comparação de Resultados Empresariais em ${c.ano} (Resultados e Painel de Bordo).`,
+  // Desde 22/10/2026, a Comparação usa o cenário marcado em qualquer exercício (o ano do cenário só aparece na opção).
+  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado de Resultados Empresariais (Resultados, Painel de Bordo e Relatórios Executivos): o comparado padrão da Comparação; os meses de ${c.ano} contra os mesmos meses do exercício da tela.`,
+  RESULTADOS_ANTERIORES: () => "Os resultados de comparação do exercício anterior; pode ser escolhido na Comparação de Resultados Empresariais.",
+  RESULTADOS_VENDIDOS: () => "Os resultados do que foi vendido; pode ser escolhido na Comparação de Resultados Empresariais.",
+  PREVISAO: () => "Uma previsão de resultados; pode ser escolhida na Comparação de Resultados Empresariais (Resultados e Painel de Bordo).",
 };
 
 /**

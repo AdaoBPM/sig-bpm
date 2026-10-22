@@ -616,7 +616,7 @@ export function PainelContent() {
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
               O cenário comparado é o escolhido na “Comparação” da tela Resultados, entre os cenários marcados, de qualquer exercício (Orçamento Empresarial, o padrão,
-              Resultados Anteriores, Resultados Vendidos e Previsão), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento
+              Resultados Anteriores, Resultados Vendidos e Previsão de Resultados), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento
               Empresarial, os cards dizem “vs.” e o nome da marcação.
             </li>
             <li>

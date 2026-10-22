@@ -94,7 +94,7 @@ export const MARCACOES: Record<MarcacaoCenario, string> = {
   ORCAMENTO_EMPRESARIAL: "Orçamento Empresarial",
   RESULTADOS_ANTERIORES: "Resultados Anteriores",
   RESULTADOS_VENDIDOS: "Resultados Vendidos",
-  PREVISAO: "Previsão",
+  PREVISAO: "Previsão de Resultados",
 };
 
 /**

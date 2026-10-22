@@ -178,7 +178,8 @@ export const ROTULO_DA_MARCACAO: Record<MarcacaoCenario, string> = {
   ORCAMENTO_EMPRESARIAL: "Orçamento Empresarial",
   RESULTADOS_ANTERIORES: "Resultados Anteriores",
   RESULTADOS_VENDIDOS: "Resultados Vendidos",
-  PREVISAO: "Previsão",
+  // "Previsão de Resultados" (22/10/2026; antes, "Previsão"), também nos rótulos do comparado.
+  PREVISAO: "Previsão de Resultados",
 };
 
 /** Os cenários marcados do exercício (21/10/2026): as opções do Compara Com de Resultados Empresariais. */
