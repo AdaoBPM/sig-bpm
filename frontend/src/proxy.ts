@@ -16,7 +16,8 @@ export function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp)$/)
+    // As fontes (22/10/2026: as abertas dos Relatórios Executivos, em public/fontes), como as imagens.
+    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|woff2)$/)
   ) {
     return NextResponse.next();
   }
