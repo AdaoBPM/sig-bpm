@@ -91,10 +91,11 @@ export class CenarioError extends Error {
 }
 
 export const MARCACOES: Record<MarcacaoCenario, string> = {
-  ORCAMENTO_EMPRESARIAL: "Orçamento Empresarial",
-  RESULTADOS_ANTERIORES: "Resultados Anteriores",
-  RESULTADOS_VENDIDOS: "Resultados Vendidos",
-  PREVISAO: "Previsão de Resultados",
+  // Os nomes curtos (22/10/2026; antes, Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos e Previsão de Resultados).
+  ORCAMENTO_EMPRESARIAL: "Orçamento",
+  RESULTADOS_ANTERIORES: "Anterior",
+  RESULTADOS_VENDIDOS: "Vendido",
+  PREVISAO: "Previsão",
 };
 
 /**

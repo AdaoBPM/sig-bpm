@@ -89,8 +89,8 @@ const COMO_USAR_ANALITICOS = (
     </li>
     <li>Clique na linha para abrir o cenário, com as telas Configurações, Premissas, Resultados, Painel de Bordo e Histórico (as que o seu perfil lê).</li>
     <li>
-      Marcação, exclusão, nome, descrição, visualização e comparativo ficam em Configurações, como nos sintéticos. Cada marcação (Orçamento Empresarial,
-      Resultados Anteriores, Resultados Vendidos) fica ativa em um cenário só, sintético ou analítico: marcar um tira a marcação do anterior.
+      Marcação, exclusão, nome, descrição, visualização e comparativo ficam em Configurações, como nos sintéticos. Cada marcação (Orçamento,
+      Anterior, Vendido e Previsão) fica ativa em um cenário só, sintético ou analítico: marcar um tira a marcação do anterior.
     </li>
     <li>Use os filtros nos rótulos das colunas, “Apenas com Marcação” e “Apenas Vigentes” (só a versão mais alta de cada cenário).</li>
   </ul>
@@ -147,11 +147,11 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
             </li>
             <li>Clique na linha para abrir o cenário, com as telas Configurações, Resultados, Painel de Bordo e Reajustes (as que o seu perfil lê).</li>
             <li>
-              Depois da etiqueta Vigente, a da marcação (com o símbolo de marcação) diz se o cenário é o Orçamento Empresarial, os Resultados Anteriores ou os Resultados Vendidos. Para marcar, excluir,
+              Depois da etiqueta Vigente, a da marcação (com o símbolo de marcação) diz se o cenário é o Orçamento, o Anterior, o Vendido ou a Previsão. Para marcar, excluir,
               importar um arquivo no cenário ou mudar o nome, a descrição, a visualização, a referência e o comparativo, abra o cenário e vá em
               Configurações. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
-            <li>O cenário marcado como Orçamento Empresarial dá o orçado das telas Indicadores e Painel de Bordo de Resultados Empresariais.</li>
+            <li>O cenário marcado como Orçamento dá o orçado das telas Indicadores e Painel de Bordo de Resultados Empresariais.</li>
             <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui; marcado ou com a versão congelada, não se edita: a DRE, os indicadores manuais, a referência, o nome, a descrição, o comparativo e as justificativas (a visualização, sim). Tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e os Administradores

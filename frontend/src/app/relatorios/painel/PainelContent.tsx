@@ -615,8 +615,8 @@ export function PainelContent() {
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
-              O cenário comparado é o escolhido na “Comparação” da tela Resultados, entre os cenários marcados, de qualquer exercício (Orçamento Empresarial, o padrão,
-              Resultados Anteriores, Resultados Vendidos e Previsão de Resultados), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento
+              O cenário comparado é o escolhido na “Comparação” da tela Resultados, entre os cenários marcados, de qualquer exercício (Orçamento, o padrão,
+              Anterior, Vendido e Previsão), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento
               Empresarial, os cards dizem “vs.” e o nome da marcação.
             </li>
             <li>
@@ -625,7 +625,7 @@ export function PainelContent() {
               imagem, para colar num e-mail ou numa apresentação; o botão seguinte (o mesmo ícone, com um asterisco: “Copiar o grupo como imagem (sem
               gráficos)”) copia só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
-            <li>O orçado vem do cenário marcado como Orçamento Empresarial no exercício (Criação de Cenários / Cenários Sintéticos), ou do escolhido na Comparação de Resultados; sem ele, o orçado fica zero.</li>
+            <li>O orçado vem do cenário marcado como Orçamento (Criação de Cenários / Cenários Sintéticos), ou do escolhido na Comparação de Resultados; sem ele, o orçado fica zero.</li>
             <li>Sem os Rótulos, a escala à esquerda de cada gráfico usa marcas práticas, sem casas decimais: múltiplos de 1, 2, 5, 10, 25, 50, 100, 250, 500, 1.000… (ou 0,1, 0,2, 0,5 quando os valores são pequenos), na unidade do card (milhões, milhares, %, m³…).</li>
           </ul>
         }
@@ -637,7 +637,7 @@ export function PainelContent() {
             </p>
             <p>
               O realizado sai dos mesmos valores da aba Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
-              digitados nas Listas Operacionais). O orçado sai das Metas do cenário marcado como Orçamento Empresarial no exercício
+              digitados nas Listas Operacionais). O orçado sai das Metas do cenário marcado como Orçamento
               (Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem cenário marcado no
               exercício, ou sem o valor no cenário, o orçado é zero.
             </p>
@@ -724,12 +724,11 @@ export function PainelContent() {
             // Os avisos como um quadro comum, com o destaque vermelho à esquerda (13/10/2026; antes, amarelos).
             !dados.cenarioOrcado ? (
               <div className={AVISO_DO_PAINEL}>
-                Nenhum cenário está marcado como Orçamento Empresarial para {dados.ano}: o orçado aparece como zero. Marque um cenário de {dados.ano} em
-                Criação de Cenários / Cenários Sintéticos.
+                Nenhum cenário está marcado como Orçamento: o orçado aparece como zero. Marque um cenário em Criação de Cenários / Cenários Sintéticos.
               </div>
             ) : dados.mesesSemMeta.length > 0 ? (
               <div className={AVISO_DO_PAINEL}>
-                O cenário {dados.cenarioOrcado} (Orçamento Empresarial) não tem valores de {dados.mesesSemMeta.join(", ")}: o orçado desses meses aparece
+                O cenário {dados.cenarioOrcado} (Orçamento) não tem valores de {dados.mesesSemMeta.join(", ")}: o orçado desses meses aparece
                 como zero. Importe nele um arquivo com esses meses (Cenários Sintéticos).
               </div>
             ) : null

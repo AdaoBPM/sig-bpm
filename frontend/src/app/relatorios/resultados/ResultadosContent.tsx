@@ -709,8 +709,8 @@ export function ResultadosContent() {
               Nas unidades e no Consolidado, as colunas de rótulo preto trazem o orçado (valor, % e R$/m³): depois do mês de referência, o do mês;
               depois do total, o acumulado de janeiro até ele. Depois do orçado acumulado, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷
               orçado) e Eficiência (% realizado − % orçado, em pontos percentuais). O orçado é o do cenário escolhido em “Comparação”, ao lado do
-              período, entre os cenários marcados (Orçamento Empresarial, o padrão, Resultados Anteriores, Resultados Vendidos e Previsão de Resultados, em
-              Criação de Cenários), de qualquer exercício (o ano aparece na opção; num cenário de outro exercício, valem os mesmos meses dele); fora do Orçamento Empresarial, as colunas trazem o nome da marcação (PREVISÃO DE RESULTADOS AGO/26…). Sem cenário, zero. A escolha vale
+              período, entre os cenários marcados (Orçamento, o padrão, Anterior, Vendido e Previsão, em
+              Criação de Cenários), de qualquer exercício (o ano aparece na opção; num cenário de outro exercício, valem os mesmos meses dele); fora do Orçamento, as colunas trazem o nome da marcação (PREVISÃO AGO/26…). Sem cenário, zero. A escolha vale
               também no Painel de Bordo. Os centros de custo não têm orçado.
             </li>
             <li>Clique no valor de um mês, numa linha com lupa, para ver os lançamentos de origem daquele mês (ou, nas linhas de volume, as listas somadas por obra); clicar na descrição abre o mês de referência.</li>

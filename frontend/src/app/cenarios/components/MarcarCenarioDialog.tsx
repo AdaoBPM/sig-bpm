@@ -14,9 +14,9 @@ import { botaoPrimario, Erro } from "./CenarioDialog";
 
 /** O que cada marcação faz, embaixo da opção. */
 const EFEITO: Record<MarcacaoCenario, (c: Cenario) => string> = {
-  // Desde 22/10/2026, a Comparação usa o cenário marcado em qualquer exercício (o ano do cenário só aparece na opção).
-  ORCAMENTO_EMPRESARIAL: (c) => `Dá o orçado de Resultados Empresariais (Resultados, Painel de Bordo e Relatórios Executivos): o comparado padrão da Comparação; os meses de ${c.ano} contra os mesmos meses do exercício da tela.`,
-  RESULTADOS_ANTERIORES: () => "Os resultados de comparação do exercício anterior; pode ser escolhido na Comparação de Resultados Empresariais.",
+  // Sem as menções aos exercícios (22/10/2026): a Comparação usa o cenário marcado, de qualquer exercício.
+  ORCAMENTO_EMPRESARIAL: () => "Dá o orçado de Resultados Empresariais (Resultados, Painel de Bordo e Relatórios Executivos): o comparado padrão da Comparação.",
+  RESULTADOS_ANTERIORES: () => "Os resultados anteriores, para comparação; pode ser escolhido na Comparação de Resultados Empresariais.",
   RESULTADOS_VENDIDOS: () => "Os resultados do que foi vendido; pode ser escolhido na Comparação de Resultados Empresariais.",
   PREVISAO: () => "Uma previsão de resultados; pode ser escolhida na Comparação de Resultados Empresariais (Resultados e Painel de Bordo).",
 };
@@ -34,7 +34,7 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
     mutationFn: () => cenariosService.marcar(cenario.id, escolha || null),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["cenarios"] });
-      // O orçado de Resultados Empresariais muda com o Orçamento Empresarial.
+      // O orçado de Resultados Empresariais muda com o Orçamento.
       queryClient.invalidateQueries({ queryKey: ["relatorios"] });
       toast.success(escolha ? `${cenario.nome} marcado como ${rotuloMarcacao(escolha)}.${r.desmarcado ? ` ${r.desmarcado} deixou de ser.` : ""}` : `${cenario.nome} ficou sem marcação.`);
       onFechar();
@@ -50,7 +50,7 @@ export function MarcarCenarioDialog({ cenario, cenarios, onFechar }: { cenario: 
         <DialogHeader>
           <DialogTitle>Marcar Cenário</DialogTitle>
           <DialogDescription>
-            {cenario.nome} ({cenario.ano}). Cada marcação fica ativa em um cenário só: marcar este tira a marcação do cenário que a tinha.
+            {cenario.nome}. Cada marcação fica ativa em um cenário só: marcar este tira a marcação do cenário que a tinha.
           </DialogDescription>
         </DialogHeader>
         {particular ? (

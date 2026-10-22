@@ -5,12 +5,12 @@ import type { Indicador, MesRelatorio, Painel, Resultados } from "@/app/relatori
 export type MarcacaoCenario = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS" | "PREVISAO";
 
 export const MARCACOES: Array<{ valor: MarcacaoCenario; rotulo: string }> = [
-  { valor: "ORCAMENTO_EMPRESARIAL", rotulo: "Orçamento Empresarial" },
-  { valor: "RESULTADOS_ANTERIORES", rotulo: "Resultados Anteriores" },
-  { valor: "RESULTADOS_VENDIDOS", rotulo: "Resultados Vendidos" },
+  // Os nomes curtos (22/10/2026; antes, Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos e Previsão de Resultados).
+  { valor: "ORCAMENTO_EMPRESARIAL", rotulo: "Orçamento" },
+  { valor: "RESULTADOS_ANTERIORES", rotulo: "Anterior" },
+  { valor: "RESULTADOS_VENDIDOS", rotulo: "Vendido" },
   // 21/10/2026: escolhida no Compara Com de Resultados Empresariais.
-  // "Previsão de Resultados" (22/10/2026; antes, "Previsão").
-  { valor: "PREVISAO", rotulo: "Previsão de Resultados" },
+  { valor: "PREVISAO", rotulo: "Previsão" },
 ];
 export const rotuloMarcacao = (m: MarcacaoCenario | null) => MARCACOES.find((x) => x.valor === m)?.rotulo ?? null;
 /** O rótulo da versão do cenário (13/10/2026): VER00, VER01… */

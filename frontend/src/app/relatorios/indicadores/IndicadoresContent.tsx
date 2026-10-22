@@ -61,13 +61,13 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             <li>Use os filtros nos rótulos das colunas para escolher indicadores ou ordenar por um valor.</li>
             <li>Os indicadores sem numeração (os totais, como Custos de Produção: Matriz) ficam com a cor da faixa do grupo, e os de numeração par num tom mais fraco (amarelo nas colunas do realizado, cinza nas do orçado), para ajudar a seguir a linha.</li>
             {periodoFixo ? null : (
-              <li>As colunas de rótulo preto trazem o orçado (o cenário Orçamento Empresarial do exercício; zero sem ele): o do último mês, depois dele, e o acumulado, depois do Acumulado.</li>
+              <li>As colunas de rótulo preto trazem o orçado (o cenário marcado como Orçamento, ou o escolhido na Comparação; zero sem ele): o do último mês, depois dele, e o acumulado, depois do Acumulado.</li>
             )}
             <li>As colunas Indicador, Sent. e Und. ficam fixas à esquerda; ao rolar a página, os rótulos ficam presos logo abaixo do título, como em Resultados, e a barra de rolagem lateral fica no pé da janela.</li>
             <li>Passe o mouse sobre a seta do sentido para ver se o indicador é melhor quanto maior ou quanto menor.</li>
             {periodoFixo ? null : (
               <>
-              <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (do cenário Orçamento Empresarial) em preto, como no Painel de Bordo, e, depois do último mês, o gráfico do acumulado (ACUM.); a descrição do indicador (a metodologia, a unidade e o comportamento) fica na linha da legenda. O botão ao lado do nome copia o modal (o nome, os valores e o gráfico) como imagem, para colar num e-mail ou numa apresentação; se o navegador não deixar copiar, a imagem é baixada.</li>
+              <li>Clique num indicador para abrir o gráfico dele: os meses do exercício até o escolhido, com o realizado em amarelo-ouro e o orçado (do cenário marcado como Orçamento, ou do escolhido na Comparação) em preto, como no Painel de Bordo, e, depois do último mês, o gráfico do acumulado (ACUM.); a descrição do indicador (a metodologia, a unidade e o comportamento) fica na linha da legenda. O botão ao lado do nome copia o modal (o nome, os valores e o gráfico) como imagem, para colar num e-mail ou numa apresentação; se o navegador não deixar copiar, a imagem é baixada.</li>
               <li>No Tipo, escolha Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, transparente no zero e forte no máximo do período, com o contorno em amarelo-ouro, e o orçado numa linha preta). A escolha vale também para o Painel de Bordo e fica guardada neste navegador.</li>
               <li>Nos Rótulos, Com escreve os valores de cada mês no gráfico, na vertical, só com o número (o realizado à esquerda do centro do mês, o orçado à direita); Sem mostra a escala à esquerda. Como no Painel de Bordo, a escolha vale para os dois e fica guardada neste navegador.</li>
               </>
@@ -94,7 +94,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
               último mês.
             </p>
             <p>
-              O orçado (o gráfico do indicador) vem das Metas do cenário marcado como Orçamento Empresarial no exercício (Criação de
+              O orçado (o gráfico do indicador) vem das Metas do cenário marcado como Orçamento (Criação de
               Cenários / Cenários Sintéticos){dados?.cenarioOrcado ? ` — hoje, ${dados.cenarioOrcado}` : ""}. Sem cenário marcado no
               exercício, ou sem o valor no cenário, o orçado é zero.
             </p>

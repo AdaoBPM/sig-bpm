@@ -175,11 +175,11 @@ export function rotuloDaComparacao(c: Comparacao, cenario?: { nome: string; marc
 
 /** O nome de cada marcação (21/10/2026: o Compara Com de Resultados Empresariais e os rótulos do comparado). */
 export const ROTULO_DA_MARCACAO: Record<MarcacaoCenario, string> = {
-  ORCAMENTO_EMPRESARIAL: "Orçamento Empresarial",
-  RESULTADOS_ANTERIORES: "Resultados Anteriores",
-  RESULTADOS_VENDIDOS: "Resultados Vendidos",
-  // "Previsão de Resultados" (22/10/2026; antes, "Previsão"), também nos rótulos do comparado.
-  PREVISAO: "Previsão de Resultados",
+  // Os nomes curtos (22/10/2026; antes, Orçamento Empresarial, Resultados Anteriores, Resultados Vendidos e Previsão de Resultados).
+  ORCAMENTO_EMPRESARIAL: "Orçamento",
+  RESULTADOS_ANTERIORES: "Anterior",
+  RESULTADOS_VENDIDOS: "Vendido",
+  PREVISAO: "Previsão",
 };
 
 /** Os cenários marcados do exercício (21/10/2026): as opções do Compara Com de Resultados Empresariais. */

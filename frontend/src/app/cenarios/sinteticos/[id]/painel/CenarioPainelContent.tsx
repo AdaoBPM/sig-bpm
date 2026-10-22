@@ -65,7 +65,7 @@ export function CenarioPainelContent() {
               Na aba Indicadores, todos os indicadores do cenário mês a mês e acumulados, com a coluna Comparado Acum. (o acumulado do cenário
               comparado): os que saem da DRE do cenário e os Indicadores Manuais (os quadros de lotação e os do Comercial e do Administrativo, que
               se digitam {analitico ? "na tela Premissas, aba Indicadores Manuais" : "na tela Configurações, aba Indicadores Manuais"}), com as
-              eficiências calculadas e os importados. É o orçado de Resultados Empresariais quando o cenário é o Orçamento Empresarial. Clique num
+              eficiências calculadas e os importados. É o orçado de Resultados Empresariais quando o cenário é o marcado como Orçamento. Clique num
               indicador para ver o gráfico dele (o cenário e o comparado), no Tipo e com os Rótulos do Configurar Gráficos daqui.
             </li>
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, comportamento, grupo, quadro, Metodologia e formato.</li>

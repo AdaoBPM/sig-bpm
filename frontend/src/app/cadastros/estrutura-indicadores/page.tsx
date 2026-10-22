@@ -19,7 +19,7 @@ export default function EstruturaIndicadoresPage() {
               <li>Use “Novo” para incluir um indicador; o lápis edita, e a exclusão fica dentro da edição.</li>
               <li>
                 Na Metodologia, monte a fórmula do indicador: escolha o tipo do item (uma linha da DRE, com a unidade; um totalizador das Listas;
-                um indicador do Comercial ou do Administrativo; uma meta do Orçamento Empresarial, o cenário marcado), busque, escolha e clique em “Inserir Item”; entre os
+                um indicador do Comercial ou do Administrativo; uma meta do Orçamento, o cenário marcado), busque, escolha e clique em “Inserir Item”; entre os
                 itens, use os operadores (+ − × ÷), os parênteses e o número digitado com “Inserir” (por exemplo, ÷ 1000 para milhares). “Apagar” desfaz
                 o último pedaço, e “Limpar” apaga a fórmula inteira.
               </li>
@@ -38,7 +38,7 @@ export default function EstruturaIndicadoresPage() {
               <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="Os indicadores de resultado, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar de Resultados Empresariais: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento Empresarial (o cenário marcado no exercício). Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
+          descricao="Os indicadores de resultado, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar de Resultados Empresariais: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento (o cenário marcado). Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
         />
       </PermissionGuard>
     </ProtectedLayout>
