@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Upload } from "lucide-react";
@@ -20,7 +20,7 @@ import { Abas } from "@/components/shared/Abas";
 import { FaixaIndicadores } from "@/components/shared/FaixaIndicadores";
 
 import { dataHora, lerAnoMes, moeda } from "../utils/formatacao";
-import { Agrupador, SeletorNivel, useNiveisDRE } from "../dre/components/NiveisDRE";
+import { Agrupador, SeletorNivel, fundoDaLinha, semPrimeiroTotalDaRol, useNiveisDRE } from "../dre/components/NiveisDRE";
 import { conferenciaService, mensagemDeErro, type LinhaConferencia, type VisaoConferencia } from "./services/conferenciaService";
 import { plural } from "@/lib/texto";
 
@@ -94,7 +94,9 @@ function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna:
  * agrupadores e os níveis (Totais, Atribuições, Contas) da planilha.
  */
 function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas: boolean }) {
-  const niveis = useNiveisDRE(visao.linhas, "sig.conferencia.nivel");
+  // Sem o primeiro total da ROL, que repete o segundo, como na DRE (22/10/2026).
+  const semRolRepetida = useMemo(() => semPrimeiroTotalDaRol(visao.linhas), [visao.linhas]);
+  const niveis = useNiveisDRE(semRolRepetida, "sig.conferencia.nivel");
   // Com "Só as Diferenças", todas as linhas com diferença aparecem, sem os grupos fechados escondê-las.
   const linhas = soDiferencas ? niveis.linhas.filter((l) => l.destaque) : niveis.linhas.filter(niveis.visivel);
   const destaque = (l: LinhaConferencia) => l.tipo !== "ITEM";
@@ -125,7 +127,7 @@ function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas
             linhas.map((l) => (
               <tr
                 key={`${l.linha}-${l.codigo}`}
-                className={`${destaque(l) ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"} ${l.destaque ? "bg-red-50" : destaque(l) ? "bg-gray-50" : ""}`}
+                className={`${destaque(l) ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"} ${l.destaque ? "bg-red-50" : fundoDaLinha(l)}`}
               >
                 <td className="px-3 py-1.5 text-right text-xs font-normal text-gray-400" title="Linha da planilha">
                   {l.linha}

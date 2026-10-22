@@ -1,11 +1,12 @@
 import { getPrismaClient } from "../../config/prisma.js";
-import { ESTILO, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { ESTILO, naCorDaDRE, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
 import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 import { A4, caber, DocumentoPDF, type Cor } from "../../lib/pdfEscrita.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { apuracaoService } from "../apuracao/apuracaoService.js";
 import { dreService, RegraDREError } from "./dreService.js";
 import { linhasDoCentro } from "./recorteCentros.js";
+import { fundoDaDRE, semPrimeiroTotalDaRol } from "../relatorios/linhasDaDRE.js";
 import { obrasService } from "./obrasService.js";
 import { semCentroService, type GrupoSemCentro } from "./semCentroService.js";
 
@@ -139,13 +140,16 @@ function abaExcel(b: Bloco, id: Identificacao): AbaEscrita {
     { valor: "Valor", estilo: ESTILO.cabecalhoDireita },
   ]);
   const cabecalho = linhas.length;
-  for (const l of b.linhas.filter((x) => x.tipo !== "SECAO")) {
-    const destaque = l.tipo !== "ITEM";
+  // Sem o primeiro total da ROL e com os fundos das telas (22/10/2026): os totais em amarelo claro, os resultados mais forte.
+  for (const l of semPrimeiroTotalDaRol(b.linhas.filter((x) => x.tipo !== "SECAO"))) {
+    const fundo = fundoDaDRE(l);
+    const destaque = fundo !== "item";
+    const total = (e: Parameters<typeof naCorDaDRE>[0]) => (fundo === "item" ? ESTILO[e] : naCorDaDRE(e, fundo));
     const valor: Celula =
       l.valor === null
-        ? { valor: "—", estilo: destaque ? ESTILO.destaqueDireita : ESTILO.itemDireita }
-        : { valor: Number(l.valor), estilo: ehVolume(l) ? (destaque ? ESTILO.destaqueVolume : ESTILO.itemVolume) : destaque ? ESTILO.destaqueMoeda : ESTILO.itemMoeda };
-    linhas.push([{ valor: l.descricao, estilo: destaque ? ESTILO.destaque : ESTILO.item }, valor]);
+        ? { valor: "—", estilo: destaque ? total("destaqueDireita") : ESTILO.itemDireita }
+        : { valor: Number(l.valor), estilo: ehVolume(l) ? (destaque ? total("destaqueVolume") : ESTILO.itemVolume) : destaque ? total("destaqueMoeda") : ESTILO.itemMoeda };
+    linhas.push([{ valor: l.descricao, estilo: destaque ? total("destaque") : ESTILO.item }, valor]);
   }
   return { nome: b.nome, larguras: [72, 20], linhas, linhaCabecalho: cabecalho, rodape: `DRE ${id.competencia} · ${b.titulo} · ${id.estado}` };
 }
@@ -153,6 +157,9 @@ function abaExcel(b: Bloco, id: Identificacao): AbaEscrita {
 const CINZA: Cor = [75, 85, 99];
 const AMBAR: Cor = [146, 64, 14];
 const FUNDO: Cor = [243, 244, 246];
+/** Os fundos dos totais da DRE (22/10/2026), como nas telas: os totais (yellow-100) e as linhas de resultado (yellow-200). */
+const FUNDO_DO_TOTAL: Cor = [254, 249, 195];
+const FUNDO_DO_RESULTADO: Cor = [254, 240, 138];
 const TRACO: Cor = [156, 163, 175];
 const M = 42; // margem lateral
 const ALTURA_LINHA = 12.5;
@@ -193,11 +200,12 @@ function paginasPdf(doc: DocumentoPDF, b: Bloco, id: Identificacao) {
   };
 
   novaPagina(true);
-  for (const l of b.linhas.filter((x) => x.tipo !== "SECAO")) {
+  for (const l of semPrimeiroTotalDaRol(b.linhas.filter((x) => x.tipo !== "SECAO"))) {
     if (y < 52) novaPagina(false);
-    const destaque = l.tipo !== "ITEM";
+    const fundo = fundoDaDRE(l);
+    const destaque = fundo !== "item";
     const fonte = destaque ? "negrito" : "normal";
-    if (destaque) doc.retangulo(M, y - 3.5, direita - M, ALTURA_LINHA, FUNDO);
+    if (destaque) doc.retangulo(M, y - 3.5, direita - M, ALTURA_LINHA, fundo === "resultado" ? FUNDO_DO_RESULTADO : FUNDO_DO_TOTAL);
     const valor = valorTela(l);
     const xTexto = destaque ? M + 4 : M + 16;
     doc.texto(xTexto, y, caber(l.descricao, fonte, CORPO, direita - 4 - 90 - xTexto), { fonte, tamanho: CORPO });

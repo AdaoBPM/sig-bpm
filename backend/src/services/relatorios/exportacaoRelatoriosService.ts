@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { A4_PAISAGEM, caber, DocumentoPDF, type Cor, type Fonte } from "../../lib/pdfEscrita.js";
-import { ESTILO, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { ESTILO, naCorDaDRE, gerarXlsx, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
+import { fundoDaDRE, semPrimeiroTotalDaRol } from "./linhasDaDRE.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { indicadoresService } from "./indicadoresService.js";
 import { RelatorioError, resultadosService } from "./resultadosService.js";
@@ -125,12 +126,15 @@ function abaResultados(b: Bloco, id: Identificacao): AbaEscrita {
     cab("R$/m³"),
   ]);
   const cabecalho = linhas.length;
-  for (const l of dados.linhas.filter((x) => x.tipo !== "SECAO")) {
-    const d = l.tipo !== "ITEM";
-    const num = (v: number | null): Celula => (v === null ? { valor: null, estilo: d ? ESTILO.destaqueDireita : ESTILO.itemDireita } : { valor: v, estilo: d ? ESTILO.destaqueNumero : ESTILO.itemNumero });
-    const per = (v: number | null): Celula => (v === null || l.volume ? { valor: null, estilo: d ? ESTILO.destaqueDireita : ESTILO.itemDireita } : { valor: v, estilo: d ? ESTILO.destaquePercentual : ESTILO.itemPercentual });
+  // Sem o primeiro total da ROL e com os fundos das telas (22/10/2026): os totais em amarelo claro, os resultados mais forte.
+  for (const l of semPrimeiroTotalDaRol(dados.linhas.filter((x) => x.tipo !== "SECAO"))) {
+    const fundo = fundoDaDRE(l);
+    const d = fundo !== "item";
+    const t = (e: Parameters<typeof naCorDaDRE>[0]) => (fundo === "item" ? ESTILO[e] : naCorDaDRE(e, fundo));
+    const num = (v: number | null): Celula => (v === null ? { valor: null, estilo: d ? t("destaqueDireita") : ESTILO.itemDireita } : { valor: v, estilo: d ? t("destaqueNumero") : ESTILO.itemNumero });
+    const per = (v: number | null): Celula => (v === null || l.volume ? { valor: null, estilo: d ? t("destaqueDireita") : ESTILO.itemDireita } : { valor: v, estilo: d ? t("destaquePercentual") : ESTILO.itemPercentual });
     linhas.push([
-      { valor: l.descricao, estilo: d ? ESTILO.destaque : ESTILO.item },
+      { valor: l.descricao, estilo: d ? t("destaque") : ESTILO.item },
       ...l.meses.flatMap((c, i) => [num(c.valor), per(c.pct), ...(i === l.meses.length - 1 ? [num(l.volume ? null : c.unitario)] : [])]),
       num(l.total.valor),
       per(l.total.pct),
@@ -202,6 +206,9 @@ const CINZA: Cor = [75, 85, 99];
 const CLARO: Cor = [107, 114, 128];
 const AMBAR: Cor = [146, 64, 14];
 const FUNDO: Cor = [243, 244, 246];
+/** Os fundos dos totais da DRE (22/10/2026), como nas telas: os totais (yellow-100) e as linhas de resultado (yellow-200). */
+const FUNDO_DO_TOTAL: Cor = [254, 249, 195];
+const FUNDO_DO_RESULTADO: Cor = [254, 240, 138];
 const TRACO: Cor = [156, 163, 175];
 const M = 30;
 const DIREITA = A4_PAISAGEM.largura - M;
@@ -245,14 +252,15 @@ function paginasResultados(doc: DocumentoPDF, b: Bloco, id: Identificacao) {
   const titulo = `Resultados · ${b.titulo}`;
   y = topo(doc, titulo, id, true);
   cabecalho();
-  for (const l of dados.linhas.filter((z) => z.tipo !== "SECAO")) {
+  for (const l of semPrimeiroTotalDaRol(dados.linhas.filter((z) => z.tipo !== "SECAO"))) {
     if (y < 40) {
       y = topo(doc, titulo, id, false);
       cabecalho();
     }
-    const d = l.tipo !== "ITEM";
+    const fundo = fundoDaDRE(l);
+    const d = fundo !== "item";
     const fonte: Fonte = d ? "negrito" : "normal";
-    if (d) doc.retangulo(M, y - 9.5, DIREITA - M, ALTURA - 1, FUNDO);
+    if (d) doc.retangulo(M, y - 9.5, DIREITA - M, ALTURA - 1, fundo === "resultado" ? FUNDO_DO_RESULTADO : FUNDO_DO_TOTAL);
     const xt = d ? M + 3 : M + 11;
     doc.texto(xt, y - 2, caber(l.descricao, fonte, CORPO, larguraDescricao - (xt - M) - 4), { fonte, tamanho: CORPO });
     const valor = (v: number | null) => (v === null ? "—" : l.volume ? n2.format(v) : n0.format(v));

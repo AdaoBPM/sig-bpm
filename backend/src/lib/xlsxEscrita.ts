@@ -29,8 +29,28 @@ export const ESTILO = {
   /** Participação: 0,256 sai 25,6%. */
   itemPercentual: 16,
   destaquePercentual: 17,
+  /**
+   * Os totais da DRE (22/10/2026), como nas telas: os totais em amarelo claro (…Total) e as linhas de resultado num
+   * amarelo mais forte (…Resultado); `naCorDaDRE` escolhe pelo fundo da linha.
+   */
+  destaqueTotal: 18,
+  destaqueMoedaTotal: 19,
+  destaqueVolumeTotal: 20,
+  destaqueDireitaTotal: 21,
+  destaqueNumeroTotal: 22,
+  destaquePercentualTotal: 23,
+  destaqueResultado: 24,
+  destaqueMoedaResultado: 25,
+  destaqueVolumeResultado: 26,
+  destaqueDireitaResultado: 27,
+  destaqueNumeroResultado: 28,
+  destaquePercentualResultado: 29,
 } as const;
 export type Estilo = (typeof ESTILO)[keyof typeof ESTILO];
+
+type Destaque = "destaque" | "destaqueMoeda" | "destaqueVolume" | "destaqueDireita" | "destaqueNumero" | "destaquePercentual";
+/** O estilo do total na cor da linha da DRE: "total" (amarelo claro) ou "resultado" (amarelo mais forte). */
+export const naCorDaDRE = (estilo: Destaque, fundo: "total" | "resultado"): Estilo => ESTILO[`${estilo}${fundo === "total" ? "Total" : "Resultado"}`];
 
 export type Celula = { valor: string | number | null; estilo?: Estilo; /** A fórmula, sem o "=" (o `valor` é o resultado dela). */ formula?: string };
 export type AbaEscrita = {
@@ -89,10 +109,10 @@ const ESTILOS = `${XML}<styleSheet xmlns="${NS}">
 <font><sz val="9"/><color rgb="FF4B5563"/><name val="Arial"/><family val="2"/></font>
 <font><sz val="9"/><color rgb="FF92400E"/><name val="Arial"/><family val="2"/></font>
 </fonts>
-<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F4F6"/><bgColor indexed="64"/></patternFill></fill></fills>
+<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F4F6"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFEF9C3"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFEF08A"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FF9CA3AF"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="18">
+<cellXfs count="30">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>
@@ -111,6 +131,18 @@ const ESTILOS = `${XML}<styleSheet xmlns="${NS}">
 <xf numFmtId="166" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
 <xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="167" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="164" fontId="1" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="165" fontId="1" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="right"/></xf>
+<xf numFmtId="166" fontId="1" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="167" fontId="1" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="1" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="164" fontId="1" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="165" fontId="1" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="1" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="right"/></xf>
+<xf numFmtId="166" fontId="1" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="167" fontId="1" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
