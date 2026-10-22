@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
 import { moveElement } from "react-grid-layout/build/utils";
-import { ChartColumn, CircleAlert, GripVertical, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { ChartColumn, CircleAlert, CirclePlay, GripVertical, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, X } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -26,6 +26,7 @@ import { BarraDoSumario, ConfigurarSumarioDialog, ListaDoSumario } from "./Sumar
 import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
 import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
 import { videoDoLink } from "./videoIncorporado";
+import { ConfigurarTabelaDialog, TabelaDoBloco } from "./TabelaDoRelatorio";
 
 
 /** A grade: 12 colunas, linhas de 24 px, 12 px entre os blocos. */
@@ -69,6 +70,8 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; 
   if (b.tipo === "VIDEO") return { w: 6, h: 8 };
   if (b.tipo === "TEXTO") return { w: 6, h: 3 };
   if (b.tipo === "SUMARIO") return { w: 6, h: 10 };
+  // A tabela de Resultados (22/10/2026): a largura da página.
+  if (b.tipo === "TABELA") return { w: 12, h: 16 };
   return { w: 6, h: 6 };
 }
 
@@ -81,6 +84,7 @@ function tamanhoMinimo(b: Bloco) {
   // O Texto Livre baixa até uma linha; o Sumário, até duas (20/10/2026).
   if (b.tipo === "TEXTO") return { minW: 2, minH: 1 };
   if (b.tipo === "SUMARIO") return { minW: 3, minH: 2 };
+  if (b.tipo === "TABELA") return { minW: 3, minH: 3 };
   // A anotação baixa a ponto de mostrar uma linha só do texto (16/10/2026).
   return { minW: 3, minH: 2 };
 }
@@ -199,9 +203,12 @@ export function GradeDoRelatorio({
   fundo,
   onCarregarImagem,
   onEscolherVideo,
+  paraImagem = false,
   onMudar,
 }: {
   relatorioId: string;
+  /** Na imagem do slide (22/10/2026: a exportação em PDF): os vídeos como quadros com o ícone. */
+  paraImagem?: boolean;
   /** As telas e os slides do relatório, com os números (20/10/2026), para os blocos de Sumário. */
   sumario?: TelaDoSumario[];
   /** A Imagem de Fundo da página (20/10/2026), atrás dos blocos (na edição; a apresentação a põe no slide inteiro). */
@@ -398,6 +405,7 @@ export function GradeDoRelatorio({
                 registrar={(el) => (el ? campos.current.set(b.id, el) : campos.current.delete(b.id))}
                 onCarregarImagem={onCarregarImagem ? (arquivo) => onCarregarImagem(b.id, arquivo) : undefined}
                 onEscolherVideo={onEscolherVideo ? () => onEscolherVideo(b.id) : undefined}
+                paraImagem={paraImagem}
                 onMudar={(m) => mudarBloco(b.id, m)}
               />
             </div>
@@ -456,6 +464,19 @@ export function GradeDoRelatorio({
           onFechar={() => setConfigurando(null)}
           onAplicar={(o) => {
             mudarBloco(doCard.id, o);
+            setConfigurando(null);
+          }}
+        />
+      ) : null}
+      {doCard?.tipo === "TABELA" ? (
+        <ConfigurarTabelaDialog
+          relatorioId={relatorioId}
+          titulo="Configurar Tabela"
+          inicial={{ visao: doCard.visao, nivel: doCard.nivel, linhas: doCard.linhas, recolhido: doCard.recolhido }}
+          onFechar={() => setConfigurando(null)}
+          onAplicar={(o) => {
+            // Sem as linhas (todas), o campo sai do bloco.
+            mudarBloco(doCard.id, { ...o, linhas: o.linhas } as Partial<Bloco>);
             setConfigurando(null);
           }}
         />
@@ -655,6 +676,12 @@ function BarraDoBloco({
           <Settings className="size-4" />
         </button>
       ) : null}
+      {/* A tabela (22/10/2026): a aba, o modo, os meses e as linhas. */}
+      {b.tipo === "TABELA" ? (
+        <button type="button" className={botao} title="Configurar a tabela" aria-label="Configurar a tabela" onClick={onConfigurar}>
+          <Settings className="size-4" />
+        </button>
+      ) : null}
       {/* A formatação do Sumário (20/10/2026): a do texto, sem os marcadores, por nível (as telas ou os slides). */}
       {b.tipo === "SUMARIO" ? (
         <>
@@ -721,10 +748,13 @@ function ConteudoDoBloco({
   registrar,
   onCarregarImagem,
   onEscolherVideo,
+  paraImagem = false,
   onMudar,
 }: {
   relatorioId: string;
   b: Bloco;
+  /** Na imagem do slide (22/10/2026: a exportação em PDF): o vídeo como um quadro com o ícone (o player não vira imagem). */
+  paraImagem?: boolean;
   /** Na apresentação (20/10/2026): o vídeo sem os controles do player, com os botões ao passar o mouse. */
   apresentacao?: boolean;
   /** As telas e os slides, com os números, para o Sumário (20/10/2026). */
@@ -875,6 +905,12 @@ function ConteudoDoBloco({
     return (
       <figure className="flex h-full flex-col gap-2">
         <div className="min-h-0 flex-1">
+          {paraImagem ? (
+            <div className="flex size-full flex-col items-center justify-center gap-2 rounded-sm bg-gray-900 text-gray-100">
+              <CirclePlay className="size-12" />
+              <span className="text-sm">Vídeo (na apresentação)</span>
+            </div>
+          ) : (
           <PlayerDoVideo
             relatorioId={relatorioId}
             b={b}
@@ -883,6 +919,7 @@ function ConteudoDoBloco({
             tocar={video?.tocando}
             onEscolher={editavel ? onEscolherVideo : undefined}
           />
+          )}
         </div>
         {editavel || b.legenda ? (
           <figcaption
@@ -904,6 +941,8 @@ function ConteudoDoBloco({
       </figure>
     );
   }
+  // A tabela de Resultados (22/10/2026), com a consulta dela (não depende dos dados dos cards).
+  if (b.tipo === "TABELA") return <TabelaDoBloco relatorioId={relatorioId} b={b} />;
   if (!dados) return <div className="h-full animate-pulse rounded-sm bg-gray-100" />;
   if (b.tipo === "PAINEL") {
     const item = dados.painel.abas.find((a) => a.chave === b.aba)?.quadros.find((q) => q.titulo === b.quadro)?.itens.find((i) => i.titulo === b.titulo && i.sigla === b.sigla);

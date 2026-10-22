@@ -21,7 +21,7 @@ import {
 
 /** Os três níveis: totais, atribuições e contas. */
 export type Nivel = 1 | 2 | 3;
-const NIVEIS: Array<{ nivel: Nivel; rotulo: string; dica: string }> = [
+export const NIVEIS: Array<{ nivel: Nivel; rotulo: string; dica: string }> = [
   { nivel: 1, rotulo: "Totais", dica: "Só os totais" },
   { nivel: 2, rotulo: "Atribuições", dica: "Os totais e as atribuições" },
   { nivel: 3, rotulo: "Contas", dica: "Todas as contas" },
@@ -53,7 +53,7 @@ type Linha = { codigo: string; tipo: string };
  * atribuição; a conta é nível 2 quando há atribuição com o mesmo prefixo.
  * Conferido com as seis abas Resultados em 07/10/2026: todas as linhas batem.
  */
-function estrutura(linhas: Linha[]) {
+export function estrutura(linhas: Linha[]) {
   const partes = (c: string) => c.split(".");
   const totais = new Set(linhas.filter((l) => l.tipo !== "ITEM" && partes(l.codigo).length === 2).map((l) => partes(l.codigo)[0]));
   const nivel = new Map<string, number>();
@@ -152,19 +152,23 @@ export const ROTULO_DO_ORCADO = "!bg-[var(--cor-rotulo-orcado)] !text-[var(--cor
 /** O recuo da descrição em cada nível. */
 export const RECUO = ["pl-4", "pl-9", "pl-14"];
 
+/** As linhas que as tabelas mostram: sem as seções P e S; PRODUÇÃO E SERVIÇOS (PS) só quando há volumes. */
+export function linhasDaDRE<L extends Linha>(todas: L[]) {
+  const temVolume = todas.some((l) => l.tipo === "ITEM" && /^(P|S)\./.test(l.codigo));
+  return todas.filter((l) => l.tipo !== "SECAO" || (l.codigo.startsWith("PS.") && temVolume));
+}
+
 /**
  * O estado dos níveis de uma tabela de linhas da DRE. As seções P e S não
  * aparecem; PRODUÇÃO E SERVIÇOS (PS) só quando há volumes, e (com eles) só em
- * Contas. `chave` guarda o nível escolhido no navegador.
+ * Contas. `chave` guarda o nível escolhido no navegador; com `fixo` (22/10/2026: as tabelas dos Relatórios Executivos),
+ * o nível é esse, sem o do navegador.
  */
-export function useNiveisDRE<L extends Linha>(todas: L[], chave: string) {
-  const linhas = useMemo(() => {
-    const temVolume = todas.some((l) => l.tipo === "ITEM" && /^(P|S)\./.test(l.codigo));
-    return todas.filter((l) => l.tipo !== "SECAO" || (l.codigo.startsWith("PS.") && temVolume));
-  }, [todas]);
+export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: Nivel) {
+  const linhas = useMemo(() => linhasDaDRE(todas), [todas]);
   const { nivel, acima, comFilhos, soContas } = useMemo(() => estrutura(linhas), [linhas]);
-  const [nivelGeral, setNivelGeral] = useState<Nivel>(() => nivelGuardado(chave));
-  const [fechados, setFechados] = useState<Set<string>>(() => fechadosAte(nivelGuardado(chave), nivel, comFilhos, soContas));
+  const [nivelGeral, setNivelGeral] = useState<Nivel>(() => fixo ?? nivelGuardado(chave));
+  const [fechados, setFechados] = useState<Set<string>>(() => fechadosAte(fixo ?? nivelGuardado(chave), nivel, comFilhos, soContas));
   const escolherNivel = (n: Nivel) => {
     setNivelGeral(n);
     guardarNivel(chave, n);

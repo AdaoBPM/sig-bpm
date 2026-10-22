@@ -13,6 +13,8 @@ import { auditar } from "../auditoriaService.js";
 import { diretorioUploads } from "../importacoes/arquivosImportados.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { painelService } from "../relatorios/painelService.js";
+import { resultadosService } from "../relatorios/resultadosService.js";
+import { ACESSO_TOTAL } from "../acesso/acesso.js";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
@@ -87,6 +89,11 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
    */
   /** O sublinhado entre o nome e o número e a formatação das telas e dos slides (20/10/2026). */
   | { tipo: "SUMARIO"; listar: "TELAS" | "TELAS_E_SLIDES"; telas: AbaRelatorioExecutivo[]; linha?: "PONTOS" | "TRACOS" | "LINHA" | "NENHUM"; estilos?: { telas?: EstiloDoSumario; slides?: EstiloDoSumario } }
+  /**
+   * A tabela de Resultados (22/10/2026): a visão da DRE (0 Consolidado, 1 a 5 as unidades), as linhas escolhidas (os
+   * códigos; sem elas, todas), o nível (1 Totais, 2 Atribuições, 3 Contas) e os meses anteriores recolhidos ou não.
+   */
+  | { tipo: "TABELA"; visao: 0 | 1 | 2 | 3 | 4 | 5; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean }
 );
 
 /**
@@ -330,6 +337,15 @@ export const relatoriosExecutivosService = {
     const r = await doRelatorio(id);
     const [painel, indicadores] = await Promise.all([painelService.painel(r.ano, r.mes, true), indicadoresService.listar(r.ano, r.mes, true)]);
     return { painel, indicadores };
+  },
+
+  /**
+   * A tabela de Resultados de uma visão (22/10/2026), para os blocos de tabela: até o mês do relatório, só das competências
+   * fechadas, com o orçado (o Orçamento Empresarial), como a tela Resultados; sem o recorte do usuário, como os cards.
+   */
+  async resultados(id: string, visao: 0 | 1 | 2 | 3 | 4 | 5) {
+    const r = await doRelatorio(id);
+    return resultadosService.unidade(r.ano, visao, r.mes, ACESSO_TOTAL, true);
   },
 
   /** Grava as páginas de uma aba, com os blocos de cada uma (de quem a edita, em elaboração). */

@@ -114,7 +114,12 @@ export function CenarioResultadosContent() {
           <div className="flex flex-wrap items-center gap-2">
             {podeRecalcular ? <BotaoRecalcular id={id} /> : null}
             {hasPermission(t.perm("resultados", "editar")) && cenario.data ? <BotoesDeVersao cenario={cenario.data} /> : null}
-            {opcoesExportar.length ? <ExportarRelatorio endereco={`/proxy/cenarios/${id}/exportar`} opcoes={opcoesExportar} padrao={`${cenario.data?.nome ?? "Cenário"} - Resultados`} /> : null}
+            {opcoesExportar.length ? <ExportarRelatorio
+                endereco={`/proxy/cenarios/${id}/exportar`}
+                opcoes={opcoesExportar}
+                padrao={`${cenario.data?.nome ?? "Cenário"} - Resultados`}
+                imagem={{ nome: `${cenario.data?.nome ?? "Cenário"} - Resultados - ${nome}` }}
+              /> : null}
           </div>
         }
         comoUsar={
@@ -132,7 +137,7 @@ export function CenarioResultadosContent() {
             ) : null}
             <li>
               Use “Exportar” para baixar em Excel ou PDF, como em Resultados Empresariais: a visão atual ou todas as unidades (uma por aba ou por
-              página).{analitico ? " Nos analíticos, também os centros de custo em Excel: todos numa planilha (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo)." : ""}
+              página); em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que está (recolhida ou expandida), inteira.{analitico ? " Nos analíticos, também os centros de custo em Excel: todos numa planilha (um por aba) ou um arquivo por centro (num ZIP, com o departamento e o centro no nome de cada arquivo)." : ""}
             </li>
             <li>
               Versões (para quem edita a tela Resultados): “Congelar Versão” trava o cenário na versão atual (VER00, VER01…), como o fechamento de uma

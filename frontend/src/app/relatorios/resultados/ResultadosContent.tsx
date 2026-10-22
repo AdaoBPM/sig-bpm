@@ -15,12 +15,12 @@ import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
 import { DetalheDialog } from "../../competencias/[anoMes]/dre/components/DetalheDialog";
 import { InfoAgrupamento } from "../../competencias/[anoMes]/dre/components/InfoAgrupamento";
-import { Agrupador, fundoDaLinha, fundoDoOrcado, ROTULO_DO_ORCADO, SeletorNivel, semPrimeiroTotalDaRol, useNiveisDRE } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
+import { Agrupador, fundoDaLinha, fundoDoOrcado, ROTULO_DO_ORCADO, SeletorNivel, semPrimeiroTotalDaRol, useNiveisDRE, type Nivel } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
 import { VolumesDialog } from "../../competencias/[anoMes]/dre/components/VolumesDialog";
 import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreService";
 import { ExportarRelatorio, type OpcaoExportar } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
-import { TabelaLarga } from "../components/TabelaLarga";
+import { TabelaEstatica, TabelaLarga } from "../components/TabelaLarga";
 import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type MesRelatorio, type Resultados, type MarcacaoComparavel } from "../services/relatoriosService";
 
 /** As visões da DRE, como as abas Resultados (…) da planilha, e os centros de custo. */
@@ -166,6 +166,7 @@ export function TabelaResultados({
   consultas = true,
   edicao,
   doCenario = false,
+  estatico,
 }: {
   dados: Resultados;
   titulo: string;
@@ -181,11 +182,19 @@ export function TabelaResultados({
    * recolhidos, sem nenhum mês (dezembro também), só a descrição e os totais — a tabela se estica e enche a tela.
    */
   doCenario?: boolean;
+  /**
+   * A tabela fixa (22/10/2026: os blocos de tabela dos Relatórios Executivos): o nível, as linhas escolhidas (sem elas,
+   * todas) e os meses anteriores recolhidos ou não vêm de fora; sem as consultas, os botões dos níveis e dos meses, as
+   * setas dos grupos e a rolagem (a tabela inteira, na largura das colunas).
+   */
+  estatico?: { nivel: Nivel; linhas?: string[]; recolhido: boolean };
 }) {
   // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
   // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
   const linhasDaTabela = useMemo(() => semPrimeiroTotalDaRol(dados.linhas), [dados.linhas]);
-  const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel");
+  const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel", estatico?.nivel);
+  const linhasEscolhidas = estatico?.linhas;
+  const escolhidas = useMemo(() => (linhasEscolhidas ? new Set(linhasEscolhidas) : null), [linhasEscolhidas]);
   // Sem o R$/m³ em Despesas e Extra e no RN (21/10/2026).
   const comUnitario = !("unidade" in visao && (visao.unidade === 4 || visao.unidade === 5));
   // Na edição, as contas da linha que a caixa dela marca: ela mesma (se se edita) e as editáveis abaixo dela.
@@ -196,13 +205,14 @@ export function TabelaResultados({
   const referencia = dados.meses.length - 1;
   // Recolhidos, só o mês de referência fica (com o orçado dele), antes dos totais. Na edição dos cenários também
   // (13/10/2026): os meses marcados e escondidos continuam marcados (a barra de marcação mostra quantos).
-  const [recolhido, alternarMeses] = useMesesRecolhidos();
+  const [recolhidoNaTela, alternarMeses] = useMesesRecolhidos();
+  const recolhido = estatico ? estatico.recolhido : recolhidoNaTela;
   const mostra = (i: number) => !recolhido || (i === referencia && !doCenario);
   // O R$/m³ do mês de referência (Resultados Empresariais); nos cenários, só no total.
   const unitarioNoMes = !doCenario && comUnitario;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
-  const abre = (l: LinhaResultado) => consultas && (detalhavel(l) || listavel(l, visao));
+  const abre = (l: LinhaResultado) => !estatico && consultas && (detalhavel(l) || listavel(l, visao));
   // O orçado (só nas visões de Resultados Empresariais): depois do mês de referência e depois do total, o orçado (valor, % e
   // R$/m³, em cinza); só depois do total, a variação (em amarelo): a diferença, o atingimento e a eficiência.
   const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
@@ -266,18 +276,23 @@ export function TabelaResultados({
       ) : null}
     </>
   );
+  // A tabela fixa, sem a rolagem (os Relatórios Executivos); na tela, a larga, com os rótulos presos no topo.
+  const Tabela = estatico ? TabelaEstatica : TabelaLarga;
   return (
     <div>
-      <TabelaLarga
+      <Tabela
         larguras={larguras}
         cabecalho={
           <tr className="border-b border-gray-300">
             <th className="left-0 !z-20 px-3 py-2 text-left">
               <span className="flex items-center gap-3">
-                <span className="flex shrink-0 items-center gap-1.5">
-                  <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
-                  {dados.meses.length > 1 ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
-                </span>
+                {/* Os botões ficam de fora da imagem da tabela (22/10/2026) e da tabela fixa. */}
+                {estatico ? null : (
+                  <span data-fora-da-imagem className="flex shrink-0 items-center gap-1.5">
+                    <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
+                    {dados.meses.length > 1 ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
+                  </span>
+                )}
                 <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>
                   {titulo}
                 </span>
@@ -313,7 +328,7 @@ export function TabelaResultados({
             {comOrcado ? rotulosDoOrcado(rotuloDoOrcadoTotal, true) : null}
           </tr>
         }
-        corpo={niveis.linhas.filter(niveis.visivel).map((l) => {
+        corpo={niveis.linhas.filter((l) => niveis.visivel(l) && (!escolhidas || escolhidas.has(l.codigo))).map((l) => {
             const destaque = l.tipo !== "ITEM";
             const fundo = fundoDaLinha(l);
             const td = "px-1.5 py-1.5 text-right whitespace-nowrap";
@@ -360,8 +375,8 @@ export function TabelaResultados({
                         <span aria-hidden className="inline-block size-3.5 shrink-0" />
                       )
                     ) : null}
-                    <Agrupador grupo={niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />
-                    {clicavel ? <Search className="size-3.5 shrink-0 text-gray-400" /> : null}
+                    <Agrupador grupo={!estatico && niveis.grupo(l)} fechado={niveis.fechado(l)} onAlternar={() => niveis.alternar(l.codigo)} />
+                    {clicavel ? <Search data-fora-da-imagem className="size-3.5 shrink-0 text-gray-400" /> : null}
                     <span className="truncate" title={l.descricao}>
                       {l.descricao}
                     </span>
@@ -712,7 +727,8 @@ export function ResultadosContent() {
               “Exportar”, ao lado do período, baixa em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o %
               e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo ou a Obra Atual) e, de qualquer aba, todas as unidades,
               todos os centros de custo, todas sem centro de custo e todas as obras (uma por aba ou por página). Em Excel, também um arquivo por centro de
-              custo, num ZIP, com o departamento e o centro no nome de cada arquivo.
+              custo, num ZIP, com o departamento e o centro no nome de cada arquivo. Em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que
+              está (os níveis e os grupos abertos ou fechados, os meses recolhidos ou não), mas inteira: todas as linhas e colunas, sem os botões.
             </li>
           </ul>
         }
@@ -748,7 +764,12 @@ export function ResultadosContent() {
             />
             {/* O cenário comparado (21/10/2026), entre os marcados do exercício. */}
             <SeletorComparaCom valor={comparacao.comparaCom} opcoes={comparacao.opcoes} onMudar={comparacao.mudar} />
-            {opcoesExportar.length && visoes.length ? <ExportarRelatorio caminho="resultados" opcoes={opcoesExportar} padrao={`Resultados ${ano}`} /> : null}
+            {opcoesExportar.length && visoes.length ? <ExportarRelatorio
+                caminho="resultados"
+                opcoes={opcoesExportar}
+                padrao={`Resultados ${ano}`}
+                imagem={{ nome: `Resultados ${ano} - ${VISOES.find((v) => v.chave === visao)?.nome ?? ""}` }}
+              /> : null}
             </div>
           ) : null
         }

@@ -109,51 +109,7 @@ export function ApresentacaoDoRelatorio({
   const botao = "inline-flex size-9 items-center justify-center rounded-sm text-gray-100 hover:bg-gray-700 hover:text-white disabled:pointer-events-none disabled:opacity-40";
   return (
     <div role="dialog" aria-modal aria-label={`Apresentação: Relatório Executivo de ${periodo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
-      {/*
-        O topo e as margens do slide: os de linhasDaPagina, para a página caber inteira na tela. Embaixo da página, o rodapé
-        (22/10/2026), no espaço que sobra até o pé da tela.
-      */}
-      <div className="flex h-full flex-col px-8 pt-6">
-        {/*
-          À esquerda, o grupo (o título da aba: Introdução…) em cinza, a seta dos caminhos do topo das telas, em cinza, e o
-          nome do slide (o da página) em preto; à direita, "Relatório Executivo" em cinza, a seta e o período em preto
-          (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
-          fica centrada na altura da barra, sem mudar a altura dela.
-        */}
-        {/* O contador (20/10/2026), no centro: o número do slide e o total, contados da Introdução em diante; na Capa e no Encerramento, sem ele. */}
-        <header className="relative mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
-          <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{slide?.nome}</span>
-          <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
-          <h1 className="min-w-0 truncate text-lg font-bold text-gray-900">{slide?.pagina}</h1>
-          <span className="ml-auto shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">Relatório Executivo</span>
-          <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
-          <span className="shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{periodo}</span>
-          <BpmLogo className="h-[30px] w-auto shrink-0" />
-        </header>
-        {/*
-          A Imagem de Fundo (20/10/2026): o slide inteiro, por cima do cabeçalho (vem depois dele) e atrás dos blocos (a grade
-          vem depois dela).
-        */}
-        {slide?.fundo ? <CamadaDoFundo key={slide.chave} relatorioId={relatorioId} fundo={slide.fundo} className="absolute inset-0" /> : null}
-        {slide ? (
-          <div className="relative">
-            <GradeDoRelatorio key={slide.chave} relatorioId={relatorioId} blocos={slide.blocos} sumario={sumario} dados={dados} editavel={false} cores={cores} tipo={tipo} linhas={linhasDaPagina()} ampliavel onMudar={() => undefined} />
-          </div>
-        ) : null}
-        {/*
-          O rodapé (22/10/2026), com o separador igual ao do cabeçalho: à esquerda, a legenda dos cards, como a da tela Painel
-          de Bordo (só nos slides com cards do Painel ou dos Indicadores); à direita, o contador dos slides, com o número do
-          slide em preto e negrito (antes, no centro do cabeçalho); na Capa e no Encerramento, sem ele.
-        */}
-        <footer className="relative mt-auto flex min-h-6 flex-1 items-center justify-between gap-4 border-t border-gray-200">
-          <div>{slide?.blocos.some((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") ? <LegendaDoPainel tipo={tipo} cores={cores} comparado={dados?.painel.cenarioOrcado} /> : null}</div>
-          {slide?.numero ? (
-            <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">
-              <span className="font-bold text-gray-900">{slide.numero}</span>/{slide.total}
-            </span>
-          ) : null}
-        </footer>
-      </div>
+      <SlideDoRelatorio relatorioId={relatorioId} periodo={periodo} slide={slide} sumario={sumario} dados={dados} cores={cores} tipo={tipo} />
       <nav
         aria-label="Slides"
         onMouseEnter={() => (sobreOsBotoes.current = true)}
@@ -181,5 +137,92 @@ export function ApresentacaoDoRelatorio({
         </button>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Um slide (22/10/2026: separado da apresentação, para a exportação em PDF sair igual): o topo, a Imagem de Fundo, a grade
+ * dos blocos e o rodapé, na tela inteira. `paraImagem`: sem o destaque e a ampliação dos blocos, e os vídeos como quadros.
+ */
+export function SlideDoRelatorio({
+  relatorioId,
+  periodo,
+  slide,
+  sumario,
+  dados,
+  cores,
+  tipo,
+  paraImagem = false,
+}: {
+  relatorioId: string;
+  periodo: string;
+  slide: Slide | undefined;
+  sumario: TelaDoSumario[];
+  dados: DadosDoRelatorio | undefined;
+  cores: Cores;
+  tipo: TipoGrafico;
+  paraImagem?: boolean;
+}) {
+  return (
+    <>
+    {/*
+      O topo e as margens do slide: os de linhasDaPagina, para a página caber inteira na tela. Embaixo da página, o rodapé
+      (22/10/2026), no espaço que sobra até o pé da tela.
+    */}
+    <div className="flex h-full flex-col px-8 pt-6">
+      {/*
+        À esquerda, o grupo (o título da aba: Introdução…) em cinza, a seta dos caminhos do topo das telas, em cinza, e o
+        nome do slide (o da página) em preto; à direita, "Relatório Executivo" em cinza, a seta e o período em preto
+        (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
+        fica centrada na altura da barra, sem mudar a altura dela.
+      */}
+      {/* O contador (20/10/2026), no centro: o número do slide e o total, contados da Introdução em diante; na Capa e no Encerramento, sem ele. */}
+      <header className="relative mb-4 flex h-10 items-center gap-1.5 border-b border-gray-200 pb-3">
+        <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{slide?.nome}</span>
+        <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
+        <h1 className="min-w-0 truncate text-lg font-bold text-gray-900">{slide?.pagina}</h1>
+        <span className="ml-auto shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">Relatório Executivo</span>
+        <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
+        <span className="shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{periodo}</span>
+        <BpmLogo className="h-[30px] w-auto shrink-0" />
+      </header>
+      {/*
+        A Imagem de Fundo (20/10/2026): o slide inteiro, por cima do cabeçalho (vem depois dele) e atrás dos blocos (a grade
+        vem depois dela).
+      */}
+      {slide?.fundo ? <CamadaDoFundo key={slide.chave} relatorioId={relatorioId} fundo={slide.fundo} className="absolute inset-0" /> : null}
+      {slide ? (
+        <div className="relative">
+          <GradeDoRelatorio
+              key={slide.chave}
+              relatorioId={relatorioId}
+              blocos={slide.blocos}
+              sumario={sumario}
+              dados={dados}
+              editavel={false}
+              cores={cores}
+              tipo={tipo}
+              linhas={linhasDaPagina()}
+              ampliavel={!paraImagem}
+              paraImagem={paraImagem}
+              onMudar={() => undefined}
+            />
+        </div>
+      ) : null}
+      {/*
+        O rodapé (22/10/2026), com o separador igual ao do cabeçalho: à esquerda, a legenda dos cards, como a da tela Painel
+        de Bordo (só nos slides com cards do Painel ou dos Indicadores); à direita, o contador dos slides, com o número do
+        slide em preto e negrito (antes, no centro do cabeçalho); na Capa e no Encerramento, sem ele.
+      */}
+      <footer className="relative mt-auto flex min-h-6 flex-1 items-center justify-between gap-4 border-t border-gray-200">
+        <div>{slide?.blocos.some((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") ? <LegendaDoPainel tipo={tipo} cores={cores} comparado={dados?.painel.cenarioOrcado} /> : null}</div>
+        {slide?.numero ? (
+          <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">
+            <span className="font-bold text-gray-900">{slide.numero}</span>/{slide.total}
+          </span>
+        ) : null}
+      </footer>
+    </div>
+    </>
   );
 }

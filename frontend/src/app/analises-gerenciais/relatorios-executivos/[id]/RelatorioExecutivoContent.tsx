@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Trash2, Type, Video } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -24,6 +24,8 @@ import { EtiquetaSituacao } from "../components/EtiquetaSituacao";
 import { AjustarFundoDialog } from "../components/FundoDoSlide";
 import { prepararFoto } from "../components/enviarImagem";
 import { ConfigurarSumarioDialog } from "../components/SumarioDoRelatorio";
+import { ConfigurarTabelaDialog } from "../components/TabelaDoRelatorio";
+import { ExportarPdfDoRelatorio } from "../components/ExportarPdfDoRelatorio";
 import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
 import { COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
@@ -88,6 +90,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   // A Imagem de Fundo em ajuste (20/10/2026) e o Adicionar Sumário aberto.
   const [ajustandoFundo, setAjustandoFundo] = useState<Fundo | null>(null);
   const [adicionandoSumario, setAdicionandoSumario] = useState(false);
+  // O Adicionar Tabela (22/10/2026).
+  const [adicionandoTabela, setAdicionandoTabela] = useState(false);
   const [confirmar, setConfirmar] = useState<"finalizar" | "excluir" | "excluirPagina" | null>(null);
   // A página com o nome em edição (16/10/2026), na própria aba dela.
   const [renomeando, setRenomeando] = useState<string | null>(null);
@@ -311,6 +315,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                     <ListOrdered className="size-4" />
                     Sumário
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setAdicionandoTabela(true)}>
+                    <Table2 className="size-4" />
+                    Tabela
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => seletorDeFoto.current?.click()}>
                     <ImagePlus className="size-4" />
                     Imagem com Legenda
@@ -348,6 +356,17 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                 Reabrir Aba
               </Button>
             ) : null}
+            <ExportarPdfDoRelatorio
+              relatorioId={relatorio.id}
+              periodo={relatorio.rotuloMes}
+              slides={slides}
+              grupo={{ chave, nome: aba?.nome ?? "" }}
+              pagina={{ chave: `${chave}|${pagina?.id}`, nome: pagina ? nomeDaPagina(pagina, nPagina) : "" }}
+              sumario={sumario}
+              dados={dados.data}
+              cores={cores}
+              tipo={tipo}
+            />
             <Button type="button" className={botaoPrimario} disabled={!slides.length} title={slides.length ? "Apresentar as páginas em tela inteira" : "Nenhuma página com blocos para apresentar"} onClick={apresentar}>
               <Presentation className="size-4" />
               Apresentar
@@ -406,7 +425,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
-              Na sua aba, “Adicionar” traz oito opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
+              Na sua aba, “Adicionar” traz nove opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
               dos Indicadores (o card de destaque, com o valor do mês e o acumulado, cada um com o orçado num quadro cinza e a faixa de melhor ou pior, como no Painel), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
               Painel e os dos Indicadores com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
@@ -431,6 +450,13 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               do texto. A engrenagem do bloco muda as opções. Na barra do bloco, a formatação do texto (sem os marcadores): negrito, itálico, sublinhado, o
               tamanho, a cor e a fonte, que valem para todas as telas ou para todos os slides — em Telas e Slides, o botão Telas | Slides escolhe qual nível
               ela muda (de início, as telas em negrito, com 16, e os slides com 14).
+            </li>
+            <li>
+              Tabela abre o modal Adicionar Tabela: a tabela de Resultados de uma aba (Consolidado, Matriz, Filial, Serviços, Despesas e Extra ou RN), até o mês do relatório, como na
+              tela Resultados, com o orçado e a variação. Escolha o Modo (Totais, Atribuições ou Contas, como os níveis da tela), os Meses Anteriores (Recolhidos: só o mês do relatório e os totais;
+              Expandidos: de janeiro ao mês do relatório) e os Totais e Contas que entram (de início, todos; marcar um total marca as linhas dele). A tabela inteira cabe no bloco: ela
+              se reduz na proporção (aumente o bloco para lê-la maior; menos linhas, como em Totais, ficam maiores). A engrenagem do bloco muda as opções. Na apresentação, como os
+              cards, ela se destaca sob o mouse e se amplia ao clicar.
             </li>
             <li>
               Imagem com Legenda (antes, Foto) envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
@@ -475,6 +501,11 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               e recuar, o volume e a tela cheia; um clique fora do vídeo ou o Esc fecha, e o vídeo da página fica no ponto em que parou). No Instagram, no
               Facebook e no LinkedIn, que não aceitam os botões da página, o vídeo toca ampliado, nos controles da plataforma. Na apresentação, os textos
               não se selecionam.
+            </li>
+            <li>
+              “Exportar” baixa os slides em PDF, como na apresentação (um slide por página, na proporção da tela): Toda a Apresentação, o Grupo Atual (a aba do
+              relatório aberta: Capa, Introdução, Administrativo…) ou a Aba Atual (a página aberta), com o número de slides de cada um. Vale o que está na tela, gravado
+              ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
             </li>
             <li>
               “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar Aba” grava a aba e a torna pública, só para
@@ -674,6 +705,17 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           onAplicar={(o) => {
             incluir([{ tipo: "SUMARIO", ...o }]);
             setAdicionandoSumario(false);
+          }}
+        />
+      ) : null}
+      {adicionandoTabela ? (
+        <ConfigurarTabelaDialog
+          relatorioId={relatorio.id}
+          titulo="Adicionar Tabela"
+          onFechar={() => setAdicionandoTabela(false)}
+          onAplicar={(o) => {
+            incluir([{ tipo: "TABELA", ...o }]);
+            setAdicionandoTabela(false);
           }}
         />
       ) : null}

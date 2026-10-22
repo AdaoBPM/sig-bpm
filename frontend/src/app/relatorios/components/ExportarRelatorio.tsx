@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileImage, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { api } from "@/lib/api";
 
 import { mensagemDoErro, nomeDoArquivo } from "../../competencias/[anoMes]/dre/components/ExportarDRE";
+import { baixarArquivo, imagemDaTabela } from "./CopiarComoImagem";
 
 type Formato = "xlsx" | "pdf";
 /**
@@ -28,6 +29,7 @@ export function ExportarRelatorio({
   opcoes,
   padrao,
   rotulo = "Exportar",
+  imagem,
 }: {
   caminho?: string;
   endereco?: string;
@@ -35,6 +37,11 @@ export function ExportarRelatorio({
   padrao: string;
   /** O texto do botão (15/10/2026: "Exportar Premissas", nas premissas dos analíticos). */
   rotulo?: string;
+  /**
+   * A tabela atual como imagem (22/10/2026: Resultados e os Resultados dos cenários): a tabela da tela, do jeito que está
+   * (recolhida ou expandida), num PNG com `nome`.
+   */
+  imagem?: { nome: string };
 }) {
   const [gerando, setGerando] = useState(false);
 
@@ -52,6 +59,22 @@ export function ExportarRelatorio({
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (error) {
       toast.error(await mensagemDoErro(error));
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  async function baixarImagem(nome: string) {
+    const tabela = [...document.querySelectorAll<HTMLElement>("[data-tabela-larga]")].find((t) => t.offsetParent !== null);
+    if (!tabela) {
+      toast.error("Nenhuma tabela na tela.");
+      return;
+    }
+    setGerando(true);
+    try {
+      baixarArquivo(await imagemDaTabela(tabela), `${nome}.png`);
+    } catch {
+      toast.error("Não foi possível gerar a imagem.");
     } finally {
       setGerando(false);
     }
@@ -82,6 +105,18 @@ export function ExportarRelatorio({
             ))}
           </DropdownMenuGroup>
         ))}
+        {imagem ? (
+          <DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex items-center gap-1.5 text-xs font-bold text-gray-700">
+              <FileImage className="size-3.5" />
+              Imagem
+            </DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => void baixarImagem(imagem.nome)} className="pl-6">
+              Tabela Atual (como está na tela)
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -17,6 +17,27 @@ import { BarraDeRolagem } from "@/components/shared/BarraDeRolagem";
  * pela ferramenta): à vista enquanto a tabela está na tela, e não só no fim dela. A do corpo fica escondida (a
  * rolagem pelo touchpad e por Shift + roda continua).
  */
+/**
+ * A mesma tabela sem a rolagem (22/10/2026: as tabelas dos Relatórios Executivos): os rótulos e o corpo numa tabela só, na
+ * largura das colunas, sem os rótulos presos no topo nem a barra de rolagem.
+ */
+export function TabelaEstatica({ larguras, cabecalho, corpo }: { larguras: number[]; cabecalho: ReactNode; corpo: ReactNode }) {
+  const total = larguras.reduce((s, w) => s + w, 0);
+  return (
+    <div className="rounded-sm border border-gray-200 bg-white" style={{ width: total + 2 }}>
+      <table className="tabela-sig table-fixed border-collapse text-sm [--topo-tabela:0px]" style={{ width: total }}>
+        <colgroup>
+          {larguras.map((w, i) => (
+            <col key={i} style={{ width: w }} />
+          ))}
+        </colgroup>
+        <thead>{cabecalho}</thead>
+        <tbody>{corpo}</tbody>
+      </table>
+    </div>
+  );
+}
+
 export function TabelaLarga({ larguras, cabecalho, corpo }: { larguras: number[]; cabecalho: ReactNode; corpo: ReactNode }) {
   const topo = useRef<HTMLDivElement>(null);
   const area = useRef<HTMLDivElement>(null);
@@ -34,16 +55,18 @@ export function TabelaLarga({ larguras, cabecalho, corpo }: { larguras: number[]
   );
   const tabela = "tabela-sig table-fixed border-collapse text-sm";
   return (
-    <div className="rounded-sm border border-gray-200 bg-white">
+    // data-tabela-larga, data-topo-da-tabela e data-corpo-da-tabela: a imagem da tabela (22/10/2026) solta os rótulos e o
+    // corpo, para a tabela sair inteira.
+    <div data-tabela-larga className="rounded-sm border border-gray-200 bg-white">
       {/* Acima da coluna presa do corpo (z-10), que passa por baixo dos rótulos ao rolar. */}
-      <div ref={topo} className="sticky top-[var(--topo-tabela,0px)] z-30 overflow-hidden">
+      <div ref={topo} data-topo-da-tabela className="sticky top-[var(--topo-tabela,0px)] z-30 overflow-hidden">
         {/* Dentro da faixa presa, os rótulos ficam no alto dela (--topo-tabela zerado). */}
         <table className={`${tabela} [--topo-tabela:0px]`} style={{ width: total, minWidth: "100%" }}>
           {colunas}
           <thead>{cabecalho}</thead>
         </table>
       </div>
-      <div ref={area} className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" onScroll={(e) => acompanhar(e.currentTarget.scrollLeft)}>
+      <div ref={area} data-corpo-da-tabela className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" onScroll={(e) => acompanhar(e.currentTarget.scrollLeft)}>
         <table className={tabela} style={{ width: total, minWidth: "100%" }}>
           {colunas}
           <tbody>{corpo}</tbody>

@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-import type { Indicadores, Painel } from "@/app/relatorios/services/relatoriosService";
+import type { Indicadores, Painel, Resultados } from "@/app/relatorios/services/relatoriosService";
 
 /**
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): um relatório por competência fechada, com sete abas (17/10/2026:
@@ -92,7 +92,23 @@ export type Bloco = Posicao &
         /** A formatação das telas e dos slides (20/10/2026); sem ela, a de início (as telas em negrito, maiores). */
         estilos?: { telas?: EstiloDoSumario; slides?: EstiloDoSumario };
       }
+    /**
+     * A tabela de Resultados (22/10/2026), como a da tela Resultados: a visão (0 Consolidado, 1 a 5 as unidades), o nível
+     * (1 Totais, 2 Atribuições, 3 Contas), as linhas escolhidas (os códigos; sem elas, todas) e os meses anteriores ao do
+     * relatório recolhidos (só o mês e os totais) ou não.
+     */
+    | { tipo: "TABELA"; visao: VisaoDaTabela; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean }
   );
+export type VisaoDaTabela = 0 | 1 | 2 | 3 | 4 | 5;
+/** As visões da tabela (as abas de Resultados das unidades), com o nome. */
+export const VISOES_DA_TABELA: Array<{ visao: VisaoDaTabela; nome: string }> = [
+  { visao: 0, nome: "Consolidado" },
+  { visao: 1, nome: "Matriz" },
+  { visao: 2, nome: "Filial" },
+  { visao: 3, nome: "Serviços" },
+  { visao: 4, nome: "Despesas e Extra" },
+  { visao: 5, nome: "RN" },
+];
 export type ListarDoSumario = "TELAS" | "TELAS_E_SLIDES";
 export type LinhaDoSumario = "PONTOS" | "TRACOS" | "LINHA" | "NENHUM";
 /** A formatação de um nível do Sumário (20/10/2026): o tamanho em px, a cor (#rrggbb) e a fonte (a chave de FONTES). */
@@ -169,6 +185,8 @@ export const relatoriosExecutivosService = {
     (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe, manterImagensEAnotacoes })).data.data,
   obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
   dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
+  /** A tabela de Resultados de uma visão (22/10/2026), até o mês do relatório, para os blocos de tabela. */
+  resultados: async (id: string, visao: VisaoDaTabela) => (await api.get<{ data: Resultados }>(`${base}/${id}/resultados`, { params: { visao } })).data.data,
   gravarAba: async (id: string, aba: string, paginas: Pagina[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas })).data.data,
   finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
   reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,

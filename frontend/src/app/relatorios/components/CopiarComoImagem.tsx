@@ -6,7 +6,7 @@ import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 /** O fundo de verdade atrás do elemento (o do primeiro ancestral com cor), para a imagem ter o fundo da tela no tema escolhido. */
-function fundoAtras(no: HTMLElement) {
+export function fundoAtras(no: HTMLElement) {
   for (let e: HTMLElement | null = no; e; e = e.parentElement) {
     const cor = getComputedStyle(e).backgroundColor;
     if (cor && cor !== "transparent" && !/^rgba\(.*,\s*0\)$/.test(cor)) return cor;
@@ -16,12 +16,64 @@ function fundoAtras(no: HTMLElement) {
 
 /** As fontes da página para a imagem, lidas uma vez (as próximas cópias saem mais rápido); com erro, lê de novo na próxima. */
 let fontes: Promise<string> | null = null;
-function fontesDaPagina(no: HTMLElement) {
+export function fontesDaPagina(no: HTMLElement) {
   fontes ??= getFontEmbedCSS(no).catch(() => {
     fontes = null;
     return "";
   });
   return fontes;
+}
+
+/** Baixa o arquivo com o nome (sem os caracteres que o Windows não aceita). */
+export function baixarArquivo(blob: Blob, nome: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome.replace(/[\\/:*?"<>|]/g, "-");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * A imagem de uma tabela larga (22/10/2026: o Exportar de Resultados e dos cenários), do jeito que está na tela — os níveis e
+ * os grupos abertos ou fechados, os meses recolhidos ou não —, mas inteira: todas as linhas e colunas, sem a rolagem, sem
+ * os rótulos presos e sem os botões. Sai de uma cópia da tabela fora da tela (como o Copiar sem os Gráficos), em PNG,
+ * com o fundo da tela e uma margem.
+ */
+export async function imagemDaTabela(raiz: HTMLElement): Promise<Blob> {
+  const largura = Math.max(...[...raiz.querySelectorAll("table")].map((t) => t.scrollWidth), raiz.offsetWidth - 2) + 2;
+  const caixa = document.createElement("div");
+  caixa.setAttribute("aria-hidden", "true");
+  caixa.style.cssText = "position: fixed; left: -100000px; top: 0; pointer-events: none;";
+  const no = raiz.cloneNode(true) as HTMLElement;
+  no.style.width = `${largura}px`;
+  no.querySelectorAll<HTMLElement>("[data-topo-da-tabela], [data-corpo-da-tabela]").forEach((e) => {
+    e.style.position = "static";
+    e.style.overflow = "visible";
+  });
+  caixa.appendChild(no);
+  (raiz.parentElement ?? document.body).appendChild(caixa);
+  try {
+    const margem = 16;
+    const opcoes: Parameters<typeof toBlob>[1] = {
+      width: no.offsetWidth + 2 * margem,
+      height: no.offsetHeight + 2 * margem,
+      backgroundColor: fundoAtras(raiz),
+      style: { margin: "0", padding: `${margem}px`, width: `${no.offsetWidth + 2 * margem}px`, height: `${no.offsetHeight + 2 * margem}px` },
+      // Os ícones (SVG) também: as lupas das consultas.
+      filter: (n) => (n as Partial<HTMLOrSVGElement>).dataset?.foraDaImagem === undefined,
+      fontEmbedCSS: await fontesDaPagina(no),
+    };
+    // Duas vezes, como no Copiar como Imagem: vale a segunda.
+    await toBlob(no, opcoes);
+    const b = await toBlob(no, opcoes);
+    if (!b) throw new Error("Imagem vazia.");
+    return b;
+  } finally {
+    caixa.remove();
+  }
 }
 
 /**

@@ -36,6 +36,8 @@ export function BarraDeRolagem({ area }: { area: RefObject<HTMLDivElement | null
     <div
       ref={barra}
       aria-hidden
+      // Fora da imagem da tabela (22/10/2026).
+      data-fora-da-imagem
       // Altura mínima: a barra sobreposta do Windows 11 (a que aparece por cima do conteúdo, como na caixa de
       // Indicadores) precisa de espaço na faixa; a barra clássica soma a própria altura.
       className="sticky bottom-0 z-30 min-h-3.5 overflow-x-auto overflow-y-hidden bg-white"

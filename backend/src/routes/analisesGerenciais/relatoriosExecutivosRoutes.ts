@@ -17,6 +17,8 @@ relatoriosExecutivosRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
 relatoriosExecutivosRoutes.post("/", autenticacao, editar, asyncHandler(c.criar));
 relatoriosExecutivosRoutes.get("/:id", autenticacao, ler, asyncHandler(c.obter));
 relatoriosExecutivosRoutes.get("/:id/dados", autenticacao, ler, asyncHandler(c.dados));
+// A tabela de Resultados de uma visão (22/10/2026), para os blocos de tabela.
+relatoriosExecutivosRoutes.get("/:id/resultados", autenticacao, ler, asyncHandler(c.resultados));
 relatoriosExecutivosRoutes.delete("/:id", autenticacao, editar, asyncHandler(c.excluir));
 // As fotos (16/10/2026): o arquivo cru no corpo (até 10 MB).
 relatoriosExecutivosRoutes.post("/:id/fotos", autenticacao, editar, express.raw({ type: () => true, limit: "10mb" }), asyncHandler(c.salvarFoto));
