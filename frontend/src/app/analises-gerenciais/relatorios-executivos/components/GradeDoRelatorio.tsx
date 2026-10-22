@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { CardDoPainel, type Cores } from "@/app/relatorios/painel/PainelContent";
 import { SeletorRotulos, SeletorTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
-import { valor } from "@/app/relatorios/indicadores/TabelaIndicadores";
+import { valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
+import { MiniGrafico } from "@/app/relatorios/components/MiniGrafico";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
@@ -30,10 +31,36 @@ export const COLUNAS = 12;
 const ALTURA_DA_LINHA = 24;
 const MARGEM = 12;
 
+/**
+ * O gráfico dos cards (22/10/2026): os meses e o acumulado, só o acumulado ou nenhum. O ícone do gráfico passa de um ao
+ * outro, nessa ordem, e o card muda de largura na proporção: os valores são 2 partes, o gráfico dos meses e do acumulado
+ * mais 3, e o só do acumulado mais 1.
+ */
+export type ModoDoGrafico = "MESES" | "ACUMULADO" | "NENHUM";
+export function modoDoGrafico(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; soAcumulado?: boolean; grafico?: "MESES" | "ACUMULADO" }): ModoDoGrafico {
+  if (b.tipo === "PAINEL") return !b.comGrafico ? "NENHUM" : b.soAcumulado ? "ACUMULADO" : "MESES";
+  if (b.tipo === "INDICADOR") return b.grafico ?? "NENHUM";
+  return "NENHUM";
+}
+const PARTES: Record<ModoDoGrafico, number> = { MESES: 5, ACUMULADO: 3, NENHUM: 2 };
+const PROXIMO: Record<ModoDoGrafico, ModoDoGrafico> = { MESES: "ACUMULADO", ACUMULADO: "NENHUM", NENHUM: "MESES" };
+/** A largura mínima dos cards em cada modo do gráfico. */
+const MINIMO: Record<"PAINEL" | "INDICADOR", Record<ModoDoGrafico, number>> = {
+  PAINEL: { MESES: 10, ACUMULADO: 6, NENHUM: 5 },
+  INDICADOR: { MESES: 8, ACUMULADO: 5, NENHUM: 3 },
+};
+/** O próximo modo do gráfico do card e a largura dele nesse modo (na proporção das partes, entre o mínimo e a grade). */
+function proximoGrafico(b: Extract<Bloco, { tipo: "PAINEL" | "INDICADOR" }>): Partial<Bloco> {
+  const atual = modoDoGrafico(b);
+  const novo = PROXIMO[atual];
+  const w = Math.min(COLUNAS, Math.max(MINIMO[b.tipo][novo], Math.round((b.w * PARTES[novo]) / PARTES[atual])));
+  return (b.tipo === "PAINEL" ? { comGrafico: novo !== "NENHUM", soAcumulado: novo === "ACUMULADO", w } : { grafico: novo === "NENHUM" ? undefined : novo, w }) as Partial<Bloco>;
+}
+
 /** O tamanho inicial de cada tipo de bloco (colunas × linhas); o card do Painel sem o gráfico, 2/5 dele com o gráfico. */
-export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean }) {
+export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; grafico?: "MESES" | "ACUMULADO" }) {
   if (b.tipo === "PAINEL") return b.comGrafico ? { w: 12, h: 9 } : { w: 5, h: 9 };
-  if (b.tipo === "INDICADOR") return { w: 4, h: 5 };
+  if (b.tipo === "INDICADOR") return b.grafico ? { w: 10, h: 6 } : { w: 4, h: 5 };
   if (b.tipo === "FOTO") return { w: 4, h: 6 };
   if (b.tipo === "VIDEO") return { w: 6, h: 8 };
   if (b.tipo === "TEXTO") return { w: 6, h: 3 };
@@ -43,8 +70,8 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean }
 
 /** O tamanho mínimo de cada tipo de bloco (16/10/2026), para as informações não se amontoarem. */
 function tamanhoMinimo(b: Bloco) {
-  if (b.tipo === "PAINEL") return b.comGrafico ? { minW: 10, minH: 6 } : { minW: 5, minH: 6 };
-  if (b.tipo === "INDICADOR") return { minW: 3, minH: 4 };
+  if (b.tipo === "PAINEL") return { minW: MINIMO.PAINEL[modoDoGrafico(b)], minH: 6 };
+  if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: 4 };
   if (b.tipo === "FOTO") return { minW: 2, minH: 2 };
   if (b.tipo === "VIDEO") return { minW: 3, minH: 3 };
   // O Texto Livre baixa até uma linha; o Sumário, até duas (20/10/2026).
@@ -117,6 +144,20 @@ export function linhasDaFoto(w: number, proporcao: number, largura: number, semL
  */
 const naProporcao = (b: Bloco | undefined): b is Extract<Bloco, { tipo: "FOTO" | "VIDEO" }> =>
   b?.tipo === "FOTO" || (b?.tipo === "VIDEO" && (b.origem === "ARQUIVO" || !!videoDoLink(b.url)?.comandos));
+
+/** O ícone do gráfico do card (22/10/2026): o modo de agora e, na dica, o próximo. */
+function BotaoDoGrafico({ modo, botao, onClicar }: { modo: ModoDoGrafico; botao: string; onClicar: () => void }) {
+  const AGORA: Record<ModoDoGrafico, string> = { MESES: "Gráfico dos meses e do acumulado", ACUMULADO: "Gráfico só do acumulado", NENHUM: "Sem gráfico" };
+  const PROXIMA: Record<ModoDoGrafico, string> = { MESES: "clique para mostrar só o acumulado", ACUMULADO: "clique para tirar o gráfico", NENHUM: "clique para mostrar os meses e o acumulado" };
+  const dica = `${AGORA[modo]}: ${PROXIMA[modo]}`;
+  return (
+    <button type="button" className={`relative ${botao} ${modo === "NENHUM" ? "" : "text-gray-900"}`} title={dica} aria-label={dica} onClick={onClicar}>
+      <ChartColumn className="size-4" />
+      {modo === "NENHUM" ? <span className="absolute h-px w-4 rotate-45 bg-current" /> : null}
+      {modo === "ACUMULADO" ? <span className="absolute right-0 bottom-0 text-[8px] leading-none font-bold">A</span> : null}
+    </button>
+  );
+}
 
 /**
  * As notas das anotações (15/10/2026): o ícone e as cores, no padrão do Painel de Bordo — positivo em verde (azul com a
@@ -555,11 +596,9 @@ function BarraDoBloco({
       <span className={`alca-do-bloco cursor-move ${botao}`} title="Mover (arraste)" aria-label="Mover">
         <GripVertical className="size-4" />
       </span>
-      {b.tipo === "PAINEL" ? (
-        <button type="button" className={`${botao} ${b.comGrafico ? "text-gray-900" : ""}`} title={b.comGrafico ? "Tirar o gráfico" : "Mostrar o gráfico"} aria-label={b.comGrafico ? "Tirar o gráfico" : "Mostrar o gráfico"} onClick={() => onMudar({ comGrafico: !b.comGrafico, w: b.comGrafico ? Math.max(5, Math.round(b.w * LARGURA_SEM_GRAFICO)) : Math.min(COLUNAS, Math.max(10, Math.round(b.w / LARGURA_SEM_GRAFICO))) } as Partial<Bloco>)}>
-          <ChartColumn className="size-4" />
-          {b.comGrafico ? null : <span className="absolute h-px w-4 rotate-45 bg-current" />}
-        </button>
+      {/* O gráfico do card (22/10/2026), em ciclo: os meses e o acumulado → só o acumulado → sem gráfico → os meses e o acumulado. */}
+      {b.tipo === "PAINEL" || b.tipo === "INDICADOR" ? (
+        <BotaoDoGrafico modo={modoDoGrafico(b)} botao={botao} onClicar={() => onMudar(proximoGrafico(b))} />
       ) : null}
       {/* As opções do gráfico (16/10/2026), nos cards com o gráfico. */}
       {b.tipo === "PAINEL" && b.comGrafico ? (
@@ -831,36 +870,57 @@ function ConteudoDoBloco({
   if (b.tipo === "PAINEL") {
     const item = dados.painel.abas.find((a) => a.chave === b.aba)?.quadros.find((q) => q.titulo === b.quadro)?.itens.find((i) => i.titulo === b.titulo && i.sigla === b.sigla);
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
-    const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} comRotulos={b.comRotulos ?? false} />;
+    const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} soAcumulado={!!b.soAcumulado} comRotulos={b.comRotulos ?? false} />;
     // Sem o nome do grupo em cima do card (22/10/2026; antes, "PRODUÇÃO: MATRIZ"…): o card ocupa o bloco inteiro.
     return <div className="h-full">{card}</div>;
   }
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
   if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
   const ate = dados.indicadores.ate;
+  // Os valores 50% maiores (22/10/2026; antes, 24 px o do mês e 16 px os demais).
   const campo = (rotulo: string, v: number | null, destaque = false) => (
     <div className="flex items-baseline gap-1.5">
-      <span className={destaque ? "text-2xl font-extrabold text-gray-900" : "text-base font-bold text-gray-800"}>{valor(i, v)}</span>
+      <span className={destaque ? "text-[36px] leading-tight font-extrabold text-gray-900" : "text-2xl font-bold text-gray-800"}>{valor(i, v)}</span>
       <span className="text-xs text-gray-600">{rotulo}</span>
     </div>
   );
-  // O card de destaque, como os totais das Listas: o destaque amarelo-ouro à esquerda, o valor do mês em evidência.
+  // O gráfico (22/10/2026): os meses do exercício até o do relatório e o acumulado (ou só o acumulado), realizado × orçado,
+  // como nos cards do Painel, à direita dos valores.
+  const modo = modoDoGrafico(b);
+  const daSerie = dados.indicadores.meses.slice(0, ate).map((m, k) => ({ mes: m.rotulo.split("/")[0], realizado: i.meses[k] ?? null, orcado: i.orcado[k] ?? null }));
+  const doAcumulado = [{ mes: i.acumulado === "ACUM" ? "ACUM." : "ATUAL", realizado: i.total, orcado: i.totalOrcado }];
+  const grafico = (d: typeof daSerie) => <MiniGrafico dados={d} formatar={(v) => valor(i, v)} formatarCurto={(v) => valorCurto(i, v)} tipo={tipo} comEscala />;
+  // O card de destaque, como os totais das Listas: o destaque amarelo-ouro à esquerda, o valor do mês em evidência. Sem a
+  // numeração do indicador (22/10/2026): só o nome.
   return (
-    <article className="flex h-full flex-col justify-between gap-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3">
-      <header>
-        <h3 className="text-sm leading-snug font-bold text-gray-900" title={i.metodologia}>
-          {i.numero ? <span className="mr-1 font-normal text-gray-400">{i.numero}</span> : null}
-          {i.nome}
-        </h3>
-        <p className="text-xs text-gray-500">
-          {i.grupo} · {i.unidade} {i.sentido}
-        </p>
-      </header>
-      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
-        {campo(dados.painel.rotuloMes, i.meses[ate - 1] ?? null, true)}
-        {campo(i.acumulado === "ACUM" ? "Acumulado" : "Atual", i.total)}
-        {campo("Orçado", i.orcado[ate - 1] ?? null)}
+    <article
+      className={`grid h-full gap-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 ${modo === "MESES" ? "grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : modo === "ACUMULADO" ? "grid-cols-[minmax(0,2fr)_minmax(0,1fr)]" : ""}`}
+    >
+      <div className="flex min-w-0 flex-col justify-between gap-2">
+        <header>
+          <h3 className="text-sm leading-snug font-bold text-gray-900" title={i.metodologia}>
+            {i.nome}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {i.grupo} · {i.unidade} {i.sentido}
+          </p>
+        </header>
+        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+          {campo(dados.painel.rotuloMes, i.meses[ate - 1] ?? null, true)}
+          {campo(i.acumulado === "ACUM" ? "Acumulado" : "Atual", i.total)}
+          {campo("Orçado", i.orcado[ate - 1] ?? null)}
+        </div>
       </div>
+      {modo === "NENHUM" ? null : (
+        <div data-grafico-do-card className="relative min-h-24 min-w-0 border-l border-gray-100">
+          <div className="absolute inset-0 flex gap-3 pl-3">
+            {modo === "MESES" ? <div className="min-w-0 flex-1">{grafico(daSerie)}</div> : null}
+            <div className={`${modo === "MESES" ? "w-28 border-l border-gray-100 pl-3" : "w-full"} shrink-0`} title="Acumulado do exercício: realizado × orçado">
+              {grafico(doAcumulado)}
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }

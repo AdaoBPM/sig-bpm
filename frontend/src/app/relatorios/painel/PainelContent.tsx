@@ -258,7 +258,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
       */}
       <div data-grafico-do-card className="relative min-h-32 min-w-0 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-gray-100">
         <div className="absolute inset-0 flex gap-3 lg:left-5">
-          <div className="min-w-0 flex-1">
+          <div data-grafico-dos-meses className="min-w-0 flex-1">
             <MiniGrafico
               dados={i.serie}
               formatar={(v) => formatar(v, i.formato)}
@@ -270,7 +270,7 @@ function CardIndicador({ i, rotuloMes, tipo, comRotulos }: { i: ItemPainel; rotu
             />
           </div>
           {/* O acumulado também com os rótulos ou com a escala; com a escala, um pouco mais largo. */}
-          <div className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title={`Acumulado do exercício (${acumulado}): realizado × orçado`}>
+          <div data-grafico-acumulado className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title={`Acumulado do exercício (${acumulado}): realizado × orçado`}>
             <MiniGrafico
               dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
               formatar={(v) => formatar(v, i.formatoAcumulado)}
@@ -297,6 +297,7 @@ export function CardDoPainel({
   tipo,
   cores,
   comGrafico,
+  soAcumulado = false,
   comRotulos = false,
 }: {
   i: ItemPainel;
@@ -304,11 +305,18 @@ export function CardDoPainel({
   tipo: TipoGrafico;
   cores: Cores;
   comGrafico: boolean;
+  /** Só o gráfico do acumulado (22/10/2026), na terceira coluna, da largura dos valores. */
+  soAcumulado?: boolean;
   comRotulos?: boolean;
 }) {
+  const doGrafico = !comGrafico
+    ? "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"
+    : soAcumulado
+      ? "[&_[data-grafico-dos-meses]]:hidden lg:[&_[data-card-indicador]]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] [&_[data-grafico-acumulado]]:w-full [&_[data-grafico-acumulado]]:border-l-0 [&_[data-grafico-acumulado]]:pl-0"
+      : "";
   return (
     <CoresDoPainel.Provider value={cores}>
-      <div className={`h-full [&>article]:h-full ${comGrafico ? "" : "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"}`}>
+      <div className={`h-full [&>article]:h-full ${doGrafico}`}>
         <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
       </div>
     </CoresDoPainel.Provider>

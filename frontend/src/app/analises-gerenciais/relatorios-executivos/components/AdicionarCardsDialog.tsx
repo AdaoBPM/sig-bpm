@@ -47,7 +47,7 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
     titulo: g,
     itens: dados.indicadores.indicadores
       .filter((i) => i.grupo === g && (!b || normal(`${i.grupo} ${i.nome}`).includes(b)))
-      .map((i) => ({ chave: `I|${i.nome}`, rotulo: i.nome, detalhe: [i.numero, i.unidade].filter(Boolean).join(" · ") })),
+      .map((i) => ({ chave: `I|${i.nome}`, rotulo: i.nome, detalhe: i.unidade })),
   }));
   const lista = (origem === "painel" ? painel : indicadores).filter((g) => g.itens.length);
   const adicionar = () => {
@@ -56,7 +56,7 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
       // Os cards do Painel entram com os rótulos e em barras (20/10/2026); o Configurar Gráfico do card os muda.
       return t === "P"
         ? { tipo: "PAINEL", aba: p[0] as "resultados" | "performance", quadro: p[1], titulo: p[2], sigla: p[3], comGrafico, comRotulos: true, tipoGrafico: "barras" }
-        : { tipo: "INDICADOR", nome: p.join("|") };
+        : { tipo: "INDICADOR", nome: p.join("|"), ...(comGrafico ? { grafico: "MESES" as const } : {}) };
     });
     onAdicionar(novos);
   };
@@ -86,12 +86,11 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
           <div className="min-w-64 flex-1">
             <CampoBusca valor={busca} onMudar={setBusca} placeholder="Buscar pelo nome…" />
           </div>
-          {origem === "painel" ? (
-            <label className="inline-flex items-center gap-2 text-sm text-gray-800">
-              <input type="checkbox" className="accent-black" checked={comGrafico} onChange={(e) => setComGrafico(e.target.checked)} />
-              Com Gráfico
-            </label>
-          ) : null}
+          {/* Com Gráfico (22/10/2026: também nos indicadores). */}
+          <label className="inline-flex items-center gap-2 text-sm text-gray-800">
+            <input type="checkbox" className="accent-black" checked={comGrafico} onChange={(e) => setComGrafico(e.target.checked)} />
+            Com Gráfico
+          </label>
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-sm border border-gray-200 p-3">
           {lista.length === 0 ? <p className="text-sm text-gray-500">Nenhum card com esse nome.</p> : null}

@@ -406,8 +406,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
             </li>
             <li>
-              Na sua aba, “Adicionar” traz oito opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo (com ou sem o gráfico) e
-              dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado): marque os que quiser; eles entram no fim da página, os do
+              Na sua aba, “Adicionar” traz oito opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
+              dos Indicadores (o card de destaque, com o valor do mês, o acumulado e o orçado), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
               Painel com os rótulos e em barras (o Configurar Gráfico do card muda). Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
             <li>
@@ -456,8 +456,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide.
             </li>
             <li>
-              Passe o mouse num bloco para ver os botões dele: a alça (arraste para mover), o gráfico (com ou sem, nos cards do Painel; sem ele, o card fica
-              mais estreito e o restante igual), as opções do gráfico (os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
+              Passe o mouse num bloco para ver os botões dele: a alça (arraste para mover), o gráfico (nos cards do Painel e dos Indicadores, em ciclo: os meses e o acumulado →
+              só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), as opções do gráfico (os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
               excluir. O canto de baixo, à direita, redimensiona o bloco, até um tamanho mínimo, para as informações não se amontoarem. Ao mover ou
               redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos.
             </li>

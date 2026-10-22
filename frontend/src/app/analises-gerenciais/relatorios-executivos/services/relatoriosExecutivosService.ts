@@ -43,12 +43,15 @@ export type Bloco = Posicao &
         titulo: string;
         sigla: string;
         comGrafico: boolean;
+        /** Com o gráfico, só o do acumulado (22/10/2026); sem isso, os meses e o acumulado. */
+        soAcumulado?: boolean;
         /** As opções do gráfico do card (16/10/2026), como no Configurar Gráficos do Painel; sem elas, as do navegador. */
         tipoGrafico?: "barras" | "area";
         comRotulos?: boolean;
         cores?: "padrao" | "daltonismo";
       }
-    | { tipo: "INDICADOR"; nome: string }
+    /** O gráfico do card do indicador (22/10/2026): os meses e o acumulado ou só o acumulado; sem ele, só os valores. */
+    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO" }
     /** O título da anotação (16/10/2026); sem ele, o nome da nota. */
     | {
         tipo: "ANOTACAO";
