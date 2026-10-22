@@ -11,6 +11,9 @@ const nextConfig = {
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.16.*.*"],
   reactCompiler: true,
   cacheComponents: true,
+  // O build sem a verificação de tipos (22/10/2026, combinado com o TI): no servidor, ela levou a memória ao limite e o
+  // travou. A verificação é feita no notebook antes de cada envio à master (npx tsc --noEmit no frontend).
+  typescript: { ignoreBuildErrors: true },
   experimental: {
     // Com o proxy.ts ativo, o Next limita o corpo das requisições a 10 MB e
     // corta o excedente. As planilhas do SIG passam disso (o LISTAS FOLHA tem
