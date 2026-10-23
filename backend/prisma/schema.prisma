@@ -1,12 +1,11 @@
 // =============================================================================
 // SIG BPM — Fechamento Mensal
 //
-// Banco de DESENVOLVIMENTO: SQLite (arquivo local, ver prisma.config.ts).
-// Banco de PRODUÇÃO: PostgreSQL.
-//
-// Este schema é escrito para ser portável entre os dois. As convenções que
-// garantem isso — e o que muda na migração — estão em prisma/PORTABILIDADE.md.
-// Leia aquele arquivo antes de acrescentar campos.
+// Banco: PostgreSQL (desde a migração de 23/10/2026; antes, SQLite em arquivo).
+// Desenvolvimento: sig_bpm_dev; produção: sig_bpm (192.168.0.40). As URLs ficam
+// nos .env do backend, nunca no git (ver prisma.config.ts e
+// Docs/PRODUCAO-E-DESENVOLVIMENTO.md). As convenções de portabilidade de antes
+// estão em prisma/PORTABILIDADE.md.
 // =============================================================================
 
 generator client {
@@ -15,9 +14,9 @@ generator client {
 }
 
 datasource db {
-  // MIGRAÇÃO PARA POSTGRES: trocar para "postgresql" e ajustar a URL em
-  // prisma.config.ts. Nenhuma outra linha deste schema precisa mudar.
-  provider = "sqlite"
+  // PostgreSQL (23/10/2026). As migrações do SQLite ficam em prisma/migrations-sqlite (histórico); a inicial do
+  // PostgreSQL é a prisma/migrations/0_init.
+  provider = "postgresql"
 }
 
 // -----------------------------------------------------------------------------

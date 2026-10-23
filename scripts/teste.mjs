@@ -1,5 +1,6 @@
 // O ambiente de teste (21/10/2026): a versão compilada da ferramenta (sem o Turbopack, as telas abrem em menos de 1 s)
-// com o banco do desenvolvimento (backend/prisma/desenvolvimento.db). Telas na porta 3200, backend na 3201.
+// com o banco do desenvolvimento (o DATABASE_URL do backend/.env.teste; na branch postgres, o sig_bpm_dev). Telas na porta
+// 3200, backend na 3201.
 // Uso (na pasta sig-bpm):
 //   npm run teste:construir   gera a versão de teste do código de agora (o backend em backend/dist, as telas em frontend/.next)
 //   npm run teste             inicia o teste a partir do que foi gerado

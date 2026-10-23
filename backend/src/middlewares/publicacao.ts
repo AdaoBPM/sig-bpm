@@ -16,12 +16,18 @@ export const CODIGO_DA_PUBLICACAO = "PUBLICACAO_EM_ANDAMENTO";
 export const AVISO_DA_PUBLICACAO = "Publicação em andamento: as telas continuam para consulta, mas criar, editar, apagar, importar e apurar ficam bloqueados até o fim (alguns minutos). Tente de novo em seguida.";
 
 /**
- * O arquivo-sinal: na pasta do banco (o DATABASE_URL, `file:` relativo à pasta do backend ou absoluto). Calculado na
- * primeira consulta, depois de os .env carregados.
+ * O arquivo-sinal. Com o PostgreSQL (23/10/2026), o banco não é mais um arquivo: vale a PASTA_DO_SINAL do .env ou, sem
+ * ela, a pasta /dados do container (a /root/dados/sig-bpm/dados do servidor, onde o deploy.sh liga e desliga o sinal).
+ * Com um DATABASE_URL de arquivo (`file:`, o SQLite de antes), a pasta dele. Calculado na primeira consulta, depois de
+ * os .env carregados.
  */
 let sinal: string | null = null;
-export const sinalDaPublicacao = () =>
-  (sinal ??= join(dirname(resolve((process.env.DATABASE_URL ?? "file:./prisma/dev.db").replace(/^file:/, ""))), ".publicacao-em-andamento"));
+function pastaDoSinal() {
+  if (process.env.PASTA_DO_SINAL) return resolve(process.env.PASTA_DO_SINAL);
+  const url = process.env.DATABASE_URL ?? "";
+  return url.startsWith("file:") ? dirname(resolve(url.replace(/^file:/, ""))) : "/dados";
+}
+export const sinalDaPublicacao = () => (sinal ??= join(pastaDoSinal(), ".publicacao-em-andamento"));
 
 export const emPublicacao = () => existsSync(sinalDaPublicacao());
 

@@ -260,11 +260,11 @@ export const classificacaoService = {
       ...(busca
         ? {
             OR: [
-              { codigoCentroCusto: { contains: busca } },
-              { nomeCentroCusto: { contains: busca } },
-              { contaResultado: { reduzido: { contains: busca } } },
-              { contaResultado: { descricao: { contains: busca } } },
-              { contaAdotada: { reduzido: { contains: busca } } },
+              { codigoCentroCusto: { contains: busca, mode: "insensitive" } },
+              { nomeCentroCusto: { contains: busca, mode: "insensitive" } },
+              { contaResultado: { reduzido: { contains: busca, mode: "insensitive" } } },
+              { contaResultado: { descricao: { contains: busca, mode: "insensitive" } } },
+              { contaAdotada: { reduzido: { contains: busca, mode: "insensitive" } } },
             ],
           }
         : {}),

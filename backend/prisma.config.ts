@@ -12,12 +12,13 @@ config({ quiet: true });
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
+    // As do PostgreSQL, a partir da 0_init (23/10/2026); as do SQLite ficam em prisma/migrations-sqlite, só de histórico.
     path: "prisma/migrations",
   },
   datasource: {
-    // Desenvolvimento: SQLite em arquivo, sem servidor.
-    // Produção: PostgreSQL — ver prisma/PORTABILIDADE.md.
-    // Sem o .env do modo, o de desenvolvimento (15/10/2026; antes, o dev.db, que é o banco de produção).
-    url: process.env.DATABASE_URL ?? "file:./prisma/desenvolvimento.db",
+    // PostgreSQL (23/10/2026): o DATABASE_URL do .env do modo, sem padrão (antes, o arquivo SQLite do desenvolvimento).
+    // O banco-sombra (SHADOW_DATABASE_URL) é o do `prisma migrate dev`: descartável, só no desenvolvimento.
+    url: process.env.DATABASE_URL ?? "",
+    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
 });

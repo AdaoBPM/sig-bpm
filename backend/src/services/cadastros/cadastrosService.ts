@@ -26,10 +26,10 @@ export const cadastrosService = {
     const where = busca
       ? {
           OR: [
-            { codigoRM: { contains: busca } },
-            { nomeRM: { contains: busca } },
-            { nomeControladoria: { contains: busca } },
-            { departamento: { contains: busca } },
+            { codigoRM: { contains: busca, mode: "insensitive" as const } },
+            { nomeRM: { contains: busca, mode: "insensitive" as const } },
+            { nomeControladoria: { contains: busca, mode: "insensitive" as const } },
+            { departamento: { contains: busca, mode: "insensitive" as const } },
           ],
         }
       : {};
@@ -65,11 +65,11 @@ export const cadastrosService = {
     const where = busca
       ? {
           OR: [
-            { reduzido: { contains: busca } },
-            { conta: { contains: busca } },
-            { descricao: { contains: busca } },
-            { departamento: { contains: busca } },
-            { atribuicao: { contains: busca } },
+            { reduzido: { contains: busca, mode: "insensitive" as const } },
+            { conta: { contains: busca, mode: "insensitive" as const } },
+            { descricao: { contains: busca, mode: "insensitive" as const } },
+            { departamento: { contains: busca, mode: "insensitive" as const } },
+            { atribuicao: { contains: busca, mode: "insensitive" as const } },
           ],
         }
       : {};
@@ -109,11 +109,11 @@ export const cadastrosService = {
     const where = busca
       ? {
           OR: [
-            { codigoCentroCusto: { contains: busca } },
-            { contaOrigem: { reduzido: { contains: busca } } },
-            { contaOrigem: { descricao: { contains: busca } } },
-            { contaDestino: { reduzido: { contains: busca } } },
-            { contaDestino: { descricao: { contains: busca } } },
+            { codigoCentroCusto: { contains: busca, mode: "insensitive" as const } },
+            { contaOrigem: { reduzido: { contains: busca, mode: "insensitive" as const } } },
+            { contaOrigem: { descricao: { contains: busca, mode: "insensitive" as const } } },
+            { contaDestino: { reduzido: { contains: busca, mode: "insensitive" as const } } },
+            { contaDestino: { descricao: { contains: busca, mode: "insensitive" as const } } },
           ],
         }
       : {};
@@ -166,11 +166,11 @@ export const cadastrosService = {
       ...(busca
         ? {
             OR: [
-              { obra: { codigo: { contains: busca } } },
-              { obra: { nome: { contains: busca } } },
-              { contaResultado: { contains: busca } },
-              { linhaTexto: { contains: busca } },
-              { atribuicao: { contains: busca } },
+              { obra: { codigo: { contains: busca, mode: "insensitive" as const } } },
+              { obra: { nome: { contains: busca, mode: "insensitive" as const } } },
+              { contaResultado: { contains: busca, mode: "insensitive" as const } },
+              { linhaTexto: { contains: busca, mode: "insensitive" as const } },
+              { atribuicao: { contains: busca, mode: "insensitive" as const } },
             ],
           }
         : {}),
@@ -213,10 +213,10 @@ export const cadastrosService = {
     const where = busca
       ? {
           OR: [
-            { codigo: { contains: busca } },
-            { descricao: { contains: busca } },
-            { grupo: { contains: busca } },
-            { atribuicao: { contains: busca } },
+            { codigo: { contains: busca, mode: "insensitive" as const } },
+            { descricao: { contains: busca, mode: "insensitive" as const } },
+            { grupo: { contains: busca, mode: "insensitive" as const } },
+            { atribuicao: { contains: busca, mode: "insensitive" as const } },
           ],
         }
       : {};

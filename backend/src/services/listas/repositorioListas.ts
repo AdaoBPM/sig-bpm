@@ -34,7 +34,7 @@ function where(f: Filtro) {
   return {
     competenciaId: f.competenciaId,
     ...(busca
-      ? { OR: [{ obra: { codigo: { contains: busca } } }, { obra: { nome: { contains: busca } } }] }
+      ? { OR: [{ obra: { codigo: { contains: busca, mode: "insensitive" as const } } }, { obra: { nome: { contains: busca, mode: "insensitive" as const } } }] }
       : {}),
   };
 }

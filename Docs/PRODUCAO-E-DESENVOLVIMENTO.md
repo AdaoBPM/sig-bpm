@@ -6,6 +6,31 @@
 > produção. As regras do servidor (o que pode e o que não pode, scripts de dados, back-up) estão em
 > [SERVIDOR-DA-EMPRESA.md](./SERVIDOR-DA-EMPRESA.md). A tabela e os comandos de produção abaixo são histórico (15 a 20/10/2026).
 
+## PostgreSQL (desde 23/10/2026, na branch `postgres`)
+
+A migração do SQLite para o PostgreSQL, conduzida pelo TI (Eduardo Domingos), está em andamento. O banco fica no servidor
+de banco da empresa, **192.168.0.40:5432** (PostgreSQL 15, ordenação `C`, igual à do SQLite):
+
+| Banco | Usuário | Uso |
+|---|---|---|
+| `sig_bpm` | `sig_prod` | A produção, depois da virada. **Nunca usar no desenvolvimento.** |
+| `sig_bpm_dev` | `sig_dev` | O desenvolvimento (porta 3100) |
+| `sig_bpm_dev_sombra` | `sig_dev` | O banco-sombra do `prisma migrate dev` (descartável) |
+
+- O código do PostgreSQL está na branch `postgres` e só vai à `master` na virada combinada com o TI (a `master` publica
+  direto na produção, que segue no SQLite até lá).
+- As URLs ficam no `backend/.env.development` (`DATABASE_URL` e `SHADOW_DATABASE_URL`), nunca no git; o modelo está no
+  `backend/.env.example`. Para voltar a rodar a `master` (SQLite) no notebook: `DATABASE_URL=file:./prisma/desenvolvimento.db`.
+- Migrações: as do SQLite ficaram em `backend/prisma/migrations-sqlite` (histórico); a inicial do PostgreSQL é a
+  `backend/prisma/migrations/0_init` (o schema e, no fim, os gatilhos que deixam o `audit_log` imutável). No
+  `sig_bpm_dev`, as tabelas foram criadas pelo TI e a `0_init` só foi registrada (`npx prisma migrate resolve --applied
+  0_init`): não rodar `migrate deploy` nele. Para recarregar o `sig_bpm_dev` com a produção, pedir ao TI.
+- O sinal da publicação (`.publicacao-em-andamento`) não vem mais da pasta do banco: vale a `PASTA_DO_SINAL` do .env ou,
+  sem ela, `/dados` (a pasta do container no servidor, onde o `deploy.sh` o liga e desliga).
+- `db:backup` e `db:copiar-producao` passam a usar o `pg_dump` e o `pg_restore` (versão 15 ou mais nova, no PATH ou em
+  `PG_DUMP`/`PG_RESTORE`).
+- O plano completo (fases, riscos e como voltar atrás) é o PLANO-MIGRACAO-POSTGRES.md do TI.
+
 ## Os três ambientes (desde 21/10/2026)
 
 | | Desenvolvimento | Teste | Produção |
