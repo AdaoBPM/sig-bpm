@@ -103,6 +103,7 @@ export async function substituirBalanceteDetalhado(opcoes: {
 
     const gravados = await prisma.lancamentoContabil.findMany({
       where: { competenciaId: competencia.id },
+      orderBy: [{ filial: "asc" }, { codigoCentroCusto: { sort: "asc", nulls: "first" } }, { linhaArquivo: "asc" }],
       select: {
         filial: true,
         codigoCentroCusto: true,

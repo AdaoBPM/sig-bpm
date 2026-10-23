@@ -92,9 +92,13 @@ export function renomeacoesDaDre(p: CadastrosPreparados, noBanco: LinhaNoBanco[]
 export async function compararComBanco(p: CadastrosPreparados) {
   const prisma = getPrismaClient();
   const [centros, contas, linhas] = await Promise.all([
-    prisma.centroCusto.findMany({ include: { _count: { select: { lancamentosContabeis: true, lancamentosManuais: true, resultadosApurados: true } } } }),
-    prisma.contaResultado.findMany({ include: { linhaDRE: { select: { codigo: true } } } }),
+    prisma.centroCusto.findMany({
+      include: { _count: { select: { lancamentosContabeis: true, lancamentosManuais: true, resultadosApurados: true } } },
+      orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }],
+    }),
+    prisma.contaResultado.findMany({ include: { linhaDRE: { select: { codigo: true } } }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] }),
     prisma.linhaDRE.findMany({
+      orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }],
       include: {
         unidades: { include: { unidadeNegocio: { select: { nome: true } } } },
         _count: { select: { contas: true, lancamentosContabeis: true, lancamentosManuais: true, resultadosApurados: true } },
@@ -157,7 +161,7 @@ function linhasEmUso(codigos: string[], linhas: LinhaComUso[]) {
 export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
   // Centros sem código no RM: a chave é o nome (como na prévia). Antes eram
   // apagados e recriados a cada carga, com id novo.
-  const semCodigo = await tx.centroCusto.findMany({ where: { codigoRM: null }, select: { id: true, nomeRM: true } });
+  const semCodigo = await tx.centroCusto.findMany({ where: { codigoRM: null }, select: { id: true, nomeRM: true }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
   const codigos: string[] = [];
   const mantidosSemCodigo: string[] = [];
   for (const c of p.centros.alvos) {
@@ -193,7 +197,7 @@ export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
   const unidades = await tx.unidadeNegocio.findMany({ select: { id: true, nome: true } });
   const unidadePorNome = new Map(unidades.map((u) => [chaveNome(u.nome), u.id]));
   const idPorCodigo = new Map<string, string>();
-  const noBanco = await tx.linhaDRE.findMany({ select: { id: true, codigo: true, tipo: true, grupo: true, ordem: true } });
+  const noBanco = await tx.linhaDRE.findMany({ select: { id: true, codigo: true, tipo: true, grupo: true, ordem: true }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
   for (const [novo, antiga] of renomeacoesDaDre(p, noBanco)) {
     await tx.linhaDRE.update({ where: { id: antiga.id }, data: { codigo: novo } });
   }

@@ -167,7 +167,7 @@ const opcaoBalde = (v: unknown) => {
 async function departamentos(db: Db) {
   const [centros, linhas] = await Promise.all([
     db.centroCusto.groupBy({ by: ["departamento", "departamentoSigla"], where: { departamento: { not: null } } }),
-    db.linhaDRE.findMany({ where: { tipo: "ITEM" }, select: { grupo: true, grupoSigla: true }, distinct: ["grupo"] }),
+    db.linhaDRE.findMany({ where: { tipo: "ITEM" }, select: { grupo: true, grupoSigla: true }, distinct: ["grupo"], orderBy: { ordem: "asc" } }),
   ]);
   const sigla = new Map<string, string | null>();
   for (const l of linhas) if (/\(/.test(l.grupo)) sigla.set(l.grupo, l.grupoSigla);
@@ -292,7 +292,7 @@ const contas: DefinicaoCadastro = {
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
   ],
   async listar(db, busca) {
-    const cs = await db.contaResultado.findMany({ orderBy: [{ conta: "asc" }] });
+    const cs = await db.contaResultado.findMany({ orderBy: [{ conta: "asc" }, { ordem: "asc" }] });
     return cs.filter((c) => contem(busca, c.reduzido, c.conta, c.descricao));
   },
   ler: (db, id) => db.contaResultado.findUnique({ where: { id } }),
@@ -363,7 +363,7 @@ const reclassificacoes: DefinicaoCadastro = {
   ],
   async listar(db, busca) {
     const rs = await db.reclassificacaoConta.findMany({
-      orderBy: [{ codigoCentroCusto: "asc" }],
+      orderBy: [{ codigoCentroCusto: "asc" }, { ordem: "asc" }],
       include: { contaOrigem: { select: { reduzido: true, descricao: true } }, contaDestino: { select: { reduzido: true, descricao: true } } },
     });
     return rs.filter((r) => contem(busca, r.codigoCentroCusto, r.contaOrigem.reduzido, r.contaDestino.reduzido, r.motivo));

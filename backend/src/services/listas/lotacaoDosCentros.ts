@@ -35,6 +35,7 @@ export async function lotacaoDosGrupos(competenciaIds: string[], grupos: string[
   const linhas = await getPrismaClient().lotacaoCentro.findMany({
     where: { competenciaId: { in: competenciaIds }, importacao: { status: "CONCLUIDA", substituidaEm: null } },
     select: { competenciaId: true, centroCusto: true, clt: true, pj: true, total: true },
+    orderBy: [{ competencia: { mes: "asc" } }, { linhaArquivo: "asc" }],
   });
   const porCompetencia = new Map<string, Map<string, { clt: number; pj: number }>>();
   const semGrupo = new Map<string, number>();

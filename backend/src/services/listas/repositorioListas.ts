@@ -39,7 +39,14 @@ function where(f: Filtro) {
   };
 }
 
-const ORDEM = [{ importacaoId: "asc" as const }, { linhaArquivo: "asc" as const }, { criadoEm: "asc" as const }];
+// Os digitados (sem importação e sem linha do arquivo) primeiro, como no SQLite (23/10/2026: o PostgreSQL põe os vazios por
+// último no crescente).
+const ORDEM = [
+  { importacaoId: { sort: "asc" as const, nulls: "first" as const } },
+  { linhaArquivo: { sort: "asc" as const, nulls: "first" as const } },
+  { criadoEm: "asc" as const },
+  { id: "asc" as const },
+];
 
 export async function listarRegistros(tipo: TipoListaRateio, f: Filtro, skip: number, take: number) {
   const p = getPrismaClient();

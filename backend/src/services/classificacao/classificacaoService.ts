@@ -280,7 +280,8 @@ export const classificacaoService = {
     const [itens, total] = await Promise.all([
       prisma.lancamentoContabil.findMany({
         where,
-        orderBy: [{ filial: "asc" }, { codigoCentroCusto: "asc" }, { linhaArquivo: "asc" }],
+        // Sem centro primeiro, como no SQLite (23/10/2026).
+        orderBy: [{ filial: "asc" }, { codigoCentroCusto: { sort: "asc", nulls: "first" } }, { linhaArquivo: "asc" }],
         skip: (filtro.pagina - 1) * filtro.porPagina,
         take: filtro.porPagina,
         select: {

@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import { calcularReceita, separarPorVenda, totalizar, type DadosCalculo, type Registro } from "./calculoReceita.js";
 import { chaveDaLinha } from "../../lib/linhas.js";
+import { peloTexto } from "../../lib/ordemDoSqlite.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraReceitaError extends Error {
@@ -47,9 +48,11 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
   });
 
   const [precos, estacas, movimentos, producoes, expedicoes, saidas, devolucoes, medicoes, lancamentos] = await Promise.all([
+    // Numa ordem fixa (23/10/2026, PostgreSQL): o id gravado como preço da receita é o do primeiro do grupo.
     prisma.precoContrato.findMany({
       where: { substituidoEm: null },
       select: { id: true, versao: true, linhaTexto: true, atribuicao: true, departamento: true, valorUnitario: true, valorTotal: true, obra: { select: { codigo: true } } },
+      orderBy: [{ vigenteDesde: "asc" }, { id: "asc" }],
     }),
     prisma.tabelaEstaca.findMany({ where: { vigenciaFim: null }, select: { grupo: true, secao: true, peca: true, precoLiquido: true } }),
     prisma.tipoMovimento.findMany({ where: { ativo: true }, select: { codigo: true } }),
@@ -201,6 +204,7 @@ export const receitaPreviaService = {
       by: ["observacao"],
       where: { receitaPrevia: { competenciaId: competencia.id }, origem: { not: "LANCAMENTO" }, observacao: { not: null } },
       _count: true,
+      orderBy: { observacao: "asc" },
     });
     return {
       competencia: { ano, mes, status: competencia.status },
@@ -242,15 +246,16 @@ export const receitaPreviaService = {
     const competencia = await competenciaPorAnoMes(ano, mes);
     const prisma = getPrismaClient();
     const where = { receitaPrevia: { competenciaId: competencia.id, natureza, unidadeNegocio: { codigo: unidade } } };
-    const [itens, total] = await Promise.all([
-      prisma.receitaPreviaItem.findMany({
+    // A origem pelo texto e os vazios primeiro, como no SQLite (23/10/2026: no PostgreSQL, o enum ordena pela declaração):
+    // ordena-se aqui, e a página sai daqui.
+    const todos = (
+      await prisma.receitaPreviaItem.findMany({
         where,
-        orderBy: [{ origem: "asc" }, { obraCodigo: "asc" }, { linha: "asc" }],
-        skip: (pagina - 1) * porPagina,
-        take: porPagina,
-      }),
-      prisma.receitaPreviaItem.count({ where }),
-    ]);
+        orderBy: [{ obraCodigo: { sort: "asc", nulls: "first" } }, { linha: { sort: "asc", nulls: "first" } }, { registroId: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+      })
+    ).sort(peloTexto((i) => i.origem));
+    const total = todos.length;
+    const itens = todos.slice((pagina - 1) * porPagina, pagina * porPagina);
     const dec = (d: { toFixed: (n: number) => string } | null, n = 2) => (d === null ? null : d.toFixed(n));
     // O nome da obra, como na coluna Nome da Obra das abas de receita.
     const codigos = [...new Set(itens.map((i) => i.obraCodigo).filter((c): c is string => !!c))];

@@ -61,6 +61,7 @@ export async function compararBalancete(linhas: LinhaPlanilha[], competencia: { 
   }
   const gravados = await prisma.lancamentoContabil.findMany({
     where: { competenciaId: competencia.id },
+    orderBy: [{ filial: "asc" }, { codigoCentroCusto: { sort: "asc", nulls: "first" } }, { linhaArquivo: "asc" }],
     select: { filial: true, codigoCentroCusto: true, nomeCentroCusto: true, valorMovimento: true, contaResultado: { select: { reduzido: true, descricao: true } } },
   });
   const gravado = new Map<string, { filial: number; centro: string | null; conta: string; valor: Decimal; nomeCentro: string | null; nomeConta: string | null }>();
@@ -215,7 +216,7 @@ export const divergenciasService = {
     const [itens, total, porCompetencia] = await Promise.all([
       prisma.divergencia.findMany({
         where,
-        orderBy: [{ detectadaEm: "desc" }, { diferenca: "desc" }],
+        orderBy: [{ detectadaEm: "desc" }, { diferenca: "desc" }, { filial: "asc" }, { codigoCentroCusto: { sort: "asc", nulls: "first" } }, { codigoConta: { sort: "asc", nulls: "first" } }, { id: "asc" }],
         skip: (f.pagina - 1) * f.porPagina,
         take: f.porPagina,
         select: {

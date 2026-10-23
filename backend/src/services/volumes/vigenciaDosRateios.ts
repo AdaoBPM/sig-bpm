@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { getPrismaClient } from "../../config/prisma.js";
+import { peloTexto } from "../../lib/ordemDoSqlite.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { CHAVES_DE_RATEIO, NOME_DA_CHAVE } from "./rateiosService.js";
 import { rotuloDoMes, valeNoMes } from "./vigenciasRateio.js";
@@ -25,11 +26,13 @@ export type RegraDoMes = {
 type Db = Pick<ReturnType<typeof getPrismaClient>, "regraRateio">;
 
 /** Todas as regras de rateio, com a vigência, o percentual fixo e a data de alteração. */
-export function regrasDeRateio(db: Db = getPrismaClient()): Promise<RegraDoMes[]> {
-  return db.regraRateio.findMany({
+export async function regrasDeRateio(db: Db = getPrismaClient()): Promise<RegraDoMes[]> {
+  const rs = await db.regraRateio.findMany({
     select: { id: true, chave: true, destino: true, vigenciaInicio: true, vigenciaFim: true, percentualFixo: true, atualizadoEm: true },
-    orderBy: [{ chave: "asc" }, { vigenciaInicio: "asc" }],
+    orderBy: [{ vigenciaInicio: "asc" }, { id: "asc" }],
   });
+  // A chave pelo texto, como no SQLite (23/10/2026: no PostgreSQL, o enum ordena pela declaração).
+  return rs.sort(peloTexto((r) => r.chave));
 }
 
 const vigencia = (r: RegraDoMes) => ({ inicio: r.vigenciaInicio, fim: r.vigenciaFim });

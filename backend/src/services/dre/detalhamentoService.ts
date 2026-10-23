@@ -159,7 +159,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
   const sinalDaLinhaManual = async (linhaId: string) =>
     manualNoSinalDoBalancete((await prisma.linhaDRE.findUnique({ where: { id: linhaId }, select: { grupoSigla: true } }))?.grupoSigla ?? "", new Decimal(1));
   const blocoManual = async (where: Prisma.LancamentoManualWhereInput, linhaId: string, multiplicador: Decimal, titulo: string, filtro: string) => {
-    const ms = await prisma.lancamentoManual.findMany({ where: { competenciaId, linhaDREId: linhaId, ...where }, select: selecaoManual });
+    const ms = await prisma.lancamentoManual.findMany({ where: { competenciaId, linhaDREId: linhaId, ...where }, select: selecaoManual, orderBy: [{ criadoEm: "asc" }, { id: "asc" }] });
     if (!ms.length) return;
     const m = (await sinalDaLinhaManual(linhaId)).times(multiplicador);
     blocos.push({ tipo: "MANUAL", titulo, unidade, filtro, total: somar(ms.map((x) => x.valor.times(m))).toFixed(2), lancamentos: ms.map((x) => linhaManual(x, x.valor.times(m))).sort(porValor) });
@@ -173,6 +173,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     const ls = await prisma.lancamentoContabil.findMany({
       where: { competenciaId, linhaDREId: f.linhaId, ...(f.filial !== undefined ? { filial: f.filial } : {}), AND: filtros },
       select: selecaoContabil,
+      orderBy: { linhaArquivo: "asc" },
     });
     const fator = new Decimal(f.fator ?? 1);
     const partes = [
@@ -206,6 +207,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     const ls = await prisma.lancamentoContabil.findMany({
       where: { competenciaId, linhaDREId: r.linhaId, alocacao: "RATEIO", balde: r.chave as never },
       select: selecaoContabil,
+      orderBy: { linhaArquivo: "asc" },
     });
     const p = new Decimal(r.percentual);
     blocos.push({
@@ -224,6 +226,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
   if (o.manual) {
     const ms = await prisma.lancamentoManual.findMany({
       where: { competenciaId, linhaDREId: o.manual.linhaId, balde: o.manual.balde as never },
+      orderBy: [{ criadoEm: "asc" }, { id: "asc" }],
       select: {
         id: true,
         filial: true,
@@ -307,7 +310,7 @@ export const detalhamentoService = {
       titulo = `Sem Centro de Custo · ${nomeDoGrupoSemCentro(visao.semCentro)}`;
       regra = "Lançamentos contábeis sem centro de custo do cadastro, nas contas de mão de obra e de gastos gerais, antes do rateio";
       const ls = deveriaTerCentro(linha)
-        ? (await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: null }, select: selecaoContabil })).filter(
+        ? (await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: null }, select: selecaoContabil, orderBy: { linhaArquivo: "asc" } })).filter(
             (l) => grupoSemCentro(linha.codigo, l.filial) === visao.semCentro,
           )
         : [];
@@ -326,7 +329,7 @@ export const detalhamentoService = {
     } else if ("obra" in visao) {
       // A obra (aba Obras): os lançamentos do centro de obra na linha, com o sinal da DRE (receitas trocadas).
       if (!CENTRO_DE_OBRA.test(visao.obra)) throw new RegraDREError(400, `${visao.obra} não é um centro de custo de obra (1.98 ou 1.99).`);
-      const ls = await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, codigoCentroCusto: visao.obra }, select: selecaoContabil });
+      const ls = await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, codigoCentroCusto: visao.obra }, select: selecaoContabil, orderBy: { linhaArquivo: "asc" } });
       titulo = `Obra ${ls[0]?.nomeCentroCusto ?? visao.obra} (${visao.obra})`;
       regra = "Lançamentos contábeis do centro de obra, diretos e de rateio, antes do rateio";
       if (ls.length > 0) {
@@ -350,7 +353,7 @@ export const detalhamentoService = {
       if (ids.length === 0) throw new RegraDREError(403, `O centro de custo ${visao.grupo} não é de um departamento seu.`);
       const [gravados, ls] = await Promise.all([
         prisma.resultadoApurado.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: { valor: true, composicao: true } }),
-        prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: selecaoContabil }),
+        prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, centroCustoId: { in: ids } }, select: selecaoContabil, orderBy: { linhaArquivo: "asc" } }),
       ]);
       // Antes da apuração (15/10/2026), a soma dos lançamentos.
       valor = gravados.length ? somar(gravados.map((g) => g.valor)) : ls.length ? somar(ls.map((l) => l.valorMovimento)) : null;

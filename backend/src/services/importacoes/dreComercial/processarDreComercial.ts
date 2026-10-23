@@ -72,6 +72,7 @@ export async function processarDreComercial(importacaoId: string): Promise<void>
 
         const vigentes = await tx.precoContrato.findMany({
           where: { substituidoEm: null },
+          orderBy: [{ obra: { codigo: "asc" } }, { chave: "asc" }],
           select: { id: true, chave: true, atribuicao: true, unidade: true, fornecimento: true, valorUnitario: true, valorTotal: true, percentualRL: true, obra: { select: { codigo: true } }, contaResultado: true, linhaTexto: true, etapa: true },
         });
         const vigentePorChave = new Map(vigentes.map((v) => [v.chave, v]));

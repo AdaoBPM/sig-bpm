@@ -60,6 +60,7 @@ export const estoqueService = {
       prisma.precoContrato.findMany({
         where: { substituidoEm: null },
         select: { versao: true, linhaTexto: true, contaResultado: true, valorUnitario: true, obra: { select: { codigo: true } } },
+        orderBy: [{ vigenteDesde: "asc" }, { id: "asc" }],
       }),
       prisma.tabelaEstaca.findMany({ where: { vigenciaFim: null }, select: { grupo: true, secao: true, peca: true, precoLiquido: true } }),
     ]);

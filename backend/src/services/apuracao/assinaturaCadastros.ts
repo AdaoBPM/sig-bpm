@@ -25,7 +25,8 @@ const CADASTROS: Array<{ chave: string; nome: string; dados: () => Promise<unkno
       await getPrismaClient().linha.findMany({ omit: sem, orderBy: { id: "asc" } }),
       await getPrismaClient().correspondenciaTarefa.findMany({
         select: { filial: true, tarefa: true, linhaId: true },
-        orderBy: [{ filial: "asc" }, { tarefa: "asc" }],
+        // A filial vazia (qualquer filial) primeiro, como no SQLite: a assinatura gravada nas apurações bate (23/10/2026).
+        orderBy: [{ filial: { sort: "asc", nulls: "first" } }, { tarefa: "asc" }],
       }),
     ],
   },

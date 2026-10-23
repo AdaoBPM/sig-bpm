@@ -4,6 +4,7 @@ import { auditar } from "../auditoriaService.js";
 import { CHAVES_DE_RATEIO, NOME_DA_CHAVE, RegraRateioError } from "./rateiosService.js";
 import { REGRAS_DOS_PERCENTUAIS_FIXOS } from "./regrasRateio.js";
 import { conflitoDeVigencia, descreverVigencia, lacunasDasRegras, type RegraComVigencia } from "./vigenciasRateio.js";
+import { peloTexto } from "../../lib/ordemDoSqlite.js";
 
 /**
  * Os percentuais fixos das regras de rateio (14/10/2026, a tela Percentuais Fixos de Cadastros da Controladoria / Regras
@@ -23,10 +24,12 @@ const rotuloDaRegra = (base: string, destino: string) => `${base}: ${NOME_DO_DES
 const baseDoRotulo = (rotulo: string) => rotulo.replace(/: [^:]+ (Fixo)$/, "");
 
 async function regras() {
-  return getPrismaClient().regraRateio.findMany({
+  const rs = await getPrismaClient().regraRateio.findMany({
     select: { id: true, chave: true, destino: true, rotulo: true, vigenciaInicio: true, vigenciaFim: true, percentualFixo: true, _count: { select: { volumesOperacionais: true } } },
-    orderBy: [{ chave: "asc" }, { vigenciaInicio: "asc" }],
+    orderBy: [{ vigenciaInicio: "asc" }, { id: "asc" }],
   });
+  // A chave pelo texto, como no SQLite (23/10/2026: no PostgreSQL, o enum ordena pela declaração).
+  return rs.sort(peloTexto((r) => r.chave));
 }
 const comVigencia = (r: Awaited<ReturnType<typeof regras>>[number]): RegraComVigencia => ({
   id: r.id,

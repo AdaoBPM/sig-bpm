@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import { LINHAS_POR_UNIDADE, type LancamentoReceitaInput } from "../../schemas/receitaPrevia/receitaPreviaSchemas.js";
 import { competenciaPorAnoMes, RegraReceitaError } from "./receitaPreviaService.js";
 import { auditar } from "../auditoriaService.js";
+import { peloTexto } from "../../lib/ordemDoSqlite.js";
 
 /**
  * Lançamentos manuais de receita — o que a aba Receita (Lanç. Manuais) do BASE
@@ -68,9 +69,11 @@ export const lancamentosReceitaService = {
     const c = await competenciaPorAnoMes(ano, mes);
     const itens = await getPrismaClient().lancamentoReceita.findMany({
       where: { competenciaId: c.id },
-      orderBy: [{ unidadeNegocio: { codigo: "asc" } }, { natureza: "asc" }, { criadoEm: "asc" }],
+      orderBy: [{ unidadeNegocio: { codigo: "asc" } }, { criadoEm: "asc" }, { id: "asc" }],
       select: SELECAO,
     });
+    // A natureza pelo texto dentro da unidade, como no SQLite (23/10/2026: no PostgreSQL, o enum ordena pela declaração).
+    itens.sort((a, b) => a.unidadeNegocio.codigo - b.unidadeNegocio.codigo || peloTexto((x: (typeof itens)[number]) => x.natureza)(a, b));
     return { competencia: { ano, mes, status: c.status }, itens: itens.map(apresentar) };
   },
 

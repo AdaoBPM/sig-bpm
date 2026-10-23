@@ -51,7 +51,8 @@ export const documentosService = {
           valorMovimento: true,
           centroCusto: { select: { codigoRM: true, nomeRM: true } },
         },
-        orderBy: [{ emissao: "asc" }, { linhaArquivo: "asc" }],
+        // Sem emissão primeiro, como no SQLite (23/10/2026).
+        orderBy: [{ emissao: { sort: "asc", nulls: "first" } }, { linhaArquivo: "asc" }],
       }),
       // O mês tem o balancete detalhado (com o detalhe de algum movimento)?
       prisma.lancamentoContabil.count({ where: { competenciaId: c.id, OR: [{ historico: { not: null } }, { cliForn: { not: null } }, { emissao: { not: null } }] } }),

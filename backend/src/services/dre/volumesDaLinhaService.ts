@@ -108,7 +108,7 @@ export async function volumesDaLinha(ano: number, mes: number, codigoLinha: stri
 
   const linhas: LinhaVolume[] = [...grupos.values()]
     .map(({ soma, ...g }) => ({ ...g, quantidade: soma.toFixed(6) }))
-    .sort((a, b) => (a.obra ?? "").localeCompare(b.obra ?? "") || a.destino.localeCompare(b.destino));
+    .sort((a, b) => (a.obra ?? "").localeCompare(b.obra ?? "") || a.destino.localeCompare(b.destino) || (a.linha ?? "").localeCompare(b.linha ?? ""));
   return {
     linha: linhaDRE.descricao,
     medida: totais[0]?.medida ?? null,

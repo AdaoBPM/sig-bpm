@@ -129,6 +129,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
     prisma.resultadoApurado.findMany({
       where: { ...naComp, centroCustoId: null, unidadeNegocioId: { not: null } },
       select: { competenciaId: true, valor: true, linhaDRE: linhaSel, unidadeNegocio: unidadeSel },
+      orderBy: [{ unidadeNegocio: { codigo: "asc" } }, { linhaDRE: { ordem: "asc" } }],
     }),
     prisma.resultadoApurado.findMany({
       where: { ...naComp, centroCustoId: { not: null } },
@@ -138,6 +139,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
     // dos padrões, que o usuário realoca.
     prisma.lancamentoContabil.findMany({
       where: { ...naComp, OR: [".MOD.", ".MOI.", ".GGD.", ".GGI.", ".GGC."].map((a) => ({ linhaDRE: { codigo: { contains: a } } })) },
+      orderBy: [{ competencia: { mes: "asc" } }, { linhaArquivo: "asc" }],
       select: {
         competenciaId: true,
         filial: true,

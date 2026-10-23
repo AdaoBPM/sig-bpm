@@ -152,7 +152,7 @@ export const lancamentosManuaisService = {
     const competencia = await competenciaPorAnoMes(ano, mes);
     const itens = await getPrismaClient().lancamentoManual.findMany({
       where: { competenciaId: competencia.id },
-      orderBy: [{ motivo: "asc" }, { criadoEm: "asc" }],
+      orderBy: [{ motivo: "asc" }, { criadoEm: "asc" }, { id: "asc" }],
       select: SELECAO,
     });
     const total = itens.reduce((a, l) => a.plus(l.valor), new Prisma.Decimal(0));
@@ -241,6 +241,7 @@ export const lancamentosManuaisService = {
     }
     const origem = await prisma.lancamentoManual.findMany({
       where: { competenciaId: anterior.id },
+      orderBy: [{ motivo: "asc" }, { criadoEm: "asc" }, { id: "asc" }],
       select: {
         motivo: true,
         filial: true,
@@ -255,11 +256,14 @@ export const lancamentosManuaisService = {
     if (origem.length === 0) {
       throw new RegraLancamentoManualError(404, `A competência ${rotulo(anoAnt, mesAnt)} não tem lançamentos manuais.`);
     }
+    // Cada cópia 1 ms depois da anterior (23/10/2026): a lista ordena pela criação, e as cópias ficam na ordem do mês copiado.
+    const copiadoEm = Date.now();
     await prisma.lancamentoManual.createMany({
-      data: origem.map(({ contaResultado, centroCusto, ...l }) => ({
+      data: origem.map(({ contaResultado, centroCusto, ...l }, k) => ({
         ...l,
         competenciaId: competencia.id,
         criadoPor: usuarioId,
+        criadoEm: new Date(copiadoEm + k),
         // Derivados com o cadastro de hoje, não com o do mês copiado.
         ...(contaResultado
           ? derivarLancamentoManual(contaResultado, centroCusto)

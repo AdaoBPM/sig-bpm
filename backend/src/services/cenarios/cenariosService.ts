@@ -1375,7 +1375,8 @@ export const cenariosService = {
     const [itens, linhas] = await Promise.all([
       prisma.correspondenciaTarefa.findMany({
         include: { linha: { select: { codigo: true, nome: true, ativo: true, unidadeNegocio: { select: { codigo: true } } } } },
-        orderBy: [{ tarefa: "asc" }, { filial: "asc" }],
+        // Qualquer filial (vazia) primeiro, como no SQLite (23/10/2026).
+        orderBy: [{ tarefa: "asc" }, { filial: { sort: "asc", nulls: "first" } }],
       }),
       linhasDoCadastro(true),
     ]);
@@ -2038,7 +2039,7 @@ export const cenariosService = {
     exigirAnalitico(c);
     exigirEditavel(c);
     const prisma = getPrismaClient();
-    const lista = await prisma.cenarioInvestimento.findMany({ where: { cenarioId: id, id: { in: ids } } });
+    const lista = await prisma.cenarioInvestimento.findMany({ where: { cenarioId: id, id: { in: ids } }, orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }] });
     if (lista.length !== new Set(ids).size) throw new CenarioError(404, "Algum investimento não foi encontrado: atualize a tela.");
     await prisma.$transaction(
       async (tx) => {

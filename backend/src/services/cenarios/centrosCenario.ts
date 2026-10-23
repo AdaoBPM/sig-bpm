@@ -80,7 +80,11 @@ const maisComum = <T>(xs: T[]) => {
 export async function gruposDoCadastro(): Promise<GrupoDoCenario[]> {
   const prisma = getPrismaClient();
   const [centros, filiais] = await Promise.all([
-    prisma.centroCusto.findMany({ where: { ativo: true }, orderBy: [{ nomeControladoria: "asc" }, { codigoRM: "asc" }] }),
+    // Os vazios primeiro, como no SQLite (23/10/2026): o desempate do maisComum é a posição, e decide o balde do grupo.
+    prisma.centroCusto.findMany({
+      where: { ativo: true },
+      orderBy: [{ nomeControladoria: { sort: "asc", nulls: "first" } }, { codigoRM: { sort: "asc", nulls: "first" } }, { criadoEm: "asc" }, { id: "asc" }],
+    }),
     prisma.lancamentoContabil.groupBy({ by: ["centroCustoId", "filial"], _count: { _all: true }, where: { centroCustoId: { not: null } } }),
   ]);
   const porGrupo = new Map<string, typeof centros>();

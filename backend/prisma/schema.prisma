@@ -15,7 +15,8 @@ generator client {
 
 datasource db {
   // PostgreSQL (23/10/2026). As migrações do SQLite ficam em prisma/migrations-sqlite (histórico); a inicial do
-  // PostgreSQL é a prisma/migrations/0_init.
+  // PostgreSQL é a prisma/migrations/0_init. Os campos Json são @db.Json (o json do PostgreSQL, que guarda o texto como
+  // veio), não jsonb: o jsonb reordena as chaves dos objetos, e a Auditoria e outras telas mostram a ordem gravada.
   provider = "postgresql"
 }
 
@@ -215,9 +216,9 @@ model AuditLog {
   ip          String?
   userAgent   String?  @map("user_agent")
   /// JSON: suportado nos dois bancos. Em SQLite o Prisma serializa e valida.
-  dadosAntes  Json?    @map("dados_antes")
-  dadosDepois Json?    @map("dados_depois")
-  metadados   Json?
+  dadosAntes  Json? @db.Json @map("dados_antes")
+  dadosDepois Json? @db.Json @map("dados_depois")
+  metadados   Json? @db.Json
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([usuarioId, createdAt(sort: Desc)])
@@ -702,7 +703,7 @@ model Competencia {
   /// JSON: retrato das entradas no momento da apuração (contagens e somas dos
   /// lançamentos, das listas e das importações ativas). Comparado com as
   /// entradas atuais, diz se algo mudou depois da apuração (Passo 21).
-  entradasApuradas Json? @map("entradas_apuradas")
+  entradasApuradas Json? @db.Json @map("entradas_apuradas")
   /// JSON: a assinatura de cada cadastro da Controladoria na apuração (17/10/2026; antes, só a do Painel de Bordo): se
   /// algum muda com a competência apurada e ainda aberta, a situação pede reapurar (e o fechamento fica bloqueado até lá).
   cadastrosAssinatura String? @map("cadastros_assinatura")
@@ -803,9 +804,9 @@ model Importacao {
   /// total que não confere. Nesse caso nenhuma linha é gravada.
   motivoRejeicao  String?          @map("motivo_rejeicao")
   /// JSON: erros por linha, para o relatório de importação.
-  relatorioErros  Json?            @map("relatorio_erros")
+  relatorioErros  Json? @db.Json @map("relatorio_erros")
   /// JSON: totais conferidos e avisos que não impedem a gravação.
-  resumo          Json?
+  resumo          Json? @db.Json
   /// Uma reimportação do mesmo tipo na mesma competência substitui a anterior,
   /// que fica marcada aqui em vez de ser apagada.
   substituidaEm   DateTime?        @map("substituida_em")
@@ -1744,7 +1745,7 @@ model ResultadoApurado {
   percentualROL    Decimal? @map("percentual_rol")
   /// JSON: como o valor foi formado — a regra, a soma dos diretos e cada rateio
   /// com base e percentual. É a memória de cálculo e o ponto de partida do detalhamento.
-  composicao       Json?
+  composicao       Json? @db.Json
   apuradoEm        DateTime @default(now()) @map("apurado_em")
   apuradoPor       String?  @map("apurado_por")
   congelado        Boolean  @default(false)
@@ -1903,8 +1904,7 @@ model ConferenciaPlanilha {
   enviadoEm     DateTime @default(now()) @map("enviado_em")
   /// JSON: [{ unidade (0 = consolidado), aba, linha, descricao, codigo, valor }]
   /// — codigo é a linha da estrutura ligada pela descrição, ou null.
-  valores       Json
-
+  valores       Json @db.Json
   competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   usuario     Usuario     @relation(fields: [enviadoPor], references: [id])
 
@@ -1953,16 +1953,16 @@ model Cenario {
   /// máxima do total delas pedem justificativa (tela Justificativas).
   comparadoComId   String?  @map("comparado_com_id")
   /// A variação máxima (em %) de cada total da DRE no comparativo: { código do total: percentual }.
-  variacoesMaximas Json?    @map("variacoes_maximas")
+  variacoesMaximas Json? @db.Json @map("variacoes_maximas")
   /// Os Índices de Reajuste do cenário analítico (19/10/2026; Configurações / Índices): [{ chave, descricao, observacao,
   /// variacao (%) }]. No Comparativo dos analíticos, cada conta escolhe um índice (no lugar da variação digitada).
-  indicesReajuste  Json?    @map("indices_reajuste")
+  indicesReajuste  Json? @db.Json @map("indices_reajuste")
   /// O índice de cada conta no Comparativo dos analíticos: { código da linha da DRE: chave do índice }.
-  indicesDoComparativo Json? @map("indices_do_comparativo")
+  indicesDoComparativo Json? @db.Json @map("indices_do_comparativo")
   /// As movimentações do realizado fora dos padrões das premissas (cenário analítico, 14/10/2026): as da última carga
   /// do resultado realizado, as decisões de realocação (o grupo de centros de custo de cada conta; mantidas entre as
   /// cargas) e o que está somado nos centros por elas. Ver services/cenarios/realocacoesCenario.ts.
-  realocacoes      Json?    @map("realocacoes")
+  realocacoes      Json? @db.Json @map("realocacoes")
   /// As regras de rateio do último cálculo do cenário analítico (14/10/2026): o id e a data de alteração de cada uma. Se
   /// as regras de hoje são outras (editadas, criadas ou excluídas), a tela Resultados pede o Recalcular.
   rateiosAssinatura String? @map("rateios_assinatura")
@@ -2169,9 +2169,9 @@ model CenarioReajuste {
   /// A edição de um valor replicada aos meses seguintes.
   replicado   Boolean  @default(false)
   /// As contas alteradas: [{ codigo, descricao }].
-  contas      Json?
+  contas      Json? @db.Json
   /// Os meses alterados (1 a 12).
-  meses       Json?
+  meses       Json? @db.Json
   valores     Int      @default(0)
   somaAntes   Decimal? @map("soma_antes")
   somaDepois  Decimal? @map("soma_depois")
@@ -2340,7 +2340,7 @@ model RelatorioExecutivoAba {
   /// A aba (o nome da coluna ficou o de antes, departamento).
   departamento  AbaRelatorioExecutivo
   /// Os blocos: [{ id, tipo, x, y, w, h, … }].
-  blocos        Json
+  blocos        Json @db.Json
   situacao      SituacaoRelatorio  @default(EM_ELABORACAO)
   atualizadoPor String?            @map("atualizado_por")
   atualizadoEm  DateTime           @updatedAt @map("atualizado_em")
