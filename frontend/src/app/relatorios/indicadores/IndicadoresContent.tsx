@@ -168,6 +168,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
             dicaDoClique="Ver o gráfico do indicador"
             iconeDoClique={abreGrafico ? ChartColumn : undefined}
             comOrcado={!periodoFixo}
+            rotuloDoOrcado={dados.rotuloComparado}
           />
           {comGrafico ? (
             <GraficoIndicadorDialog

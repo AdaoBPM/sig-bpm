@@ -128,18 +128,19 @@ function montarColunas<T extends Indicador>(
   orcado: boolean,
   comparado: { rotulo: string } | null,
   comReferencia = false,
+  rotuloDoOrcado = "Orçado",
 ): Coluna<T>[] {
   const ultimo = meses.length - 1;
   // O orçado (Resultados Empresariais, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado. Nos
   // cenários com um cenário comparado (13/10/2026), só o acumulado dele, depois do acumulado.
   const orcadoDoMes: Coluna<T>[] = orcado && !comparado
-    ? [{ chave: "orcado:mes", rotulo: `Orçado ${meses[ultimo].rotulo}`, tipo: "numero", alinhamento: "direita", valor: (i) => i.orcado[ultimo] ?? null, texto: (i) => valor(i, i.orcado[ultimo] ?? null), classe: ROTULO_DO_ORCADO }]
+    ? [{ chave: "orcado:mes", rotulo: `${rotuloDoOrcado} ${meses[ultimo].rotulo}`, tipo: "numero", alinhamento: "direita", valor: (i) => i.orcado[ultimo] ?? null, texto: (i) => valor(i, i.orcado[ultimo] ?? null), classe: ROTULO_DO_ORCADO }]
     : [];
   const orcadoAcumulado: Coluna<T>[] = orcado
     ? [
         {
           chave: "orcado:acum",
-          rotulo: comparado?.rotulo ?? "Orçado Acum.",
+          rotulo: comparado?.rotulo ?? `${rotuloDoOrcado} Acum.`,
           tipo: "numero",
           alinhamento: "direita",
           valor: (i) => i.totalOrcado,
@@ -201,6 +202,11 @@ type Props<T extends Indicador> = {
   iconeDoClique?: ComponentType<{ className?: string }>;
   /** As colunas do orçado (Resultados Empresariais): a do último mês e a do acumulado. */
   comOrcado?: boolean;
+  /**
+   * O nome do orçado nos rótulos dessas colunas (23/10/2026): "Orçado" no Orçamento; nas outras marcações da Comparação, o
+   * nome dela (Previsão SET/26, Previsão Acum.), como em Resultados.
+   */
+  rotuloDoOrcado?: string;
   /** Nos cenários (13/10/2026): o cenário comparado, cujo acumulado vem no lugar do orçado (só ele, sem o do mês). */
   comparado?: { nome: string; ano: number } | null;
   /** A célula do mês em destaque (o valor digitado, nos lançamentos manuais do cenário). */
@@ -222,6 +228,7 @@ export function TabelaIndicadores<T extends Indicador>({
   dicaDoClique,
   iconeDoClique: Icone,
   comOrcado,
+  rotuloDoOrcado,
   comparado,
   destacar,
   dicaDoDestaque,
@@ -230,8 +237,8 @@ export function TabelaIndicadores<T extends Indicador>({
   const colunas = useMemo(() => {
     const indices = soUltimoMes ? [meses.length - 1] : meses.map((_, k) => k);
     const doComparado = comparado ? { rotulo: "Comparado Acum." } : null;
-    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado, !!comReferencia);
-  }, [meses, soUltimoMes, comOrcado, comparado, comReferencia]);
+    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado, !!comReferencia, rotuloDoOrcado);
+  }, [meses, soUltimoMes, comOrcado, comparado, comReferencia, rotuloDoOrcado]);
   // O grupo escolhido na lista antes do rótulo Indicador (13/10/2026); um grupo que a tabela não tem vale Todos.
   const [grupoEscolhido, setGrupo] = useState(TODOS_OS_GRUPOS);
   const grupos = useMemo(() => [...new Set(indicadores.map((i) => i.grupo))], [indicadores]);

@@ -10,8 +10,8 @@ import { Seletor } from "./SeletorPeriodo";
  * A Comparação de Resultados Empresariais (21/10/2026; de início, "Compara Com"): o cenário comparado (as colunas pretas de Resultados e o
  * orçado do Painel de Bordo), entre os cenários marcados (de qualquer exercício, desde 22/10/2026: num de outro, valem os
  * mesmos meses dele; o ano aparece na opção) (Orçamento Empresarial, Resultados Anteriores,
- * Resultados Vendidos e Previsão de Resultados). O padrão é o Orçamento Empresarial; a escolha fica guardada no navegador e vale nas
- * duas telas.
+ * Resultados Vendidos e Previsão de Resultados). O padrão é o Orçamento Empresarial (sem ele marcado, a primeira marcação que houver,
+ * 23/10/2026); a escolha fica guardada no navegador e vale nas duas telas (desde 23/10/2026, o Painel de Bordo também tem a lista).
  */
 const CHAVE = "sig.comparaCom";
 const PADRAO: MarcacaoComparavel = "ORCAMENTO_EMPRESARIAL";
@@ -28,8 +28,10 @@ export function useComparaCom(ano: number | null) {
   const [escolhida, setEscolhida] = useState<MarcacaoComparavel>(() => (typeof window === "undefined" ? PADRAO : lerEscolha()));
   const consulta = useQuery({ queryKey: ["relatorios", "comparaveis", ano], queryFn: () => relatoriosService.comparaveis(ano!), enabled: ano !== null });
   const opcoes = consulta.data ?? [];
-  // A escolhida sem cenário marcado: vale o Orçamento Empresarial.
-  const comparaCom = opcoes.some((o) => o.marcacao === escolhida) ? escolhida : PADRAO;
+  // A escolhida sem cenário marcado: vale o Orçamento Empresarial; sem ele marcado (23/10/2026), a primeira marcação que houver
+  // (antes, o Orçamento mesmo sem cenário: o orçado zero para quem nunca tinha escolhido outra).
+  const temA = (m: MarcacaoComparavel) => opcoes.some((o) => o.marcacao === m);
+  const comparaCom = temA(escolhida) ? escolhida : temA(PADRAO) ? PADRAO : (opcoes[0]?.marcacao ?? PADRAO);
   const mudar = (m: MarcacaoComparavel) => {
     setEscolhida(m);
     try {
@@ -38,7 +40,8 @@ export function useComparaCom(ano: number | null) {
       // Sem o armazenamento do navegador, vale só nesta tela.
     }
   };
-  return { comparaCom, opcoes, mudar };
+  // `pronta`: as opções chegaram (ou falharam), para não pedir os dados com o padrão antes da escolha valer.
+  return { comparaCom, opcoes, mudar, pronta: consulta.isSuccess || consulta.isError, atual: opcoes.find((o) => o.marcacao === comparaCom) ?? null };
 }
 
 export function SeletorComparaCom({ valor, opcoes, onMudar }: { valor: MarcacaoComparavel; opcoes: ReturnType<typeof useComparaCom>["opcoes"]; onMudar: (m: MarcacaoComparavel) => void }) {

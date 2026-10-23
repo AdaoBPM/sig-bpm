@@ -35,6 +35,7 @@ export function IndicadoresDoPainel({ ano, ate, tipo, comRotulos, comparaCom }: 
         dicaDoClique="Ver o gráfico do indicador"
         iconeDoClique={ChartColumn}
         comOrcado
+        rotuloDoOrcado={dados.rotuloComparado}
       />
       {comGrafico ? (
         <GraficoIndicadorDialog
