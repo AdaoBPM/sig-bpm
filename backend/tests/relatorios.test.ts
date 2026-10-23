@@ -4,11 +4,11 @@ import { describe, it } from "node:test";
 import { baseDoPercentual, baseDoUnitario, COD } from "../src/services/relatorios/basesResultados.js";
 import { lerIndicadores } from "../src/services/importacoes/indicadores/leituraIndicadores.js";
 import { acumular } from "../src/services/relatorios/indicadores.js";
-import { montarIndicador } from "../src/services/relatorios/catalogoIndicadores.js";
+import { montarCatalogo } from "../src/services/relatorios/catalogoIndicadores.js";
 import { ESTRUTURA_INICIAL_INDICADORES } from "../src/services/relatorios/estruturaInicialIndicadores.js";
 
 // O catálogo da carga inicial do cadastro Estrutura dos Indicadores, com as fórmulas compiladas (sem o banco).
-const INDICADORES = ESTRUTURA_INICIAL_INDICADORES.map(montarIndicador);
+const INDICADORES = montarCatalogo(ESTRUTURA_INICIAL_INDICADORES);
 const porNomeDoCatalogo = (n: string) => INDICADORES.find((i) => i.nome === n);
 import { acumularMeta } from "../src/services/relatorios/metasOrcamento.js";
 import { sinal, vsOrcado } from "../src/services/relatorios/painelDeBordo.js";
@@ -172,5 +172,63 @@ describe("GME 4 e GME 8 (aba Realizado, linhas 112 a 115)", () => {
     const pmc = meses.map((m) => mc.calculo(m));
     assert.deepEqual(pmc.map((p) => p.valor), [0.5, 1]);
     assert.equal(acumular(mc, pmc), 1);
+  });
+
+  it("os GME 4 pela Metodologia (a demanda ou a expedição sobre a meta da produção, ponderadas pela venda ou pela expedição) dão o mesmo do cálculo do sistema", async () => {
+    const { acumular } = await import("../src/services/relatorios/indicadores.js");
+    const linha = (nome: string, formula: string, peso: string) => ({ grupo: "GME", numero: "GME 4", nome, sentido: "↑", unidade: "%", descricao: null, formula, modo: "MEDIA_PONDERADA", peso });
+    const [gerada, expedida] = montarCatalogo([
+      linha("Gerada", "[IND|Demanda (Vol.): Total (Fabricação)] / [META|Produção (Vol.): Total]", "[IND|Venda: Total]"),
+      linha("Expedida", "[DRE|0|S.EXPEDICAO_DO_PRE_FABRICADO_M] / [META|Produção (Vol.): Total]", "[DRE|0|S.EXPEDICAO_DO_PRE_FABRICADO_M]"),
+    ]);
+    const meses = [
+      mes({ "S.EXPEDICAO_DO_PRE_FABRICADO_M": 50 }, { "Venda: Total": 10, "Demanda (Vol.): Total (Fabricação)": 80 }, { "Produção (Vol.): Total": 100 }),
+      mes({ "S.EXPEDICAO_DO_PRE_FABRICADO_M": 150 }, { "Venda: Total": 30, "Demanda (Vol.): Total (Fabricação)": 120 }, { "Produção (Vol.): Total": 100 }),
+    ];
+    for (const [nova, sistema] of [[gerada, "Média Móvel da Demanda Gerada"], [expedida, "Média Móvel da Demanda Expedida"]] as const) {
+      const s = INDICADORES.find((i) => i.nome === sistema)!;
+      const pn = meses.map((m) => nova.calculo(m));
+      const ps = meses.map((m) => s.calculo(m));
+      assert.deepEqual(pn.map((p) => p.valor), ps.map((p) => p.valor));
+      assert.equal(acumular(nova, pn), acumular(s, ps));
+    }
+  });
+});
+
+describe("Metodologia com outros indicadores (o item [INDICADOR], 23/10/2026)", () => {
+  const linha = (nome: string, formula: string) => ({ grupo: "Geral", numero: "1", nome, sentido: "↑", unidade: "R$", descricao: null, formula, modo: "SOMA", peso: null });
+  const mes = (importado: Record<string, number>, outros?: Record<string, number | null>) => ({
+    dre: () => 0,
+    volume: () => 0,
+    importado: (n: string) => importado[n] ?? null,
+    indicador: outros ? (n: string) => (n in outros ? outros[n] : undefined) : undefined,
+  });
+  const catalogo = montarCatalogo([
+    linha("A", "[IND|Venda: Total]"),
+    linha("B", "[INDICADOR|A] * 2"),
+    linha("C", "[INDICADOR|B] + [INDICADOR|A]"),
+    // Um ciclo (o cadastro recusa; se houver, fica sem valor).
+    linha("D", "[INDICADOR|E] + 1"),
+    linha("E", "[INDICADOR|D] + 1"),
+    linha("F", "[INDICADOR|Inexistente] + 1"),
+  ]);
+  const por = (n: string) => catalogo.find((i) => i.nome === n)!;
+  it("usa o valor do mês do outro indicador, encadeado, e soma no acumulado", () => {
+    const meses = [mes({ "Venda: Total": 10 }), mes({ "Venda: Total": 30 })];
+    assert.deepEqual(meses.map((m) => por("B").calculo(m).valor), [20, 60]);
+    assert.deepEqual(meses.map((m) => por("C").calculo(m).valor), [30, 90]);
+    assert.equal(acumular(por("C"), meses.map((m) => por("C").calculo(m))), 120);
+    // Sem o dado do outro, sem valor.
+    assert.equal(por("B").calculo(mes({})).valor, null);
+  });
+  it("o ciclo e o indicador que não existe ficam sem valor", () => {
+    const m = mes({ "Venda: Total": 10 });
+    assert.equal(por("D").calculo(m).valor, null);
+    assert.equal(por("E").calculo(m).valor, null);
+    assert.equal(por("F").calculo(m).valor, null);
+  });
+  it("os dados do mês podem dar o valor do outro (nos cenários, o importado vem das metas)", () => {
+    assert.equal(por("B").calculo(mes({ "Venda: Total": 10 }, { A: 7 })).valor, 14);
+    assert.equal(por("B").calculo(mes({ "Venda: Total": 10 }, { A: null })).valor, null);
   });
 });

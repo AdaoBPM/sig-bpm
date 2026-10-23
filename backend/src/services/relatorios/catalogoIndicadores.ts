@@ -44,8 +44,33 @@ export async function rotulosDosItens() {
           : i.nome;
 }
 
+/** Os valores de outros indicadores já contados em cada mês, e os que estão sendo contados (um ciclo fica sem valor). */
+const contados = new WeakMap<DadosDoMes, Map<string, number | null>>();
+const contando = new WeakMap<DadosDoMes, Set<string>>();
+
+/** O valor do mês de outro indicador (o item [INDICADOR], 23/10/2026): o que os dados do mês dão ou a conta dele. */
+function valorDoIndicador(m: DadosDoMes, nome: string, irmaos?: Map<string, Indicador>): number {
+  const dado = m.indicador?.(nome);
+  if (dado !== undefined) return dado ?? NaN;
+  const memo = contados.get(m) ?? new Map<string, number | null>();
+  contados.set(m, memo);
+  if (memo.has(nome)) return memo.get(nome) ?? NaN;
+  const outro = irmaos?.get(nome);
+  const emCurso = contando.get(m) ?? new Set<string>();
+  contando.set(m, emCurso);
+  if (!outro || emCurso.has(nome)) return NaN;
+  emCurso.add(nome);
+  try {
+    const v = outro.calculo(m).valor;
+    memo.set(nome, v);
+    return v ?? NaN;
+  } finally {
+    emCurso.delete(nome);
+  }
+}
+
 /** O valor de um item no mês (NaN sem dado). */
-function valorDoItem(m: DadosDoMes, i: Item): number {
+function valorDoItem(m: DadosDoMes, i: Item, irmaos?: Map<string, Indicador>): number {
   switch (i.tipo) {
     case "DRE":
       return m.dre(i.unidade, i.codigo);
@@ -55,9 +80,8 @@ function valorDoItem(m: DadosDoMes, i: Item): number {
       return m.importado(i.nome) ?? NaN;
     case "META":
       return m.meta?.(i.nome) ?? NaN;
-    // Só o Painel de Bordo usa indicadores na fórmula; num indicador, não vale (o cadastro recusa).
     case "INDICADOR":
-      return NaN;
+      return valorDoIndicador(m, i.nome, irmaos);
   }
 }
 
@@ -73,8 +97,8 @@ export type LinhaEstruturaIndicador = {
   peso: string | null;
 };
 
-/** Um indicador do cadastro pronto para calcular. */
-export function montarIndicador(r: LinhaEstruturaIndicador): Indicador {
+/** Um indicador do cadastro pronto para calcular; `irmaos`: os indicadores pelo nome, para o item [INDICADOR]. */
+export function montarIndicador(r: LinhaEstruturaIndicador, irmaos?: Map<string, Indicador>): Indicador {
   const base = { grupo: r.grupo, numero: r.numero, nome: r.nome, sentido: r.sentido, unidade: r.unidade, metodologia: r.descricao ?? "" };
   if (r.modo === "SISTEMA" || !r.formula) {
     const s = CALCULOS_SISTEMA[r.nome];
@@ -87,12 +111,12 @@ export function montarIndicador(r: LinhaEstruturaIndicador): Indicador {
     ...base,
     acumulado: r.modo === "ULTIMO" ? "ATUAL" : "ACUM",
     calculo: (m) => {
-      const valores = new Map(itens.map(([chave, item]) => [chave, valorDoItem(m, item)]));
+      const valores = new Map(itens.map(([chave, item]) => [chave, valorDoItem(m, item, irmaos)]));
       const valor = f.avaliar((k) => valores.get(k) ?? NaN);
       if (peso) {
         const p = peso.avaliar((k) => {
           const it = peso.itens.get(k);
-          return it ? valorDoItem(m, it) : NaN;
+          return it ? valorDoItem(m, it, irmaos) : NaN;
         });
         return { valor, peso: p ?? undefined };
       }
@@ -103,10 +127,19 @@ export function montarIndicador(r: LinhaEstruturaIndicador): Indicador {
   };
 }
 
-/** Os indicadores ativos do cadastro, na ordem da tela. */
+/** Os indicadores das linhas, ligados uns aos outros pelo nome (o item [INDICADOR] da Metodologia, 23/10/2026). */
+export function montarCatalogo(linhas: LinhaEstruturaIndicador[]): Indicador[] {
+  const irmaos = new Map<string, Indicador>();
+  const todos = linhas.map((r) => montarIndicador(r, irmaos));
+  for (const i of todos) irmaos.set(i.nome, i);
+  return todos;
+}
+
+/** Os indicadores ativos do cadastro, na ordem da tela (um inativo usado na Metodologia de outro ainda se conta). */
 export async function catalogoDeIndicadores(): Promise<Indicador[]> {
-  const linhas = await getPrismaClient().indicadorEstrutura.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } });
-  return linhas.map(montarIndicador);
+  const linhas = await getPrismaClient().indicadorEstrutura.findMany({ orderBy: { ordem: "asc" } });
+  const todos = montarCatalogo(linhas);
+  return todos.filter((_, k) => linhas[k].ativo);
 }
 
 /** A fórmula por extenso de cada indicador do cadastro (a coluna Metodologia da tela). */

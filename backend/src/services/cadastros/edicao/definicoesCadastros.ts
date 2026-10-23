@@ -704,9 +704,10 @@ const linhas: DefinicaoCadastro = {
 // --------------------------------------------------------- estrutura dos indicadores
 /**
  * A Estrutura dos Indicadores (11/10/2026): os indicadores de resultado, com a fórmula (Metodologia) que os calcula —
- * itens da DRE (qualquer linha, por unidade), totalizadores das Listas, indicadores do Comercial e do Administrativo
- * e metas do orçamento, com + − × ÷ e parênteses. O nome identifica o indicador nas metas importadas, nos valores
- * digitados e no Painel de Bordo: com eles, não muda.
+ * itens da DRE (qualquer linha, por unidade), totalizadores das Listas, indicadores do Comercial e do Administrativo,
+ * metas do orçamento e (23/10/2026) outros indicadores do cadastro, com + − × ÷ e parênteses. O nome identifica o
+ * indicador nas metas importadas, nos valores digitados, no Painel de Bordo e na Metodologia de outros indicadores: com
+ * eles, não muda.
  */
 const GRUPOS_DE_INDICADORES = ["Produção", "Serviços", "Logística", "Técnico", "Comercial", "Administrativo", "Geral", "GME"];
 const SENTIDOS: Array<[string, string]> = [["↑", "↑ Maior, melhor"], ["↓", "↓ Menor, melhor"], ["=", "= Acompanhamento"], ["-", "- Sem sentido"]];
@@ -730,13 +731,39 @@ const MODOS_DO_ACUMULADO: Array<[string, string]> = [["SOMA", "Soma dos meses"],
 /** Os itens que a fórmula pode usar (as opções do montador): valor "TIPO|chave", grupo pelo tipo do item. */
 async function itensDaFormula(db: Db): Promise<Opcao[]> {
   const linhas = await db.linhaDRE.findMany({ where: { tipo: { not: "SECAO" }, ativo: true }, orderBy: { ordem: "asc" }, select: { codigo: true, descricao: true, grupoSigla: true, tipo: true } });
-  const nomes = (await db.indicadorEstrutura.findMany({ orderBy: { ordem: "asc" }, select: { nome: true } })).map((i) => i.nome);
+  const indicadores = await db.indicadorEstrutura.findMany({ orderBy: { ordem: "asc" }, select: { nome: true, grupo: true, ativo: true } });
+  const nomes = indicadores.map((i) => i.nome);
   return [
     ...linhas.map((l) => ({ valor: `DRE|${l.codigo}`, rotulo: `${l.grupoSigla} › ${l.descricao}${l.tipo === "ITEM" ? "" : " (total)"}`, grupos: ["DRE"] })),
     ...TOTALIZADORES_DAS_LISTAS.map((t) => ({ valor: `LISTA|${t.codigo}`, rotulo: t.rotulo, grupos: ["LISTA"] })),
     ...INDICADORES_DAS_LISTAS.map((n) => ({ valor: `IND|${n}`, rotulo: n, grupos: ["IND"] })),
     ...nomes.map((n) => ({ valor: `META|${n}`, rotulo: n, grupos: ["META"] })),
+    // Os outros indicadores do cadastro (23/10/2026), com o grupo antes, como no Painel de Bordo; o próprio, o cadastro recusa.
+    ...indicadores.filter((i) => i.ativo).map((i) => ({ valor: `INDICADOR|${i.nome}`, rotulo: `${i.grupo} › ${i.nome}`, grupos: ["INDICADOR"] })),
   ];
+}
+
+/**
+ * Recusa a Metodologia (ou o Peso da Média) que faz um ciclo pelos indicadores que usa (23/10/2026): o indicador que
+ * usa, direta ou indiretamente, a si mesmo. `id`: o indicador editado (o gravado dele sai da conta).
+ */
+async function exigirSemCiclo(db: Db, id: string | null, nome: string, formula: string | null, peso: string | null) {
+  const outros = await db.indicadorEstrutura.findMany({ select: { id: true, nome: true, formula: true, peso: true } });
+  const usa = new Map(outros.filter((o) => o.id !== id).map((o) => [o.nome, [...indicadoresDaFormula(o.formula), ...indicadoresDaFormula(o.peso)]]));
+  usa.set(nome, [...indicadoresDaFormula(formula), ...indicadoresDaFormula(peso)]);
+  const vistos = new Set<string>();
+  const caminho = (de: string): string[] | null => {
+    for (const p of usa.get(de) ?? []) {
+      if (p === nome) return [de];
+      if (vistos.has(p)) continue;
+      vistos.add(p);
+      const resto = caminho(p);
+      if (resto) return [de, ...resto];
+    }
+    return null;
+  };
+  const ciclo = caminho(nome);
+  if (ciclo) throw new RegraCadastroError(400, `A Metodologia faz um ciclo entre os indicadores: ${[...ciclo, nome].join(" → ")}.`);
 }
 
 /** Valida a fórmula: a escrita e os itens (linhas que existem na DRE, totalizadores, indicadores e metas conhecidos). */
@@ -753,7 +780,13 @@ async function validarFormula(db: Db, formula: string, rotulo: string, nomesDoCa
   const metas = new Set(nomesDoCatalogo);
   for (const i of compilada.itens.values()) {
     const ok =
-      i.tipo === "DRE" ? codigos.has(i.codigo) : i.tipo === "LISTA" ? listas.has(i.codigo) : i.tipo === "IND" ? indicadores.has(i.nome) : i.tipo === "META" && metas.has(i.nome);
+      i.tipo === "DRE"
+        ? codigos.has(i.codigo)
+        : i.tipo === "LISTA"
+          ? listas.has(i.codigo)
+          : i.tipo === "IND"
+            ? indicadores.has(i.nome)
+            : (i.tipo === "META" || i.tipo === "INDICADOR") && metas.has(i.nome);
     if (!ok) throw new RegraCadastroError(400, `${rotulo}: o item ${i.tipo === "DRE" ? i.codigo : i.tipo === "LISTA" ? i.codigo : i.nome} não existe.`);
   }
 }
@@ -817,6 +850,7 @@ const estruturaIndicadores: DefinicaoCadastro = {
       } else {
         peso = null;
       }
+      await exigirSemCiclo(db, id, nome, formula, peso);
     }
     return {
       ordem: inteiro(v.ordem, "A ordem") ?? undefined,
@@ -850,8 +884,17 @@ const estruturaIndicadores: DefinicaoCadastro = {
     const noPainel = (await db.painelItem.findMany({ select: { formula: true, percentual: true } })).some(
       (p) => indicadoresDaFormula(p.formula).includes(i.nome) || indicadoresDaFormula(p.percentual).includes(i.nome),
     );
-    if (!metas && !digitados && !importados && !noPainel) return null;
-    const partes = [metas ? `${metas} ${plural(metas, "meta", "metas")} de cenários` : null, importados + digitados ? `${importados + digitados} ${plural(importados + digitados, "valor importado ou digitado", "valores importados ou digitados")}` : null, noPainel ? "o Painel de Bordo" : null].filter(Boolean);
+    // Usado na Metodologia (ou no Peso da Média) de outro indicador (23/10/2026).
+    const naMetodologia = (await db.indicadorEstrutura.findMany({ where: { id: { not: id } }, select: { formula: true, peso: true } })).filter(
+      (o) => indicadoresDaFormula(o.formula).includes(i.nome) || indicadoresDaFormula(o.peso).includes(i.nome),
+    ).length;
+    if (!metas && !digitados && !importados && !noPainel && !naMetodologia) return null;
+    const partes = [
+      metas ? `${metas} ${plural(metas, "meta", "metas")} de cenários` : null,
+      importados + digitados ? `${importados + digitados} ${plural(importados + digitados, "valor importado ou digitado", "valores importados ou digitados")}` : null,
+      noPainel ? "o Painel de Bordo" : null,
+      naMetodologia ? `a Metodologia de ${naMetodologia} ${plural(naMetodologia, "outro indicador", "outros indicadores")}` : null,
+    ].filter(Boolean);
     return `O indicador é usado por ${partes.join(", ")}.`;
   },
   async impedimentoExclusao(db, id) {

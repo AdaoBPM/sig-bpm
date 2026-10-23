@@ -13,7 +13,8 @@ import type { Opcao } from "../services/edicaoService";
  * item, e se monta inserindo itens (linhas da DRE por unidade, totalizadores das Listas, indicadores do Comercial e do
  * Administrativo, metas do orçamento), operadores (+ − × ÷), parênteses e números. Grava o texto da fórmula, com os
  * itens entre colchetes ([DRE|1|CPP…]). Os tipos de item são os que as opções trazem: na Metodologia do Painel de Bordo
- * (17/10/2026), só os indicadores ([INDICADOR|nome]).
+ * (17/10/2026), só os indicadores ([INDICADOR|nome]); na dos indicadores, todos (desde 23/10/2026, também outros
+ * indicadores do cadastro).
  */
 
 const TIPOS = [

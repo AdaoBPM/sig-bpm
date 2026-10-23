@@ -31,6 +31,11 @@ export type DadosDoMes = {
   anteriores?: DadosDoMes[];
   /** Um totalizador das Listas (o item [LISTA] das fórmulas): o volume congelado da apuração ou, sem ele, o das listas. */
   lista?: (codigo: string) => number;
+  /**
+   * O valor do mês de outro indicador do cadastro (o item [INDICADOR], 23/10/2026), quando quem monta os dados o dá (nos
+   * cenários, os importados vêm das metas); undefined: vale a conta do indicador.
+   */
+  indicador?: (nome: string) => number | null | undefined;
 };
 /** O valor do mês e o peso dele no acumulado; `componentes`, quando o acumulado pondera partes (Matriz e Filial) em vez do total. */
 export type Parte = {

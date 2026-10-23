@@ -8,8 +8,9 @@
  * - [IND|nome]: um indicador importado ou digitado das abas Comercial e Administrativo (Venda: Total, Quadro de
  *   Lotação…);
  * - [META|nome]: a meta do mês de um indicador no cenário Orçamento Empresarial do exercício (zero sem ele);
- * - [INDICADOR|nome]: um indicador da Estrutura dos Indicadores — só na Metodologia dos itens do Painel de Bordo
- *   (17/10/2026), onde o realizado usa o valor do indicador e o orçado, a meta dele.
+ * - [INDICADOR|nome]: um indicador da Estrutura dos Indicadores — na Metodologia dos itens do Painel de Bordo
+ *   (17/10/2026), onde o realizado usa o valor do indicador e o orçado, a meta dele; e, desde 23/10/2026, na dos
+ *   próprios indicadores, com o valor do mês do outro indicador (sem ciclos: o cadastro os recusa).
  *
  * O valor do mês é a fórmula com os itens do mês; sem dado em algum item (mês não apurado, indicador não importado)
  * ou com divisão por zero, o indicador fica sem valor. O acumulado depende do modo do indicador (indicadores.ts).

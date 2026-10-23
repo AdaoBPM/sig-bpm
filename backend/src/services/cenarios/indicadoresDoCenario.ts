@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
-import { INDICADORES_DAS_LISTAS, montarIndicador } from "../relatorios/catalogoIndicadores.js";
+import { INDICADORES_DAS_LISTAS, montarCatalogo } from "../relatorios/catalogoIndicadores.js";
 import { compilarFormula } from "../relatorios/formulaIndicador.js";
 import { acumular, type DadosDoMes, type Indicador, type Parte } from "../relatorios/indicadores.js";
 import { acumularMeta } from "../relatorios/metasOrcamento.js";
@@ -15,7 +15,8 @@ import { QUADROS_DE_LOTACAO, quadrosDeLotacao, VENDAS_LOTACAO } from "./lotacaoC
  * - RESULTADO: a fórmula só usa linhas da DRE (custos, volumes, receitas, margens…): sai da DRE do cenário;
  * - MANUAL: os que não saem da DRE — os quadros de lotação e os numerados do Comercial e do Administrativo (os das
  *   abas Comercial e Administrativo das Listas): vêm da aba das metas e se digitam na tela;
- * - CALCULADO: a fórmula junta a DRE e os lançamentos manuais (as eficiências: volume ou receita por colaborador);
+ * - CALCULADO: a fórmula junta a DRE e os lançamentos manuais (as eficiências: volume ou receita por colaborador), ou
+ *   usa outros indicadores (23/10/2026: o item [INDICADOR], com o valor deles no cenário — nos importados, o das metas);
  * - IMPORTADO: os que o cenário não tem como calcular (a liberação de projetos, que vem das Listas, e os GME 4 e 8,
  *   que usam a demanda condicionada à venda e o orçado acumulado): ficam com o valor da aba das metas.
  *
@@ -39,7 +40,7 @@ export function classificar(r: Linha, analitico = false): ClasseIndicador {
   const itens = [...compilarFormula(r.formula).itens.values(), ...(r.modo === "MEDIA_PONDERADA" && r.peso ? compilarFormula(r.peso).itens.values() : [])];
   const tipos = new Set(itens.map((i) => i.tipo));
   if (tipos.has("LISTA") || tipos.has("META")) return "IMPORTADO";
-  if (tipos.has("IND")) return "CALCULADO";
+  if (tipos.has("IND") || tipos.has("INDICADOR")) return "CALCULADO";
   return "RESULTADO";
 }
 
@@ -70,7 +71,8 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
     prisma.cenario.findUniqueOrThrow({ where: { id: cenarioId }, select: { ano: true, tipo: true } }),
     prisma.cenarioResultado.findMany({ where: { cenarioId }, select: { visao: true, mes: true, valor: true, linhaDRE: { select: { codigo: true } } } }),
     prisma.cenarioIndicador.findMany({ where: { cenarioId }, select: { nome: true, mes: true, valor: true, origem: true } }),
-    prisma.indicadorEstrutura.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
+    // Todos (os inativos também), para o item [INDICADOR]; só os ativos vão no resultado.
+    prisma.indicadorEstrutura.findMany({ orderBy: { ordem: "asc" } }),
   ]);
   const porLinha = new Map(dre.map((r) => [`${r.mes}|${r.visao}|${r.linhaDRE.codigo}`, Number(r.valor)]));
   // No analítico, os quadros de lotação dos grupos de centros de custo.
@@ -95,6 +97,7 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
     return doMes.length ? new Map(doMes.map((m) => [m.nome, Number(m.valor)])) : null;
   });
 
+  const classes = new Map(estrutura.map((r) => [r.nome, classificar(r, analitico)]));
   const dados: DadosDoMes[] = Array.from({ length: 12 }, (_, k) => {
     const mes = k + 1;
     const temDRE = mesesComDRE[k];
@@ -104,17 +107,21 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
       lista: () => NaN,
       importado: (n) => (quadros?.has(n) ? quadros.get(n)![k] : (porMeta.get(`${mes}|${n}`)?.valor ?? null)),
       meta: () => null,
+      // O item [INDICADOR]: num importado, o valor das metas; nos outros, a conta dele no cenário.
+      indicador: (n) => (classes.get(n) === "IMPORTADO" ? (importadas[k]?.get(n) ?? null) : undefined),
     };
   });
 
-  const indicadores = estrutura.map((r): IndicadorDoCenario => {
-    const indicador = montarIndicador(r);
-    const classe = classificar(r, analitico);
+  const catalogo = montarCatalogo(estrutura);
+  const indicadores = estrutura.flatMap((r, n): IndicadorDoCenario[] => {
+    if (!r.ativo) return [];
+    const indicador = catalogo[n];
+    const classe = classes.get(r.nome)!;
     const partes =
       classe === "IMPORTADO"
         ? importadas.map((m) => (m ? { valor: m.get(r.nome) ?? null } : null))
         : dados.map((d) => indicador.calculo(d));
-    return { indicador, classe, partes, digitados: Array.from({ length: 12 }, (_, k) => classe === "MANUAL" && !!porMeta.get(`${k + 1}|${r.nome}`)?.digitado) };
+    return [{ indicador, classe, partes, digitados: Array.from({ length: 12 }, (_, k) => classe === "MANUAL" && !!porMeta.get(`${k + 1}|${r.nome}`)?.digitado) }];
   });
 
   return {

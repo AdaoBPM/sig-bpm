@@ -91,6 +91,13 @@ describe("leitura do cenário sintético", () => {
     const contagem = [...classe.values()].reduce<Record<string, number>>((m, c) => ({ ...m, [c]: (m[c] ?? 0) + 1 }), {});
     assert.deepEqual(contagem, { RESULTADO: 53, MANUAL: 33, CALCULADO: 25, IMPORTADO: 7 });
   });
+
+  it("a Metodologia com outros indicadores ([INDICADOR], 23/10/2026) é calculada no cenário; com Listas ou metas, importada", () => {
+    const i = (formula: string) => classificar({ nome: "X", formula, peso: null, modo: "SOMA" });
+    assert.equal(i("[INDICADOR|Venda: Total] * 2"), "CALCULADO");
+    assert.equal(i("[INDICADOR|Venda: Total] / [DRE|0|MC.MARGEM_DE_CONTRIBUICAO_MC]"), "CALCULADO");
+    assert.equal(i("[INDICADOR|Venda: Total] / [META|Venda: Total]"), "IMPORTADO");
+  });
 });
 
 describe("comparativo entre cenários", () => {
