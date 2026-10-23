@@ -5,15 +5,19 @@ import { DepartamentoAcesso, RecursoSistema, AcaoPermissao, TipoImportacao } fro
 import { RegraUsuarioError, usuariosService } from "../../services/usuarios/usuariosService.js";
 import { novaSenhaSchema } from "../authController.js";
 
+// Os ids como texto, sem exigir o formato de UUID: o do perfil Administrador, gravado por uma migração (14/10/2026), não
+// o tem, e o z.string().uuid() recusava criar ou editar um usuário Administrador. O serviço confere se o perfil e os
+// centros existem.
+const idSchema = z.string().min(1).max(64);
 const usuarioSchema = z.object({
   nome: z.string().trim().min(2).max(120),
   email: z.string().trim().email("E-mail inválido").max(200),
-  perfilId: z.string().uuid(),
+  perfilId: idSchema,
   ativo: z.boolean().default(true),
   setores: z.array(z.enum(Object.values(TipoImportacao) as [string, ...string[]])).default([]),
   departamentos: z.array(z.enum(Object.values(DepartamentoAcesso) as [string, ...string[]])).default([]),
   gestao: z.enum(Object.values(DepartamentoAcesso) as [string, ...string[]]).nullable().default(null),
-  centros: z.array(z.string().uuid()).default([]),
+  centros: z.array(idSchema).default([]),
   veObras: z.boolean().default(false),
 });
 const perfilSchema = z.object({
