@@ -1,5 +1,9 @@
 # Produção e Desenvolvimento
 
+> **Desde 23/10/2026, a produção é http://192.168.0.16:3020 (PostgreSQL `sig_bpm`).** A 3010 (SQLite) saiu do ar. O
+> deploy automático está parado até o TI ajustá-lo para o PostgreSQL: não juntar a branch `postgres` na `master` antes
+> disso. O que vem abaixo sobre a 3010 e o envio à `master` vale de novo só quando o TI liberar o deploy novo.
+
 > **Desde 20/10/2026, a produção é o servidor da empresa** (`srv-docker`, http://192.168.0.16:3010), com deploy
 > automático a cada envio à `master` do GitHub. **Publicar = enviar à `master`.** O notebook é só desenvolvimento: a
 > produção antiga dele (portas 3000/3001, `backend/prisma/dev.db`) foi desligada e não deve voltar a ser usada como

@@ -1,5 +1,9 @@
 # Servidor da Empresa — Registro para o TI
 
+> **Desde 23/10/2026, a produção é http://192.168.0.16:3020 (PostgreSQL `sig_bpm`, back-up às 18:34).** A 3010
+> (SQLite) saiu do ar, com o último estado guardado. O deploy automático está parado até o TI ajustá-lo para o
+> PostgreSQL. As regras abaixo sobre a 3010 e a pasta `/root/dados/sig-bpm` são da produção anterior.
+
 O SIG BPM do servidor 192.168.0.16 (frontend na porta 3010, docker compose) recebe o código do GitHub pelo deploy
 automático (timer `sig-bpm-deploy`). O deploy leva **só o código**: a base de dados do servidor é própria, separada da
 produção local (notebook, porta 3000). Por isso, toda alteração de dados feita na produção local (migração, script de
