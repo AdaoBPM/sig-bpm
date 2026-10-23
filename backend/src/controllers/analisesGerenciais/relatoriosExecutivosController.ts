@@ -37,7 +37,7 @@ async function responder(response: Response, fn: () => Promise<unknown>, status 
   try {
     return response.status(status).json({ data: await fn() });
   } catch (error) {
-    if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message });
+    if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message, ...(error.codigo ? { codigo: error.codigo, detalhes: error.detalhes } : {}) });
     throw error;
   }
 }
@@ -132,9 +132,16 @@ export const relatoriosExecutivosController = {
     const d = r ? aba(request, response) : null;
     if (!r || !d) return;
     // As páginas da aba (16/10/2026), cada uma com os blocos dela.
-    const corpo = z.object({ paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200), fundo: fundo.optional() })).min(1).max(30) }).safeParse(request.body);
+    // `versao` e `forcar` (23/10/2026): a conferência de que ninguém gravou a aba depois que o usuário a abriu.
+    const corpo = z
+      .object({
+        paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200), fundo: fundo.optional() })).min(1).max(30),
+        versao: z.string().max(40).optional(),
+        forcar: z.boolean().optional(),
+      })
+      .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Páginas ou blocos inválidos." });
-    return responder(response, () => s.gravarAba(r, d, corpo.data.paginas, usuario(request)));
+    return responder(response, () => s.gravarAba(r, d, corpo.data.paginas, usuario(request), { versao: corpo.data.versao, forcar: corpo.data.forcar }));
   },
 
   finalizarAba(request: Request, response: Response) {
@@ -166,7 +173,7 @@ export const relatoriosExecutivosController = {
       response.setHeader("Cache-Control", "private, max-age=86400");
       return response.send(f.conteudo);
     } catch (error) {
-      if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message });
+      if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message, ...(error.codigo ? { codigo: error.codigo, detalhes: error.detalhes } : {}) });
       throw error;
     }
   },
@@ -205,7 +212,7 @@ export const relatoriosExecutivosController = {
       response.setHeader("Content-Length", String(fim - inicio + 1));
       return createReadStream(v.caminho, { start: inicio, end: fim }).pipe(response);
     } catch (error) {
-      if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message });
+      if (error instanceof RelatorioExecutivoError) return response.status(error.status).json({ error: error.message, ...(error.codigo ? { codigo: error.codigo, detalhes: error.detalhes } : {}) });
       throw error;
     }
   },

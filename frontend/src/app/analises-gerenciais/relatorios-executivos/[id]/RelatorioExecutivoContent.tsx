@@ -35,6 +35,13 @@ import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type Conteudo
 const novoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
+/** O grupo que outro usuário gravou depois (23/10/2026): o 409 CONFLITO do servidor, com quem e quando; nos outros erros, null. */
+type Conflito = { aba: string; nome: string; atualizadoPor: string | null; atualizadoEm: string };
+function conflitoDe(e: unknown): Conflito | null {
+  const r = (e as { response?: { status?: number; data?: { codigo?: string; detalhes?: Conflito } } }).response;
+  return r?.status === 409 && r.data?.codigo === "CONFLITO" && r.data.detalhes ? r.data.detalhes : null;
+}
+
 /** O nome da página: o escolhido ou, sem ele, "Página N". */
 const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 1}`;
 
@@ -80,8 +87,16 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const dados = useQuery({ queryKey: ["relatorios-executivos", "dados", relatorio.id], queryFn: () => relatoriosExecutivosService.dados(relatorio.id) });
   const [cores] = useCoresDoPainel();
   const [tipo] = useTipoGrafico();
-  const gravadas = Object.fromEntries(relatorio.abas.map((a) => [a.chave, a.paginas]));
-  const [paginas, setPaginas] = useState<Record<string, Pagina[]>>(gravadas);
+  // A base de cada grupo (23/10/2026): as páginas e a versão (quando o grupo foi gravado) do que o usuário abriu ou gravou
+  // por último; o Gravar manda a versão, e o servidor recusa se outro gravou o grupo depois.
+  const [base, setBase] = useState(() => ({
+    paginas: Object.fromEntries(relatorio.abas.map((a) => [a.chave, a.paginas])) as Record<string, Pagina[]>,
+    versoes: Object.fromEntries(relatorio.abas.map((a) => [a.chave, a.atualizadoEm])) as Record<string, string>,
+  }));
+  const gravadas = base.paginas;
+  const [paginas, setPaginas] = useState<Record<string, Pagina[]>>(() => base.paginas);
+  // O grupo que outro usuário gravou depois que este abriu o relatório (o Gravar foi recusado).
+  const [conflito, setConflito] = useState<Conflito | null>(null);
   const [adicionando, setAdicionando] = useState(false);
   // O Adicionar Vídeo (20/10/2026): "novo" (um bloco novo) ou o id do quadro de vídeo vazio que recebe o vídeo.
   const [escolhendoVideo, setEscolhendoVideo] = useState<string | null>(null);
@@ -244,20 +259,29 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"], exact: true });
   };
   // Gravar: as abas alteradas (as que o usuário edita), uma a uma.
+  // Grava os grupos alterados, um a um, cada um com a versão dele; `forcar`: o grupo que o usuário escolheu gravar por cima.
+  // Num conflito, os já gravados ficam (a base deles passa a ser o gravado) e o aviso pergunta o que fazer com o recusado.
   const gravar = useMutation({
-    mutationFn: async () => {
-      let r = relatorio;
-      for (const a of mudadas) r = await relatoriosExecutivosService.gravarAba(relatorio.id, a.chave, paginas[a.chave] ?? []);
+    mutationFn: async (forcar: string | null) => {
+      let r: Relatorio | null = null;
+      for (const a of mudadas) {
+        const enviadas = paginas[a.chave] ?? [];
+        const gravado = await relatoriosExecutivosService.gravarAba(relatorio.id, a.chave, enviadas, { versao: base.versoes[a.chave], forcar: forcar === a.chave });
+        r = gravado;
+        const versao = gravado.abas.find((x) => x.chave === a.chave)?.atualizadoEm;
+        setBase((b) => ({ paginas: { ...b.paginas, [a.chave]: enviadas }, versoes: { ...b.versoes, [a.chave]: versao ?? b.versoes[a.chave] } }));
+      }
       return r;
     },
     onSuccess: (r) => {
-      atualizar(r);
-      toast.success(mudadas.length === 1 ? `Aba ${mudadas[0].nome} gravada.` : `${mudadas.length} abas gravadas.`);
+      if (r) atualizar(r);
+      toast.success(mudadas.length === 1 ? `${mudadas[0].nome}: gravado.` : `${mudadas.length} grupos gravados.`);
     },
+    onError: (e) => setConflito(conflitoDe(e)),
   });
   const situacao = useMutation({
     mutationFn: async (acao: "finalizar" | "reabrir") => {
-      if (acao === "finalizar" && mudouAba) await relatoriosExecutivosService.gravarAba(relatorio.id, chave, daAba);
+      if (acao === "finalizar" && mudouAba) await relatoriosExecutivosService.gravarAba(relatorio.id, chave, daAba, { versao: base.versoes[chave] });
       return acao === "finalizar" ? relatoriosExecutivosService.finalizarAba(relatorio.id, chave) : relatoriosExecutivosService.reabrirAba(relatorio.id, chave);
     },
     onSuccess: (r, acao) => {
@@ -347,7 +371,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               </DropdownMenu>
             ) : null}
             {mudadas.length ? (
-              <Button type="button" className={botaoPrimario} disabled={gravar.isPending} onClick={() => gravar.mutate()}>
+              <Button type="button" className={botaoPrimario} disabled={gravar.isPending} onClick={() => gravar.mutate(null)}>
                 <Save className="size-4" />
                 {gravar.isPending ? "Gravando…" : "Gravar"}
               </Button>
@@ -522,7 +546,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
             </li>
             <li>
-              “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar” grava e finaliza o grupo aberto (Capa, Introdução,
+              “Gravar” guarda os grupos alterados, com as páginas (sair sem gravar pergunta antes). Se outra pessoa gravou o mesmo grupo depois que
+              você abriu o relatório, nada desse grupo é gravado: o aviso diz quem gravou e quando, e você escolhe Recarregar (vê o que ela gravou; as
+              suas alterações não gravadas se perdem) ou Gravar por Cima (a sua versão do grupo fica; as dela, nesse grupo, se perdem). “Finalizar” grava e finaliza o grupo aberto (Capa, Introdução,
               Administrativo…), com todas as abas dele, só para leitura, e o grupo ganha o check verde na barra do topo; “Reabrir” o devolve à elaboração. O relatório
               fica Finalizado quando todos os grupos estão finalizados.
             </li>
@@ -688,7 +714,62 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           </Button>
         </div>
       ) : null}
-      <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar.") : null} />
+      <Erro erro={gravar.isError && !conflitoDe(gravar.error) ? mensagemDeErro(gravar.error, "Não foi possível gravar.") : null} />
+      {/*
+        O grupo gravado por outro usuário depois que este abriu o relatório (23/10/2026): recarregar (as alterações não
+        gravadas deste se perdem) ou gravar por cima (as do outro, nesse grupo, se perdem).
+      */}
+      {conflito ? (
+        <Dialog open onOpenChange={(o) => (!o ? setConflito(null) : undefined)}>
+          <DialogContent className="rounded-sm sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Gravado por Outro Usuário</DialogTitle>
+              <DialogDescription>
+                {conflito.atualizadoPor ?? "Outro usuário"} gravou {conflito.nome} em {dataHora(conflito.atualizadoEm)}, depois que você abriu o relatório. Nada
+                deste grupo foi gravado agora.
+              </DialogDescription>
+            </DialogHeader>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+              <li>
+                <strong>Recarregar</strong> traz o relatório como está gravado agora, com as alterações de {conflito.atualizadoPor ?? "quem gravou"}; as suas
+                alterações não gravadas se perdem.
+              </li>
+              <li>
+                <strong>Gravar por Cima</strong> grava a sua versão de {conflito.nome}; as alterações de {conflito.atualizadoPor ?? "quem gravou"} nesse grupo se
+                perdem.
+              </li>
+            </ul>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setConflito(null)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-sm border-red-300 text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  const c = conflito.aba;
+                  setConflito(null);
+                  gravar.mutate(c);
+                }}
+              >
+                Gravar por Cima
+              </Button>
+              <Button
+                type="button"
+                className={botaoPrimario}
+                onClick={() => {
+                  setConflito(null);
+                  // O relatório de agora: o editor remonta com ele (as alterações não gravadas saem).
+                  void queryClient.invalidateQueries({ queryKey: ["relatorios-executivos", "relatorio", relatorio.id] });
+                }}
+              >
+                Recarregar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
       {apresentando !== null ? (
         <ApresentacaoDoRelatorio
           relatorioId={relatorio.id}

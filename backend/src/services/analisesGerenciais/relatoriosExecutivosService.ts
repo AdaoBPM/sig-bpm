@@ -32,6 +32,9 @@ export class RelatorioExecutivoError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** O código do erro (23/10/2026: CONFLITO, o grupo gravado por outro depois de aberto) e os detalhes para a tela. */
+    public codigo?: string,
+    public detalhes?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -407,8 +410,23 @@ export const relatoriosExecutivosService = {
   },
 
   /** Grava as páginas de uma aba, com os blocos de cada uma (de quem a edita, em elaboração). */
-  async gravarAba(id: string, departamento: AbaRelatorioExecutivo, paginas: PaginaDoRelatorio[], usuario: UsuarioDoRelatorio) {
-    await abaEditavel(id, departamento, usuario);
+  /**
+   * Grava as páginas de uma aba (o grupo). `versao` (23/10/2026): quando ela foi gravada da última vez, no momento em que o
+   * usuário a abriu; se outro gravou depois, recusa (409 CONFLITO, com quem e quando) em vez de sobrepor — a não ser com
+   * `forcar` (o usuário escolheu gravar por cima).
+   */
+  async gravarAba(id: string, departamento: AbaRelatorioExecutivo, paginas: PaginaDoRelatorio[], usuario: UsuarioDoRelatorio, opcoes: { versao?: string; forcar?: boolean } = {}) {
+    const { aba } = await abaEditavel(id, departamento, usuario);
+    if (opcoes.versao && !opcoes.forcar && aba.atualizadoEm.toISOString() !== opcoes.versao) {
+      const quem = aba.atualizadoPor ?? "Outro usuário";
+      const quando = aba.atualizadoEm.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
+      throw new RelatorioExecutivoError(409, `${quem} gravou ${nomeDaAba(departamento)} em ${quando}, depois que você abriu o relatório.`, "CONFLITO", {
+        aba: departamento,
+        nome: nomeDaAba(departamento),
+        atualizadoPor: aba.atualizadoPor,
+        atualizadoEm: aba.atualizadoEm,
+      });
+    }
     await getPrismaClient().relatorioExecutivoAba.update({
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
       data: { blocos: (paginas.length ? paginas : paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: usuario.nome },

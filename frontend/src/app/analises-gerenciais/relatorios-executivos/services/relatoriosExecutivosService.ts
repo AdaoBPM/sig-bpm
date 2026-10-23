@@ -202,7 +202,12 @@ export const relatoriosExecutivosService = {
     (await api.put<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`, { cenarioComparadoId })).data.data,
   /** A tabela de Resultados de uma visão (22/10/2026), até o mês do relatório, para os blocos de tabela. */
   resultados: async (id: string, visao: VisaoDaTabela) => (await api.get<{ data: Resultados }>(`${base}/${id}/resultados`, { params: { visao } })).data.data,
-  gravarAba: async (id: string, aba: string, paginas: Pagina[]) => (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas })).data.data,
+  /**
+   * Grava as páginas do grupo (a aba). `versao` (23/10/2026): quando ele foi gravado da última vez no que o usuário abriu; se
+   * outro gravou depois, o servidor recusa (409, codigo CONFLITO), a não ser com `forcar` (gravar por cima).
+   */
+  gravarAba: async (id: string, aba: string, paginas: Pagina[], opcoes: { versao?: string; forcar?: boolean } = {}) =>
+    (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas, ...opcoes })).data.data,
   finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
   reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
   enviarFoto: async (id: string, foto: Blob) =>
