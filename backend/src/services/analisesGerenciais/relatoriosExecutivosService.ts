@@ -21,10 +21,9 @@ import { cenarioMarcado, type Comparacao } from "../cenarios/indicadoresDoCenari
  * Os Relatórios Executivos (15/10/2026, Análises Gerenciais): a apresentação de cada competência fechada, que os gestores
  * montam juntos. Decisões do usuário: um relatório por competência, criado por quem edita a tela; as oito abas (17/10/2026; a Capa e o Encerramento, 20/10/2026;
  * antes, uma por departamento) — Capa, Introdução, Demonstrativo de Resultados e Encerramento, que todos os que editam a tela editam, e
- * as performances Comercial, da Produção, de Serviços e Administrativa, que cada gestor edita pelo recorte de
- * departamentos (sem recorte, todas); cada aba tem a sua situação —
- * em elaboração, só quem a edita (e o Administrador) a vê; finalizada, todos —, e quem a edita a finaliza e a reabre (o
- * Administrador reabre qualquer uma); o relatório fica finalizado quando todas as abas estão. As anotações são blocos
+ * as performances Comercial, da Produção, de Serviços e Administrativa; desde 23/10/2026, sem o recorte de departamentos:
+ * quem lê a tela vê todas as abas (em elaboração ou finalizadas) e quem edita a tela edita, finaliza e reabre todas; cada
+ * aba tem a sua situação, e o relatório fica finalizado quando todas as abas estão. As anotações são blocos
  * livres na grade, ao lado dos cards. Os cards trazem o Painel de Bordo e os Indicadores de Resultados Empresariais até
  * o mês do relatório, só das competências fechadas.
  */
@@ -159,13 +158,13 @@ async function limparFotos(relatorioId: string) {
 
 type Aba = { departamento: AbaRelatorioExecutivo; blocos: unknown; situacao: "EM_ELABORACAO" | "FINALIZADO"; atualizadoPor: string | null; atualizadoEm: Date; finalizadoPor: string | null; finalizadoEm: Date | null };
 
-/** Quem edita a aba: quem edita a tela; nas abas de um departamento, só no recorte dele (sem recorte, todas). */
-const editaAba = (u: UsuarioDoRelatorio, d: AbaRelatorioExecutivo) => {
-  const dep = DA_ABA.get(d)?.departamento ?? null;
-  return u.edita && (dep === null || u.departamentos === null || u.departamentos.includes(dep));
-};
-/** Quem vê a aba: finalizada, todos; em elaboração, quem a edita e o Administrador. */
-const veAba = (u: UsuarioDoRelatorio, a: Aba) => a.situacao === "FINALIZADO" || editaAba(u, a.departamento) || u.admin;
+/**
+ * Quem edita a aba: quem edita a tela, em todas as abas (23/10/2026; antes, nas abas de um departamento, só no recorte de
+ * departamentos do usuário).
+ */
+const editaAba = (u: UsuarioDoRelatorio, _d: AbaRelatorioExecutivo) => u.edita;
+/** Quem vê a aba: todos os que leem a tela, em elaboração ou finalizada (23/10/2026; antes, em elaboração, só quem a editava). */
+const veAba = (_u: UsuarioDoRelatorio, _a: Aba) => true;
 
 /** A situação do relatório: finalizado quando todas as abas estão. */
 const situacaoGeral = (abas: Aba[]) => (abas.length && abas.every((a) => a.situacao === "FINALIZADO") ? "FINALIZADO" : "EM_ELABORACAO");
@@ -202,12 +201,12 @@ async function doRelatorio(id: string) {
   return (await completarAbas(r)) ? (await buscar())! : r;
 }
 
-/** A aba que o usuário pode alterar: a do recorte dele, em elaboração. */
+/** A aba que o usuário pode alterar: em elaboração (todas, para quem edita a tela; 23/10/2026). */
 async function abaEditavel(id: string, d: AbaRelatorioExecutivo, u: UsuarioDoRelatorio) {
   const r = await doRelatorio(id);
   const aba = r.abas.find((a) => a.departamento === d);
   if (!aba) throw new RelatorioExecutivoError(404, "Aba não encontrada.");
-  if (!editaAba(u, d)) throw new RelatorioExecutivoError(403, `A aba ${nomeDaAba(d)} não é do seu recorte.`);
+  if (!editaAba(u, d)) throw new RelatorioExecutivoError(403, "Só quem edita os Relatórios Executivos altera as abas.");
   if (aba.situacao === "FINALIZADO") throw new RelatorioExecutivoError(409, `A aba ${nomeDaAba(d)} está finalizada: reabra-a para alterar.`);
   return { r, aba };
 }
@@ -426,7 +425,7 @@ export const relatoriosExecutivosService = {
     else {
       const aba = r.abas.find((a) => a.departamento === departamento);
       if (!aba) throw new RelatorioExecutivoError(404, "Aba não encontrada.");
-      if (!editaAba(usuario, departamento) && !usuario.admin) throw new RelatorioExecutivoError(403, `A aba ${nomeDaAba(departamento)} não é do seu recorte.`);
+      if (!editaAba(usuario, departamento) && !usuario.admin) throw new RelatorioExecutivoError(403, "Só quem edita os Relatórios Executivos reabre as abas.");
       if (aba.situacao !== "FINALIZADO") throw new RelatorioExecutivoError(409, "A aba não está finalizada.");
     }
     await prisma.relatorioExecutivoAba.update({

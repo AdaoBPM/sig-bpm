@@ -420,11 +420,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <li>
               A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as oito abas: Capa, Introdução,
               Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
-              Serviços), Administrativo (Performance Administrativa) e Encerramento. Capa, Introdução, Resultados e Encerramento são gerais: todos os que
-              editam a tela os editam. Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
-              na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). As performances
-              seguem o recorte de departamentos do seu usuário (Controle de Usuários): você edita as do seu recorte (sem recorte, todas); as dos outros
-              aparecem quando o gestor delas as finaliza. O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
+              Serviços), Administrativo (Performance Administrativa) e Encerramento. Todos os que leem a tela veem todas as
+              abas, e todos os que a editam editam todas (desde 23/10/2026, sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
+              na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
               finalizou e quando).
             </li>
             <li>
@@ -658,7 +656,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       {dados.isError ? <Erro erro={mensagemDeErro(dados.error, "Erro ao carregar os dados dos cards.")} /> : null}
       {configuracoes ? null : !aba?.visivel ? (
         <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
-          A aba {aba?.nome} está em elaboração: aparece quando o gestor dela a finalizar.
+          A aba {aba?.nome} não está disponível.
         </p>
       ) : daPagina.length === 0 && !pagina?.fundo ? (
         <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
