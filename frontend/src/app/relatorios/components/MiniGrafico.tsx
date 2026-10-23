@@ -57,6 +57,7 @@ export function MiniGrafico({
   comEscala = false,
   topoComRotulos = TOPO_COM_ROTULOS,
   fatorDaEscala = 1,
+  acumulado = false,
 }: {
   dados: MesDoGrafico[];
   /** O valor com a unidade (a dica do mês). */
@@ -75,6 +76,8 @@ export function MiniGrafico({
    * percentuais; as marcas práticas se escolhem nessa unidade.
    */
   fatorDaEscala?: number;
+  /** O gráfico do acumulado (23/10/2026): a legenda (ACUM.) em negrito e ela e os rótulos 2 px maiores. */
+  acumulado?: boolean;
 }) {
   const rotulos = useRotulosDoGrafico();
   const gradiente = `mini-${useId().replace(/:/g, "")}`;
@@ -89,7 +92,8 @@ export function MiniGrafico({
   // Com os rótulos, o espaço deles em cima dos positivos e, havendo negativos, também embaixo (13/10/2026: os rótulos dos
   // negativos saíam do gráfico, por cima dos meses).
   // O espaço cresce com o rótulo mais comprido do lado (o padrão vale para uns 4 caracteres, como "10,2"), até a metade.
-  const espaco = (lado: number[]) => Math.min(50, (topoComRotulos * Math.max(4, ...lado.map((v) => formatarCurto(v).length))) / 4.5);
+  // No acumulado, os rótulos 2 px maiores pedem o espaço na mesma proporção (14 ÷ 12).
+  const espaco = (lado: number[]) => Math.min(50, ((acumulado ? 14 / 12 : 1) * topoComRotulos * Math.max(4, ...lado.map((v) => formatarCurto(v).length))) / 4.5);
   const topo = comRotulos && max > 0 ? espaco(valores.filter((v) => v > 0)) : TOPO;
   const pe = comRotulos && min < 0 ? espaco(valores.filter((v) => v < 0)) : 0;
   const util = 100 - topo - pe;
@@ -115,7 +119,7 @@ export function MiniGrafico({
     ? escala.marcas.map((m) => ({ topo: y(m / fatorDaEscala), texto: marca.format(m) }))
     : [0, 0.25, 0.5, 0.75, 1].map((f) => ({ topo: topo + f * util, texto: formatarCurto(Math.abs(max - f * faixa) < faixa * 1e-9 ? 0 : max - f * faixa) }));
   const meses = (
-    <div className="grid pt-1 text-center text-[10px] text-muted-foreground" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+    <div className={`grid pt-1 text-center text-muted-foreground ${acumulado ? "text-[12px] font-bold" : "text-[10px]"}`} style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
       {dados.map((d, i) => (
         <span key={i} className="truncate">
           {d.mes}
@@ -234,7 +238,7 @@ export function MiniGrafico({
                       }}
                     >
                       <span
-                        className={`shrink-0 rounded-[2px] border bg-white py-0.5 text-[12px] leading-[14px] font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${area ? "" : "mx-auto"}`}
+                        className={`shrink-0 rounded-[2px] border bg-white py-0.5 font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${acumulado ? "text-[14px] leading-[16px]" : "text-[12px] leading-[14px]"} ${area ? "" : "mx-auto"}`}
                         // Na vertical, lido de baixo para cima: o texto em pé, girado meia volta.
                         style={{ transform: "rotate(180deg)", borderColor: esquerda ? OURO : PRETO }}
                       >

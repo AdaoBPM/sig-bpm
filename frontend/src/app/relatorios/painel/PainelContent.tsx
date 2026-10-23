@@ -355,6 +355,7 @@ function CardIndicador({
               comRotulos={comRotulos}
               comEscala={!comRotulos}
               fatorDaEscala={fa.fatorDaEscala}
+              acumulado
             />
             </div>
           </div>

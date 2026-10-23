@@ -95,6 +95,7 @@ export function GraficoIndicadorDialog({
             >
               <MiniGrafico
                 dados={[{ mes: "ACUM.", realizado: i.total, orcado: i.totalOrcado }]}
+                acumulado
                 formatar={formatar}
                 formatarCurto={formatarCurto}
                 tipo={tipo}
