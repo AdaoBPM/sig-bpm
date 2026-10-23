@@ -51,6 +51,10 @@ export const ROTULO_ACAO: Record<string, string> = {
   RESOLUCAO: "Divergência resolvida",
   EXPORTACAO: "Exportação da DRE",
   CONFERENCIA_PLANILHA: "Planilha enviada para conferência",
+  // Os Relatórios Executivos (23/10/2026): a gravação, a finalização e a reabertura de um grupo.
+  GRAVACAO_RE: "Gravação do grupo",
+  FINALIZACAO_RE: "Finalização do grupo",
+  REABERTURA_RE: "Reabertura do grupo",
 };
 
 /** Entidades registradas, com o rótulo da tela de consulta. */
@@ -75,6 +79,7 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   regra_rateio: "Regra de rateio",
   tipo_movimento: "Tipo de movimento",
   tabela_estaca: "Tabela de estacas",
+  relatorio_executivo: "Relatório Executivo",
 };
 
 /** Deixa o JSON gravável: Decimal e Date viram texto, undefined some. */
@@ -171,6 +176,9 @@ async function nomesDosRegistros(itens: ItemDoLog[]) {
     else if (i.entidade === "divergencia") nome = (id ? divPorId.get(id) : null) ?? [competencia, txt(m.descricao)].filter(Boolean).join(" · ");
     else if (i.entidade === "lista_operacional") nome = [competencia, LISTA[txt(m.tipo) ?? ""] ?? txt(m.tipo)].filter(Boolean).join(" · ");
     else if (i.entidade === "cadastros") nome = "Planilha de cadastros";
+    // Os Relatórios Executivos (23/10/2026): o mês e o grupo (ou as Configurações); "por cima" na gravação sobre a de outro.
+    else if (i.entidade === "relatorio_executivo")
+      nome = [`RE ${txt(m.mes) ?? ""}`.trim(), txt(m.aba), m.configuracoes ? "Configurações" : null, m.porCima ? "por cima da gravação de outro usuário" : null].filter(Boolean).join(" · ");
     else {
       const detalhe = txt(m.nome) ?? txt(d.nome) ?? txt(d.descricao) ?? txt(m.arquivo) ?? txt(d.nomeRM);
       nome = [competencia, detalhe].filter(Boolean).join(" · ");

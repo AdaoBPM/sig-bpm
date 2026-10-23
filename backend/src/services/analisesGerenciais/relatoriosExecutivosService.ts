@@ -399,7 +399,7 @@ export const relatoriosExecutivosService = {
     await auditar({
       usuarioId: usuario.id,
       usuarioNome: usuario.nome,
-      acao: "EDICAO",
+      acao: "ALTERACAO",
       entidade: "relatorio_executivo",
       entidadeId: id,
       antes: { cenarioComparadoId: r.cenarioComparadoId },
@@ -416,7 +416,7 @@ export const relatoriosExecutivosService = {
    * `forcar` (o usuário escolheu gravar por cima).
    */
   async gravarAba(id: string, departamento: AbaRelatorioExecutivo, paginas: PaginaDoRelatorio[], usuario: UsuarioDoRelatorio, opcoes: { versao?: string; forcar?: boolean } = {}) {
-    const { aba } = await abaEditavel(id, departamento, usuario);
+    const { r, aba } = await abaEditavel(id, departamento, usuario);
     if (opcoes.versao && !opcoes.forcar && aba.atualizadoEm.toISOString() !== opcoes.versao) {
       const quem = aba.atualizadoPor ?? "Outro usuário";
       const quando = aba.atualizadoEm.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
@@ -430,6 +430,15 @@ export const relatoriosExecutivosService = {
     await getPrismaClient().relatorioExecutivoAba.update({
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
       data: { blocos: (paginas.length ? paginas : paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: usuario.nome },
+    });
+    // A gravação na Auditoria (23/10/2026), com a gravação por cima de outro usuário, quando foi o caso.
+    await auditar({
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      acao: "GRAVACAO_RE",
+      entidade: "relatorio_executivo",
+      entidadeId: id,
+      metadados: { mes: rotuloMes(r.ano, r.mes), aba: nomeDaAba(departamento), paginas: paginas.length, ...(opcoes.forcar ? { porCima: true } : {}) },
     });
     await limparFotos(id);
     return this.obter(id, usuario);
@@ -453,10 +462,11 @@ export const relatoriosExecutivosService = {
     await auditar({
       usuarioId: usuario.id,
       usuarioNome: usuario.nome,
-      acao: "ALTERACAO",
+      // A ação própria (23/10/2026; antes, ALTERACAO, com a ação nos metadados).
+      acao: acao === "finalizar" ? "FINALIZACAO_RE" : "REABERTURA_RE",
       entidade: "relatorio_executivo",
       entidadeId: id,
-      metadados: { mes: rotuloMes(r.ano, r.mes), aba: nomeDaAba(departamento), acao },
+      metadados: { mes: rotuloMes(r.ano, r.mes), aba: nomeDaAba(departamento) },
     });
     return this.obter(id, usuario);
   },
