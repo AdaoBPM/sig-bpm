@@ -223,6 +223,9 @@ export function blocoComparado(realizado: number | null, orcado: number | null, 
   return { realizado, orcado, base: null, vsOrcado, sinal };
 }
 
+/** A largura da escala dos gráficos dos cards (a do MiniGrafico, w-10). */
+const LARGURA_DA_ESCALA = 40;
+
 /** O percentual sob o realizado (▪ 48,4% (/RL)), quando o item tem. */
 const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
   i.base ? `${b.base === null ? "—" : `${(i.base.casas === 2 ? n2 : n1).format(b.base * 100)}%`} ${i.base.rotulo}` : null;
@@ -314,7 +317,12 @@ function CardIndicador({
       */}
       <div data-grafico-do-card className="relative min-h-32 min-w-0 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-gray-100">
         <div className="absolute inset-0 flex gap-3 lg:left-5">
-          <div data-grafico-dos-meses className="min-w-0 flex-1">
+          {/*
+            O acumulado na largura de um mês (23/10/2026; antes, 96 px com os rótulos e 144 px com a escala): os dois gráficos
+            crescem na proporção dos períodos (os meses e 1), a partir da mesma base (a escala, quando há, e, no acumulado, o
+            espaço do quadro cinza).
+          */}
+          <div data-grafico-dos-meses className="min-w-0" style={{ flex: `${Math.max(1, i.serie.length)} 1 ${comRotulos ? 0 : LARGURA_DA_ESCALA}px` }}>
             <MiniGrafico
               dados={i.serie}
               formatar={fm.formatar}
@@ -325,8 +333,20 @@ function CardIndicador({
               fatorDaEscala={fm.fatorDaEscala}
             />
           </div>
-          {/* O acumulado também com os rótulos ou com a escala; com a escala, um pouco mais largo. */}
-          <div data-grafico-acumulado className={`${comRotulos ? "w-24" : "w-36"} shrink-0 border-l border-gray-100 pl-3`} title={`Acumulado do exercício (${acumulado}): realizado × orçado`}>
+          {/*
+            O acumulado também com os rótulos ou com a escala, num quadro no cinza do destaque do desvio (23/10/2026; antes, só
+            separado por uma linha); o fundo em SVG, como o do destaque (o Copiar como Imagem do Firefox perdia o fundo em CSS).
+          */}
+          <div
+            data-grafico-acumulado
+            className="relative min-w-0 overflow-hidden rounded-sm px-1.5"
+            style={{ flex: `1 1 ${(comRotulos ? 0 : LARGURA_DA_ESCALA) + 12}px` }}
+            title={`Acumulado do exercício (${acumulado}): realizado × orçado`}
+          >
+            <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
+              <rect width="100%" height="100%" style={{ fill: "var(--color-gray-100)" }} />
+            </svg>
+            <div className="relative h-full">
             <MiniGrafico
               dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
               formatar={fa.formatar}
@@ -336,6 +356,7 @@ function CardIndicador({
               comEscala={!comRotulos}
               fatorDaEscala={fa.fatorDaEscala}
             />
+            </div>
           </div>
         </div>
       </div>
@@ -371,7 +392,7 @@ export function CardDoPainel({
   const doGrafico = !comGrafico
     ? "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"
     : soAcumulado
-      ? "[&_[data-grafico-dos-meses]]:hidden lg:[&_[data-card-indicador]]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] [&_[data-grafico-acumulado]]:w-full [&_[data-grafico-acumulado]]:border-l-0 [&_[data-grafico-acumulado]]:pl-0"
+      ? "[&_[data-grafico-dos-meses]]:hidden lg:[&_[data-card-indicador]]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] [&_[data-grafico-acumulado]]:w-full"
       : "";
   return (
     <CoresDoPainel.Provider value={cores}>
@@ -603,7 +624,7 @@ export function PainelContent() {
               Cada grupo (Consolidado, Produção: Matriz…) é uma seção, uma abaixo da outra, com um card por indicador, da largura da tela: em cima, o nome e, à direita dele, a Metodologia (a fórmula do item) e o comportamento entre parênteses (o mês de referência fica ao lado do nome
               do grupo); embaixo, o Atual e o Acumulado, com a unidade no rótulo (Atual (R$ M), Acumulado (m³)…), cada um com o valor em destaque e, à direita, o destaque do desvio — a variação, “vs. Orçado” e o valor orçado, num quadro cinza com uma
               faixa na cor do sinal à direita; e, ao lado, o gráfico dos meses do exercício, com
-              o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo.
+              o realizado em amarelo-ouro e o orçado em preto, e o gráfico do acumulado (ACUM.), do mesmo tipo, na largura de um mês e num quadro cinza (o do destaque do desvio).
             </li>
             <li>
               Tipo: Barras (colunas do realizado e do orçado) ou Área (o realizado numa área amarela, mais forte no máximo do
