@@ -1,8 +1,15 @@
 # Produção e Desenvolvimento
 
-> **Desde 23/10/2026, a produção é http://192.168.0.16:3020 (PostgreSQL `sig_bpm`).** A 3010 (SQLite) saiu do ar. O
-> deploy automático está parado até o TI ajustá-lo para o PostgreSQL: não juntar a branch `postgres` na `master` antes
-> disso. O que vem abaixo sobre a 3010 e o envio à `master` vale de novo só quando o TI liberar o deploy novo.
+> **Desde 23/10/2026, a produção é http://192.168.0.16:3020 (PostgreSQL `sig_bpm`, pasta `/root/dados/sig-bpm-pg`).**
+> A 3010 (SQLite) saiu do ar.
+> - **Publicar:** o deploy automático acompanha a branch **`postgres`**, então publicar é enviar a `postgres` ao GitHub
+>   (só com o "publique" do Adão).
+> - **Back-ups:** o deploy faz um back-up do banco por `pg_dump` em `dados/backups/` antes de cada publicação. Há também
+>   um back-up diário às 2h em `dados/backups/diario`, que guarda os 15 últimos.
+> - **A `master` e a 3010:** não se usam por enquanto. O merge na `master` e a volta ao endereço 3010 ficam para depois,
+>   feitos juntos com o TI.
+>
+> Abaixo, onde se lê 3010, `/root/dados/sig-bpm` ou `master`, leia 3020, `/root/dados/sig-bpm-pg` e `postgres`.
 
 > **Desde 20/10/2026, a produção é o servidor da empresa** (`srv-docker`, http://192.168.0.16:3010), com deploy
 > automático a cada envio à `master` do GitHub. **Publicar = enviar à `master`.** O notebook é só desenvolvimento: a

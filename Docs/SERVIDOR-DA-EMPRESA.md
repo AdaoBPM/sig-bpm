@@ -1,8 +1,13 @@
 # Servidor da Empresa — Registro para o TI
 
 > **Desde 23/10/2026, a produção é http://192.168.0.16:3020 (PostgreSQL `sig_bpm`, back-up às 18:34).** A 3010
-> (SQLite) saiu do ar, com o último estado guardado. O deploy automático está parado até o TI ajustá-lo para o
-> PostgreSQL. As regras abaixo sobre a 3010 e a pasta `/root/dados/sig-bpm` são da produção anterior.
+> (SQLite) saiu do ar, com o último estado guardado.
+> - **Deploy:** o timer `sig-bpm-deploy` roda o `/root/dados/sig-bpm-pg/deploy.sh`, que acompanha a branch `postgres`.
+>   Antes de cada publicação, ele faz um back-up do banco por `pg_dump` (`dados/backups/sig_bpm-*.dump`, os 15
+>   últimos). O log fica em `deploy.log`.
+> - **Back-up diário:** às 2h, pelo `sig-bpm-backup.timer`, em `dados/backups/diario`.
+> - **As regras abaixo:** valem agora para a pasta `/root/dados/sig-bpm-pg` e os contêineres `sig-bpm-pg-backend` e
+>   `sig-bpm-pg-frontend`. O arquivo de ambiente é o `sig-bpm-pg.env`, com a senha do banco: nunca mostrar nem copiar.
 
 O SIG BPM do servidor 192.168.0.16 (frontend na porta 3010, docker compose) recebe o código do GitHub pelo deploy
 automático (timer `sig-bpm-deploy`). O deploy leva **só o código**: a base de dados do servidor é própria, separada da
