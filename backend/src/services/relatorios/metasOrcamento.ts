@@ -50,7 +50,11 @@ function pesoDaMeta(nome: string): Peso | null {
  * O acumulado da meta de um indicador nos meses dados (cada mês: as metas importadas dele, por nome; null sem
  * importação). O indicador vem do cadastro; só o modo (último mês ou acumulado) importa aqui.
  */
-export function acumularMeta(indicador: Pick<Indicador, "nome" | "acumulado"> | undefined, meses: Array<Map<string, number> | null>): number | null {
+export function acumularMeta(
+  indicador: Pick<Indicador, "nome" | "acumulado"> | undefined,
+  // Cada mês: as metas pelo nome (um Map, ou só o get: as metas de cada mês do item [META|nome|ACUM], 23/10/2026).
+  meses: Array<Pick<Map<string, number>, "get"> | null>,
+): number | null {
   if (!indicador) return null;
   const nome = indicador.nome;
   const peso = pesoDaMeta(nome);

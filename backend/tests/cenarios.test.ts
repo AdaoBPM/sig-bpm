@@ -97,6 +97,10 @@ describe("leitura do cenário sintético", () => {
     assert.equal(i("[INDICADOR|Venda: Total] * 2"), "CALCULADO");
     assert.equal(i("[INDICADOR|Venda: Total] / [DRE|0|MC.MARGEM_DE_CONTRIBUICAO_MC]"), "CALCULADO");
     assert.equal(i("[INDICADOR|Venda: Total] / [META|Venda: Total]"), "IMPORTADO");
+    // A Fórmula do Acumulado (o modo FORMULA, gravada em peso) também conta.
+    const f = (peso: string) => classificar({ nome: "X", formula: "[DRE|0|MC.MARGEM_DE_CONTRIBUICAO_MC]", peso, modo: "FORMULA" });
+    assert.equal(f("[INDICADOR|Venda: Total|ACUM]"), "CALCULADO");
+    assert.equal(f("[META|Venda: Total|ACUM]"), "IMPORTADO");
   });
 });
 

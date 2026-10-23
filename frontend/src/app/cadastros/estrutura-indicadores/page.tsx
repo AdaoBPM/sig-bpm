@@ -20,7 +20,8 @@ export default function EstruturaIndicadoresPage() {
               <li>
                 Na Metodologia, monte a fórmula do indicador: escolha o tipo do item (uma linha da DRE, com a unidade; um totalizador das Listas;
                 um indicador do Comercial ou do Administrativo; uma meta do Orçamento, o cenário marcado; ou outro Indicador deste cadastro, com o
-                valor dele no mês), busque, escolha e clique em “Inserir Item”; entre os
+                valor dele no mês), busque, escolha e clique em “Inserir Item”. Nas metas e nos indicadores, o Período escolhe o valor do mês (No
+                Mês) ou o de janeiro até o mês (Acumulado no Ano: o acumulado do indicador, como a coluna Acumulado, ou o orçado acumulado). Entre os
                 itens, use os operadores (+ − × ÷), os parênteses e o número digitado com “Inserir” (por exemplo, ÷ 1000 para milhares). “Apagar” desfaz
                 o último pedaço, e “Limpar” apaga a fórmula inteira.
               </li>
@@ -30,8 +31,11 @@ export default function EstruturaIndicadoresPage() {
               </li>
               <li>
                 Acumulado: Soma dos Meses (a fórmula sobre a soma de cada item; nas razões, a soma dos numeradores sobre a dos denominadores),
-                Média Ponderada (pelo Peso da Média, montado como a Metodologia) ou Último Mês (os de posição, como o quadro de lotação). Os de
-                Cálculo do Sistema têm a conta no código; para trocar pela Metodologia, escolha outro Acumulado e monte a fórmula.
+                Média Ponderada (pelo Peso da Média, montado como a Metodologia), Último Mês (os de posição, como o quadro de lotação, e os
+                atingimentos acumulados, como os do GME 8) ou Fórmula do Acumulado (uma segunda fórmula, montada como a Metodologia com os itens
+                no Acumulado no Ano, que dá o acumulado: nas Eficiências da Operação Totais, os acumulados da Matriz e da Filial ponderados pelas
+                receitas acumuladas de cada uma). O Cálculo do Sistema (a conta no código) ficou só para voltar atrás: todos os indicadores têm
+                Metodologia.
               </li>
               <li>A Descrição é o texto que a tela Indicadores de Resultados Empresariais mostra sob o nome.</li>
               <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os indicadores inativos (que saem das telas Indicadores e Painel de Bordo de Resultados Empresariais).</li>

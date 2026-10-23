@@ -12,6 +12,10 @@
  *   (17/10/2026), onde o realizado usa o valor do indicador e o orçado, a meta dele; e, desde 23/10/2026, na dos
  *   próprios indicadores, com o valor do mês do outro indicador (sem ciclos: o cadastro os recusa).
  *
+ * Acumulado no Ano (23/10/2026): [INDICADOR|nome|ACUM] é o acumulado do indicador de janeiro até o mês (o da coluna
+ * Acumulado da tela, pelo modo dele; sem o valor do mês, sem valor) e [META|nome|ACUM], o orçado acumulado do mesmo
+ * período — os SUM(JAN:mês) da aba Realizado do INDICADORES DE RESULTADO (os GME 8). Só nos indicadores.
+ *
  * O valor do mês é a fórmula com os itens do mês; sem dado em algum item (mês não apurado, indicador não importado)
  * ou com divisão por zero, o indicador fica sem valor. O acumulado depende do modo do indicador (indicadores.ts).
  */
@@ -20,8 +24,8 @@ export type Item =
   | { tipo: "DRE"; unidade: number; codigo: string }
   | { tipo: "LISTA"; codigo: string }
   | { tipo: "IND"; nome: string }
-  | { tipo: "META"; nome: string }
-  | { tipo: "INDICADOR"; nome: string };
+  | { tipo: "META"; nome: string; acumulado?: true }
+  | { tipo: "INDICADOR"; nome: string; acumulado?: true };
 
 type Token = { t: "num"; v: number } | { t: "item"; chave: string; item: Item } | { t: "op"; v: "+" | "-" | "*" | "/" } | { t: "(" } | { t: ")" };
 
@@ -36,10 +40,17 @@ export function lerItem(texto: string): Item {
   if ((tipo === "LISTA" || tipo === "IND" || tipo === "META" || tipo === "INDICADOR") && resto.length === 1 && resto[0]) {
     return tipo === "LISTA" ? { tipo, codigo: resto[0] } : { tipo, nome: resto[0] };
   }
+  // O Acumulado no Ano (23/10/2026), só no indicador e na meta.
+  if ((tipo === "META" || tipo === "INDICADOR") && resto.length === 2 && resto[0] && resto[1] === "ACUM") return { tipo, nome: resto[0], acumulado: true };
   throw new FormulaInvalidaError(`Item inválido na fórmula: [${texto}].`);
 }
 
-export const chaveDoItem = (i: Item) => (i.tipo === "DRE" ? `DRE|${i.unidade}|${i.codigo}` : i.tipo === "LISTA" ? `LISTA|${i.codigo}` : `${i.tipo}|${i.nome}`);
+export const chaveDoItem = (i: Item) =>
+  i.tipo === "DRE"
+    ? `DRE|${i.unidade}|${i.codigo}`
+    : i.tipo === "LISTA"
+      ? `LISTA|${i.codigo}`
+      : `${i.tipo}|${i.nome}${(i.tipo === "META" || i.tipo === "INDICADOR") && i.acumulado ? "|ACUM" : ""}`;
 
 function tokens(formula: string): Token[] {
   const r: Token[] = [];

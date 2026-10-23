@@ -2,7 +2,8 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { DEFINICOES_INDICADORES } from "../importacoes/indicadores/leituraIndicadores.js";
 import { LINHAS_TOTAIS } from "../volumes/totaisOperacao.js";
 import { compilarFormula, formulaPorExtenso, type Item } from "./formulaIndicador.js";
-import { CALCULOS_SISTEMA, type DadosDoMes, type Indicador } from "./indicadores.js";
+import { acumular, CALCULOS_SISTEMA, type DadosDoMes, type Indicador, type Parte } from "./indicadores.js";
+import { acumularMeta } from "./metasOrcamento.js";
 
 /**
  * O catálogo dos indicadores, lido do cadastro Estrutura dos Indicadores (11/10/2026): cada indicador com a fórmula
@@ -40,33 +41,56 @@ export async function rotulosDosItens() {
       : i.tipo === "LISTA"
         ? `${listas.get(i.codigo) ?? i.codigo} [Listas]`
         : i.tipo === "META"
-          ? `Meta: ${i.nome}`
-          : i.nome;
+          ? `Meta: ${i.nome}${i.acumulado ? " (Acumulado no Ano)" : ""}`
+          : i.tipo === "INDICADOR" && i.acumulado
+            ? `${i.nome} (Acumulado no Ano)`
+            : i.nome;
 }
 
-/** Os valores de outros indicadores já contados em cada mês, e os que estão sendo contados (um ciclo fica sem valor). */
-const contados = new WeakMap<DadosDoMes, Map<string, number | null>>();
+/** As partes de outros indicadores já contadas em cada mês, e os que estão sendo contados (um ciclo fica sem valor). */
+const contados = new WeakMap<DadosDoMes, Map<string, Parte | null>>();
 const contando = new WeakMap<DadosDoMes, Set<string>>();
 
-/** O valor do mês de outro indicador (o item [INDICADOR], 23/10/2026): o que os dados do mês dão ou a conta dele. */
-function valorDoIndicador(m: DadosDoMes, nome: string, irmaos?: Map<string, Indicador>): number {
+/** A parte do mês de outro indicador (o item [INDICADOR], 23/10/2026): o valor que os dados do mês dão ou a conta dele. */
+function parteDoIndicador(m: DadosDoMes, nome: string, irmaos?: Map<string, Indicador>): Parte | null {
   const dado = m.indicador?.(nome);
-  if (dado !== undefined) return dado ?? NaN;
-  const memo = contados.get(m) ?? new Map<string, number | null>();
+  if (dado !== undefined) return { valor: dado };
+  const memo = contados.get(m) ?? new Map<string, Parte | null>();
   contados.set(m, memo);
-  if (memo.has(nome)) return memo.get(nome) ?? NaN;
+  if (memo.has(nome)) return memo.get(nome)!;
   const outro = irmaos?.get(nome);
   const emCurso = contando.get(m) ?? new Set<string>();
   contando.set(m, emCurso);
-  if (!outro || emCurso.has(nome)) return NaN;
+  if (!outro || emCurso.has(nome)) return null;
   emCurso.add(nome);
   try {
-    const v = outro.calculo(m).valor;
-    memo.set(nome, v);
-    return v ?? NaN;
+    const p = outro.calculo(m);
+    memo.set(nome, p);
+    return p;
   } finally {
     emCurso.delete(nome);
   }
+}
+
+/** Os meses do exercício de janeiro até este (o Acumulado no Ano). */
+const ateOMes = (m: DadosDoMes) => [...(m.anteriores ?? []), m];
+
+/**
+ * O item [INDICADOR|nome|ACUM]: o acumulado do indicador de janeiro até o mês, pelo modo dele (o da coluna Acumulado);
+ * sem o valor do mês, sem valor (o IF(E74="","",…) da aba Realizado).
+ */
+function acumuladoDoIndicador(m: DadosDoMes, nome: string, irmaos?: Map<string, Indicador>): number {
+  const outro = irmaos?.get(nome);
+  const doMes = parteDoIndicador(m, nome, irmaos)?.valor;
+  if (!outro || doMes === null || doMes === undefined || !Number.isFinite(doMes)) return NaN;
+  return acumular(outro, ateOMes(m).map((x) => parteDoIndicador(x, nome, irmaos))) ?? NaN;
+}
+
+/** O item [META|nome|ACUM]: o orçado acumulado do indicador de janeiro até o mês, como o de Resultados Empresariais. */
+function acumuladoDaMeta(m: DadosDoMes, nome: string, irmaos?: Map<string, Indicador>): number {
+  if (!m.meta) return NaN;
+  const meses = ateOMes(m).map((x) => (x.meta ? { get: (n: string) => x.meta!(n) ?? undefined } : null));
+  return acumularMeta(irmaos?.get(nome) ?? { nome, acumulado: "ACUM" }, meses) ?? NaN;
 }
 
 /** O valor de um item no mês (NaN sem dado). */
@@ -79,9 +103,9 @@ function valorDoItem(m: DadosDoMes, i: Item, irmaos?: Map<string, Indicador>): n
     case "IND":
       return m.importado(i.nome) ?? NaN;
     case "META":
-      return m.meta?.(i.nome) ?? NaN;
+      return i.acumulado ? acumuladoDaMeta(m, i.nome, irmaos) : (m.meta?.(i.nome) ?? NaN);
     case "INDICADOR":
-      return valorDoIndicador(m, i.nome, irmaos);
+      return i.acumulado ? acumuladoDoIndicador(m, i.nome, irmaos) : (parteDoIndicador(m, i.nome, irmaos)?.valor ?? NaN);
   }
 }
 
@@ -106,20 +130,26 @@ export function montarIndicador(r: LinhaEstruturaIndicador, irmaos?: Map<string,
   }
   const f = compilarFormula(r.formula);
   const peso = r.modo === "MEDIA_PONDERADA" && r.peso ? compilarFormula(r.peso) : null;
+  // A Fórmula do Acumulado (o modo FORMULA, 23/10/2026; gravada na coluna peso): o acumulado de janeiro até o mês.
+  const doAcumulado = r.modo === "FORMULA" && r.peso ? compilarFormula(r.peso) : null;
   const itens = [...f.itens];
+  const avaliarNoMes = (g: ReturnType<typeof compilarFormula>, m: DadosDoMes) =>
+    g.avaliar((k) => {
+      const it = g.itens.get(k);
+      return it ? valorDoItem(m, it, irmaos) : NaN;
+    });
   return {
     ...base,
     acumulado: r.modo === "ULTIMO" ? "ATUAL" : "ACUM",
+    ...(r.modo === "FORMULA" ? { porFormula: true as const } : {}),
     calculo: (m) => {
       const valores = new Map(itens.map(([chave, item]) => [chave, valorDoItem(m, item, irmaos)]));
       const valor = f.avaliar((k) => valores.get(k) ?? NaN);
       if (peso) {
-        const p = peso.avaliar((k) => {
-          const it = peso.itens.get(k);
-          return it ? valorDoItem(m, it, irmaos) : NaN;
-        });
+        const p = avaliarNoMes(peso, m);
         return { valor, peso: p ?? undefined };
       }
+      if (r.modo === "FORMULA") return { valor, acumulado: doAcumulado ? avaliarNoMes(doAcumulado, m) : null };
       return r.modo === "SOMA" ? { valor, operandos: Object.fromEntries(valores) } : { valor };
     },
     // Soma dos meses: a fórmula sobre a soma de cada item nos meses com valor.

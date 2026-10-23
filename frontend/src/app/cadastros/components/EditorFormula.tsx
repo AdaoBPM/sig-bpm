@@ -14,7 +14,8 @@ import type { Opcao } from "../services/edicaoService";
  * Administrativo, metas do orçamento), operadores (+ − × ÷), parênteses e números. Grava o texto da fórmula, com os
  * itens entre colchetes ([DRE|1|CPP…]). Os tipos de item são os que as opções trazem: na Metodologia do Painel de Bordo
  * (17/10/2026), só os indicadores ([INDICADOR|nome]); na dos indicadores, todos (desde 23/10/2026, também outros
- * indicadores do cadastro).
+ * indicadores do cadastro). Nos itens com a marca ACUMULAVEL (23/10/2026: as metas e os indicadores, na Metodologia dos
+ * indicadores), o Período escolhe o valor do mês ou o acumulado de janeiro até o mês ([META|nome|ACUM]).
  */
 
 const TIPOS = [
@@ -31,6 +32,10 @@ const VISOES = [
   { valor: "3", rotulo: "Serviços" },
   { valor: "4", rotulo: "Despesas e Extra" },
   { valor: "5", rotulo: "RN" },
+];
+const PERIODOS = [
+  { valor: "MES", rotulo: "No Mês" },
+  { valor: "ACUM", rotulo: "Acumulado no Ano" },
 ];
 const OPERADORES: Array<{ valor: string; rotulo: string; dica: string }> = [
   { valor: "+", rotulo: "+", dica: "Somar" },
@@ -51,11 +56,14 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
   const tipos = useMemo(() => TIPOS.filter((t) => opcoes.some((o) => o.grupos?.includes(t.valor))), [opcoes]);
   const [tipo, setTipo] = useState(() => tipos[0]?.valor ?? "DRE");
   const [visao, setVisao] = useState("0");
+  const [periodo, setPeriodo] = useState("MES");
   const [busca, setBusca] = useState("");
   const [item, setItem] = useState("");
   const [numero, setNumero] = useState("");
   const lista = pedacos(valor);
   const rotulos = useMemo(() => new Map(opcoes.map((o) => [o.valor, o.rotulo])), [opcoes]);
+  // O tipo aceita o Acumulado no Ano (as opções dele trazem a marca ACUMULAVEL).
+  const acumulavel = useMemo(() => opcoes.some((o) => o.grupos?.includes(tipo) && o.grupos.includes("ACUMULAVEL")), [opcoes, tipo]);
   const doTipo = useMemo(() => {
     const t = busca.trim().toLowerCase();
     return opcoes.filter((o) => o.grupos?.includes(tipo) && (!t || o.rotulo.toLowerCase().includes(t)));
@@ -67,15 +75,16 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
     const partes = p.slice(1, -1).split("|");
     if (partes[0] === "DRE") return `${rotulos.get(`DRE|${partes[2]}`) ?? partes[2]} (${VISOES.find((v) => v.valor === partes[1])?.rotulo ?? partes[1]})`;
     // O indicador pelo nome (a opção traz o grupo antes: "Produção › …").
-    if (partes[0] === "INDICADOR") return partes[1];
+    const noAno = partes[2] === "ACUM" ? " (Acumulado no Ano)" : "";
+    if (partes[0] === "INDICADOR") return `${partes[1]}${noAno}`;
     const r = rotulos.get(`${partes[0]}|${partes[1]}`) ?? partes[1];
-    return partes[0] === "META" ? `Meta: ${r}` : partes[0] === "LISTA" ? `${r} [Listas]` : r;
+    return partes[0] === "META" ? `Meta: ${r}${noAno}` : partes[0] === "LISTA" ? `${r} [Listas]` : r;
   };
   const inserir = (p: string) => onMuda([...lista, p].join(" "));
   const inserirItem = () => {
     if (!item) return;
     const [t, chave] = [item.slice(0, item.indexOf("|")), item.slice(item.indexOf("|") + 1)];
-    inserir(t === "DRE" ? `[DRE|${visao}|${chave}]` : `[${t}|${chave}]`);
+    inserir(t === "DRE" ? `[DRE|${visao}|${chave}]` : acumulavel && periodo === "ACUM" ? `[${t}|${chave}|ACUM]` : `[${t}|${chave}]`);
     setItem("");
   };
 
@@ -126,6 +135,15 @@ export function EditorFormula({ valor, onMuda, opcoes, travado, id }: { valor: s
                 {VISOES.map((v) => (
                   <option key={v.valor} value={v.valor}>
                     {v.rotulo}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            {acumulavel ? (
+              <select aria-label="Período do item" value={periodo} onChange={(e) => setPeriodo(e.target.value)} className={classeSelect}>
+                {PERIODOS.map((p) => (
+                  <option key={p.valor} value={p.valor}>
+                    {p.rotulo}
                   </option>
                 ))}
               </select>

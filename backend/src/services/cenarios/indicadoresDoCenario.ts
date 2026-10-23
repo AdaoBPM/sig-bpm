@@ -37,7 +37,8 @@ export function classificar(r: Linha, analitico = false): ClasseIndicador {
   if (MANUAIS.has(r.nome)) return "MANUAL";
   // Do sistema, só a eficiência da operação total se calcula (a DRE e os quadros); os GME, não.
   if (r.modo === "SISTEMA" || !r.formula) return r.nome.startsWith("Eficiência") ? "CALCULADO" : "IMPORTADO";
-  const itens = [...compilarFormula(r.formula).itens.values(), ...(r.modo === "MEDIA_PONDERADA" && r.peso ? compilarFormula(r.peso).itens.values() : [])];
+  // O peso da média e a Fórmula do Acumulado (o modo FORMULA, 23/10/2026) também contam.
+  const itens = [...compilarFormula(r.formula).itens.values(), ...((r.modo === "MEDIA_PONDERADA" || r.modo === "FORMULA") && r.peso ? compilarFormula(r.peso).itens.values() : [])];
   const tipos = new Set(itens.map((i) => i.tipo));
   if (tipos.has("LISTA") || tipos.has("META")) return "IMPORTADO";
   if (tipos.has("IND") || tipos.has("INDICADOR")) return "CALCULADO";
@@ -111,6 +112,8 @@ export async function calcularCenario(cenarioId: string): Promise<CalculoDoCenar
       indicador: (n) => (classes.get(n) === "IMPORTADO" ? (importadas[k]?.get(n) ?? null) : undefined),
     };
   });
+  // Os meses anteriores de cada um, para o Acumulado no Ano dos itens (23/10/2026).
+  dados.forEach((d, k) => (d.anteriores = dados.slice(0, k)));
 
   const catalogo = montarCatalogo(estrutura);
   const indicadores = estrutura.flatMap((r, n): IndicadorDoCenario[] => {

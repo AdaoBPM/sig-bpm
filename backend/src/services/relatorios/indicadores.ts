@@ -44,6 +44,8 @@ export type Parte = {
   componentes?: Array<{ valor: number | null; peso: number }>;
   /** Os itens da fórmula no mês (indicadores do cadastro com o acumulado pela soma dos itens). */
   operandos?: Record<string, number>;
+  /** O acumulado de janeiro até o mês, pela Fórmula do Acumulado (o modo FORMULA do cadastro, 23/10/2026). */
+  acumulado?: number | null;
 };
 type Calculo = (m: DadosDoMes) => Parte;
 
@@ -60,6 +62,8 @@ export type Indicador = {
   calculo: Calculo;
   /** A fórmula sobre a soma de cada item nos meses com valor (o acumulado SOMA do cadastro Estrutura dos Indicadores). */
   reavaliar?: (somas: Record<string, number>) => number | null;
+  /** O acumulado é o da Fórmula do Acumulado no último mês com valor (o modo FORMULA, 23/10/2026). */
+  porFormula?: true;
 };
 
 /** a ÷ b; sem divisor (zero ou sem dado), sem valor. */
@@ -110,7 +114,10 @@ const atingimentoAcumulado = (nome: string, realizado: (m: DadosDoMes) => number
   return { valor: divide(soma, orcado) };
 };
 
-/** Os indicadores que a fórmula do cadastro não expressa: a conta fica no código (modo SISTEMA). */
+/**
+ * Os indicadores com a conta no código (modo SISTEMA). Desde 23/10/2026, a Metodologia os expressa (o Acumulado no Ano dos
+ * itens e a Fórmula do Acumulado), e o cadastro passou a usá-la; o modo fica para voltar atrás.
+ */
 export const CALCULOS_SISTEMA: Record<string, { calculo: Calculo; acumulado: "ACUM" | "ATUAL" }> = {
   "Eficiência da Operação: MO Direta Total": { calculo: operacaoTotal("MO Direta"), acumulado: "ACUM" },
   "Eficiência da Operação: MO Indireta Total": { calculo: operacaoTotal("MO Indireta"), acumulado: "ACUM" },
@@ -134,9 +141,10 @@ export const CALCULOS_SISTEMA: Record<string, { calculo: Calculo; acumulado: "AC
 };
 
 /** O acumulado dos meses (as partes de cada mês, em ordem; null no mês sem dado). */
-export function acumular(i: Pick<Indicador, "acumulado" | "reavaliar">, partes: Array<Parte | null>): number | null {
+export function acumular(i: Pick<Indicador, "acumulado" | "reavaliar" | "porFormula">, partes: Array<Parte | null>): number | null {
   const comDado = partes.filter((p): p is Parte => p !== null && (p.valor !== null || !!p.componentes));
   if (comDado.length === 0) return null;
+  if (i.porFormula) return comDado[comDado.length - 1].acumulado ?? null;
   if (i.acumulado === "ATUAL") return comDado[comDado.length - 1].valor;
   if (i.reavaliar && comDado.every((p) => p.operandos)) {
     const somas: Record<string, number> = {};

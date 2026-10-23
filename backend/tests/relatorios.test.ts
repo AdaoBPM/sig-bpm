@@ -195,6 +195,81 @@ describe("GME 4 e GME 8 (aba Realizado, linhas 112 a 115)", () => {
   });
 });
 
+describe("os indicadores de Cálculo do Sistema pela Metodologia (23/10/2026: o Acumulado no Ano e a Fórmula do Acumulado)", () => {
+  const RLPF = "ROL.RLPF.RECEITA_LIQUIDA_DO_PRE_FABRICADO";
+  const I = (n: string, acum = false) => `[INDICADOR|${n}${acum ? "|ACUM" : ""}]`;
+  const M = (n: string, acum = false) => `[META|${n}${acum ? "|ACUM" : ""}]`;
+  const eficiencia = (q: string) => ({
+    formula: `(${I("Receita Líquida: Produção Matriz")} + ${I("Receita Líquida: Produção Filial")}) / ${I(`Quadro de Lotação: ${q} Total`)} / 1000`,
+    modo: "FORMULA",
+    peso:
+      `(${I(`Eficiência da Operação: ${q} Matriz`, true)} * ${I("Receita Líquida: Produção Matriz", true)} + ${I(`Eficiência da Operação: ${q} Filial`, true)} * ${I("Receita Líquida: Produção Filial", true)})` +
+      ` / (${I("Receita Líquida: Produção Matriz", true)} + ${I("Receita Líquida: Produção Filial", true)})`,
+  });
+  // As Metodologias que trocam o Cálculo do Sistema, pelas fórmulas da aba Realizado do INDICADORES DE RESULTADO.
+  const NOVAS: Record<string, { formula: string; modo: string; peso: string | null }> = {
+    "Média Móvel da Demanda Gerada": { formula: `${I("Demanda (Vol.): Total (Fabricação)")} / ${M("Produção (Vol.): Total")}`, modo: "MEDIA_PONDERADA", peso: I("Venda: Total") },
+    "Média Móvel da Demanda Expedida": { formula: `${I("Expedição (Vol.): Total")} / ${M("Produção (Vol.): Total")}`, modo: "MEDIA_PONDERADA", peso: I("Expedição (Vol.): Total") },
+    "Atingimento do FCOL Acumulado": { formula: `${I("Fluxo de Caixa Operacional Líquido", true)} / ${M("Fluxo de Caixa Operacional Líquido", true)}`, modo: "ULTIMO", peso: null },
+    "Atingimento da MC Acumulada": { formula: `${I("Margem de Contribuição (MC): Total", true)} / ${M("Margem de Contribuição (MC): Total", true)}`, modo: "ULTIMO", peso: null },
+    "Eficiência da Operação: MO Direta Total": eficiencia("MO Direta"),
+    "Eficiência da Operação: MO Indireta Total": eficiencia("MO Indireta"),
+    "Eficiência da Operação: MO Geral Total": eficiencia("MO Geral"),
+  };
+  const PELA_METODOLOGIA = montarCatalogo(ESTRUTURA_INICIAL_INDICADORES.map((r) => (NOVAS[r.nome] ? { ...r, ...NOVAS[r.nome] } : r)));
+  const dos = (c: typeof INDICADORES, n: string) => c.find((i) => i.nome === n)!;
+  const quase = (a: number | null, b: number | null) => (a === null || b === null ? assert.equal(a, b) : assert.ok(Math.abs(a - b) < 1e-9, `${a} × ${b}`));
+  const comparar = async (nome: string, meses: Array<Parameters<(typeof INDICADORES)[number]["calculo"]>[0]>) => {
+    const { acumular } = await import("../src/services/relatorios/indicadores.js");
+    const { encadearMeses } = await import("../src/services/relatorios/indicadoresService.js");
+    const [sistema, nova] = [dos(INDICADORES, nome), dos(PELA_METODOLOGIA, nome)];
+    // Cada catálogo com os seus meses (as contas de cada mês ficam guardadas nos dados dele).
+    const ms = encadearMeses(meses.map((m) => ({ ...m })));
+    const mn = encadearMeses(meses.map((m) => ({ ...m })));
+    const ps = ms.map((m) => sistema.calculo(m));
+    const pn = mn.map((m) => nova.calculo(m));
+    ps.forEach((p, k) => quase(pn[k].valor, p.valor));
+    quase(acumular(nova, pn), acumular(sistema, ps));
+    return pn.map((p) => p.valor);
+  };
+  const mes = (dre: Record<string, number>, importado: Record<string, number>, meta: Record<string, number>) => ({
+    dre: (u: number, c: string) => dre[`${u}|${c}`] ?? 0,
+    volume: () => 0,
+    importado: (n: string) => importado[n] ?? null,
+    meta: (n: string) => meta[n] ?? null,
+  });
+  const MC = "0|MC.MARGEM_DE_CONTRIBUICAO_MC";
+  const EXP = "0|S.EXPEDICAO_DO_PRE_FABRICADO_M";
+  const tres = [
+    mes({ [MC]: 100, [EXP]: 50 }, { "Venda: Total": 10, "Demanda (Vol.): Total (Fabricação)": 80, "Fluxo de Caixa Operacional Líquido": 40 }, { "Produção (Vol.): Total": 100, "Margem de Contribuição (MC): Total": 200, "Fluxo de Caixa Operacional Líquido": 50 }),
+    mes({ [MC]: 300, [EXP]: 150 }, { "Venda: Total": 30, "Demanda (Vol.): Total (Fabricação)": 120 }, { "Produção (Vol.): Total": 100, "Margem de Contribuição (MC): Total": 200, "Fluxo de Caixa Operacional Líquido": 50 }),
+    mes({ [MC]: 50, [EXP]: 90 }, { "Venda: Total": 20, "Demanda (Vol.): Total (Fabricação)": 60, "Fluxo de Caixa Operacional Líquido": 160 }, { "Produção (Vol.): Total": 120, "Margem de Contribuição (MC): Total": 100, "Fluxo de Caixa Operacional Líquido": 50 }),
+  ];
+
+  it("os GME 4: a demanda e a expedição sobre a meta da produção, ponderadas pela venda e pela expedição", async () => {
+    assert.deepEqual(await comparar("Média Móvel da Demanda Gerada", tres), [0.8, 1.2, 0.5]);
+    assert.deepEqual(await comparar("Média Móvel da Demanda Expedida", tres), [0.5, 1.5, 0.75]);
+  });
+
+  it("os GME 8: o realizado de janeiro até o mês sobre o orçado do mesmo período (sem o realizado do mês, sem valor)", async () => {
+    assert.deepEqual(await comparar("Atingimento da MC Acumulada", tres), [0.5, 1, 0.9]);
+    // O FCOL de fevereiro não veio: o mês fica sem valor; março soma janeiro e março sobre os três orçados.
+    assert.deepEqual(await comparar("Atingimento do FCOL Acumulado", tres), [0.8, null, 200 / 150]);
+  });
+
+  it("as Eficiências da Operação Totais: o mês pela receita total sobre o quadro total; o acumulado pondera os acumulados da Matriz e da Filial", async () => {
+    const ef = (rm: number, rf: number, q: Record<string, number>) =>
+      mes({ [`1|${RLPF}`]: rm, [`2|${RLPF}`]: rf }, Object.fromEntries(Object.entries(q).map(([k, v]) => [`Quadro de Lotação: ${k}`, v])), {});
+    const meses = [
+      ef(400000, 600000, { "MO Direta Matriz": 10, "MO Direta Filial": 20, "MO Direta Total": 30, "MO Indireta Matriz": 4, "MO Indireta Filial": 5, "MO Indireta Total": 9, "MO Geral Matriz": 14, "MO Geral Filial": 25, "MO Geral Total": 39 }),
+      ef(900000, 300000, { "MO Direta Matriz": 12, "MO Direta Filial": 15, "MO Direta Total": 27, "MO Indireta Matriz": 5, "MO Indireta Filial": 4, "MO Indireta Total": 9, "MO Geral Matriz": 17, "MO Geral Filial": 19, "MO Geral Total": 36 }),
+    ];
+    for (const q of ["MO Direta", "MO Indireta", "MO Geral"]) await comparar(`Eficiência da Operação: ${q} Total`, meses);
+    // MO Direta: 1.000.000 ÷ 30 ÷ 1000 e 1.200.000 ÷ 27 ÷ 1000.
+    quase((await comparar("Eficiência da Operação: MO Direta Total", meses))[0], 1000 / 30);
+  });
+});
+
 describe("Metodologia com outros indicadores (o item [INDICADOR], 23/10/2026)", () => {
   const linha = (nome: string, formula: string) => ({ grupo: "Geral", numero: "1", nome, sentido: "↑", unidade: "R$", descricao: null, formula, modo: "SOMA", peso: null });
   const mes = (importado: Record<string, number>, outros?: Record<string, number | null>) => ({

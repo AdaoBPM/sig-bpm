@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { compilarFormula, FormulaInvalidaError, formulaPorExtenso } from "../src/services/relatorios/formulaIndicador.js";
+import { chaveDoItem, compilarFormula, FormulaInvalidaError, formulaPorExtenso, lerItem } from "../src/services/relatorios/formulaIndicador.js";
 import { contaDaFormula, indicadoresDaFormula, quadrosDoCadastro } from "../src/services/relatorios/painelDeBordo.js";
 
 describe("fórmula dos indicadores (Estrutura dos Indicadores)", () => {
@@ -19,6 +19,16 @@ describe("fórmula dos indicadores (Estrutura dos Indicadores)", () => {
   it("fica sem valor com divisão por zero ou item sem dado", () => {
     assert.equal(compilarFormula("[DRE|1|A] / [IND|Venda: Total]").avaliar(valor), null);
     assert.equal(compilarFormula("[DRE|1|A] + [DRE|2|X]").avaliar(valor), null);
+  });
+
+  it("lê o Acumulado no Ano só no indicador e na meta, como outra chave (23/10/2026)", () => {
+    assert.deepEqual(lerItem("INDICADOR|Venda: Total|ACUM"), { tipo: "INDICADOR", nome: "Venda: Total", acumulado: true });
+    assert.deepEqual(lerItem("META|Venda: Total|ACUM"), { tipo: "META", nome: "Venda: Total", acumulado: true });
+    assert.equal(chaveDoItem(lerItem("META|Venda: Total|ACUM")), "META|Venda: Total|ACUM");
+    assert.equal(chaveDoItem(lerItem("META|Venda: Total")), "META|Venda: Total");
+    const f = compilarFormula("[INDICADOR|X|ACUM] / [INDICADOR|X]");
+    assert.deepEqual([...f.itens.keys()], ["INDICADOR|X|ACUM", "INDICADOR|X"]);
+    for (const t of ["IND|Venda: Total|ACUM", "LISTA|PROJETOS_TOTAL|ACUM", "META|Venda: Total|ANO"]) assert.throws(() => lerItem(t), FormulaInvalidaError, t);
   });
 
   it("recusa fórmula mal escrita", () => {

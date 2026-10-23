@@ -726,7 +726,15 @@ const UNIDADES_DE_INDICADOR: Array<[string, string]> = [
   ["colab.", "colab."],
   ["ocorr.", "ocorr."],
 ];
-const MODOS_DO_ACUMULADO: Array<[string, string]> = [["SOMA", "Soma dos meses"], ["MEDIA_PONDERADA", "Média ponderada"], ["ULTIMO", "Último mês"], ["SISTEMA", "Cálculo do sistema"]];
+// FORMULA (23/10/2026): o acumulado de janeiro até o mês por uma fórmula própria (a Fórmula do Acumulado), gravada na
+// coluna peso — que nos outros modos é o Peso da Média ou fica vazia —, para não mudar o banco.
+const MODOS_DO_ACUMULADO: Array<[string, string]> = [
+  ["SOMA", "Soma dos meses"],
+  ["MEDIA_PONDERADA", "Média ponderada"],
+  ["ULTIMO", "Último mês"],
+  ["FORMULA", "Fórmula do acumulado"],
+  ["SISTEMA", "Cálculo do sistema"],
+];
 
 /** Os itens que a fórmula pode usar (as opções do montador): valor "TIPO|chave", grupo pelo tipo do item. */
 async function itensDaFormula(db: Db): Promise<Opcao[]> {
@@ -737,9 +745,10 @@ async function itensDaFormula(db: Db): Promise<Opcao[]> {
     ...linhas.map((l) => ({ valor: `DRE|${l.codigo}`, rotulo: `${l.grupoSigla} › ${l.descricao}${l.tipo === "ITEM" ? "" : " (total)"}`, grupos: ["DRE"] })),
     ...TOTALIZADORES_DAS_LISTAS.map((t) => ({ valor: `LISTA|${t.codigo}`, rotulo: t.rotulo, grupos: ["LISTA"] })),
     ...INDICADORES_DAS_LISTAS.map((n) => ({ valor: `IND|${n}`, rotulo: n, grupos: ["IND"] })),
-    ...nomes.map((n) => ({ valor: `META|${n}`, rotulo: n, grupos: ["META"] })),
+    // A marca ACUMULAVEL (23/10/2026): o montador oferece o Período (No Mês ou Acumulado no Ano) nas metas e nos indicadores.
+    ...nomes.map((n) => ({ valor: `META|${n}`, rotulo: n, grupos: ["META", "ACUMULAVEL"] })),
     // Os outros indicadores do cadastro (23/10/2026), com o grupo antes, como no Painel de Bordo; o próprio, o cadastro recusa.
-    ...indicadores.filter((i) => i.ativo).map((i) => ({ valor: `INDICADOR|${i.nome}`, rotulo: `${i.grupo} › ${i.nome}`, grupos: ["INDICADOR"] })),
+    ...indicadores.filter((i) => i.ativo).map((i) => ({ valor: `INDICADOR|${i.nome}`, rotulo: `${i.grupo} › ${i.nome}`, grupos: ["INDICADOR", "ACUMULAVEL"] })),
   ];
 }
 
@@ -791,6 +800,15 @@ async function validarFormula(db: Db, formula: string, rotulo: string, nomesDoCa
   }
 }
 
+/**
+ * O indicador como a tela o mostra: a Metodologia por extenso e, no modo FORMULA (23/10/2026), a Fórmula do Acumulado
+ * (gravada em peso) no campo dela, com o Peso da Média vazio.
+ */
+function paraATela<T extends { modo: string; peso: string | null }>(i: T, texto: string | null) {
+  const porFormula = i.modo === "FORMULA";
+  return { ...i, peso: porFormula ? null : i.peso, formulaAcumulado: porFormula ? i.peso : null, metodologiaTexto: i.modo === "SISTEMA" ? "Cálculo do sistema" : texto };
+}
+
 const estruturaIndicadores: DefinicaoCadastro = {
   entidade: "estrutura-indicadores",
   titulo: "Indicador",
@@ -809,17 +827,28 @@ const estruturaIndicadores: DefinicaoCadastro = {
     { nome: "metodologiaTexto", rotulo: "Metodologia", tipo: "texto", derivado: true, noFormulario: false },
     { nome: "modo", rotulo: "Acumulado", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(MODOS_DO_ACUMULADO) },
     { nome: "peso", rotulo: "Peso da Média", tipo: "formula", larguraInteira: true, naTabela: false, visivelSe: { campo: "modo", valores: ["MEDIA_PONDERADA"] }, opcoes: itensDaFormula },
+    // A Fórmula do Acumulado (23/10/2026): gravada na coluna peso; a tela a mostra num campo próprio.
+    {
+      nome: "formulaAcumulado",
+      rotulo: "Fórmula do Acumulado",
+      tipo: "formula",
+      larguraInteira: true,
+      naTabela: false,
+      visivelSe: { campo: "modo", valores: ["FORMULA"] },
+      opcoes: itensDaFormula,
+      ajuda: "O acumulado de janeiro até o mês: use os itens com o Período “Acumulado no Ano”.",
+    },
     { nome: "ativo", rotulo: "Ativo", tipo: "booleano" },
   ],
   async listar(db, busca) {
     const r = (await db.indicadorEstrutura.findMany({ orderBy: { ordem: "asc" } })).filter((i) => contem(busca, i.grupo, i.nome, i.numero));
     const textos = await formulasPorExtenso(r.map((i) => i.formula));
-    return r.map((i, k) => ({ ...i, metodologiaTexto: i.modo === "SISTEMA" ? "Cálculo do sistema" : textos[k] }));
+    return r.map((i, k) => paraATela(i, textos[k]));
   },
   async ler(db, id) {
     const i = await db.indicadorEstrutura.findUnique({ where: { id } });
     if (!i) return null;
-    return { ...i, metodologiaTexto: i.modo === "SISTEMA" ? "Cálculo do sistema" : (await formulasPorExtenso([i.formula]))[0] };
+    return paraATela(i, (await formulasPorExtenso([i.formula]))[0]);
   },
   async preparar(db, v, id) {
     const nome = exigir(v.nome, "O nome");
@@ -847,6 +876,11 @@ const estruturaIndicadores: DefinicaoCadastro = {
       if (modo === "MEDIA_PONDERADA") {
         if (!peso) throw new RegraCadastroError(400, "Na média ponderada, monte o Peso da Média.");
         await validarFormula(db, peso, "Peso da Média", nomes);
+      } else if (modo === "FORMULA") {
+        // A Fórmula do Acumulado vai na coluna do peso (23/10/2026).
+        peso = texto(v.formulaAcumulado);
+        if (!peso) throw new RegraCadastroError(400, "No acumulado pela fórmula, monte a Fórmula do Acumulado.");
+        await validarFormula(db, peso, "Fórmula do Acumulado", nomes);
       } else {
         peso = null;
       }
@@ -1064,6 +1098,8 @@ async function validarFormulaDoPainel(db: Db, formula: string, rotulo: string) {
   const nomes = new Set((await db.indicadorEstrutura.findMany({ select: { nome: true } })).map((i) => i.nome));
   for (const i of compilada.itens.values()) {
     if (i.tipo !== "INDICADOR") throw new RegraCadastroError(400, `${rotulo}: use só os indicadores do cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
+    // O Acumulado no Ano (23/10/2026) é dos indicadores; o painel já tem o Atual e o Acumulado.
+    if (i.acumulado) throw new RegraCadastroError(400, `${rotulo}: o Acumulado no Ano vale só na Metodologia dos Indicadores.`);
     if (!nomes.has(i.nome)) throw new RegraCadastroError(400, `${rotulo}: o indicador “${i.nome}” não está no cadastro Indicadores.`);
   }
 }
