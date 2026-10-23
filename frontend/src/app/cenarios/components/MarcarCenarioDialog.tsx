@@ -15,10 +15,10 @@ import { botaoPrimario, Erro } from "./CenarioDialog";
 /** O que cada marcação faz, embaixo da opção. */
 const EFEITO: Record<MarcacaoCenario, (c: Cenario) => string> = {
   // Sem as menções aos exercícios (22/10/2026): a Comparação usa o cenário marcado, de qualquer exercício.
-  ORCAMENTO_EMPRESARIAL: () => "Dá o orçado de Resultados Empresariais (Resultados, Painel de Bordo e Relatórios Executivos): o comparado padrão da Comparação.",
+  ORCAMENTO_EMPRESARIAL: () => "Dá o orçado de Resultados Empresariais (Resultados, Painel de Bordo e Relatórios Executivos): o comparado padrão da Comparação quando não há cenário marcado como Previsão.",
   RESULTADOS_ANTERIORES: () => "Os resultados anteriores, para comparação; pode ser escolhido na Comparação de Resultados Empresariais.",
   RESULTADOS_VENDIDOS: () => "Os resultados do que foi vendido; pode ser escolhido na Comparação de Resultados Empresariais.",
-  PREVISAO: () => "Uma previsão de resultados; pode ser escolhida na Comparação de Resultados Empresariais (Resultados e Painel de Bordo).",
+  PREVISAO: () => "Uma previsão de resultados: o comparado padrão da Comparação de Resultados Empresariais (Resultados e Painel de Bordo).",
 };
 
 /**

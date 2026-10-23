@@ -9,29 +9,30 @@ import { Seletor } from "./SeletorPeriodo";
 /**
  * A Comparação de Resultados Empresariais (21/10/2026; de início, "Compara Com"): o cenário comparado (as colunas pretas de Resultados e o
  * orçado do Painel de Bordo), entre os cenários marcados (de qualquer exercício, desde 22/10/2026: num de outro, valem os
- * mesmos meses dele; o ano aparece na opção) (Orçamento Empresarial, Resultados Anteriores,
- * Resultados Vendidos e Previsão de Resultados). O padrão é o Orçamento Empresarial (sem ele marcado, a primeira marcação que houver,
- * 23/10/2026); a escolha fica guardada no navegador e vale nas duas telas (desde 23/10/2026, o Painel de Bordo também tem a lista).
+ * mesmos meses dele; o ano aparece na opção) (Previsão, Orçamento, Anterior e Vendido). O padrão (23/10/2026; antes, o Orçamento) é a
+ * primeira marcação que houver, nessa ordem; a escolha fica guardada no navegador e vale nas duas telas (a lista fica só em Resultados).
  */
 const CHAVE = "sig.comparaCom";
-const PADRAO: MarcacaoComparavel = "ORCAMENTO_EMPRESARIAL";
+const ORDEM: MarcacaoComparavel[] = ["PREVISAO", "ORCAMENTO_EMPRESARIAL", "RESULTADOS_ANTERIORES", "RESULTADOS_VENDIDOS"];
+const PADRAO = ORDEM[0];
 
-function lerEscolha(): MarcacaoComparavel {
+/** A escolha guardada neste navegador; null: nenhuma (vale o padrão). */
+function lerEscolha(): MarcacaoComparavel | null {
   try {
-    return (window.localStorage.getItem(CHAVE) as MarcacaoComparavel | null) ?? PADRAO;
+    return window.localStorage.getItem(CHAVE) as MarcacaoComparavel | null;
   } catch {
-    return PADRAO;
+    return null;
   }
 }
 
 export function useComparaCom(ano: number | null) {
-  const [escolhida, setEscolhida] = useState<MarcacaoComparavel>(() => (typeof window === "undefined" ? PADRAO : lerEscolha()));
+  const [escolhida, setEscolhida] = useState<MarcacaoComparavel | null>(() => (typeof window === "undefined" ? null : lerEscolha()));
   const consulta = useQuery({ queryKey: ["relatorios", "comparaveis", ano], queryFn: () => relatoriosService.comparaveis(ano!), enabled: ano !== null });
   const opcoes = consulta.data ?? [];
-  // A escolhida sem cenário marcado: vale o Orçamento Empresarial; sem ele marcado (23/10/2026), a primeira marcação que houver
-  // (antes, o Orçamento mesmo sem cenário: o orçado zero para quem nunca tinha escolhido outra).
+  // Sem escolha (ou a escolhida sem cenário marcado), a primeira marcação que houver na ORDEM (23/10/2026; antes, o Orçamento
+  // mesmo sem cenário: o orçado zero para quem nunca tinha escolhido outra).
   const temA = (m: MarcacaoComparavel) => opcoes.some((o) => o.marcacao === m);
-  const comparaCom = temA(escolhida) ? escolhida : temA(PADRAO) ? PADRAO : (opcoes[0]?.marcacao ?? PADRAO);
+  const comparaCom = escolhida && temA(escolhida) ? escolhida : (ORDEM.find(temA) ?? PADRAO);
   const mudar = (m: MarcacaoComparavel) => {
     setEscolhida(m);
     try {

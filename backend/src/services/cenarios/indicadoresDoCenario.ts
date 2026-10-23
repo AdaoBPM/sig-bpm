@@ -186,7 +186,8 @@ export const ROTULO_DA_MARCACAO: Record<MarcacaoCenario, string> = {
 export async function cenariosMarcados() {
   // De qualquer exercício (22/10/2026), com o ano dele.
   const cs = await getPrismaClient().cenario.findMany({ where: { marcacao: { not: null } }, select: { id: true, nome: true, ano: true, marcacao: true } });
-  const ordem = Object.keys(ROTULO_DA_MARCACAO);
+  // Na ordem do padrão da Comparação (23/10/2026): Previsão, Orçamento, Anterior e Vendido.
+  const ordem: MarcacaoCenario[] = ["PREVISAO", "ORCAMENTO_EMPRESARIAL", "RESULTADOS_ANTERIORES", "RESULTADOS_VENDIDOS"];
   return cs
     .map((c) => ({ marcacao: c.marcacao!, rotulo: ROTULO_DA_MARCACAO[c.marcacao!], cenario: { id: c.id, nome: c.nome, ano: c.ano } }))
     .sort((a, b) => ordem.indexOf(a.marcacao) - ordem.indexOf(b.marcacao));

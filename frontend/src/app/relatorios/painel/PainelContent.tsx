@@ -17,7 +17,7 @@ import { ConfigurarGraficos } from "../components/ConfigurarGraficos";
 import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { IndicadoresDoPainel } from "./IndicadoresDoPainel";
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
-import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
+import { useComparaCom } from "../components/ComparaCom";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
@@ -610,7 +610,7 @@ export function PainelContent() {
               Em “Configurar Gráficos”, à direita do título, escolha o Exercício, o Período (o mês de referência, entre as competências fechadas; o
               acumulado vai de janeiro até ele), os Rótulos (Com: os valores de cada mês escritos nos gráficos, o realizado por cima do orçado), o
               Tipo dos gráficos; cada escolha vale na hora e também na aba Indicadores. O Tipo e os Rótulos ficam guardados neste navegador. As
-              legendas (as cores das séries e os sinais) ficam antes da Comparação, e ela antes do botão.
+              legendas (as cores das séries e os sinais) ficam antes do botão.
             </li>
             <li>Troque entre as abas Resultados e Performance (os unitários) e Indicadores. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, comportamento, grupo, quadro, Metodologia e formato.</li>
@@ -638,10 +638,9 @@ export function PainelContent() {
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
-              O cenário comparado é o escolhido na “Comparação”, à esquerda do Configurar Gráficos (a mesma escolha da tela Resultados: trocar numa
-              tela troca na outra, neste navegador), entre os cenários marcados, de qualquer exercício (Orçamento, o padrão; sem ele marcado, a
-              primeira marcação que houver; Anterior, Vendido e Previsão), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento,
-              os cards dizem “vs.” e o nome da marcação.
+              O cenário comparado é o escolhido na “Comparação” da tela Resultados (a escolha fica guardada neste navegador), entre os cenários marcados, de qualquer exercício (Previsão, Orçamento, Anterior e Vendido; o
+              padrão é a primeira marcação que houver, nessa ordem), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento, os
+              cards dizem “vs.” e o nome da marcação.
             </li>
             <li>
               Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
@@ -649,7 +648,7 @@ export function PainelContent() {
               imagem, para colar num e-mail ou numa apresentação; o botão seguinte (o mesmo ícone, com um asterisco: “Copiar o grupo como imagem (sem
               gráficos)”) copia só os valores dos cards, com a borda de cada um. Se o navegador não deixar copiar, a imagem é baixada.
             </li>
-            <li>O orçado vem do cenário escolhido na Comparação (de início, o marcado como Orçamento, em Criação de Cenários / Cenários Sintéticos); sem nenhum cenário marcado, o orçado fica zero.</li>
+            <li>O orçado vem do cenário escolhido na Comparação (de início, o marcado como Previsão ou, sem ele, como Orçamento, Anterior ou Vendido, em Criação de Cenários / Cenários Sintéticos); sem nenhum cenário marcado, o orçado fica zero.</li>
             <li>Sem os Rótulos, a escala à esquerda de cada gráfico usa marcas práticas, sem casas decimais: múltiplos de 1, 2, 5, 10, 25, 50, 100, 250, 500, 1.000… (ou 0,1, 0,2, 0,5 quando os valores são pequenos), na unidade do card (milhões, milhares, %, m³…).</li>
           </ul>
         }
@@ -661,8 +660,8 @@ export function PainelContent() {
             </p>
             <p>
               O realizado sai dos mesmos valores da aba Indicadores, só das competências fechadas: a DRE apurada, os volumes da apuração e os indicadores importados (ou
-              digitados nas Listas Operacionais). O orçado sai das Metas do cenário escolhido na Comparação (de início, o marcado como Orçamento,
-              em Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem nenhum cenário
+              digitados nas Listas Operacionais). O orçado sai das Metas do cenário escolhido na Comparação (de início, o marcado como Previsão ou,
+              sem ele, como Orçamento, Anterior ou Vendido, em Criação de Cenários / Cenários Sintéticos), calculadas como o realizado, e o acumulado do orçado também. Sem nenhum cenário
               marcado, ou sem o valor no cenário, o orçado é zero.
             </p>
             <p>
@@ -696,8 +695,6 @@ export function PainelContent() {
               ) : (
                 <LegendaDoPainel tipo={tipoGrafico} cores={cores} comparado={dados?.cenarioOrcado} />
               )}
-              {/* O cenário comparado (23/10/2026; antes, só na tela Resultados): a mesma escolha de lá. */}
-              <SeletorComparaCom valor={comparacao.comparaCom} opcoes={comparacao.opcoes} onMudar={comparacao.mudar} />
               <ConfigurarGraficos>
               <Seletor
                 rotulo="Exercício"
