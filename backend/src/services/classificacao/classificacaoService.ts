@@ -153,10 +153,19 @@ export const classificacaoService = {
       return { id: l.id, data: { ...c, classificadoEm: agora } };
     });
 
+    // Em lote (23/10/2026, PostgreSQL): os lançamentos com a mesma classificação num comando só, em blocos de 5.000 ids. Um
+    // a um eram uma ida ao banco por lançamento — no PostgreSQL, em outra máquina, a maior parte do tempo da apuração.
+    const porDados = new Map<string, { data: (typeof atualizacoes)[number]["data"]; ids: string[] }>();
+    for (const u of atualizacoes) {
+      const chave = JSON.stringify(u.data);
+      const grupo = porDados.get(chave) ?? { data: u.data, ids: [] };
+      grupo.ids.push(u.id);
+      porDados.set(chave, grupo);
+    }
     await prisma.$transaction(
       async (tx) => {
-        for (const u of atualizacoes) {
-          await tx.lancamentoContabil.update({ where: { id: u.id }, data: u.data });
+        for (const { data, ids } of porDados.values()) {
+          for (let k = 0; k < ids.length; k += 5000) await tx.lancamentoContabil.updateMany({ where: { id: { in: ids.slice(k, k + 5000) } }, data });
         }
       },
       { timeout: 120_000 },
