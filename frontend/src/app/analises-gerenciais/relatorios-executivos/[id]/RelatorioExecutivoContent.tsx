@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -263,7 +263,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     onSuccess: (r, acao) => {
       setConfirmar(null);
       atualizar(r);
-      toast.success(acao === "finalizar" ? `Aba ${aba?.nome} finalizada: agora todos a veem.` : `Aba ${aba?.nome} reaberta: só quem a edita a vê até finalizar de novo.`);
+      toast.success(acao === "finalizar" ? `${aba?.nome}: finalizado, com todas as abas (só para leitura).` : `${aba?.nome}: reaberto para a edição.`);
     },
   });
   const excluir = useMutation({
@@ -355,13 +355,13 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             {editavel ? (
               <Button type="button" className={botaoPrimario} onClick={() => setConfirmar("finalizar")}>
                 <CheckCheck className="size-4" />
-                Finalizar Aba
+                Finalizar
               </Button>
             ) : null}
             {aba?.podeReabrir ? (
               <Button type="button" className={botaoPrimario} disabled={situacao.isPending} onClick={() => situacao.mutate("reabrir")}>
                 <LockOpen className="size-4" />
-                Reabrir Aba
+                Reabrir
               </Button>
             ) : null}
             <ExportarPdfDoRelatorio
@@ -422,7 +422,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
               Serviços), Administrativo (Performance Administrativa) e Encerramento. Todos os que leem a tela veem todas as
               abas, e todos os que a editam editam todas (desde 23/10/2026, sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
-              na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O ícone de check ao lado do nome diz que a aba está finalizada (a dica dele mostra quem a
+              na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O check verde ao lado do nome (o das etapas feitas do Fechamento Mensal) diz que o grupo está finalizado (a dica dele mostra quem o
               finalizou e quando).
             </li>
             <li>
@@ -522,8 +522,9 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
             </li>
             <li>
-              “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar Aba” grava a aba e a torna pública, só para
-              leitura; “Reabrir Aba” a devolve à elaboração. O relatório fica Finalizado quando todas as abas estão finalizadas.
+              “Gravar” guarda as abas alteradas, com as páginas (sair sem gravar pergunta antes). “Finalizar” grava e finaliza o grupo aberto (Capa, Introdução,
+              Administrativo…), com todas as abas dele, só para leitura, e o grupo ganha o check verde na barra do topo; “Reabrir” o devolve à elaboração. O relatório
+              fica Finalizado quando todos os grupos estão finalizados.
             </li>
           </ul>
         }
@@ -777,10 +778,10 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(null) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{confirmar === "finalizar" ? `Finalizar a Aba ${aba?.nome ?? ""}` : "Excluir Relatório"}</DialogTitle>
+              <DialogTitle>{confirmar === "finalizar" ? `Finalizar ${aba?.nome ?? ""}` : "Excluir Relatório"}</DialogTitle>
               <DialogDescription>
                 {confirmar === "finalizar"
-                  ? `A aba ${aba?.nome} de ${relatorio.rotuloMes} fica visível, só para leitura, para todos os que leem a tela.${mudouAba ? " As alterações ainda não gravadas são gravadas antes." : ""}${vazia ? " A aba está vazia." : ""} Você pode reabri-la depois.`
+                  ? `O grupo ${aba?.nome} de ${relatorio.rotuloMes}, com todas as abas dele, fica finalizado, só para leitura.${mudouAba ? " As alterações ainda não gravadas são gravadas antes." : ""}${vazia ? " O grupo está vazio." : ""} Você pode reabri-lo depois.`
                   : `O relatório de ${relatorio.rotuloMes}, com todas as abas, é excluído.`}
               </DialogDescription>
             </DialogHeader>
@@ -791,7 +792,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               </Button>
               {confirmar === "finalizar" ? (
                 <Button type="button" className={botaoPrimario} disabled={situacao.isPending} onClick={() => situacao.mutate("finalizar")}>
-                  {situacao.isPending ? "Finalizando…" : "Finalizar Aba"}
+                  {situacao.isPending ? "Finalizando…" : "Finalizar"}
                 </Button>
               ) : (
                 <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" disabled={excluir.isPending} onClick={() => excluir.mutate()}>
@@ -872,8 +873,9 @@ function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio;
               >
                 {a.nome}
                 {a.situacao === "FINALIZADO" ? (
-                  <span title={`Aba finalizada${a.finalizadoPor ? ` por ${a.finalizadoPor}` : ""}${a.finalizadoEm ? ` em ${dataHora(a.finalizadoEm)}` : ""}`}>
-                    <CircleCheck className={`size-4 ${ativa ? "text-green-400" : "text-green-700"}`} aria-label="Aba finalizada" />
+                  // O check das etapas feitas do Fechamento Mensal (23/10/2026; antes, o check no círculo).
+                  <span title={`Finalizado${a.finalizadoPor ? ` por ${a.finalizadoPor}` : ""}${a.finalizadoEm ? ` em ${dataHora(a.finalizadoEm)}` : ""}`}>
+                    <Check className={`size-4 ${ativa ? "text-green-400" : "text-green-700"}`} aria-label="Finalizado" />
                   </span>
                 ) : null}
               </button>
