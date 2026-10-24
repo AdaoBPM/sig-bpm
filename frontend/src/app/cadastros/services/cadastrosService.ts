@@ -141,6 +141,8 @@ export type PreviaRecarga = {
   dre: SecaoRecarga;
   semDestino: string[];
   avisos: Array<{ origem: string; chave: string; motivo: string }>;
+  /** O que impede a recarga (a linha da DRE em uso que sairia; a conta que nenhuma aba leria): a confirmação é recusada. */
+  bloqueios: string[];
   ajustesObsoletos: string[];
 };
 

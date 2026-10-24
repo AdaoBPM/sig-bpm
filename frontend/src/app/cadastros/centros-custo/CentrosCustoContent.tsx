@@ -57,7 +57,10 @@ export function CentrosCustoContent() {
           <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
-          <li>“Recarregar da Planilha” mostra o que muda em relação ao arquivo enviado antes de gravar.</li>
+          <li>
+            “Recarregar da Planilha” mostra o que muda em relação ao arquivo enviado antes de gravar. O que impede a recarga (uma linha da DRE em uso que
+            sairia, uma conta que nenhuma aba de resultado leria) aparece num quadro vermelho, e a confirmação fica bloqueada até a planilha ser corrigida.
+          </li>
           <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
           <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Código RM e o Centro de Custo (Controladoria) e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
           <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>

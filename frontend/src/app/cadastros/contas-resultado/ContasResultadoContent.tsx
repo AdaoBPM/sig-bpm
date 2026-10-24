@@ -76,7 +76,11 @@ export function ContasResultadoContent() {
             que alguma aba lê, com as abas de cada uma; “Usar” põe a escolhida no formulário, para conferir e gravar.
           </li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
-          <li>“Recarregar da Planilha” mostra o que muda em relação ao arquivo enviado antes de gravar.</li>
+          <li>
+            “Recarregar da Planilha” mostra o que muda em relação ao arquivo enviado antes de gravar. A mesma regra das abas de resultado vale ali: a recarga
+            não se confirma se deixar uma conta numa combinação que nenhuma aba lê (o quadro vermelho diz as combinações permitidas, para corrigir a
+            planilha); a conta que já estava assim e não muda aparece entre os avisos.
+          </li>
           <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
           <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Reduzido e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
           <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>

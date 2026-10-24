@@ -1,5 +1,7 @@
 import { getPrismaClient } from "../../../config/prisma.js";
 import type { PrismaClient } from "../../../generated/prisma/client.js";
+import { BaldeAlocacao, type TipoLinhaDRE } from "../../../generated/prisma/enums.js";
+import { abasDaConta, combinacoesDaConta } from "../../dre/apuracaoUnidades.js";
 import type { CadastrosPreparados } from "./prepararCadastros.js";
 import { plural } from "../../../utils/plural.js";
 
@@ -100,7 +102,7 @@ export async function compararComBanco(p: CadastrosPreparados) {
     prisma.linhaDRE.findMany({
       orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }],
       include: {
-        unidades: { include: { unidadeNegocio: { select: { nome: true } } } },
+        unidades: { include: { unidadeNegocio: { select: { nome: true, codigo: true } } } },
         _count: { select: { contas: true, lancamentosContabeis: true, lancamentosManuais: true, resultadosApurados: true } },
       },
     }),
@@ -143,7 +145,71 @@ export async function compararComBanco(p: CadastrosPreparados) {
   // Linha da DRE que sairia e está em uso: o banco recusa apagá-la (valores
   // apurados, lançamentos e contas apontam para ela). A recarga é bloqueada.
   const emUsoDre = linhasEmUso(dreDif.removidos.map((r) => r.chave), linhas);
-  return { centros: centrosDif, contas: contasDif, dre: dreDif, bloqueios: emUsoDre };
+
+  // As contas que nenhuma aba de resultado leria (24/10/2026, a regra do cadastro da conta), na estrutura da DRE da
+  // planilha: a recarga é bloqueada pela conta que ficaria assim; a que já estava assim e não muda vira aviso.
+  const unidades = await prisma.unidadeNegocio.findMany({ select: { codigo: true, nome: true } });
+  const codigoDaUnidade = new Map(unidades.map((u) => [chaveNome(u.nome), u.codigo]));
+  const linhasDepois = p.dre.linhas.map((l) => ({
+    id: l.codigo,
+    ...l.dados,
+    unidades: l.unidades.map((n) => codigoDaUnidade.get(chaveNome(n))).filter((u): u is number => u !== undefined),
+  }));
+  const linhasAntes = linhas
+    .filter((l) => l.ativo)
+    .map((l) => ({ ...l, id: codigoNovo.get(l.codigo) ?? l.codigo, unidades: l.unidades.map((u) => u.unidadeNegocio.codigo) }));
+  const chave = (c: ContaParaAbas) => `${c.reduzido}|${c.linha}|${c.balde}`;
+  const jaSemAba = new Set(
+    contasSemAba(
+      contas.map((c) => ({ reduzido: c.reduzido, descricao: c.descricao, tipoConta: c.tipoConta, balde: c.balde, linha: c.linhaDRE ? (codigoNovo.get(c.linhaDRE.codigo) ?? c.linhaDRE.codigo) : null })),
+      linhasAntes,
+    ).map(({ conta }) => chave(conta)),
+  );
+  const semAba = contasSemAba(
+    p.contas.alvos.map((c) => ({ reduzido: c.reduzido, descricao: c.dados.descricao, tipoConta: c.dados.tipoConta, balde: c.dados.balde, linha: p.vinculos.get(c.reduzido) ?? null })),
+    linhasDepois,
+  );
+  const bloqueiosContas = semAba
+    .filter(({ conta }) => !jaSemAba.has(chave(conta)))
+    .map(({ conta, linha, permitidas }) => `A conta ${conta.reduzido} ${conta.descricao} ficaria ${semAbaPorque(linha, conta.balde)} ${permitidas}`);
+  const avisosContas = semAba
+    .filter(({ conta }) => jaSemAba.has(chave(conta)))
+    .map(({ conta, linha, permitidas }) => ({ origem: "contas de resultado", chave: `${conta.reduzido} ${conta.descricao}`, motivo: `já está ${semAbaPorque(linha, conta.balde)} A recarga não muda isso. ${permitidas}` }));
+  return { centros: centrosDif, contas: contasDif, dre: dreDif, bloqueios: [...emUsoDre, ...bloqueiosContas], avisosContas };
+}
+
+/** A chave do nome da unidade: sem diferença de maiúsculas e acentos. */
+const chaveNome = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+/** "A, B ou C". */
+const ouLista = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} ou ${xs[xs.length - 1]}` : (xs[0] ?? ""));
+const BALDES_DAS_CONTAS = Object.values(BaldeAlocacao).filter((b) => b !== "LEBEN");
+
+type ContaParaAbas = { reduzido: string; descricao: string; tipoConta: string; balde: string | null; linha: string | null };
+type LinhaParaAbas = { id: string; tipo: TipoLinhaDRE; grupo: string; grupoSigla: string; atribuicao: string | null; descricao: string; unidades: number[] };
+
+const semAbaPorque = (linha: LinhaParaAbas, balde: string | null) =>
+  `na linha “${linha.descricao}” (${linha.grupoSigla}) com o rateio ${balde ?? "vazio"}, que nenhuma aba de resultado lê: os lançamentos de obras, de centros fora do cadastro e sem centro ficariam fora do resultado.`;
+
+/**
+ * As contas analíticas de linha de item que nenhuma aba de resultado lê (abasDaConta, a regra da Classificação), com o
+ * texto das combinações que alguma aba lê — a linha e as de mesma atribuição e descrição, com os rateios aceitos.
+ */
+function contasSemAba(contas: ContaParaAbas[], linhas: LinhaParaAbas[]) {
+  const porCodigo = new Map(linhas.map((l) => [l.id, l]));
+  const comSigla = linhas.filter((l) => /\(/.test(l.grupo));
+  return contas.flatMap((conta) => {
+    const linha = conta.linha ? porCodigo.get(conta.linha) : undefined;
+    if (conta.tipoConta !== "ANALITICA" || !linha || linha.tipo !== "ITEM" || abasDaConta(linha, conta.balde, linhas).some((a) => a.length)) return [];
+    const porLinha = new Map<string, string[]>();
+    for (const c of combinacoesDaConta(linha, comSigla, BALDES_DAS_CONTAS)) {
+      const k = `${c.linha.grupoSigla} › ${c.linha.atribuicao ?? "—"} › ${c.linha.descricao}`;
+      porLinha.set(k, [...(porLinha.get(k) ?? []), c.balde]);
+    }
+    const permitidas = porLinha.size
+      ? `Na planilha, use uma das combinações que alguma aba lê: ${[...porLinha].map(([k, bs]) => `${k}, com o rateio ${ouLista(bs)}`).join("; ")}.`
+      : "Nenhum rateio faz uma aba ler essa linha: aponte a conta para outra linha na planilha.";
+    return [{ conta, linha, permitidas }];
+  });
 }
 
 type LinhaComUso = { codigo: string; descricao: string; _count: { contas: number; lancamentosContabeis: number; lancamentosManuais: number; resultadosApurados: number } };
@@ -193,7 +259,6 @@ export async function gravarCadastros(tx: Tx, p: CadastrosPreparados) {
   }
 
   // A unidade de cada linha pelo nome (o Tipo saiu do cadastro em 09/10/2026), sem diferença de maiúsculas e acentos.
-  const chaveNome = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
   const unidades = await tx.unidadeNegocio.findMany({ select: { id: true, nome: true } });
   const unidadePorNome = new Map(unidades.map((u) => [chaveNome(u.nome), u.id]));
   const idPorCodigo = new Map<string, string>();

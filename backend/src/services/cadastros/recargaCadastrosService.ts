@@ -69,7 +69,9 @@ export const recargaCadastrosService = {
       contas: resumir(diferencas.contas),
       dre: resumir(diferencas.dre),
       semDestino: preparado.semDestino,
-      avisos: [...diferencas.bloqueios.map((b) => ({ origem: "estrutura da DRE", chave: "bloqueio", motivo: `${b} A recarga será recusada.` })), ...preparado.avisos],
+      // Os bloqueios (a linha da DRE em uso que sairia; a conta que nenhuma aba leria) à parte: a tela os mostra em
+      // vermelho e não deixa confirmar (24/10/2026; antes, entre os avisos).
+      avisos: [...preparado.avisos, ...diferencas.avisosContas],
       bloqueios: diferencas.bloqueios,
       ajustesObsoletos: obsoletos.map((o) => o.descricao),
     };

@@ -153,7 +153,9 @@ export function RecarregarPlanilha() {
               muda nos centros de custo, nas contas de resultado e na estrutura da DRE
               antes de gravar. As competências ainda não apuradas são reclassificadas depois; as apuradas
               ficam como foram apuradas até serem reapuradas. A planilha prevalece: uma correção feita
-              aqui na ferramenta e que não esteja nela aparece como alteração e é desfeita.
+              aqui na ferramenta e que não esteja nela aparece como alteração e é desfeita. A recarga não
+              se confirma se deixar uma conta numa combinação de linha e rateio que nenhuma aba de
+              resultado lê; o aviso diz as combinações que alguma aba lê.
             </DialogDescription>
           </DialogHeader>
 
@@ -184,6 +186,22 @@ export function RecarregarPlanilha() {
                   <CheckCircle2 className="size-4" />
                   A planilha é igual ao cadastro. Nada muda.
                 </p>
+              ) : null}
+              {/* Os bloqueios (24/10/2026; antes, entre os avisos): com eles, a recarga não se confirma. */}
+              {previa.bloqueios.length > 0 ? (
+                <div className="rounded-sm border border-red-200 bg-red-50 p-3">
+                  <div className="flex items-start gap-2 text-sm text-red-700">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="font-medium">A recarga não pode ser confirmada. Corrija a planilha e envie de novo:</p>
+                      <ul className="list-disc space-y-1 pl-4">
+                        {previa.bloqueios.map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               ) : null}
               <Secao nome="Centros de custo" s={previa.centros} />
               <Secao nome="Contas de resultado" s={previa.contas} />
@@ -229,7 +247,7 @@ export function RecarregarPlanilha() {
               <Button
                 type="button"
                 onClick={() => confirmar.mutate()}
-                disabled={confirmar.isPending || totalMudancas === 0}
+                disabled={confirmar.isPending || totalMudancas === 0 || previa.bloqueios.length > 0}
                 className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
               >
                 {confirmar.isPending ? "Gravando…" : `Confirmar recarga (${totalMudancas} ${plural(totalMudancas, "mudança", "mudanças")})`}
