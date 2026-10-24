@@ -17,6 +17,14 @@ usuariosRoutes.post("/", autenticacao, editar, asyncHandler(c.criar));
 usuariosRoutes.put("/:id", autenticacao, editar, asyncHandler(c.atualizar));
 usuariosRoutes.put("/:id/senha", autenticacao, editar, asyncHandler(c.redefinirSenha));
 
+/**
+ * Quem está online (24/10/2026): montado em /presenca. Todo usuário logado avisa (GET, que o modo de publicação não
+ * recusa); só o Administrador recebe a lista. O DELETE tira o usuário ao sair.
+ */
+export const presencaRoutes = Router();
+presencaRoutes.get("/", autenticacao, c.presenca);
+presencaRoutes.delete("/", autenticacao, c.sairDaPresenca);
+
 /** Perfis (tipos de usuário): montado em /perfis. */
 export const perfisRoutes = Router();
 // Os perfis têm a tela própria (14/10/2026); a lista também serve à tela Usuários.

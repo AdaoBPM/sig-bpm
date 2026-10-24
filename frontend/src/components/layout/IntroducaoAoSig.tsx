@@ -151,7 +151,8 @@ const ETAPAS: Etapa[] = [
     texto: (
       <p>
         O seu nome e o seu perfil, o Tema (Padrão, Claro ou Escuro), a Acessibilidade (Daltonismo), Trocar Senha, Sair e esta
-        Introdução ao SIG, para revê-la quando quiser.
+        Introdução ao SIG, para revê-la quando quiser. Para o Administrador, ao lado do nome, quantos usuários estão online
+        (os nomes aparecem ao parar o mouse em cima).
       </p>
     ),
   },

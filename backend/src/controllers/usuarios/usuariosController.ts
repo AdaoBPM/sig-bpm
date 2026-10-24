@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { DepartamentoAcesso, RecursoSistema, AcaoPermissao, TipoImportacao } from "../../generated/prisma/enums.js";
+import { CODIGO_ADMINISTRADOR } from "../../services/acesso/acesso.js";
+import { presencaService } from "../../services/usuarios/presencaService.js";
 import { RegraUsuarioError, usuariosService } from "../../services/usuarios/usuariosService.js";
 import { novaSenhaSchema } from "../authController.js";
 
@@ -87,4 +89,18 @@ export const usuariosController = {
   },
 
   excluirPerfil: (request: Request, response: Response) => responder(response, () => usuariosService.excluirPerfil(String(request.params.id), request.user!.sub)),
+
+  /** O aviso de quem está com o SIG aberto; ao Administrador, devolve quem está online (24/10/2026). */
+  presenca(request: Request, response: Response) {
+    const u = request.user!;
+    presencaService.marcar(u.sub, u.nome);
+    if (u.perfil.codigo !== CODIGO_ADMINISTRADOR) return response.json({ data: null });
+    const usuarios = presencaService.online();
+    return response.json({ data: { total: usuarios.length, usuarios } });
+  },
+
+  sairDaPresenca(request: Request, response: Response) {
+    presencaService.sair(request.user!.sub);
+    return response.status(204).end();
+  },
 };

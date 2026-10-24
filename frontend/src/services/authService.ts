@@ -43,6 +43,8 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
+    // Sai da lista de quem está online (24/10/2026), enquanto a sessão ainda vale; sem ela, some em 3 minutos.
+    await api.delete("/proxy/presenca").catch(() => undefined);
     try {
       await api.post("/auth/logout");
     } catch {

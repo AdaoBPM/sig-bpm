@@ -44,6 +44,7 @@ import { relatoriosExecutivosService } from "@/app/analises-gerenciais/relatorio
 import { EtiquetaDoDesenvolvimento } from "./AmbienteDeDesenvolvimento";
 import { abrirIntroducao } from "./IntroducaoAoSig";
 import { TrocarSenhaDialog } from "./TrocarSenhaDialog";
+import { UsuariosOnline } from "./UsuariosOnline";
 
 function getInitials(name: string) {
   return name
@@ -117,6 +118,8 @@ export function AppHeader() {
       </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Quantos usuários estão online (24/10/2026): só para o Administrador. */}
+        <UsuariosOnline />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
