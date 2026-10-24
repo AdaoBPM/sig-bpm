@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, AlertTriangle, FileSearch } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
@@ -14,6 +14,7 @@ import type { Natureza } from "../../receita-previa/services/receitaPreviaServic
 import { moeda } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, UNIDADES, type BlocoDetalhe, type LancamentoDetalhe, type VisaoDetalhe } from "../services/dreService";
 import { BalanceteDialog } from "./BalanceteDialog";
+import { ExportarExtrato } from "./ExportarExtrato";
 import { plural } from "@/lib/texto";
 
 type Props = {
@@ -182,7 +183,7 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
   const fecha = data?.somaOrigens !== null && data?.somaOrigens !== undefined && Math.abs(Number(data.somaOrigens) - Number(data.valor ?? 0)) <= 0.05;
 
   if (documentos) {
-    return <BalanceteDialog anoMes={anoMes} linha={linha} lancamento={documentos} rotuloMes={rotuloMes} onVoltar={() => setDocumentos(null)} />;
+    return <BalanceteDialog anoMes={anoMes} linha={linha} visao={visao} lancamento={documentos} rotuloMes={rotuloMes} onVoltar={() => setDocumentos(null)} />;
   }
   if (memoria) {
     return <MemoriaCalculoDialog anoMes={anoMes} unidade={memoria.unidade} natureza={memoria.natureza} onFechar={() => setMemoria(null)} />;
@@ -212,6 +213,13 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
               </div>
             ) : null}
           </div>
+        ) : null}
+        {/* O extrato em Excel (24/10/2026): as movimentações numa aba e os detalhes, item a item, em outra. O pé fica preso
+            embaixo, como o título em cima, para o botão aparecer sem rolar o extrato. */}
+        {data ? (
+          <DialogFooter className="sticky -bottom-4 z-10 bg-popover">
+            <ExportarExtrato anoMes={anoMes} linha={linha} visao={visao} />
+          </DialogFooter>
         ) : null}
       </DialogContent>
     </Dialog>

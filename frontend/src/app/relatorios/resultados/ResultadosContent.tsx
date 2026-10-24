@@ -720,6 +720,11 @@ export function ResultadosContent() {
               de custo e na filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
             </li>
             <li>
+              “Exportar”, no pé do extrato, baixa um Excel com a aba Movimentações (os lançamentos do extrato, por bloco, com o valor e a parcela na
+              linha) e a aba Detalhes (os movimentos do balancete de cada lançamento, item a item: a emissão, o cliente ou fornecedor e o histórico). No
+              Balancete, o “Exportar” baixa só a conta: o lançamento numa aba e os movimentos que o modal mostra (no recorte da caixa) na outra.
+            </li>
+            <li>
               No extrato, o lançamento reclassificado (Cadastros da Apuração / Reclassificações) mostra a conta corrigida, a que vale na DRE, com
               “(Corrigida de: …)” e a conta do balancete em vermelho.
             </li>

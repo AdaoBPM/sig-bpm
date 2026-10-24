@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { moeda } from "../../utils/formatacao";
-import { dreService, mensagemDeErro, type LancamentoDetalhe, type MovimentoDoBalancete } from "../services/dreService";
+import { dreService, mensagemDeErro, type LancamentoDetalhe, type MovimentoDoBalancete, type VisaoDetalhe } from "../services/dreService";
+import { ExportarExtrato } from "./ExportarExtrato";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : null);
 const centroTexto = (d: MovimentoDoBalancete) => (d.codigoCentroCusto ? `${d.codigoCentroCusto}${d.nomeCentroCusto ? ` · ${d.nomeCentroCusto}` : ""}` : null);
@@ -34,12 +35,15 @@ const COLUNAS: Coluna<MovimentoDoBalancete>[] = [
 export function BalanceteDialog({
   anoMes,
   linha,
+  visao,
   lancamento,
   rotuloMes,
   onVoltar,
 }: {
   anoMes: string;
   linha: string;
+  /** A visão do extrato (o Exportar traz os lançamentos da conta nela). */
+  visao: VisaoDetalhe;
   lancamento: LancamentoDetalhe;
   rotuloMes?: string;
   onVoltar: () => void;
@@ -130,11 +134,13 @@ export function BalanceteDialog({
           </div>
         )}
 
-        <DialogFooter className="shrink-0">
+        <DialogFooter className="shrink-0 sm:justify-between">
           <Button type="button" variant="outline" className="rounded-sm" onClick={onVoltar}>
             <ArrowLeft className="size-4" />
             Voltar ao Extrato
           </Button>
+          {/* O balancete da conta em Excel (24/10/2026): o lançamento numa aba e os movimentos, no recorte da caixa, em outra. */}
+          <ExportarExtrato anoMes={anoMes} linha={linha} visao={visao} recorte={{ conta: lancamento.conta.reduzido, ...(soDoLancamento ? { centro: lancamento.centro?.codigoRM ?? null, filial: lancamento.filial } : {}) }} />
         </DialogFooter>
       </DialogContent>
     </Dialog>

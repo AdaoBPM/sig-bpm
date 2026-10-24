@@ -6,6 +6,7 @@ import { detalhamentoService } from "../../services/dre/detalhamentoService.js";
 import { documentosService } from "../../services/dre/documentosService.js";
 import { dreService, RegraDREError } from "../../services/dre/dreService.js";
 import { exportacaoService, type VisaoExportacao } from "../../services/dre/exportacaoService.js";
+import { exportarExtrato } from "../../services/dre/exportacaoExtrato.js";
 import { obrasService } from "../../services/dre/obrasService.js";
 import { ehGrupoSemCentro, semCentroService, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
 import { volumesDaLinha } from "../../services/dre/volumesDaLinhaService.js";
@@ -23,6 +24,27 @@ function competencia(request: Request, response: Response) {
     return null;
   }
   return c.data;
+}
+
+/** A linha e a visão do detalhamento pela query: ?linha= e ?unidade=1..5, ?grupo= (centro), ?obra=, ?semCentro= ou nenhuma (consolidado). */
+function linhaEVisaoDoDetalhe(request: Request): { linha: string; visao: Parameters<typeof detalhamentoService.detalhar>[3] } | { erro: string } {
+  const linha = z.string().trim().min(1).max(200).safeParse(request.query.linha);
+  if (!linha.success) return { erro: "Linha da DRE inválida" };
+  const g = grupoSchema.safeParse(request.query.grupo);
+  if (!g.success) return { erro: "Centro de custo inválido" };
+  const o = obraSchema.safeParse(request.query.obra);
+  if (!o.success) return { erro: "Obra inválida" };
+  const semCentro = z.string().trim().min(1).max(40).optional().safeParse(request.query.semCentro);
+  if (!semCentro.success) return { erro: "Grupo inválido" };
+  if (semCentro.data) return { linha: linha.data, visao: { semCentro: semCentro.data } };
+  if (o.data) return { linha: linha.data, visao: { obra: o.data } };
+  if (g.data) return { linha: linha.data, visao: { grupo: g.data } };
+  if (request.query.unidade !== undefined) {
+    const u = unidadeSchema.safeParse(request.query.unidade);
+    if (!u.success) return { erro: "Unidade inválida" };
+    return { linha: linha.data, visao: { unidade: u.data } };
+  }
+  return { linha: linha.data, visao: { consolidado: true } };
 }
 
 async function responder(response: Response, fn: () => Promise<unknown>) {
@@ -83,24 +105,42 @@ export const dreController = {
   async detalhe(request: Request, response: Response) {
     const c = competencia(request, response);
     if (!c) return;
-    const linha = z.string().trim().min(1).max(200).safeParse(request.query.linha);
-    if (!linha.success) return response.status(400).json({ error: "Linha da DRE inválida" });
-    const g = grupoSchema.safeParse(request.query.grupo);
-    if (!g.success) return response.status(400).json({ error: "Centro de custo inválido" });
-    const o = obraSchema.safeParse(request.query.obra);
-    if (!o.success) return response.status(400).json({ error: "Obra inválida" });
-    let visao: Parameters<typeof detalhamentoService.detalhar>[3] = { consolidado: true };
-    const semCentro = z.string().trim().min(1).max(40).optional().safeParse(request.query.semCentro);
-    if (!semCentro.success) return response.status(400).json({ error: "Grupo inválido" });
-    if (semCentro.data) visao = { semCentro: semCentro.data };
-    else if (o.data) visao = { obra: o.data };
-    else if (g.data) visao = { grupo: g.data };
-    else if (request.query.unidade !== undefined) {
-      const u = unidadeSchema.safeParse(request.query.unidade);
-      if (!u.success) return response.status(400).json({ error: "Unidade inválida" });
-      visao = { unidade: u.data };
+    const q = linhaEVisaoDoDetalhe(request);
+    if ("erro" in q) return response.status(400).json({ error: q.erro });
+    return responder(response, () => detalhamentoService.detalhar(c.ano, c.mes, q.linha, q.visao, request.user!.acesso));
+  },
+
+  /**
+   * O extrato de um valor em Excel (24/10/2026), com as abas Movimentações e Detalhes: os mesmos parâmetros do
+   * detalhamento e, do modal Balancete, ?conta= (o reduzido do balancete), ?centro= e ?filial=.
+   */
+  async exportarExtrato(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    const q = linhaEVisaoDoDetalhe(request);
+    if ("erro" in q) return response.status(400).json({ error: q.erro });
+    const r = z
+      .object({ conta: z.string().trim().min(1).max(50).optional(), centro: z.string().trim().max(50).optional(), filial: z.coerce.number().int().min(1).max(99).optional() })
+      .safeParse(request.query);
+    if (!r.success) return response.status(400).json({ error: "Conta, centro de custo ou filial inválidos." });
+    const recorte = r.data.conta ? { conta: r.data.conta, centro: r.data.centro || null, filial: r.data.filial ?? null } : undefined;
+    try {
+      const x = await exportarExtrato(c.ano, c.mes, q.linha, q.visao, request.user!.acesso, recorte);
+      await auditar({
+        usuarioId: request.user!.sub,
+        usuarioNome: request.user!.nome,
+        acao: "EXPORTACAO",
+        entidade: "competencia",
+        entidadeId: `${c.ano}-${String(c.mes).padStart(2, "0")}`,
+        metadados: { formato: "xlsx", extrato: q.linha, visao: q.visao, ...(recorte ? { conta: recorte } : {}), arquivo: x.nomeArquivo },
+      });
+      response.setHeader("Content-Type", x.tipo);
+      response.setHeader("Content-Disposition", `attachment; filename="${x.nomeArquivo.normalize("NFD").replace(/[^\x20-\x7e]/g, "")}"; filename*=UTF-8''${encodeURIComponent(x.nomeArquivo)}`);
+      return response.send(Buffer.from(x.conteudo));
+    } catch (error) {
+      if (error instanceof RegraDREError) return response.status(error.status).json({ error: error.message });
+      throw error;
     }
-    return responder(response, () => detalhamentoService.detalhar(c.ano, c.mes, linha.data, visao, request.user!.acesso));
   },
 
   /** As requisições e as notas fiscais de uma conta no mês: ?linha= (o recorte), ?conta= (reduzido), ?centro= (código RM) e ?filial=. */

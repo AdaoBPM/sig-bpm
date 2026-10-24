@@ -129,6 +129,20 @@ export type LinhaVolume = {
 };
 export type VolumesDaLinha = { linha: string; medida: string | null; destinos: string[]; total: string; linhas: LinhaVolume[] };
 
+/** Os parâmetros do detalhamento: a linha e a visão (a unidade, o centro, a obra ou o grupo sem centro; nenhum, o consolidado). */
+const paramsDoDetalhe = (linha: string, visao: VisaoDetalhe) => ({
+  linha,
+  ...("unidade" in visao
+    ? { unidade: visao.unidade }
+    : "grupo" in visao
+      ? { grupo: visao.grupo }
+      : "obra" in visao
+        ? { obra: visao.obra }
+        : "semCentro" in visao
+          ? { semCentro: visao.semCentro }
+          : {}),
+});
+
 export const dreService = {
   /** As requisições e as notas fiscais de uma conta no mês (o extrato de uma conta): a linha (o recorte), a conta e, quando vêm, o centro e a filial. */
   /** O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais). */
@@ -139,21 +153,21 @@ export const dreService = {
   },
 
   detalhe: async (anoMes: string, linha: string, visao: VisaoDetalhe): Promise<DetalheDRE> => {
-    const params = {
-      linha,
-      ...("unidade" in visao
-        ? { unidade: visao.unidade }
-        : "grupo" in visao
-          ? { grupo: visao.grupo }
-          : "obra" in visao
-            ? { obra: visao.obra }
-            : "semCentro" in visao
-              ? { semCentro: visao.semCentro }
-              : {}),
-    };
-    const { data } = await api.get<{ data: DetalheDRE }>(`/proxy/competencias/${anoMes}/dre/detalhe`, { params });
+    const { data } = await api.get<{ data: DetalheDRE }>(`/proxy/competencias/${anoMes}/dre/detalhe`, { params: paramsDoDetalhe(linha, visao) });
     return data.data;
   },
+  /**
+   * O extrato em Excel (24/10/2026): as abas Movimentações e Detalhes. Com `recorte` (o modal Balancete), só a conta do
+   * balancete e, quando vêm, o centro e a filial do lançamento.
+   */
+  exportarExtrato: (anoMes: string, linha: string, visao: VisaoDetalhe, recorte?: { conta: string; centro?: string | null; filial?: number | null }) =>
+    api.get<Blob>(`/proxy/competencias/${anoMes}/dre/detalhe/exportar`, {
+      params: {
+        ...paramsDoDetalhe(linha, visao),
+        ...(recorte ? { conta: recorte.conta, ...(recorte.centro ? { centro: recorte.centro } : {}), ...(recorte.filial ? { filial: recorte.filial } : {}) } : {}),
+      },
+      responseType: "blob",
+    }),
   /** As listas que formam uma linha de volume (Produção, Expedição…), por obra; sem unidade, o consolidado. */
   volumes: async (anoMes: string, linha: string, unidade?: number): Promise<VolumesDaLinha> => {
     const { data } = await api.get<{ data: VolumesDaLinha }>(`/proxy/competencias/${anoMes}/dre/volumes`, { params: { linha, unidade } });

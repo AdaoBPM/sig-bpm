@@ -13,6 +13,7 @@ dreRoutes.get("/centros", autenticacao, lerDREDoMes, asyncHandler(c.centros));
 dreRoutes.get("/obras", autenticacao, lerDREDoMes, asyncHandler(c.obras));
 dreRoutes.get("/sem-centros", autenticacao, lerDREDoMes, asyncHandler(c.semCentros));
 dreRoutes.get("/detalhe", autenticacao, lerDREDoMes, asyncHandler(c.detalhe));
+dreRoutes.get("/detalhe/exportar", autenticacao, lerDREDoMes, asyncHandler(c.exportarExtrato));
 dreRoutes.get("/documentos", autenticacao, lerDREDoMes, asyncHandler(c.documentos));
 dreRoutes.get("/volumes", autenticacao, lerDREDoMes, asyncHandler(c.volumes));
 dreRoutes.get("/exportar", autenticacao, lerDREDoMes, asyncHandler(c.exportar));
