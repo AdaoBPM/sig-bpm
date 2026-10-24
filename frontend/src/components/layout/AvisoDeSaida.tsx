@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { haAlteracoesPendentes, MENSAGEM_SAIDA } from "@/lib/alteracoesPendentes";
+import { haAlteracoesPendentes, haSalvamentoPendente, MENSAGEM_SAIDA } from "@/lib/alteracoesPendentes";
 
 /**
  * O aviso ao sair com alterações não gravadas (13/10/2026), em todas as telas: ao recarregar ou fechar a aba, o aviso
@@ -13,7 +13,8 @@ import { haAlteracoesPendentes, MENSAGEM_SAIDA } from "@/lib/alteracoesPendentes
 export function AvisoDeSaida() {
   useEffect(() => {
     const aoDescarregar = (e: BeforeUnloadEvent) => {
-      if (!haAlteracoesPendentes()) return;
+      // Também com o salvamento automático por terminar (24/10/2026): fechando a aba, ele não termina.
+      if (!haAlteracoesPendentes() && !haSalvamentoPendente()) return;
       e.preventDefault();
       e.returnValue = "";
     };

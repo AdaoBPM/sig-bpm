@@ -1,5 +1,6 @@
 import { app } from "./app.js";
 import { env } from "./config/env.js";
+import { auditoriaEmSequencia } from "./services/auditoriaService.js";
 import { importacoesService } from "./services/importacoes/importacoesService.js";
 import { logger } from "./utils/logger.js";
 import { plural } from "./utils/plural.js";
@@ -28,3 +29,13 @@ server.on("error", (error: NodeJS.ErrnoException) => {
   }
   throw error;
 });
+
+// Ao parar (24/10/2026; a publicação troca o container com um SIGTERM): as gravações em sequência que esperam na memória
+// entram na Auditoria, e o processo sai (até 5 s; antes, o Docker esperava 10 s e o matava).
+for (const sinal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(sinal, () => {
+    server.close();
+    setTimeout(() => process.exit(0), 5000).unref();
+    void auditoriaEmSequencia.encerrar().finally(() => process.exit(0));
+  });
+}

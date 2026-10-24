@@ -30,3 +30,24 @@ export function useAlteracoesPendentes(sujo: boolean) {
     };
   }, [sujo]);
 }
+
+/**
+ * O salvamento automático por fazer (24/10/2026, os Relatórios Executivos): a tela grava sozinha, também ao sair por um
+ * link ou por código (o que falta segue em segundo plano), sem perguntar; só recarregar ou fechar a aba do navegador antes
+ * de o salvamento terminar pergunta (o aviso do navegador).
+ */
+const salvando = new Set<symbol>();
+
+export const haSalvamentoPendente = () => salvando.size > 0;
+
+/** Registra a tela enquanto o salvamento automático tem algo por gravar. */
+export function useSalvamentoPendente(pendente: boolean) {
+  useEffect(() => {
+    if (!pendente) return;
+    const id = Symbol("salvamento");
+    salvando.add(id);
+    return () => {
+      salvando.delete(id);
+    };
+  }, [pendente]);
+}

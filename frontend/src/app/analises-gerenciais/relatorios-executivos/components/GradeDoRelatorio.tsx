@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
-import { moveElement } from "react-grid-layout/build/utils";
-import { ChartColumn, CircleAlert, CirclePlay, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { ChartColumn, CircleAlert, CirclePlay, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -192,7 +191,30 @@ const ESTILO_DA_EDICAO = `
 .grade-do-relatorio .ancora-do-bloco.react-resizable-handle-s { bottom: calc(-6px / var(--escala, 1)) !important; left: calc(50% - 5px / var(--escala, 1)) !important; cursor: ns-resize; }
 .grade-do-relatorio .ancora-do-bloco.react-resizable-handle-e { right: calc(-6px / var(--escala, 1)) !important; top: calc(50% - 5px / var(--escala, 1)) !important; cursor: ew-resize; }
 .grade-do-relatorio .ancora-do-bloco.react-resizable-handle-w { left: calc(-6px / var(--escala, 1)) !important; top: calc(50% - 5px / var(--escala, 1)) !important; cursor: ew-resize; }
+.grade-do-relatorio.em-ajuste .react-grid-item { pointer-events: none; }
+.grade-do-relatorio .react-grid-item.react-draggable-dragging, .grade-do-relatorio .react-grid-item.resizing { z-index: 40 !important; }
 `;
+
+/**
+ * O cursor durante o ajuste (24/10/2026): mover ou o eixo do quadrado de ancoragem. Enquanto um bloco se move ou se
+ * redimensiona, os outros não respondem ao mouse (.em-ajuste): antes, o mouse escapava da borda fina do arrastado e passava
+ * sobre eles, que piscavam (o contorno tracejado e o bloco por cima do arrastado).
+ */
+const CURSOR_DA_ALCA: Record<string, string> = { n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize", nw: "nwse-resize", se: "nwse-resize", ne: "nesw-resize", sw: "nesw-resize" };
+
+/** Os blocos que `fixo` encobre descem para logo abaixo dele; e os que esses encobrem, para baixo deles (em cascata). */
+function empurrar(l: Layout[], fixo: Layout) {
+  const encobre = (a: Layout, b: Layout) => a.i !== b.i && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const fila = [fixo];
+  for (let k = 0; k < fila.length; k++) {
+    const de = fila[k];
+    for (const b of l) {
+      if (b.i === fixo.i || !encobre(de, b)) continue;
+      b.y = de.y + de.h;
+      fila.push(b);
+    }
+  }
+}
 
 /** As faixas da borda do bloco escolhido que o movem ao arrastar (por cima da linha de destaque, 8 px na tela). */
 const FAIXAS_DA_BORDA: Array<{ lado: string; estilo: React.CSSProperties }> = [
@@ -202,7 +224,7 @@ const FAIXAS_DA_BORDA: Array<{ lado: string; estilo: React.CSSProperties }> = [
   { lado: "direita", estilo: { top: 0, bottom: 0, right: "calc(-6px / var(--escala, 1))", width: "calc(8px / var(--escala, 1))" } },
 ];
 
-/** O nome do bloco escolhido, no começo do menu da edição. */
+/** O nome do bloco escolhido, na dica da borda dele. */
 function nomeDoBloco(b: Bloco) {
   if (b.tipo === "PAINEL") return "Card do Painel de Bordo";
   if (b.tipo === "INDICADOR") return "Card de Indicador";
@@ -268,9 +290,14 @@ export function GradeDoRelatorio({
   onCarregarImagem,
   onEscolherVideo,
   paraImagem = false,
+  desfazer,
+  refazer,
   onMudar,
 }: {
   relatorioId: string;
+  /** O Desfazer e o Refazer do menu da edição (24/10/2026); sem eles, quase apagados. */
+  desfazer?: () => void;
+  refazer?: () => void;
   /** Na imagem do slide (22/10/2026: a exportação em PDF): os vídeos como quadros com o ícone. */
   paraImagem?: boolean;
   /** As telas e os slides do relatório, com os números (20/10/2026), para os blocos de Sumário. */
@@ -342,13 +369,17 @@ export function GradeDoRelatorio({
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
   });
-  // A largura da grade enquanto um bloco se move ou se redimensiona (para a grade de fundo); fora disso, null.
-  const [ajustando, setAjustando] = useState<number | null>(null);
-  const comecar = () => setAjustando(caixa.current?.offsetWidth ?? null);
+  // A largura da grade (para a grade de fundo) e o cursor enquanto um bloco se move ou se redimensiona; fora disso, null.
+  const [ajustando, setAjustando] = useState<{ largura: number; cursor: string } | null>(null);
+  const comecar = (cursor = "move") => setAjustando(caixa.current ? { largura: caixa.current.offsetWidth, cursor } : null);
+  const comecarRedimensionar = (_l: Layout[], _a: Layout, _n: Layout, _p: Layout, _e: MouseEvent, alca: HTMLElement) =>
+    comecar(CURSOR_DA_ALCA[/react-resizable-handle-([a-z]+)/.exec(alca?.className ?? "")?.[1] ?? ""] ?? "default");
   const terminar = () => setAjustando(null);
-  // O arrasto (22/10/2026): os blocos empurrados voltam ao lugar quando o arrastado sai de cima deles. A grade acumula os
-  // empurrões a cada passo do arrasto; aqui, a cada passo, os outros blocos voltam à posição do início do arrasto e só os
-  // que o bloco encobre agora são empurrados (a mesma regra da grade, no próprio leiaute, antes de ela o guardar).
+  // O arrasto (22/10/2026): os blocos empurrados voltam ao lugar quando o arrastado sai de cima deles. A cada passo do
+  // arrasto, os outros blocos voltam à posição do início dele e os que o bloco encobre agora descem para logo abaixo dele
+  // (em cascata). Durante o arrasto, a grade não resolve as colisões (allowOverlap): a regra dela (24/10/2026) trocava a
+  // linha do arrastado pela do bloco encoberto e, a cada movimento do mouse, alternava entre duas arrumações — os outros
+  // blocos pulavam de um lugar para o outro (piscavam).
   const doInicio = useRef<Map<string, { x: number; y: number }> | null>(null);
   const comecarArrasto = (l: Layout[]) => {
     doInicio.current = new Map(l.map((b) => [b.i, { x: b.x, y: b.y }]));
@@ -356,18 +387,22 @@ export function GradeDoRelatorio({
   };
   const aoArrastar = (l: Layout[], _antes: Layout, arrastado: Layout) => {
     const inicio = doInicio.current;
-    if (!inicio) return;
-    const { x, y } = arrastado;
+    // O arrastado está na célula do mouse; o leiaute pode ser uma cópia (o item dele, outro objeto).
+    const alvo = l.find((b) => b.i === arrastado.i);
+    if (!inicio || !alvo) return;
+    alvo.x = arrastado.x;
+    alvo.y = arrastado.y;
     for (const b of l) {
       const p = inicio.get(b.i);
-      if (!p) continue;
+      if (b === alvo || !p) continue;
       b.x = p.x;
       b.y = p.y;
       b.moved = false;
     }
-    moveElement(l, arrastado, x, y, true, false, null, COLUNAS, false);
+    empurrar(l, alvo);
   };
-  const terminarArrasto = () => {
+  const terminarArrasto = (l: Layout[], antes: Layout, arrastado: Layout) => {
+    aoArrastar(l, antes, arrastado);
     doInicio.current = null;
     terminar();
   };
@@ -437,6 +472,8 @@ export function GradeDoRelatorio({
           <BarraDeEdicao
             b={escolhido}
             campo={campoDoEscolhido}
+            desfazer={desfazer}
+            refazer={refazer}
             onMudar={(m) => escolhido && mudarBloco(escolhido.id, m)}
             onConfigurar={() => escolhido && setConfigurando(escolhido.id)}
             onExcluir={() => escolhido && excluir(escolhido.id)}
@@ -448,8 +485,8 @@ export function GradeDoRelatorio({
     <div ref={area} className="relative -mx-3" style={{ height: alturaDoSlide * escala }}>
       <div
         ref={caixa}
-        className="grade-do-relatorio absolute top-0 left-0 [&_.react-grid-placeholder]:!bg-gray-400"
-        style={{ width: LARGURA, minHeight: alturaDaPagina, transform: escala === 1 ? undefined : `scale(${escala})`, transformOrigin: "top left", ["--escala" as string]: escala }}
+        className={`grade-do-relatorio absolute top-0 left-0 [&_.react-grid-placeholder]:!bg-gray-400 ${ajustando ? "em-ajuste" : ""}`}
+        style={{ width: LARGURA, minHeight: alturaDaPagina, transform: escala === 1 ? undefined : `scale(${escala})`, transformOrigin: "top left", ["--escala" as string]: escala, cursor: ajustando?.cursor }}
         // O clique fora dos blocos solta o escolhido.
         onMouseDown={editavel ? (e) => (!(e.target as HTMLElement).closest(".react-grid-item") ? setSelecionado(null) : undefined) : undefined}
       >
@@ -457,7 +494,7 @@ export function GradeDoRelatorio({
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 rounded-sm border border-dashed border-gray-300" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} />
       ) : null}
       {fundo ? <CamadaDoFundo relatorioId={relatorioId} fundo={fundo} className="absolute inset-x-0 top-0 rounded-sm" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} /> : null}
-      {ajustando ? <GradeDeFundo largura={ajustando} /> : null}
+      {ajustando ? <GradeDeFundo largura={ajustando.largura} /> : null}
       <GridLayout
         layout={layout}
         width={LARGURA}
@@ -479,6 +516,7 @@ export function GradeDoRelatorio({
         // empurra; e, se o arrasto continua, o empurrado volta ao lugar, 22/10/2026) e dentro da página (as linhas dela e as
         // colunas, isBounded).
         compactType={null}
+        allowOverlap={ajustando?.cursor === "move"}
         isBounded
         // A grade com a altura da página, no mínimo (22/10/2026): o isBounded limita o arrasto à altura da grade, que sem
         // isso era só a do bloco mais baixo (numa página com poucos blocos, eles não desciam).
@@ -488,7 +526,7 @@ export function GradeDoRelatorio({
         onDragStart={comecarArrasto}
         onDrag={aoArrastar}
         onDragStop={terminarArrasto}
-        onResizeStart={comecar}
+        onResizeStart={comecarRedimensionar}
         onResizeStop={terminar}
       >
         {blocos.map((b) => {
@@ -515,7 +553,7 @@ export function GradeDoRelatorio({
                   style={{ outline: "calc(2px / var(--escala, 1)) solid var(--color-sky-600)", outlineOffset: "calc(2px / var(--escala, 1))" }}
                 />
                 {FAIXAS_DA_BORDA.map(({ lado, estilo }) => (
-                  <span key={lado} className="alca-do-bloco absolute z-20 cursor-move" style={estilo} title="Arraste a borda para mover o bloco" />
+                  <span key={lado} className="alca-do-bloco absolute z-20 cursor-move" style={estilo} title={`${nomeDoBloco(b)}: arraste a borda para mover`} />
                 ))}
               </>
             ) : editavel ? (
@@ -781,23 +819,29 @@ function ConfigurarGraficoDialog({
 
 /**
  * O menu único da edição (24/10/2026, pedido do Adão; antes, a barra de cada bloco, com o mouse sobre ele), logo abaixo
- * das abas e preso no alto ao rolar: o nome do bloco escolhido e, sempre nos mesmos lugares, as opções de todos os tipos —
- * o gráfico dos cards e o Configurar (o gráfico, o sumário ou a tabela), os ajustes da imagem, as notas das anotações, a
- * formatação do texto (no Sumário, a dele, por nível) e excluir. As que não valem para o bloco escolhido (ou sem bloco
- * escolhido) ficam à vista, quase apagadas (o cinza claro no tema claro, o escuro no Escuro).
+ * das abas, preso no alto ao rolar e centralizado, na largura dos botões (24/10/2026: sem o nome do bloco — ele fica na dica
+ * da borda — e sem o espaço vazio à direita): o Desfazer e o Refazer e, sempre nos mesmos lugares, as opções de todos os
+ * tipos — o gráfico dos cards e o Configurar (o gráfico, o sumário ou a tabela), os ajustes da imagem, as notas das
+ * anotações, a formatação do texto (no Sumário, a dele, por nível) e excluir. As que não valem para o bloco escolhido (ou
+ * sem bloco escolhido) ficam à vista, quase apagadas (o cinza claro no tema claro, o escuro no Escuro).
  */
-function BarraDeEdicao({
+export function BarraDeEdicao({
   b,
-  campo,
-  onMudar,
-  onConfigurar,
-  onExcluir,
+  campo = semCampo,
+  desfazer,
+  refazer,
+  onMudar = () => undefined,
+  onConfigurar = () => undefined,
+  onExcluir = () => undefined,
 }: {
-  b: Bloco | undefined;
-  campo: () => HTMLElement | null;
-  onMudar: (m: Partial<Bloco>) => void;
-  onConfigurar: () => void;
-  onExcluir: () => void;
+  b?: Bloco;
+  campo?: () => HTMLElement | null;
+  /** O Desfazer e o Refazer (24/10/2026); sem eles (nada a desfazer ou a refazer), quase apagados. */
+  desfazer?: () => void;
+  refazer?: () => void;
+  onMudar?: (m: Partial<Bloco>) => void;
+  onConfigurar?: () => void;
+  onExcluir?: () => void;
 }) {
   const botao = "inline-flex size-7 items-center justify-center rounded-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:cursor-default disabled:text-gray-300 disabled:hover:bg-transparent";
   const card = b?.tipo === "PAINEL" || b?.tipo === "INDICADOR" ? b : undefined;
@@ -808,8 +852,19 @@ function BarraDeEdicao({
   const doTexto = b?.tipo === "ANOTACAO" || b?.tipo === "TEXTO";
   const separador = <span aria-hidden className="mx-1 h-5 w-px bg-gray-200" />;
   return (
-    <div role="toolbar" aria-label="Edição do bloco escolhido" className="sticky top-[var(--topo-tabela,0px)] z-30 flex flex-wrap items-center gap-0.5 rounded-sm border border-gray-200 bg-white px-2 py-1 shadow-sm">
-      <span className="mr-1 min-w-40 text-xs">{b ? <span className="font-semibold text-gray-900">{nomeDoBloco(b)}</span> : <span className="text-gray-500">Clique num bloco para editá-lo</span>}</span>
+    <div
+      role="toolbar"
+      aria-label="Edição do bloco escolhido"
+      title={b ? undefined : "Clique num bloco para editá-lo"}
+      className="sticky top-[var(--topo-tabela,0px)] z-30 mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-0.5 rounded-sm border border-gray-200 bg-white px-2 py-1 shadow-sm"
+    >
+      {/* O Desfazer e o Refazer (24/10/2026): as alterações da sessão, em todas as abas. */}
+      <button type="button" className={botao} disabled={!desfazer} title="Desfazer (Ctrl+Z)" aria-label="Desfazer" onClick={desfazer}>
+        <Undo2 className="size-4" />
+      </button>
+      <button type="button" className={botao} disabled={!refazer} title="Refazer (Ctrl+Y)" aria-label="Refazer" onClick={refazer}>
+        <Redo2 className="size-4" />
+      </button>
       {separador}
       {/* O gráfico do card (22/10/2026), em ciclo: os meses e o acumulado → só o acumulado → sem gráfico → os meses e o acumulado. */}
       {card ? (

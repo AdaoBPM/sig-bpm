@@ -26,6 +26,8 @@ export type EventoAuditoria = {
   metadados?: unknown;
   ip?: string | null;
   userAgent?: string | null;
+  /** Quando aconteceu (24/10/2026: a gravação em sequência entra no log depois); se ausente, agora. */
+  quando?: Date;
 };
 
 /** Ações registradas, com o rótulo da tela de consulta. */
@@ -103,6 +105,7 @@ export async function auditar(e: EventoAuditoria) {
         dadosAntes: json(e.antes),
         dadosDepois: json(e.depois),
         metadados: json(e.metadados),
+        ...(e.quando ? { createdAt: e.quando } : {}),
       },
     });
   } catch (error) {
@@ -114,6 +117,56 @@ export async function auditar(e: EventoAuditoria) {
     });
   }
 }
+
+/** A sequência de 5 min: sem outra gravação nesse tempo, a sequência acaba e a última entra no log. */
+export const FIM_DA_SEQUENCIA = 5 * 60_000;
+
+/**
+ * As ações em sequência (24/10/2026, com o salvamento automático dos Relatórios Executivos, pedido do Adão): a mesma ação
+ * do mesmo usuário no mesmo registro (a `chave`), uma atrás da outra, fica só com a mais recente na Auditoria. A ação
+ * espera aqui, na memória, até a sequência acabar — 5 min sem outra, outra pessoa no mesmo registro, outra ação nele
+ * (`encerrar`) ou o servidor parando — e entra no log com a data e a hora da última, os metadados dela (com as marcas das
+ * anteriores, como o "por cima") e, havendo mais de uma, quantas foram e a hora da primeira. O log continua imutável:
+ * nada nele se altera nem se apaga. Se o servidor cair sem parar (falta de energia), a última da sequência se perde.
+ */
+export function criarSequencias(gravar: (e: EventoAuditoria) => Promise<void>, fim = FIM_DA_SEQUENCIA) {
+  type Sequencia = { evento: EventoAuditoria; metadados: Record<string, unknown>; quando: Date; desde: Date; vezes: number; timer: NodeJS.Timeout };
+  const abertas = new Map<string, Sequencia>();
+  const fechar = (chave: string) => {
+    const s = abertas.get(chave);
+    if (!s) return Promise.resolve();
+    clearTimeout(s.timer);
+    abertas.delete(chave);
+    const metadados = { ...s.metadados, ...(s.vezes > 1 ? { gravacoes: s.vezes, desde: s.desde.toISOString() } : {}) };
+    return gravar({ ...s.evento, metadados, quando: s.quando });
+  };
+  return {
+    registrar(chave: string, e: EventoAuditoria, agora = new Date()) {
+      const anterior = abertas.get(chave);
+      const continua = !!anterior && anterior.evento.usuarioId === e.usuarioId && anterior.evento.acao === e.acao;
+      if (anterior && !continua) void fechar(chave);
+      if (anterior) clearTimeout(anterior.timer);
+      const timer = setTimeout(() => void fechar(chave), fim);
+      // Não segura o processo (os testes e o encerramento do servidor).
+      timer.unref();
+      abertas.set(chave, {
+        evento: e,
+        metadados: { ...(continua ? anterior.metadados : {}), ...obj(e.metadados) },
+        quando: agora,
+        desde: continua ? anterior.desde : agora,
+        vezes: continua ? anterior.vezes + 1 : 1,
+        timer,
+      });
+    },
+    /** Encerra as sequências cujas chaves começam com `prefixo` (todas, sem ele): a última de cada uma entra no log. */
+    async encerrar(prefixo = "") {
+      await Promise.all([...abertas.keys()].filter((k) => k.startsWith(prefixo)).map(fechar));
+    },
+  };
+}
+
+/** As sequências da Auditoria (a gravação dos grupos dos Relatórios Executivos). */
+export const auditoriaEmSequencia = criarSequencias(auditar);
 
 export type FiltroAuditoria = {
   de?: Date;
@@ -132,6 +185,7 @@ export type FiltroAuditoria = {
 const obj = (x: unknown): Record<string, unknown> => (x && typeof x === "object" && !Array.isArray(x) ? (x as Record<string, unknown>) : {});
 const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 const rotuloMes = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
+const horaDe = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 const LISTA: Record<string, string> = {
   PROJETO: "Projetos", PRODUCAO: "Produção (m³)", PRODUCAO_PISTA: "Produção (pistas)", PRODUCAO_ARMADURA: "Armadura",
   PRODUCAO_METALURGIA: "Metalurgia", EXPEDICAO: "Expedição", MONTAGEM: "Montagem", ACOMPANHAMENTO: "Acompanhamento",
@@ -176,9 +230,18 @@ async function nomesDosRegistros(itens: ItemDoLog[]) {
     else if (i.entidade === "divergencia") nome = (id ? divPorId.get(id) : null) ?? [competencia, txt(m.descricao)].filter(Boolean).join(" · ");
     else if (i.entidade === "lista_operacional") nome = [competencia, LISTA[txt(m.tipo) ?? ""] ?? txt(m.tipo)].filter(Boolean).join(" · ");
     else if (i.entidade === "cadastros") nome = "Planilha de cadastros";
-    // Os Relatórios Executivos (23/10/2026): o mês e o grupo (ou as Configurações); "por cima" na gravação sobre a de outro.
+    // Os Relatórios Executivos (23/10/2026): o mês e o grupo (ou as Configurações); "por cima" na gravação sobre a de outro;
+    // as gravações em sequência (24/10/2026, o salvamento automático), quantas foram e desde quando.
     else if (i.entidade === "relatorio_executivo")
-      nome = [`RE ${txt(m.mes) ?? ""}`.trim(), txt(m.aba), m.configuracoes ? "Configurações" : null, m.porCima ? "por cima da gravação de outro usuário" : null].filter(Boolean).join(" · ");
+      nome = [
+        `RE ${txt(m.mes) ?? ""}`.trim(),
+        txt(m.aba),
+        m.configuracoes ? "Configurações" : null,
+        m.porCima ? "por cima da gravação de outro usuário" : null,
+        typeof m.gravacoes === "number" && txt(m.desde) ? `${m.gravacoes} gravações seguidas, desde ${horaDe(txt(m.desde)!)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
     else {
       const detalhe = txt(m.nome) ?? txt(d.nome) ?? txt(d.descricao) ?? txt(m.arquivo) ?? txt(d.nomeRM);
       nome = [competencia, detalhe].filter(Boolean).join(" · ");

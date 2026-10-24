@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save } from "lucide-react";
+import { CloudCheck, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
-
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
-import { botaoPrimario, Erro } from "@/app/cenarios/components/CenarioDialog";
+import { Erro } from "@/app/cenarios/components/CenarioDialog";
 import { rotuloMarcacao } from "@/app/cenarios/services/cenariosService";
 
 import { relatoriosExecutivosService } from "../services/relatoriosExecutivosService";
@@ -22,28 +19,36 @@ export const CONFIGURACOES = "CONFIGURACOES";
  * entra na tela inteira nem no PDF. O Cenário de Comparação: o orçado dos cards (Painel de Bordo e Indicadores) e das
  * tabelas; de início, o cenário marcado como Orçamento Empresarial no exercício (a marcação pode mudar de cenário: o
  * relatório pode escolher um dos cenários públicos — de qualquer exercício, sintético ou analítico, com a marcação em etiqueta —
- * e fica com ele). Quem edita a tela grava; os demais só veem.
+ * e fica com ele). Quem edita a tela escolhe, e a escolha se salva na hora (24/10/2026, o salvamento automático; antes, o
+ * Gravar); os demais só veem.
  */
 export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string }) {
   const queryClient = useQueryClient();
   const consulta = useQuery({ queryKey: ["relatorios-executivos", "configuracoes", relatorioId], queryFn: () => relatoriosExecutivosService.configuracoes(relatorioId) });
-  // A escolha na tela; undefined: a gravada.
+  // A escolha em gravação; undefined: a gravada.
   const [escolhido, setEscolhido] = useState<string | null | undefined>(undefined);
   const gravado = consulta.data?.cenarioComparadoId ?? null;
   const atual = escolhido === undefined ? gravado : escolhido;
-  const mudou = escolhido !== undefined && escolhido !== gravado;
-  useAlteracoesPendentes(mudou);
+  const [salvoEm, setSalvoEm] = useState<Date | null>(null);
   const gravar = useMutation({
-    mutationFn: () => relatoriosExecutivosService.gravarConfiguracoes(relatorioId, atual),
+    mutationFn: (cenarioComparadoId: string | null) => relatoriosExecutivosService.gravarConfiguracoes(relatorioId, cenarioComparadoId),
+    // Recusada, a escolha volta à gravada.
+    onError: () => setEscolhido(undefined),
     onSuccess: (c) => {
       queryClient.setQueryData(["relatorios-executivos", "configuracoes", relatorioId], c);
       // Os cards e as tabelas mudam de comparado.
       queryClient.invalidateQueries({ queryKey: ["relatorios-executivos", "dados", relatorioId] });
       queryClient.invalidateQueries({ queryKey: ["relatorios-executivos", "resultados", relatorioId] });
       setEscolhido(undefined);
-      toast.success("Configurações gravadas: os cards e as tabelas usam o cenário escolhido.");
+      setSalvoEm(new Date());
+      toast.success("Configurações salvas: os cards e as tabelas usam o cenário escolhido.");
     },
   });
+  const escolher = (id: string | null) => {
+    if (!consulta.data?.podeEditar || gravar.isPending || id === atual) return;
+    setEscolhido(id);
+    gravar.mutate(id);
+  };
   if (consulta.isError) return <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as configurações.")} />;
   if (!consulta.data) return <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
   const c = consulta.data;
@@ -70,7 +75,7 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
             </tr>
           </thead>
           <tbody>
-            <Linha marcada={atual === null} onMarcar={() => setEscolhido(null)}>
+            <Linha marcada={atual === null} onMarcar={() => escolher(null)}>
               <td className="px-3 py-2">
                 <span className="font-semibold text-gray-900">Orçamento (a marcação)</span>
                 <span className="block text-xs text-gray-500">
@@ -84,7 +89,7 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
               </td>
             </Linha>
             {c.cenarios.map((x) => (
-              <Linha key={x.id} marcada={atual === x.id} onMarcar={() => setEscolhido(x.id)}>
+              <Linha key={x.id} marcada={atual === x.id} onMarcar={() => escolher(x.id)}>
                 <td className="px-3 py-2 font-medium text-gray-900">{x.nome}</td>
                 <td className="px-3 py-2 text-gray-700">{x.ano}</td>
                 <td className="px-3 py-2">
@@ -101,16 +106,14 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
         </table>
       </fieldset>
       {c.podeEditar ? (
-        <div className="flex justify-end">
-          <Button type="button" className={botaoPrimario} disabled={!mudou || gravar.isPending} onClick={() => gravar.mutate()}>
-            <Save className="size-4" />
-            {gravar.isPending ? "Gravando…" : "Gravar"}
-          </Button>
-        </div>
+        <p className="flex items-center justify-end gap-1.5 text-sm text-gray-500" role="status">
+          {gravar.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <CloudCheck className="size-4" />}
+          {gravar.isPending ? "Salvando…" : salvoEm ? `Salvo às ${salvoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "A escolha se salva sozinha."}
+        </p>
       ) : (
         <p className="text-xs text-gray-500">Só quem edita os Relatórios Executivos muda as configurações.</p>
       )}
-      <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar as configurações.") : null} />
+      <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível salvar as configurações.") : null} />
     </section>
   );
 }

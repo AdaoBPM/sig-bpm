@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LockOpen, Pencil, Plus, Presentation, Save, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
-import { podeSair, useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
+import { podeSair, useAlteracoesPendentes, useSalvamentoPendente } from "@/lib/alteracoesPendentes";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
@@ -28,7 +28,7 @@ import { ConfigurarTabelaDialog } from "../components/TabelaDoRelatorio";
 import { ExportarPdfDoRelatorio } from "../components/ExportarPdfDoRelatorio";
 import { CONFIGURACOES, ConfiguracoesDoRelatorio } from "../components/ConfiguracoesDoRelatorio";
 import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
-import { COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
+import { BarraDeEdicao, COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
@@ -62,8 +62,10 @@ export function RelatorioExecutivoContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela("/analises-gerenciais/relatorios-executivos");
   const consulta = useQuery({ queryKey: ["relatorios-executivos", "relatorio", id], queryFn: () => relatoriosExecutivosService.obter(id) });
-  // A aba e a página abertas ficam aqui, para não mudarem quando o editor remonta (ao gravar, finalizar ou reabrir).
+  // A aba e a página abertas ficam aqui, para não mudarem quando o editor remonta (ao finalizar, reabrir ou recarregar).
   const [aberta, setAberta] = useState<Aberta | null>(null);
+  // O Recarregar do conflito (24/10/2026): o editor remonta com o relatório de agora.
+  const [geracao, setGeracao] = useState(0);
   if (consulta.isError) {
     return (
       <div className="space-y-6">
@@ -73,30 +75,64 @@ export function RelatorioExecutivoContent() {
     );
   }
   if (!consulta.data) return <div className="h-96 animate-pulse rounded-sm bg-gray-100" />;
-  // Remonta ao gravar, finalizar ou reabrir uma aba, com o que o servidor devolveu.
-  const versao = consulta.data.abas.map((a) => `${a.situacao}|${a.atualizadoEm}`).join(";");
+  // Remonta ao finalizar ou reabrir uma aba e ao recarregar, com o que o servidor devolveu. O salvamento automático
+  // (24/10/2026) não remonta: o editor continua com o bloco escolhido, o cursor no texto e o histórico do Desfazer.
+  const versao = `${geracao};${consulta.data.abas.map((a) => a.situacao).join(";")}`;
   // De início, a primeira aba que o usuário edita; sem nenhuma, a primeira que ele vê.
   const abas = consulta.data.abas;
   const inicial = { chave: (abas.find((a) => a.podeEditar) ?? abas.find((a) => a.visivel) ?? abas[0])?.chave ?? "", pagina: null };
-  return <Editor key={versao} relatorio={consulta.data} aberta={aberta ?? inicial} setAberta={setAberta} />;
+  const recarregar = async () => {
+    await consulta.refetch();
+    setGeracao((g) => g + 1);
+  };
+  return <Editor key={versao} relatorio={consulta.data} aberta={aberta ?? inicial} setAberta={setAberta} onRecarregar={recarregar} />;
 }
 
-function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta: Aberta; setAberta: (a: Aberta) => void }) {
+/** O salvamento automático: 2 s depois da última alteração, ou 10 s depois da primeira, numa edição sem pausa. */
+const ESPERA = 2000;
+const ESPERA_MAXIMA = 10_000;
+/** O histórico do Desfazer: até 100 passos; as alterações a menos de 1 s uma da outra (a digitação) são um passo só. */
+const PASSOS = 100;
+const JUNTAR = 1000;
+
+/** Um estado das páginas no histórico do Desfazer, com a aba e a página onde a alteração aconteceu. */
+type Passo = { paginas: Record<string, Pagina[]>; aberta: Aberta };
+
+function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Relatorio; aberta: Aberta; setAberta: (a: Aberta) => void; onRecarregar: () => Promise<void> }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const dados = useQuery({ queryKey: ["relatorios-executivos", "dados", relatorio.id], queryFn: () => relatoriosExecutivosService.dados(relatorio.id) });
   const [cores] = useCoresDoPainel();
   const [tipo] = useTipoGrafico();
   // A base de cada grupo (23/10/2026): as páginas e a versão (quando o grupo foi gravado) do que o usuário abriu ou gravou
-  // por último; o Gravar manda a versão, e o servidor recusa se outro gravou o grupo depois.
+  // por último; a gravação manda a versão, e o servidor recusa se outro gravou o grupo depois. `baseAgora` é a base do
+  // salvamento em andamento (o estado só chega na tela no próximo desenho).
   const [base, setBase] = useState(() => ({
     paginas: Object.fromEntries(relatorio.abas.map((a) => [a.chave, a.paginas])) as Record<string, Pagina[]>,
     versoes: Object.fromEntries(relatorio.abas.map((a) => [a.chave, a.atualizadoEm])) as Record<string, string>,
   }));
+  const baseAgora = useRef(base);
+  const mudarBase = (b: typeof base) => {
+    baseAgora.current = b;
+    setBase(b);
+  };
   const gravadas = base.paginas;
   const [paginas, setPaginas] = useState<Record<string, Pagina[]>>(() => base.paginas);
-  // O grupo que outro usuário gravou depois que este abriu o relatório (o Gravar foi recusado).
+  const paginasAgora = useRef(paginas);
+  useLayoutEffect(() => {
+    paginasAgora.current = paginas;
+  }, [paginas]);
+  // O grupo que outro usuário gravou depois que este abriu o relatório (a gravação foi recusada) e se o aviso dele está
+  // aberto: com o Cancelar, o grupo fica sem salvar até o usuário escolher (o "Não Salvo" reabre o aviso).
   const [conflito, setConflito] = useState<Conflito | null>(null);
+  const conflitoAgora = useRef(conflito);
+  useLayoutEffect(() => {
+    conflitoAgora.current = conflito;
+  }, [conflito]);
+  const [vendoConflito, setVendoConflito] = useState(false);
+  // O histórico da sessão (24/10/2026, o Desfazer e o Refazer): os estados de antes de cada alteração e os desfeitos.
+  const [historico, setHistorico] = useState<{ passado: Passo[]; futuro: Passo[] }>({ passado: [], futuro: [] });
+  const ultimaMudanca = useRef(0);
   const [adicionando, setAdicionando] = useState(false);
   // O Adicionar Vídeo (20/10/2026): "novo" (um bloco novo) ou o id do quadro de vídeo vazio que recebe o vídeo.
   const [escolhendoVideo, setEscolhendoVideo] = useState<string | null>(null);
@@ -135,9 +171,31 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const nPagina = pagina ? daAba.indexOf(pagina) : -1;
   const mudadas = relatorio.abas.filter((a) => a.podeEditar && JSON.stringify(paginas[a.chave] ?? []) !== JSON.stringify(gravadas[a.chave] ?? []));
   const mudouAba = mudadas.some((a) => a.chave === chave);
-  useAlteracoesPendentes(mudadas.length > 0);
+  // Os grupos que o salvamento automático grava: os alterados, menos o em conflito (espera a escolha do usuário).
+  const aSalvar = mudadas.filter((a) => a.chave !== conflito?.aba);
   const daPagina = pagina?.blocos ?? [];
-  const mudarPaginas = (lista: Pagina[]) => setPaginas((p) => ({ ...p, [chave]: lista }));
+  // Cada alteração entra no histórico (a anterior a menos de 1 s, como a digitação, fica no mesmo passo) e limpa os desfeitos.
+  const mudarPaginas = (lista: Pagina[]) => {
+    const agora = Date.now();
+    const novoPasso = agora - ultimaMudanca.current > JUNTAR;
+    ultimaMudanca.current = agora;
+    setHistorico((h) => (novoPasso ? { passado: [...h.passado, { paginas, aberta: { chave, pagina: pagina?.id ?? null } }].slice(-PASSOS), futuro: [] } : h.futuro.length ? { ...h, futuro: [] } : h));
+    setPaginas((p) => ({ ...p, [chave]: lista }));
+  };
+  // Desfazer e Refazer (24/10/2026): voltam as páginas ao passo do histórico e abrem a aba e a página onde a alteração
+  // aconteceu; o salvamento automático grava o resultado. O texto em edição perde o foco antes, para receber o conteúdo.
+  const irNoHistorico = (de: "passado" | "futuro") => {
+    const passo = historico[de].at(-1);
+    if (!passo) return;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    const para = de === "passado" ? "futuro" : "passado";
+    setHistorico({ [de]: historico[de].slice(0, -1), [para]: [...historico[para], { paginas, aberta: passo.aberta }] } as typeof historico);
+    ultimaMudanca.current = 0;
+    setPaginas(passo.paginas);
+    setAberta(passo.aberta);
+  };
+  const desfazer = historico.passado.length ? () => irNoHistorico("passado") : undefined;
+  const refazer = historico.futuro.length ? () => irNoHistorico("futuro") : undefined;
   const mudarPagina = (blocos: Bloco[]) => mudarPaginas(daAba.map((p) => (p.id === pagina?.id ? { ...p, blocos } : p)));
   // A Imagem de Fundo da página aberta (20/10/2026); sem ela, a página fica sem fundo.
   const mudarFundo = (fundo: Fundo | undefined) => mudarPaginas(daAba.map((p) => (p.id === pagina?.id ? { ...p, fundo } : p)));
@@ -258,30 +316,97 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
     queryClient.setQueryData(["relatorios-executivos", "relatorio", relatorio.id], r);
     queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"], exact: true });
   };
-  // Gravar: as abas alteradas (as que o usuário edita), uma a uma.
-  // Grava os grupos alterados, um a um, cada um com a versão dele; `forcar`: o grupo que o usuário escolheu gravar por cima.
-  // Num conflito, os já gravados ficam (a base deles passa a ser o gravado) e o aviso pergunta o que fazer com o recusado.
-  const gravar = useMutation({
-    mutationFn: async (forcar: string | null) => {
+  // O salvamento automático (24/10/2026, pedido do Adão, como no Canva; antes, o Gravar): grava os grupos alterados, um a
+  // um, cada um com a versão dele, depois do salvamento em andamento (um de cada vez; o que mudar durante ele se grava em
+  // seguida). `forcar`: o grupo que o usuário escolheu gravar por cima. Num conflito, os já gravados ficam (a base deles
+  // passa a ser o gravado) e o aviso pergunta o que fazer com o recusado.
+  const emAndamento = useRef<Promise<void> | null>(null);
+  // O Recarregar e o Excluir Relatório descartam o que falta salvar (o editor sai sem gravar).
+  const descartar = useRef(false);
+  const alteradas = () =>
+    relatorio.abas.filter((a) => a.podeEditar && JSON.stringify(paginasAgora.current[a.chave] ?? []) !== JSON.stringify(baseAgora.current.paginas[a.chave] ?? []));
+  const salvar = (forcar: string | null = null) => {
+    const anterior = emAndamento.current;
+    const vez = (async () => {
+      await anterior?.catch(() => undefined);
       let r: Relatorio | null = null;
-      for (const a of mudadas) {
-        const enviadas = paginas[a.chave] ?? [];
-        const gravado = await relatoriosExecutivosService.gravarAba(relatorio.id, a.chave, enviadas, { versao: base.versoes[a.chave], forcar: forcar === a.chave });
+      for (const a of alteradas()) {
+        if (a.chave === conflitoAgora.current?.aba && forcar !== a.chave) continue;
+        const enviadas = paginasAgora.current[a.chave] ?? [];
+        const gravado = await relatoriosExecutivosService.gravarAba(relatorio.id, a.chave, enviadas, { versao: baseAgora.current.versoes[a.chave], forcar: forcar === a.chave });
         r = gravado;
         const versao = gravado.abas.find((x) => x.chave === a.chave)?.atualizadoEm;
-        setBase((b) => ({ paginas: { ...b.paginas, [a.chave]: enviadas }, versoes: { ...b.versoes, [a.chave]: versao ?? b.versoes[a.chave] } }));
+        const b = baseAgora.current;
+        mudarBase({ paginas: { ...b.paginas, [a.chave]: enviadas }, versoes: { ...b.versoes, [a.chave]: versao ?? b.versoes[a.chave] } });
       }
-      return r;
+      // O relatório do cache com o gravado (para quem volta à tela), sem remontar o editor.
+      if (r) queryClient.setQueryData(["relatorios-executivos", "relatorio", relatorio.id], r);
+    })();
+    emAndamento.current = vez;
+    vez.then(
+      () => (emAndamento.current === vez ? (emAndamento.current = null) : undefined),
+      () => (emAndamento.current === vez ? (emAndamento.current = null) : undefined),
+    );
+    return vez;
+  };
+  // A situação do salvamento, no lugar do Gravar: as falhas (sem conexão, a publicação) tentam de novo em 5 s, 10 s… até 30 s.
+  const [salvamento, setSalvamento] = useState<{ fase: "pronto" | "salvando" | "erro"; em: Date | null; erro: string | null; falhas: number }>({ fase: "pronto", em: null, erro: null, falhas: 0 });
+  const autoSalvar = async (forcar: string | null = null) => {
+    setSalvamento((s) => ({ ...s, fase: "salvando" }));
+    try {
+      await salvar(forcar);
+      setSalvamento({ fase: "pronto", em: new Date(), erro: null, falhas: 0 });
+    } catch (e) {
+      const c = conflitoDe(e);
+      if (c) {
+        setConflito(c);
+        setVendoConflito(true);
+        setSalvamento((s) => ({ ...s, fase: "pronto" }));
+      } else setSalvamento((s) => ({ ...s, fase: "erro", erro: mensagemDeErro(e, "Não foi possível salvar."), falhas: s.falhas + 1 }));
+    }
+  };
+  const pendenteDesde = useRef<number | null>(null);
+  const haPendentes = aSalvar.length > 0;
+  useEffect(() => {
+    if (!haPendentes) {
+      pendenteDesde.current = null;
+      return;
+    }
+    if (salvamento.fase === "salvando") return;
+    const agora = Date.now();
+    pendenteDesde.current ??= agora;
+    const espera = salvamento.fase === "erro" ? Math.min(30_000, 5_000 * salvamento.falhas) : Math.max(0, Math.min(ESPERA, pendenteDesde.current + ESPERA_MAXIMA - agora));
+    const t = setTimeout(() => {
+      pendenteDesde.current = null;
+      void autoSalvar();
+    }, espera);
+    return () => clearTimeout(t);
+    // A cada alteração (paginas), o prazo recomeça.
+  }, [paginas, haPendentes, salvamento]);
+  // Saindo da tela (um link, outro relatório): o que falta segue gravando em segundo plano.
+  useEffect(
+    () => () => {
+      if (!descartar.current && alteradas().length) salvar().catch(() => undefined);
     },
-    onSuccess: (r) => {
-      if (r) atualizar(r);
-      toast.success(mudadas.length === 1 ? `${mudadas[0].nome}: gravado.` : `${mudadas.length} grupos gravados.`);
-    },
-    onError: (e) => setConflito(conflitoDe(e)),
-  });
+    [],
+  );
+  // Fechar a aba do navegador antes de salvar pergunta; com a falha ou o conflito, também sair pela tela (o que falta não se grava).
+  useSalvamentoPendente(haPendentes || salvamento.fase === "salvando");
+  useAlteracoesPendentes(salvamento.fase === "erro" || !!conflito);
+  // O que outro usuário gravou num grupo que este não alterou (o relatório lido de novo do servidor) entra na tela.
+  useEffect(() => {
+    const b = baseAgora.current;
+    const novos = relatorio.abas.filter((a) => a.atualizadoEm !== b.versoes[a.chave] && JSON.stringify(paginasAgora.current[a.chave] ?? []) === JSON.stringify(b.paginas[a.chave] ?? []));
+    if (!novos.length || emAndamento.current) return;
+    mudarBase({ paginas: { ...b.paginas, ...Object.fromEntries(novos.map((a) => [a.chave, a.paginas])) }, versoes: { ...b.versoes, ...Object.fromEntries(novos.map((a) => [a.chave, a.atualizadoEm])) } });
+    setPaginas((p) => ({ ...p, ...Object.fromEntries(novos.map((a) => [a.chave, a.paginas])) }));
+    // O histórico tem as páginas de antes: o Desfazer não volta a elas por cima do que o outro gravou.
+    setHistorico({ passado: [], futuro: [] });
+  }, [relatorio]);
   const situacao = useMutation({
     mutationFn: async (acao: "finalizar" | "reabrir") => {
-      if (acao === "finalizar" && mudouAba) await relatoriosExecutivosService.gravarAba(relatorio.id, chave, daAba, { versao: base.versoes[chave] });
+      // Finalizar salva antes o que falta (24/10/2026: depois do salvamento em andamento).
+      if (acao === "finalizar") await salvar();
       return acao === "finalizar" ? relatoriosExecutivosService.finalizarAba(relatorio.id, chave) : relatoriosExecutivosService.reabrirAba(relatorio.id, chave);
     },
     onSuccess: (r, acao) => {
@@ -289,9 +414,19 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
       atualizar(r);
       toast.success(acao === "finalizar" ? `${aba?.nome}: finalizado, com todas as abas (só para leitura).` : `${aba?.nome}: reaberto para a edição.`);
     },
+    onError: (e) => {
+      const c = conflitoDe(e);
+      if (!c) return;
+      setConfirmar(null);
+      setConflito(c);
+      setVendoConflito(true);
+    },
   });
   const excluir = useMutation({
-    mutationFn: () => relatoriosExecutivosService.excluir(relatorio.id),
+    mutationFn: () => {
+      descartar.current = true;
+      return relatoriosExecutivosService.excluir(relatorio.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"] });
       toast.success("Relatório excluído.");
@@ -304,13 +439,30 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
   const emConfirmacao = confirmar === "finalizar" ? situacao : excluir;
   const vazia = daAba.every((p) => p.blocos.length === 0);
   const botaoIcone = "inline-flex size-8 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40";
+  const editaAlgum = relatorio.abas.some((a) => a.podeEditar);
+  const classeDaSituacao = "inline-flex h-9 items-center gap-1.5 rounded-sm px-2 text-sm whitespace-nowrap";
+  // O Ctrl+Z e o Ctrl+Y (ou Ctrl+Shift+Z) fora dos textos em edição (neles, valem os do navegador, na digitação) e dos modais.
+  useEffect(() => {
+    if (configuracoes || !editaAlgum) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || document.querySelector("[role=dialog]")) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      const tecla = e.key.toLowerCase();
+      const acao = tecla === "z" && !e.shiftKey ? desfazer : tecla === "y" || (tecla === "z" && e.shiftKey) ? refazer : undefined;
+      if (tecla !== "z" && tecla !== "y") return;
+      e.preventDefault();
+      acao?.();
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  });
   return (
     // O nome do comparado (22/10/2026: o cenário das Configurações) no "vs." dos cards e na legenda, na tela, na apresentação e no PDF.
     <RotulosDoGrafico.Provider value={{ realizado: "Realizado", orcado: dados.data?.painel.rotuloComparado ?? "Orçado" }}>
     {/* A largura da área (a da grade, menos as margens de fora), para a altura da foto nova. */}
     <div ref={area} className="space-y-6">
-      {/* Saindo das Configurações com a escolha não gravada, pergunta antes (22/10/2026). */}
-      <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => (chave !== CONFIGURACOES || podeSair()) && setAberta({ chave: c, pagina: null })} />
+      <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => setAberta({ chave: c, pagina: null })} />
       <CabecalhoDaTela
         // O título da tela é o da aba aberta (17/10/2026: Introdução, Performance da Produção…); o mês fica na barra do topo.
         titulo={configuracoes ? "Configurações" : (aba?.titulo ?? `RE - ${relatorio.rotuloMes}`)}
@@ -370,14 +522,37 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
-            {mudadas.length ? (
-              <Button type="button" className={botaoPrimario} disabled={gravar.isPending} onClick={() => gravar.mutate(null)}>
-                <Save className="size-4" />
-                {gravar.isPending ? "Gravando…" : "Gravar"}
-              </Button>
+            {/* A situação do salvamento automático (24/10/2026), no lugar do Gravar. */}
+            {editaAlgum ? (
+              conflito ? (
+                <button
+                  type="button"
+                  className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`}
+                  title={`${conflito.atualizadoPor ?? "Outro usuário"} gravou ${conflito.nome} depois que você abriu o relatório: clique para escolher o que fazer.`}
+                  onClick={() => setVendoConflito(true)}
+                >
+                  <CloudAlert className="size-4" />
+                  Não Salvo
+                </button>
+              ) : salvamento.fase === "erro" ? (
+                <button type="button" className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`} title={`${salvamento.erro} Tentando de novo; clique para tentar agora.`} onClick={() => void autoSalvar()}>
+                  <CloudOff className="size-4" />
+                  Não Salvo
+                </button>
+              ) : haPendentes || salvamento.fase === "salvando" ? (
+                <span className={`${classeDaSituacao} text-gray-500`} role="status">
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Salvando…
+                </span>
+              ) : (
+                <span className={`${classeDaSituacao} text-gray-500`} role="status" title="As alterações se salvam sozinhas.">
+                  <CloudCheck className="size-4" />
+                  {salvamento.em ? `Salvo às ${salvamento.em.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Salvo"}
+                </span>
+              )
             ) : null}
             {editavel ? (
-              <Button type="button" className={botaoPrimario} onClick={() => setConfirmar("finalizar")}>
+              <Button type="button" className={botaoPrimario} onClick={() => (conflito?.aba === chave ? setVendoConflito(true) : setConfirmar("finalizar"))}>
                 <CheckCheck className="size-4" />
                 Finalizar
               </Button>
@@ -453,8 +628,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               Configurações, antes da Capa, é preliminar à apresentação: não tem páginas, não conta nos slides e não entra na tela inteira nem no PDF. Nela, o
               Cenário de Comparação é o orçado dos cards (Painel de Bordo e Indicadores) e das tabelas: de início, o cenário marcado como Orçamento (acompanha
               a marcação); ou escolha um dos cenários da lista — todos os públicos, de qualquer exercício, com o ano, o tipo (Sintético ou
-              Analítico) e a marcação em etiquetas — para o relatório ficar com ele, mesmo que a marcação mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). Quem edita a tela grava
-              (“Gravar”); os demais só veem.
+              Analítico) e a marcação em etiquetas — para o relatório ficar com ele, mesmo que a marcação mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). Quem edita a tela
+              escolhe, e a escolha se salva na hora (“Salvo às…”, embaixo da lista); os demais só veem.
             </li>
             <li>
               Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
@@ -528,8 +703,11 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               texto) o exclui. Num vídeo, o primeiro clique o escolhe; depois, o player responde.
             </li>
             <li>
-              O menu da edição, logo abaixo das abas (preso no alto ao rolar a página), mostra o nome do bloco escolhido e as opções de todos os tipos, sempre
-              nos mesmos lugares; as que não valem para ele ficam quase apagadas. Da esquerda para a direita: o gráfico dos cards do Painel e dos Indicadores (em
+              O menu da edição, logo abaixo das abas (centralizado e preso no alto ao rolar a página), tem as opções de todos os tipos de bloco, sempre
+              nos mesmos lugares; as que não valem para o bloco escolhido ficam quase apagadas (o nome do bloco aparece na dica da borda dele). Da esquerda para a
+              direita: Desfazer e Refazer (Ctrl+Z e Ctrl+Y, ou Ctrl+Shift+Z: as alterações desta sessão, em todas as abas, até 100 passos; a digitação seguida
+              conta como um passo, e o Desfazer abre a aba e a página da alteração; dentro de um texto em edição, o Ctrl+Z desfaz a digitação, como no
+              navegador), o gráfico dos cards do Painel e dos Indicadores (em
               ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), Configurar (as opções do
               gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
               imagem, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
@@ -554,9 +732,16 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
             </li>
             <li>
-              “Gravar” guarda os grupos alterados, com as páginas (sair sem gravar pergunta antes). Se outra pessoa gravou o mesmo grupo depois que
-              você abriu o relatório, nada desse grupo é gravado: o aviso diz quem gravou e quando, e você escolhe Recarregar (vê o que ela gravou; as
-              suas alterações não gravadas se perdem) ou Gravar por Cima (a sua versão do grupo fica; as dela, nesse grupo, se perdem). “Finalizar” grava e finaliza o grupo aberto (Capa, Introdução,
+              As alterações se salvam sozinhas, como no Canva: 2 segundos depois da última (numa edição sem pausa, a cada 10 segundos). Ao lado dos botões do
+              título, a situação: Salvando…, Salvo às 14:32 ou Não Salvo, em vermelho. Sem conexão ou durante uma publicação do SIG, o Não Salvo tenta de novo
+              sozinho (clique nele para tentar na hora). Saindo da tela por um link, o que falta se salva em segundo plano; fechar ou recarregar a aba do
+              navegador antes de salvar pergunta. Se outra pessoa gravou o mesmo grupo depois que você abriu o relatório, nada desse grupo é salvo: o aviso diz
+              quem gravou e quando, e você escolhe Recarregar (vê o que ela gravou; as suas alterações desse grupo se perdem) ou Gravar por Cima (a sua versão
+              do grupo fica; as dela, nesse grupo, se perdem); com o Cancelar, o grupo fica sem salvar, e o Não Salvo reabre o aviso. Na Auditoria, as
+              gravações seguidas de um grupo pela mesma pessoa ficam numa entrada só, a mais recente (com quantas foram e desde quando).
+            </li>
+            <li>
+              “Finalizar” salva o que falta e finaliza o grupo aberto (Capa, Introdução,
               Administrativo…), com todas as abas dele, só para leitura, e o grupo ganha o check verde na barra do topo; “Reabrir” o devolve à elaboração. O relatório
               fica Finalizado quando todos os grupos estão finalizados.
             </li>
@@ -694,9 +879,13 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           A aba {aba?.nome} não está disponível.
         </p>
       ) : daPagina.length === 0 && !pagina?.fundo ? (
-        <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
-          {editavel ? "A página está vazia: use “Adicionar”, na linha do título." : "Nada nesta página."}
-        </p>
+        <>
+          {/* O menu da edição também na página vazia (o Desfazer traz de volta o último bloco excluído). */}
+          {editavel ? <BarraDeEdicao desfazer={desfazer} refazer={refazer} /> : null}
+          <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
+            {editavel ? "A página está vazia: use “Adicionar”, na linha do título." : "Nada nesta página."}
+          </p>
+        </>
       ) : (
         <GradeDoRelatorio
           key={pagina?.id}
@@ -711,6 +900,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           linhas={linhasDaPagina()}
           onCarregarImagem={(id, arquivo) => imagemNoQuadro.mutate({ id, arquivo })}
           onEscolherVideo={(id) => setEscolhendoVideo(id)}
+          desfazer={desfazer}
+          refazer={refazer}
           onMudar={mudarPagina}
         />
       )}
@@ -722,25 +913,25 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
           </Button>
         </div>
       ) : null}
-      <Erro erro={gravar.isError && !conflitoDe(gravar.error) ? mensagemDeErro(gravar.error, "Não foi possível gravar.") : null} />
       {/*
         O grupo gravado por outro usuário depois que este abriu o relatório (23/10/2026): recarregar (as alterações não
-        gravadas deste se perdem) ou gravar por cima (as do outro, nesse grupo, se perdem).
+        salvas deste grupo se perdem) ou gravar por cima (as do outro, nesse grupo, se perdem). Com o Cancelar, o grupo fica
+        sem salvar (24/10/2026; o "Não Salvo" reabre o aviso).
       */}
-      {conflito ? (
-        <Dialog open onOpenChange={(o) => (!o ? setConflito(null) : undefined)}>
+      {conflito && vendoConflito ? (
+        <Dialog open onOpenChange={(o) => (!o ? setVendoConflito(false) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Gravado por Outro Usuário</DialogTitle>
               <DialogDescription>
-                {conflito.atualizadoPor ?? "Outro usuário"} gravou {conflito.nome} em {dataHora(conflito.atualizadoEm)}, depois que você abriu o relatório. Nada
-                deste grupo foi gravado agora.
+                {conflito.atualizadoPor ?? "Outro usuário"} gravou {conflito.nome} em {dataHora(conflito.atualizadoEm)}, depois que você abriu o relatório. As
+                suas alterações deste grupo não foram salvas.
               </DialogDescription>
             </DialogHeader>
             <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
               <li>
                 <strong>Recarregar</strong> traz o relatório como está gravado agora, com as alterações de {conflito.atualizadoPor ?? "quem gravou"}; as suas
-                alterações não gravadas se perdem.
+                alterações deste grupo se perdem.
               </li>
               <li>
                 <strong>Gravar por Cima</strong> grava a sua versão de {conflito.nome}; as alterações de {conflito.atualizadoPor ?? "quem gravou"} nesse grupo se
@@ -748,7 +939,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               </li>
             </ul>
             <DialogFooter>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setConflito(null)}>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setVendoConflito(false)}>
                 Cancelar
               </Button>
               <Button
@@ -758,7 +949,8 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                 onClick={() => {
                   const c = conflito.aba;
                   setConflito(null);
-                  gravar.mutate(c);
+                  setVendoConflito(false);
+                  void autoSalvar(c);
                 }}
               >
                 Gravar por Cima
@@ -767,9 +959,14 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
                 type="button"
                 className={botaoPrimario}
                 onClick={() => {
-                  setConflito(null);
-                  // O relatório de agora: o editor remonta com ele (as alterações não gravadas saem).
-                  void queryClient.invalidateQueries({ queryKey: ["relatorios-executivos", "relatorio", relatorio.id] });
+                  setVendoConflito(false);
+                  // O relatório de agora: o editor remonta com ele, depois de salvar os outros grupos (as alterações do grupo em conflito saem).
+                  void salvar()
+                    .catch(() => undefined)
+                    .then(() => {
+                      descartar.current = true;
+                      return onRecarregar();
+                    });
                 }}
               >
                 Recarregar
@@ -850,7 +1047,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             <DialogHeader>
               <DialogTitle>Excluir a Página {pagina ? nomeDaPagina(pagina, nPagina) : ""}</DialogTitle>
               <DialogDescription>
-                A página {pagina ? nomeDaPagina(pagina, nPagina) : ""} da aba {aba?.nome} sai com os blocos dela. A exclusão vale ao gravar (antes disso, sair sem gravar a desfaz).
+                A página {pagina ? nomeDaPagina(pagina, nPagina) : ""} da aba {aba?.nome} sai com os blocos dela. O Desfazer, no menu da edição, a traz de volta.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -870,7 +1067,7 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               <DialogTitle>{confirmar === "finalizar" ? `Finalizar ${aba?.nome ?? ""}` : "Excluir Relatório"}</DialogTitle>
               <DialogDescription>
                 {confirmar === "finalizar"
-                  ? `O grupo ${aba?.nome} de ${relatorio.rotuloMes}, com todas as abas dele, fica finalizado, só para leitura.${mudouAba ? " As alterações ainda não gravadas são gravadas antes." : ""}${vazia ? " O grupo está vazio." : ""} Você pode reabri-lo depois.`
+                  ? `O grupo ${aba?.nome} de ${relatorio.rotuloMes}, com todas as abas dele, fica finalizado, só para leitura.${mudouAba ? " As alterações ainda não salvas são salvas antes." : ""}${vazia ? " O grupo está vazio." : ""} Você pode reabri-lo depois.`
                   : `O relatório de ${relatorio.rotuloMes}, com todas as abas, é excluído.`}
               </DialogDescription>
             </DialogHeader>

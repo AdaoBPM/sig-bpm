@@ -9,7 +9,7 @@ import { Transform } from "node:stream";
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { AbaRelatorioExecutivo, DepartamentoAcesso } from "../../generated/prisma/enums.js";
-import { auditar } from "../auditoriaService.js";
+import { auditar, auditoriaEmSequencia } from "../auditoriaService.js";
 import { diretorioUploads } from "../importacoes/arquivosImportados.js";
 import { indicadoresService } from "../relatorios/indicadoresService.js";
 import { painelService } from "../relatorios/painelService.js";
@@ -142,21 +142,33 @@ const arquivosDaPagina = (p: PaginaDoRelatorio) => [
   ...(p.fundo?.arquivo ? [p.fundo.arquivo] : []),
 ];
 
+/** Desde quando cada arquivo da pasta do relatório está sem uso (24/10/2026), em ms. */
+const SEM_USO = ".sem-uso.json";
+
 /**
  * Apaga as fotos que nenhuma aba usa (enviadas e não gravadas, ou tiradas da aba) com mais de um dia: as mais novas
- * podem estar numa aba ainda não gravada.
+ * podem estar numa aba ainda não gravada. O dia conta do envio e (24/10/2026, o Desfazer do salvamento automático) de
+ * quando a foto saiu da aba: a excluída e logo gravada volta inteira com o Desfazer.
  */
 async function limparFotos(relatorioId: string) {
   const abas = await getPrismaClient().relatorioExecutivoAba.findMany({ where: { relatorioId }, select: { blocos: true } });
   const usadas = new Set(abas.flatMap((a) => paginasDe(a.blocos).flatMap(arquivosDaPagina)));
   const pasta = pastaDasFotos(relatorioId);
   const arquivos = await readdir(pasta).catch(() => [] as string[]);
-  const umDia = Date.now() - 24 * 60 * 60 * 1000;
+  const agora = Date.now();
+  const umDia = agora - 24 * 60 * 60 * 1000;
+  const antes = await readFile(join(pasta, SEM_USO), "utf8")
+    .then((t) => JSON.parse(t) as Record<string, number>)
+    .catch(() => ({}) as Record<string, number>);
+  const semUso: Record<string, number> = {};
   for (const arquivo of arquivos) {
     if (usadas.has(arquivo) || !(NOME_DA_FOTO.test(arquivo) || NOME_DO_VIDEO.test(arquivo))) continue;
+    const desde = antes[arquivo] ?? agora;
     const info = await stat(join(pasta, arquivo)).catch(() => null);
-    if (info && info.mtimeMs < umDia) await rm(join(pasta, arquivo), { force: true });
+    if (info && info.mtimeMs < umDia && desde < umDia) await rm(join(pasta, arquivo), { force: true });
+    else semUso[arquivo] = desde;
   }
+  if (Object.keys(semUso).length || Object.keys(antes).length) await writeFile(join(pasta, SEM_USO), JSON.stringify(semUso)).catch(() => undefined);
 }
 
 type Aba = { departamento: AbaRelatorioExecutivo; blocos: unknown; situacao: "EM_ELABORACAO" | "FINALIZADO"; atualizadoPor: string | null; atualizadoEm: Date; finalizadoPor: string | null; finalizadoEm: Date | null };
@@ -431,8 +443,9 @@ export const relatoriosExecutivosService = {
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
       data: { blocos: (paginas.length ? paginas : paginasDe([])) as Prisma.InputJsonValue, atualizadoPor: usuario.nome },
     });
-    // A gravação na Auditoria (23/10/2026), com a gravação por cima de outro usuário, quando foi o caso.
-    await auditar({
+    // A gravação na Auditoria (23/10/2026), com a gravação por cima de outro usuário, quando foi o caso. Em sequência
+    // (24/10/2026, o salvamento automático), só a mais recente do mesmo usuário no grupo.
+    auditoriaEmSequencia.registrar(`${id}|${departamento}`, {
       usuarioId: usuario.id,
       usuarioNome: usuario.nome,
       acao: "GRAVACAO_RE",
@@ -455,6 +468,8 @@ export const relatoriosExecutivosService = {
       if (!editaAba(usuario, departamento) && !usuario.admin) throw new RelatorioExecutivoError(403, "Só quem edita os Relatórios Executivos reabre as abas.");
       if (aba.situacao !== "FINALIZADO") throw new RelatorioExecutivoError(409, "A aba não está finalizada.");
     }
+    // As gravações em sequência do relatório entram na Auditoria antes.
+    await auditoriaEmSequencia.encerrar(`${id}|`);
     await prisma.relatorioExecutivoAba.update({
       where: { relatorioId_departamento: { relatorioId: id, departamento } },
       data: acao === "finalizar" ? { situacao: "FINALIZADO", finalizadoPor: usuario.nome, finalizadoEm: new Date() } : { situacao: "EM_ELABORACAO", finalizadoPor: null, finalizadoEm: null, atualizadoPor: usuario.nome },
@@ -546,6 +561,7 @@ export const relatoriosExecutivosService = {
     if (r.abas.some((a) => a.situacao === "FINALIZADO")) throw new RelatorioExecutivoError(409, "O relatório tem abas finalizadas: reabra-as antes de excluir.");
     await getPrismaClient().relatorioExecutivo.delete({ where: { id } });
     await rm(pastaDasFotos(id), { recursive: true, force: true });
+    await auditoriaEmSequencia.encerrar(`${id}|`);
     await auditar({ usuarioId: usuario.id, usuarioNome: usuario.nome, acao: "EXCLUSAO", entidade: "relatorio_executivo", entidadeId: id, metadados: { mes: rotuloMes(r.ano, r.mes) } });
     return { excluido: true };
   },
