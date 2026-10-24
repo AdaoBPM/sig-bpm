@@ -77,6 +77,7 @@ export function MenuDaBarra({
   aberto,
   onAlternar,
   largura = "w-40",
+  desabilitado = false,
   children,
 }: {
   botao: string;
@@ -85,15 +86,17 @@ export function MenuDaBarra({
   aberto: boolean;
   onAlternar: () => void;
   largura?: string;
+  /** No menu único da edição (24/10/2026): a opção que não vale para o bloco escolhido fica à vista, quase apagada. */
+  desabilitado?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <span className="relative">
-      <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={onAlternar} title={titulo} aria-label={titulo} aria-expanded={aberto}>
+      <button type="button" className={`${botao} w-auto gap-0 px-0.5`} disabled={desabilitado} onMouseDown={semFoco} onClick={onAlternar} title={titulo} aria-label={titulo} aria-expanded={aberto}>
         {gatilho}
         <ChevronDown className="size-3" />
       </button>
-      {aberto ? <span className={`absolute top-full right-0 z-20 mt-1 grid ${largura} rounded-sm border border-gray-200 bg-white p-1 shadow-md`}>{children}</span> : null}
+      {aberto && !desabilitado ? <span className={`absolute top-full left-0 z-40 mt-1 grid ${largura} rounded-sm border border-gray-200 bg-white p-1 shadow-md`}>{children}</span> : null}
     </span>
   );
 }
@@ -375,7 +378,7 @@ function marcar(sel: Selection, campo: HTMLElement, simbolo: string) {
 }
 
 /**
- * Os botões da formatação (17/10/2026), na barra do bloco: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a
+ * Os botões da formatação (17/10/2026; desde 24/10/2026, no menu único da edição): negrito, itálico, sublinhado, aumentar e diminuir a fonte, a
  * cor e os marcadores. O clique não tira o foco do texto (a seleção fica); as listas de cores e de marcadores abrem ali
  * mesmo, sem menu (o menu levaria o foco).
  */
@@ -385,9 +388,15 @@ export function BarraDeTexto({
   titulo,
   fontes = false,
   espacamento,
+  desabilitado = false,
 }: {
   campo: () => HTMLElement | null;
   botao: string;
+  /**
+   * No menu único da edição (24/10/2026): sem um bloco com texto escolhido, os botões ficam à vista, quase apagados. A
+   * fonte e o espaçamento, sem `fontes` e sem `espacamento`, também (nas legendas das fotos e dos vídeos).
+   */
+  desabilitado?: boolean;
   /** A fonte do trecho (20/10/2026: nas anotações e no Texto Livre; no título da anotação, a dele). */
   fontes?: boolean;
   /** O espaçamento entre as linhas do texto todo do bloco (20/10/2026: nas anotações e no Texto Livre). */
@@ -399,6 +408,8 @@ export function BarraDeTexto({
   titulo?: { campo: () => HTMLInputElement | null; tamanho: number; definir: (px: number) => void; fonte?: string; definirFonte?: (chave: ChaveDaFonte | undefined) => void };
 }) {
   const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | "fonte" | "espacamento" | null>(null);
+  // Outro bloco escolhido (24/10/2026, o menu único): a lista aberta fecha.
+  useEffect(() => setAberta(null), [campo, desabilitado]);
   // O tamanho do texto onde está o cursor (o número do botão), a cada mudança da seleção; no título, o dele.
   const [tamanho, setTamanho] = useState(14);
   // A fonte do texto onde está o cursor (22/10/2026), destacada na lista das fontes; no título, a dele.
@@ -472,13 +483,13 @@ export function BarraDeTexto({
   const marcada = (chave?: string) => (fonteMarcada === chave ? "bg-gray-100 font-bold text-gray-900" : "");
   return (
     <>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("bold")} title="Negrito" aria-label="Negrito">
+      <button type="button" className={botao} disabled={desabilitado} onMouseDown={semFoco} onClick={() => exec("bold")} title="Negrito" aria-label="Negrito">
         <Bold className="size-4" />
       </button>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("italic")} title="Itálico" aria-label="Itálico">
+      <button type="button" className={botao} disabled={desabilitado} onMouseDown={semFoco} onClick={() => exec("italic")} title="Itálico" aria-label="Itálico">
         <Italic className="size-4" />
       </button>
-      <button type="button" className={botao} onMouseDown={semFoco} onClick={() => exec("underline")} title="Sublinhado" aria-label="Sublinhado">
+      <button type="button" className={botao} disabled={desabilitado} onMouseDown={semFoco} onClick={() => exec("underline")} title="Sublinhado" aria-label="Sublinhado">
         <Underline className="size-4" />
       </button>
       {/* O tamanho da fonte (17/10/2026): um botão só, com o número; a lista dos tamanhos, com o padrão marcado com asterisco. */}
@@ -486,6 +497,7 @@ export function BarraDeTexto({
         <button
           type="button"
           className={`${botao} w-auto min-w-9 gap-0 px-1 text-xs font-semibold`}
+          disabled={desabilitado}
           onMouseDown={semFoco}
           onClick={() => setAberta((a) => (a === "tamanho" ? null : "tamanho"))}
           title="Tamanho da fonte"
@@ -496,7 +508,7 @@ export function BarraDeTexto({
           <ChevronDown className="size-3" />
         </button>
         {aberta === "tamanho" ? (
-          <span className="absolute top-full right-0 z-20 mt-1 grid w-20 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
+          <span className="absolute top-full left-0 z-40 mt-1 grid w-20 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
             {(titulo && focoNoTitulo ? TAMANHOS_DO_TITULO : TAMANHOS).map((t) => (
               <button
                 key={t}
@@ -515,8 +527,8 @@ export function BarraDeTexto({
           </span>
         ) : null}
       </span>
-      {fontes ? (
-        <MenuDaBarra botao={botao} titulo="Fonte" gatilho={<CaseSensitive className="size-4" />} aberto={aberta === "fonte"} onAlternar={alternar("fonte")} largura="w-36">
+      {/* A fonte, sempre à vista (24/10/2026): quase apagada nas legendas das fotos e dos vídeos, que não a têm. */}
+      <MenuDaBarra botao={botao} titulo="Fonte" gatilho={<CaseSensitive className="size-4" />} aberto={aberta === "fonte"} onAlternar={alternar("fonte")} largura="w-36" desabilitado={desabilitado || !fontes}>
           {/* A fonte atual destacada (22/10/2026), em negrito e com o fundo cinza. */}
           <button type="button" className={`${item} ${marcada(undefined)}`} aria-current={fonteMarcada === undefined} onMouseDown={semFoco} onClick={() => escolherFonte(undefined)}>
             Padrão
@@ -534,15 +546,14 @@ export function BarraDeTexto({
               {x.nome}
             </button>
           ))}
-        </MenuDaBarra>
-      ) : null}
+      </MenuDaBarra>
       <span className="relative">
-        <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "cor" ? null : "cor"))} title="Cor da fonte" aria-label="Cor da fonte" aria-expanded={aberta === "cor"}>
+        <button type="button" className={`${botao} w-auto gap-0 px-0.5`} disabled={desabilitado} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "cor" ? null : "cor"))} title="Cor da fonte" aria-label="Cor da fonte" aria-expanded={aberta === "cor"}>
           <Palette className="size-4" />
           <ChevronDown className="size-3" />
         </button>
         {aberta === "cor" ? (
-          <span className="absolute top-full right-0 z-20 mt-1 grid w-40 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
+          <span className="absolute top-full left-0 z-40 mt-1 grid w-40 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
             {CORES_DA_FONTE.map((c) => (
               <button
                 key={c.cor}
@@ -573,12 +584,12 @@ export function BarraDeTexto({
         ) : null}
       </span>
       <span className="relative">
-        <button type="button" className={`${botao} w-auto gap-0 px-0.5`} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "marcador" ? null : "marcador"))} title="Marcadores" aria-label="Marcadores" aria-expanded={aberta === "marcador"}>
+        <button type="button" className={`${botao} w-auto gap-0 px-0.5`} disabled={desabilitado} onMouseDown={semFoco} onClick={() => setAberta((a) => (a === "marcador" ? null : "marcador"))} title="Marcadores" aria-label="Marcadores" aria-expanded={aberta === "marcador"}>
           <List className="size-4" />
           <ChevronDown className="size-3" />
         </button>
         {aberta === "marcador" ? (
-          <span className="absolute top-full right-0 z-20 mt-1 grid w-36 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
+          <span className="absolute top-full left-0 z-40 mt-1 grid w-36 rounded-sm border border-gray-200 bg-white p-1 shadow-md">
             {MARCADORES.map((m) => (
               <button
                 key={m.nome}
@@ -598,35 +609,42 @@ export function BarraDeTexto({
           </span>
         ) : null}
       </span>
-      {espacamento ? (
-        <MenuDaBarra botao={botao} titulo="Espaçamento entre linhas" gatilho={<UnfoldVertical className="size-4" />} aberto={aberta === "espacamento"} onAlternar={alternar("espacamento")} largura="w-24">
-          {ESPACAMENTOS.map((e) => (
-            <button
-              key={e}
-              type="button"
-              className={`${item} justify-center ${e === espacamento.valor ? "font-bold text-gray-900" : ""}`}
-              onMouseDown={semFoco}
-              onClick={() => {
-                espacamento.definir(e);
-                setAberta(null);
-              }}
-            >
-              {rotuloDoEspacamento(e)}
-            </button>
-          ))}
+      {/* O espaçamento, sempre à vista (24/10/2026): quase apagado nas legendas, que não o têm. */}
+      <MenuDaBarra
+        botao={botao}
+        titulo="Espaçamento entre linhas"
+        gatilho={<UnfoldVertical className="size-4" />}
+        aberto={aberta === "espacamento"}
+        onAlternar={alternar("espacamento")}
+        largura="w-24"
+        desabilitado={desabilitado || !espacamento}
+      >
+        {ESPACAMENTOS.map((e) => (
           <button
+            key={e}
             type="button"
-            className={`${item} justify-center border-t border-gray-100 ${espacamento.valor === undefined ? "font-bold text-gray-900" : ""}`}
+            className={`${item} justify-center ${e === espacamento?.valor ? "font-bold text-gray-900" : ""}`}
             onMouseDown={semFoco}
             onClick={() => {
-              espacamento.definir(undefined);
+              espacamento?.definir(e);
               setAberta(null);
             }}
           >
-            Padrão
+            {rotuloDoEspacamento(e)}
           </button>
-        </MenuDaBarra>
-      ) : null}
+        ))}
+        <button
+          type="button"
+          className={`${item} justify-center border-t border-gray-100 ${espacamento?.valor === undefined ? "font-bold text-gray-900" : ""}`}
+          onMouseDown={semFoco}
+          onClick={() => {
+            espacamento?.definir(undefined);
+            setAberta(null);
+          }}
+        >
+          Padrão
+        </button>
+      </MenuDaBarra>
     </>
   );
 }

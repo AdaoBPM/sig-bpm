@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bold, CaseSensitive, Italic, Palette, Underline } from "lucide-react";
+import { Bold, CaseSensitive, Italic, List, Palette, Underline, UnfoldVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -50,7 +50,7 @@ export function ListaDoSumario({ b, sumario, editavel }: { b: Sumario; sumario: 
   if (!telas.length) {
     return editavel ? (
       <div className="flex h-full items-center justify-center rounded-sm border border-dashed border-gray-300 p-3 text-center text-xs text-gray-500">
-        Nenhuma tela marcada tem slides: marque as telas no Configurar Sumário (o botão de engrenagem do bloco).
+        Nenhuma tela marcada tem slides: marque as telas no Configurar Sumário (a engrenagem do menu da edição, com o Sumário escolhido).
       </div>
     ) : null;
   }
@@ -91,9 +91,10 @@ export function ListaDoSumario({ b, sumario, editavel }: { b: Sumario; sumario: 
 }
 
 /**
- * A formatação do Sumário na barra do bloco (20/10/2026): a do texto das anotações (negrito, itálico, sublinhado, o tamanho,
- * a cor e a fonte; sem os marcadores), por nível — as telas ou os slides (em Telas e Slides, o botão escolhe qual) —, já
- * que a lista se monta sozinha e não se seleciona.
+ * A formatação do Sumário no menu da edição (20/10/2026; desde 24/10/2026, no menu único, na ordem da barra do texto): a do
+ * texto das anotações (negrito, itálico, sublinhado, o tamanho, a fonte e a cor; os marcadores e o espaçamento à vista,
+ * quase apagados), por nível — as telas ou os slides (em Telas e Slides, o botão no fim escolhe qual) —, já que a lista se
+ * monta sozinha e não se seleciona.
  */
 export function BarraDoSumario({ b, botao, onMudar }: { b: Sumario; botao: string; onMudar: (m: Pick<Sumario, "estilos">) => void }) {
   const [escolhido, setEscolhido] = useState<Nivel>("telas");
@@ -113,12 +114,6 @@ export function BarraDoSumario({ b, botao, onMudar }: { b: Sumario; botao: strin
   );
   return (
     <>
-      {b.listar === "TELAS_E_SLIDES" ? (
-        <span role="group" aria-label="Formatar" title="O nível que a formatação muda" className="flex overflow-hidden rounded-sm border border-gray-200 text-[11px]">
-          {nivel("telas", "Telas")}
-          {nivel("slides", "Slides")}
-        </span>
-      ) : null}
       <button type="button" className={`${botao} ${ligado(estilo.negrito)}`} onMouseDown={semFoco} onClick={() => mudar({ negrito: !estilo.negrito })} title="Negrito" aria-label="Negrito" aria-pressed={!!estilo.negrito}>
         <Bold className="size-4" />
       </button>
@@ -135,14 +130,6 @@ export function BarraDoSumario({ b, botao, onMudar }: { b: Sumario; botao: strin
           </button>
         ))}
         <span className="border-t border-gray-100 px-1 pt-1 text-center text-[10px] text-gray-500">* padrão</span>
-      </MenuDaBarra>
-      <MenuDaBarra botao={botao} titulo="Cor da fonte" gatilho={<Palette className="size-4" />} aberto={aberta === "cor"} onAlternar={alternar("cor")}>
-        {CORES_DA_FONTE.map((c) => (
-          <button key={c.cor} type="button" className={ITEM_DA_BARRA} onMouseDown={semFoco} onClick={() => mudar({ cor: c.cor === COR_PADRAO ? undefined : c.cor })}>
-            <span className="size-3.5 shrink-0 rounded-[2px] border border-gray-300" style={{ background: c.cor === COR_PADRAO ? "linear-gradient(135deg, #111827 50%, #ffffff 50%)" : c.cor }} />
-            {c.nome}
-          </button>
-        ))}
       </MenuDaBarra>
       <MenuDaBarra botao={botao} titulo="Fonte" gatilho={<CaseSensitive className="size-4" />} aberto={aberta === "fonte"} onAlternar={alternar("fonte")} largura="w-36">
         {/* A fonte atual destacada (22/10/2026: também com o fundo cinza, como na barra do texto). */}
@@ -162,6 +149,27 @@ export function BarraDoSumario({ b, botao, onMudar }: { b: Sumario; botao: strin
           </button>
         ))}
       </MenuDaBarra>
+      <MenuDaBarra botao={botao} titulo="Cor da fonte" gatilho={<Palette className="size-4" />} aberto={aberta === "cor"} onAlternar={alternar("cor")}>
+        {CORES_DA_FONTE.map((c) => (
+          <button key={c.cor} type="button" className={ITEM_DA_BARRA} onMouseDown={semFoco} onClick={() => mudar({ cor: c.cor === COR_PADRAO ? undefined : c.cor })}>
+            <span className="size-3.5 shrink-0 rounded-[2px] border border-gray-300" style={{ background: c.cor === COR_PADRAO ? "linear-gradient(135deg, #111827 50%, #ffffff 50%)" : c.cor }} />
+            {c.nome}
+          </button>
+        ))}
+      </MenuDaBarra>
+      {/* Os marcadores e o espaçamento não valem para o Sumário: à vista, quase apagados, nos lugares da barra do texto. */}
+      <MenuDaBarra botao={botao} titulo="Marcadores" gatilho={<List className="size-4" />} aberto={false} onAlternar={() => undefined} desabilitado>
+        {null}
+      </MenuDaBarra>
+      <MenuDaBarra botao={botao} titulo="Espaçamento entre linhas" gatilho={<UnfoldVertical className="size-4" />} aberto={false} onAlternar={() => undefined} desabilitado>
+        {null}
+      </MenuDaBarra>
+      {b.listar === "TELAS_E_SLIDES" ? (
+        <span role="group" aria-label="Formatar" title="O nível que a formatação muda" className="ml-1 flex overflow-hidden rounded-sm border border-gray-200 text-[11px]">
+          {nivel("telas", "Telas")}
+          {nivel("slides", "Slides")}
+        </span>
+      ) : null}
     </>
   );
 }

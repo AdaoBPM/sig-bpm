@@ -469,14 +469,14 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
             </li>
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
-              nele para mudar) e o texto no card com o destaque da cor. Na barra do bloco (logo acima dele, com o mouse sobre ele ou escrevendo nele), a formatação do
+              nele para mudar) e o texto no card com o destaque da cor. No menu da edição (logo abaixo das abas, com o bloco escolhido), a formatação do
               texto da anotação e da legenda da foto: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
               verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 144; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana, Georgia e as abertas Roboto, Open Sans, Montserrat, Lato e Poppins; a fonte do texto onde está o cursor fica destacada na lista, em negrito e com o fundo cinza) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
-              para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12 a 32; o padrão, 18), e o da fonte, a dele. No canto do bloco, escolha Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
+              para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12 a 32; o padrão, 18), e o da fonte, a dele. No menu da edição, escolha a nota: Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
               Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
             </li>
             <li>
-              Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (na barra do bloco; o tamanho até 144 e o
+              Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (no menu da edição; o tamanho até 144 e o
               branco servem aos textos sobre a Imagem de Fundo), mas sem o destaque lateral, o título, o ícone e o fundo: na edição, o contorno tracejado aparece com o mouse
               sobre ele. Na apresentação, ele não se destaca nem se amplia.
             </li>
@@ -485,15 +485,15 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               tela, os slides, com os números), e as telas que entram (da Introdução em diante; de início, todas). A lista se monta sozinha, com os slides de
               agora (as páginas com algum bloco ou com a Imagem de Fundo): os números são a contagem dos slides a partir da Introdução, a mesma do contador
               do topo dos slides; a tela marcada sem slides não aparece. O Sublinhado (Pontos, Traços, Linha ou Nenhum) é a linha entre o nome e o número, na cor
-              do texto. A engrenagem do bloco muda as opções. Na barra do bloco, a formatação do texto (sem os marcadores): negrito, itálico, sublinhado, o
-              tamanho, a cor e a fonte, que valem para todas as telas ou para todos os slides — em Telas e Slides, o botão Telas | Slides escolhe qual nível
+              do texto. A engrenagem do menu da edição muda as opções. No menu, a formatação do texto (sem os marcadores e o espaçamento, quase apagados): negrito, itálico, sublinhado, o
+              tamanho, a fonte e a cor, que valem para todas as telas ou para todos os slides — em Telas e Slides, o botão Telas | Slides, no fim da formatação, escolhe qual nível
               ela muda (de início, as telas em negrito, com 16, e os slides com 14).
             </li>
             <li>
               Tabela abre o modal Adicionar Tabela: a tabela de Resultados de uma aba (Consolidado, Matriz, Filial, Serviços, Despesas e Extra ou RN), até o mês do relatório, como na
               tela Resultados, com o orçado e a variação. Escolha o Modo (Totais, Atribuições ou Contas, como os níveis da tela), os Meses Anteriores (Recolhidos: só o mês do relatório e os totais;
               Expandidos: de janeiro ao mês do relatório) e os Totais e Contas que entram (de início, todos; marcar um total marca as linhas dele). A tabela inteira cabe no bloco: ela
-              se reduz na proporção (aumente o bloco para lê-la maior; menos linhas, como em Totais, ficam maiores). A engrenagem do bloco muda as opções. Na apresentação, como os
+              se reduz na proporção (aumente o bloco para lê-la maior; menos linhas, como em Totais, ficam maiores). A engrenagem do menu da edição muda as opções. Na apresentação, como os
               cards, ela se destaca sob o mouse e se amplia ao clicar.
             </li>
             <li>
@@ -520,11 +520,19 @@ function Editor({ relatorio, aberta, setAberta }: { relatorio: Relatorio; aberta
               aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide.
             </li>
             <li>
-              Passe o mouse num bloco para ver os botões dele: a alça (arraste para mover), o gráfico (nos cards do Painel e dos Indicadores, em ciclo: os meses e o acumulado →
-              só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), as opções do gráfico (os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade), a nota (nas anotações) e
-              excluir. O canto de baixo, à direita, redimensiona o bloco, até um tamanho mínimo, para as informações não se amontoarem. Ao mover ou
-              redimensionar, a grade aparece no fundo, bem clara, para alinhar os blocos. O bloco arrastado sobre outro o empurra; se você continua
-              arrastando e sai de cima dele, o empurrado volta ao lugar.
+              Como no Canva: clique num bloco para escolhê-lo (o contorno tracejado, com o mouse sobre um bloco, mostra qual o clique escolhe). O escolhido fica destacado
+              em azul, com os quadrados de ancoragem nos cantos e no meio dos lados: arraste um quadrado para redimensionar (até um tamanho mínimo, para as
+              informações não se amontoarem; a imagem e os vídeos só pelos cantos, na proporção deles). Clique e segure na borda destacada para mover o bloco.
+              Ao mover ou redimensionar, a grade aparece no fundo, bem clara, e o bloco se encaixa nela; o bloco arrastado sobre outro o empurra e, se você
+              continua arrastando e sai de cima dele, o empurrado volta ao lugar. Um clique fora dos blocos ou o Esc soltam o escolhido; o Delete (fora de um
+              texto) o exclui. Num vídeo, o primeiro clique o escolhe; depois, o player responde.
+            </li>
+            <li>
+              O menu da edição, logo abaixo das abas (preso no alto ao rolar a página), mostra o nome do bloco escolhido e as opções de todos os tipos, sempre
+              nos mesmos lugares; as que não valem para ele ficam quase apagadas. Da esquerda para a direita: o gráfico dos cards do Painel e dos Indicadores (em
+              ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), Configurar (as opções do
+              gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
+              imagem, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
             </li>
             <li>
               “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:

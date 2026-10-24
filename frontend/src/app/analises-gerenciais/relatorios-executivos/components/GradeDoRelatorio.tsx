@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
 import { moveElement } from "react-grid-layout/build/utils";
-import { ChartColumn, CircleAlert, CirclePlay, GripVertical, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { ChartColumn, CircleAlert, CirclePlay, ImagePlus, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -164,6 +164,59 @@ function linhasSemMinimo(w: number, proporcao: number, largura: number, extra = 
 const naProporcao = (b: Bloco | undefined): b is Extract<Bloco, { tipo: "FOTO" | "VIDEO" }> =>
   b?.tipo === "FOTO" || (b?.tipo === "VIDEO" && (b.origem === "ARQUIVO" || !!videoDoLink(b.url)?.comandos));
 
+/**
+ * Os quadrados de ancoragem do bloco escolhido (24/10/2026, como no Canva): os quatro cantos e o meio dos lados; nos
+ * blocos na proporção (a foto e os vídeos), só os cantos — a altura acompanha a largura.
+ */
+type Alca = "s" | "w" | "e" | "n" | "sw" | "nw" | "se" | "ne";
+const TODAS_AS_ALCAS: Alca[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+const CANTOS: Alca[] = ["nw", "ne", "se", "sw"];
+
+/**
+ * O desenho dos quadrados de ancoragem e da borda do bloco escolhido (24/10/2026). As medidas se dividem pela escala do
+ * slide na edição (--escala), para os quadrados terem o mesmo tamanho na tela em qualquer largura.
+ */
+const ESTILO_DA_EDICAO = `
+.grade-do-relatorio .react-grid-item > .ancora-do-bloco {
+  width: calc(10px / var(--escala, 1)) !important; height: calc(10px / var(--escala, 1)) !important;
+  padding: 0 !important; margin: 0 !important; transform: none !important; box-sizing: border-box;
+  background: var(--background) !important; background-image: none !important;
+  border: calc(2px / var(--escala, 1)) solid var(--color-sky-600); border-radius: calc(2px / var(--escala, 1)); z-index: 30;
+}
+.grade-do-relatorio .react-grid-item > .ancora-do-bloco::after { display: none !important; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-nw { top: calc(-6px / var(--escala, 1)) !important; left: calc(-6px / var(--escala, 1)) !important; cursor: nwse-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-ne { top: calc(-6px / var(--escala, 1)) !important; right: calc(-6px / var(--escala, 1)) !important; left: auto !important; cursor: nesw-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-se { bottom: calc(-6px / var(--escala, 1)) !important; right: calc(-6px / var(--escala, 1)) !important; cursor: nwse-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-sw { bottom: calc(-6px / var(--escala, 1)) !important; left: calc(-6px / var(--escala, 1)) !important; cursor: nesw-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-n { top: calc(-6px / var(--escala, 1)) !important; left: calc(50% - 5px / var(--escala, 1)) !important; cursor: ns-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-s { bottom: calc(-6px / var(--escala, 1)) !important; left: calc(50% - 5px / var(--escala, 1)) !important; cursor: ns-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-e { right: calc(-6px / var(--escala, 1)) !important; top: calc(50% - 5px / var(--escala, 1)) !important; cursor: ew-resize; }
+.grade-do-relatorio .ancora-do-bloco.react-resizable-handle-w { left: calc(-6px / var(--escala, 1)) !important; top: calc(50% - 5px / var(--escala, 1)) !important; cursor: ew-resize; }
+`;
+
+/** As faixas da borda do bloco escolhido que o movem ao arrastar (por cima da linha de destaque, 8 px na tela). */
+const FAIXAS_DA_BORDA: Array<{ lado: string; estilo: React.CSSProperties }> = [
+  { lado: "cima", estilo: { left: 0, right: 0, top: "calc(-6px / var(--escala, 1))", height: "calc(8px / var(--escala, 1))" } },
+  { lado: "baixo", estilo: { left: 0, right: 0, bottom: "calc(-6px / var(--escala, 1))", height: "calc(8px / var(--escala, 1))" } },
+  { lado: "esquerda", estilo: { top: 0, bottom: 0, left: "calc(-6px / var(--escala, 1))", width: "calc(8px / var(--escala, 1))" } },
+  { lado: "direita", estilo: { top: 0, bottom: 0, right: "calc(-6px / var(--escala, 1))", width: "calc(8px / var(--escala, 1))" } },
+];
+
+/** O nome do bloco escolhido, no começo do menu da edição. */
+function nomeDoBloco(b: Bloco) {
+  if (b.tipo === "PAINEL") return "Card do Painel de Bordo";
+  if (b.tipo === "INDICADOR") return "Card de Indicador";
+  if (b.tipo === "ANOTACAO") return "Anotação";
+  if (b.tipo === "TEXTO") return "Texto Livre";
+  if (b.tipo === "SUMARIO") return "Sumário";
+  if (b.tipo === "TABELA") return "Tabela";
+  if (b.tipo === "VIDEO") return "Vídeo";
+  return b.livre ? "Imagem Livre" : "Imagem com Legenda";
+}
+
+/** O campo de texto de quando nenhum bloco com texto está escolhido (estável, para a barra do texto). */
+const semCampo = () => null;
+
 /** O ícone do gráfico do card (22/10/2026): o modo de agora e, na dica, o próximo. */
 function BotaoDoGrafico({ modo, botao, onClicar }: { modo: ModoDoGrafico; botao: string; onClicar: () => void }) {
   const AGORA: Record<ModoDoGrafico, string> = { MESES: "Gráfico dos meses e do acumulado", ACUMULADO: "Gráfico só do acumulado", NENHUM: "Sem gráfico" };
@@ -260,8 +313,35 @@ export function GradeDoRelatorio({
     obs.observe(c);
     return () => obs.disconnect();
   }, [LARGURA]);
-  // Os campos de texto formatado dos blocos (anotações e legendas), para a barra de formatação de cada um.
+  // Os campos de texto formatado dos blocos (anotações e legendas), para a barra de formatação do menu da edição.
   const campos = useRef(new Map<string, HTMLElement>());
+  // O bloco escolhido na edição (24/10/2026, como no Canva): o clique o destaca, com os quadrados de ancoragem para
+  // redimensionar e a borda para mover; o menu único, no alto, mostra as opções dele. Um clique fora dos blocos ou o Esc
+  // o soltam; o Delete (fora de um texto) o exclui.
+  const [selecionado, setSelecionado] = useState<string | null>(null);
+  const escolhido = editavel ? blocos.find((b) => b.id === selecionado) : undefined;
+  const campoDoEscolhido = useCallback(() => (selecionado ? (campos.current.get(selecionado) ?? null) : null), [selecionado]);
+  const excluir = (id: string) => {
+    onMudar(blocos.filter((x) => x.id !== id));
+    setSelecionado(null);
+  };
+  useEffect(() => {
+    if (!editavel || !selecionado) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (document.querySelector("[role=dialog]")) return;
+      const el = document.activeElement as HTMLElement | null;
+      const escrevendo = !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
+      if (e.key === "Escape") {
+        if (escrevendo) el!.blur();
+        setSelecionado(null);
+      } else if (e.key === "Delete" && !escrevendo) {
+        e.preventDefault();
+        excluir(selecionado);
+      }
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  });
   // A largura da grade enquanto um bloco se move ou se redimensiona (para a grade de fundo); fora disso, null.
   const [ajustando, setAjustando] = useState<number | null>(null);
   const comecar = () => setAjustando(caixa.current?.offsetWidth ?? null);
@@ -291,12 +371,25 @@ export function GradeDoRelatorio({
     doInicio.current = null;
     terminar();
   };
-  const layout: Layout[] = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, ...tamanhoMinimo(b, LARGURA) }));
-  // A foto se redimensiona pela largura: a altura acompanha, na proporção dela.
-  const aoRedimensionar = (_l: Layout[], _antes: Layout, novo: Layout, sombra: Layout) => {
+  // Só o bloco escolhido se redimensiona, pelos quadrados de ancoragem (24/10/2026; antes, qualquer bloco, pelo canto).
+  const layout: Layout[] = blocos.map((b) => ({
+    i: b.id,
+    x: b.x,
+    y: b.y,
+    w: b.w,
+    h: b.h,
+    ...tamanhoMinimo(b, LARGURA),
+    isResizable: editavel && b.id === selecionado,
+    resizeHandles: naProporcao(b) ? CANTOS : TODAS_AS_ALCAS,
+  }));
+  // A foto se redimensiona pela largura: a altura acompanha, na proporção dela. Por um canto de cima (24/10/2026), o pé
+  // fica no lugar: o topo acompanha a altura.
+  const aoRedimensionar = (_l: Layout[], antes: Layout, novo: Layout, sombra: Layout) => {
     const b = blocos.find((x) => x.id === novo.i);
     if (!naProporcao(b) || !caixa.current) return;
-    novo.h = sombra.h = linhasDaFoto(novo.w, b.proporcao, caixa.current.offsetWidth, b.tipo === "FOTO" && !!b.livre);
+    const h = linhasDaFoto(novo.w, b.proporcao, caixa.current.offsetWidth, b.tipo === "FOTO" && !!b.livre);
+    if (novo.y !== antes.y) novo.y = sombra.y = Math.max(0, antes.y + antes.h - h);
+    novo.h = sombra.h = h;
   };
   const mudarBloco = (id: string, m: Partial<Bloco>) => onMudar(blocos.map((b) => (b.id === id ? ({ ...b, ...m } as Bloco) : b)));
   const aoMudarLeiaute = (novo: Layout[]) => {
@@ -336,13 +429,29 @@ export function GradeDoRelatorio({
     // A cada desenho (20/10/2026): o fechar do momento (o do vídeo ampliado lê o tempo dele).
   });
   return (
-    // A página na altura do espaço útil da tela inteira; na edição, com o contorno tracejado dela (o bloco que passa dele,
-    // de antes do limite, aparece abaixo e volta para dentro ao ser movido). A sombra do bloco, em cinza.
+    <>
+      {/* O menu único da edição (24/10/2026; antes, a barra de cada bloco, com o mouse sobre ele), logo abaixo das abas. */}
+      {editavel ? (
+        <>
+          <style>{ESTILO_DA_EDICAO}</style>
+          <BarraDeEdicao
+            b={escolhido}
+            campo={campoDoEscolhido}
+            onMudar={(m) => escolhido && mudarBloco(escolhido.id, m)}
+            onConfigurar={() => escolhido && setConfigurando(escolhido.id)}
+            onExcluir={() => escolhido && excluir(escolhido.id)}
+          />
+        </>
+      ) : null}
+    {/* A página na altura do espaço útil da tela inteira; na edição, com o contorno tracejado dela (o bloco que passa dele,
+        de antes do limite, aparece abaixo e volta para dentro ao ser movido). A sombra do bloco, em cinza. */}
     <div ref={area} className="relative -mx-3" style={{ height: alturaDoSlide * escala }}>
       <div
         ref={caixa}
-        className="absolute top-0 left-0 [&_.react-grid-placeholder]:!bg-gray-400"
-        style={{ width: LARGURA, minHeight: alturaDaPagina, transform: escala === 1 ? undefined : `scale(${escala})`, transformOrigin: "top left" }}
+        className="grade-do-relatorio absolute top-0 left-0 [&_.react-grid-placeholder]:!bg-gray-400"
+        style={{ width: LARGURA, minHeight: alturaDaPagina, transform: escala === 1 ? undefined : `scale(${escala})`, transformOrigin: "top left", ["--escala" as string]: escala }}
+        // O clique fora dos blocos solta o escolhido.
+        onMouseDown={editavel ? (e) => (!(e.target as HTMLElement).closest(".react-grid-item") ? setSelecionado(null) : undefined) : undefined}
       >
       {editavel ? (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 rounded-sm border border-dashed border-gray-300" style={{ height: linhas * (ALTURA_DA_LINHA + MARGEM) + MARGEM }} />
@@ -359,7 +468,12 @@ export function GradeDoRelatorio({
         margin={[12, 12]}
         isDraggable={editavel}
         isResizable={editavel}
+        // Move-se pela borda do bloco escolhido (as faixas .alca-do-bloco, 24/10/2026; antes, pela alça da barra do bloco).
         draggableHandle=".alca-do-bloco"
+        // Os quadrados de ancoragem do bloco escolhido (24/10/2026), no desenho de ESTILO_DA_EDICAO.
+        resizeHandle={(eixo: Alca, ref: React.Ref<HTMLElement>) => (
+          <span ref={ref as React.Ref<HTMLSpanElement>} className={`react-resizable-handle react-resizable-handle-${eixo} ancora-do-bloco`} />
+        )}
         // Os blocos ficam onde se põem, em todas as páginas (22/10/2026; antes, só na Capa, no Encerramento e nas com a
         // Imagem de Fundo — nas demais, a grade os encostava em cima): sem se sobrepor (o bloco arrastado sobre outro o
         // empurra; e, se o arrasto continua, o empurrado volta ao lugar, 22/10/2026) e dentro da página (as linhas dela e as
@@ -385,15 +499,36 @@ export function GradeDoRelatorio({
           const imagemLivre = b.tipo === "FOTO" && !!b.livre;
           return (
           // Sob o mouse, o bloco fica por cima dos vizinhos (a dica do gráfico e o destaque da apresentação passam por cima deles).
-          <div key={b.id} className="group relative focus-within:z-10 hover:z-10">
-            {editavel ? (
-              <BarraDoBloco
-                b={b}
-                campo={() => campos.current.get(b.id) ?? null}
-                onMudar={(m) => mudarBloco(b.id, m)}
-                onConfigurar={() => setConfigurando(b.id)}
-                onExcluir={() => onMudar(blocos.filter((x) => x.id !== b.id))}
-              />
+          // Na edição, o clique (ou o foco num texto dele) escolhe o bloco.
+          <div
+            key={b.id}
+            className={`group relative focus-within:z-10 hover:z-10 ${b.id === selecionado ? "z-20" : ""}`}
+            onMouseDownCapture={editavel ? () => setSelecionado(b.id) : undefined}
+            onFocusCapture={editavel ? () => setSelecionado(b.id) : undefined}
+          >
+            {editavel && b.id === selecionado ? (
+              <>
+                {/* O destaque do bloco escolhido e as faixas da borda, que o movem ao arrastar. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-20 rounded-[2px]"
+                  style={{ outline: "calc(2px / var(--escala, 1)) solid var(--color-sky-600)", outlineOffset: "calc(2px / var(--escala, 1))" }}
+                />
+                {FAIXAS_DA_BORDA.map(({ lado, estilo }) => (
+                  <span key={lado} className="alca-do-bloco absolute z-20 cursor-move" style={estilo} title="Arraste a borda para mover o bloco" />
+                ))}
+              </>
+            ) : editavel ? (
+              <>
+                {/* Sob o mouse, o contorno tracejado mostra o bloco que o clique escolhe. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-20 rounded-[2px] opacity-0 transition-opacity group-hover:opacity-100"
+                  style={{ outline: "calc(1px / var(--escala, 1)) dashed var(--color-gray-400)", outlineOffset: "calc(2px / var(--escala, 1))" }}
+                />
+                {/* O player do vídeo (um iframe) não passa o clique adiante: a camada recebe o primeiro, que escolhe o bloco. */}
+                {b.tipo === "VIDEO" ? <div className="absolute inset-0 z-10 cursor-pointer" title="Clique para escolher o vídeo" /> : null}
+              </>
             ) : null}
             {/* Na apresentação, sob o mouse, o bloco cresce 10% com uma sombra fraca, sem sair da tela; o clique o amplia. */}
             <div
@@ -511,6 +646,7 @@ export function GradeDoRelatorio({
         />
       ) : null}
     </div>
+    </>
   );
 }
 
@@ -643,101 +779,101 @@ function ConfigurarGraficoDialog({
   );
 }
 
-/** Os botões do bloco na edição, no canto de cima: a alça de mover, as opções do tipo e excluir. */
-function BarraDoBloco({
+/**
+ * O menu único da edição (24/10/2026, pedido do Adão; antes, a barra de cada bloco, com o mouse sobre ele), logo abaixo
+ * das abas e preso no alto ao rolar: o nome do bloco escolhido e, sempre nos mesmos lugares, as opções de todos os tipos —
+ * o gráfico dos cards e o Configurar (o gráfico, o sumário ou a tabela), os ajustes da imagem, as notas das anotações, a
+ * formatação do texto (no Sumário, a dele, por nível) e excluir. As que não valem para o bloco escolhido (ou sem bloco
+ * escolhido) ficam à vista, quase apagadas (o cinza claro no tema claro, o escuro no Escuro).
+ */
+function BarraDeEdicao({
   b,
   campo,
   onMudar,
   onConfigurar,
   onExcluir,
 }: {
-  b: Bloco;
+  b: Bloco | undefined;
   campo: () => HTMLElement | null;
   onMudar: (m: Partial<Bloco>) => void;
   onConfigurar: () => void;
   onExcluir: () => void;
 }) {
-  const botao = "inline-flex size-6 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+  const botao = "inline-flex size-7 items-center justify-center rounded-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:cursor-default disabled:text-gray-300 disabled:hover:bg-transparent";
+  const card = b?.tipo === "PAINEL" || b?.tipo === "INDICADOR" ? b : undefined;
+  const configurar = card && modoDoGrafico(card) !== "NENHUM" ? "Configurar o gráfico" : b?.tipo === "SUMARIO" ? "Configurar o sumário" : b?.tipo === "TABELA" ? "Configurar a tabela" : null;
+  const imagem = b?.tipo === "FOTO" && b.arquivo ? b : undefined;
+  // O texto formatado: as anotações, o Texto Livre e as legendas das fotos e dos vídeos (a fonte e o espaçamento, só nos dois primeiros).
+  const comTexto = !!b && (b.tipo === "ANOTACAO" || b.tipo === "TEXTO" || (b.tipo === "FOTO" && !b.livre) || b.tipo === "VIDEO");
+  const doTexto = b?.tipo === "ANOTACAO" || b?.tipo === "TEXTO";
+  const separador = <span aria-hidden className="mx-1 h-5 w-px bg-gray-200" />;
   return (
-    // Aparece com o mouse sobre o bloco e enquanto se escreve nele (o foco no texto), logo acima do bloco (19/10/2026; antes,
-    // por cima do canto dele, onde cobria a primeira linha do texto e atrapalhava a seleção). Sem a barra à vista, ela não
-    // pega o mouse (o bloco de cima continua clicável).
-    <div className="pointer-events-none absolute right-1 bottom-full z-10 flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white p-0.5 opacity-0 shadow-sm transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
-      <span className={`alca-do-bloco cursor-move ${botao}`} title="Mover (arraste)" aria-label="Mover">
-        <GripVertical className="size-4" />
-      </span>
+    <div role="toolbar" aria-label="Edição do bloco escolhido" className="sticky top-[var(--topo-tabela,0px)] z-30 flex flex-wrap items-center gap-0.5 rounded-sm border border-gray-200 bg-white px-2 py-1 shadow-sm">
+      <span className="mr-1 min-w-40 text-xs">{b ? <span className="font-semibold text-gray-900">{nomeDoBloco(b)}</span> : <span className="text-gray-500">Clique num bloco para editá-lo</span>}</span>
+      {separador}
       {/* O gráfico do card (22/10/2026), em ciclo: os meses e o acumulado → só o acumulado → sem gráfico → os meses e o acumulado. */}
-      {b.tipo === "PAINEL" || b.tipo === "INDICADOR" ? (
-        <BotaoDoGrafico modo={modoDoGrafico(b)} botao={botao} onClicar={() => onMudar(proximoGrafico(b))} />
-      ) : null}
-      {/* As opções do gráfico (16/10/2026), nos cards com o gráfico (os do Painel e, desde 22/10/2026, os dos Indicadores). */}
-      {(b.tipo === "PAINEL" || b.tipo === "INDICADOR") && modoDoGrafico(b) !== "NENHUM" ? (
-        <button type="button" className={botao} title="Configurar o gráfico" aria-label="Configurar o gráfico" onClick={onConfigurar}>
-          <Settings className="size-4" />
+      {card ? (
+        <BotaoDoGrafico modo={modoDoGrafico(card)} botao={botao} onClicar={() => onMudar(proximoGrafico(card))} />
+      ) : (
+        <button type="button" className={botao} disabled title="Gráfico do card" aria-label="Gráfico do card">
+          <ChartColumn className="size-4" />
         </button>
-      ) : null}
+      )}
+      {/* O Configurar: as opções do gráfico dos cards com gráfico, o sumário ou a tabela. */}
+      <button type="button" className={botao} disabled={!configurar} title={configurar ?? "Configurar"} aria-label={configurar ?? "Configurar"} onClick={onConfigurar}>
+        <Settings className="size-4" />
+      </button>
       {/* Os ajustes da imagem (21/10/2026): brilho, matiz, saturação, desfoque e transparência. */}
-      {b.tipo === "FOTO" && b.arquivo ? (
-        <button type="button" className={`${botao} ${b.ajustes ? "text-gray-900" : ""}`} title="Ajustes da imagem" aria-label="Ajustes da imagem" onClick={onConfigurar}>
-          <SlidersHorizontal className="size-4" />
-        </button>
-      ) : null}
-      {b.tipo === "SUMARIO" ? (
-        <button type="button" className={botao} title="Configurar o sumário" aria-label="Configurar o sumário" onClick={onConfigurar}>
-          <Settings className="size-4" />
-        </button>
-      ) : null}
-      {/* A tabela (22/10/2026): a aba, o modo, os meses e as linhas. */}
-      {b.tipo === "TABELA" ? (
-        <button type="button" className={botao} title="Configurar a tabela" aria-label="Configurar a tabela" onClick={onConfigurar}>
-          <Settings className="size-4" />
-        </button>
-      ) : null}
-      {/* A formatação do Sumário (20/10/2026): a do texto, sem os marcadores, por nível (as telas ou os slides). */}
-      {b.tipo === "SUMARIO" ? (
-        <>
-          <span className="mx-0.5 h-4 w-px bg-gray-200" />
-          <BarraDoSumario b={b} botao={botao} onMudar={(m) => onMudar(m as Partial<Bloco>)} />
-          <span className="mx-0.5 h-4 w-px bg-gray-200" />
-        </>
-      ) : null}
-      {b.tipo === "ANOTACAO"
-        ? (Object.keys(NOTAS) as Nota[]).map((n) => {
-            const { Icone, rotulo } = NOTAS[n];
-            return (
-              <button key={n} type="button" className={`${botao} ${b.nota === n ? "bg-gray-200 text-gray-900" : ""}`} title={rotulo} aria-label={rotulo} aria-pressed={b.nota === n} onClick={() => onMudar({ nota: n } as Partial<Bloco>)}>
-                <Icone className="size-4" />
-              </button>
-            );
-          })
-        : null}
-      {/* A formatação do texto (17/10/2026), nas anotações, no Texto Livre e nas legendas das fotos e dos vídeos. */}
-      {b.tipo === "ANOTACAO" || b.tipo === "TEXTO" || (b.tipo === "FOTO" && !b.livre) || b.tipo === "VIDEO" ? (
-        <>
-          <span className="mx-0.5 h-4 w-px bg-gray-200" />
-          <BarraDeTexto
-            campo={campo}
-            botao={botao}
-            // A fonte e o espaçamento entre as linhas (20/10/2026), nas anotações e no Texto Livre.
-            fontes={b.tipo === "ANOTACAO" || b.tipo === "TEXTO"}
-            espacamento={b.tipo === "ANOTACAO" || b.tipo === "TEXTO" ? { valor: b.espacamento, definir: (espacamento) => onMudar({ espacamento } as Partial<Bloco>) } : undefined}
-            titulo={
-              b.tipo === "ANOTACAO"
-                ? {
-                    campo: () => campo()?.closest(".group")?.querySelector<HTMLInputElement>("[data-titulo-da-anotacao]") ?? null,
-                    tamanho: b.tamanhoTitulo ?? TAMANHO_DO_TITULO,
-                    definir: (px) => onMudar({ tamanhoTitulo: px } as Partial<Bloco>),
-                    fonte: b.fonteTitulo,
-                    definirFonte: (fonteTitulo) => onMudar({ fonteTitulo } as Partial<Bloco>),
-                  }
-                : undefined
-            }
-          />
-          <span className="mx-0.5 h-4 w-px bg-gray-200" />
-        </>
-      ) : null}
-      <button type="button" className={`${botao} hover:text-red-700`} title="Excluir o bloco" aria-label="Excluir o bloco" onClick={onExcluir}>
-        <X className="size-4" />
+      <button type="button" className={`${botao} ${imagem?.ajustes ? "text-gray-900" : ""}`} disabled={!imagem} title="Ajustes da imagem" aria-label="Ajustes da imagem" onClick={onConfigurar}>
+        <SlidersHorizontal className="size-4" />
+      </button>
+      {separador}
+      {(Object.keys(NOTAS) as Nota[]).map((n) => {
+        const { Icone, rotulo } = NOTAS[n];
+        const marcada = b?.tipo === "ANOTACAO" && b.nota === n;
+        return (
+          <button
+            key={n}
+            type="button"
+            className={`${botao} ${marcada ? "bg-gray-200 text-gray-900" : ""}`}
+            disabled={b?.tipo !== "ANOTACAO"}
+            title={`Nota: ${rotulo}`}
+            aria-label={`Nota: ${rotulo}`}
+            aria-pressed={marcada}
+            onClick={() => onMudar({ nota: n } as Partial<Bloco>)}
+          >
+            <Icone className="size-4" />
+          </button>
+        );
+      })}
+      {separador}
+      {/* A formatação: no Sumário, a dele, por nível (20/10/2026); nos demais, a do texto (17/10/2026). */}
+      {b?.tipo === "SUMARIO" ? (
+        <BarraDoSumario b={b} botao={botao} onMudar={(m) => onMudar(m as Partial<Bloco>)} />
+      ) : (
+        <BarraDeTexto
+          campo={comTexto ? campo : semCampo}
+          botao={botao}
+          desabilitado={!comTexto}
+          // A fonte e o espaçamento entre as linhas (20/10/2026), nas anotações e no Texto Livre.
+          fontes={doTexto}
+          espacamento={doTexto ? { valor: b.espacamento, definir: (espacamento) => onMudar({ espacamento } as Partial<Bloco>) } : undefined}
+          titulo={
+            b?.tipo === "ANOTACAO"
+              ? {
+                  campo: () => campo()?.closest(".group")?.querySelector<HTMLInputElement>("[data-titulo-da-anotacao]") ?? null,
+                  tamanho: b.tamanhoTitulo ?? TAMANHO_DO_TITULO,
+                  definir: (px) => onMudar({ tamanhoTitulo: px } as Partial<Bloco>),
+                  fonte: b.fonteTitulo,
+                  definirFonte: (fonteTitulo) => onMudar({ fonteTitulo } as Partial<Bloco>),
+                }
+              : undefined
+          }
+        />
+      )}
+      {separador}
+      <button type="button" className={`${botao} hover:text-red-700`} disabled={!b} title="Excluir o bloco (Delete)" aria-label="Excluir o bloco" onClick={onExcluir}>
+        <Trash2 className="size-4" />
       </button>
     </div>
   );
@@ -819,7 +955,7 @@ function ConteudoDoBloco({
           )}
         </header>
         <article className={`flex min-h-0 flex-1 rounded-sm border border-l-4 border-gray-200 bg-white ${n.classe(cores)}`}>
-          {/* O texto formatado (17/10/2026; antes, só texto): a formatação na barra do bloco. */}
+          {/* O texto formatado (17/10/2026; antes, só texto): a formatação no menu da edição. */}
           <TextoRico
             html={b.html}
             texto={b.texto}
@@ -890,7 +1026,7 @@ function ConteudoDoBloco({
             </label>
           )}
         </div>
-        {/* A legenda formatada (17/10/2026; antes, só texto): a formatação na barra do bloco. A Imagem Livre não a tem. */}
+        {/* A legenda formatada (17/10/2026; antes, só texto): a formatação no menu da edição. A Imagem Livre não a tem. */}
         {!b.livre && (editavel || b.legenda) ? (
           <figcaption
             className="max-h-[40%] min-h-9 shrink-0 overflow-auto rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white text-sm font-semibold text-gray-900"
