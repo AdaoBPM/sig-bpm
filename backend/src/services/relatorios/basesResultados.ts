@@ -8,8 +8,9 @@
  *   Pré-Fabricado (também na Filial: corrigido na planilha em 08/10/2026,
  *   antes era sobre a ROL); os de montagem (CSM) sobre a
  *   Receita Líquida de Montagem; os complementares (CSC) sobre a Receita
- *   Líquida Complementar; Frete e Descarga sobre a Receita Líquida de Frete; o
- *   resto sobre a ROL. As linhas de volume (PS) não têm %.
+ *   Líquida Complementar; Frete e Descarga sobre a Receita Líquida de Frete (em
+ *   Serviços, o frete dos complementares, sobre a Receita Líquida Complementar,
+ *   24/10/2026); o resto sobre a ROL. As linhas de volume (PS) não têm %.
  * - R$/m³: a receita do pré-fabricado e os custos de produção sobre a
  *   produção (m³); a receita de montagem e os custos de montagem sobre a
  *   montagem (m³); o Frete e Descarga sobre a expedição (m³) (21/10/2026). As demais linhas não têm.
@@ -52,7 +53,8 @@ export function baseDoPercentual(visao: VisaoResultados, l: Linha): string | nul
   if (l.grupoSigla === "CPP") return COD.RLPF;
   if (l.grupoSigla === "CSM") return COD.RLM;
   if (l.grupoSigla === "CSC") return COD.RLC;
-  if (l.codigo === COD.FRETE) return COD.RLF;
+  // Em Serviços, o frete é o dos complementares (24/10/2026): sobre a Receita Líquida Complementar.
+  if (l.codigo === COD.FRETE) return visao === 3 ? COD.RLC : COD.RLF;
   return COD.RO;
 }
 

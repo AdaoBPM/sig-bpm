@@ -69,6 +69,8 @@ export const LIQUIDA_DA_BRUTA: Record<string, string> = {
  * demais são complementares (a receita complementar e os custos na CSC).
  */
 const LINHAS_DE_MONTAGEM = new Set(["MONTAGEM", "VEDAÇÃO"]);
+/** O Frete e Descarga do DVV: em Serviços, só das linhas complementares (24/10/2026). */
+const FRETE_DOS_COMPLEMENTARES = "DVV.GGV.FRETE_E_DESCARGA";
 const PISTAS = "m³ e pistas";
 /**
  * As linhas com a demanda de armadura (14/10/2026), em kg por unidade da linha (kg/m³, kg/kg, kg/m²…), e as com a
@@ -118,7 +120,8 @@ export function contasDaLinha(est: LinhaEstrutura[], l: LinhaDoCadastro) {
     // A mão de obra terceirizada (14/10/2026) é custo unitário da linha: a de produção na Matriz e na Filial, a de
     // serviços em Serviços (não vem dos centros de custo). Desde 15/10/2026, antes das matérias primas.
     custos: [...daUnidade(`${custo}.MOT.`), ...daUnidade(`${custo}.MP.`), ...daUnidade(`${custo}.GGV.`), ...daUnidade(`${custo}.E.`)],
-    dvv: daUnidade("DVV.GGV."),
+    // Em Serviços, o Frete e Descarga é só dos complementares (24/10/2026): as linhas de montagem não o têm.
+    dvv: daUnidade("DVV.GGV.").filter((x) => !(custo === "CSM" && x.codigo === FRETE_DOS_COMPLEMENTARES)),
   };
 }
 

@@ -742,7 +742,8 @@ export function ResultadosContent() {
             <p>
               A participação é sobre a ROB nas receitas e nos impostos; sobre a Receita Líquida do Pré-Fabricado nos custos de produção
               (também na Filial); sobre a Receita Líquida de Montagem e a Complementar nos custos de serviços; sobre a Receita Líquida de Frete
-              no Frete e Descarga; e sobre a ROL no resto. O valor unitário divide a receita e os custos do pré-fabricado pela produção (m³) e os
+              no Frete e Descarga (em Serviços, onde ele é o frete dos complementares — só o rateio COMPLEMENTAR —, sobre a Receita Líquida
+              Complementar); e sobre a ROL no resto. O valor unitário divide a receita e os custos do pré-fabricado pela produção (m³) e os
               de montagem pela montagem (m³). Em Despesas e Extra, no RN e nos centros de custo, as bases são as do Consolidado.
             </p>
             <p>Nos centros de custo, cada mês mostra o mesmo recorte da DRE: os custos e despesas de mão de obra, gastos gerais e depreciação.</p>

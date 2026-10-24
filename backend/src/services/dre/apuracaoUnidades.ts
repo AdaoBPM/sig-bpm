@@ -210,6 +210,8 @@ export function abasQueSomam(
       else if (impostos) { if (b === "OBRAS") abas.push(u); }
       else if (g === "CSM" && b === "OBRAS") abas.push(u);
       else if (g === "CSC" && b === "COMPLEMENTAR") abas.push(u);
+      // O frete dos complementares (24/10/2026): o Frete e Descarga do DVV, só do balde COMPLEMENTAR.
+      else if (g === "DVV" && desc === n("Frete e Descarga") && b === "COMPLEMENTAR") abas.push(u);
       // A Montagem com o balde COMPLEMENTAR vai para a linha equivalente dos Complementares, quando ela existe.
       else if (g === "CSM" && b === "COMPLEMENTAR" && l.parNaComplementar) abas.push(u);
     } else if (u === UNIDADE.DESPESAS) abas.push(u);
@@ -482,6 +484,15 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
         });
       } else if (desc === n("Receita Líquida de Montagem")) {
         continue; // depois dos impostos
+      } else if (l.grupoSigla === "DVV" && desc === n("Frete e Descarga")) {
+        // O frete dos complementares (24/10/2026, pedido do Adão): em Serviços, só o balde COMPLEMENTAR; o de montagem
+        // (OBRAS) não tem a linha. Na Matriz e na Filial, o frete segue como antes.
+        const v = somaDireto(l.id, { balde: (b) => b === "COMPLEMENTAR" });
+        gravar(u, l, v, {
+          regra: "Lançamentos contábeis do balde COMPLEMENTAR, todas as filiais (o frete dos complementares)",
+          direto: v.toFixed(2),
+          origem: { contabil: { linhaId: l.id, baldes: ["COMPLEMENTAR"] } },
+        });
       } else if (l.grupoSigla === "CSM" || l.grupoSigla === "CSC") {
         const montagem = l.grupoSigla === "CSM";
         const destino = montagem ? "MONTAGEM" : "COMPLEMENTAR";

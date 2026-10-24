@@ -5,6 +5,7 @@ import { Prisma } from "../src/generated/prisma/client.js";
 import { abasDaConta, abasQueSomam, apurarUnidades, combinacoesDaConta, type LinhaEstrutura } from "../src/services/dre/apuracaoUnidades.js";
 import { apurarCentros, consolidar } from "../src/services/dre/consolidacao.js";
 import { avaliarExpressao } from "../src/services/dre/expressao.js";
+import { baseDoPercentual } from "../src/services/relatorios/basesResultados.js";
 
 const D = (v: number) => new Prisma.Decimal(v);
 
@@ -233,5 +234,35 @@ describe("lançamentos manuais em todas as abas e a Montagem do balde Complement
     // A própria linha primeiro, depois a de mesma atribuição e descrição nos Complementares.
     assert.deepEqual(permitidas("CSM.PJ"), ["CSM.PJ:ACOMPANHAMENTO", "CSM.PJ:OBRAS", "CSM.PJ:COMPLEMENTAR", "CSC.PJ:COMPLEMENTAR"]);
     assert.deepEqual(permitidas("CP.CLT"), ["CP.CLT:UNIDADE", "CP.CLT:PRODUCAO", "CP.CLT:MATRIZ", "CP.CLT:FILIAL"]);
+  });
+});
+
+describe("o frete dos complementares em Serviços (24/10/2026)", () => {
+  const linha = (codigo: string, grupo: string, grupoSigla: string, descricao: string, unidades: number[]): LinhaEstrutura => ({
+    id: codigo, codigo, tipo: "ITEM", grupo, grupoSigla, atribuicao: "Gastos Gerais Variáveis", descricao, expressao: null, unidades,
+  });
+  const frete = linha("DVV.GGV.FRETE_E_DESCARGA", "DESPESAS VARIÁVEIS DE VENDA (DVV)", "DVV", "Frete e Descarga", [1, 2, 3]);
+
+  it("Serviços lê só o balde COMPLEMENTAR; a Matriz e a Filial, como antes", () => {
+    const abas = (balde: string, filial = 1) => abasQueSomam(frete, { filial, balde, rateio: false });
+    assert.deepEqual(abas("COMPLEMENTAR"), [3]);
+    assert.deepEqual(abas("OBRAS"), []); // o frete da montagem não tem a linha
+    assert.deepEqual(abas("MATRIZ"), [1]);
+    assert.deepEqual(abas("UNIDADE", 2), [2]);
+    const { resultados } = apurarUnidades({
+      linhas: [frete], manuais: [], receitas: [], totais: new Map(), percentuais: new Map(),
+      lancamentos: [
+        { filial: 1, linhaDREId: frete.id, balde: "COMPLEMENTAR", alocacao: "DIRETO", valor: D(300) },
+        { filial: 2, linhaDREId: frete.id, balde: "COMPLEMENTAR", alocacao: "DIRETO", valor: D(20) },
+        { filial: 1, linhaDREId: frete.id, balde: "OBRAS", alocacao: "DIRETO", valor: D(7) },
+        { filial: 1, linhaDREId: frete.id, balde: "MATRIZ", alocacao: "DIRETO", valor: D(1000) },
+      ],
+    });
+    const v = (u: number) => resultados.find((r) => r.unidade === u && r.codigo === frete.codigo)?.valor.toString();
+    assert.equal(v(3), "320");
+    assert.equal(v(1), "1000");
+    // O % em Serviços sobre a Receita Líquida Complementar; na Matriz, sobre a de frete.
+    assert.equal(baseDoPercentual(3, frete), "ROL.RLC.RECEITA_LIQUIDA_COMPLEMENTAR");
+    assert.equal(baseDoPercentual(1, frete), "ROL.RLF.RECEITA_LIQUIDA_DE_FRETE");
   });
 });
