@@ -14,13 +14,13 @@ import { NOME_DA_PLATAFORMA, videoDoLink } from "./videoIncorporado";
 
 /** O maior vídeo do computador (20/10/2026): 200 MB. */
 export const MAXIMO_DO_VIDEO = 200 * 1024 * 1024;
-const TIPOS_DE_VIDEO = ["video/mp4", "video/webm", "video/quicktime", "video/x-m4v", "video/ogg"];
+export const TIPOS_DE_VIDEO = ["video/mp4", "video/webm", "video/quicktime", "video/x-m4v", "video/ogg"];
 
 /** O vídeo escolhido: o arquivo (com a proporção dele) ou o link (com a proporção do player da plataforma). */
 export type VideoEscolhido = { origem: "ARQUIVO"; arquivo: File; proporcao: number } | { origem: "LINK"; url: string; proporcao: number };
 
 /** A proporção (largura ÷ altura) do vídeo, lida no navegador; sem ela (o formato que o navegador não abre), 16:9. */
-function proporcaoDoArquivo(arquivo: File): Promise<number> {
+export function proporcaoDoArquivo(arquivo: File): Promise<number> {
   return new Promise((ok) => {
     const v = document.createElement("video");
     const endereco = URL.createObjectURL(arquivo);
@@ -33,6 +33,17 @@ function proporcaoDoArquivo(arquivo: File): Promise<number> {
     v.onerror = () => fim(16 / 9);
     v.src = endereco;
   });
+}
+
+/**
+ * O vídeo de um link (o endereço ou o código "incorporar" da plataforma), com a proporção do player; null quando não é de
+ * uma das plataformas aceitas. Também o Ctrl+V de um link na página (24/10/2026), que vira o bloco sem o modal.
+ */
+export function videoDoTexto(texto: string): VideoEscolhido | null {
+  const link = texto.trim() ? videoDoLink(texto) : null;
+  if (!link) return null;
+  const t = texto.trim();
+  return { origem: "LINK", url: t.startsWith("<") ? (/src=["']([^"']+)/.exec(t)?.[1] ?? t).replace(/&amp;/g, "&") : t, proporcao: link.proporcao };
 }
 
 const tamanho = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
@@ -57,7 +68,8 @@ export function VideoDialog({ titulo = "Adicionar Vídeo", onEscolher, onFechar 
   const erroDoLink = url.trim() && !link ? "O link não é de um vídeo do YouTube, Instagram, Facebook ou LinkedIn." : null;
   const pronto = origem === "ARQUIVO" ? !!arquivo && !erroDoArquivo : !!link;
   const escolher = async () => {
-    if (origem === "LINK" && link) return onEscolher({ origem: "LINK", url: url.trim().startsWith("<") ? (/src=["']([^"']+)/.exec(url)?.[1] ?? url.trim()).replace(/&amp;/g, "&") : url.trim(), proporcao: link.proporcao });
+    const doLink = origem === "LINK" ? videoDoTexto(url) : null;
+    if (doLink) return onEscolher(doLink);
     if (!arquivo) return;
     setLendo(true);
     const proporcao = await proporcaoDoArquivo(arquivo);

@@ -29,6 +29,8 @@ relatoriosExecutivosRoutes.get("/:id/fotos/:arquivo", autenticacao, ler, asyncHa
 // Os vídeos (20/10/2026): o arquivo cru no corpo, gravado enquanto chega (até 200 MB), e a leitura em partes (Range).
 relatoriosExecutivosRoutes.post("/:id/videos", autenticacao, editar, asyncHandler(c.salvarVideo));
 relatoriosExecutivosRoutes.get("/:id/videos/:arquivo", autenticacao, ler, asyncHandler(c.lerVideo));
+// A cópia das fotos e dos vídeos de outro relatório (24/10/2026), ao colar blocos copiados dele.
+relatoriosExecutivosRoutes.post("/:id/arquivos/copiar", autenticacao, editar, asyncHandler(c.copiarArquivos));
 relatoriosExecutivosRoutes.put("/:id/abas/:departamento", autenticacao, editar, asyncHandler(c.gravarAba));
 relatoriosExecutivosRoutes.post("/:id/abas/:departamento/finalizar", autenticacao, editar, asyncHandler(c.finalizarAba));
 relatoriosExecutivosRoutes.post("/:id/abas/:departamento/reabrir", autenticacao, ler, asyncHandler(c.reabrirAba));

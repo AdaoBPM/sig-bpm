@@ -13,7 +13,7 @@ const PERMITIDOS = { ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "span", "font
 export const limparHtml = (html: string) => (typeof window === "undefined" ? "" : DOMPurify.sanitize(html, PERMITIDOS));
 
 /** O texto simples de antes (sem formatação) em HTML: os caracteres escapados e as quebras de linha. */
-const deTexto = (texto: string) => texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+export const deTexto = (texto: string) => texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
 
 /**
  * As cores da fonte, na ordem pedida. Padrão (17/10/2026; antes, Preto) tira a cor escolhida: o texto volta à cor do tema
@@ -409,7 +409,11 @@ export function BarraDeTexto({
 }) {
   const [aberta, setAberta] = useState<"cor" | "marcador" | "tamanho" | "fonte" | "espacamento" | null>(null);
   // Outro bloco escolhido (24/10/2026, o menu único): a lista aberta fecha.
-  useEffect(() => setAberta(null), [campo, desabilitado]);
+  const [doBloco, setDoBloco] = useState({ campo, desabilitado });
+  if (doBloco.campo !== campo || doBloco.desabilitado !== desabilitado) {
+    setDoBloco({ campo, desabilitado });
+    setAberta(null);
+  }
   // O tamanho do texto onde está o cursor (o número do botão), a cada mudança da seleção; no título, o dele.
   const [tamanho, setTamanho] = useState(14);
   // A fonte do texto onde está o cursor (22/10/2026), destacada na lista das fontes; no título, a dele.

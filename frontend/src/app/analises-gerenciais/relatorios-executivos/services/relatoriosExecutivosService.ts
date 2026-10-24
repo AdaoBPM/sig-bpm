@@ -208,6 +208,9 @@ export const relatoriosExecutivosService = {
    */
   gravarAba: async (id: string, aba: string, paginas: Pagina[], opcoes: { versao?: string; forcar?: boolean } = {}) =>
     (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas, ...opcoes })).data.data,
+  /** Copia as fotos e os vídeos de outro relatório para este (24/10/2026: colar blocos copiados dele). */
+  copiarArquivos: async (id: string, de: string, arquivos: string[]) =>
+    (await api.post<{ data: { copiados: number; faltando: string[] } }>(`${base}/${id}/arquivos/copiar`, { de, arquivos })).data.data,
   finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
   reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
   enviarFoto: async (id: string, foto: Blob) =>

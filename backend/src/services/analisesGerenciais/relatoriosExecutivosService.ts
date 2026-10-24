@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -498,6 +498,29 @@ export const relatoriosExecutivosService = {
     await mkdir(pastaDasFotos(id), { recursive: true });
     await writeFile(join(pastaDasFotos(id), arquivo), conteudo);
     return { arquivo };
+  },
+
+  /**
+   * Copia fotos e vídeos de outro relatório para a pasta deste (24/10/2026: colar blocos copiados de outro relatório), com
+   * os mesmos nomes; os que já estão aqui ficam. Devolve os que não se acharam na origem.
+   */
+  async copiarArquivos(id: string, origemId: string, arquivos: string[], usuario: UsuarioDoRelatorio) {
+    if (!usuario.edita) throw new RelatorioExecutivoError(403, "Seu perfil não edita os relatórios.");
+    await doRelatorio(id);
+    await doRelatorio(origemId);
+    const validos = [...new Set(arquivos)].filter((a) => NOME_DA_FOTO.test(a) || NOME_DO_VIDEO.test(a));
+    await mkdir(pastaDasFotos(id), { recursive: true });
+    const faltando: string[] = [];
+    for (const a of validos) {
+      const destino = join(pastaDasFotos(id), a);
+      if (await stat(destino).catch(() => null)) continue;
+      const copiou = await copyFile(join(pastaDasFotos(origemId), a), destino).then(
+        () => true,
+        () => false,
+      );
+      if (!copiou) faltando.push(a);
+    }
+    return { copiados: validos.length - faltando.length, faltando };
   },
 
   /** Uma foto do relatório: o conteúdo e o tipo. */

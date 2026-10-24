@@ -157,6 +157,14 @@ export const relatoriosExecutivosController = {
   },
 
   /** Uma foto nova (16/10/2026): o arquivo vai cru no corpo, com o tipo no Content-Type. */
+  copiarArquivos(request: Request, response: Response) {
+    const r = id(request, response);
+    if (!r) return;
+    const corpo = z.object({ de: z.string().uuid(), arquivos: z.array(z.string().max(60)).min(1).max(200) }).safeParse(request.body);
+    if (!corpo.success) return response.status(400).json({ error: "Informe o relatório de origem e os arquivos." });
+    return responder(response, () => s.copiarArquivos(r, corpo.data.de, corpo.data.arquivos, usuario(request)));
+  },
+
   salvarFoto(request: Request, response: Response) {
     const r = id(request, response);
     if (!r) return;

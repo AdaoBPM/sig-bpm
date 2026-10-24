@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { podeSair, useAlteracoesPendentes, useSalvamentoPendente } from "@/lib/alteracoesPendentes";
+import { plural } from "@/lib/texto";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { useCoresDoPainel } from "@/app/relatorios/painel/PainelContent";
@@ -27,8 +28,11 @@ import { ConfigurarSumarioDialog } from "../components/SumarioDoRelatorio";
 import { ConfigurarTabelaDialog } from "../components/TabelaDoRelatorio";
 import { ExportarPdfDoRelatorio } from "../components/ExportarPdfDoRelatorio";
 import { CONFIGURACOES, ConfiguracoesDoRelatorio } from "../components/ConfiguracoesDoRelatorio";
-import { VideoDialog, type VideoEscolhido } from "../components/VideoDialog";
-import { BarraDeEdicao, COLUNAS, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, tamanhoInicial } from "../components/GradeDoRelatorio";
+import { MAXIMO_DO_VIDEO, proporcaoDoArquivo, TIPOS_DE_VIDEO, VideoDialog, videoDoTexto, type VideoEscolhido } from "../components/VideoDialog";
+import { BarraDeEdicao, COLUNAS, escrevendoAgora, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, linhasDoTexto, lugarLivre, tamanhoInicial } from "../components/GradeDoRelatorio";
+import { ColarNoSlideDialog, type Colado, type ComoColar } from "../components/ColarNoSlideDialog";
+import { copiaDe, copiaPeloTexto, formatacaoBasica, TIPO_DA_COPIA, useCopia, type Copia } from "../components/copiarColar";
+import { deTexto, limparHtml } from "../components/TextoRico";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
@@ -207,7 +211,13 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     if (n.tipo === "ANOTACAO" && ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS) return { x: ultimo.x + ultimo.w, y: ultimo.y, ...t, h: Math.max(t.h, ultimo.h) };
     return { x: 0, y: fim + k, ...t };
   };
-  const incluir = (novos: ConteudoDoBloco[]) => mudarPagina([...daPagina, ...novos.map((n, k) => ({ ...n, id: novoId(), ...posicao(n, k) }) as Bloco)]);
+  // O bloco adicionado (24/10/2026: também o colado) fica escolhido, com o menu da edição dele.
+  const [escolher, setEscolher] = useState<{ id: string } | undefined>(undefined);
+  const incluir = (novos: ConteudoDoBloco[]) => {
+    const blocos = novos.map((n, k) => ({ ...n, id: novoId(), ...posicao(n, k) }) as Bloco);
+    mudarPagina([...daPagina, ...blocos]);
+    if (blocos[0]) setEscolher({ id: blocos[0].id });
+  };
   // A foto (16/10/2026): reduzida no navegador, enviada ao servidor e incluída como as anotações, na altura da proporção dela.
   // A Imagem Livre (21/10/2026) é a foto com `livre`: só a imagem, sem a legenda (a altura, só a da imagem).
   const foto = useMutation({
@@ -221,7 +231,9 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       // A grade tem 24 px a mais que a área (as margens de fora dos blocos).
       const h = linhasDaFoto(t.w, proporcao, larguraDoSlide(), livre);
       const p = ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS ? { x: ultimo.x + ultimo.w, y: ultimo.y } : { x: 0, y: fim };
-      mudarPagina([...daPagina, { tipo: "FOTO", arquivo: nome, legenda: "", proporcao, ...(livre ? { livre: true } : {}), id: novoId(), ...p, w: t.w, h }]);
+      const id = novoId();
+      mudarPagina([...daPagina, { tipo: "FOTO", arquivo: nome, legenda: "", proporcao, ...(livre ? { livre: true } : {}), id, ...p, w: t.w, h }]);
+      setEscolher({ id });
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
   });
@@ -261,7 +273,9 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       const t = tamanhoInicial({ tipo: "VIDEO" });
       const h = linhasDaFoto(t.w, m.proporcao, largura);
       const p = ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS ? { x: ultimo.x + ultimo.w, y: ultimo.y } : { x: 0, y: fim };
-      mudarPagina([...daPagina, { tipo: "VIDEO", ...m, legenda: "", id: novoId(), ...p, w: t.w, h }]);
+      const id = novoId();
+      mudarPagina([...daPagina, { tipo: "VIDEO", ...m, legenda: "", id, ...p, w: t.w, h }]);
+      setEscolher({ id });
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar o vídeo.")),
   });
@@ -275,6 +289,58 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     onSuccess: (f) => setAjustandoFundo(f),
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a imagem.")),
   });
+  // Colar os blocos copiados (24/10/2026, pedido do Adão): na página aberta, cada um o mais perto do lugar de onde veio em
+  // que caiba sem encobrir outro bloco. Os de outro relatório trazem antes as fotos e os vídeos para a pasta deste; os que
+  // não vêm (não estão lá, ou o relatório foi excluído) ficam como o quadro vazio, com o Carregar.
+  const copia = useCopia();
+  const colarBlocos = async (c: Copia) => {
+    let blocos = c.blocos;
+    const arquivos = c.relatorioId === relatorio.id ? [] : blocos.flatMap((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo ? [b.arquivo] : []));
+    if (arquivos.length) {
+      const faltando = await relatoriosExecutivosService.copiarArquivos(relatorio.id, c.relatorioId, arquivos).then(
+        (r) => r.faltando,
+        () => arquivos,
+      );
+      if (faltando.length) {
+        toast.warning(`${plural(faltando.length, "1 imagem ou vídeo do outro relatório não veio", `${faltando.length} imagens ou vídeos do outro relatório não vieram`)}: o bloco fica com o quadro vazio.`);
+        blocos = blocos.map((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && faltando.includes(b.arquivo) ? ({ ...b, arquivo: "" } as Bloco) : b));
+      }
+    }
+    const linhas = linhasDaPagina();
+    const novos: Bloco[] = [];
+    for (const b of blocos) {
+      const w = Math.min(b.w, COLUNAS);
+      novos.push({ ...structuredClone(b), id: novoId(), w, ...lugarLivre([...daPagina, ...novos], w, b.h, b.x, b.y, linhas) });
+    }
+    mudarPagina([...daPagina, ...novos]);
+    setEscolher({ id: novos[0].id });
+  };
+  // O que veio de outro programa (24/10/2026): o texto e a imagem esperam a escolha no Colar no Slide; o vídeo entra direto.
+  const [colado, setColado] = useState<Colado | null>(null);
+  const colarVideo = async (arquivo: File) => {
+    if (arquivo.size > MAXIMO_DO_VIDEO) return void toast.error("O vídeo colado passa de 200 MB.");
+    video.mutate({ v: { origem: "ARQUIVO", arquivo, proporcao: await proporcaoDoArquivo(arquivo) }, quadro: null });
+  };
+  // O texto entra como Texto Livre ou Anotação (com a formatação básica, se escolhida, nos limites do servidor), no lugar
+  // mais perto do alto da página em que caiba; a imagem, como a do Adicionar (com Legenda, Livre ou de Fundo).
+  const aplicarColado = (c: Colado, como: ComoColar) => {
+    setColado(null);
+    if (como.tipo === "IMAGEM") {
+      if (!c.imagem) return;
+      if (como.como === "FUNDO") imagemDeFundo.mutate(c.imagem);
+      else foto.mutate({ arquivo: c.imagem, livre: como.como === "LIVRE" });
+      return;
+    }
+    const texto = c.texto.trim().slice(0, 5000);
+    const formatado = como.formatado && c.html ? limparHtml(formatacaoBasica(c.html)) : "";
+    const html = formatado && formatado.length <= 30_000 ? formatado : deTexto(texto);
+    const w = 6;
+    const h = linhasDoTexto(texto, w, como.tipo === "ANOTACAO" ? 30 : 0);
+    const conteudo = como.tipo === "ANOTACAO" ? { tipo: "ANOTACAO" as const, nota: como.nota, texto, html } : { tipo: "TEXTO" as const, texto, html };
+    const id = novoId();
+    mudarPagina([...daPagina, { ...conteudo, id, w, h, ...lugarLivre(daPagina, w, h, 0, 0, linhasDaPagina()) }]);
+    setEscolher({ id });
+  };
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
   const novaPagina = () => {
     const nova = { id: novoId(), blocos: [] };
@@ -440,6 +506,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   const vazia = daAba.every((p) => p.blocos.length === 0);
   const botaoIcone = "inline-flex size-8 items-center justify-center rounded-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40";
   const editaAlgum = relatorio.abas.some((a) => a.podeEditar);
+  // O Colar do menu da edição (24/10/2026): o último bloco copiado no SIG (o botão não lê a área de transferência).
+  const colarDoMenu = editavel && copia ? () => void colarBlocos(copia) : undefined;
   const classeDaSituacao = "inline-flex h-9 items-center gap-1.5 rounded-sm px-2 text-sm whitespace-nowrap";
   // O Ctrl+Z e o Ctrl+Y (ou Ctrl+Shift+Z) fora dos textos em edição (neles, valem os do navegador, na digitação) e dos modais.
   useEffect(() => {
@@ -456,6 +524,34 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     };
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
+  });
+  // O Ctrl+V na página (24/10/2026): os blocos copiados no SIG entram direto, e o vídeo (o arquivo ou o link de uma das
+  // plataformas) também; o texto e a imagem de outro programa abrem o Colar no Slide. Num texto em edição, vale a colagem
+  // do navegador, menos para os blocos do SIG e para a imagem sem texto (que não cabem no texto).
+  useEffect(() => {
+    if (configuracoes || !editavel || !pagina) return;
+    const aoColar = (e: ClipboardEvent) => {
+      const dados = e.clipboardData;
+      if (!dados || document.querySelector("[role=dialog]")) return;
+      const arquivos = [...dados.files];
+      const imagem = arquivos.find((a) => a.type.startsWith("image/")) ?? null;
+      const arquivoDeVideo = arquivos.find((a) => TIPOS_DE_VIDEO.includes(a.type));
+      const texto = dados.getData("text/plain");
+      // O tipo do SIG; sem ele (a área de transferência que só guarda o texto), fora dos textos em edição, a última cópia do
+      // SIG com esse texto.
+      const doSig = copiaDe(dados.getData(TIPO_DA_COPIA)) ?? (arquivos.length || escrevendoAgora() ? null : copiaPeloTexto(texto));
+      if (escrevendoAgora() && !doSig && !(imagem && !texto.trim())) return;
+      // O link (sem espaços) ou o código "incorporar" da plataforma.
+      const link = !imagem && (/^<iframe/i.test(texto.trim()) || (!!texto.trim() && !/\s/.test(texto.trim()))) ? videoDoTexto(texto) : null;
+      if (!doSig && !arquivoDeVideo && !link && !imagem && !texto.trim()) return;
+      e.preventDefault();
+      if (doSig) void colarBlocos(doSig);
+      else if (arquivoDeVideo) void colarVideo(arquivoDeVideo);
+      else if (link) video.mutate({ v: link, quadro: null });
+      else setColado({ imagem, texto, html: dados.getData("text/html") });
+    };
+    window.addEventListener("paste", aoColar);
+    return () => window.removeEventListener("paste", aoColar);
   });
   return (
     // O nome do comparado (22/10/2026: o cenário das Configurações) no "vs." dos cards e na legenda, na tela, na apresentação e no PDF.
@@ -700,14 +796,24 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               informações não se amontoarem; a imagem e os vídeos só pelos cantos, na proporção deles). Clique e segure na borda destacada para mover o bloco.
               Ao mover ou redimensionar, a grade aparece no fundo, bem clara, e o bloco se encaixa nela; o bloco arrastado sobre outro o empurra e, se você
               continua arrastando e sai de cima dele, o empurrado volta ao lugar. Um clique fora dos blocos ou o Esc soltam o escolhido; o Delete (fora de um
-              texto) o exclui. Num vídeo, o primeiro clique o escolhe; depois, o player responde.
+              texto) o exclui. Num vídeo, o primeiro clique o escolhe; depois, o player responde. O bloco adicionado ou colado já fica escolhido.
+            </li>
+            <li>
+              Copiar e colar: com um bloco escolhido, o Ctrl+C (ou o Copiar do menu da edição) o copia, e o Ctrl+X o recorta; o Ctrl+V (ou o Colar) o cola
+              na página aberta — desta ou de outra aba, ou de outro relatório (as imagens e os vídeos vêm junto) —, no lugar livre mais perto de onde ele
+              estava (sem lugar na página, embaixo do último bloco). Num texto em edição, o Ctrl+C copia o trecho selecionado; sem trecho, o bloco. De outro
+              programa, o Ctrl+V de um texto ou de uma imagem abre o Colar no Slide: o texto entra como Texto Livre ou como Anotação (Positivo, Negativo ou
+              Atenção), com a formatação básica (negrito, itálico, sublinhado e listas; sem as fontes, os tamanhos e as cores de lá) ou só o texto; a imagem,
+              como Imagem com Legenda, Imagem Livre ou Imagem de Fundo. Com o texto e a imagem juntos (a cópia do Word ou do Excel), as duas escolhas. O link
+              de um vídeo do YouTube, do Instagram, do Facebook ou do LinkedIn (ou um arquivo de vídeo) entra direto como vídeo, sem o modal. Num texto em
+              edição, o Ctrl+V de fora cola no próprio texto.
             </li>
             <li>
               O menu da edição, logo abaixo das abas (centralizado e preso no alto ao rolar a página), tem as opções de todos os tipos de bloco, sempre
               nos mesmos lugares; as que não valem para o bloco escolhido ficam quase apagadas (o nome do bloco aparece na dica da borda dele). Da esquerda para a
               direita: Desfazer e Refazer (Ctrl+Z e Ctrl+Y, ou Ctrl+Shift+Z: as alterações desta sessão, em todas as abas, até 100 passos; a digitação seguida
               conta como um passo, e o Desfazer abre a aba e a página da alteração; dentro de um texto em edição, o Ctrl+Z desfaz a digitação, como no
-              navegador), o gráfico dos cards do Painel e dos Indicadores (em
+              navegador), Copiar e Colar (o bloco; veja acima), o gráfico dos cards do Painel e dos Indicadores (em
               ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), Configurar (as opções do
               gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
               imagem, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
@@ -881,7 +987,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       ) : daPagina.length === 0 && !pagina?.fundo ? (
         <>
           {/* O menu da edição também na página vazia (o Desfazer traz de volta o último bloco excluído). */}
-          {editavel ? <BarraDeEdicao desfazer={desfazer} refazer={refazer} /> : null}
+          {editavel ? <BarraDeEdicao desfazer={desfazer} refazer={refazer} colar={colarDoMenu} /> : null}
           <p className="rounded-sm border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
             {editavel ? "A página está vazia: use “Adicionar”, na linha do título." : "Nada nesta página."}
           </p>
@@ -902,6 +1008,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
           onEscolherVideo={(id) => setEscolhendoVideo(id)}
           desfazer={desfazer}
           refazer={refazer}
+          colar={colarDoMenu}
+          escolher={escolher}
           onMudar={mudarPagina}
         />
       )}
@@ -974,6 +1082,9 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      ) : null}
+      {colado && pagina ? (
+        <ColarNoSlideDialog colado={colado} pagina={nomeDaPagina(pagina, nPagina)} temFundo={!!pagina.fundo} onColar={(como) => aplicarColado(colado, como)} onFechar={() => setColado(null)} />
       ) : null}
       {apresentando !== null ? (
         <ApresentacaoDoRelatorio

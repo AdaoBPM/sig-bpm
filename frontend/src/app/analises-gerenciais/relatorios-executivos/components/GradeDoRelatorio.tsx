@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
-import { ChartColumn, CircleAlert, CirclePlay, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import { ChartColumn, CircleAlert, CirclePlay, ClipboardPaste, Copy, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -26,6 +26,7 @@ import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } 
 import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
 import { videoDoLink } from "./videoIncorporado";
 import { ConfigurarTabelaDialog, TabelaDoBloco } from "./TabelaDoRelatorio";
+import { guardarCopia, textoDoBloco, TIPO_DA_COPIA, type Copia } from "./copiarColar";
 
 
 /** A grade: 12 colunas, linhas de 24 px, 12 px entre os blocos. */
@@ -147,6 +148,38 @@ const ALTURA_DA_LEGENDA = 44;
 export function linhasDaFoto(w: number, proporcao: number, largura: number, semLegenda = false) {
   // A Imagem Livre (21/10/2026) não tem a legenda: a altura é só a da imagem.
   return Math.max(2, linhasSemMinimo(w, proporcao, largura, semLegenda ? 0 : ALTURA_DA_LEGENDA));
+}
+
+/**
+ * As linhas para um texto colado (24/10/2026) caber num bloco de `w` colunas: uma estimativa pelo número de letras (a fonte
+ * padrão, de 14 px: uns 7,5 px por letra e 20 px por linha), mais `extra` px (o título da anotação), até a altura da página.
+ */
+export function linhasDoTexto(texto: string, w: number, extra = 0) {
+  const coluna = (larguraDoSlide() - MARGEM * (COLUNAS - 1) - MARGEM * 2) / COLUNAS;
+  const porLinha = Math.max(10, Math.floor((coluna * w + MARGEM * (w - 1) - 32) / 7.5));
+  const linhas = texto.split("\n").reduce((n, p) => n + Math.max(1, Math.ceil(p.length / porLinha)), 0);
+  return Math.max(2, Math.min(linhasDaPagina(), Math.round((linhas * 20 + 24 + extra + MARGEM) / (ALTURA_DA_LINHA + MARGEM))));
+}
+
+/**
+ * O lugar do bloco colado (24/10/2026): o mais perto de (x0, y0) em que ele cabe na página sem encobrir outro bloco; sem
+ * nenhum, embaixo do último, na coluna de origem.
+ */
+export function lugarLivre(blocos: Array<Pick<Bloco, "x" | "y" | "w" | "h">>, w: number, h: number, x0: number, y0: number, linhas: number) {
+  const livre = (x: number, y: number) => blocos.every((b) => x >= b.x + b.w || b.x >= x + w || y >= b.y + b.h || b.y >= y + h);
+  let melhor: { x: number; y: number; d: number } | null = null;
+  for (let y = 0; y + h <= linhas; y++)
+    for (let x = 0; x + w <= COLUNAS; x++) {
+      const d = Math.abs(y - y0) * 2 + Math.abs(x - x0);
+      if ((!melhor || d < melhor.d) && livre(x, y)) melhor = { x, y, d };
+    }
+  return melhor ? { x: melhor.x, y: melhor.y } : { x: Math.max(0, Math.min(x0, COLUNAS - w)), y: blocos.reduce((m, b) => Math.max(m, b.y + b.h), 0) };
+}
+
+/** O foco num texto em edição: o texto formatado, o título da anotação ou outro campo. */
+export function escrevendoAgora() {
+  const el = document.activeElement as HTMLElement | null;
+  return !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
 }
 
 /** As linhas da imagem com `w` colunas, na proporção dela (mais `extra` px), sem o mínimo de duas. */
@@ -292,12 +325,18 @@ export function GradeDoRelatorio({
   paraImagem = false,
   desfazer,
   refazer,
+  colar,
+  escolher,
   onMudar,
 }: {
   relatorioId: string;
   /** O Desfazer e o Refazer do menu da edição (24/10/2026); sem eles, quase apagados. */
   desfazer?: () => void;
   refazer?: () => void;
+  /** O Colar do menu da edição (24/10/2026: o bloco copiado); sem ele, quase apagado. */
+  colar?: () => void;
+  /** O bloco a escolher (24/10/2026: o colado ou o adicionado); um objeto novo a cada vez. */
+  escolher?: { id: string };
   /** Na imagem do slide (22/10/2026: a exportação em PDF): os vídeos como quadros com o ícone. */
   paraImagem?: boolean;
   /** As telas e os slides do relatório, com os números (20/10/2026), para os blocos de Sumário. */
@@ -345,7 +384,13 @@ export function GradeDoRelatorio({
   // O bloco escolhido na edição (24/10/2026, como no Canva): o clique o destaca, com os quadrados de ancoragem para
   // redimensionar e a borda para mover; o menu único, no alto, mostra as opções dele. Um clique fora dos blocos ou o Esc
   // o soltam; o Delete (fora de um texto) o exclui.
-  const [selecionado, setSelecionado] = useState<string | null>(null);
+  const [selecionado, setSelecionado] = useState<string | null>(() => escolher?.id ?? null);
+  // O bloco a escolher que chegou (o colado ou o adicionado) passa a ser o escolhido.
+  const [escolherVisto, setEscolherVisto] = useState(escolher);
+  if (escolher !== escolherVisto) {
+    setEscolherVisto(escolher);
+    if (escolher) setSelecionado(escolher.id);
+  }
   const escolhido = editavel ? blocos.find((b) => b.id === selecionado) : undefined;
   const campoDoEscolhido = useCallback(() => (selecionado ? (campos.current.get(selecionado) ?? null) : null), [selecionado]);
   const excluir = (id: string) => {
@@ -369,6 +414,44 @@ export function GradeDoRelatorio({
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
   });
+  // Copiar e recortar (24/10/2026): com um bloco escolhido, o Ctrl+C o copia (o Ctrl+X o recorta), fora de um texto em
+  // edição ou nele sem nenhum trecho selecionado (com o trecho, vale a cópia do texto; o Ctrl+X, só fora dos textos). O
+  // botão Copiar do menu copia o bloco sempre.
+  const peloBotao = useRef(false);
+  const copiarBloco = (e: ClipboardEvent | null, b: Bloco) => {
+    // O texto vai junto (o do bloco; sem ele, o nome do bloco): é o que outro programa recebe.
+    const copia: Copia = { relatorioId, blocos: [b], texto: textoDoBloco(b) || nomeDoBloco(b), em: Date.now() };
+    e?.clipboardData?.setData(TIPO_DA_COPIA, JSON.stringify(copia));
+    e?.clipboardData?.setData("text/plain", copia.texto ?? "");
+    guardarCopia(copia);
+  };
+  useEffect(() => {
+    if (!editavel) return;
+    const aoCopiar = (e: ClipboardEvent) => {
+      const b = blocos.find((x) => x.id === selecionado);
+      if (!b || (document.querySelector("[role=dialog]") && !peloBotao.current)) return;
+      const el = document.activeElement;
+      const comTrecho = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.selectionStart !== el.selectionEnd : !window.getSelection()?.isCollapsed;
+      if (!peloBotao.current && (comTrecho || (e.type === "cut" && escrevendoAgora()))) return;
+      e.preventDefault();
+      copiarBloco(e, b);
+      if (e.type === "cut") excluir(b.id);
+    };
+    document.addEventListener("copy", aoCopiar);
+    document.addEventListener("cut", aoCopiar);
+    return () => {
+      document.removeEventListener("copy", aoCopiar);
+      document.removeEventListener("cut", aoCopiar);
+    };
+  });
+  const copiar = escolhido
+    ? () => {
+        peloBotao.current = true;
+        const foi = document.execCommand("copy");
+        peloBotao.current = false;
+        if (!foi) copiarBloco(null, escolhido);
+      }
+    : undefined;
   // A largura da grade (para a grade de fundo) e o cursor enquanto um bloco se move ou se redimensiona; fora disso, null.
   const [ajustando, setAjustando] = useState<{ largura: number; cursor: string } | null>(null);
   const comecar = (cursor = "move") => setAjustando(caixa.current ? { largura: caixa.current.offsetWidth, cursor } : null);
@@ -474,6 +557,8 @@ export function GradeDoRelatorio({
             campo={campoDoEscolhido}
             desfazer={desfazer}
             refazer={refazer}
+            copiar={copiar}
+            colar={colar}
             onMudar={(m) => escolhido && mudarBloco(escolhido.id, m)}
             onConfigurar={() => escolhido && setConfigurando(escolhido.id)}
             onExcluir={() => escolhido && excluir(escolhido.id)}
@@ -830,6 +915,8 @@ export function BarraDeEdicao({
   campo = semCampo,
   desfazer,
   refazer,
+  copiar,
+  colar,
   onMudar = () => undefined,
   onConfigurar = () => undefined,
   onExcluir = () => undefined,
@@ -839,6 +926,9 @@ export function BarraDeEdicao({
   /** O Desfazer e o Refazer (24/10/2026); sem eles (nada a desfazer ou a refazer), quase apagados. */
   desfazer?: () => void;
   refazer?: () => void;
+  /** Copiar o bloco escolhido e colar o copiado (24/10/2026); sem eles, quase apagados. */
+  copiar?: () => void;
+  colar?: () => void;
   onMudar?: (m: Partial<Bloco>) => void;
   onConfigurar?: () => void;
   onExcluir?: () => void;
@@ -864,6 +954,14 @@ export function BarraDeEdicao({
       </button>
       <button type="button" className={botao} disabled={!refazer} title="Refazer (Ctrl+Y)" aria-label="Refazer" onClick={refazer}>
         <Redo2 className="size-4" />
+      </button>
+      {separador}
+      {/* Copiar e Colar (24/10/2026): o bloco escolhido, para esta ou outra página, aba ou relatório. */}
+      <button type="button" className={botao} disabled={!copiar} title="Copiar o bloco (Ctrl+C; o Ctrl+X recorta)" aria-label="Copiar" onClick={copiar}>
+        <Copy className="size-4" />
+      </button>
+      <button type="button" className={botao} disabled={!colar} title="Colar o bloco copiado (Ctrl+V; o Ctrl+V também cola textos, imagens e vídeos de outros programas)" aria-label="Colar" onClick={colar}>
+        <ClipboardPaste className="size-4" />
       </button>
       {separador}
       {/* O gráfico do card (22/10/2026), em ciclo: os meses e o acumulado → só o acumulado → sem gráfico → os meses e o acumulado. */}
