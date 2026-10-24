@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { useTema, type Tema } from "@/lib/tema";
 import { useAcessibilidade, type Acessibilidade } from "@/lib/acessibilidade";
-import { Eye, GraduationCap, KeyRound, LogOut, Palette } from "lucide-react";
+import { Bell, Eye, GraduationCap, KeyRound, LogOut, Palette } from "lucide-react";
 
 import {
   Avatar,
@@ -38,11 +38,13 @@ import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { etapasDoMes } from "@/lib/etapasDoMes";
 import { migalhas } from "@/lib/navigation-config";
+import type { Novidade } from "@/lib/novidades";
 
 import { relatoriosExecutivosService } from "@/app/analises-gerenciais/relatorios-executivos/services/relatoriosExecutivosService";
 
 import { EtiquetaDoDesenvolvimento } from "./AmbienteDeDesenvolvimento";
 import { abrirIntroducao } from "./IntroducaoAoSig";
+import { NovidadesDialog, SinoDasNovidades, telasCom, useNovidades } from "./Novidades";
 import { TrocarSenhaDialog } from "./TrocarSenhaDialog";
 import { UsuariosOnline } from "./UsuariosOnline";
 
@@ -72,6 +74,13 @@ export function AppHeader() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [trocandoSenha, setTrocandoSenha] = useState(false);
+  // As Novidades (24/10/2026): as das telas do usuário; ao abrir, as não vistas ganham a etiqueta Nova e ficam vistas.
+  const novidades = useNovidades();
+  const [vendoNovidades, setVendoNovidades] = useState<Novidade[] | null>(null);
+  const abrirNovidades = () => {
+    setVendoNovidades(novidades.novas);
+    novidades.marcar();
+  };
   const [tema, escolherTema] = useTema();
   const [acessibilidade, escolherAcessibilidade] = useAcessibilidade();
   const { hasPermission } = usePermissions();
@@ -120,6 +129,8 @@ export function AppHeader() {
       <div className="ml-auto flex items-center gap-2">
         {/* Quantos usuários estão online (24/10/2026): só para o Administrador. */}
         <UsuariosOnline />
+        {/* O sino das novidades ainda não vistas (24/10/2026), ao lado do nome. */}
+        <SinoDasNovidades novas={novidades.novas} onAbrir={abrirNovidades} />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -199,6 +210,16 @@ export function AppHeader() {
               </span>
             </div>
             <DropdownMenuSeparator />
+            {/* As Novidades (24/10/2026), só com alguma das telas do usuário; o número: as telas com novidades não vistas. */}
+            {novidades.lista.length ? (
+              <DropdownMenuItem onClick={abrirNovidades}>
+                <Bell />
+                Novidades
+                {novidades.novas.length ? (
+                  <span className="ml-auto rounded-sm bg-bpm-primary px-1.5 text-[10px] font-bold text-black">{telasCom(novidades.novas)}</span>
+                ) : null}
+              </DropdownMenuItem>
+            ) : null}
             {/* A Introdução ao SIG (21/10/2026): o tour sobre a tela atual (o layout o desenha). */}
             <DropdownMenuItem onClick={abrirIntroducao}>
               <GraduationCap />
@@ -217,6 +238,7 @@ export function AppHeader() {
         </DropdownMenu>
       </div>
       {trocandoSenha ? <TrocarSenhaDialog onFechar={() => setTrocandoSenha(false)} /> : null}
+      {vendoNovidades ? <NovidadesDialog lista={novidades.lista} novas={vendoNovidades} onFechar={() => setVendoNovidades(null)} /> : null}
     </header>
   );
 }

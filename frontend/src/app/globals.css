@@ -352,3 +352,24 @@
 [data-tema="escuro"] .texto-rico [style*="color: rgb(220, 38, 38)"] {
   color: #f87171 !important;
 }
+
+/* O sino das Novidades (24/10/2026): parado e, a cada 5 s, um balanço curto (no topo, como um sino). */
+@keyframes sino {
+  0%,
+  84%,
+  100% {
+    transform: rotate(0);
+  }
+  87% {
+    transform: rotate(14deg);
+  }
+  90% {
+    transform: rotate(-12deg);
+  }
+  93% {
+    transform: rotate(8deg);
+  }
+  96% {
+    transform: rotate(-4deg);
+  }
+}
