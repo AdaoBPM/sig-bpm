@@ -470,6 +470,35 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
           // Na aba Configurações (22/10/2026), sem as ações: ela não tem páginas nem slides (não se apresenta nem se exporta).
           configuracoes ? undefined : (
           <div className="flex flex-wrap items-center gap-2">
+            {/* A situação do salvamento automático (24/10/2026), no lugar do Gravar; antes do Adicionar. */}
+            {editaAlgum ? (
+              conflito ? (
+                <button
+                  type="button"
+                  className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`}
+                  title={`${conflito.atualizadoPor ?? "Outro usuário"} gravou ${conflito.nome} depois que você abriu o relatório: clique para escolher o que fazer.`}
+                  onClick={() => setVendoConflito(true)}
+                >
+                  <CloudAlert className="size-4" />
+                  Não Salvo
+                </button>
+              ) : salvamento.fase === "erro" ? (
+                <button type="button" className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`} title={`${salvamento.erro} Tentando de novo; clique para tentar agora.`} onClick={() => void autoSalvar()}>
+                  <CloudOff className="size-4" />
+                  Não Salvo
+                </button>
+              ) : haPendentes || salvamento.fase === "salvando" ? (
+                <span className={`${classeDaSituacao} text-gray-500`} role="status">
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Salvando…
+                </span>
+              ) : (
+                <span className={`${classeDaSituacao} text-gray-500`} role="status" title="As alterações se salvam sozinhas.">
+                  <CloudCheck className="size-4" />
+                  {salvamento.em ? `Salvo às ${salvamento.em.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Salvo"}
+                </span>
+              )
+            ) : null}
             {editavel ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -521,35 +550,6 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : null}
-            {/* A situação do salvamento automático (24/10/2026), no lugar do Gravar. */}
-            {editaAlgum ? (
-              conflito ? (
-                <button
-                  type="button"
-                  className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`}
-                  title={`${conflito.atualizadoPor ?? "Outro usuário"} gravou ${conflito.nome} depois que você abriu o relatório: clique para escolher o que fazer.`}
-                  onClick={() => setVendoConflito(true)}
-                >
-                  <CloudAlert className="size-4" />
-                  Não Salvo
-                </button>
-              ) : salvamento.fase === "erro" ? (
-                <button type="button" className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`} title={`${salvamento.erro} Tentando de novo; clique para tentar agora.`} onClick={() => void autoSalvar()}>
-                  <CloudOff className="size-4" />
-                  Não Salvo
-                </button>
-              ) : haPendentes || salvamento.fase === "salvando" ? (
-                <span className={`${classeDaSituacao} text-gray-500`} role="status">
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Salvando…
-                </span>
-              ) : (
-                <span className={`${classeDaSituacao} text-gray-500`} role="status" title="As alterações se salvam sozinhas.">
-                  <CloudCheck className="size-4" />
-                  {salvamento.em ? `Salvo às ${salvamento.em.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Salvo"}
-                </span>
-              )
             ) : null}
             {editavel ? (
               <Button type="button" className={botaoPrimario} onClick={() => (conflito?.aba === chave ? setVendoConflito(true) : setConfirmar("finalizar"))}>
@@ -732,8 +732,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
             </li>
             <li>
-              As alterações se salvam sozinhas, como no Canva: 2 segundos depois da última (numa edição sem pausa, a cada 10 segundos). Ao lado dos botões do
-              título, a situação: Salvando…, Salvo às 14:32 ou Não Salvo, em vermelho. Sem conexão ou durante uma publicação do SIG, o Não Salvo tenta de novo
+              As alterações se salvam sozinhas, como no Canva: 2 segundos depois da última (numa edição sem pausa, a cada 10 segundos). Na linha do título, antes
+              do Adicionar, a situação: Salvando…, Salvo às 14:32 ou Não Salvo, em vermelho. Sem conexão ou durante uma publicação do SIG, o Não Salvo tenta de novo
               sozinho (clique nele para tentar na hora). Saindo da tela por um link, o que falta se salva em segundo plano; fechar ou recarregar a aba do
               navegador antes de salvar pergunta. Se outra pessoa gravou o mesmo grupo depois que você abriu o relatório, nada desse grupo é salvo: o aviso diz
               quem gravou e quando, e você escolhe Recarregar (vê o que ela gravou; as suas alterações desse grupo se perdem) ou Gravar por Cima (a sua versão
