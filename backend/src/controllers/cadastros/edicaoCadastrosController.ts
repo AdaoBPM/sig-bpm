@@ -10,7 +10,7 @@ async function responder(response: Response, fn: () => Promise<unknown>, status 
   try {
     return response.status(status).json({ data: await fn() });
   } catch (error) {
-    if (error instanceof RegraCadastroError) return response.status(error.status).json({ error: error.message });
+    if (error instanceof RegraCadastroError) return response.status(error.status).json({ error: error.message, ...(error.sugestoes ? { sugestoes: error.sugestoes } : {}) });
     throw error;
   }
 }

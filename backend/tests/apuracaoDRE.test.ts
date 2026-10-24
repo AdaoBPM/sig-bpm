@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { Prisma } from "../src/generated/prisma/client.js";
-import { abasQueSomam, apurarUnidades, type LinhaEstrutura } from "../src/services/dre/apuracaoUnidades.js";
+import { abasDaConta, abasQueSomam, apurarUnidades, combinacoesDaConta, type LinhaEstrutura } from "../src/services/dre/apuracaoUnidades.js";
 import { apurarCentros, consolidar } from "../src/services/dre/consolidacao.js";
 import { avaliarExpressao } from "../src/services/dre/expressao.js";
 
@@ -216,5 +216,22 @@ describe("lançamentos manuais em todas as abas e a Montagem do balde Complement
     assert.deepEqual(abas("CP.CLT", "PRODUCAO", 1, { rateio: true }), [1, 2]);
     assert.deepEqual(abas("IRCS", "RN", 1, { manual: true }), [5]);
     assert.deepEqual(abas("IRCS", "EXTRA"), [4]);
+  });
+
+  it("a conta que nenhuma aba lê e as combinações permitidas (o cadastro da conta, 24/10/2026)", () => {
+    const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
+    const conta = (c: string, balde: string) => abasDaConta(porCodigo.get(c)!, balde, linhas);
+    // As ferragens de 23/10/2026: uma linha da Montagem com o rateio MATRIZ — a Matriz não tem a linha, e Serviços não lê o balde.
+    assert.deepEqual(conta("CSM.PJ", "MATRIZ"), [[], []]);
+    assert.deepEqual(conta("CSM.PJ", "OBRAS"), [[3], [3]]);
+    assert.deepEqual(conta("CSM.PJ", "COMPLEMENTAR"), [[3], [3]]); // tem a equivalente nos Complementares
+    assert.deepEqual(conta("CSM.SO", "COMPLEMENTAR"), [[], []]); // não tem
+    assert.deepEqual(conta("CP.CLT", "UNIDADE"), [[1], [2]]); // a aba da filial do lançamento
+    assert.deepEqual(conta("CP.CLT", "PRODUCAO"), [[1, 2], [1, 2]]);
+    const baldes = ["UNIDADE", "PRODUCAO", "ACOMPANHAMENTO", "MATRIZ", "FILIAL", "OBRAS", "COMPLEMENTAR", "DESPESAS"];
+    const permitidas = (c: string) => combinacoesDaConta(porCodigo.get(c)!, linhas, baldes).map((x) => `${x.linha.codigo}:${x.balde}`);
+    // A própria linha primeiro, depois a de mesma atribuição e descrição nos Complementares.
+    assert.deepEqual(permitidas("CSM.PJ"), ["CSM.PJ:ACOMPANHAMENTO", "CSM.PJ:OBRAS", "CSM.PJ:COMPLEMENTAR", "CSC.PJ:COMPLEMENTAR"]);
+    assert.deepEqual(permitidas("CP.CLT"), ["CP.CLT:UNIDADE", "CP.CLT:PRODUCAO", "CP.CLT:MATRIZ", "CP.CLT:FILIAL"]);
   });
 });

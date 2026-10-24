@@ -148,7 +148,7 @@ export function rateiosSemVolume(d: Pick<DadosApuracao, "lancamentos" | "percent
 /** Chaves de rateio que cada unidade de produção recebe, e o destino dela. */
 const RATEIOS_PRODUCAO = ["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA"] as const;
 const DESTINO_DA_UNIDADE: Record<number, string> = { 1: "MATRIZ", 2: "FILIAL" };
-const CHAVES_DE_RATEIO = new Set<string>([...RATEIOS_PRODUCAO, "ACOMPANHAMENTO"]);
+export const CHAVES_DE_RATEIO = new Set<string>([...RATEIOS_PRODUCAO, "ACOMPANHAMENTO"]);
 
 /**
  * Os grupos em que a DRE mostra o valor com o sinal trocado em relação ao balancete (as receitas: no balancete, a
@@ -215,6 +215,31 @@ export function abasQueSomam(
     } else if (u === UNIDADE.DESPESAS) abas.push(u);
   }
   return abas;
+}
+
+type LinhaDaConta = Pick<LinhaEstrutura, "id" | "tipo" | "grupo" | "grupoSigla" | "atribuicao" | "descricao" | "unidades">;
+const mesmaLinha = (a: LinhaDaConta, b: LinhaDaConta) => n(a.atribuicao) === n(b.atribuicao) && n(a.descricao) === n(b.descricao);
+
+/**
+ * As abas que leem uma conta com esta linha e este rateio, na filial 1 e na 2 (24/10/2026): as dos lançamentos que
+ * seguem o rateio da conta — de obras, de centros fora do cadastro e sem centro. Vazias nas duas, esses lançamentos
+ * ficam com a pendência Sem Aba de Resultado; o cadastro da conta recusa a combinação.
+ */
+export function abasDaConta(linha: LinhaDaConta, balde: string | null, linhas: LinhaDaConta[]): [number[], number[]] {
+  const par = linha.grupoSigla === "CSM" && linhas.some((x) => x.tipo === "ITEM" && x.grupoSigla === "CSC" && mesmaLinha(x, linha));
+  const abas = (filial: number) => abasQueSomam(linha, { filial, balde, rateio: CHAVES_DE_RATEIO.has(balde ?? ""), parNaComplementar: par }).sort((a, b) => a - b);
+  return [abas(1), abas(2)];
+}
+
+/**
+ * As combinações que alguma aba lê, para a conta com a linha escolhida (24/10/2026): a própria linha e as equivalentes
+ * de outros departamentos (mesma atribuição e descrição), cada uma com os rateios aceitos, na ordem de `baldes`.
+ */
+export function combinacoesDaConta(escolhida: LinhaDaConta, linhas: LinhaDaConta[], baldes: string[]) {
+  const candidatas = [escolhida, ...linhas.filter((l) => l.id !== escolhida.id && l.tipo === "ITEM" && mesmaLinha(l, escolhida))];
+  return candidatas.flatMap((linha) =>
+    baldes.map((balde) => ({ linha, balde, abas: abasDaConta(linha, balde, linhas) })).filter((c) => c.abas[0].length || c.abas[1].length),
+  );
 }
 
 export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]; avisos: string[] } {

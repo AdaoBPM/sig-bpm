@@ -66,6 +66,15 @@ export function ContasResultadoContent() {
         <ul>
           <li>Use os filtros nos rótulos das colunas.</li>
           <li>Use “Novo” para incluir; o lápis edita, e a exclusão fica dentro da edição.</li>
+          <li>
+            Na edição, o Departamento escolhe o grupo da DRE, e a Linha da DRE mostra só as linhas dele. Ao trocar o Departamento, fica a linha de mesma
+            atribuição e descrição, quando ele tem uma; a Atribuição sai da linha.
+          </li>
+          <li>
+            A gravação é recusada quando nenhuma aba de resultado lê a combinação da Linha da DRE com o Rateio: os lançamentos que seguem o rateio da conta
+            (de obras, de centros fora do cadastro e sem centro) ficariam fora do resultado, com a pendência Sem Aba de Resultado. O aviso lista as combinações
+            que alguma aba lê, com as abas de cada uma; “Usar” põe a escolhida no formulário, para conferir e gravar.
+          </li>
           <li>Ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem reapuradas.</li>
           <li>“Recarregar da Planilha” mostra o que muda em relação ao arquivo enviado antes de gravar.</li>
           <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
@@ -73,7 +82,7 @@ export function ContasResultadoContent() {
           <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
         </ul>
       }
-      descricao="As contas de resultado, editáveis aqui. O departamento e a atribuição vêm do destino na DRE."
+      descricao="As contas de resultado, editáveis aqui. O departamento escolhe o grupo da DRE; a atribuição vem da linha de destino."
       acoes={
         <div className="flex items-center gap-2">
           <RecarregarPlanilha />

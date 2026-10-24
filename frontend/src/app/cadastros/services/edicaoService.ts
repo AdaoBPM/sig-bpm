@@ -1,7 +1,12 @@
 import { api } from "@/lib/api";
 
-/** Uma opção de lista; `grupos`: os valores do campo `filtradoPor` em que ela aparece. */
-export type Opcao = { valor: string; rotulo: string; grupos?: string[] };
+/**
+ * Uma opção de lista; `grupos`: os valores do campo `filtradoPor` em que ela aparece. `chave`: liga as opções
+ * equivalentes de grupos diferentes — ao trocar o filtro, a lista fica com a equivalente (24/10/2026).
+ */
+export type Opcao = { valor: string; rotulo: string; grupos?: string[]; chave?: string };
+/** Uma correção que o formulário aplica com um clique (24/10/2026: as combinações de linha e rateio de uma conta). */
+export type Sugestao = { rotulo: string; detalhe?: string; valores: Record<string, unknown> };
 export type Campo = {
   nome: string;
   rotulo: string;
@@ -55,6 +60,11 @@ export const edicaoService = {
 
 export function mensagemDeErro(error: unknown, padrao: string) {
   return (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? padrao;
+}
+
+/** As correções que o backend propõe junto da recusa, quando há. */
+export function sugestoesDoErro(error: unknown): Sugestao[] {
+  return (error as { response?: { data?: { sugestoes?: Sugestao[] } } }).response?.data?.sugestoes ?? [];
 }
 
 /** O aviso depois de gravar um cadastro que classifica ou um Cadastro da Controladoria (17/10/2026: pede reapurar). */

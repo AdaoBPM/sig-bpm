@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 import { iniciaisMaiusculas } from "@/lib/texto";
 
-import { edicaoService, mensagemDeErro, textoDoEfeito, type Campo, type DefinicaoCadastro, type Registro } from "../services/edicaoService";
+import { edicaoService, mensagemDeErro, sugestoesDoErro, textoDoEfeito, type Campo, type DefinicaoCadastro, type Registro, type Sugestao } from "../services/edicaoService";
 import { EditorFormula } from "./EditorFormula";
 
 type Props = { entidade: string; id: string | null; onFechar: () => void };
@@ -129,7 +129,20 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
     Object.fromEntries(def.campos.map((c) => [c.nome, paraTela(c, registro ? registro[c.nome] : (c.padrao ?? (c.tipo === "booleano" ? true : undefined)))])),
   );
   const [confirmaExclusao, setConfirmaExclusao] = useState(false);
+  // A gravação recusada com as correções possíveis (24/10/2026: a conta que nenhuma aba de resultado lê).
+  const [recusa, setRecusa] = useState<{ mensagem: string; sugestoes: Sugestao[] } | null>(null);
   const travas = registro?.__travas;
+  const aplicar = (s: Sugestao) => {
+    setValores((x) => {
+      const novo = { ...x };
+      for (const [nome, v] of Object.entries(s.valores)) {
+        const c = def.campos.find((y) => y.nome === nome);
+        if (c) novo[nome] = paraTela(c, v);
+      }
+      return novo;
+    });
+    setRecusa(null);
+  };
   const concluir = (msg: string, efeito?: { reclassificadas: string[]; apuradasPorReapurar: string[] }) => {
     const extra = efeito ? textoDoEfeito(efeito) : "";
     toast.success(`${msg}${extra ? ` ${extra}` : ""}`);
@@ -144,7 +157,11 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
       return registro ? edicaoService.atualizar(entidade, registro.id, enviar) : edicaoService.criar(entidade, enviar);
     },
     onSuccess: (r) => concluir(registro ? `${def.titulo} atualizado.` : `${def.titulo} criado.`, r),
-    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível gravar.")),
+    onError: (e) => {
+      const sugestoes = sugestoesDoErro(e);
+      if (sugestoes.length) setRecusa({ mensagem: mensagemDeErro(e, "Não foi possível gravar."), sugestoes });
+      else toast.error(mensagemDeErro(e, "Não foi possível gravar."));
+    },
   });
   const excluir = useMutation({
     mutationFn: () => edicaoService.excluir(entidade, registro!.id),
@@ -178,20 +195,44 @@ function Formulario({ def, registro, entidade, onFechar }: { def: DefinicaoCadas
               comMovimento={!!travas?.campos.includes(c.nome)}
               opcoes={opcoesVisiveis(c, valores)}
               semFiltro={c.filtradoPor && !valores[c.filtradoPor] ? def.campos.find((x) => x.nome === c.filtradoPor)?.rotulo : undefined}
-              onMuda={(v) =>
+              onMuda={(v) => {
+                setRecusa(null);
                 setValores((x) => {
                   const novo = { ...x, [c.nome]: v };
-                  // A lista que depende deste campo perde a escolha que não é mais dele.
+                  // A lista que depende deste campo perde a escolha que não é mais dele; fica a equivalente, quando a
+                  // opção tem chave e o novo filtro tem uma de mesma chave (a linha da DRE ao trocar o departamento).
                   for (const d of def.campos.filter((y) => y.filtradoPor === c.nome)) {
-                    if (novo[d.nome] && !opcoesVisiveis(d, novo).some((o) => o.valor === novo[d.nome])) novo[d.nome] = "";
+                    if (!novo[d.nome] || opcoesVisiveis(d, novo).some((o) => o.valor === novo[d.nome])) continue;
+                    const chave = d.opcoes?.find((o) => o.valor === novo[d.nome])?.chave;
+                    novo[d.nome] = (chave && opcoesVisiveis(d, novo).find((o) => o.chave === chave)?.valor) || "";
                   }
                   return novo;
-                })
-              }
+                });
+              }}
             />
           </div>
         ))}
       </div>
+      {recusa ? (
+        // Rola até o aviso quando ele aparece: com o formulário longo, ficaria abaixo da área visível.
+        <div ref={(el) => el?.scrollIntoView({ block: "nearest" })} className="rounded-sm border border-l-4 border-gray-200 border-l-red-700 bg-white px-4 py-2.5 text-sm text-gray-700">
+          <p className="font-medium text-gray-900">A gravação foi recusada.</p>
+          <p>{recusa.mensagem}</p>
+          <ul className="mt-2 divide-y divide-gray-100">
+            {recusa.sugestoes.map((s) => (
+              <li key={s.rotulo} className="flex items-center justify-between gap-3 py-1.5">
+                <span>
+                  {s.rotulo}
+                  {s.detalhe ? <span className="text-gray-500"> · {s.detalhe}</span> : null}
+                </span>
+                <Button type="button" size="sm" variant="outline" className="shrink-0 rounded-sm" onClick={() => aplicar(s)}>
+                  Usar
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {def.reclassifica ? (
         <p className="text-xs text-gray-500">
           Este cadastro classifica os lançamentos: ao gravar, as competências ainda não apuradas são reclassificadas; as apuradas só mudam se forem

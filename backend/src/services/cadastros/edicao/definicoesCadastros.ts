@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../../config/prisma.js";
 import { Prisma } from "../../../generated/prisma/client.js";
+import { abasDaConta, combinacoesDaConta } from "../../dre/apuracaoUnidades.js";
 import { avaliarExpressao, codigosDaExpressao } from "../../dre/expressao.js";
 import { chaveDaLinha } from "../../../lib/linhas.js";
 import { LINHAS_TOTAIS } from "../../volumes/totaisOperacao.js";
@@ -22,17 +23,24 @@ const Decimal = Prisma.Decimal;
 type Db = ReturnType<typeof getPrismaClient>;
 export type Valores = Record<string, unknown>;
 
+/** Uma correção que o formulário aplica com um clique (24/10/2026: as combinações de linha e rateio de uma conta). */
+export type Sugestao = { rotulo: string; detalhe?: string; valores: Valores };
+
 export class RegraCadastroError extends Error {
   constructor(
     readonly status: 400 | 404 | 409,
     message: string,
+    readonly sugestoes?: Sugestao[],
   ) {
     super(message);
   }
 }
 
-/** Uma opção de lista; `grupos`: os valores do campo `filtradoPor` em que ela aparece. */
-export type Opcao = { valor: string; rotulo: string; grupos?: string[] };
+/**
+ * Uma opção de lista; `grupos`: os valores do campo `filtradoPor` em que ela aparece. `chave`: liga as opções
+ * equivalentes de grupos diferentes — ao trocar o filtro, a lista fica com a equivalente (24/10/2026).
+ */
+export type Opcao = { valor: string; rotulo: string; grupos?: string[]; chave?: string };
 export type Campo = {
   nome: string;
   rotulo: string;
@@ -139,6 +147,8 @@ const opcoesFixas = (pares: Array<[string, string]>) => async () => pares.map(([
 const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
 const contem = (busca: string | undefined, ...xs: Array<string | null | undefined>) =>
   !busca || xs.some((x) => (x ?? "").toLowerCase().includes(busca.toLowerCase()));
+/** "A, B e C". */
+const emLista = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : (xs[0] ?? ""));
 
 /** Baldes de alocação: as chaves de rateio e os baldes diretos (a coluna RATEIO da planilha). */
 const BALDES: Array<[string, string]> = [
@@ -180,6 +190,47 @@ async function linhaPorId(db: Db, id: string) {
   const l = await db.linhaDRE.findUnique({ where: { id }, select: { id: true, tipo: true, grupo: true, atribuicao: true, ativo: true } });
   if (!l) throw new RegraCadastroError(400, "Linha da DRE inexistente.");
   return l;
+}
+
+/** As linhas a que uma conta pode apontar: as de item e de total ativas dos departamentos da DRE (os grupos com sigla). */
+async function linhasDasContas(db: Db) {
+  const ls = await db.linhaDRE.findMany({ where: { tipo: { in: ["ITEM", "TOTAL"] }, ativo: true }, orderBy: { ordem: "asc" } });
+  return ls.filter((l) => /\(/.test(l.grupo));
+}
+
+/**
+ * Recusa a conta cuja linha e rateio nenhuma aba de resultado lê (24/10/2026): os lançamentos que seguem o rateio da
+ * conta (obras, centros fora do cadastro e sem centro) ficariam fora do resultado, com a pendência Sem Aba de Resultado
+ * da Classificação. O aviso traz as combinações que alguma aba lê, para o formulário aplicar.
+ */
+async function exigirAbaQueLeia(db: Db, linhaId: string, balde: string | null) {
+  const [ls, us] = await Promise.all([
+    db.linhaDRE.findMany({
+      orderBy: { ordem: "asc" },
+      select: { id: true, tipo: true, grupo: true, grupoSigla: true, atribuicao: true, descricao: true, ativo: true, unidades: { select: { unidadeNegocio: { select: { codigo: true } } } } },
+    }),
+    db.unidadeNegocio.findMany({ select: { codigo: true, nome: true } }),
+  ]);
+  const linhas = ls.map((l) => ({ ...l, unidades: l.unidades.map((u) => u.unidadeNegocio.codigo) }));
+  // O par da Montagem nos Complementares, como na Classificação: entre as linhas ativas.
+  const ativas = linhas.filter((l) => l.ativo);
+  const escolhida = linhas.find((l) => l.id === linhaId);
+  if (!escolhida || abasDaConta(escolhida, balde, ativas).some((a) => a.length)) return;
+  const nome = new Map(us.map((u) => [u.codigo, u.nome]));
+  const nomes = (abas: number[]) => emLista(abas.map((u) => nome.get(u) ?? String(u)));
+  // Iguais nas duas filiais, só as abas; senão, as de cada filial (o rateio UNIDADE: Matriz na filial 1, Filial na 2).
+  const lidaEm = ([f1, f2]: [number[], number[]]) =>
+    f1.join() === f2.join() ? nomes(f1) : [f1.length ? `${nomes(f1)} (filial 1)` : null, f2.length ? `${nomes(f2)} (filial 2)` : null].filter(Boolean).join(" ou ");
+  const sugestoes = combinacoesDaConta(escolhida, ativas.filter((l) => /\(/.test(l.grupo)), BALDES.map(([b]) => b).filter((b) => b !== "LEBEN")).map((c) => ({
+    rotulo: `${c.linha.grupoSigla} › ${c.linha.atribuicao ?? "—"} › ${c.linha.descricao} · Rateio ${c.balde}`,
+    detalhe: `lida em ${lidaEm(c.abas)}`,
+    valores: { departamento: c.linha.grupo, linhaDREId: c.linha.id, balde: c.balde },
+  }));
+  throw new RegraCadastroError(
+    400,
+    `Nenhuma aba de resultado lê a linha “${escolhida.descricao}” (${escolhida.grupoSigla}) com o rateio ${balde ?? "vazio"}: os lançamentos que seguem o rateio da conta (de obras, de centros fora do cadastro e sem centro) ficariam fora do resultado, com a pendência Sem Aba de Resultado. ${sugestoes.length ? "Escolha uma das combinações que alguma aba lê:" : "Nenhum rateio faz uma aba ler esta linha: escolha outra Linha da DRE."}`,
+    sugestoes,
+  );
 }
 
 // ----------------------------------------------------------- centros de custo
@@ -275,18 +326,30 @@ const contas: DefinicaoCadastro = {
     { nome: "conta", rotulo: "Conta", tipo: "texto", obrigatorio: true },
     { nome: "descricao", rotulo: "Descrição", tipo: "texto", obrigatorio: true },
     { nome: "tipoConta", rotulo: "Tipo", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas([["ANALITICA", "Analítica"], ["SINTETICA", "Sintética"]]) },
+    // O departamento escolhe o grupo da DRE, e a linha fica entre as dele (24/10/2026; antes, derivado da linha).
+    {
+      nome: "departamento",
+      rotulo: "Departamento",
+      tipo: "opcao",
+      larguraInteira: true,
+      ajuda: "O grupo da DRE. A Linha da DRE mostra só as linhas dele.",
+      opcoes: async (db) => [...new Set((await linhasDasContas(db)).map((l) => l.grupo))].map((g) => ({ valor: g, rotulo: g })),
+    },
     {
       nome: "linhaDREId",
       rotulo: "Linha da DRE",
       tipo: "opcao",
-      ajuda: "O destino na DRE. O departamento e a atribuição da conta saem da linha.",
+      filtradoPor: "departamento",
+      larguraInteira: true,
+      ajuda: "O destino na DRE. Ao trocar o departamento, fica a linha de mesma atribuição e descrição, quando ele tem uma. A atribuição sai da linha.",
       opcoes: async (db) =>
-        (await db.linhaDRE.findMany({ where: { tipo: { in: ["ITEM", "TOTAL"] }, ativo: true }, orderBy: { ordem: "asc" } })).map((l) => ({
+        (await linhasDasContas(db)).map((l) => ({
           valor: l.id,
           rotulo: `${l.grupoSigla} › ${l.atribuicao ?? "—"} › ${l.descricao}`,
+          grupos: [l.grupo],
+          chave: `${l.atribuicao ?? ""}|${l.descricao}`.toUpperCase(),
         })),
     },
-    { nome: "departamento", rotulo: "Departamento", tipo: "texto", derivado: true },
     { nome: "atribuicao", rotulo: "Atribuição", tipo: "texto", derivado: true },
     { nome: "balde", rotulo: "Rateio", tipo: "opcao", opcoes: opcoesFixas(BALDES) },
     { nome: "ativo", rotulo: "Ativa", tipo: "booleano" },
@@ -295,26 +358,36 @@ const contas: DefinicaoCadastro = {
     const cs = await db.contaResultado.findMany({ orderBy: [{ conta: "asc" }, { ordem: "asc" }] });
     return cs.filter((c) => contem(busca, c.reduzido, c.conta, c.descricao));
   },
-  ler: (db, id) => db.contaResultado.findUnique({ where: { id } }),
+  // Com linha, o departamento é sempre o grupo dela (a lista da linha é filtrada por ele).
+  async ler(db, id) {
+    const c = await db.contaResultado.findUnique({ where: { id }, include: { linhaDRE: { select: { grupo: true } } } });
+    if (!c) return null;
+    const { linhaDRE, ...conta } = c;
+    return { ...conta, departamento: linhaDRE?.grupo ?? conta.departamento };
+  },
   async preparar(db, v, id) {
     const reduzido = exigir(v.reduzido, "O reduzido");
     const outro = await db.contaResultado.findUnique({ where: { reduzido }, select: { id: true } });
     if (outro && outro.id !== id) throw new RegraCadastroError(409, `Já existe uma conta com o reduzido ${reduzido}.`);
     const tipoConta = exigir(v.tipoConta, "O tipo");
     if (!["ANALITICA", "SINTETICA"].includes(tipoConta)) throw new RegraCadastroError(400, "Tipo deve ser analítica ou sintética.");
+    const departamento = texto(v.departamento);
     const linhaDREId = texto(v.linhaDREId);
     const linha = linhaDREId ? await linhaPorId(db, linhaDREId) : null;
     if (linha && linha.tipo !== "ITEM" && linha.tipo !== "TOTAL") throw new RegraCadastroError(400, "A conta só aponta para linha de item (ou para os impostos operacionais).");
-    if (linha && tipoConta === "SINTETICA") throw new RegraCadastroError(400, "Conta sintética não classifica: deixe a linha da DRE vazia.");
+    if ((linha || departamento) && tipoConta === "SINTETICA") throw new RegraCadastroError(400, "Conta sintética não classifica: deixe o Departamento e a Linha da DRE vazios.");
+    if (linha && departamento && departamento !== linha.grupo) throw new RegraCadastroError(400, `A Linha da DRE escolhida é do departamento ${linha.grupo}, e não de ${departamento}.`);
+    const balde = opcaoBalde(v.balde);
+    if (linha?.tipo === "ITEM" && tipoConta === "ANALITICA") await exigirAbaQueLeia(db, linha.id, balde);
     return {
       reduzido,
       conta: exigir(v.conta, "A conta"),
       descricao: exigir(v.descricao, "A descrição"),
       tipoConta,
       linhaDREId,
-      departamento: linha?.grupo ?? null,
+      departamento: linha?.grupo ?? departamento,
       atribuicao: linha?.atribuicao ?? null,
-      balde: opcaoBalde(v.balde),
+      balde,
       ativo: v.ativo === undefined ? true : booleano(v.ativo),
     };
   },
