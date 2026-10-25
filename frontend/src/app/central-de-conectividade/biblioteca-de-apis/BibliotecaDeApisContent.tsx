@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Eye, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -44,27 +44,53 @@ function Codigo({ titulo, texto }: { titulo: string; texto: string }) {
   );
 }
 
-/** A situação da API: o HTTPS exigido (a regra do TI) e o endereço desta página. */
+function Aviso({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex gap-3 rounded-sm border border-orange-300 bg-orange-50 p-4 text-sm text-gray-800">
+      <ShieldAlert className="mt-0.5 size-5 shrink-0 text-orange-600" />
+      <p>{children}</p>
+    </div>
+  );
+}
+
+/**
+ * A situação da API (o modo que o TI ligou) e o endereço desta página: desligada (o padrão da produção, até o HTTPS do
+ * TI), só por HTTPS ou também por HTTP (o desenvolvimento, ou a decisão do TI).
+ */
 function Situacao({ c }: { c: Catalogo }) {
   const http = typeof window !== "undefined" && window.location.protocol === "http:";
-  if (c.httpsObrigatorio && http) {
+  const token = `O token vale ${Math.round(c.duracaoDoToken / 60)} minutos.`;
+  if (c.modo === "desligada") {
     return (
-      <div className="flex gap-3 rounded-sm border border-orange-300 bg-orange-50 p-4 text-sm text-gray-800">
-        <ShieldAlert className="mt-0.5 size-5 shrink-0 text-orange-600" />
-        <p>
-          <strong>As APIs só funcionam por HTTPS</strong> (regra de segurança do TI da BPM: o login e o token não podem passar pela rede sem
-          criptografia). Este endereço do SIG é HTTP: até o TI publicar o endereço com HTTPS, os aplicativos recebem a recusa “HTTPS
-          obrigatório”. A biblioteca, a pré-visualização e os bloqueios já funcionam aqui.
-        </p>
-      </div>
+      <Aviso>
+        <strong>As APIs estão desligadas neste endereço.</strong> O TI da BPM as liga depois de pôr o SIG atrás do endereço com HTTPS (regra de segurança do
+        TI: o login e o token não podem passar pela rede sem criptografia). Até lá, os aplicativos recebem a recusa “API desligada”, sem a senha ser conferida.
+        A biblioteca, a pré-visualização e os bloqueios já funcionam aqui.
+      </Aviso>
+    );
+  }
+  if (c.modo === "https" && http) {
+    return (
+      <Aviso>
+        <strong>As APIs só funcionam por HTTPS</strong> (regra de segurança do TI da BPM). Este endereço do SIG é HTTP: nos aplicativos, use o endereço do SIG
+        com HTTPS, que o TI informa. {token}
+      </Aviso>
+    );
+  }
+  if (c.modo === "http") {
+    return (
+      <Aviso>
+        <strong>As APIs aceitam HTTP neste ambiente</strong> (o desenvolvimento ou a decisão do TI): <span className="font-mono">{enderecoDaApi()}</span>. {token} Sem
+        o HTTPS, a senha e o token passam pela rede sem criptografia, e o endereço de quem chama é o que o aplicativo informa: o bloqueio por endereço não é
+        garantido (o por usuário, sim).
+      </Aviso>
     );
   }
   return (
     <div className="flex gap-3 rounded-sm border border-gray-200 bg-white p-4 text-sm text-gray-800">
       <ShieldCheck className="mt-0.5 size-5 shrink-0 text-gray-700" />
       <p>
-        {c.httpsObrigatorio ? "As APIs estão abertas neste endereço, por HTTPS: " : "As APIs aceitam HTTP neste ambiente (o desenvolvimento ou a liberação do TI): "}
-        <span className="font-mono">{enderecoDaApi()}</span>. O token vale {Math.round(c.duracaoDoToken / 60)} minutos.
+        As APIs estão ligadas neste endereço, por HTTPS: <span className="font-mono">{enderecoDaApi()}</span>. {token}
       </p>
     </div>
   );
@@ -217,15 +243,16 @@ export function BibliotecaDeApisContent() {
           <p>
             As APIs que abrem os dados do SIG a outros aplicativos (planilhas, o Power BI, sistemas da empresa): as DREs, os cards e os indicadores do Painel de
             Bordo dos Resultados Empresariais e dos Cenários, em tabela (os valores) ou em visual (os cards e as tabelas em SVG). O aplicativo entra com o código
-            da API e o login e a senha do SIG, e lê só o que esse login lê no SIG. Segue as regras do TI da BPM para API: só por HTTPS, o token no cabeçalho, o
-            limite de tentativas e o registro de cada pedido na Auditoria.
+            da API e o login e a senha do SIG, e lê só o que esse login lê no SIG. Segue as regras do TI da BPM para API: ligada só pelo TI, só por HTTPS, o
+            token no cabeçalho, o limite de tentativas e o registro de cada pedido na Auditoria.
           </p>
         }
         comoUsar={
           <ul>
             <li>
-              No alto, a situação: as APIs só funcionam por HTTPS (regra do TI). No endereço HTTP do SIG, os aplicativos recebem a recusa “HTTPS obrigatório” até o TI
-              publicar o endereço com HTTPS; a biblioteca, a pré-visualização e os bloqueios já funcionam.
+              No alto, a situação: na produção, as APIs ficam desligadas até o TI pôr o SIG atrás do endereço com HTTPS e ligá-las (regra do TI); até lá, os
+              aplicativos recebem a recusa “API desligada”, sem a senha ser conferida. Ligadas, funcionam só por HTTPS. A biblioteca, a pré-visualização e os
+              bloqueios funcionam sempre.
             </li>
             <li>
               Como Conectar explica os dois passos — o token, pedido com o e-mail e a senha do SIG (vale uma hora), e os dados, com o token no cabeçalho

@@ -16,7 +16,9 @@ export type ApiDoCatalogo = {
   alcanca: boolean;
   bloqueio: { bloqueadoPor: string | null; bloqueadoEm: string } | null;
 };
-export type Catalogo = { httpsObrigatorio: boolean; podeEditar: boolean; duracaoDoToken: number; apis: ApiDoCatalogo[] };
+/** O modo da API (a API_EXTERNA do backend, que só o TI liga): desligada, só por HTTPS ou também por HTTP. */
+export type ModoDaApi = "desligada" | "https" | "http";
+export type Catalogo = { modo: ModoDaApi; podeEditar: boolean; duracaoDoToken: number; apis: ApiDoCatalogo[] };
 
 export type Coluna = { chave: string; titulo: string; tipo: "texto" | "numero" | "percentual" };
 export type Visual = { titulo: string; largura: number; altura: number; svg: string };

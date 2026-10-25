@@ -12,7 +12,8 @@ import { ApiError, apiDoCodigo, CATALOGO, type Formato, type Resposta } from "./
  * - o aplicativo pede o token com o login e a senha do SIG (POST /api/v1/token) e manda o token no cabeçalho
  *   `Authorization: Bearer` em cada pedido (GET /api/v1/apis/{código}); o token vale uma hora e só abre a API (o SIG o
  *   recusa, e o da sessão do SIG não abre a API);
- * - só com HTTPS (na produção, sem a API_ACEITA_HTTP do TI, o pedido por HTTP é recusado);
+ * - só com a API ligada pelo TI (a API_EXTERNA: desligada, o padrão da produção, recusa antes de conferir a senha) e,
+ *   ligada em "https", só com HTTPS;
  * - o usuário precisa da Biblioteca de APIs (Ler) e da leitura da tela dos dados (a mesma das telas: quem não lê no SIG não
  *   lê pela API);
  * - os bloqueios da tela (uma API, um usuário ou um endereço) recusam na hora (403);
@@ -32,9 +33,15 @@ async function bloqueado(tipo: TipoDeBloqueio, valor: string | null) {
   return !!(await getPrismaClient().apiBloqueio.findUnique({ where: { tipo_valor: { tipo, valor } }, select: { id: true } }));
 }
 
-/** O HTTPS (a regra do TI): sem ele, recusa, a não ser com a API_ACEITA_HTTP (só o TI a liga; no desenvolvimento, sim). */
-function exigirHttps(origem: Origem) {
-  if (!origem.https && !env.apiAceitaHttp) {
+/**
+ * A API ligada pelo TI (a API_EXTERNA) e, em "https", o HTTPS (a regra do TI). Vem antes de tudo: desligada, nem a senha
+ * é conferida.
+ */
+export function exigirLigada(origem: Pick<Origem, "https">, modo = env.apiExterna) {
+  if (modo === "desligada") {
+    throw new ApiError(503, "A API do SIG BPM ainda não foi ligada pelo TI da BPM neste endereço.", "API_DESLIGADA");
+  }
+  if (modo === "https" && !origem.https) {
     throw new ApiError(403, "A API só aceita conexões HTTPS (regra de segurança do TI da BPM). Peça ao TI o endereço do SIG com HTTPS.", "HTTPS_OBRIGATORIO");
   }
 }
@@ -63,7 +70,7 @@ const registrar = (acao: (typeof ACOES_DA_API)[number] | "LOGIN_FALHA", u: { sub
 export const conectividadeService = {
   /** O token da API, pelo login e pela senha do SIG (a mesma verificação do login). */
   async emitirToken(email: string, senha: string, origem: Origem) {
-    exigirHttps(origem);
+    exigirLigada(origem);
     let u: UsuarioAutenticado;
     try {
       u = await authService.verificarCredenciais(email, senha);
@@ -87,7 +94,7 @@ export const conectividadeService = {
 
   /** As APIs que o usuário do token lê (o catálogo, pela API). */
   async catalogoDaApi(u: UsuarioAutenticado, origem: Origem) {
-    exigirHttps(origem);
+    exigirLigada(origem);
     await exigirLiberado(u, origem);
     const bloqueadas = new Set((await getPrismaClient().apiBloqueio.findMany({ where: { tipo: "API" }, select: { valor: true } })).map((b) => b.valor));
     return CATALOGO.filter((a) => a.alcanca(u)).map((a) => ({ codigo: a.codigo, nome: a.nome, origem: a.origem, descricao: a.descricao, formatos: a.formatos, parametros: a.parametros, bloqueada: bloqueadas.has(a.codigo) }));
@@ -98,7 +105,7 @@ export const conectividadeService = {
     const inicio = Date.now();
     const formato = (consulta.formato === "visual" ? "visual" : "dados") as Formato;
     try {
-      exigirHttps(origem);
+      exigirLigada(origem);
       if (consulta.formato !== undefined && consulta.formato !== "dados" && consulta.formato !== "visual") {
         throw new ApiError(422, "Parâmetro inválido — formato: dados ou visual.", "PARAMETRO_INVALIDO");
       }
@@ -124,12 +131,12 @@ export const conectividadeService = {
     return api.executar(parametros, u, formato === "visual" ? "visual" : "dados");
   },
 
-  /** O catálogo da tela: todas as APIs, com o que o usuário lê, os bloqueios e se a API exige HTTPS. */
+  /** O catálogo da tela: todas as APIs, com o que o usuário lê, os bloqueios e o modo da API (desligada, https ou http). */
   async catalogo(u: UsuarioAutenticado) {
     const bloqueios = await getPrismaClient().apiBloqueio.findMany({ select: { tipo: true, valor: true, bloqueadoPor: true, bloqueadoEm: true } });
     const daApi = new Map(bloqueios.filter((b) => b.tipo === "API").map((b) => [b.valor, b]));
     return {
-      httpsObrigatorio: !env.apiAceitaHttp,
+      modo: env.apiExterna,
       podeEditar: u.permissions.includes("biblioteca_apis:editar"),
       duracaoDoToken: DURACAO_DO_TOKEN_DA_API,
       apis: CATALOGO.map((a) => ({

@@ -25,7 +25,7 @@ export const openApiSpec = {
       name: "Biblioteca de APIs",
       description:
         "Os dados das DREs, dos cards e dos indicadores dos Resultados Empresariais e dos Cenários para outros aplicativos (24/10/2026). " +
-        "Fora do SIG, o endereço é o do SIG com o prefixo /api (http(s)://servidor/api/v1/…). Só por HTTPS, na produção (regra do TI); " +
+        "Fora do SIG, o endereço é o do SIG com o prefixo /api (http(s)://servidor/api/v1/…). Na produção, só depois que o TI liga a API (a API_EXTERNA; antes, 503) e só por HTTPS (regra do TI);" +
         "o token vale uma hora; cada pedido exige a Biblioteca de APIs (Ler) e a leitura da tela dos dados no perfil, e fica na Auditoria.",
     },
   ],
@@ -262,6 +262,7 @@ export const openApiSpec = {
           "403": { description: "Sem HTTPS, sem a Biblioteca de APIs no perfil, ou o usuário ou o endereço bloqueados" },
           "422": { description: "O e-mail e a senha não vieram" },
           "429": { description: "Muitas tentativas" },
+          "503": { description: "A API ainda não foi ligada pelo TI (API_DESLIGADA)" },
         },
       },
     },
@@ -274,6 +275,7 @@ export const openApiSpec = {
           "200": { description: "{ data: [{ codigo, nome, origem, descricao, formatos, parametros, bloqueada }], meta: { total } }" },
           "401": { description: "Sem o token, ou o token inválido ou vencido" },
           "403": { description: "Sem HTTPS, sem a Biblioteca de APIs no perfil, ou o usuário ou o endereço bloqueados" },
+          "503": { description: "A API ainda não foi ligada pelo TI (API_DESLIGADA)" },
         },
       },
     },
@@ -296,6 +298,7 @@ export const openApiSpec = {
           "404": { description: "API, cenário ou card inexistente" },
           "422": { description: "Parâmetro inválido" },
           "429": { description: "Mais de 120 pedidos por minuto" },
+          "503": { description: "A API ainda não foi ligada pelo TI (API_DESLIGADA)" },
         },
       },
     },

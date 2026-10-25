@@ -30,10 +30,13 @@ const envSchema = z
     ENABLE_SWAGGER: z.stringbool().optional(),
     ENABLE_AUDIT: z.stringbool().optional(),
     /**
-     * A Biblioteca de APIs sem HTTPS (24/10/2026): a regra do TI (Docs/projeto/anexos/RNF-API-SEGURA.md) só aceita o
-     * token sobre HTTPS; sem esta variável, a produção recusa a API pedida por HTTP. Só o TI a liga (o arquivo .env).
+     * A API da Biblioteca de APIs (24/10/2026), que só o TI liga (o arquivo .env): "desligada" (o padrão da produção)
+     * recusa todo pedido, antes de conferir a senha; "https" aceita só o pedido que o proxy HTTPS do TI marca como
+     * HTTPS (a regra do TI, Docs/projeto/anexos/RNF-API-SEGURA.md) — o proxy reescreve o X-Forwarded-Proto e acrescenta
+     * o X-Forwarded-For, e a porta do SIG não fica acessível sem ele; "http" aceita também o HTTP (o padrão fora da
+     * produção). Um valor errado desliga a API, sem derrubar o SIG.
      */
-    API_ACEITA_HTTP: z.stringbool().optional(),
+    API_EXTERNA: z.enum(["desligada", "https", "http"]).optional().catch("desligada"),
     TOTVS_WSDL_URL: z.string().optional(),
     TOTVS_USER: z.string().optional(),
     TOTVS_PASSWORD: z.string().optional(),
@@ -55,11 +58,14 @@ const envSchema = z
   });
 
 const parsed = envSchema.parse(process.env);
+if (process.env.API_EXTERNA && process.env.API_EXTERNA !== parsed.API_EXTERNA) {
+  console.warn(`API_EXTERNA="${process.env.API_EXTERNA}" não é desligada, https nem http: a API da Biblioteca de APIs fica desligada.`);
+}
 
 export const env = {
   ...parsed,
   enableSwagger: parsed.ENABLE_SWAGGER ?? parsed.NODE_ENV !== "production",
   enableAudit: parsed.ENABLE_AUDIT ?? true,
-  apiAceitaHttp: parsed.API_ACEITA_HTTP ?? parsed.NODE_ENV !== "production",
+  apiExterna: parsed.API_EXTERNA ?? (parsed.NODE_ENV === "production" ? "desligada" : "http"),
   totvsConfigured: Boolean(parsed.TOTVS_WSDL_URL),
 };

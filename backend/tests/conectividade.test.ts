@@ -6,7 +6,8 @@ import type { Request } from "express";
 import { enderecoDe, httpsDe } from "../src/controllers/conectividade/conectividadeController.js";
 import { signToken, signTokenDaApi, verifyToken } from "../src/lib/jwt.js";
 import { autenticacao } from "../src/middlewares/autenticacao.js";
-import { curtoDoIndicador, curtoDoPainel, niveisDaDre, sinalDo, variacao } from "../src/services/conectividade/catalogoApis.js";
+import { ApiError, curtoDoIndicador, curtoDoPainel, niveisDaDre, sinalDo, variacao } from "../src/services/conectividade/catalogoApis.js";
+import { exigirLigada } from "../src/services/conectividade/conectividadeService.js";
 import { cardEmSvg, cortar, esc, tabelaEmSvg } from "../src/services/conectividade/visuais.js";
 
 /** Um pedido de mentira: o endereço da conexão e os cabeçalhos. */
@@ -33,6 +34,22 @@ describe("Biblioteca de APIs (24/10/2026)", () => {
     assert.equal(enderecoDe(pedido("200.1.1.1", { "x-forwarded-for": "9.9.9.9" })), "200.1.1.1");
     assert.equal(httpsDe(pedido("200.1.1.1", { "x-forwarded-proto": "https" })), false);
     assert.equal(httpsDe(pedido("200.1.1.1", {}, true)), true);
+  });
+
+  it("a API desligada recusa tudo; em https, só o HTTPS; em http, tudo passa", () => {
+    const recusa = (https: boolean, modo: "desligada" | "https" | "http") => {
+      try {
+        exigirLigada({ https }, modo);
+        return null;
+      } catch (e) {
+        return e instanceof ApiError ? `${e.status} ${e.codigo}` : String(e);
+      }
+    };
+    assert.equal(recusa(true, "desligada"), "503 API_DESLIGADA");
+    assert.equal(recusa(false, "desligada"), "503 API_DESLIGADA");
+    assert.equal(recusa(false, "https"), "403 HTTPS_OBRIGATORIO");
+    assert.equal(recusa(true, "https"), null);
+    assert.equal(recusa(false, "http"), null);
   });
 
   it("o sinal e a variação dos indicadores, com a regra do Painel", () => {

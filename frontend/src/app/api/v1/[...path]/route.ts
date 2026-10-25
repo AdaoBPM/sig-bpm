@@ -20,8 +20,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
  * A API da Biblioteca de APIs para outros aplicativos (24/10/2026): /api/v1/… vai ao /v1/… do backend. Repassa só o
  * Authorization do aplicativo (o token da API; nunca o cookie da sessão do SIG), o tipo do conteúdo e o navegador, e
  * diz ao backend de onde veio o pedido e por qual protocolo: o último endereço do X-Forwarded-For e o X-Forwarded-Proto
- * (os que o servidor do Next põe — ou o proxy HTTPS do TI, na frente dele). A regra do HTTPS e a dos bloqueios ficam no
- * backend.
+ * (os que o servidor do Next põe — ou o proxy HTTPS do TI, na frente dele). Sem o proxy do TI, o aplicativo pode mandar
+ * os dois cabeçalhos: por isso, na produção, a API fica desligada até o TI ligá-la (a API_EXTERNA do backend). A regra do
+ * HTTPS e a dos bloqueios ficam no backend.
  */
 async function repassar(request: NextRequest, context: RouteContext, metodo: "GET" | "POST") {
   await connection();

@@ -19,7 +19,7 @@ import { cardEmSvg, tabelaEmSvg, type BlocoDoCard, type ColunaVisual, type Sinal
 
 export class ApiError extends Error {
   constructor(
-    readonly status: 401 | 403 | 404 | 422 | 429,
+    readonly status: 401 | 403 | 404 | 422 | 429 | 503,
     message: string,
     readonly codigo?: string,
   ) {

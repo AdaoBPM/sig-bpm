@@ -25,6 +25,7 @@ const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateSt
 const diaCurto = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
 /** O motivo da recusa, como o usuário o entende. */
 const MOTIVO: Record<string, string> = {
+  API_DESLIGADA: "API desligada",
   HTTPS_OBRIGATORIO: "sem HTTPS",
   SEM_BIBLIOTECA: "sem a Biblioteca no perfil",
   SEM_PERMISSAO: "sem a leitura dos dados",

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { verifyToken } from "../../lib/jwt.js";
 import { carregarUsuario } from "../../services/acesso/acesso.js";
 import { ApiError } from "../../services/conectividade/catalogoApis.js";
-import { conectividadeService, type Origem } from "../../services/conectividade/conectividadeService.js";
+import { conectividadeService, exigirLigada, type Origem } from "../../services/conectividade/conectividadeService.js";
 
 /**
  * A Biblioteca de APIs (24/10/2026): as rotas externas (/v1, pelo /api/v1 do servidor do Next) e as da tela
@@ -19,7 +19,8 @@ const limpar = (ip: string) => ip.trim().replace(/^::ffff:/i, "");
 
 /**
  * O endereço de quem chama: o último do X-Forwarded-For que o servidor do Next (ou o proxy HTTPS do TI, na frente dele)
- * acrescenta; fora disso, o da conexão. Sem o proxy do TI, o aplicativo pode mandar o próprio cabeçalho.
+ * acrescenta; fora disso, o da conexão. Sem o proxy do TI, o aplicativo pode mandar o próprio cabeçalho (o Next guarda o
+ * que vier): só com o proxy, e a porta do SIG fechada sem ele, o endereço é confiável.
  */
 export function enderecoDe(request: Request) {
   const xff = request.headers["x-forwarded-for"];
@@ -27,7 +28,10 @@ export function enderecoDe(request: Request) {
   return request.socket.remoteAddress ? limpar(request.socket.remoteAddress) : null;
 }
 
-/** O pedido chegou por HTTPS: o X-Forwarded-Proto do Next (ou do proxy do TI) ou a própria conexão. */
+/**
+ * O pedido chegou por HTTPS: o X-Forwarded-Proto do Next (ou do proxy do TI) ou a própria conexão. Como o endereço, só é
+ * confiável com o proxy do TI, que reescreve o cabeçalho — por isso a API em "https" é só para depois do proxy.
+ */
 export function httpsDe(request: Request) {
   const proto = request.headers["x-forwarded-proto"];
   if (typeof proto === "string" && doProxy(request)) return proto.split(",")[0]?.trim() === "https";
@@ -107,10 +111,12 @@ const bloqueioSchema = z.object({ tipo: z.enum(["API", "USUARIO", "ENDERECO"]), 
 export const conectividadeController = {
   /** POST /v1/token: { email, senha } → o token da API (uma hora). */
   async token(request: Request, response: Response) {
-    const b = tokenSchema.safeParse(request.body);
-    if (!b.success) return response.status(422).json({ error: "Informe o e-mail e a senha do SIG: { \"email\": \"…\", \"senha\": \"…\" }.", codigo: "PARAMETRO_INVALIDO" });
+    const origem = origemDe(request);
     try {
-      return response.json({ data: await conectividadeService.emitirToken(b.data.email, b.data.senha, origemDe(request)) });
+      exigirLigada(origem);
+      const b = tokenSchema.safeParse(request.body);
+      if (!b.success) return response.status(422).json({ error: "Informe o e-mail e a senha do SIG: { \"email\": \"…\", \"senha\": \"…\" }.", codigo: "PARAMETRO_INVALIDO" });
+      return response.json({ data: await conectividadeService.emitirToken(b.data.email, b.data.senha, origem) });
     } catch (e) {
       return erro(response, e);
     }
