@@ -30,13 +30,23 @@ function publico(u: UsuarioAutenticado) {
 }
 
 export const authService = {
-  async login(input: LoginInput) {
-    const usuario = await carregarUsuario({ email: input.email.trim().toLowerCase() });
+  /**
+   * O usuário do e-mail e da senha (o login do SIG e o token da Biblioteca de APIs, 24/10/2026); senão, 401. O e-mail
+   * inexistente leva o mesmo tempo (o hash fictício), para não revelar quem tem conta.
+   */
+  async verificarCredenciais(email: string, senha: string): Promise<UsuarioAutenticado> {
+    const usuario = await carregarUsuario({ email: email.trim().toLowerCase() });
     if (!usuario) {
-      await compararSenha(input.password, await hashFicticio());
+      await compararSenha(senha, await hashFicticio());
       throw new RegraAuthError(401, "E-mail ou senha inválidos");
     }
-    if (!(await compararSenha(input.password, usuario.senhaHash))) throw new RegraAuthError(401, "E-mail ou senha inválidos");
+    if (!(await compararSenha(senha, usuario.senhaHash))) throw new RegraAuthError(401, "E-mail ou senha inválidos");
+    const { senhaHash: _, ...semHash } = usuario;
+    return semHash;
+  },
+
+  async login(input: LoginInput) {
+    const usuario = await this.verificarCredenciais(input.email, input.password);
     const token = signToken({ sub: usuario.sub, email: usuario.email });
     return { user: await this.me(usuario), token };
   },

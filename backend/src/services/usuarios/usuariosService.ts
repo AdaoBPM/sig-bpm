@@ -42,6 +42,7 @@ export const RECURSOS: RecursoSistema[] = [
   "CADASTROS_APURACAO",
   "CADASTROS_CONTROLADORIA",
   "CONTROLE_USUARIOS",
+  "CENTRAL_CONECTIVIDADE",
 ];
 const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   CENARIOS_SINTETICOS: "Cenários Sintéticos",
@@ -52,6 +53,7 @@ const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   CADASTROS_CONTROLADORIA: "Cadastros da Controladoria",
   CONTROLE_USUARIOS: "Controle de Usuários",
   ANALISES_GERENCIAIS: "Análises Gerenciais",
+  CENTRAL_CONECTIVIDADE: "Central de Conectividade",
 };
 const ACOES: AcaoPermissao[] = ["LER", "EDITAR"];
 const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [

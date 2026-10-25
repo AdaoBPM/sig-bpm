@@ -33,6 +33,8 @@ export const emPublicacao = () => existsSync(sinalDaPublicacao());
 
 const LIVRES: Array<(metodo: string, caminho: string) => boolean> = [
   (m, c) => m === "POST" && c === "/auth/login",
+  // O token da Biblioteca de APIs (24/10/2026), como o login: só lê os dados.
+  (m, c) => m === "POST" && c === "/v1/token",
   (m, c) => m === "POST" && c === "/auditoria/acesso",
   // As análises (prévias) das importações e dos arquivos dos cenários só leem o arquivo enviado.
   (m, c) => m === "POST" && /\/analise$/.test(c),

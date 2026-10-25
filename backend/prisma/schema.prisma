@@ -38,6 +38,8 @@ enum RecursoSistema {
   CONTROLE_USUARIOS
   /// As Análises Gerenciais (15/10/2026): os Relatórios Executivos.
   ANALISES_GERENCIAIS
+  /// A Central de Conectividade (24/10/2026): a Biblioteca de APIs (e as Integrações, em desenvolvimento).
+  CENTRAL_CONECTIVIDADE
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
@@ -2382,4 +2384,19 @@ model PainelItem {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   @@map("painel_itens")
+}
+
+/// Os bloqueios da Biblioteca de APIs (24/10/2026, os controles deslizantes da tela): uma API (o código dela), um usuário
+/// (o id) ou um endereço (o IP de quem chama) sem acesso às APIs. Sem a linha, liberado; desbloquear apaga a linha (a
+/// Auditoria guarda quem bloqueou e desbloqueou, e quando).
+model ApiBloqueio {
+  id           String   @id @default(uuid())
+  /// "API", "USUARIO" ou "ENDERECO".
+  tipo         String
+  valor        String
+  bloqueadoPor String?  @map("bloqueado_por")
+  bloqueadoEm  DateTime @default(now()) @map("bloqueado_em")
+
+  @@unique([tipo, valor])
+  @@map("api_bloqueios")
 }

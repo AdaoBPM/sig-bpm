@@ -8,6 +8,8 @@ const PUBLIC_PATHS = [
   "/api/auth/logout",
   // O estado do modo de publicação (21/10/2026): a faixa aparece também na tela de login.
   "/api/publicacao",
+  // A Biblioteca de APIs (24/10/2026): os aplicativos entram com o token da API (o backend confere), sem a sessão do SIG.
+  "/api/v1/",
 ];
 
 export function proxy(request: NextRequest) {

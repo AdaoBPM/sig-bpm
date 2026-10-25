@@ -174,6 +174,9 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       { codigo: "auditoria", nome: "Auditoria" },
     ],
   },
+  // A Central de Conectividade (24/10/2026), no fim, como no menu: a Biblioteca de APIs — Ler usa as APIs e vê os próprios
+  // acessos; Editar vê os de todos e bloqueia APIs, usuários e endereços. As Integrações, em desenvolvimento, ficam fora.
+  { recurso: "CENTRAL_CONECTIVIDADE", nome: "Central de Conectividade", area: "conectividade", telas: [{ codigo: "biblioteca_apis", nome: "Biblioteca de APIs" }] },
 ];
 
 /** Todas as chaves da matriz: as telas e as abas (`tela.aba`), com o grupo de cada uma. */

@@ -29,6 +29,11 @@ const envSchema = z
     // "true"/"false", "1"/"0", "sim"... — z.coerce.boolean() tomaria "false" por verdadeiro.
     ENABLE_SWAGGER: z.stringbool().optional(),
     ENABLE_AUDIT: z.stringbool().optional(),
+    /**
+     * A Biblioteca de APIs sem HTTPS (24/10/2026): a regra do TI (Docs/projeto/anexos/RNF-API-SEGURA.md) só aceita o
+     * token sobre HTTPS; sem esta variável, a produção recusa a API pedida por HTTP. Só o TI a liga (o arquivo .env).
+     */
+    API_ACEITA_HTTP: z.stringbool().optional(),
     TOTVS_WSDL_URL: z.string().optional(),
     TOTVS_USER: z.string().optional(),
     TOTVS_PASSWORD: z.string().optional(),
@@ -55,5 +60,6 @@ export const env = {
   ...parsed,
   enableSwagger: parsed.ENABLE_SWAGGER ?? parsed.NODE_ENV !== "production",
   enableAudit: parsed.ENABLE_AUDIT ?? true,
+  apiAceitaHttp: parsed.API_ACEITA_HTTP ?? parsed.NODE_ENV !== "production",
   totvsConfigured: Boolean(parsed.TOTVS_WSDL_URL),
 };

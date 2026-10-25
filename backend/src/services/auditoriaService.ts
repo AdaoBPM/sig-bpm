@@ -57,6 +57,10 @@ export const ROTULO_ACAO: Record<string, string> = {
   GRAVACAO_RE: "Gravação do grupo",
   FINALIZACAO_RE: "Finalização do grupo",
   REABERTURA_RE: "Reabertura do grupo",
+  // A Biblioteca de APIs (24/10/2026): o token emitido e os pedidos às APIs, atendidos ou recusados.
+  TOKEN_API: "Token da API emitido",
+  ACESSO_API: "Acesso pela API",
+  ACESSO_API_NEGADO: "Acesso pela API recusado",
 };
 
 /** Entidades registradas, com o rótulo da tela de consulta. */
@@ -82,6 +86,8 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   tipo_movimento: "Tipo de movimento",
   tabela_estaca: "Tabela de estacas",
   relatorio_executivo: "Relatório Executivo",
+  api: "Biblioteca de APIs",
+  api_bloqueio: "Bloqueio na Biblioteca de APIs",
 };
 
 /** Deixa o JSON gravável: Decimal e Date viram texto, undefined some. */
@@ -230,6 +236,12 @@ async function nomesDosRegistros(itens: ItemDoLog[]) {
     else if (i.entidade === "divergencia") nome = (id ? divPorId.get(id) : null) ?? [competencia, txt(m.descricao)].filter(Boolean).join(" · ");
     else if (i.entidade === "lista_operacional") nome = [competencia, LISTA[txt(m.tipo) ?? ""] ?? txt(m.tipo)].filter(Boolean).join(" · ");
     else if (i.entidade === "cadastros") nome = "Planilha de cadastros";
+    // A Biblioteca de APIs (24/10/2026): a API (o código) e o formato; recusado, o motivo; o token tentado, o e-mail.
+    else if (i.entidade === "api")
+      nome = [txt(m.codigo) === "token" ? "Pedido do token" : txt(m.codigo), txt(m.formato), m.status && m.status !== 200 ? `recusado${txt(m.motivo) ? ` (${txt(m.motivo)})` : ""}` : null, txt(m.email)]
+        .filter(Boolean)
+        .join(" · ");
+    else if (i.entidade === "api_bloqueio") nome = `${m.tipo === "API" ? "API" : m.tipo === "USUARIO" ? "Usuário" : "Endereço"} ${txt(m.nome) ?? ""}`.trim();
     // Os Relatórios Executivos (23/10/2026): o mês e o grupo (ou as Configurações); "por cima" na gravação sobre a de outro;
     // as gravações em sequência (24/10/2026, o salvamento automático), quantas foram e desde quando.
     else if (i.entidade === "relatorio_executivo")
@@ -277,7 +289,8 @@ export const auditoriaService = {
       ...(f.usuarioId ? { usuarioId: { in: f.usuarioId } } : {}),
       ...(f.entidade ? { entidade: { in: f.entidade } } : {}),
       ...(f.entidadeId ? { entidadeId: f.entidadeId } : {}),
-      ...(f.acao ? { acao: { in: f.acao } } : !f.incluirAcessos ? { acao: { not: "ACESSO" } } : {}),
+      // Os acessos às telas e, desde 24/10/2026, os pedidos às APIs (muitos, dos aplicativos) só com "incluir acessos".
+      ...(f.acao ? { acao: { in: f.acao } } : !f.incluirAcessos ? { acao: { notIn: ["ACESSO", "ACESSO_API"] } } : {}),
     };
     const [itens, total] = await Promise.all([
       db.auditLog.findMany({

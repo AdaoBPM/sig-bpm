@@ -21,6 +21,13 @@ export const openApiSpec = {
     { name: "Health", description: "Disponibilidade da API" },
     { name: "Auth", description: "Autenticação JWT" },
     { name: "Auditoria", description: "Registro de ações de negócio" },
+    {
+      name: "Biblioteca de APIs",
+      description:
+        "Os dados das DREs, dos cards e dos indicadores dos Resultados Empresariais e dos Cenários para outros aplicativos (24/10/2026). " +
+        "Fora do SIG, o endereço é o do SIG com o prefixo /api (http(s)://servidor/api/v1/…). Só por HTTPS, na produção (regra do TI); " +
+        "o token vale uma hora; cada pedido exige a Biblioteca de APIs (Ler) e a leitura da tela dos dados no perfil, e fica na Auditoria.",
+    },
   ],
   components: {
     securitySchemes: {
@@ -237,6 +244,58 @@ export const openApiSpec = {
               },
             },
           },
+        },
+      },
+    },
+    "/v1/token": {
+      post: {
+        tags: ["Biblioteca de APIs"],
+        summary: "Pedir o token da API",
+        description: "Com o e-mail e a senha do SIG. Limite: 20 tentativas erradas por e-mail e 30 por endereço a cada 15 minutos.",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", required: ["email", "senha"], properties: { email: { type: "string" }, senha: { type: "string" } } } } },
+        },
+        responses: {
+          "200": { description: "{ data: { token, tipo: \"Bearer\", expiraEm } }" },
+          "401": { description: "E-mail ou senha inválidos", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "403": { description: "Sem HTTPS, sem a Biblioteca de APIs no perfil, ou o usuário ou o endereço bloqueados" },
+          "422": { description: "O e-mail e a senha não vieram" },
+          "429": { description: "Muitas tentativas" },
+        },
+      },
+    },
+    "/v1/apis": {
+      get: {
+        tags: ["Biblioteca de APIs"],
+        summary: "As APIs que o usuário do token lê",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": { description: "{ data: [{ codigo, nome, origem, descricao, formatos, parametros, bloqueada }], meta: { total } }" },
+          "401": { description: "Sem o token, ou o token inválido ou vencido" },
+          "403": { description: "Sem HTTPS, sem a Biblioteca de APIs no perfil, ou o usuário ou o endereço bloqueados" },
+        },
+      },
+    },
+    "/v1/apis/{codigo}": {
+      get: {
+        tags: ["Biblioteca de APIs"],
+        summary: "Os dados de uma API",
+        description:
+          "Códigos: resultados-dre, resultados-painel, resultados-indicadores, cenarios, cenario-dre, cenario-painel e cenario-indicadores. " +
+          "?formato=dados (o padrão: { colunas, linhas }) ou visual ({ visuais: [{ titulo, largura, altura, svg }] }); os demais parâmetros, conforme a API (GET /v1/apis).",
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "codigo", in: "path", required: true, schema: { type: "string" } },
+          { name: "formato", in: "query", required: false, schema: { type: "string", enum: ["dados", "visual"] } },
+        ],
+        responses: {
+          "200": { description: "{ data: { api, formato, colunas, linhas } | { api, formato, visuais }, meta }" },
+          "401": { description: "Sem o token, ou o token inválido ou vencido" },
+          "403": { description: "Sem HTTPS, sem a permissão de leitura dos dados, ou a API, o usuário ou o endereço bloqueados" },
+          "404": { description: "API, cenário ou card inexistente" },
+          "422": { description: "Parâmetro inválido" },
+          "429": { description: "Mais de 120 pedidos por minuto" },
         },
       },
     },

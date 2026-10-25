@@ -9,7 +9,16 @@ import { env } from "../config/env.js";
 export type JwtPayload = {
   sub: string;
   email: string;
+  /** O token da Biblioteca de APIs (24/10/2026): só vale nas rotas da API (/v1), e as do SIG o recusam. */
+  escopo?: "api";
 };
+
+/** A duração do token da API (24/10/2026): uma hora; depois, outro pedido com o login e a senha. */
+export const DURACAO_DO_TOKEN_DA_API = 60 * 60;
+
+export function signTokenDaApi(payload: { sub: string; email: string }): string {
+  return jwt.sign({ ...payload, escopo: "api" }, env.JWT_SECRET, { expiresIn: DURACAO_DO_TOKEN_DA_API });
+}
 
 export function signToken(payload: JwtPayload): string {
   const options: SignOptions = {

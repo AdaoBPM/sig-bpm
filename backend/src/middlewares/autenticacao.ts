@@ -17,7 +17,10 @@ export async function autenticacao(request: Request, response: Response, next: N
 
   let sub: string;
   try {
-    sub = verifyToken(header.slice("Bearer ".length)).sub;
+    const payload = verifyToken(header.slice("Bearer ".length));
+    // O token da Biblioteca de APIs (24/10/2026) não abre o SIG: só as rotas da API (/v1).
+    if (payload.escopo === "api") return response.status(401).json({ error: "Token inválido ou expirado" });
+    sub = payload.sub;
   } catch {
     return response.status(401).json({ error: "Token inválido ou expirado" });
   }

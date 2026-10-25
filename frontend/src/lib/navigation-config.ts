@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   BadgeDollarSign,
   Building2,
+  Cable,
   Calculator,
   CalendarCheck,
   ChartPie,
@@ -23,6 +24,7 @@ import {
   Landmark,
   Layers,
   LayoutDashboard,
+  Library,
   ListOrdered,
   ListTree,
   Percent,
@@ -195,6 +197,21 @@ export const navGrupos: NavGrupo[] = [
       },
     ],
   },
+  {
+    // A Central de Conectividade (24/10/2026): a Biblioteca de APIs, que abre os dados do SIG a outros aplicativos, e as
+    // Integrações, ainda em desenvolvimento.
+    titulo: "Central de Conectividade",
+    itens: [
+      { title: "Integrações", href: "/central-de-conectividade/integracoes", icon: Cable, emDesenvolvimento: true },
+      {
+        title: "Biblioteca de APIs",
+        href: "/central-de-conectividade/biblioteca-de-apis",
+        icon: Library,
+        permission: "biblioteca_apis:ler",
+        recurso: "CENTRAL_CONECTIVIDADE",
+      },
+    ],
+  },
 ];
 
 const naTela = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
@@ -267,6 +284,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/auditoria(\/|$)/, "auditoria:ler"],
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
+  [/^\/central-de-conectividade\/biblioteca-de-apis(\/|$)/, "biblioteca_apis:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
   // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
   [/^\/relatorios\/indicadores(\/|$)/, "relatorio_painel:ler"],
@@ -344,6 +362,7 @@ export const pageTitles: Record<string, string> = {
   "/relatorios/painel": "Painel de Bordo",
   "/cenarios/sinteticos": "Cenários Sintéticos",
   "/cenarios/analiticos": "Cenários Analíticos",
+  "/central-de-conectividade/biblioteca-de-apis": "Biblioteca de APIs",
 };
 
 /** Uma parte do caminho no topo da tela; sem href, é a tela atual. */
