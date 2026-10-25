@@ -51,9 +51,10 @@ function Barra({ valor, maximo }: { valor: number; maximo: number }) {
   );
 }
 
+/** Um destaque do período: amarelo-ouro à esquerda, como os das outras telas. */
 function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: number; detalhe?: string }) {
   return (
-    <div className="rounded-sm border border-gray-200 bg-white px-4 py-3">
+    <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3">
       <p className="text-xs font-semibold tracking-wide text-gray-600 uppercase">{rotulo}</p>
       <p className="mt-1 text-2xl font-bold text-gray-900">{valor.toLocaleString("pt-BR")}</p>
       {detalhe ? <p className="text-xs text-gray-500">{detalhe}</p> : null}
@@ -97,7 +98,7 @@ export function AcessosDaApi() {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold text-gray-900">{a.todos ? "Acessos às APIs" : "Os Seus Acessos às APIs"}</h2>
+        <p className="text-sm text-gray-600">{a.todos ? "Os pedidos de todos os usuários às APIs." : "Os seus pedidos às APIs (quem edita a Biblioteca vê os de todos)."}</p>
         <span className="flex overflow-hidden rounded-sm border border-gray-300" role="radiogroup" aria-label="Período">
           {PERIODOS.map((d) => (
             <button
@@ -133,150 +134,148 @@ export function AcessosDaApi() {
           </BarChart>
         </ChartContainer>
       </div>
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className={cabecalho}>
-                <th className="px-3 py-2">Usuário</th>
-                <th className="w-40 px-3 py-2 text-right">Pedidos</th>
-                <th className="px-3 py-2 text-right">Recusados</th>
-                <th className="px-3 py-2">Último</th>
-                {a.todos ? <th className="px-3 py-2">Acesso</th> : null}
+      <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
+        <p className="px-4 pt-3 pb-2 text-sm font-semibold text-gray-900">Pedidos por Usuário</p>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className={cabecalho}>
+              <th className="px-3 py-2">Usuário</th>
+              <th className="w-40 px-3 py-2 text-right">Pedidos</th>
+              <th className="px-3 py-2 text-right">Recusados</th>
+              <th className="px-3 py-2">Último</th>
+              {a.todos ? <th className="px-3 py-2">Acesso</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {usuarios.length ? null : (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                  Nenhum pedido no período.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {usuarios.length ? null : (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
-                    Nenhum pedido no período.
-                  </td>
-                </tr>
-              )}
-              {usuarios.map((u) => (
-                <tr key={u.usuarioId} className="border-b border-gray-100 last:border-b-0">
-                  <td className="min-w-44 px-3 py-2">
-                    <span className="font-medium text-gray-900">{u.nome}</span>
-                    {u.enderecos.length ? <span className="block text-xs text-gray-500">{`${plural(u.enderecos.length, "1 endereço", `${u.enderecos.length} endereços`)}: ${u.enderecos.join(", ")}`}</span> : null}
-                  </td>
+            )}
+            {usuarios.map((u) => (
+              <tr key={u.usuarioId} className="border-b border-gray-100 last:border-b-0">
+                <td className="min-w-44 px-3 py-2">
+                  <span className="font-medium text-gray-900">{u.nome}</span>
+                  {u.enderecos.length ? <span className="block text-xs text-gray-500">{`${plural(u.enderecos.length, "1 endereço", `${u.enderecos.length} endereços`)}: ${u.enderecos.join(", ")}`}</span> : null}
+                </td>
+                <td className="px-3 py-2">
+                  <Barra valor={u.total} maximo={maiorUsuario} />
+                </td>
+                <td className={`px-3 py-2 text-right ${u.recusados ? "font-semibold text-red-700" : "text-gray-500"}`}>{u.recusados}</td>
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-gray-600">{u.ultimo ? dataHora(u.ultimo) : "—"}</td>
+                {a.todos ? (
                   <td className="px-3 py-2">
-                    <Barra valor={u.total} maximo={maiorUsuario} />
+                    <Deslizante liberado={!u.bloqueado} rotulo={u.nome} desabilitado={bloquear.isPending} onMudar={(liberado) => bloquear.mutate({ tipo: "USUARIO", valor: u.usuarioId, bloqueado: !liberado, nome: u.nome })} />
                   </td>
-                  <td className={`px-3 py-2 text-right ${u.recusados ? "font-semibold text-red-700" : "text-gray-500"}`}>{u.recusados}</td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap text-gray-600">{u.ultimo ? dataHora(u.ultimo) : "—"}</td>
-                  {a.todos ? (
-                    <td className="px-3 py-2">
-                      <Deslizante liberado={!u.bloqueado} rotulo={u.nome} desabilitado={bloquear.isPending} onMudar={(liberado) => bloquear.mutate({ tipo: "USUARIO", valor: u.usuarioId, bloqueado: !liberado, nome: u.nome })} />
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className={cabecalho}>
-                <th className="px-3 py-2">Endereço</th>
-                <th className="w-40 px-3 py-2 text-right">Pedidos</th>
-                <th className="px-3 py-2 text-right">Recusados</th>
-                <th className="px-3 py-2">Último</th>
-                {a.todos ? <th className="px-3 py-2">Acesso</th> : null}
+                ) : null}
               </tr>
-            </thead>
-            <tbody>
-              {enderecos.length ? null : (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
-                    Nenhum pedido no período.
-                  </td>
-                </tr>
-              )}
-              {enderecos.map((e) => (
-                <tr key={e.endereco} className="border-b border-gray-100 last:border-b-0">
-                  <td className="min-w-44 px-3 py-2">
-                    <span className="font-mono text-xs font-medium text-gray-900">{e.endereco}</span>
-                    {e.usuarios.length ? <span className="block text-xs text-gray-500">{e.usuarios.join(", ")}</span> : null}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Barra valor={e.total} maximo={maiorEndereco} />
-                  </td>
-                  <td className={`px-3 py-2 text-right ${e.recusados ? "font-semibold text-red-700" : "text-gray-500"}`}>{e.recusados}</td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap text-gray-600">{e.ultimo ? dataHora(e.ultimo) : "—"}</td>
-                  {a.todos ? (
-                    <td className="px-3 py-2">
-                      <Deslizante liberado={!e.bloqueado} rotulo={e.endereco} desabilitado={bloquear.isPending} onMudar={(liberado) => bloquear.mutate({ tipo: "ENDERECO", valor: e.endereco, bloqueado: !liberado, nome: e.endereco })} />
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <div className="rounded-sm border border-gray-200 bg-white p-4">
-          <p className="mb-2 text-sm font-semibold text-gray-900">Pedidos por API</p>
-          {a.porApi.length ? (
-            <ul className="space-y-2 text-sm">
-              {a.porApi.map((x) => (
-                <li key={x.codigo}>
-                  <span className="flex justify-between text-gray-800">
-                    <span>{x.nome}</span>
-                    {x.recusados ? <span className="text-xs text-red-700">{plural(x.recusados, "1 recusado", `${x.recusados} recusados`)}</span> : null}
-                  </span>
-                  <Barra valor={x.total} maximo={maiorApi} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500">Nenhum pedido no período.</p>
-          )}
-        </div>
-        <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
-          <p className="px-4 pt-3 pb-2 text-sm font-semibold text-gray-900">Últimos Pedidos</p>
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className={cabecalho}>
-                <th className="px-3 py-2">Quando</th>
-                <th className="px-3 py-2">Usuário</th>
-                <th className="px-3 py-2">Endereço</th>
-                <th className="px-3 py-2">API</th>
-                <th className="px-3 py-2">Resultado</th>
-                <th className="px-3 py-2 text-right">Tempo</th>
+      <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
+        <p className="px-4 pt-3 pb-2 text-sm font-semibold text-gray-900">Pedidos por Endereço</p>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className={cabecalho}>
+              <th className="px-3 py-2">Endereço</th>
+              <th className="w-40 px-3 py-2 text-right">Pedidos</th>
+              <th className="px-3 py-2 text-right">Recusados</th>
+              <th className="px-3 py-2">Último</th>
+              {a.todos ? <th className="px-3 py-2">Acesso</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {enderecos.length ? null : (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                  Nenhum pedido no período.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {a.ultimos.map((u, k) => (
-                <tr key={k} className="border-b border-gray-100 last:border-b-0">
-                  <td className="px-3 py-1.5 whitespace-nowrap text-gray-600">{dataHora(u.quando)}</td>
-                  <td className="px-3 py-1.5 text-gray-900">{u.usuario}</td>
-                  <td className="px-3 py-1.5 font-mono text-gray-700">{u.endereco ?? "—"}</td>
-                  <td className="px-3 py-1.5 text-gray-800">
-                    {u.api}
-                    {u.formato ? <span className="text-gray-500"> · {u.formato}</span> : null}
+            )}
+            {enderecos.map((e) => (
+              <tr key={e.endereco} className="border-b border-gray-100 last:border-b-0">
+                <td className="min-w-44 px-3 py-2">
+                  <span className="font-mono text-xs font-medium text-gray-900">{e.endereco}</span>
+                  {e.usuarios.length ? <span className="block text-xs text-gray-500">{e.usuarios.join(", ")}</span> : null}
+                </td>
+                <td className="px-3 py-2">
+                  <Barra valor={e.total} maximo={maiorEndereco} />
+                </td>
+                <td className={`px-3 py-2 text-right ${e.recusados ? "font-semibold text-red-700" : "text-gray-500"}`}>{e.recusados}</td>
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-gray-600">{e.ultimo ? dataHora(e.ultimo) : "—"}</td>
+                {a.todos ? (
+                  <td className="px-3 py-2">
+                    <Deslizante liberado={!e.bloqueado} rotulo={e.endereco} desabilitado={bloquear.isPending} onMudar={(liberado) => bloquear.mutate({ tipo: "ENDERECO", valor: e.endereco, bloqueado: !liberado, nome: e.endereco })} />
                   </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
-                    {u.status === 200 ? (
-                      <span className="text-gray-700">Atendido</span>
-                    ) : (
-                      <span className="font-semibold text-red-700">{`Recusado${u.motivo ? ` (${MOTIVO[u.motivo] ?? u.motivo})` : u.status ? ` (${u.status})` : ""}`}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-1.5 text-right text-gray-600">{u.ms === null ? "—" : `${u.ms.toLocaleString("pt-BR")} ms`}</td>
-                </tr>
-              ))}
-              {a.ultimos.length ? null : (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
-                    Nenhum pedido no período.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="rounded-sm border border-gray-200 bg-white p-4">
+        <p className="mb-2 text-sm font-semibold text-gray-900">Pedidos por API</p>
+        {a.porApi.length ? (
+          <ul className="space-y-2 text-sm">
+            {a.porApi.map((x) => (
+              <li key={x.codigo}>
+                <span className="flex justify-between text-gray-800">
+                  <span>{x.nome}</span>
+                  {x.recusados ? <span className="text-xs text-red-700">{plural(x.recusados, "1 recusado", `${x.recusados} recusados`)}</span> : null}
+                </span>
+                <Barra valor={x.total} maximo={maiorApi} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-500">Nenhum pedido no período.</p>
+        )}
+      </div>
+      <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
+        <p className="px-4 pt-3 pb-2 text-sm font-semibold text-gray-900">Últimos Pedidos</p>
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className={cabecalho}>
+              <th className="px-3 py-2">Quando</th>
+              <th className="px-3 py-2">Usuário</th>
+              <th className="px-3 py-2">Endereço</th>
+              <th className="px-3 py-2">API</th>
+              <th className="px-3 py-2">Resultado</th>
+              <th className="px-3 py-2 text-right">Tempo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {a.ultimos.map((u, k) => (
+              <tr key={k} className="border-b border-gray-100 last:border-b-0">
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-600">{dataHora(u.quando)}</td>
+                <td className="px-3 py-1.5 text-gray-900">{u.usuario}</td>
+                <td className="px-3 py-1.5 font-mono text-gray-700">{u.endereco ?? "—"}</td>
+                <td className="px-3 py-1.5 text-gray-800">
+                  {u.api}
+                  {u.formato ? <span className="text-gray-500"> · {u.formato}</span> : null}
+                </td>
+                <td className="px-3 py-1.5 whitespace-nowrap">
+                  {u.status === 200 ? (
+                    <span className="text-gray-700">Atendido</span>
+                  ) : (
+                    <span className="font-semibold text-red-700">{`Recusado${u.motivo ? ` (${MOTIVO[u.motivo] ?? u.motivo})` : u.status ? ` (${u.status})` : ""}`}</span>
+                  )}
+                </td>
+                <td className="px-3 py-1.5 text-right whitespace-nowrap text-gray-600">{u.ms === null ? "—" : `${u.ms.toLocaleString("pt-BR")} ms`}</td>
+              </tr>
+            ))}
+            {a.ultimos.length ? null : (
+              <tr>
+                <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                  Nenhum pedido no período.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </section>
   );

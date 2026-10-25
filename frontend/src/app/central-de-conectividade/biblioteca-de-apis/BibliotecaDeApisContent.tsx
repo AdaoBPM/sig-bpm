@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Eye, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
+import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -44,10 +45,12 @@ function Codigo({ titulo, texto }: { titulo: string; texto: string }) {
   );
 }
 
-function Aviso({ children }: { children: ReactNode }) {
+/** O destaque da situação: amarelo-ouro à esquerda, como os das outras telas. */
+function Destaque({ ligada = false, children }: { ligada?: boolean; children: ReactNode }) {
+  const Icone = ligada ? ShieldCheck : ShieldAlert;
   return (
-    <div className="flex gap-3 rounded-sm border border-orange-300 bg-orange-50 p-4 text-sm text-gray-800">
-      <ShieldAlert className="mt-0.5 size-5 shrink-0 text-orange-600" />
+    <div className="flex gap-3 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 text-sm text-gray-700">
+      <Icone className="mt-0.5 size-5 shrink-0 text-gray-700" />
       <p>{children}</p>
     </div>
   );
@@ -62,37 +65,34 @@ function Situacao({ c }: { c: Catalogo }) {
   const token = `O token vale ${Math.round(c.duracaoDoToken / 60)} minutos.`;
   if (c.modo === "desligada") {
     return (
-      <Aviso>
+      <Destaque>
         <strong>As APIs estão desligadas neste endereço.</strong> O TI da BPM as liga depois de pôr o SIG atrás do endereço com HTTPS (regra de segurança do
         TI: o login e o token não podem passar pela rede sem criptografia). Até lá, os aplicativos recebem a recusa “API desligada”, sem a senha ser conferida.
         A biblioteca, a pré-visualização e os bloqueios já funcionam aqui.
-      </Aviso>
+      </Destaque>
     );
   }
   if (c.modo === "https" && http) {
     return (
-      <Aviso>
+      <Destaque>
         <strong>As APIs só funcionam por HTTPS</strong> (regra de segurança do TI da BPM). Este endereço do SIG é HTTP: nos aplicativos, use o endereço do SIG
         com HTTPS, que o TI informa. {token}
-      </Aviso>
+      </Destaque>
     );
   }
   if (c.modo === "http") {
     return (
-      <Aviso>
+      <Destaque>
         <strong>As APIs aceitam HTTP neste ambiente</strong> (o desenvolvimento ou a decisão do TI): <span className="font-mono">{enderecoDaApi()}</span>. {token} Sem
         o HTTPS, a senha e o token passam pela rede sem criptografia, e o endereço de quem chama é o que o aplicativo informa: o bloqueio por endereço não é
         garantido (o por usuário, sim).
-      </Aviso>
+      </Destaque>
     );
   }
   return (
-    <div className="flex gap-3 rounded-sm border border-gray-200 bg-white p-4 text-sm text-gray-800">
-      <ShieldCheck className="mt-0.5 size-5 shrink-0 text-gray-700" />
-      <p>
-        As APIs estão ligadas neste endereço, por HTTPS: <span className="font-mono">{enderecoDaApi()}</span>. {token}
-      </p>
-    </div>
+    <Destaque ligada>
+      As APIs estão ligadas neste endereço, por HTTPS: <span className="font-mono">{enderecoDaApi()}</span>. {token}
+    </Destaque>
   );
 }
 
@@ -138,7 +138,7 @@ in
         </li>
         <li>Cada login lê só o que lê no SIG (as mesmas permissões e os mesmos recortes). Não compartilhe a sua senha: cada aplicativo deve usar o login de quem responde por ele.</li>
       </ol>
-      <div className="grid gap-3 xl:grid-cols-2">
+      <div className="space-y-3">
         <Codigo titulo="curl" texto={curl} />
         <Codigo titulo="Power Query (Excel e Power BI)" texto={powerQuery} />
       </div>
@@ -223,18 +223,29 @@ function CartaoDaApi({ a, podeEditar, onPrevia }: { a: ApiDoCatalogo; podeEditar
   );
 }
 
+/** As abas da tela (24/10/2026): como conectar, as APIs de cada origem e os acessos. */
+const ABAS = [
+  { chave: "conectar", rotulo: "Como Conectar" },
+  { chave: "resultados", rotulo: "Resultados Empresariais" },
+  { chave: "cenarios", rotulo: "Cenários" },
+  { chave: "acessos", rotulo: "Acesso às APIs" },
+] as const;
+type ChaveDaAba = (typeof ABAS)[number]["chave"];
+const ORIGEM_DA_ABA = { resultados: "Resultados Empresariais", cenarios: "Cenários" } as const;
+
 /**
  * A Biblioteca de APIs (24/10/2026, pedido do Adão; a Central de Conectividade): o catálogo das APIs que abrem a outros
  * aplicativos os dados das DREs, dos cards e dos indicadores dos Resultados Empresariais e dos Cenários — com o código, os
  * parâmetros, os formatos (dados e visual) e a pré-visualização —, como conectar e os acessos (quem e de onde), com os
- * controles deslizantes de quem edita a tela para bloquear APIs, usuários e endereços.
+ * controles deslizantes de quem edita a tela para bloquear APIs, usuários e endereços. Em abas, com os blocos um abaixo do
+ * outro (24/10/2026, pedido do Adão).
  */
 export function BibliotecaDeApisContent() {
   useRegistrarAcessoTela("/central-de-conectividade/biblioteca-de-apis");
   const consulta = useQuery({ queryKey: ["conectividade", "catalogo"], queryFn: conectividadeService.catalogo });
+  const [aba, setAba] = useState<ChaveDaAba>("conectar");
   const [previa, setPrevia] = useState<ApiDoCatalogo | null>(null);
   const c = consulta.data;
-  const grupos = c ? (["Resultados Empresariais", "Cenários"] as const).map((origem) => ({ origem, apis: c.apis.filter((a) => a.origem === origem) })) : [];
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
@@ -249,32 +260,32 @@ export function BibliotecaDeApisContent() {
         }
         comoUsar={
           <ul>
+            <li>A tela tem quatro abas: Como Conectar, Resultados Empresariais, Cenários e Acesso às APIs.</li>
             <li>
-              No alto, a situação: na produção, as APIs ficam desligadas até o TI pôr o SIG atrás do endereço com HTTPS e ligá-las (regra do TI); até lá, os
-              aplicativos recebem a recusa “API desligada”, sem a senha ser conferida. Ligadas, funcionam só por HTTPS. A biblioteca, a pré-visualização e os
-              bloqueios funcionam sempre.
+              Como Conectar: no alto, em destaque, a situação — na produção, as APIs ficam desligadas até o TI pôr o SIG atrás do endereço com HTTPS e ligá-las
+              (regra do TI); até lá, os aplicativos recebem a recusa “API desligada”, sem a senha ser conferida; ligadas, funcionam só por HTTPS. Abaixo, os dois
+              passos — o token, pedido com o e-mail e a senha do SIG (vale uma hora), e os dados, com o token no cabeçalho Authorization: Bearer e o código da API
+              no endereço — e os exemplos em curl e, logo abaixo, no Power Query (Excel e Power BI), com o botão de copiar.
             </li>
             <li>
-              Como Conectar explica os dois passos — o token, pedido com o e-mail e a senha do SIG (vale uma hora), e os dados, com o token no cabeçalho
-              Authorization: Bearer e o código da API no endereço — e traz os exemplos em curl e no Power Query (Excel e Power BI), com o botão de copiar.
-            </li>
-            <li>
-              As APIs, por origem (Resultados Empresariais e Cenários): o nome, o código (copie com o botão), o que ela traz, a permissão que exige no perfil, os
-              formatos (Dados: a tabela, com as colunas e as linhas; Visual: os cards e as tabelas em SVG, como nas telas) e os parâmetros (o asterisco marca os
-              obrigatórios). A Lista de Cenários dá o id que as APIs dos cenários pedem.
+              Resultados Empresariais e Cenários: as APIs de cada origem, uma abaixo da outra — nos Resultados Empresariais, a DRE, os Cards e os Indicadores do
+              Painel de Bordo; nos Cenários, a Lista de Cenários (o id que as outras pedem), a DRE, os Cards e os Indicadores de um cenário. Em cada uma: o nome,
+              o código (copie com o botão), o que ela traz, a permissão que exige no perfil, os formatos (Dados: a tabela, com as colunas e as linhas; Visual: os
+              cards e as tabelas em SVG, como nas telas) e os parâmetros (o asterisco marca os obrigatórios).
             </li>
             <li>
               Pré-visualizar abre o que um aplicativo receberia com o seu login: escolha os parâmetros e o formato e clique em Ver; o endereço do pedido, logo acima
               do resultado, se copia para o aplicativo. Sem a leitura dos dados no seu perfil, o botão fica desabilitado.
             </li>
             <li>
-              Os acessos (os últimos 7, 30 ou 90 dias): os pedidos (atendidos e recusados), os usuários e os endereços (os computadores ou servidores que chamam
-              as APIs), os pedidos por dia e por API e os últimos pedidos, com o motivo das recusas. Quem só lê a Biblioteca vê os próprios acessos.
+              Acesso às APIs (os últimos 7, 30 ou 90 dias): os destaques do período (os pedidos, os recusados, os usuários e os endereços — os computadores ou
+              servidores que chamam as APIs) e, um abaixo do outro, os pedidos por dia, por usuário, por endereço e por API e os últimos pedidos, com o motivo das
+              recusas. Quem só lê a Biblioteca vê os próprios acessos.
             </li>
             <li>
               Quem edita a Biblioteca (o perfil com Editar na Central de Conectividade) vê os acessos de todos e bloqueia ou libera, nos controles deslizantes, uma
-              API (no cartão dela), um usuário ou um endereço (nas tabelas dos acessos): o bloqueio vale na hora, para os pedidos e para o token, e fica na
-              Auditoria. Os bloqueados sem pedidos no período continuam nas tabelas, para liberar.
+              API (no cartão dela, nas abas das origens), um usuário ou um endereço (nas tabelas de Acesso às APIs): o bloqueio vale na hora, para os pedidos e para
+              o token, e fica na Auditoria. Os bloqueados sem pedidos no período continuam nas tabelas, para liberar.
             </li>
             <li>
               Para um usuário usar as APIs, o perfil dele precisa da Biblioteca de APIs (Ler) e da leitura das telas dos dados, na tela Perfis. Na Auditoria, os
@@ -283,26 +294,28 @@ export function BibliotecaDeApisContent() {
           </ul>
         }
       />
-      {consulta.isError ? <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar a Biblioteca de APIs.")} /> : null}
-      {c ? (
-        <>
+      <Abas rotulo="Abas da Biblioteca de APIs" ativa={aba} onMudar={(a) => setAba(a as ChaveDaAba)} abas={[...ABAS]} />
+      {aba === "acessos" ? (
+        <AcessosDaApi />
+      ) : consulta.isError ? (
+        <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar a Biblioteca de APIs.")} />
+      ) : !c ? (
+        <div className="h-96 animate-pulse rounded-sm bg-gray-100" />
+      ) : aba === "conectar" ? (
+        <div className="space-y-4">
           <Situacao c={c} />
           <ComoConectar />
-          {grupos.map((g) => (
-            <section key={g.origem} className="space-y-3">
-              <h2 className="text-base font-bold text-gray-900">{g.origem}</h2>
-              <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-                {g.apis.map((a) => (
-                  <CartaoDaApi key={a.codigo} a={a} podeEditar={c.podeEditar} onPrevia={() => setPrevia(a)} />
-                ))}
-              </div>
-            </section>
-          ))}
-          <AcessosDaApi />
-        </>
-      ) : !consulta.isError ? (
-        <div className="h-96 animate-pulse rounded-sm bg-gray-100" />
-      ) : null}
+        </div>
+      ) : (
+        // As APIs da origem, uma abaixo da outra, na ordem do catálogo (a DRE, os Cards e os Indicadores).
+        <div className="space-y-4">
+          {c.apis
+            .filter((a) => a.origem === ORIGEM_DA_ABA[aba])
+            .map((a) => (
+              <CartaoDaApi key={a.codigo} a={a} podeEditar={c.podeEditar} onPrevia={() => setPrevia(a)} />
+            ))}
+        </div>
+      )}
       {previa ? <PreviaDaApi api={previa} onFechar={() => setPrevia(null)} /> : null}
     </div>
   );
