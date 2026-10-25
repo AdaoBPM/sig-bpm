@@ -46,7 +46,11 @@ export function PreviaDaApi({ api: a, onFechar }: { api: ApiDoCatalogo; onFechar
     enabled: precisaCenario,
   });
   const listaDeCenarios = cenarios.data?.data.formato === "dados" ? cenarios.data.data.linhas : [];
-  const params = { ...Object.fromEntries(Object.entries(valores).filter(([, v]) => v.trim() !== "")), ...(formato === "visual" ? { formato } : {}) };
+  // Sem o cenário escolhido, o marcado (o Orçamento, a Previsão…) ou o primeiro da lista: a prévia já abre pronta para Ver.
+  const sugerido = listaDeCenarios.find((c) => c.marcacao) ?? listaDeCenarios[0];
+  const efetivos = precisaCenario && !valores.cenario && sugerido ? { ...valores, cenario: String(sugerido.id) } : valores;
+  const faltando = a.parametros.filter((p) => p.obrigatorio && p.nome !== "formato" && !(efetivos[p.nome] ?? "").trim()).map((p) => p.nome);
+  const params = { ...Object.fromEntries(Object.entries(efetivos).filter(([, v]) => v.trim() !== "")), ...(formato === "visual" ? { formato } : {}) };
   const endereco = `${enderecoDaApi()}/apis/${a.codigo}${Object.keys(params).length ? `?${new URLSearchParams(params)}` : ""}`;
   const ver = useMutation({ mutationFn: () => conectividadeService.previa(a.codigo, params) });
   const r: Previa | undefined = ver.data?.data;
@@ -70,8 +74,12 @@ export function PreviaDaApi({ api: a, onFechar }: { api: ApiDoCatalogo; onFechar
                   {p.obrigatorio ? <span className="text-red-700"> *</span> : null}
                 </span>
                 {p.nome === "cenario" ? (
-                  <select className={campo} value={valores.cenario} onChange={(e) => setValores((v) => ({ ...v, cenario: e.target.value }))}>
-                    <option value="">{cenarios.isLoading ? "Carregando…" : "Escolha o cenário"}</option>
+                  <select className={campo} value={efetivos.cenario} onChange={(e) => setValores((v) => ({ ...v, cenario: e.target.value }))}>
+                    {listaDeCenarios.length ? null : (
+                      <option value="">
+                        {cenarios.isLoading ? "Carregando…" : cenarios.isError ? "Não foi possível carregar os cenários" : "Nenhum cenário que o seu perfil lê"}
+                      </option>
+                    )}
                     {listaDeCenarios.map((c) => (
                       <option key={String(c.id)} value={String(c.id)}>
                         {`${c.nome} (${c.ano}, ${c.tipo}${c.marcacao ? `, ${c.marcacao}` : ""})`}
@@ -125,8 +133,9 @@ export function PreviaDaApi({ api: a, onFechar }: { api: ApiDoCatalogo; onFechar
           </button>
         </div>
         <Erro erro={ver.isError ? mensagemDeErro(ver.error, "Não foi possível ler a API.") : null} />
+        {/* min-w-0: a tabela larga rola dentro do quadro dela, sem alargar o modal (e cortar os campos). */}
         {r?.formato === "dados" ? (
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <p className="text-xs text-gray-600">
               {plural(r.linhas.length, "1 linha", `${r.linhas.length} linhas`)} e {plural(r.colunas.length, "1 coluna", `${r.colunas.length} colunas`)}
               {r.linhas.length > 50 ? "; aqui, as 50 primeiras" : ""}.
@@ -157,7 +166,7 @@ export function PreviaDaApi({ api: a, onFechar }: { api: ApiDoCatalogo; onFechar
             </div>
           </div>
         ) : r?.formato === "visual" ? (
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <p className="text-xs text-gray-600">
               {plural(r.visuais.length, "1 visual", `${r.visuais.length} visuais`)} em SVG{r.visuais.length > 12 ? "; aqui, os 12 primeiros" : ""}.
             </p>
@@ -169,11 +178,12 @@ export function PreviaDaApi({ api: a, onFechar }: { api: ApiDoCatalogo; onFechar
             </div>
           </div>
         ) : null}
-        <DialogFooter>
+        <DialogFooter className="items-center">
+          {faltando.length ? <p className="mr-auto text-xs text-gray-600">{`Preencha ${faltando.join(" e ")} para ver.`}</p> : null}
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Fechar
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={ver.isPending} onClick={() => ver.mutate()}>
+          <Button type="button" className={botaoPrimario} disabled={ver.isPending || faltando.length > 0} onClick={() => ver.mutate()}>
             <Eye className="size-4" />
             {ver.isPending ? "Lendo…" : "Ver"}
           </Button>

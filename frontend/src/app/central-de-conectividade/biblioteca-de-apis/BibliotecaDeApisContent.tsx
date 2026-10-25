@@ -275,7 +275,8 @@ export function BibliotecaDeApisContent() {
             </li>
             <li>
               Pré-visualizar abre o que um aplicativo receberia com o seu login: escolha os parâmetros e o formato e clique em Ver; o endereço do pedido, logo acima
-              do resultado, se copia para o aplicativo. Sem a leitura dos dados no seu perfil, o botão fica desabilitado.
+              do resultado, se copia para o aplicativo. Nas APIs de um cenário, o cenário já vem escolhido (o marcado, como o Orçamento, ou o primeiro da lista);
+              sem um parâmetro obrigatório, o Ver fica desabilitado. Sem a leitura dos dados no seu perfil, o botão Pré-visualizar fica desabilitado.
             </li>
             <li>
               Acesso às APIs (os últimos 7, 30 ou 90 dias): os destaques do período (os pedidos, os recusados, os usuários e os endereços — os computadores ou

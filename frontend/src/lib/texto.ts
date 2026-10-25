@@ -1,6 +1,6 @@
 /** Artigos, preposições, conjunções e pronomes que ficam em minúscula no meio de um nome. */
 const MINUSCULAS = new Set([
-  "a", "o", "as", "os", "e", "ou", "de", "da", "do", "das", "dos", "em", "na", "no", "nas", "nos", "num", "numa",
+  "a", "o", "as", "os", "um", "uma", "uns", "umas", "e", "ou", "de", "da", "do", "das", "dos", "em", "na", "no", "nas", "nos", "num", "numa",
   "com", "sem", "sob", "para", "por", "pelo", "pela", "pelos", "pelas", "ao", "aos", "à", "às", "que", "se", "lhe",
 ]);
 
