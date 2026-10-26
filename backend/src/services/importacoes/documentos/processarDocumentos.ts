@@ -13,7 +13,8 @@ const LOTE = 500;
 /**
  * Importa os itens do mês das requisições ou das notas fiscais (abas Requisições (Lista) e Notas Fiscais (Lista) do
  * LISTAS REALIZADO (RESULTADOS)), substituindo a importação anterior do mesmo tipo na competência. Não entra na
- * apuração: importar não pede reapuração.
+ * apuração: importar não pede reapuração e vale também na competência fechada (26/10/2026: a tarefa dos documentos
+ * leva os custos às linhas nos Resultados por Linha, importados pela tela deles).
  */
 export async function processarDocumentos(importacaoId: string): Promise<void> {
   const prisma = getPrismaClient();
@@ -35,8 +36,6 @@ export async function processarDocumentos(importacaoId: string): Promise<void> {
     const competenciaId = importacao.competenciaId;
     await prisma.$transaction(
       async (tx) => {
-        const competencia = await tx.competencia.findUniqueOrThrow({ where: { id: competenciaId }, select: { status: true } });
-        if (competencia.status === "FECHADA") throw new ArquivoRecusado("A competência foi fechada enquanto o arquivo era processado. Nada foi gravado.");
         const anteriores = (
           await tx.importacao.findMany({ where: { competenciaId, tipo, status: "CONCLUIDA", substituidaEm: null, id: { not: importacaoId } }, select: { id: true } })
         ).map((a) => a.id);

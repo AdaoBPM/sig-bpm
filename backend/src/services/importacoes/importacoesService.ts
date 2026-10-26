@@ -130,7 +130,9 @@ export const importacoesService = {
     // Balancete de competência fechada (Passo 24): é recebido só para comparar
     // com o gravado; as diferenças viram divergências e nada é substituído.
     const comparacao = competencia.status === "FECHADA" && input.tipo === "BALANCETE";
-    if (competencia.status === "FECHADA" && !comparacao) {
+    // As requisições e as notas fiscais (26/10/2026, os Resultados por Linha) não entram na apuração: importam-se também
+    // na competência fechada.
+    if (competencia.status === "FECHADA" && !comparacao && !ehTipoDocumentos(input.tipo)) {
       throw new RegraImportacaoError(
         409,
         `A competência ${rotulo(input.ano, input.mes)} está fechada. ` +

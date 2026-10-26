@@ -1,6 +1,16 @@
-import { TelaEmDesenvolvimento } from "@/components/shared/TelaEmDesenvolvimento";
+import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { SemLeitura } from "@/components/shared/SemLeitura";
 
-/** Processo do menu lateral ainda em desenvolvimento (14/10/2026). */
+import { ResultadosPorLinhaContent } from "./ResultadosPorLinhaContent";
+
+/** Os Resultados por Linha (26/10/2026; antes, em desenvolvimento): a DRE de cada linha de produto e de obra. */
 export default function ResultadosPorLinhaPage() {
-  return <TelaEmDesenvolvimento />;
+  return (
+    <ProtectedLayout>
+      <PermissionGuard permission="resultados_linha:ler" fallback={<SemLeitura />}>
+        <ResultadosPorLinhaContent />
+      </PermissionGuard>
+    </ProtectedLayout>
+  );
 }

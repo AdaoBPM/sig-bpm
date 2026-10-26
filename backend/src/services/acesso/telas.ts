@@ -86,6 +86,9 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
   { recurso: "ANALISES_GERENCIAIS", nome: "Análises Gerenciais", area: "analises_gerenciais", telas: [{ codigo: "relatorios_executivos", nome: "Relatórios Executivos" }] },
   { recurso: "CENARIOS_SINTETICOS", nome: "Cenários Sintéticos", area: "cenarios", telas: telasDoCenario("cenarios", false) },
   { recurso: "CENARIOS_ANALITICOS", nome: "Cenários Analíticos", area: "cenarios_analiticos", telas: telasDoCenario("cenarios_analiticos", true) },
+  // Os Resultados por Linha (26/10/2026), antes dos Resultados Empresariais, como no menu: Ler abre a tela; Editar
+  // importa as requisições e as notas fiscais (a tarefa delas).
+  { recurso: "RESULTADOS_POR_LINHA", nome: "Resultados por Linha", area: "resultados_linha", telas: [{ codigo: "resultados_linha", nome: "Resultados por Linha" }] },
   {
     recurso: "RESULTADOS_REALIZADOS",
     nome: "Resultados Empresariais",

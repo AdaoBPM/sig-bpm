@@ -40,6 +40,8 @@ enum RecursoSistema {
   ANALISES_GERENCIAIS
   /// A Central de Conectividade (24/10/2026): a Biblioteca de APIs (e as Integrações, em desenvolvimento).
   CENTRAL_CONECTIVIDADE
+  /// Os Resultados por Linha (26/10/2026), na Apuração dos Resultados.
+  RESULTADOS_POR_LINHA
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
