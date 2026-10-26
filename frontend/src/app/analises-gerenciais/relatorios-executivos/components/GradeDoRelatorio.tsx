@@ -484,10 +484,15 @@ export function GradeDoRelatorio({
     }
     empurrar(l, alvo);
   };
+  // Ao soltar, a posição final vai aos blocos daqui mesmo (26/10/2026): a grade só avisa a mudança (onLayoutChange) se o
+  // leiaute final difere do de antes do arrasto, mas o dela guarda, no lugar, o bloco já na primeira célula a que ele
+  // chegou. O bloco solto nessa célula (uma coluna ou uma linha, num espaço vazio) não era salvo e voltava ao lugar quando
+  // a grade relia os blocos (ao escolher outro, por exemplo).
   const terminarArrasto = (l: Layout[], antes: Layout, arrastado: Layout) => {
     aoArrastar(l, antes, arrastado);
     doInicio.current = null;
     terminar();
+    aoMudarLeiaute(l);
   };
   // Só o bloco escolhido se redimensiona, pelos quadrados de ancoragem (24/10/2026; antes, qualquer bloco, pelo canto).
   const layout: Layout[] = blocos.map((b) => ({
