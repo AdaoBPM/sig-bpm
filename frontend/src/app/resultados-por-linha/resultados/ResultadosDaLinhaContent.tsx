@@ -21,7 +21,7 @@ const ABAS = [
 type ChaveDaAba = (typeof ABAS)[number]["chave"];
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
 
-/** Uma série mensal (as origens, a conferência): o rótulo, os meses e o total (sem ele, a soma dos meses). */
+/** Uma série mensal (a conferência): o rótulo, os meses e o total (sem ele, a soma dos meses). */
 type Serie = { rotulo: string; meses: Array<number | null>; total?: number | null; destaque?: boolean };
 const somaDos = (xs: Array<number | null>) => (xs.every((x) => x === null) ? null : xs.reduce<number>((s, x) => s + (x ?? 0), 0));
 
@@ -66,32 +66,17 @@ function TabelaMensal({ titulo, meses, series, rodape }: { titulo: string; meses
   );
 }
 
-/** A aba Resultados: a DRE da linha (da receita à Margem de Contribuição) e a origem dos valores. */
+/** A aba Resultados: a DRE da linha, da receita à Margem de Contribuição. */
 function AbaResultados({ dados, linha }: { dados: ResultadosPorLinha; linha: LinhaDoNegocio }) {
   return (
-    <div className="space-y-6">
-      <TabelaResultados
-        key={linha.id}
-        dados={{ ano: dados.ano, ate: dados.ate, meses: dados.meses, linhas: linha.resultado }}
-        titulo={`${linha.nome} · ${linha.nomeUnidade}`}
-        visao={{ unidade: linha.unidade }}
-        nomeVisao={linha.nome}
-        consultas={false}
-      />
-      {linha.origem.length ? (
-        <TabelaMensal
-          titulo={`Origem dos Valores · ${linha.nome}`}
-          meses={dados.meses}
-          series={linha.origem.map((o) => ({ rotulo: o.rotulo, meses: o.meses }))}
-          rodape={
-            <p className="text-xs text-gray-500">
-              De que passo veio cada valor da linha: a Receita Prévia (as receitas) e, nos custos, a Tarefa, a Regra do Centro, a Obra, a Regra do Rateio e o
-              Volume da Unidade (Cadastros da Controladoria › Alocação nas Linhas).
-            </p>
-          }
-        />
-      ) : null}
-    </div>
+    <TabelaResultados
+      key={linha.id}
+      dados={{ ano: dados.ano, ate: dados.ate, meses: dados.meses, linhas: linha.resultado }}
+      titulo={`${linha.nome} · ${linha.nomeUnidade}`}
+      visao={{ unidade: linha.unidade }}
+      nomeVisao={linha.nome}
+      consultas={false}
+    />
   );
 }
 
@@ -199,10 +184,7 @@ export function ResultadosDaLinhaContent() {
         comoUsar={
           <ul>
             <li>No topo, escolha a Linha (as ativas e as inativas com valores no período, com “(Inativa)”), o exercício e o mês até onde ver; só as competências fechadas aparecem.</li>
-            <li>
-              Resultados: a DRE da linha mês a mês, com o % e o R$/m³ (as mesmas bases de Resultados Empresariais) e, abaixo, a Origem dos Valores — de que passo
-              veio cada parte (a Receita Prévia, a Tarefa, a Regra do Centro, a Obra, a Regra do Rateio ou o Volume da Unidade).
-            </li>
+            <li>Resultados: a DRE da linha mês a mês, com o % e o R$/m³ (as mesmas bases de Resultados Empresariais).</li>
             <li>
               Rateios por Obras: só os custos da linha que não vieram dos centros de obra (os desses centros já são das obras) — o que os Resultados por Obra vão
               levar a cada obra, pelo volume dela na linha.

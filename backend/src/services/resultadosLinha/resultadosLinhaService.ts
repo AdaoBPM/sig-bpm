@@ -150,8 +150,6 @@ type ResultadoDoMes = {
   valores: Map<string, Map<string, number>>;
   naObra: Map<string, Map<string, number>>;
   niveis: Map<number, Map<Nivel, number>>;
-  /** Os passos de cada linha (a origem dos valores dela, para a Conferência). */
-  niveisDaLinha: Map<string, Map<Nivel, number>>;
   mcDaDRE: Map<number, number>;
   avisos: string[];
   documentos: { requisicoes: number; notas: number };
@@ -193,7 +191,7 @@ async function calcularMes(
 
   const linhasDa = (u: number) => new Set(linhas.filter((l) => l.unidade === u).map((l) => l.id));
   const porUnidade = new Map([1, 2, 3].map((u) => [u, linhasDa(u)]));
-  const r: ResultadoDoMes = { valores: new Map(), naObra: new Map(), niveis: new Map(), niveisDaLinha: new Map(), mcDaDRE: new Map(), avisos: [], documentos: { requisicoes: documentos.requisicoes, notas: documentos.notas } };
+  const r: ResultadoDoMes = { valores: new Map(), naObra: new Map(), niveis: new Map(), mcDaDRE: new Map(), avisos: [], documentos: { requisicoes: documentos.requisicoes, notas: documentos.notas } };
   const somar = (alvo: Map<string, Map<string, number>>, linha: string, codigo: string, v: number) => {
     const m = alvo.get(linha) ?? new Map<string, number>();
     m.set(codigo, (m.get(codigo) ?? 0) + v);
@@ -206,9 +204,6 @@ async function calcularMes(
       const niv = r.niveis.get(u) ?? new Map<Nivel, number>();
       niv.set(p.nivel, (niv.get(p.nivel) ?? 0) + p.valor);
       r.niveis.set(u, niv);
-      const daLinha = r.niveisDaLinha.get(p.linhaId) ?? new Map<Nivel, number>();
-      daLinha.set(p.nivel, (daLinha.get(p.nivel) ?? 0) + p.valor);
-      r.niveisDaLinha.set(p.linhaId, daLinha);
     }
   };
 
@@ -378,11 +373,6 @@ export const resultadosLinhaService = {
     const temValor = (linhaId: string) => porMes.some((r) => [...(r?.valores.get(linhaId)?.values() ?? [])].some((v) => Math.abs(v) >= 0.005));
     const comValor = linhas.filter((l) => l.ativo || temValor(l.id));
 
-    /** De que passo vieram os valores da linha (a receita e os custos), mês a mês; só os passos com valor. */
-    const origemDa = (linhaId: string) =>
-      (Object.keys(ROTULO_DO_NIVEL) as Nivel[])
-        .map((nivel) => ({ nivel, rotulo: ROTULO_DO_NIVEL[nivel], meses: porMes.map((r) => (r ? arredonda(r.niveisDaLinha.get(linhaId)?.get(nivel) ?? 0) : null)) }))
-        .filter((x) => x.meses.some((v) => v !== null && Math.abs(v) >= 0.005));
     const niveis = (Object.keys(ROTULO_DO_NIVEL) as Nivel[]).map((nivel) => ({
       nivel,
       rotulo: ROTULO_DO_NIVEL[nivel],
@@ -407,7 +397,6 @@ export const resultadosLinhaService = {
         ativo: l.ativo,
         resultado: tabela(l.id, l.unidade, noResultado, false),
         rateios: tabela(l.id, l.unidade, nosRateios, true),
-        origem: origemDa(l.id),
       })),
       conferencia: {
         unidades: [1, 2, 3].map((u) => ({
@@ -415,7 +404,6 @@ export const resultadosLinhaService = {
           nome: NOME_DA_UNIDADE[u],
           meses: porMes.map((r) => (r ? { mcDaDRE: arredonda(r.mcDaDRE.get(u) ?? 0), mcDasLinhas: arredonda(mcDasLinhas(u, r)), semLinha: arredonda([...(r.valores.get(semLinha(u))?.entries() ?? [])].filter(([c]) => CUSTOS.has(prefixo(c)) || prefixo(c) === "ROB").reduce((s, [, v]) => s + v, 0)) } : null)),
           semLinha: tabela(semLinha(u), u, noResultado, false),
-          origemSemLinha: origemDa(semLinha(u)),
         })),
         niveis,
         documentos: meses.map((m, i) => ({ mes: m.mes, rotulo: m.rotulo, requisicoes: porMes[i]?.documentos.requisicoes ?? 0, notas: porMes[i]?.documentos.notas ?? 0 })),

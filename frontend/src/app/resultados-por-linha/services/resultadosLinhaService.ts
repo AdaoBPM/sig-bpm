@@ -5,7 +5,6 @@ import type { LinhaResultado, MesRelatorio } from "@/app/relatorios/services/rel
 /** Os Resultados por Linha (26/10/2026): a tela Resultados (o exercício até um mês) e a Importação (os documentos de cada mês). */
 const base = "/proxy/resultados-por-linha";
 
-export type Origem = { nivel: string; rotulo: string; meses: Array<number | null> };
 export type LinhaDoNegocio = {
   id: string;
   codigo: string;
@@ -15,7 +14,6 @@ export type LinhaDoNegocio = {
   ativo: boolean;
   resultado: LinhaResultado[];
   rateios: LinhaResultado[];
-  origem: Origem[];
 };
 export type ResultadosPorLinha = {
   ano: number;
@@ -28,7 +26,6 @@ export type ResultadosPorLinha = {
       nome: string;
       meses: Array<{ mcDaDRE: number; mcDasLinhas: number; semLinha: number } | null>;
       semLinha: LinhaResultado[];
-      origemSemLinha: Origem[];
     }>;
     niveis: Array<{ nivel: string; rotulo: string; porUnidade: Array<{ unidade: number; meses: Array<number | null> }> }>;
     documentos: Array<{ mes: number; rotulo: string; requisicoes: number; notas: number }>;
