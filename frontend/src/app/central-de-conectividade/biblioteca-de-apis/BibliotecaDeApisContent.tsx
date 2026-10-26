@@ -290,7 +290,7 @@ export function BibliotecaDeApisContent() {
             </li>
             <li>
               Para um usuário usar as APIs, o perfil dele precisa da Biblioteca de APIs (Ler) e da leitura das telas dos dados, na tela Perfis. Na Auditoria, os
-              pedidos às APIs entram com “Incluir acessos”, como os acessos às telas.
+              pedidos às APIs entram com “Incluir Acessos”, como os acessos às telas.
             </li>
           </ul>
         }

@@ -28,6 +28,43 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 26/10/2026
+  {
+    publicada: "2026-10-26T09:56",
+    processo: TODO_O_SIG,
+    tela: "Novidades",
+    itens: ["O modal Novidades, no menu do usuário: o resumo do que cada publicação trouxe às telas que você usa. O sino ao lado do nome avisa quando há novidades."],
+  },
+  {
+    publicada: "2026-10-26T09:56",
+    processo: TODO_O_SIG,
+    tela: "Introdução ao SIG",
+    itens: ["A Introdução ao SIG, no menu do usuário, ficou mais curta: vai direto ao layout e às partes das telas."],
+  },
+  {
+    publicada: "2026-10-26T09:56",
+    processo: "Biblioteca de APIs",
+    rota: "/central-de-conectividade/biblioteca-de-apis",
+    itens: [
+      "A nova Central de Conectividade, com a Biblioteca de APIs: as DREs, os cards e os indicadores do Painel de Bordo dos Resultados Empresariais e dos Cenários para outros aplicativos (planilhas, o Power BI), em tabela ou em visual, com o login e a senha do SIG.",
+      "Em abas: Como Conectar (os passos e os exemplos em curl e no Power Query), Resultados Empresariais e Cenários (as APIs, com Pré-visualizar) e Acesso às APIs (quem chama e de onde, com os bloqueios).",
+      "As APIs ficam desligadas até o TI ligá-las no endereço com HTTPS; a biblioteca, a pré-visualização e os bloqueios já funcionam.",
+    ],
+  },
+  {
+    publicada: "2026-10-26T09:56",
+    processo: "Controle de Usuários",
+    tela: "Perfis",
+    rota: "/perfis",
+    itens: ["Na matriz do perfil, o grupo Central de Conectividade: a Biblioteca de APIs (Ler, para usar as APIs; Editar, para bloquear APIs, usuários e endereços)."],
+  },
+  {
+    publicada: "2026-10-26T09:56",
+    processo: "Controle de Usuários",
+    tela: "Auditoria",
+    rota: "/auditoria",
+    itens: ["Os pedidos às APIs da Biblioteca entram com Incluir Acessos, como os acessos às telas."],
+  },
   // 24/10/2026
   {
     publicada: "2026-10-24T14:59",
