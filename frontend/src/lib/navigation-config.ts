@@ -140,6 +140,21 @@ export const navGrupos: NavGrupo[] = [
     ],
   },
   {
+    // A Central de Conectividade (24/10/2026; antes da Controladoria desde 26/10/2026): a Biblioteca de APIs, que abre os
+    // dados do SIG a outros aplicativos, e as Integrações, ainda em desenvolvimento.
+    titulo: "Central de Conectividade",
+    itens: [
+      { title: "Integrações", href: "/central-de-conectividade/integracoes", icon: Cable, emDesenvolvimento: true },
+      {
+        title: "Biblioteca de APIs",
+        href: "/central-de-conectividade/biblioteca-de-apis",
+        icon: Library,
+        permission: "biblioteca_apis:ler",
+        recurso: "CENTRAL_CONECTIVIDADE",
+      },
+    ],
+  },
+  {
     titulo: "Controladoria",
     itens: [
       {
@@ -194,21 +209,6 @@ export const navGrupos: NavGrupo[] = [
           { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "perfis:ler" },
           { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ler" },
         ],
-      },
-    ],
-  },
-  {
-    // A Central de Conectividade (24/10/2026): a Biblioteca de APIs, que abre os dados do SIG a outros aplicativos, e as
-    // Integrações, ainda em desenvolvimento.
-    titulo: "Central de Conectividade",
-    itens: [
-      { title: "Integrações", href: "/central-de-conectividade/integracoes", icon: Cable, emDesenvolvimento: true },
-      {
-        title: "Biblioteca de APIs",
-        href: "/central-de-conectividade/biblioteca-de-apis",
-        icon: Library,
-        permission: "biblioteca_apis:ler",
-        recurso: "CENTRAL_CONECTIVIDADE",
       },
     ],
   },
