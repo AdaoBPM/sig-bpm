@@ -23,6 +23,10 @@ export default function LinhasPage() {
               <li>A Und. de Medida diz em que se mede a linha (m³, m³ e pistas, kg, m, m², dia ou %); será usada nos Cenários Analíticos. Escolha na lista, no lápis.</li>
               <li>As outras telas e as importações acham a linha pelo nome (sem diferença de maiúsculas): o nome é o texto com que as listas importadas citam a linha.</li>
               <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os registros inativos.</li>
+              <li>
+                Uma linha inativa sai das listas de escolha e dos Cenários Analíticos, e os registros antigos ficam com ela. Se uma lista importada ainda a
+                citar, o relatório da importação avisa quantos registros: corrija a linha na planilha e importe de novo.
+              </li>
               <li>Com movimentos (lançamentos, valores apurados, registros das listas), o Nome e a Unidade e a exclusão ficam bloqueados: essas informações ligam o cadastro a outras telas. O motivo aparece na edição; os demais campos continuam editáveis.</li>
               <li>
                 “Tarefas” abre a Correspondência Tarefa × Linha: a lista das tarefas das requisições e das notas fiscais e a linha dos custos de cada uma, numa filial
@@ -32,7 +36,7 @@ export default function LinhasPage() {
               <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="As linhas de cada unidade: Estrutura e Metalúrgica na Matriz; Alveolares e Estacas na Filial; Montagem, Fundação, Capeamento, Metálica, Telhamento, Turn-Key, Vedação e Outros em Serviços. As Listas Operacionais gravam cada registro com a linha e a unidade, e as outras telas e as importações acham a linha pelo nome; as linhas de faturamento das medições não aparecem aqui. A Metalúrgica presta serviço às outras linhas: nos Cenários Analíticos, não tem demanda, receita nem custo próprios. A Correspondência Tarefa × Linha liga as tarefas das requisições e das notas fiscais às linhas: a referência realizada dos Cenários Analíticos divide os custos de cada conta entre as linhas na proporção dos documentos com a tarefa de cada uma (a correspondência da filial do documento vale antes da de Qualquer Filial), e o que não tem tarefa, ou tem uma tarefa fora da lista, vai pelo volume das linhas."
+          descricao="As linhas de cada unidade: Estrutura na Matriz; Alveolares e Estacas na Filial; Montagem, Fundação, Capeamento, Metálica, Telhamento, Turn-Key, Vedação e Outros em Serviços. As Listas Operacionais gravam cada registro com a linha e a unidade, e as outras telas e as importações acham a linha pelo nome; as linhas de faturamento das medições não aparecem aqui. A Metalúrgica está inativa desde 26/10/2026: ela presta serviço às outras linhas (apoio), e o centro dela vai às linhas pelos kg que cada uma consome (Alocação nas Linhas). A Correspondência Tarefa × Linha liga as tarefas das requisições e das notas fiscais às linhas: a referência realizada dos Cenários Analíticos divide os custos de cada conta entre as linhas na proporção dos documentos com a tarefa de cada uma (a correspondência da filial do documento vale antes da de Qualquer Filial), e o que não tem tarefa, ou tem uma tarefa fora da lista, vai pelo volume das linhas."
         />
       </PermissionGuard>
     </ProtectedLayout>

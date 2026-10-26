@@ -5,6 +5,7 @@ import type { Prisma, PrismaClient } from "../../../generated/prisma/client.js";
 import type { TipoImportacao } from "../../../generated/prisma/enums.js";
 import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
 import { logger } from "../../../utils/logger.js";
+import { plural } from "../../../utils/plural.js";
 import { somarTotais, type ItemVolume } from "../../volumes/totaisOperacao.js";
 import { caminhoDoArquivo } from "../arquivosImportados.js";
 import { escolherAba, recusarImportacao, registrarProgresso } from "../statusImportacao.js";
@@ -99,10 +100,10 @@ export async function prepararGravacao(
   tipo: TipoListaOperacional,
   registros: RegistroLista[],
   contexto: { competenciaId: string; importacaoId: string | null; criadoPor: string },
-): Promise<{ dados: LinhaGravada[]; obrasCriadas: number }> {
+): Promise<{ dados: LinhaGravada[]; obrasCriadas: number; linhasInativas: Array<{ nome: string; registros: number }> }> {
   const [unidades, linhas, movimentos] = await Promise.all([
     tx.unidadeNegocio.findMany({ select: { id: true, codigo: true } }),
-    tx.linha.findMany({ select: { id: true, tipo: true, nome: true } }),
+    tx.linha.findMany({ select: { id: true, tipo: true, nome: true, ativo: true } }),
     COM_MOVIMENTO.has(tipo) ? tx.tipoMovimento.findMany({ select: { id: true, codigo: true } }) : [],
   ]);
   const movimentoPorCodigo = new Map(movimentos.map((m) => [m.codigo, m.id]));
@@ -135,7 +136,12 @@ export async function prepararGravacao(
       ? { tipoMovimentoId: movimentoPorCodigo.get(String(r.campos.movimento ?? "")) ?? null }
       : {}),
   }));
-  return { dados, obrasCriadas: criadas };
+  // As linhas inativas no cadastro que a lista ainda cita (26/10/2026: a Metalúrgica): o registro fica com elas, e a
+  // importação avisa, para corrigir a lista.
+  const inativas = new Map(linhas.filter((l) => !l.ativo).map((l) => [l.id, l.nome]));
+  const citadas = new Map<string, number>();
+  for (const d of dados) if (d.linhaId && inativas.has(d.linhaId)) citadas.set(d.linhaId, (citadas.get(d.linhaId) ?? 0) + 1);
+  return { dados, obrasCriadas: criadas, linhasInativas: [...citadas].map(([id, registros]) => ({ nome: inativas.get(id)!, registros })) };
 }
 
 /** O que a regra dos Totais precisa de cada registro lido. */
@@ -208,7 +214,7 @@ export async function processarLista(importacaoId: string): Promise<void> {
           await tx.importacao.updateMany({ where: { id: { in: ids } }, data: { substituidaEm: new Date() } });
         }
 
-        const { dados, obrasCriadas: criadas } = await prepararGravacao(tx, tipo, leitura.registros, {
+        const { dados, obrasCriadas: criadas, linhasInativas } = await prepararGravacao(tx, tipo, leitura.registros, {
           competenciaId: competencia.id,
           importacaoId,
           criadoPor: importacao.importadoPor,
@@ -235,7 +241,13 @@ export async function processarLista(importacaoId: string): Promise<void> {
               totais,
               receita: ehListaReceita(tipo),
               obrasCriadas: criadas,
-              avisos: leitura.avisos,
+              avisos: [
+                ...leitura.avisos,
+                ...linhasInativas.map(
+                  (l) =>
+                    `${l.registros} ${plural(l.registros, "registro cita", "registros citam")} a linha ${l.nome}, inativa em Cadastros da Controladoria › Linhas: corrija a linha na lista e importe de novo.`,
+                ),
+              ],
               substituiu: ids,
             },
           },

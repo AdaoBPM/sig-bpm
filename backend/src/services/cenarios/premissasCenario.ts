@@ -84,17 +84,14 @@ export const LINHAS_COM_METALURGIA = new Set(["ESTRUTURA", "ALVEOLARES", "ESTACA
 export type LinhaDoCadastro = { codigo: string; nome: string; unidade: UnidadePremissa; medida: string };
 
 /**
- * As linhas que prestam serviço às outras (14/10/2026): a Metalúrgica, na Matriz, faz as peças metálicas das demais
- * linhas. Não têm demanda, receita nem custo nas premissas: os custos dela ficam com as linhas da unidade, e a
- * metalurgia que as outras linhas consomem é a Metalúrgica (Interno) Unit. delas.
+ * As linhas das premissas: as ativas do cadastro. A Metalúrgica saiu delas como linha de apoio (14/10/2026; antes, por um
+ * conjunto fixo no código) e, desde 26/10/2026, está inativa no cadastro: a metalurgia é apoio pelo centro METALURGIA, e a
+ * que as linhas consomem é a Metalúrgica (Interno) Unit. delas.
  */
-export const LINHAS_DE_APOIO = new Set(["METALÚRGICA"]);
-
-/** As linhas das premissas; com `todas`, também as de apoio (a Correspondência Tarefa × Linha). */
-export async function linhasDoCadastro(todas = false): Promise<LinhaDoCadastro[]> {
+export async function linhasDoCadastro(): Promise<LinhaDoCadastro[]> {
   const linhas = await getPrismaClient().linha.findMany({ where: { ativo: true, tipo: { in: ["PRODUTO", "OBRA"] } }, orderBy: { ordem: "asc" }, include: { unidadeNegocio: { select: { codigo: true } } } });
   return linhas
-    .filter((l) => UNIDADES_PREMISSAS.includes(l.unidadeNegocio?.codigo as UnidadePremissa) && (todas || !LINHAS_DE_APOIO.has(l.codigo)))
+    .filter((l) => UNIDADES_PREMISSAS.includes(l.unidadeNegocio?.codigo as UnidadePremissa))
     .map((l) => ({ codigo: l.codigo, nome: l.nome, unidade: l.unidadeNegocio!.codigo as UnidadePremissa, medida: l.unidadeMedida || "und" }));
 }
 

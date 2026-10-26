@@ -1378,7 +1378,7 @@ export const cenariosService = {
         // Qualquer filial (vazia) primeiro, como no SQLite (23/10/2026).
         orderBy: [{ tarefa: "asc" }, { filial: { sort: "asc", nulls: "first" } }],
       }),
-      linhasDoCadastro(true),
+      linhasDoCadastro(),
     ]);
     // As linhas desativadas que ainda têm tarefas (14/10/2026): o modal avisa e as mostra na lista, para trocar.
     const inativas = new Map(

@@ -199,7 +199,7 @@ export async function referenciaDoRealizado(ano: number, meses: number[], deciso
     if (l) somar(qtdPistas, chave(l), Number(p.quantidade));
   }
   // A metalurgia (14/10/2026): a consumida por linha (a da lista); a da linha em kg de Serviços (a Metálica) também é o
-  // volume dela. A Metalúrgica da Matriz presta serviço às outras linhas e não entra nas premissas.
+  // volume dela. A Metalúrgica presta serviço às outras linhas (apoio; inativa no cadastro desde 26/10/2026).
   const kgServicos = daUnidade(3).find((l) => l.medida === "kg");
   for (const p of metalurgias) {
     const consumidora = linha(p.unidadeNegocio?.codigo, p.linha?.codigo);

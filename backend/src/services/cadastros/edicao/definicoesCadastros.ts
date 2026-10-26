@@ -660,7 +660,7 @@ const unidades: DefinicaoCadastro = {
 
 // ---------------------------------------------------------------------- linhas
 /**
- * As linhas por unidade (10/10/2026): os produtos (Estrutura, Metalúrgica, Alveolares, Estacas) na Matriz ou na Filial
+ * As linhas por unidade (10/10/2026): os produtos (Estrutura, Alveolares, Estacas; a Metalúrgica, inativa desde 26/10/2026) na Matriz ou na Filial
  * e as linhas de obra (Montagem, Fundação, Capeamento…) em Serviços. É o cadastro que as Listas usam: elas acham a
  * linha pelo código (o texto das planilhas, em maiúsculas), que não muda depois de criada. As linhas de faturamento
  * (das medições) ficam fora da tela.
