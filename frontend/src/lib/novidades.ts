@@ -30,6 +30,13 @@ const DRE = "/competencias/0000-00/dre";
 export const NOVIDADES: Novidade[] = [
   // 26/10/2026
   {
+    publicada: "2026-10-26T15:47",
+    processo: "Relatórios Executivos",
+    tela: "Relatório Executivo",
+    rota: RE,
+    itens: ["O bloco movido uma só coluna ou linha, para um espaço vazio, passa a ficar no lugar novo: antes, não se salvava e voltava ao lugar ao escolher outro bloco."],
+  },
+  {
     publicada: "2026-10-26T09:56",
     processo: TODO_O_SIG,
     tela: "Novidades",
