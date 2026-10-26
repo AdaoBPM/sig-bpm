@@ -86,14 +86,14 @@ function IconeDoDesenvolvimento() {
 export function EtiquetaDoDesenvolvimento() {
   if (EH_TESTE) {
     return (
-      <span data-tour="ambiente" title="Ambiente de teste (porta 3200): a versão compilada, com o banco do desenvolvimento" className="shrink-0 rounded-sm bg-orange-700 px-2 py-0.5 text-xs font-bold text-white">
+      <span title="Ambiente de teste (porta 3200): a versão compilada, com o banco do desenvolvimento" className="shrink-0 rounded-sm bg-orange-700 px-2 py-0.5 text-xs font-bold text-white">
         Teste
       </span>
     );
   }
   if (!EH_DESENVOLVIMENTO) return null;
   return (
-    <span data-tour="ambiente" title="Ambiente de desenvolvimento (porta 3100), com a cópia do banco" className="shrink-0 rounded-sm bg-red-800 px-2 py-0.5 text-xs font-bold text-white">
+    <span title="Ambiente de desenvolvimento (porta 3100), com a cópia do banco" className="shrink-0 rounded-sm bg-red-800 px-2 py-0.5 text-xs font-bold text-white">
       Desenvolvimento
     </span>
   );
