@@ -367,6 +367,7 @@ model Linha {
   devolucoes        Devolucao[]
   saidas            Saida[]
   correspondenciasTarefas CorrespondenciaTarefa[]
+  alocacoes               AlocacaoLinha[]
 
   @@unique([tipo, codigo])
   @@index([tipo, ordem])
@@ -441,6 +442,7 @@ model CentroCusto {
   lancamentosManuais   LancamentoManual[]
   resultadosApurados   ResultadoApurado[]
   usuarios             UsuarioCentro[]
+  alocacoesLinhas      AlocacaoLinha[]
 
   @@index([nomeControladoria])
   @@index([balde])
@@ -2151,6 +2153,36 @@ model CorrespondenciaTarefa {
 
   @@unique([filial, tarefa])
   @@map("correspondencias_tarefas")
+}
+
+/// A Alocação nas Linhas (26/10/2026, pedido do Adão; Cadastros da Controladoria › Controladoria): como os custos sem
+/// tarefa chegam às linhas nos Resultados por Linha. Cada regra tem uma origem — um centro de custo (CENTRO) ou o balde
+/// dos centros sem regra própria (RATEIO) — e um destino — uma linha, com 100% (LINHA), ou uma base por linha (BASE: o
+/// volume das listas de cada linha, como o m³ produzido ou os dias de acompanhamento) —, com a vigência. Não entra na
+/// apuração da DRE (não pede reapurar): só divide entre as linhas o que a DRE já deu a cada unidade.
+model AlocacaoLinha {
+  id             String         @id @default(uuid())
+  /// CENTRO ou RATEIO.
+  origem         String
+  centroCustoId  String?        @map("centro_custo_id")
+  balde          BaldeAlocacao?
+  /// LINHA ou BASE.
+  destino        String
+  linhaId        String?        @map("linha_id")
+  /// A base por linha (BASES_DAS_LINHAS, em definicoesCadastros.ts): M3_PRODUZIDO, M3_PROJETOS, KG_METALURGIA…
+  base           String?
+  vigenciaInicio DateTime       @map("vigencia_inicio")
+  vigenciaFim    DateTime?      @map("vigencia_fim")
+  ordem          Int            @default(0)
+  criadoEm       DateTime       @default(now()) @map("criado_em")
+  atualizadoEm   DateTime       @updatedAt @map("atualizado_em")
+
+  centroCusto CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: Cascade)
+  linha       Linha?       @relation(fields: [linhaId], references: [id], onDelete: Restrict)
+
+  @@index([centroCustoId])
+  @@index([balde])
+  @@map("alocacoes_linhas")
 }
 
 model CenarioReajuste {

@@ -159,6 +159,7 @@ export const AREA_DO_CADASTRO: Record<string, string> = {
   linhas: "cadastro_controladoria.linhas",
   "estrutura-dre": "cadastro_controladoria.estrutura_dre",
   "regras-rateio": "cadastro_controladoria.regras_rateio",
+  "alocacao-linhas": "cadastro_controladoria.alocacao_linhas",
   "estrutura-indicadores": "cadastro_analitico.estrutura_indicadores",
   "painel-bordo": "cadastro_analitico.painel_bordo",
 };

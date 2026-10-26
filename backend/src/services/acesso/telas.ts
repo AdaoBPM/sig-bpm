@@ -154,6 +154,8 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
           { codigo: "linhas", nome: "Linhas" },
           { codigo: "estrutura_dre", nome: "Estrutura da DRE" },
           { codigo: "regras_rateio", nome: "Regras de Rateio" },
+          // A Alocação nas Linhas (26/10/2026): os custos sem tarefa nas linhas, para os Resultados por Linha.
+          { codigo: "alocacao_linhas", nome: "Alocação nas Linhas" },
         ],
       },
       {

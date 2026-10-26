@@ -769,7 +769,10 @@ const linhas: DefinicaoCadastro = {
   },
   async impedimentoExclusao(db, id) {
     const m = await this.movimentos!(db, id);
-    return m ? `${m} Inative-a em vez de excluir.` : null;
+    if (m) return `${m} Inative-a em vez de excluir.`;
+    // As regras da Alocação nas Linhas (26/10/2026) não travam o nome, mas a exclusão, sim.
+    const n = await db.alocacaoLinha.count({ where: { linhaId: id } });
+    return n ? `A linha está em ${n} ${plural(n, "regra", "regras")} da Alocação nas Linhas: troque a linha delas ou exclua-as antes.` : null;
   },
   remover: async (db, id) => void (await db.linha.delete({ where: { id } })),
 };
@@ -1148,6 +1151,157 @@ const regras: DefinicaoCadastro = {
   remover: async (db, id) => void (await db.regraRateio.delete({ where: { id } })),
 };
 
+// --------------------------------------------------------- alocação nas linhas
+/**
+ * As bases por linha da Alocação nas Linhas (26/10/2026): o volume de cada linha nas listas do mês, com que os Resultados
+ * por Linha dividem entre as linhas de uma unidade o que um rateio (ou um centro) leva a ela. O cálculo de cada base fica
+ * no código; qual vale para cada rateio ou centro, no cadastro.
+ */
+export const BASES_DAS_LINHAS: Array<[string, string]> = [
+  ["M3_PRODUZIDO", "Volume Produzido (m³)"],
+  ["M3_PROJETOS", "Projetos Liberados (m³)"],
+  ["KG_METALURGIA", "Metalurgia Consumida (kg)"],
+  ["KG_ARMADURA", "Armadura (kg)"],
+  ["DIAS_ACOMPANHAMENTO", "Dias de Acompanhamento"],
+  ["RECEITA", "Receita Bruta"],
+];
+/** Os rateios que levam custos às unidades: sem o Extra, a RN e a Leben, fora dos resultados por linha. */
+const BALDES_DAS_LINHAS = BALDES.filter(([b]) => !["EXTRA", "RN", "LEBEN"].includes(b));
+const ORIGENS_DA_ALOCACAO: Array<[string, string]> = [["CENTRO", "Centro de Custo"], ["RATEIO", "Rateio"]];
+const DESTINOS_DA_ALOCACAO: Array<[string, string]> = [["LINHA", "Uma Linha (100%)"], ["BASE", "Base por Linha"]];
+const SEM_FIM = new Date("9999-12-31T00:00:00Z");
+const diaBR = (d: Date) => d.toISOString().slice(0, 10).split("-").reverse().join("/");
+
+/**
+ * A Alocação nas Linhas (26/10/2026, pedido do Adão): as regras com que os Resultados por Linha levam às linhas os custos
+ * sem tarefa. A origem é um centro de custo (vários centros podem ir à mesma linha, sem precisar do nome dela) ou um
+ * rateio (o balde dos centros sem regra própria); o destino, uma linha com 100% ou uma base por linha. A regra do centro
+ * vale antes da do rateio dele. Não entra na apuração da DRE: só divide entre as linhas o que a DRE já deu a cada unidade.
+ */
+const alocacaoLinhas: DefinicaoCadastro = {
+  entidade: "alocacao-linhas",
+  titulo: "Alocação nas linhas",
+  auditoria: "alocacao_linha",
+  criar: true,
+  excluir: true,
+  explicacao:
+    "A regra de um centro vale antes da do rateio dele. Uma Linha leva 100% do que a DRE dá à unidade da linha; uma Base por Linha divide o que a DRE dá a cada unidade entre as linhas dela, pelo volume de cada uma nas listas do mês. Regras da mesma origem não podem ter vigências sobrepostas. A alteração fica no log de auditoria, com o antes e o depois.",
+  campos: [
+    { nome: "origem", rotulo: "Origem", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(ORIGENS_DA_ALOCACAO), ajuda: "Um centro de custo, ou um rateio: os centros dele sem regra própria." },
+    {
+      nome: "centroCustoId",
+      rotulo: "Centro de Custo",
+      tipo: "opcao",
+      visivelSe: { campo: "origem", valores: ["CENTRO"] },
+      opcoes: async (db) =>
+        (await db.centroCusto.findMany({ orderBy: [{ codigoRM: "asc" }, { nomeRM: "asc" }], select: { id: true, codigoRM: true, nomeRM: true, nomeControladoria: true, balde: true, ativo: true } })).map((c) => ({
+          valor: c.id,
+          rotulo: `${c.codigoRM ?? "—"} · ${c.nomeControladoria ?? c.nomeRM}${c.balde ? ` (Rateio ${c.balde})` : ""}${c.ativo ? "" : " (inativo)"}`,
+        })),
+    },
+    { nome: "balde", rotulo: "Rateio", tipo: "opcao", visivelSe: { campo: "origem", valores: ["RATEIO"] }, opcoes: opcoesFixas(BALDES_DAS_LINHAS) },
+    { nome: "destino", rotulo: "Destino", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(DESTINOS_DA_ALOCACAO) },
+    {
+      nome: "linhaId",
+      rotulo: "Linha",
+      tipo: "opcao",
+      visivelSe: { campo: "destino", valores: ["LINHA"] },
+      opcoes: async (db) =>
+        (
+          await db.linha.findMany({
+            where: { tipo: { in: ["PRODUTO", "OBRA"] } },
+            select: { id: true, nome: true, ativo: true, ordem: true, unidadeNegocio: { select: { codigo: true, nome: true } } },
+          })
+        )
+          .sort((a, b) => (a.unidadeNegocio?.codigo ?? 9) - (b.unidadeNegocio?.codigo ?? 9) || a.ordem - b.ordem)
+          .map((l) => ({ valor: l.id, rotulo: `${l.nome} (${l.unidadeNegocio?.nome ?? "sem unidade"}${l.ativo ? "" : ", inativa"})` })),
+    },
+    {
+      nome: "base",
+      rotulo: "Base",
+      tipo: "opcao",
+      visivelSe: { campo: "destino", valores: ["BASE"] },
+      ajuda: "O volume de cada linha nas listas do mês: a Produção, os Projetos, a Metalurgia (pela linha que consome), as Armaduras, os Acompanhamentos ou a Receita Prévia.",
+      opcoes: opcoesFixas(BASES_DAS_LINHAS),
+    },
+    { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true, padrao: `${new Date().getFullYear()}-01-01` },
+    { nome: "vigenciaFim", rotulo: "Vigência: fim", rotuloColuna: "Fim", tipo: "data" },
+  ],
+  async listar(db) {
+    const xs = await db.alocacaoLinha.findMany({ include: { centroCusto: { select: { codigoRM: true, nomeRM: true } } }, orderBy: { vigenciaInicio: "asc" } });
+    // Os rateios (a regra geral) antes dos centros (as exceções); os rateios na ordem da lista, os centros pelo código.
+    const ordemDoBalde = (b: string | null) => BALDES_DAS_LINHAS.findIndex(([x]) => x === b);
+    return xs
+      .sort(
+        (a, b) =>
+          (a.origem === "RATEIO" ? 0 : 1) - (b.origem === "RATEIO" ? 0 : 1) ||
+          ordemDoBalde(a.balde) - ordemDoBalde(b.balde) ||
+          (a.centroCusto?.codigoRM ?? a.centroCusto?.nomeRM ?? "").localeCompare(b.centroCusto?.codigoRM ?? b.centroCusto?.nomeRM ?? ""),
+      )
+      .map(({ centroCusto: _c, ...x }) => x);
+  },
+  async ler(db, id) {
+    const a = await db.alocacaoLinha.findUnique({ where: { id }, include: { centroCusto: { select: { codigoRM: true, nomeRM: true, nomeControladoria: true } }, linha: { select: { nome: true } } } });
+    if (!a) return null;
+    const { centroCusto: c, linha: l, ...x } = a;
+    // O nome da regra, para a Auditoria: a origem e o destino por extenso.
+    const deOnde = c ? `Centro ${c.codigoRM ?? ""} ${c.nomeControladoria ?? c.nomeRM}`.replace(/\s+/g, " ") : `Rateio ${x.balde}`;
+    const paraOnde = l ? l.nome : (BASES_DAS_LINHAS.find(([b]) => b === x.base)?.[1] ?? x.base);
+    return { ...x, nome: `${deOnde} → ${paraOnde}` };
+  },
+  async preparar(db, v, id) {
+    const origem = exigir(v.origem, "A origem");
+    if (!ORIGENS_DA_ALOCACAO.some(([o]) => o === origem)) throw new RegraCadastroError(400, `Origem ${origem} desconhecida.`);
+    const destino = exigir(v.destino, "O destino");
+    if (!DESTINOS_DA_ALOCACAO.some(([d]) => d === destino)) throw new RegraCadastroError(400, `Destino ${destino} desconhecido.`);
+    let centroCustoId: string | null = null;
+    let balde: string | null = null;
+    let nomeDaOrigem: string;
+    if (origem === "CENTRO") {
+      const c = await db.centroCusto.findUnique({ where: { id: exigir(v.centroCustoId, "O centro de custo") }, select: { id: true, nomeRM: true, nomeControladoria: true } });
+      if (!c) throw new RegraCadastroError(400, "Centro de custo inexistente.");
+      centroCustoId = c.id;
+      nomeDaOrigem = `O centro ${c.nomeControladoria ?? c.nomeRM}`;
+    } else {
+      balde = exigir(v.balde, "O rateio");
+      if (!BALDES_DAS_LINHAS.some(([b]) => b === balde)) throw new RegraCadastroError(400, `O rateio ${balde} fica fora dos resultados por linha.`);
+      nomeDaOrigem = `O rateio ${balde}`;
+    }
+    let linhaId: string | null = null;
+    let base: string | null = null;
+    if (destino === "LINHA") {
+      const l = await db.linha.findUnique({ where: { id: exigir(v.linhaId, "A linha") }, select: { id: true, nome: true, tipo: true, ativo: true } });
+      if (!l || !["PRODUTO", "OBRA"].includes(l.tipo)) throw new RegraCadastroError(400, "Linha inexistente.");
+      if (!l.ativo) throw new RegraCadastroError(400, `A linha ${l.nome} está inativa: escolha uma linha ativa.`);
+      linhaId = l.id;
+    } else {
+      base = exigir(v.base, "A base");
+      if (!BASES_DAS_LINHAS.some(([b]) => b === base)) throw new RegraCadastroError(400, `Base ${base} desconhecida.`);
+    }
+    const inicio = data(v.vigenciaInicio, "A vigência inicial", true)!;
+    const fim = data(v.vigenciaFim, "A vigência final");
+    if (fim && fim < inicio) throw new RegraCadastroError(400, "A vigência final é anterior à inicial.");
+    // Uma origem tem uma regra por vez: as vigências da mesma origem não se sobrepõem.
+    const daOrigem = await db.alocacaoLinha.findMany({
+      where: { id: id ? { not: id } : undefined, ...(centroCustoId ? { centroCustoId } : { origem: "RATEIO", balde: balde as never }) },
+      select: { vigenciaInicio: true, vigenciaFim: true },
+    });
+    const outra = daOrigem.find((x) => x.vigenciaInicio <= (fim ?? SEM_FIM) && (x.vigenciaFim ?? SEM_FIM) >= inicio);
+    if (outra) {
+      throw new RegraCadastroError(
+        409,
+        `${nomeDaOrigem} já tem uma regra de ${diaBR(outra.vigenciaInicio)}${outra.vigenciaFim ? ` a ${diaBR(outra.vigenciaFim)}` : ", sem fim"}: preencha o Fim dela antes de criar outra, ou edite-a.`,
+      );
+    }
+    return { origem, centroCustoId, balde, destino, linhaId, base, vigenciaInicio: inicio, vigenciaFim: fim };
+  },
+  async gravar(db, d, id) {
+    const dados = d as Prisma.AlocacaoLinhaUncheckedCreateInput;
+    return id ? (await db.alocacaoLinha.update({ where: { id }, data: dados })).id : (await db.alocacaoLinha.create({ data: { ...dados, ordem: (await db.alocacaoLinha.count()) + 1 } })).id;
+  },
+  remover: async (db, id) => void (await db.alocacaoLinha.delete({ where: { id } })),
+};
+
 // --------------------------------------------------------- tipos de movimento
 // ------------------------------------------------------------ painel de bordo
 const GRUPOS_DO_PAINEL: Array<[string, string]> = [["RESULTADOS", "Resultados"], ["PERFORMANCE", "Performance"]];
@@ -1359,7 +1513,7 @@ const estacas: DefinicaoCadastro = {
 };
 
 export const DEFINICOES: Record<string, DefinicaoCadastro> = Object.fromEntries(
-  [centros, contas, reclassificacoes, estrutura, unidades, linhas, estruturaIndicadores, painelBordo, regras, tipos, estacas].map((d) => [d.entidade, d]),
+  [centros, contas, reclassificacoes, estrutura, unidades, linhas, estruturaIndicadores, painelBordo, regras, alocacaoLinhas, tipos, estacas].map((d) => [d.entidade, d]),
 );
 
 /** Para a tela e para o log: Decimal e Date viram texto. */

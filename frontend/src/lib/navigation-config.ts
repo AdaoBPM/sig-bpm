@@ -31,6 +31,7 @@ import {
   Presentation,
   Rows3,
   Shuffle,
+  Split,
   Table2,
   UserCog,
   Users,
@@ -184,6 +185,8 @@ export const navGrupos: NavGrupo[] = [
               { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastro_controladoria.linhas:ler" },
               { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastro_controladoria.estrutura_dre:ler" },
               { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastro_controladoria.regras_rateio:ler" },
+              // Os custos sem tarefa nas linhas, para os Resultados por Linha (26/10/2026).
+              { title: "Alocação nas Linhas", href: "/cadastros/alocacao-linhas", icon: Split, permission: "cadastro_controladoria.alocacao_linhas:ler" },
             ],
           },
           {
@@ -277,6 +280,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/cadastros\/estrutura-indicadores(\/|$)/, "cadastro_analitico.estrutura_indicadores:ler"],
   [/^\/cadastros\/painel-bordo(\/|$)/, "cadastro_analitico.painel_bordo:ler"],
   [/^\/cadastros\/regras-rateio(\/|$)/, "cadastro_controladoria.regras_rateio:ler"],
+  [/^\/cadastros\/alocacao-linhas(\/|$)/, "cadastro_controladoria.alocacao_linhas:ler"],
   [/^\/cadastros\/estrutura-dre(\/|$)/, "cadastro_controladoria.estrutura_dre:ler"],
   [/^\/cadastros(\/|$)/, "cadastros_controladoria:ler"],
   [/^\/usuarios(\/|$)/, "usuarios:ler"],
@@ -352,6 +356,7 @@ export const pageTitles: Record<string, string> = {
   "/cadastros/linhas": "Linhas",
   "/cadastros/estrutura-indicadores": "Indicadores",
   "/cadastros/regras-rateio": "Regras de Rateio",
+  "/cadastros/alocacao-linhas": "Alocação nas Linhas",
   "/cadastros/tipos-movimento": "Tipos de Movimento",
   "/cadastros/tabela-estacas": "Tabela de Estacas",
   "/usuarios": "Usuários",

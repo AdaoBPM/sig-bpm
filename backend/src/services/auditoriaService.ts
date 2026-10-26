@@ -83,6 +83,7 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   linha_dre: "Linha da DRE",
   unidade_negocio: "Unidade de negócio",
   regra_rateio: "Regra de rateio",
+  alocacao_linha: "Alocação nas linhas",
   tipo_movimento: "Tipo de movimento",
   tabela_estaca: "Tabela de estacas",
   relatorio_executivo: "Relatório Executivo",
