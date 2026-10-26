@@ -38,7 +38,17 @@ const CADASTROS: Array<{ chave: string; nome: string; dados: () => Promise<unkno
       await getPrismaClient().linhaDREUnidade.findMany({ orderBy: [{ linhaDREId: "asc" }, { unidadeNegocioId: "asc" }] }),
     ],
   },
-  { chave: "regras", nome: "Regras de Rateio", dados: () => getPrismaClient().regraRateio.findMany({ omit: sem, orderBy: { id: "asc" } }) },
+  {
+    chave: "regras",
+    nome: "Regras de Rateio",
+    // Com os percentuais por linha dos rateios fixos (26/10/2026); sem nenhum, a assinatura é a de antes (as apurações
+    // gravadas não pedem reapurar só por eles existirem).
+    dados: async () => {
+      const regras = await getPrismaClient().regraRateio.findMany({ omit: sem, orderBy: { id: "asc" } });
+      const linhas = await getPrismaClient().regraRateioLinha.findMany({ orderBy: [{ regraRateioId: "asc" }, { linhaId: "asc" }] });
+      return linhas.length ? [regras, linhas] : regras;
+    },
+  },
   // A Alocação nas Linhas (26/10/2026): as regras da etapa Linhas da apuração. As apurações de antes não a têm: não pedem reapurar.
   { chave: "alocacaoLinhas", nome: "Alocação nas Linhas", dados: () => getPrismaClient().alocacaoLinha.findMany({ omit: sem, orderBy: { id: "asc" } }) },
   { chave: "indicadores", nome: "Indicadores", dados: () => getPrismaClient().indicadorEstrutura.findMany({ omit: sem, orderBy: { id: "asc" } }) },

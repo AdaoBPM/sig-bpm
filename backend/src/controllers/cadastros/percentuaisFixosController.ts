@@ -27,7 +27,16 @@ export const percentuaisFixosController = {
 
   gravar(request: Request, response: Response) {
     const corpo = z
-      .object({ chave: z.string().min(1), inicioAnterior: DATA.nullable(), inicio: DATA, fim: DATA.nullable(), percentuais: z.record(z.string(), z.number().finite()), rotulo: z.string().trim().max(120).nullish() })
+      .object({
+        chave: z.string().min(1),
+        inicioAnterior: DATA.nullable(),
+        inicio: DATA,
+        fim: DATA.nullable(),
+        percentuais: z.record(z.string(), z.number().finite()),
+        // Os percentuais por linha de cada destino (26/10/2026): destino → id da linha → %.
+        linhas: z.record(z.string(), z.record(z.string(), z.number().finite())).optional(),
+        rotulo: z.string().trim().max(120).nullish(),
+      })
       .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Percentuais fixos inválidos." });
     return responder(response, () => percentuaisFixosService.gravar(corpo.data, request.user!.sub));

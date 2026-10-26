@@ -773,6 +773,9 @@ const linhas: DefinicaoCadastro = {
     // As regras da Alocação nas Linhas (26/10/2026) não travam o nome, mas a exclusão, sim.
     const n = await db.alocacaoLinha.count({ where: { linhaId: id } });
     if (n) return `A linha está em ${n} ${plural(n, "regra", "regras")} da Alocação nas Linhas: troque a linha delas ou exclua-as antes.`;
+    // Os percentuais por linha dos rateios fixos (26/10/2026).
+    const fixos = await db.regraRateioLinha.count({ where: { linhaId: id } });
+    if (fixos) return `A linha está nos percentuais por linha de ${fixos} ${plural(fixos, "regra", "regras")} de rateio fixo (Regras de Rateio): passe o percentual dela a outra linha antes.`;
     // Os resultados gravados pela etapa Linhas da apuração (26/10/2026).
     const r = await db.resultadoLinha.groupBy({ by: ["competenciaId"], where: { linhaId: id } });
     return r.length ? `A linha tem resultados gravados em ${r.length} ${plural(r.length, "competência", "competências")} (a etapa Linhas): inative-a em vez de excluir.` : null;

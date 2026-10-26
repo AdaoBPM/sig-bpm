@@ -17,13 +17,17 @@ import { botaoPrimario, classeSelect, Erro } from "@/app/cenarios/components/Cen
 import { lerNumero } from "@/app/cenarios/components/EdicaoDialogs";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean; rotulo: string };
-type Dados = { chaves: Array<{ chave: string; nome: string; destinos: Array<{ destino: string; nome: string }> }>; conjuntos: Conjunto[] };
+type LinhaDoDestino = { id: string; nome: string; ativo: boolean };
+type Destino = { destino: string; nome: string; linhas: LinhaDoDestino[] };
+/** Os percentuais por linha (26/10/2026): destino → id da linha → %. */
+type PorLinha = Record<string, Record<string, number>>;
+type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; linhas: PorLinha; usado: boolean; rotulo: string };
+type Dados = { chaves: Array<{ chave: string; nome: string; destinos: Destino[] }>; conjuntos: Conjunto[] };
 
 /** O serviço dos percentuais fixos (também o Novo Rateio, do tipo Fixo). */
 export const servicoDosPercentuaisFixos = {
   listar: async () => (await api.get<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos")).data.data,
-  gravar: async (d: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number>; rotulo?: string | null }) =>
+  gravar: async (d: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number>; linhas: PorLinha; rotulo?: string | null }) =>
     (await api.put<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos", d)).data.data,
   excluir: async (chave: string, inicio: string) => (await api.delete<{ data: Dados }>("/proxy/cadastros/regras-rateio/percentuais-fixos", { params: { chave, inicio } })).data.data,
   verificacao: async () => (await api.get<{ data: { avisos: string[] } }>("/proxy/cadastros/regras-rateio/verificacao")).data.data,
@@ -32,6 +36,140 @@ const servico = servicoDosPercentuaisFixos;
 
 const dataBR = (iso: string) => iso.split("-").reverse().join("/");
 const pct = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+const textoDe = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+const fora = (v: number | null | undefined) => v === undefined || (typeof v === "number" && (v < 0 || v > 100));
+
+/** Os textos de um conjunto gravado: o percentual de cada destino e os das linhas de cada destino. */
+export const textosDoConjunto = (c: Conjunto | null) => ({
+  textos: c ? Object.fromEntries(Object.entries(c.percentuais).map(([d, v]) => [d, textoDe(v)])) : {},
+  textosLinhas: c ? Object.fromEntries(Object.entries(c.linhas).map(([d, ls]) => [d, Object.fromEntries(Object.entries(ls).map(([id, v]) => [id, textoDe(v)]))])) : {},
+});
+
+/**
+ * Os percentuais digitados, lidos e conferidos: os destinos somando 100% e, em cada destino com percentual, as linhas da
+ * unidade dele somando 100% (26/10/2026). A linha inativa só aparece com percentual gravado (para passá-lo a outra); o
+ * destino com uma linha ativa só a tem com 100%, sem precisar digitar.
+ */
+export function conferirPercentuais(destinos: Destino[], textos: Record<string, string>, textosLinhas: Record<string, Record<string, string>>) {
+  const valores = destinos.map((d) => ({ ...d, valor: lerNumero(textos[d.destino] ?? "") }));
+  const soma = valores.reduce((s, v) => s + (typeof v.valor === "number" ? v.valor : 0), 0);
+  const invalido = valores.some((v) => fora(v.valor));
+  const somaCerta = Math.abs(soma - 100) <= 0.005;
+  const linhas = valores.map((d) => {
+    const ativas = d.linhas.filter((l) => l.ativo);
+    const texto = (l: LinhaDoDestino) => textosLinhas[d.destino]?.[l.id] ?? (ativas.length === 1 && l.ativo ? "100" : "");
+    const doDestino = d.linhas.filter((l) => l.ativo || (textosLinhas[d.destino]?.[l.id] ?? "") !== "").map((l) => ({ ...l, texto: texto(l), valor: lerNumero(texto(l)) }));
+    const somaDasLinhas = doDestino.reduce((s, l) => s + (typeof l.valor === "number" ? l.valor : 0), 0);
+    return {
+      destino: d.destino,
+      nome: d.nome,
+      aberto: typeof d.valor === "number" && d.valor > 0,
+      linhas: doDestino,
+      soma: somaDasLinhas,
+      invalido: doDestino.some((l) => fora(l.valor) || (!l.ativo && typeof l.valor === "number" && l.valor > 0)),
+      certa: Math.abs(somaDasLinhas - 100) <= 0.005,
+    };
+  });
+  const linhasCertas = linhas.every((x) => !x.aberto || (!x.invalido && x.certa));
+  return {
+    valores,
+    soma,
+    invalido,
+    somaCerta,
+    linhas,
+    linhasCertas,
+    percentuais: Object.fromEntries(valores.map((v) => [v.destino, typeof v.valor === "number" ? v.valor : 0])),
+    porLinha: Object.fromEntries(
+      linhas.filter((x) => x.aberto).map((x) => [x.destino, Object.fromEntries(x.linhas.flatMap((l) => (typeof l.valor === "number" && l.valor > 0 ? [[l.id, l.valor]] : [])))]),
+    ) as PorLinha,
+  };
+}
+
+/**
+ * Os percentuais de um conjunto fixo: cada destino com o seu e, logo abaixo dos destinos com percentual, as linhas da
+ * unidade dele (Matriz, Filial ou, na Montagem e na Complementar, Serviços), cada uma com a parte do destino, somando
+ * 100% no destino. A soma dos destinos no pé.
+ */
+export function PercentuaisDosDestinos({
+  prefixo,
+  conferido,
+  textos,
+  setTextos,
+  textosLinhas,
+  setTextosLinhas,
+  pode = true,
+}: {
+  prefixo: string;
+  conferido: ReturnType<typeof conferirPercentuais>;
+  textos: Record<string, string>;
+  setTextos: (f: (t: Record<string, string>) => Record<string, string>) => void;
+  textosLinhas: Record<string, Record<string, string>>;
+  setTextosLinhas: (f: (t: Record<string, Record<string, string>>) => Record<string, Record<string, string>>) => void;
+  pode?: boolean;
+}) {
+  const campo = (id: string, valor: string, mudar: (texto: string) => void, errado: boolean) => (
+    <div className="flex items-center gap-1.5">
+      <Input id={id} inputMode="decimal" value={valor} placeholder="0" disabled={!pode} onChange={(e) => mudar(e.target.value)} className={`h-8 w-28 rounded-sm text-right ${errado ? "border-red-400" : ""}`} />
+      <span className="text-sm text-gray-600">%</span>
+    </div>
+  );
+  return (
+    <>
+      <div className="rounded-sm border border-gray-200 bg-white">
+        {conferido.valores.map((v) => {
+          const doDestino = conferido.linhas.find((x) => x.destino === v.destino)!;
+          return (
+            <div key={v.destino} className="border-b border-gray-100 last:border-b-0">
+              <div className="flex items-center justify-between gap-3 px-3 py-2">
+                <Label htmlFor={`${prefixo}-${v.destino}`} className="text-sm font-medium text-gray-900">
+                  {v.nome}
+                </Label>
+                {campo(`${prefixo}-${v.destino}`, textos[v.destino] ?? "", (t) => setTextos((x) => ({ ...x, [v.destino]: t })), fora(v.valor))}
+              </div>
+              {doDestino.aberto ? (
+                <div className="mx-3 mb-2 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-gray-50">
+                  {doDestino.linhas.map((l) => (
+                    <div key={l.id} className="flex items-center justify-between gap-3 px-3 py-1.5">
+                      <Label htmlFor={`${prefixo}-${v.destino}-${l.id}`} className="text-sm text-gray-700">
+                        {l.nome}
+                        {l.ativo ? "" : " (Inativa)"}
+                      </Label>
+                      {campo(
+                        `${prefixo}-${v.destino}-${l.id}`,
+                        l.texto,
+                        (t) => setTextosLinhas((x) => ({ ...x, [v.destino]: { ...x[v.destino], [l.id]: t } })),
+                        fora(l.valor) || (!l.ativo && typeof l.valor === "number" && l.valor > 0),
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-3 py-1.5 text-sm">
+                    <span className="text-gray-700">Soma das Linhas de {v.nome}</span>
+                    <span className={`font-medium ${doDestino.certa ? "text-gray-900" : "text-red-700"}`}>{pct(doDestino.soma)}</span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+        <div className="flex items-center justify-between gap-3 bg-gray-50 px-3 py-2 text-sm">
+          <span className="font-bold text-gray-900">Soma</span>
+          <span className={`font-bold ${conferido.somaCerta ? "text-gray-900" : "text-red-700"}`}>{pct(conferido.soma)}</span>
+        </div>
+      </div>
+      {!conferido.somaCerta && !conferido.invalido ? <p className="text-xs text-red-700">Os percentuais precisam somar 100% (faltam {pct(100 - conferido.soma)}).</p> : null}
+      {conferido.linhas
+        .filter((x) => x.aberto && !x.invalido && !x.certa)
+        .map((x) => (
+          <p key={x.destino} className="text-xs text-red-700">
+            As linhas de {x.nome} precisam somar 100% (faltam {pct(100 - x.soma)}).
+          </p>
+        ))}
+      {conferido.linhas.some((x) => x.aberto && x.linhas.some((l) => !l.ativo && typeof l.valor === "number" && l.valor > 0)) ? (
+        <p className="text-xs text-red-700">Uma linha inativa ficou com percentual: passe-o a outra linha.</p>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * O aviso das regras de rateio (14/10/2026): as chaves com meses sem regra (até dezembro do ano que vem) e os conjuntos
@@ -68,7 +206,8 @@ export function PercentuaisFixosDialog({ onFechar, inicial }: { onFechar: () => 
           <DialogTitle>Percentuais Fixos</DialogTitle>
           <DialogDescription>
             Rateios com a mesma chave não podem ter vigências sobrepostas. Os percentuais de cada destino da chave, no lugar dos percentuais dos
-            volumes, somando 100%; as regras por volume da chave precisam ter a vigência encerrada antes do início.
+            volumes, somando 100%; as regras por volume da chave precisam ter a vigência encerrada antes do início. Cada destino com percentual
+            se divide entre as linhas da unidade dele, que também somam 100%: é como a parte do rateio chega às linhas na etapa Linhas.
           </DialogDescription>
         </DialogHeader>
         {consulta.isError ? (
@@ -94,9 +233,8 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
   const [inicio, setInicio] = useState(doInicial?.inicio ?? "");
   const [fim, setFim] = useState(doInicial?.fim ?? "");
   const [rotulo, setRotulo] = useState(doInicial?.rotulo ?? "");
-  const [textos, setTextos] = useState<Record<string, string>>(() =>
-    doInicial ? Object.fromEntries(Object.entries(doInicial.percentuais).map(([d, v]) => [d, v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })])) : {},
-  );
+  const [textos, setTextos] = useState<Record<string, string>>(() => textosDoConjunto(doInicial).textos);
+  const [textosLinhas, setTextosLinhas] = useState<Record<string, Record<string, string>>>(() => textosDoConjunto(doInicial).textosLinhas);
   const [excluir, setExcluir] = useState(false);
   const daChave = dados.chaves.find((c) => c.chave === chave);
   const conjuntos = dados.conjuntos.filter((c) => c.chave === chave);
@@ -109,14 +247,12 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
     setInicio(c?.inicio ?? "");
     setFim(c?.fim ?? "");
     setRotulo(c?.rotulo ?? "");
-    setTextos(c ? Object.fromEntries(Object.entries(c.percentuais).map(([d, v]) => [d, v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })])) : {});
+    setTextos(textosDoConjunto(c).textos);
+    setTextosLinhas(textosDoConjunto(c).textosLinhas);
     setExcluir(false);
   };
-  const valores = (daChave?.destinos ?? []).map((d) => ({ ...d, valor: lerNumero(textos[d.destino] ?? "") }));
-  const soma = valores.reduce((s, v) => s + (typeof v.valor === "number" ? v.valor : 0), 0);
-  const invalido = valores.some((v) => v.valor === undefined || (typeof v.valor === "number" && (v.valor < 0 || v.valor > 100)));
-  const somaCerta = Math.abs(soma - 100) <= 0.005;
-  const pronto = pode && !!inicio && (!fim || fim >= inicio) && !invalido && somaCerta;
+  const conferido = conferirPercentuais(daChave?.destinos ?? [], textos, textosLinhas);
+  const pronto = pode && !!inicio && (!fim || fim >= inicio) && !conferido.invalido && conferido.somaCerta && conferido.linhasCertas;
   const concluir = (msg: string) => {
     queryClient.invalidateQueries({ queryKey: ["edicao", "regras-rateio"] });
     atualizarCompetencia(queryClient);
@@ -131,7 +267,8 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
         inicio,
         fim: fim || null,
         rotulo: rotulo.trim() || null,
-        percentuais: Object.fromEntries(valores.map((v) => [v.destino, typeof v.valor === "number" ? v.valor : 0])),
+        percentuais: conferido.percentuais,
+        linhas: conferido.porLinha,
       }),
     onSuccess: () => concluir(`Percentuais fixos de ${daChave?.nome} gravados.`),
   });
@@ -175,32 +312,7 @@ function Formulario({ dados, onFechar, inicial }: { dados: Dados; onFechar: () =
           <Input id="pf-fim" type="date" value={fim} onChange={(e) => setFim(e.target.value)} disabled={!pode} className={`rounded-sm ${fim && inicio && fim < inicio ? "border-red-400" : ""}`} />
         </div>
       </div>
-      <div className="rounded-sm border border-gray-200 bg-white">
-        {valores.map((v) => (
-          <div key={v.destino} className="flex items-center justify-between gap-3 border-b border-gray-100 px-3 py-2 last:border-b-0">
-            <Label htmlFor={`pf-${v.destino}`} className="text-sm text-gray-800">
-              {v.nome}
-            </Label>
-            <div className="flex items-center gap-1.5">
-              <Input
-                id={`pf-${v.destino}`}
-                inputMode="decimal"
-                value={textos[v.destino] ?? ""}
-                placeholder="0"
-                disabled={!pode}
-                onChange={(e) => setTextos((t) => ({ ...t, [v.destino]: e.target.value }))}
-                className={`h-8 w-28 rounded-sm text-right ${v.valor === undefined || (typeof v.valor === "number" && (v.valor < 0 || v.valor > 100)) ? "border-red-400" : ""}`}
-              />
-              <span className="text-sm text-gray-600">%</span>
-            </div>
-          </div>
-        ))}
-        <div className="flex items-center justify-between gap-3 bg-gray-50 px-3 py-2 text-sm">
-          <span className="font-bold text-gray-900">Soma</span>
-          <span className={`font-bold ${somaCerta ? "text-gray-900" : "text-red-700"}`}>{pct(soma)}</span>
-        </div>
-      </div>
-      {!somaCerta && !invalido ? <p className="text-xs text-red-700">Os percentuais precisam somar 100% (faltam {pct(100 - soma)}).</p> : null}
+      <PercentuaisDosDestinos prefixo="pf" conferido={conferido} textos={textos} setTextos={setTextos} textosLinhas={textosLinhas} setTextosLinhas={setTextosLinhas} pode={pode} />
       <Erro erro={erro} />
       {/* Sem a edição, o rodapé teria só o Fechar: sai, e o X do canto fecha (15/10/2026). */}
       {pode ? (

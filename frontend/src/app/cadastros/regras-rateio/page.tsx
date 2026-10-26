@@ -34,12 +34,18 @@ export default function RegrasRateioPage() {
                 chave e no conjunto da regra, onde se editam o Rótulo, a vigência e os percentuais, e se excluem (o conjunto já usado em apurações não se
                 exclui: encerre a vigência).
               </li>
-              <li>O quadro vermelho acima da tabela avisa as chaves com meses sem regra (até dezembro do ano que vem): nesses meses, os lançamentos de rateio da chave não vão para nenhuma unidade. Sem regra no mês, a competência não se abre nem se fecha (Fechamento Mensal), e um cenário analítico do exercício não se abre nem se fecha.</li>
+              <li>
+                Os percentuais por linha (nos rateios fixos): cada destino com percentual abre, logo abaixo dele, as linhas ativas da unidade dele — a
+                Matriz, a Filial ou, na Montagem e na Complementar, Serviços —, cada uma com a parte do destino que vai a ela, somando 100% no destino (a
+                linha única já vem com 100%). É como a parte de rateio da chave chega às linhas na etapa Linhas da apuração, no lugar da regra da Alocação
+                nas Linhas. Uma linha inativa só aparece se ainda tem percentual: passe-o a outra antes de gravar.
+              </li>
+              <li>O quadro vermelho acima da tabela avisa as chaves com meses sem regra (até dezembro do ano que vem): nesses meses, os lançamentos de rateio da chave não vão para nenhuma unidade. Sem regra no mês, a competência não se abre nem se fecha (Fechamento Mensal), e um cenário analítico do exercício não se abre nem se fecha. Avisa também os conjuntos fixos em vigor ainda sem os percentuais por linha: até serem editados, essa parte vai às linhas pela Alocação nas Linhas.</li>
               <li>Com um cenário analítico em aberto, editar uma regra pede o “Recalcular” na tela Resultados do cenário: os rateios dele seguem as regras de cada mês.</li>
               <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="As chaves de rateio: por volume — o volume do destino sobre o da chave, nas listas do mês — ou, desde 14/10/2026, por percentuais fixos digitados, que somam 100% na chave. A chave e o destino são fixos depois de criada a regra; as vigências dizem de que mês a que mês cada regra vale. O volume continua apurado também nas regras fixas (os indicadores de volume leem dele)."
+          descricao="As chaves de rateio: por volume — o volume do destino sobre o da chave, nas listas do mês — ou, desde 14/10/2026, por percentuais fixos digitados, que somam 100% na chave (e, desde 26/10/2026, com os percentuais por linha de cada destino, que levam a parte do rateio às linhas). A chave e o destino são fixos depois de criada a regra; as vigências dizem de que mês a que mês cada regra vale. O volume continua apurado também nas regras fixas (os indicadores de volume leem dele)."
         />
       </PermissionGuard>
     </ProtectedLayout>

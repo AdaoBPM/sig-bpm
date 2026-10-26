@@ -121,8 +121,9 @@ function Conferencia({ dados }: { dados: LinhasDoMes }) {
           linhas={dados.niveis.map((n) => ({ chave: n.nivel, rotulo: n.rotulo, valores: n.porUnidade.map(valor) }))}
           rodape={
             <p className="text-xs text-gray-500">
-              De que passo veio cada valor das linhas: a Receita Prévia (as receitas) e, nos custos, a Tarefa, a Regra do Centro, a Obra, a Regra do Rateio e o
-              Volume da Unidade (Cadastros da Controladoria › Alocação nas Linhas).
+              De que passo veio cada valor das linhas: a Receita Prévia (as receitas) e, nos custos, a Tarefa, a Regra do Centro, a Obra, o Percentual Fixo
+              (os percentuais por linha de um rateio fixo, em Regras de Rateio), a Regra do Rateio e o Volume da Unidade (Cadastros da Controladoria › Alocação
+              nas Linhas).
             </p>
           }
         />
@@ -202,7 +203,8 @@ export function LinhasContent() {
               A receita vem da Receita Prévia das linhas. Os custos e as despesas variáveis de venda vêm dos lançamentos que formaram cada valor da unidade (os
               diretos e a parte de cada rateio), e cada lançamento vai às linhas por esta ordem: a tarefa das requisições e das notas fiscais (Cadastros da
               Controladoria › Linhas › Tarefas), a regra do centro de custo, a obra (os centros de obra, pela produção, pelos acompanhamentos ou pela receita da
-              própria obra), a regra do rateio do centro (Cadastros da Controladoria › Alocação nas Linhas) e, por último, o volume da unidade.
+              própria obra), os percentuais por linha do rateio fixo (na parte de rateio de uma chave com percentuais fixos no mês: Cadastros da Controladoria ›
+              Regras de Rateio), a regra do rateio do centro (Cadastros da Controladoria › Alocação nas Linhas) e, por último, o volume da unidade.
             </p>
           </>
         }

@@ -21,7 +21,8 @@ import { linhasDoNegocio, pesosDaBase, receitaDoMes, volumeDaLinhaDRE, volumesDo
  * - os custos e as despesas variáveis de venda, lançamento a lançamento: a composição gravada de cada valor (os pares
  *   diretos de balde e filial e os rateios com o percentual da unidade) diz quais lançamentos o formaram, e cada parte vai
  *   às linhas pela ordem da Alocação nas Linhas — a tarefa das requisições e das notas fiscais, a regra do centro, a obra
- *   (os centros de obra), a regra do rateio e o volume da unidade; o que nenhum passo leva fica Sem Linha;
+ *   (os centros de obra), os percentuais por linha do rateio fixo (26/10/2026: a parte de rateio de uma chave com
+ *   percentual fixo, pelo destino dela), a regra do rateio e o volume da unidade; o que nenhum passo leva fica Sem Linha;
  * - os volumes (as linhas P e S), pelas listas, na regra da aba Totais.
  *
  * A soma das linhas de cada unidade é a DRE da unidade (a Conferência). A parte de cada custo que veio dos centros de obra
@@ -49,7 +50,7 @@ const MC = "MC.MARGEM_DE_CONTRIBUICAO_MC";
 type LinhaDRE = LinhaEstrutura & { expressao: string | null; unidades: number[] };
 type Par = { balde: string; filial?: number };
 type OrigemContabil = { linhaId: string; pares?: Par[]; baldes?: string[]; fator?: string };
-type Composicao = { origem?: { contabil?: OrigemContabil; contabilPar?: OrigemContabil }; rateios?: Array<{ chave: string; percentual: string; linhaId?: string }> };
+type Composicao = { origem?: { contabil?: OrigemContabil; contabilPar?: OrigemContabil }; rateios?: Array<{ chave: string; destino?: string; percentual: string; linhaId?: string }> };
 /** Um grupo de lançamentos (os contábeis e os manuais) com o mesmo contexto: a linha da DRE, o balde, a filial, o centro e a conta. */
 type Fonte = { linhaDREId: string; balde: string; filial: number; rateio: boolean; centroCustoId: string | null; codigoCentro: string | null; reduzido: string | null; valor: number };
 type Regra = { origem: string; centroCustoId: string | null; balde: string | null; destino: string; linhaId: string | null; base: string | null };
@@ -165,7 +166,7 @@ async function calcularMes(
   dadosDoAno: DadosDoMes,
 ): Promise<ResultadoDoMes> {
   const prisma = getPrismaClient();
-  const [fontes, documentos, unidades, regras, obras] = await Promise.all([
+  const [fontes, documentos, unidades, regras, obras, fixas] = await Promise.all([
     fontesDoMes(competencia.id),
     documentosDoMes(competencia.id),
     prisma.resultadoApurado.findMany({
@@ -174,10 +175,22 @@ async function calcularMes(
     }),
     prisma.alocacaoLinha.findMany({ select: { origem: true, centroCustoId: true, balde: true, destino: true, linhaId: true, base: true, vigenciaInicio: true, vigenciaFim: true } }),
     prisma.obra.findMany({ select: { id: true, codigo: true } }),
+    // Os percentuais por linha dos rateios fixos (26/10/2026).
+    prisma.regraRateio.findMany({
+      where: { percentualFixo: { not: null }, linhas: { some: {} } },
+      select: { chave: true, destino: true, vigenciaInicio: true, vigenciaFim: true, linhas: { select: { linhaId: true, percentual: true } } },
+    }),
   ]);
   const vigentes = regras.filter((r) => valeNoMes({ inicio: r.vigenciaInicio, fim: r.vigenciaFim }, competencia.ano, competencia.mes));
   const regraDoCentro = new Map<string, Regra>(vigentes.filter((r) => r.origem === "CENTRO" && r.centroCustoId).map((r) => [r.centroCustoId!, r]));
   const regraDoBalde = new Map<string, Regra>(vigentes.filter((r) => r.origem === "RATEIO" && r.balde).map((r) => [r.balde!, r]));
+  // A parte de rateio de uma chave com percentual fixo no mês vai às linhas pelos percentuais por linha do destino dela
+  // (chave|destino → linha → fração), no lugar da regra do rateio.
+  const fixoDoDestino = new Map(
+    fixas
+      .filter((r) => valeNoMes({ inicio: r.vigenciaInicio, fim: r.vigenciaFim }, competencia.ano, competencia.mes))
+      .map((r) => [`${r.chave}|${r.destino}`, new Map(r.linhas.map((l) => [l.linhaId, Number(l.percentual)]))]),
+  );
   const obraDoNumero = new Map<string, { id: string; codigo: string }>();
   for (const o of obras) if (!obraDoNumero.has(numeroDaObra(o.codigo))) obraDoNumero.set(numeroDaObra(o.codigo), o);
 
@@ -272,7 +285,7 @@ async function calcularMes(
 
     // Os custos: os lançamentos que formaram o valor da unidade (os diretos e os rateios, pela composição gravada).
     const comp = row.composicao as Composicao | null;
-    const partes: Array<{ f: Fonte | null; a: number }> = [];
+    const partes: Array<{ f: Fonte | null; a: number; destino?: string }> = [];
     const casa = (o: OrigemContabil, f: Fonte) => (o.pares ? o.pares.some((p) => p.balde === f.balde && (p.filial === undefined || p.filial === f.filial)) : o.baldes ? o.baldes.includes(f.balde) : true);
     for (const o of [comp?.origem?.contabil, comp?.origem?.contabilPar]) {
       if (!o) continue;
@@ -282,7 +295,7 @@ async function calcularMes(
     for (const x of comp?.rateios ?? []) {
       const linhaId = x.linhaId ?? comp?.origem?.contabil?.linhaId;
       const p = Number(x.percentual);
-      for (const f of linhaId ? (fontesDaLinha.get(linhaId) ?? []) : []) if (f.rateio && f.balde === x.chave) partes.push({ f, a: p * f.valor });
+      for (const f of linhaId ? (fontesDaLinha.get(linhaId) ?? []) : []) if (f.rateio && f.balde === x.chave) partes.push({ f, a: p * f.valor, destino: x.destino });
     }
     const refeito = partes.reduce((s, p) => s + p.a, 0);
     if (Math.abs(V - refeito) >= 0.01) {
@@ -290,12 +303,15 @@ async function calcularMes(
       if (Math.abs(V - refeito) >= 1)
         r.avisos.push(`${NOME_DA_UNIDADE[u]}: ${linhaDRE.get(codigo)?.descricao ?? codigo} — a DRE (${V.toFixed(2)}) difere dos lançamentos (${refeito.toFixed(2)}); a diferença foi pelo volume da unidade.`);
     }
-    for (const { f, a } of partes) {
+    for (const { f, a, destino } of partes) {
       if (Math.abs(a) < 1e-9) continue;
       const tarefa = new Map([...(f ? (fracoes.get(chaveDoDocumento(f.reduzido, f.codigoCentro, f.filial)) ?? new Map<string, number>()) : new Map<string, number>())].filter(([l]) => porUnidade.get(u)!.has(l)));
+      // O rateio fixo com os percentuais por linha (26/10/2026): só as linhas da unidade.
+      const fixo = f?.rateio && destino ? fixoDoDestino.get(`${f.balde}|${destino}`) : undefined;
       const passos: Passo[] = [
         { nivel: "CENTRO", pesos: () => (f?.centroCustoId ? pelaRegra(u, regraDoCentro.get(f.centroCustoId)) : null) },
         { nivel: "OBRA", pesos: () => pelaObra(u, f, grupo) },
+        { nivel: "FIXO", pesos: () => (fixo ? new Map([...fixo].filter(([l, p]) => p > 0 && porUnidade.get(u)!.has(l))) : null) },
         { nivel: "RATEIO", pesos: () => (f ? pelaRegra(u, regraDoBalde.get(f.balde)) : null) },
         { nivel: "UNIDADE", pesos: () => pesosDaBase(baseDaUnidade(u), u, dadosDoMes) },
       ];

@@ -11,21 +11,50 @@ import { peloTexto } from "../../lib/ordemDoSqlite.js";
  * de Rateio): numa chave e num período, cada destino fica com um percentual digitado, e os destinos somam 100%. Os
  * destinos são sempre os quatro — Matriz, Filial, Montagem e Complementar (14/10/2026; antes, só os que a chave usava
  * por volume) —, cada um com a linha de volume dele (o volume continua apurado, só para a tela). O conjunto (uma regra por destino, com a mesma vigência) se grava e se exclui junto.
+ *
+ * Desde 26/10/2026 (pedido do Adão), cada destino com percentual tem também os percentuais por linha: a parte dele
+ * dividida entre as linhas da unidade dele (Matriz, Filial ou, na Montagem e na Complementar, Serviços), somando 100% no
+ * destino (RegraRateioLinha). A etapa Linhas da apuração usa estes percentuais na parte de rateio da chave, no lugar da
+ * regra da Alocação nas Linhas. Os conjuntos de antes ficam sem eles (as linhas seguem a Alocação) até serem editados.
  */
 
 const NOME_DO_DESTINO: Record<string, string> = { MATRIZ: "Matriz", FILIAL: "Filial", MONTAGEM: "Montagem", COMPLEMENTAR: "Complementar" };
 const nomeDaChave = (c: string) => NOME_DA_CHAVE[c] ?? c;
 const dia = (d: Date) => d.toISOString().slice(0, 10);
+const textoPct = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
-/** Um conjunto: a chave, a vigência, o percentual de cada destino e o rótulo (a base do rótulo das regras, 14/10/2026). */
-type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; usado: boolean; rotulo: string };
+/**
+ * Um conjunto: a chave, a vigência, o percentual de cada destino, os percentuais por linha de cada destino (em %, pelo id
+ * da linha) e o rótulo (a base do rótulo das regras, 14/10/2026).
+ */
+type Conjunto = { chave: string; inicio: string; fim: string | null; percentuais: Record<string, number>; linhas: Record<string, Record<string, number>>; usado: boolean; rotulo: string };
+/** As linhas da unidade de cada destino (as ativas e as inativas, que só aparecem com percentual gravado). */
+async function linhasDosDestinos() {
+  const ls = await getPrismaClient().linha.findMany({
+    where: { tipo: { in: ["PRODUTO", "OBRA"] }, unidadeNegocio: { codigo: { in: [1, 2, 3] } } },
+    select: { id: true, nome: true, ativo: true, ordem: true, unidadeNegocio: { select: { codigo: true } } },
+    orderBy: { ordem: "asc" },
+  });
+  const unidadeDo = new Map<string, number>(REGRAS_DOS_PERCENTUAIS_FIXOS.map((r) => [r.destino, r.unidade]));
+  return (destino: string) => ls.filter((l) => l.unidadeNegocio?.codigo === unidadeDo.get(destino)).map((l) => ({ id: l.id, nome: l.nome, ativo: l.ativo }));
+}
 /** O rótulo de cada regra do conjunto: "Produção: Matriz (Fixo)", com a base escolhida no lugar do nome da chave. */
 const rotuloDaRegra = (base: string, destino: string) => `${base}: ${NOME_DO_DESTINO[destino] ?? destino} (Fixo)`;
 const baseDoRotulo = (rotulo: string) => rotulo.replace(/: [^:]+ (Fixo)$/, "");
 
 async function regras() {
   const rs = await getPrismaClient().regraRateio.findMany({
-    select: { id: true, chave: true, destino: true, rotulo: true, vigenciaInicio: true, vigenciaFim: true, percentualFixo: true, _count: { select: { volumesOperacionais: true } } },
+    select: {
+      id: true,
+      chave: true,
+      destino: true,
+      rotulo: true,
+      vigenciaInicio: true,
+      vigenciaFim: true,
+      percentualFixo: true,
+      linhas: { select: { linhaId: true, percentual: true } },
+      _count: { select: { volumesOperacionais: true } },
+    },
     orderBy: [{ vigenciaInicio: "asc" }, { id: "asc" }],
   });
   // A chave pelo texto, como no SQLite (23/10/2026: no PostgreSQL, o enum ordena pela declaração).
@@ -43,12 +72,13 @@ const comVigencia = (r: Awaited<ReturnType<typeof regras>>[number]): RegraComVig
 export const percentuaisFixosService = {
   /** As chaves com os destinos delas e os conjuntos de percentuais fixos já cadastrados. */
   async listar() {
-    const todas = await regras();
+    const [todas, linhasDo] = await Promise.all([regras(), linhasDosDestinos()]);
     const conjuntos = new Map<string, Conjunto>();
     for (const r of todas.filter((x) => x.percentualFixo !== null)) {
       const k = `${r.chave}|${dia(r.vigenciaInicio)}`;
-      const c = conjuntos.get(k) ?? { chave: r.chave, inicio: dia(r.vigenciaInicio), fim: r.vigenciaFim ? dia(r.vigenciaFim) : null, percentuais: {}, usado: false, rotulo: baseDoRotulo(r.rotulo) };
+      const c = conjuntos.get(k) ?? { chave: r.chave, inicio: dia(r.vigenciaInicio), fim: r.vigenciaFim ? dia(r.vigenciaFim) : null, percentuais: {}, linhas: {}, usado: false, rotulo: baseDoRotulo(r.rotulo) };
       c.percentuais[r.destino] = Number(r.percentualFixo) * 100;
+      if (r.linhas.length) c.linhas[r.destino] = Object.fromEntries(r.linhas.map((l) => [l.linhaId, Number(l.percentual) * 100]));
       c.usado ||= r._count.volumesOperacionais > 0;
       conjuntos.set(k, c);
     }
@@ -56,7 +86,7 @@ export const percentuaisFixosService = {
       chaves: CHAVES_DE_RATEIO.map((chave) => ({
         chave,
         nome: nomeDaChave(chave),
-        destinos: REGRAS_DOS_PERCENTUAIS_FIXOS.filter((r) => r.chave === chave).map((r) => ({ destino: r.destino, nome: NOME_DO_DESTINO[r.destino] })),
+        destinos: REGRAS_DOS_PERCENTUAIS_FIXOS.filter((r) => r.chave === chave).map((r) => ({ destino: r.destino, nome: NOME_DO_DESTINO[r.destino], linhas: linhasDo(r.destino) })),
       })),
       conjuntos: [...conjuntos.values()],
     };
@@ -67,7 +97,16 @@ export const percentuaisFixosService = {
    * mesma vigência. Recusa a vigência que se sobrepõe a outras regras da chave (as por volume têm de ser encerradas antes).
    */
   async gravar(
-    dados: { chave: string; inicioAnterior: string | null; inicio: string; fim: string | null; percentuais: Record<string, number>; rotulo?: string | null },
+    dados: {
+      chave: string;
+      inicioAnterior: string | null;
+      inicio: string;
+      fim: string | null;
+      percentuais: Record<string, number>;
+      /** Os percentuais por linha de cada destino (em %, pelo id da linha), somando 100% em cada destino com percentual. */
+      linhas?: Record<string, Record<string, number>>;
+      rotulo?: string | null;
+    },
     usuarioId: string,
   ) {
     const prisma = getPrismaClient();
@@ -81,6 +120,29 @@ export const percentuaisFixosService = {
     if (pcts.some((p) => !Number.isFinite(p.valor) || p.valor < 0 || p.valor > 100)) throw new RegraRateioError(400, "Cada percentual vai de 0% a 100%.");
     const soma = pcts.reduce((s, p) => s + p.valor, 0);
     if (Math.abs(soma - 100) > 0.005) throw new RegraRateioError(400, `Os percentuais de ${nomeDaChave(dados.chave)} somam ${soma.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%: precisam somar 100%.`);
+    // Os percentuais por linha (26/10/2026): em cada destino com percentual, só as linhas ativas da unidade dele, somando
+    // 100%; o destino com 0% fica sem eles.
+    const linhasDo = await linhasDosDestinos();
+    type PorLinha = Array<{ linhaId: string; valor: number }>;
+    const porLinha = new Map<string, PorLinha>(
+      pcts.map((p): [string, PorLinha] => {
+        const nome = NOME_DO_DESTINO[p.regra.destino] ?? p.regra.destino;
+        if (p.valor <= 0) return [p.regra.destino, []];
+        const daUnidade = linhasDo(p.regra.destino);
+        const enviadas = Object.entries(dados.linhas?.[p.regra.destino] ?? {})
+          .map(([linhaId, v]) => ({ linhaId, valor: Number(v) }))
+          .filter((l) => l.valor !== 0);
+        for (const l of enviadas) {
+          const linha = daUnidade.find((x) => x.id === l.linhaId);
+          if (!linha) throw new RegraRateioError(400, `${nome}: uma das linhas não é da unidade do destino.`);
+          if (!Number.isFinite(l.valor) || l.valor < 0 || l.valor > 100) throw new RegraRateioError(400, `${nome}: cada percentual por linha vai de 0% a 100%.`);
+          if (!linha.ativo) throw new RegraRateioError(400, `${nome}: a linha ${linha.nome} está inativa; passe o percentual dela a outra linha.`);
+        }
+        const somaDasLinhas = enviadas.reduce((s, l) => s + l.valor, 0);
+        if (Math.abs(somaDasLinhas - 100) > 0.005) throw new RegraRateioError(400, `${nome}: os percentuais por linha somam ${textoPct(somaDasLinhas)}%: precisam somar 100%.`);
+        return [p.regra.destino, enviadas];
+      }),
+    );
 
     const todas = await regras();
     const anteriores = dados.inicioAnterior
@@ -102,19 +164,23 @@ export const percentuaisFixosService = {
       for (const [k, p] of pcts.entries()) {
         const anterior = anteriores.find((r) => r.destino === p.regra.destino);
         const dadosDaRegra = { vigenciaInicio: inicio, vigenciaFim: fim, percentualFixo: new Prisma.Decimal((p.valor / 100).toFixed(6)), rotulo: rotuloDaRegra(base, p.regra.destino) };
-        if (anterior) await tx.regraRateio.update({ where: { id: anterior.id }, data: dadosDaRegra });
-        else
-          await tx.regraRateio.create({
-            data: {
-              ...dadosDaRegra,
-              chave: p.regra.chave,
-              destino: p.regra.destino,
-              unidadeDestinoId: unidades.get(p.regra.unidade)!,
-              baseFisica: p.regra.baseFisica,
-              origemDoVolume: p.regra.origem,
-              ordem: ordem + k + 1,
-            },
-          });
+        const regra = anterior
+          ? await tx.regraRateio.update({ where: { id: anterior.id }, data: dadosDaRegra, select: { id: true } })
+          : await tx.regraRateio.create({
+              data: {
+                ...dadosDaRegra,
+                chave: p.regra.chave,
+                destino: p.regra.destino,
+                unidadeDestinoId: unidades.get(p.regra.unidade)!,
+                baseFisica: p.regra.baseFisica,
+                origemDoVolume: p.regra.origem,
+                ordem: ordem + k + 1,
+              },
+              select: { id: true },
+            });
+        await tx.regraRateioLinha.deleteMany({ where: { regraRateioId: regra.id } });
+        const linhas = porLinha.get(p.regra.destino) ?? [];
+        if (linhas.length) await tx.regraRateioLinha.createMany({ data: linhas.map((l) => ({ regraRateioId: regra.id, linhaId: l.linhaId, percentual: new Prisma.Decimal((l.valor / 100).toFixed(6)) })) });
       }
     });
     await auditar({
@@ -122,8 +188,16 @@ export const percentuaisFixosService = {
       acao: dados.inicioAnterior ? "ALTERACAO" : "CRIACAO",
       entidade: "regra_rateio",
       entidadeId: `${dados.chave}|${dados.inicio}`,
-      antes: anteriores.length ? anteriores.map((r) => ({ destino: r.destino, inicio: r.vigenciaInicio, fim: r.vigenciaFim, percentual: Number(r.percentualFixo) })) : undefined,
-      depois: { chave: dados.chave, inicio: dados.inicio, fim: dados.fim, percentuais: Object.fromEntries(pcts.map((p) => [p.regra.destino, p.valor])) },
+      antes: anteriores.length
+        ? anteriores.map((r) => ({ destino: r.destino, inicio: r.vigenciaInicio, fim: r.vigenciaFim, percentual: Number(r.percentualFixo), linhas: Object.fromEntries(r.linhas.map((l) => [l.linhaId, Number(l.percentual)])) }))
+        : undefined,
+      depois: {
+        chave: dados.chave,
+        inicio: dados.inicio,
+        fim: dados.fim,
+        percentuais: Object.fromEntries(pcts.map((p) => [p.regra.destino, p.valor])),
+        linhas: Object.fromEntries([...porLinha].map(([destino, ls]) => [destino, Object.fromEntries(ls.map((l) => [l.linhaId, l.valor]))])),
+      },
       metadados: { percentuaisFixos: true },
     });
     return this.listar();
@@ -159,6 +233,20 @@ export const percentuaisFixosService = {
         const [chave, inicio] = k.split("|");
         avisos.push(`${nomeDaChave(chave)}: os percentuais fixos a partir de ${inicio.split("-").reverse().join("/")} somam ${(s * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%, e não 100%.`);
       }
+    // Os conjuntos ainda em vigor sem os percentuais por linha (26/10/2026; os de antes deles): nos destinos com percentual,
+    // a parte de rateio vai às linhas pela Alocação nas Linhas até o conjunto ser editado.
+    const semLinhas = new Map<string, string[]>();
+    for (const r of todas.filter((x) => x.percentualFixo !== null && Number(x.percentualFixo) > 0 && !x.linhas.length && (!x.vigenciaFim || x.vigenciaFim >= hoje))) {
+      const k = `${r.chave}|${dia(r.vigenciaInicio)}`;
+      semLinhas.set(k, [...(semLinhas.get(k) ?? []), NOME_DO_DESTINO[r.destino] ?? r.destino]);
+    }
+    const ordem = Object.values(NOME_DO_DESTINO);
+    for (const [k, nomes] of semLinhas) {
+      const [chave, inicio] = k.split("|");
+      const destinos = nomes.sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b));
+      const lista = destinos.length === 1 ? destinos[0] : `${destinos.slice(0, -1).join(", ")} e ${destinos[destinos.length - 1]}`;
+      avisos.push(`${nomeDaChave(chave)}: os percentuais fixos a partir de ${inicio.split("-").reverse().join("/")} não têm os percentuais por linha (${lista}): nas linhas, essa parte segue a Alocação nas Linhas até o conjunto ser editado.`);
+    }
     return { avisos };
   },
 };

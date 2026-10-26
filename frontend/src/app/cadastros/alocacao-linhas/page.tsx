@@ -37,7 +37,8 @@ export default function AlocacaoLinhasPage() {
               </li>
               <li>
                 A ordem na etapa Linhas da apuração: a tarefa das requisições e das notas fiscais (Linhas › Tarefas), a regra do centro, a obra (os centros
-                de obra, pela produção, pelos acompanhamentos ou pela receita da própria obra), a regra do rateio do centro e, por último, o volume da
+                de obra, pela produção, pelos acompanhamentos ou pela receita da própria obra), os percentuais por linha do rateio fixo (a parte de rateio
+                de uma chave com percentuais fixos no mês, pelo destino dela: Regras de Rateio), a regra do rateio do centro e, por último, o volume da
                 unidade. Cada passo recebe só o que sobrou do anterior: nada fica sem linha, e a soma das linhas fecha com a DRE da unidade.
               </li>
               <li>

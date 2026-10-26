@@ -369,6 +369,7 @@ model Linha {
   correspondenciasTarefas CorrespondenciaTarefa[]
   alocacoes               AlocacaoLinha[]
   resultados              ResultadoLinha[]
+  rateiosFixos            RegraRateioLinha[]
 
   @@unique([tipo, codigo])
   @@index([tipo, ordem])
@@ -575,10 +576,29 @@ model RegraRateio {
   unidadeDestino UnidadeNegocio @relation(fields: [unidadeDestinoId], references: [id])
 
   volumesOperacionais VolumeOperacional[]
+  linhas              RegraRateioLinha[]
 
   @@unique([chave, destino, vigenciaInicio])
   @@index([chave])
   @@map("regras_rateio")
+}
+
+/// Os percentuais por linha de uma regra de percentual fixo (26/10/2026): como a parte do destino se divide entre as
+/// linhas da unidade dele, somando 100% no destino (a tela Percentuais Fixos grava junto com a regra). A etapa Linhas da
+/// apuração usa estes percentuais na parte de rateio da chave, no lugar da regra da Alocação nas Linhas.
+model RegraRateioLinha {
+  id            String  @id @default(uuid())
+  regraRateioId String  @map("regra_rateio_id")
+  linhaId       String  @map("linha_id")
+  /// DECIMAL: a fração da parte do destino que vai à linha (0 a 1).
+  percentual    Decimal
+
+  regraRateio RegraRateio @relation(fields: [regraRateioId], references: [id], onDelete: Cascade)
+  linha       Linha       @relation(fields: [linhaId], references: [id], onDelete: Restrict)
+
+  @@unique([regraRateioId, linhaId])
+  @@index([linhaId])
+  @@map("regras_rateio_linhas")
 }
 
 model TipoMovimento {

@@ -1,17 +1,19 @@
 /**
  * A divisão de um valor da DRE entre as linhas, nos Resultados por Linha (26/10/2026): a tarefa das requisições e das
  * notas fiscais leva a parte que os documentos explicam; o resto vai, inteiro, para o primeiro passo que tiver pesos — a
- * regra do centro, a obra, a regra do rateio e o volume da unidade, nesta ordem (a Alocação nas Linhas) —, e o que
- * nenhum passo leva fica Sem Linha. Cada parte guarda o passo, para a Conferência.
+ * regra do centro, a obra, os percentuais por linha do rateio fixo (26/10/2026), a regra do rateio e o volume da
+ * unidade, nesta ordem (a Alocação nas Linhas) —, e o que nenhum passo leva fica Sem Linha. Cada parte guarda o passo,
+ * para a Conferência.
  */
 
-export type Nivel = "RECEITA" | "TAREFA" | "CENTRO" | "OBRA" | "RATEIO" | "UNIDADE" | "SEM_LINHA";
+export type Nivel = "RECEITA" | "TAREFA" | "CENTRO" | "OBRA" | "FIXO" | "RATEIO" | "UNIDADE" | "SEM_LINHA";
 
 export const ROTULO_DO_NIVEL: Record<Nivel, string> = {
   RECEITA: "Receita Prévia",
   TAREFA: "Tarefa",
   CENTRO: "Regra do Centro",
   OBRA: "Obra",
+  FIXO: "Percentual Fixo",
   RATEIO: "Regra do Rateio",
   UNIDADE: "Volume da Unidade",
   SEM_LINHA: "Sem Linha",

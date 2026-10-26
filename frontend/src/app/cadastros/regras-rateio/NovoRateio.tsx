@@ -12,14 +12,12 @@ import { Label } from "@/components/ui/label";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
 
 import { botaoPrimario, classeSelect, Erro } from "@/app/cenarios/components/CenarioDialog";
-import { lerNumero } from "@/app/cenarios/components/EdicaoDialogs";
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
 import { edicaoService } from "../services/edicaoService";
-import { servicoDosPercentuaisFixos } from "./PercentuaisFixos";
+import { conferirPercentuais, PercentuaisDosDestinos, servicoDosPercentuaisFixos } from "./PercentuaisFixos";
 
 type Tipo = "PARAMETRICO" | "FIXO";
-const pct = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
 /** O botão Novo Rateio (14/10/2026; antes, o Novo do cadastro e o Percentuais Fixos), na linha do título. */
 export function BotaoNovoRateio() {
@@ -52,6 +50,7 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [textos, setTextos] = useState<Record<string, string>>({});
+  const [textosLinhas, setTextosLinhas] = useState<Record<string, Record<string, string>>>({});
 
   const chaves = fixos.data?.chaves ?? [];
   const chaveAtual = chave || chaves[0]?.chave || "";
@@ -59,12 +58,9 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
   // Os destinos do paramétrico: as linhas dos Totais da chave (as opções do campo Destino do cadastro).
   const opcoesDestino = (def.data?.campos.find((c) => c.nome === "origemDoVolume")?.opcoes ?? []).filter((o) => !o.grupos || o.grupos.includes(chaveAtual));
   const destinoAtual = opcoesDestino.some((o) => o.valor === destino) ? destino : (opcoesDestino[0]?.valor ?? "");
-  const valores = (daChave?.destinos ?? []).map((d) => ({ ...d, valor: lerNumero(textos[d.destino] ?? "") }));
-  const soma = valores.reduce((s, v) => s + (typeof v.valor === "number" ? v.valor : 0), 0);
-  const invalido = valores.some((v) => v.valor === undefined || (typeof v.valor === "number" && (v.valor < 0 || v.valor > 100)));
-  const somaCerta = Math.abs(soma - 100) <= 0.005;
+  const conferido = conferirPercentuais(daChave?.destinos ?? [], textos, textosLinhas);
   const vigenciaOk = !!inicio && (!fim || fim >= inicio);
-  const pronto = vigenciaOk && !!chaveAtual && (tipo === "PARAMETRICO" ? !!rotulo.trim() && !!destinoAtual : !invalido && somaCerta);
+  const pronto = vigenciaOk && !!chaveAtual && (tipo === "PARAMETRICO" ? !!rotulo.trim() && !!destinoAtual : !conferido.invalido && conferido.somaCerta && conferido.linhasCertas);
 
   const gravar = useMutation({
     mutationFn: async () => {
@@ -78,7 +74,8 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
         inicio,
         fim: fim || null,
         rotulo: rotulo.trim() || null,
-        percentuais: Object.fromEntries(valores.map((v) => [v.destino, typeof v.valor === "number" ? v.valor : 0])),
+        percentuais: conferido.percentuais,
+        linhas: conferido.porLinha,
       });
     },
     onSuccess: () => {
@@ -98,7 +95,7 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
             <p>Rateios com a mesma chave não podem ter vigências sobrepostas.</p>
             <ul className="mt-1 list-disc space-y-0.5 pl-5">
               <li>Paramétrico: o percentual dos destinos sai dos valores mensais das respectivas listas (chaves).</li>
-              <li>Fixo: os percentuais de Matriz, Filial, Montagem e Complementar, somando 100%.</li>
+              <li>Fixo: os percentuais de Matriz, Filial, Montagem e Complementar, somando 100%; e, em cada destino com percentual, os das linhas da unidade dele, também somando 100%.</li>
             </ul>
           </DialogDescription>
         </DialogHeader>
@@ -161,33 +158,7 @@ function NovoRateioDialog({ onFechar }: { onFechar: () => void }) {
               </div>
             </div>
             {tipo === "FIXO" ? (
-              <>
-                <div className="rounded-sm border border-gray-200 bg-white">
-                  {valores.map((v) => (
-                    <div key={v.destino} className="flex items-center justify-between gap-3 border-b border-gray-100 px-3 py-2 last:border-b-0">
-                      <Label htmlFor={`nr-${v.destino}`} className="text-sm text-gray-800">
-                        {v.nome}
-                      </Label>
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          id={`nr-${v.destino}`}
-                          inputMode="decimal"
-                          value={textos[v.destino] ?? ""}
-                          placeholder="0"
-                          onChange={(e) => setTextos((t) => ({ ...t, [v.destino]: e.target.value }))}
-                          className={`h-8 w-28 rounded-sm text-right ${v.valor === undefined || (typeof v.valor === "number" && (v.valor < 0 || v.valor > 100)) ? "border-red-400" : ""}`}
-                        />
-                        <span className="text-sm text-gray-600">%</span>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between gap-3 bg-gray-50 px-3 py-2 text-sm">
-                    <span className="font-bold text-gray-900">Soma</span>
-                    <span className={`font-bold ${somaCerta ? "text-gray-900" : "text-red-700"}`}>{pct(soma)}</span>
-                  </div>
-                </div>
-                {!somaCerta && !invalido ? <p className="text-xs text-red-700">Os percentuais precisam somar 100% (faltam {pct(100 - soma)}).</p> : null}
-              </>
+              <PercentuaisDosDestinos prefixo="nr" conferido={conferido} textos={textos} setTextos={setTextos} textosLinhas={textosLinhas} setTextosLinhas={setTextosLinhas} />
             ) : null}
             <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível gravar o rateio.") : null} />
             <DialogFooter>
