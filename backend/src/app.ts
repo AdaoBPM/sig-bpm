@@ -77,6 +77,8 @@ app.use("/competencias/:anoMes/receita-previa", receitaPreviaRoutes);
 app.use("/competencias/:anoMes/rateios", rateiosRoutes);
 app.use("/competencias/:anoMes/estoque", estoqueRoutes);
 app.use("/competencias/:anoMes/dre", dreRoutes);
+// A etapa Linhas (26/10/2026): a DRE de cada unidade dividida entre as linhas, gravada na apuração.
+app.use("/competencias/:anoMes/linhas", resultadosLinhaRoutes);
 app.use("/competencias/:anoMes/apuracao", apuracaoRoutes);
 app.use("/competencias/:anoMes/conferencia-planilha", conferenciaPlanilhaRoutes);
 app.use("/competencias", competenciasRoutes);
@@ -89,7 +91,6 @@ app.use("/lancamentos-manuais", lancamentosManuaisRoutes);
 app.use("/listas", listasRoutes);
 app.use("/lancamentos-receita", lancamentosReceitaRoutes);
 app.use("/relatorios", relatoriosRoutes);
-app.use("/resultados-por-linha", resultadosLinhaRoutes);
 // Os Relatórios Executivos (15/10/2026, Análises Gerenciais).
 app.use("/relatorios-executivos", relatoriosExecutivosRoutes);
 // A Biblioteca de APIs (24/10/2026): a API externa (pelo /api/v1 do Next) e a tela.

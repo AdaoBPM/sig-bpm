@@ -34,6 +34,9 @@ const VISOES = [
   { chave: "centros", aba: "centros", nome: "Centros de Custo" },
   // Os movimentos que deveriam ter centro de custo e não têm (14/10/2026).
   { chave: "sem_centros", aba: "sem_centros", nome: "Sem Centros de Custo" },
+  // As linhas de produto e de obra (26/10/2026), gravadas na etapa Linhas da apuração: a DRE de cada uma e o rateado dela.
+  { chave: "linhas", aba: "linhas", nome: "Linhas" },
+  { chave: "rateios_obras", aba: "rateios_obras", nome: "Rateios por Obras" },
   // As obras (centros 1.98 e 1.99), como a aba Obras da DRE (11/10/2026).
   { chave: "obras", aba: "obras", nome: "Obras" },
 ];
@@ -612,6 +615,85 @@ function VisaoObras({ ano, ate, escolhida, onEscolher: setEscolhida }: { ano: nu
   );
 }
 
+/** A linha escolhida (a primeira da lista, sem escolha), a mesma nas abas Linhas e Rateios por Obras: a lista e o id, também para o Exportar. */
+function useLinhaEscolhida(ano: number, ate: number, ativo: boolean, escolhida: string | null) {
+  const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "linhas"], queryFn: () => relatoriosService.linhas(ano, ate), enabled: ativo });
+  const linhas = lista.data?.linhas ?? [];
+  const id = (escolhida && linhas.some((l) => l.id === escolhida) ? escolhida : linhas[0]?.id) ?? null;
+  return { lista, id };
+}
+
+/**
+ * As linhas de produto e de obra (26/10/2026): a lista à esquerda, por unidade, e a DRE da escolhida, da receita à Margem
+ * de Contribuição (a aba Linhas) ou só os custos dela que não vieram dos centros de obra, sobre os volumes (`rateios`: a
+ * aba Rateios por Obras). Os valores são os gravados na etapa Linhas da apuração de cada competência fechada.
+ */
+function VisaoLinhas({ ano, ate, escolhida, onEscolher, rateios }: { ano: number; ate: number; escolhida: string | null; onEscolher: (l: string) => void; rateios: boolean }) {
+  const { lista, id } = useLinhaEscolhida(ano, ate, true, escolhida);
+  const linhas = lista.data?.linhas ?? [];
+  const linha = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "linhas", id, rateios], queryFn: () => relatoriosService.linha(ano, ate, id!, rateios), enabled: id !== null });
+  if (lista.isError) return <Erro erro={lista.error} padrao="Erro ao carregar as linhas." />;
+  if (lista.isPending) return <Carregando />;
+  if (linhas.length === 0) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma linha das unidades que o seu perfil lê.</p>;
+  const unidades = [...new Set(linhas.map((l) => l.unidade))];
+  const escolhidaAgora = linhas.find((l) => l.id === id);
+  const semLinhas = lista.data?.semLinhas ?? [];
+  return (
+    <div className="space-y-4">
+      {semLinhas.length ? (
+        <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-4 py-3 text-sm text-gray-700">
+          {semLinhas.length === 1 ? "A competência" : "As competências"} {semLinhas.join(", ")} {semLinhas.length === 1 ? "foi fechada" : "foram fechadas"} antes da
+          etapa Linhas e {semLinhas.length === 1 ? "aparece" : "aparecem"} sem valor: grave as linhas em Fechamento Mensal › competência › Linhas.
+        </div>
+      ) : null}
+      <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+        <div className="rounded-sm border border-gray-200 bg-white">
+          <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Linhas">
+            {unidades.map((u) => (
+              <Fragment key={u}>
+                <li className="px-3 pt-2 pb-1 text-xs font-bold tracking-wide text-gray-500 uppercase">{linhas.find((l) => l.unidade === u)?.nomeUnidade}</li>
+                {linhas
+                  .filter((l) => l.unidade === u)
+                  .map((l) => (
+                    <li key={l.id}>
+                      <button
+                        type="button"
+                        onClick={() => onEscolher(l.id)}
+                        aria-current={l.id === id ? "true" : undefined}
+                        className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${l.id === id ? "bg-black text-white" : "text-gray-800 hover:bg-gray-100"}`}
+                      >
+                        <span className="min-w-0 truncate" title={l.nome}>
+                          {l.nome}
+                        </span>
+                        {l.ativo ? null : <span className={`shrink-0 text-xs ${l.id === id ? "text-white/70" : "text-gray-500"}`}>Inativa</span>}
+                      </button>
+                    </li>
+                  ))}
+              </Fragment>
+            ))}
+          </ul>
+        </div>
+        <div className="min-w-0">
+          {linha.isError ? (
+            <Erro erro={linha.error} padrao="Erro ao carregar a linha." />
+          ) : linha.isPending || !escolhidaAgora ? (
+            <Carregando />
+          ) : (
+            <TabelaResultados
+              key={`${id}-${rateios}`}
+              dados={linha.data}
+              titulo={rateios ? `Rateios por Obras · ${escolhidaAgora.nome}` : `${escolhidaAgora.nome} · ${escolhidaAgora.nomeUnidade}`}
+              visao={{ unidade: escolhidaAgora.unidade }}
+              nomeVisao={escolhidaAgora.nome}
+              consultas={false}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VisaoUnidade({ ano, ate, visao, nome, comparaCom }: { ano: number; ate: number; visao: number; nome: string; comparaCom: MarcacaoComparavel }) {
   const consulta = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "visao", visao, comparaCom], queryFn: () => relatoriosService.resultados(ano, ate, visao, comparaCom) });
   if (consulta.isError) return <Erro erro={consulta.error} padrao="Erro ao carregar os resultados." />;
@@ -647,6 +729,10 @@ export function ResultadosContent() {
   const [semCentro, setSemCentro] = useState<string | null>(null);
   const { codigo: obraEscolhida } = useObraEscolhida(ano ?? 0, ate ?? 0, visao === "obras" && !!ano && !!ate, obra);
   const { codigo: semCentroEscolhido } = useSemCentroEscolhido(ano ?? 0, ate ?? 0, visao === "sem_centros" && !!ano && !!ate, semCentro);
+  // A linha escolhida (26/10/2026): a mesma nas abas Linhas e Rateios por Obras.
+  const [linha, setLinha] = useState<string | null>(null);
+  const nasLinhas = visao === "linhas" || visao === "rateios_obras";
+  const { id: linhaEscolhida } = useLinhaEscolhida(ano ?? 0, ate ?? 0, nasLinhas && !!ano && !!ate, linha);
   const periodo = { ano, ate };
   // O Exportar (14/10/2026: na altura do título, com as opções de todas as abas): o que está na tela (a visão, o centro,
   // o grupo sem centro ou a obra escolhidos) e os "todos" de cada aba que o perfil lê.
@@ -665,6 +751,10 @@ export function ResultadosContent() {
           ? semCentroEscolhido
             ? { chave: "atual", excel: "Sem Centro de Custo Atual", pdf: "Sem Centro de Custo Atual", params: { ...periodo, visao: "sem_centros", grupo: semCentroEscolhido } }
             : null
+          : nasLinhas
+            ? linhaEscolhida
+              ? { chave: "atual", excel: "Linha Atual", pdf: "Linha Atual", params: { ...periodo, visao, linha: linhaEscolhida } }
+              : null
           : visao
             ? { chave: "atual", excel: "Visão Atual", pdf: "Visão Atual", params: { ...periodo, visao } }
             : null;
@@ -679,6 +769,10 @@ export function ResultadosContent() {
         ]
       : []),
     ...(veSemCentrosNaAba ? [{ chave: "sem_centros", excel: "Todas Sem Centro de Custo (uma por aba)", pdf: "Todas Sem Centro de Custo (uma por página)", params: { ...periodo, escopo: "sem_centros" } }] : []),
+    ...(le("linhas") ? [{ chave: "linhas", excel: "Todas as Linhas (uma por aba)", pdf: "Todas as Linhas (uma por página)", params: { ...periodo, escopo: "linhas" } }] : []),
+    ...(le("rateios_obras")
+      ? [{ chave: "rateios_obras", excel: "Rateios por Obras de Todas as Linhas (uma por aba)", pdf: "Rateios por Obras de Todas as Linhas (uma por página)", params: { ...periodo, escopo: "rateios_obras" } }]
+      : []),
     ...(veObrasNaAba ? [{ chave: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)", params: { ...periodo, escopo: "obras" } }] : []),
   ];
 
@@ -690,7 +784,14 @@ export function ResultadosContent() {
         comoUsar={
           <ul>
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo, Linhas e Rateios por Obras (com a lista das linhas à esquerda, por unidade) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>
+              Em Linhas, a DRE de cada linha de produto e de obra, da receita à Margem de Contribuição, com o % e o R$/m³ da unidade dela; em Rateios por Obras, só
+              os custos da linha que não vieram dos centros de obra (os desses centros já são das obras), sobre os volumes — o que os Resultados por Obra vão
+              levar a cada obra. A linha escolhida vale nas duas abas, e a lista traz só as linhas das unidades (Matriz, Filial e Serviços) que o seu perfil lê.
+              Os valores são os gravados na etapa Linhas do Fechamento Mensal; uma competência fechada antes da etapa aparece sem valor até alguém gravar as
+              linhas dela lá. Os valores não abrem os lançamentos, e quem tem recorte por departamento ou por centro de custo não vê as duas abas.
+            </li>
             <li>
               Em Sem Centros de Custo, os lançamentos do balancete que deveriam ter um centro de custo e não têm um do cadastro, pela regra da
               referência dos cenários analíticos: os das contas de mão de obra direta e indireta e de gastos gerais diretos, indiretos e comerciais
@@ -730,8 +831,9 @@ export function ResultadosContent() {
             </li>
             <li>
               “Exportar”, ao lado do período, baixa em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o %
-              e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo ou a Obra Atual) e, de qualquer aba, todas as unidades,
-              todos os centros de custo, todas sem centro de custo e todas as obras (uma por aba ou por página). Em Excel, também um arquivo por centro de
+              e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo, a Linha ou a Obra Atual) e, de qualquer aba, todas as unidades,
+              todos os centros de custo, todas sem centro de custo, todas as linhas, os rateios por obras de todas as linhas e todas as obras (uma por aba ou por
+              página). Em Excel, também um arquivo por centro de
               custo, num ZIP, com o departamento e o centro no nome de cada arquivo. Em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que
               está (os níveis e os grupos abertos ou fechados, os meses recolhidos ou não), mas inteira: todas as linhas e colunas, sem os botões.
             </li>
@@ -752,6 +854,11 @@ export function ResultadosContent() {
               de montagem pela montagem (m³). Em Despesas e Extra, no RN e nos centros de custo, as bases são as do Consolidado.
             </p>
             <p>Nos centros de custo, cada mês mostra o mesmo recorte da DRE: os custos e despesas de mão de obra, gastos gerais e depreciação.</p>
+            <p>
+              Nas linhas, a DRE de cada unidade dividida entre as linhas dela pela etapa Linhas da apuração (a Receita Prévia nas receitas; nos custos, a tarefa
+              das requisições e das notas fiscais e as regras da Alocação nas Linhas), gravada e congelada com o fechamento: a soma das linhas de uma unidade é a
+              DRE dela até a Margem de Contribuição.
+            </p>
           </>
         }
         acoes={
@@ -801,6 +908,8 @@ export function ResultadosContent() {
             <VisaoSemCentros ano={ano} ate={ate} escolhido={semCentro} onEscolher={setSemCentro} />
           ) : visao === "obras" ? (
             <VisaoObras ano={ano} ate={ate} escolhida={obra} onEscolher={setObra} />
+          ) : nasLinhas ? (
+            <VisaoLinhas ano={ano} ate={ate} escolhida={linha} onEscolher={setLinha} rateios={visao === "rateios_obras"} />
           ) : (
             <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} comparaCom={comparacao.comparaCom} />
           )}

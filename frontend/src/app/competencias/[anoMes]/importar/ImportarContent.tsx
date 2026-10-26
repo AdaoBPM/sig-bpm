@@ -31,7 +31,7 @@ const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font
  * Os arquivos de todo mês, na ordem do fechamento: todos obrigatórios para fechar a competência (17/10/2026). Depois deles,
  * sempre visíveis, os opcionais: a DRE do Comercial e o saldo inicial (antes, só apareciam quando importados no mês).
  */
-const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "QUADRO_LOTACAO", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL"];
+const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "QUADRO_LOTACAO", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL", "REQUISICOES", "NOTAS_FISCAIS"];
 const TIPOS_EVENTUAIS = ["DRE_COMERCIAL", "ESTOQUE_INICIAL"];
 
 const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }> = {
@@ -199,7 +199,7 @@ export function ImportarContent() {
               O balancete (LISTAS REALIZADO (RESULTADOS)), as listas operacionais — as abas (Resumo), Produção (Armaduras), Produção
               (Metalúrgica) e as demais do LISTAS REALIZADO (OPERAÇÃO) —, o Quadro de Lotação por centro de custo (desde 19/10/2026; a referência do
               quadro de lotação dos Cenários Analíticos, fora da apuração), os indicadores do Administrativo e do Comercial, a DRE do Comercial
-              e o saldo inicial do estoque entram por aqui (desde 15/10/2026, o balancete é detalhado: um movimento por linha, com o cliente ou fornecedor, a emissão e o histórico, que o extrato de uma conta na DRE abre no modal Balancete; as abas Requisições (Lista) e Notas Fiscais (Lista) saíram) (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
+              e o saldo inicial do estoque entram por aqui (desde 15/10/2026, o balancete é detalhado: um movimento por linha, com o cliente ou fornecedor, a emissão e o histórico, que o extrato de uma conta na DRE abre no modal Balancete; as abas Requisições (Lista) e Notas Fiscais (Lista) saíram e, desde 26/10/2026, voltaram: a tarefa dos itens leva os custos às linhas, na etapa Linhas da apuração) (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
               lote anterior por inteiro.
             </p>
             <p>

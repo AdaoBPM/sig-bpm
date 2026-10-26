@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { permissoesDasRotas } from "../src/services/acesso/acesso.js";
 import { alocar, fracoesDaTarefa, numeroDaObra, porPesos, semLinha, type Passo } from "../src/services/resultadosLinha/alocacaoNasLinhas.js";
 
 const soma = (xs: Array<{ valor: number }>) => xs.reduce((s, x) => s + x.valor, 0);
@@ -44,5 +45,16 @@ describe("Resultados por Linha (26/10/2026)", () => {
     assert.equal(numeroDaObra("1.98.00829003"), "829003");
     assert.equal(numeroDaObra("1.98.00003171"), "3171");
     assert.equal(numeroDaObra("3171"), "3171");
+  });
+
+  it("as linhas juntam todos os departamentos: fora do recorte por departamento e por centro de custo", () => {
+    const matriz = ["relatorio_resultados", "relatorio_resultados.linhas", "relatorio_resultados.rateios_obras", "linhas_mes"].map((chave) => ({ chave, acao: "EDITAR" as const }));
+    const sem = permissoesDasRotas(matriz, { recorteSetor: false, recorteDepartamento: false });
+    for (const p of ["relatorio_resultados.linhas:ler", "relatorio_resultados.rateios_obras:ler", "linhas_mes:ler", "linhas_mes:editar"]) assert.ok(sem.includes(p), p);
+    for (const recorte of [{ recorteDepartamento: true }, { recorteDepartamento: false, recorteCentro: true }]) {
+      const com = permissoesDasRotas(matriz, { recorteSetor: false, ...recorte });
+      assert.ok(com.includes("relatorio_resultados:ler"));
+      for (const p of ["relatorio_resultados.linhas:ler", "relatorio_resultados.rateios_obras:ler", "linhas_mes:ler"]) assert.ok(!com.includes(p), p);
+    }
   });
 });

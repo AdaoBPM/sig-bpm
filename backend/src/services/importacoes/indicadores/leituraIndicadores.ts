@@ -116,8 +116,9 @@ export const ehTipoIndicadores = (tipo: string): tipo is TipoIndicadores => tipo
  * Os tipos que não entram na apuração: importá-los depois de apurar não muda
  * nenhum valor apurado, então não pede reapuração (nem acende a bola verde).
  */
-// As requisições e as notas fiscais (11/10/2026) também: são só o extrato das contas. E o quadro de lotação por centro
-// de custo (19/10/2026): a referência dos cenários analíticos.
+// As requisições e as notas fiscais (11/10/2026) também ficam fora das importações do retrato: desde 26/10/2026 têm
+// entrada própria nele (a etapa Linhas), para as apurações de antes não acusarem mudança. E o quadro de lotação por
+// centro de custo (19/10/2026): a referência dos cenários analíticos.
 export const TIPOS_FORA_DA_APURACAO: TipoImportacao[] = [...(Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[]), "REQUISICOES", "NOTAS_FISCAIS", "QUADRO_LOTACAO"];
 
 export type ValorIndicador = { nome: string; valor: number; linhaArquivo: number };

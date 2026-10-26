@@ -13,6 +13,7 @@ import { localizarCabecalho } from "./listas/leituraListas.js";
 import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type TipoIndicadores } from "./indicadores/leituraIndicadores.js";
 import { ABA_LOTACAO, lerLotacao, ROTULO_LOTACAO } from "./lotacao/leituraLotacao.js";
 import { escolherAba } from "./statusImportacao.js";
+import { DEFINICOES_DOCUMENTOS, lerDocumentos, type TipoDocumentos } from "./documentos/leituraDocumentos.js";
 import { plural } from "../../utils/plural.js";
 
 /**
@@ -113,6 +114,24 @@ const indicadores: Tipo[] = (Object.keys(DEFINICOES_INDICADORES) as TipoIndicado
   },
 }));
 
+/** As requisições e as notas fiscais do mês (abas Requisições (Lista) e Notas Fiscais (Lista), 11/10/2026). */
+const documentos: Tipo[] = (Object.keys(DEFINICOES_DOCUMENTOS) as TipoDocumentos[]).map((tipo) => ({
+  tipo,
+  rotulo: DEFINICOES_DOCUMENTOS[tipo].rotulo,
+  abas: [DEFINICOES_DOCUMENTOS[tipo].aba],
+  alcance: "POR_MES",
+  ler(linhas, ano, mes) {
+    const l = tipo === "REQUISICOES" ? lerDocumentos("REQUISICOES", linhas, ano, mes) : lerDocumentos("NOTAS_FISCAIS", linhas, ano, mes);
+    if (!l.ok) throw new AbaInvalida(l.motivo);
+    if (l.itens.length === 0) return null;
+    return {
+      registros: l.itens.length,
+      assinatura: assinar([...l.itens, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+      avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
+    };
+  },
+}));
+
 /** Os tipos que a importação em lote reconhece, na ordem em que entram na fila. */
 const TIPOS: Tipo[] = [
   {
@@ -152,8 +171,9 @@ const TIPOS: Tipo[] = [
     },
   },
   ...indicadores,
-  // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do LISTAS REALIZADO (RESULTADOS) em 15/10/2026: o
-  // balancete detalhado (CLI_FORN, EMISSAO e HISTORICO) traz o que elas traziam. As importações antigas ficam no histórico.
+  // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do LISTAS REALIZADO (RESULTADOS) em 15/10/2026 e voltaram
+  // em 26/10/2026: a tarefa dos itens leva os custos às linhas (a etapa Linhas da apuração).
+  ...documentos,
   {
     tipo: "DRE_COMERCIAL",
     rotulo: "DRE do Comercial",

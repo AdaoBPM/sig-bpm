@@ -9,14 +9,12 @@ import {
   ChartPie,
   SlidersHorizontal,
   Factory,
-  FileUp,
   HandCoins,
   HardHat,
   PackageCheck,
   ShieldCheck,
   Target,
   TrendingUp,
-  ChartColumn,
   Columns3,
   Database,
   Gauge,
@@ -112,18 +110,8 @@ export const navGrupos: NavGrupo[] = [
     titulo: "Apuração dos Resultados",
     itens: [
       { title: "Resultados por Obra", href: "/resultados-por-obra", icon: HardHat, emDesenvolvimento: true },
-      {
-        // Pronta desde 26/10/2026: a Importação (as requisições e as notas fiscais) e os Resultados (a DRE de cada linha, os
-        // rateios por obras e a conferência).
-        title: "Resultados por Linha",
-        href: "/resultados-por-linha/importacao",
-        icon: ChartColumn,
-        recurso: "RESULTADOS_POR_LINHA",
-        telas: [
-          { title: "Importação", href: "/resultados-por-linha/importacao", icon: FileUp, permission: "resultados_linha_importacao:ler" },
-          { title: "Resultados", href: "/resultados-por-linha/resultados", icon: ChartColumn, permission: "resultados_linha:ler" },
-        ],
-      },
+      // Os Resultados por Linha (26/10/2026) não são um processo: a etapa Linhas do Fechamento Mensal e as abas Linhas e
+      // Rateios por Obras dos Resultados Empresariais.
       {
         // Antes, Resultados Realizados (renomeado em 14/10/2026).
         title: "Resultados Empresariais",
@@ -197,7 +185,7 @@ export const navGrupos: NavGrupo[] = [
               { title: "Linhas", href: "/cadastros/linhas", icon: Rows3, permission: "cadastro_controladoria.linhas:ler" },
               { title: "Estrutura da DRE", href: "/cadastros/estrutura-dre", icon: ListTree, permission: "cadastro_controladoria.estrutura_dre:ler" },
               { title: "Regras de Rateio", href: "/cadastros/regras-rateio", icon: Percent, permission: "cadastro_controladoria.regras_rateio:ler" },
-              // Os custos sem tarefa nas linhas, para os Resultados por Linha (26/10/2026).
+              // Os custos sem tarefa nas linhas, para a etapa Linhas da apuração (26/10/2026).
               { title: "Alocação nas Linhas", href: "/cadastros/alocacao-linhas", icon: Split, permission: "cadastro_controladoria.alocacao_linhas:ler" },
             ],
           },
@@ -301,8 +289,6 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
   [/^\/central-de-conectividade\/biblioteca-de-apis(\/|$)/, "biblioteca_apis:ler"],
-  [/^\/resultados-por-linha\/importacao(\/|$)/, "resultados_linha_importacao:ler"],
-  [/^\/resultados-por-linha(\/|$)/, "resultados_linha:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
   // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
   [/^\/relatorios\/indicadores(\/|$)/, "relatorio_painel:ler"],
@@ -330,6 +316,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/competencias\/[^/]+\/estoque/, "estoque:ler"],
   [/^\/competencias\/[^/]+\/conferencia-planilha/, "conferencia:ler"],
   [/^\/competencias\/[^/]+\/dre/, "dre:ler"],
+  [/^\/competencias\/[^/]+\/linhas/, "linhas_mes:ler"],
   [/^\/competencias\/[^/]+\/indicadores/, "indicadores_mes:ler"],
   [/^\/competencias(\/|$)/, "fechamento:ler"],
 ];
@@ -378,8 +365,6 @@ export const pageTitles: Record<string, string> = {
   "/auditoria": "Auditoria",
   "/divergencias": "Divergências",
   "/relatorios/resultados": "Resultados",
-  "/resultados-por-linha/importacao": "Importação",
-  "/resultados-por-linha/resultados": "Resultados",
   "/relatorios/painel": "Painel de Bordo",
   "/cenarios/sinteticos": "Cenários Sintéticos",
   "/cenarios/analiticos": "Cenários Analíticos",

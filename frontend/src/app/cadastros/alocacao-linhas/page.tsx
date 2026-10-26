@@ -5,7 +5,7 @@ import { SemLeitura } from "@/components/shared/SemLeitura";
 import { ListaCadastroContent } from "../components/ListaCadastroContent";
 
 /**
- * A Alocação nas Linhas (26/10/2026, pedido do Adão): as regras com que os Resultados por Linha levam às linhas os custos
+ * A Alocação nas Linhas (26/10/2026, pedido do Adão): as regras com que a etapa Linhas da apuração leva às linhas os custos
  * sem tarefa — um centro de custo, ou o rateio dos centros sem regra própria, vai a uma linha (100%) ou a uma base por
  * linha. Mantidas pelos usuários da Controladoria, no lugar de regras no código.
  */
@@ -36,7 +36,7 @@ export default function AlocacaoLinhasPage() {
                 Receita Bruta (a Receita Prévia). A linha sem volume no mês não recebe.
               </li>
               <li>
-                A ordem nos Resultados por Linha: a tarefa das requisições e das notas fiscais (Linhas › Tarefas), a regra do centro, a obra (os centros
+                A ordem na etapa Linhas da apuração: a tarefa das requisições e das notas fiscais (Linhas › Tarefas), a regra do centro, a obra (os centros
                 de obra, pela produção, pelos acompanhamentos ou pela receita da própria obra), a regra do rateio do centro e, por último, o volume da
                 unidade. Cada passo recebe só o que sobrou do anterior: nada fica sem linha, e a soma das linhas fecha com a DRE da unidade.
               </li>
@@ -44,10 +44,13 @@ export default function AlocacaoLinhasPage() {
                 Vigências: cada regra vale do mês do início até o mês do fim. Uma origem tem uma regra por vez: para mudá-la a partir de um mês,
                 preencha o Fim da atual e crie a nova com o Início no mês seguinte. Marque “Apenas Ativas”, ao lado dos botões, para ver só as vigentes.
               </li>
-              <li>Este cadastro não entra na apuração da DRE: mudá-lo não pede reapurar, e os Resultados por Linha seguem as regras da vigência de cada mês.</li>
+              <li>
+                As regras valem na apuração (a etapa Linhas, depois da DRE): mudá-las com uma competência apurada e aberta pede reapurar, e a competência fechada
+                fica com as linhas que gravou. Cada mês segue as regras da vigência dele.
+              </li>
             </ul>
           }
-          descricao="Como os custos sem tarefa chegam às linhas nos Resultados por Linha: cada centro de custo, ou o rateio dos centros sem regra própria, vai a uma linha (100%) ou é dividido entre as linhas da unidade pelo volume de cada uma nas listas do mês. Mantido aqui pelos usuários da Controladoria, no lugar de regras fixas no sistema."
+          descricao="Como os custos sem tarefa chegam às linhas na etapa Linhas da apuração: cada centro de custo, ou o rateio dos centros sem regra própria, vai a uma linha (100%) ou é dividido entre as linhas da unidade pelo volume de cada uma nas listas do mês. Mantido aqui pelos usuários da Controladoria, no lugar de regras fixas no sistema."
         />
       </PermissionGuard>
     </ProtectedLayout>

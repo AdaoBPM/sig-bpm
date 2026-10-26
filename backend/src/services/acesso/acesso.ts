@@ -47,11 +47,11 @@ export type UsuarioAutenticado = {
 
 /**
  * O recorte por departamento (Gestor) vale na DRE, nos centros de custo e nas divergências. A classificação, os
- * lançamentos manuais, a apuração (receita, rateios, estoque, conferência e o apurar da DRE) e a auditoria mostram
+ * lançamentos manuais, a apuração (receita, rateios, estoque, linhas, conferência e o apurar da DRE) e a auditoria mostram
  * lançamentos de todos os departamentos: quem tem o recorte não as alcança, mesmo com a tela liberada, senão o recorte
  * seria contornado. O mesmo vale para o recorte por centro de custo (Coordenador).
  */
-const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "receita", "rateios", "estoque", "conferencia", "auditoria"]);
+const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "receita", "rateios", "estoque", "linhas_mes", "conferencia", "auditoria"]);
 /** O recorte por setor (Alimentador) é o das listas operacionais: no Fechamento Mensal, só Competências, Importações e Listas. */
 const TELAS_DO_FECHAMENTO = new Set(CATALOGO_DE_TELAS.find((g) => g.recurso === "FECHAMENTO_MENSAL")!.telas.map((t) => t.codigo));
 const DENTRO_DO_RECORTE_DE_SETOR = new Set(["competencias", "importacao", "listas_operacionais"]);
@@ -70,6 +70,8 @@ export function permissoesDasRotas(
       if (FORA_DO_RECORTE_DE_DEPARTAMENTO.has(tela(area))) return true;
       // O apurar da competência (a edição da DRE) mostra todos os departamentos.
       if (area === "dre" && acao === "EDITAR") return true;
+      // As linhas (26/10/2026) juntam os lançamentos de todos os departamentos, como a etapa Linhas.
+      if (area === "relatorio_resultados.linhas" || area === "relatorio_resultados.rateios_obras") return true;
     }
     if (recortes.recorteSetor && TELAS_DO_FECHAMENTO.has(tela(area)) && !DENTRO_DO_RECORTE_DE_SETOR.has(tela(area))) return true;
     return false;

@@ -6,6 +6,7 @@ import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { indicadoresService } from "./indicadoresService.js";
 import { RelatorioError, resultadosService } from "./resultadosService.js";
 import { nomeDoGrupoSemCentro, type GrupoSemCentro } from "../dre/semCentroService.js";
+import { resultadosLinhaService } from "../resultadosLinha/resultadosLinhaService.js";
 import { plural } from "../../utils/plural.js";
 import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 
@@ -29,7 +30,10 @@ export type EscopoResultados =
   | { tipo: "obra"; codigo: string }
   | { tipo: "obras" }
   | { tipo: "semCentro"; grupo: GrupoSemCentro }
-  | { tipo: "semCentros" };
+  | { tipo: "semCentros" }
+  // As linhas (26/10/2026): uma (a da tela) ou todas, das unidades que o perfil lê; `rateios`, a aba Rateios por Obras.
+  | { tipo: "linha"; id: string; rateios: boolean; unidades: number[] }
+  | { tipo: "linhas"; rateios: boolean; unidades: number[] };
 export type Formato = "xlsx" | "pdf";
 
 // O que as visões e os centros de custo têm em comum (o orçado das visões não vai para a exportação).
@@ -92,6 +96,16 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
       // A aba do Excel tem até 31 caracteres: a DVV abreviada.
       const nome = nomeDoGrupoSemCentro(g).replace("Despesas Variáveis de Venda", "DVV");
       r.push({ nome, titulo: `Sem Centro de Custo · ${nomeDoGrupoSemCentro(g)}`, dados: await resultadosService.semCentro(ano, g, ate, acesso, true) });
+    }
+    return r;
+  }
+  if (escopo.tipo === "linha" || escopo.tipo === "linhas") {
+    const ids = escopo.tipo === "linha" ? [escopo.id] : (await resultadosLinhaService.listar(ano, ate, escopo.unidades)).linhas.map((l) => l.id);
+    const r: Bloco[] = [];
+    for (const id of ids) {
+      const dados = await resultadosLinhaService.linha(ano, ate, id, escopo.rateios, escopo.unidades);
+      const nome = `${dados.linha.nome} (${dados.linha.nomeUnidade})`;
+      r.push({ nome, titulo: escopo.rateios ? `Rateios por Obras · ${nome}` : `Linha ${nome}`, dados });
     }
     return r;
   }
@@ -375,7 +389,7 @@ export const exportacaoRelatoriosService = {
     if (escopo.tipo === "centrosArquivos" && formato !== "xlsx") throw new RelatorioError(400, "Um arquivo por centro de custo só sai em Excel.");
     // Sem `ate`, até o último mês apurado (como na tela).
     const bs = await blocos(ano, ate, escopo.tipo === "centrosArquivos" ? { tipo: "centros" } : escopo, acesso);
-    if (bs.length === 0) throw new RelatorioError(404, escopo.tipo === "obras" ? "Nenhuma obra com lançamento para exportar." : escopo.tipo === "semCentros" ? "Nenhum movimento sem centro de custo para exportar." : "Nenhum centro de custo com valor para exportar.");
+    if (bs.length === 0) throw new RelatorioError(404, escopo.tipo === "linhas" ? "Nenhuma linha para exportar." : escopo.tipo === "obras" ? "Nenhuma obra com lançamento para exportar." : escopo.tipo === "semCentros" ? "Nenhum movimento sem centro de custo para exportar." : "Nenhum centro de custo com valor para exportar.");
     const ultimo = bs[0].dados.ate;
     const id = await identificar(ano, ultimo, usuarioNome);
     const nomeVisao =
@@ -393,7 +407,13 @@ export const exportacaoRelatoriosService = {
               ? "sem centros de custo"
               : escopo.tipo === "semCentro"
                 ? `sem centro de custo - ${bs[0].nome}`
-                : bs[0].nome;
+                : escopo.tipo === "linhas"
+                  ? escopo.rateios
+                    ? "rateios por obras de todas as linhas"
+                    : "todas as linhas"
+                  : escopo.tipo === "linha" && escopo.rateios
+                    ? `rateios por obras - ${bs[0].nome}`
+                    : bs[0].nome;
     const titulo = `Resultados ${ano} - ${nomeVisao}`;
     const nomeArquivo = limpar(`Resultados ${ano} até ${String(ultimo).padStart(2, "0")} - ${nomeVisao}.${formato}`);
     if (escopo.tipo === "centrosArquivos") return zipDosCentros(bs, id, `Resultados ${ano} até ${String(ultimo).padStart(2, "0")}`, nomeArquivo.replace(/\.xlsx$/, ".zip"));

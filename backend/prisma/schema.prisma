@@ -40,8 +40,6 @@ enum RecursoSistema {
   ANALISES_GERENCIAIS
   /// A Central de Conectividade (24/10/2026): a Biblioteca de APIs (e as Integrações, em desenvolvimento).
   CENTRAL_CONECTIVIDADE
-  /// Os Resultados por Linha (26/10/2026), na Apuração dos Resultados.
-  RESULTADOS_POR_LINHA
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
@@ -370,6 +368,7 @@ model Linha {
   saidas            Saida[]
   correspondenciasTarefas CorrespondenciaTarefa[]
   alocacoes               AlocacaoLinha[]
+  resultados              ResultadoLinha[]
 
   @@unique([tipo, codigo])
   @@index([tipo, ordem])
@@ -519,6 +518,7 @@ model LinhaDRE {
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
   resultadosApurados   ResultadoApurado[]
+  resultadosLinhas     ResultadoLinha[]
   cenariosResultados   CenarioResultado[]
   cenariosJustificativas CenarioJustificativa[]
 
@@ -713,6 +713,10 @@ model Competencia {
   /// JSON: a assinatura de cada cadastro da Controladoria na apuração (17/10/2026; antes, só a do Painel de Bordo): se
   /// algum muda com a competência apurada e ainda aberta, a situação pede reapurar (e o fechamento fica bloqueado até lá).
   cadastrosAssinatura String? @map("cadastros_assinatura")
+  /// JSON: a etapa Linhas da apuração (26/10/2026): quando gravou, de que passo da Alocação nas Linhas veio cada valor
+  /// (por unidade), os documentos do mês e os avisos. Nulo: as linhas do mês não foram gravadas (os valores ficam em
+  /// ResultadoLinha).
+  apuracaoLinhas Json? @db.Json @map("apuracao_linhas")
 
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
@@ -753,6 +757,7 @@ model Competencia {
   lancamentosReceita  LancamentoReceita[]
   volumesOperacionais VolumeOperacional[]
   resultadosApurados  ResultadoApurado[]
+  resultadosLinhas    ResultadoLinha[]
   conferenciasPlanilha ConferenciaPlanilha[]
 
   @@unique([ano, mes])
@@ -1764,6 +1769,32 @@ model ResultadoApurado {
   @@unique([competenciaId, unidadeNegocioId, centroCustoId, linhaDREId])
   @@index([competenciaId, linhaDREId])
   @@map("resultados_apurados")
+}
+
+/// Os Resultados por Linha (26/10/2026): o valor de cada linha de produto e de obra — ou da Sem Linha da unidade — em
+/// cada item da DRE (receitas, custos, despesas variáveis de venda e volumes), gravado pela etapa Linhas da apuração e
+/// congelado com a competência no fechamento. A soma das linhas de uma unidade é a DRE apurada dela.
+model ResultadoLinha {
+  id            String  @id @default(uuid())
+  competenciaId String  @map("competencia_id")
+  /// A unidade pelo código: 1 Matriz, 2 Filial, 3 Serviços.
+  unidade       Int
+  /// Nulo: a Sem Linha da unidade (o que nenhum passo da Alocação nas Linhas levou a uma linha).
+  linhaId       String? @map("linha_id")
+  linhaDREId    String  @map("linha_dre_id")
+  /// DECIMAL: o valor da linha no item.
+  valor         Decimal
+  /// DECIMAL: a parte do valor que veio dos centros de obra (direta nas obras); o resto é o que a aba Rateios por Obras
+  /// leva às obras.
+  naObra        Decimal @default(0) @map("na_obra")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  linha       Linha?      @relation(fields: [linhaId], references: [id], onDelete: Restrict)
+  linhaDRE    LinhaDRE    @relation(fields: [linhaDREId], references: [id])
+
+  @@index([competenciaId, linhaId])
+  @@index([linhaId])
+  @@map("resultados_linhas")
 }
 
 /// Reclassificação de conta por centro de custo — a versão de cadastro da

@@ -772,7 +772,10 @@ const linhas: DefinicaoCadastro = {
     if (m) return `${m} Inative-a em vez de excluir.`;
     // As regras da Alocação nas Linhas (26/10/2026) não travam o nome, mas a exclusão, sim.
     const n = await db.alocacaoLinha.count({ where: { linhaId: id } });
-    return n ? `A linha está em ${n} ${plural(n, "regra", "regras")} da Alocação nas Linhas: troque a linha delas ou exclua-as antes.` : null;
+    if (n) return `A linha está em ${n} ${plural(n, "regra", "regras")} da Alocação nas Linhas: troque a linha delas ou exclua-as antes.`;
+    // Os resultados gravados pela etapa Linhas da apuração (26/10/2026).
+    const r = await db.resultadoLinha.groupBy({ by: ["competenciaId"], where: { linhaId: id } });
+    return r.length ? `A linha tem resultados gravados em ${r.length} ${plural(r.length, "competência", "competências")} (a etapa Linhas): inative-a em vez de excluir.` : null;
   },
   remover: async (db, id) => void (await db.linha.delete({ where: { id } })),
 };

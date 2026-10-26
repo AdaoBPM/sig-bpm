@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Calculator, FileBarChart, Gauge, GitCompareArrows, ListChecks, NotebookPen, Percent, Rows3, TriangleAlert, Upload, Warehouse } from "lucide-react";
+import { Calculator, ChartColumn, FileBarChart, Gauge, GitCompareArrows, ListChecks, NotebookPen, Percent, Rows3, TriangleAlert, Upload, Warehouse } from "lucide-react";
 
 /** Uma etapa do fechamento do mês: a tela, na ordem em que o Contábil trabalha. */
 export type Etapa = {
@@ -41,6 +41,8 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
     { caminho: "rateios", chave: "rateios", rotulo: "Rateios", icone: Percent, permissao: "rateios:ler" },
     { caminho: "estoque", chave: "estoque", rotulo: "Estoque", icone: Warehouse, permissao: "estoque:ler" },
     { caminho: "dre", chave: "dre", rotulo: "DRE", icone: FileBarChart, permissao: "dre:ler" },
+    // A DRE de cada unidade dividida entre as linhas, gravada na apuração (26/10/2026).
+    { caminho: "linhas", chave: "linhas", rotulo: "Linhas", icone: ChartColumn, permissao: "linhas_mes:ler" },
     { caminho: "conferencia-planilha", chave: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "conferencia:ler" },
     { caminho: "divergencias", chave: "divergencias", rotulo: "Divergências", icone: TriangleAlert, permissao: "divergencia:ler" },
   ];

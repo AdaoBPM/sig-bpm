@@ -45,6 +45,11 @@ export type ObrasResultados = { ano: number; ate: number; obras: Array<{ codigo:
 /** Os grupos dos movimentos sem centro de custo com lançamento no período (14/10/2026), com o total do exercício. */
 export type SemCentrosResultados = { ano: number; ate: number; grupos: Array<{ codigo: string; nome: string; total: string }> };
 export type CentrosResultados = { ano: number; ate: number; grupos: Array<{ grupo: string; departamentos: string[]; total: string }> };
+/** Uma linha de produto ou de obra (26/10/2026), da unidade dela. */
+export type LinhaDoNegocio = { id: string; codigo: string; nome: string; unidade: number; nomeUnidade: string; ativo: boolean };
+/** As linhas das abas Linhas e Rateios por Obras; `semLinhas`: os meses fechados ainda sem as linhas gravadas. */
+export type LinhasResultados = { ano: number; ate: number; linhas: LinhaDoNegocio[]; semLinhas: string[] };
+export type ResultadosDaLinha = Resultados & { linha: LinhaDoNegocio; semLinhas: string[] };
 
 export type Indicador = {
   grupo: string;
@@ -125,6 +130,11 @@ export const relatoriosService = {
     (await api.get<{ data: SemCentrosResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "sem_centros" } })).data.data,
   semCentro: async (ano: number, ate: number | undefined, grupo: string) =>
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "sem_centros", grupo } })).data.data,
+  /** As linhas (26/10/2026): a lista e a DRE de uma, ou só o rateado dela (`rateios`: a aba Rateios por Obras). */
+  linhas: async (ano: number, ate: number | undefined) =>
+    (await api.get<{ data: LinhasResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "linhas" } })).data.data,
+  linha: async (ano: number, ate: number | undefined, linha: string, rateios: boolean) =>
+    (await api.get<{ data: ResultadosDaLinha }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: rateios ? "rateios_obras" : "linhas", linha } })).data.data,
   obras: async (ano: number, ate: number | undefined) =>
     (await api.get<{ data: ObrasResultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "obras" } })).data.data,
   obra: async (ano: number, ate: number | undefined, obra: string) =>

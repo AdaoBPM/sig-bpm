@@ -86,25 +86,24 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
   { recurso: "ANALISES_GERENCIAIS", nome: "Análises Gerenciais", area: "analises_gerenciais", telas: [{ codigo: "relatorios_executivos", nome: "Relatórios Executivos" }] },
   { recurso: "CENARIOS_SINTETICOS", nome: "Cenários Sintéticos", area: "cenarios", telas: telasDoCenario("cenarios", false) },
   { recurso: "CENARIOS_ANALITICOS", nome: "Cenários Analíticos", area: "cenarios_analiticos", telas: telasDoCenario("cenarios_analiticos", true) },
-  // Os Resultados por Linha (26/10/2026), antes dos Resultados Empresariais, como no menu: a Importação (Ler vê os documentos
-  // de cada mês; Editar importa as requisições e as notas fiscais) e os Resultados (as abas Resultados, Rateios por Obras e
-  // Conferência).
-  {
-    recurso: "RESULTADOS_POR_LINHA",
-    nome: "Resultados por Linha",
-    area: "resultados_linha",
-    telas: [
-      { codigo: "resultados_linha_importacao", nome: "Importação" },
-      { codigo: "resultados_linha", nome: "Resultados" },
-    ],
-  },
   {
     recurso: "RESULTADOS_REALIZADOS",
     nome: "Resultados Empresariais",
     area: "resultados",
     telas: [
-      // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Empresariais.
-      { codigo: "relatorio_resultados", nome: "Resultados", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
+      // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Empresariais; as abas Linhas e Rateios por Obras (26/10/2026),
+      // antes de Obras.
+      {
+        codigo: "relatorio_resultados",
+        nome: "Resultados",
+        abas: [
+          ...COM_CENTROS_E_OBRAS.slice(0, 7),
+          { codigo: "sem_centros", nome: "Sem Centros de Custo" },
+          { codigo: "linhas", nome: "Linhas" },
+          { codigo: "rateios_obras", nome: "Rateios por Obras" },
+          COM_CENTROS_E_OBRAS[7],
+        ],
+      },
       // Os Indicadores são uma aba do Painel de Bordo (19/10/2026; antes, uma tela).
       { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "indicadores", nome: "Indicadores" }] },
     ],
@@ -125,6 +124,9 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       { codigo: "estoque", nome: "Estoque" },
       // A aba Sem Centros de Custo também na DRE do mês (15/10/2026), antes de Obras.
       { codigo: "dre", nome: "DRE", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
+      // A etapa Linhas (26/10/2026): a DRE de cada unidade dividida entre as linhas, gravada na apuração. Editar grava as
+      // linhas de uma competência fechada antes dela.
+      { codigo: "linhas_mes", nome: "Linhas" },
       { codigo: "conferencia", nome: "Conferência", abas: UNIDADES },
       { codigo: "divergencia", nome: "Divergências" },
     ],
@@ -166,7 +168,7 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
           { codigo: "linhas", nome: "Linhas" },
           { codigo: "estrutura_dre", nome: "Estrutura da DRE" },
           { codigo: "regras_rateio", nome: "Regras de Rateio" },
-          // A Alocação nas Linhas (26/10/2026): os custos sem tarefa nas linhas, para os Resultados por Linha.
+          // A Alocação nas Linhas (26/10/2026): os custos sem tarefa nas linhas, para a etapa Linhas da apuração.
           { codigo: "alocacao_linhas", nome: "Alocação nas Linhas" },
         ],
       },

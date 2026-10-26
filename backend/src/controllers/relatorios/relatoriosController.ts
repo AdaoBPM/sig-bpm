@@ -9,18 +9,21 @@ import { RelatorioError, resultadosService } from "../../services/relatorios/res
 import { veObras } from "../../services/acesso/recorteDepartamento.js";
 import { cenariosMarcados } from "../../services/cenarios/indicadoresDoCenario.js";
 import { ehGrupoSemCentro, veSemCentros, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
+import { RegraLinhasError, resultadosLinhaService } from "../../services/resultadosLinha/resultadosLinhaService.js";
+import { ABA_DA_VISAO } from "../../services/acesso/telas.js";
 
 const anoSchema = z.coerce.number().int().min(2025).max(2100);
 const ateSchema = z.coerce.number().int().min(1).max(12).optional();
-const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.literal("sem_centros"), z.coerce.number().int().min(0).max(5)]);
+const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.literal("sem_centros"), z.literal("linhas"), z.literal("rateios_obras"), z.coerce.number().int().min(0).max(5)]);
 const obraSchema = z.string().trim().regex(/^1.9[89]./, "Obra inválida").max(40).optional();
 const grupoSchema = z.string().trim().min(1).max(200).optional();
+const linhaSchema = z.string().trim().min(1).max(60).optional();
 
 async function responder(response: Response, fn: () => Promise<unknown>) {
   try {
     return response.json({ data: await fn() });
   } catch (error) {
-    if (error instanceof RelatorioError) return response.status(error.status).json({ error: error.message });
+    if (error instanceof RelatorioError || error instanceof RegraLinhasError) return response.status(error.status).json({ error: error.message });
     throw error;
   }
 }
@@ -43,7 +46,7 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
     response.setHeader("Content-Disposition", `attachment; filename="${r.nomeArquivo.normalize("NFD").replace(/[^ -~]/g, "")}"; filename*=UTF-8''${encodeURIComponent(r.nomeArquivo)}`);
     return response.send(Buffer.from(r.conteudo));
   } catch (error) {
-    if (error instanceof RelatorioError) return response.status(error.status).json({ error: error.message });
+    if (error instanceof RelatorioError || error instanceof RegraLinhasError) return response.status(error.status).json({ error: error.message });
     throw error;
   }
 }
@@ -57,6 +60,9 @@ const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && t
 /** Os indicadores: a tela Indicadores dos Resultados Empresariais ou a etapa do Fechamento Mensal (?etapa=1). */
 // A aba Indicadores do Painel de Bordo (19/10/2026; antes, a tela Indicadores).
 const podeIndicadores = (request: Request) => tem(request, "relatorio_painel.indicadores:ler") || (request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
+
+/** As unidades das linhas que o perfil vê (26/10/2026): as das abas Matriz, Filial e Serviços que ele lê. */
+const unidadesDasLinhas = (request: Request) => [1, 2, 3].filter((u) => tem(request, `relatorio_resultados.${ABA_DA_VISAO[u]}:ler`));
 
 /** ?ano= e ?ate= (o último mês; sem ele, o último apurado). */
 function periodo(request: Request, response: Response) {
@@ -85,7 +91,8 @@ export const relatoriosController = {
 
   /**
    * ?visao=0..5 (0 Consolidado) ou ?visao=centros: sem ?grupo, a lista dos agrupamentos; com ele, o agrupamento. Ou
-   * ?visao=obras: sem ?obra, a lista das obras; com ela (o código do centro 1.98 ou 1.99), a obra.
+   * ?visao=obras: sem ?obra, a lista das obras; com ela (o código do centro 1.98 ou 1.99), a obra. Ou ?visao=linhas e
+   * ?visao=rateios_obras (26/10/2026): sem ?linha, a lista das linhas; com ela, a DRE da linha ou o rateado dela.
    */
   async resultados(request: Request, response: Response) {
     const p = periodo(request, response);
@@ -109,6 +116,14 @@ export const relatoriosController = {
     }
     if (v.data === "centros") {
       return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso, true) : resultadosService.listarCentros(p.ano, p.ate, acesso, true)));
+    }
+    // As linhas (26/10/2026), gravadas na etapa Linhas da apuração: as das unidades que o perfil lê.
+    if (v.data === "linhas" || v.data === "rateios_obras") {
+      const l = linhaSchema.safeParse(request.query.linha || undefined);
+      if (!l.success) return response.status(400).json({ error: "Linha inválida" });
+      const unidades = unidadesDasLinhas(request);
+      const rateios = v.data === "rateios_obras";
+      return responder(response, () => (l.data ? resultadosLinhaService.linha(p.ano, p.ate, l.data, rateios, unidades) : resultadosLinhaService.listar(p.ano, p.ate, unidades)));
     }
     const visao = v.data as 0 | 1 | 2 | 3 | 4 | 5;
     const comparaCom = comparaComDe(request);
@@ -146,8 +161,17 @@ export const relatoriosController = {
       else if (g.success && g.data && ehGrupoSemCentro(g.data)) e = { tipo: "semCentro", grupo: g.data };
       else return response.status(400).json({ error: "Grupo inválido" });
     }
+    // As linhas (26/10/2026): a da tela ou todas, na aba Linhas ou na Rateios por Obras.
+    else if (escopo === "linhas" || escopo === "rateios_obras" || (v.success && (v.data === "linhas" || v.data === "rateios_obras"))) {
+      const rateios = escopo === "rateios_obras" || (v.success && v.data === "rateios_obras");
+      const unidades = unidadesDasLinhas(request);
+      const l = linhaSchema.safeParse(request.query.linha || undefined);
+      if (escopo === "linhas" || escopo === "rateios_obras") e = { tipo: "linhas", rateios, unidades };
+      else if (l.success && l.data) e = { tipo: "linha", id: l.data, rateios, unidades };
+      else return response.status(400).json({ error: "Linha inválida" });
+    }
     else if (g.success && g.data) e = { tipo: "centro", grupo: g.data };
-    else if (v.success && v.data !== "centros" && v.data !== "obras" && v.data !== "sem_centros") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
+    else if (v.success && typeof v.data === "number") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
     else return response.status(400).json({ error: "Visão inválida: use ?visao=0..5, ?grupo= ou ?escopo=unidades|centros." });
     return enviarArquivo(request, response, "resultados", () =>
       exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, acesso),

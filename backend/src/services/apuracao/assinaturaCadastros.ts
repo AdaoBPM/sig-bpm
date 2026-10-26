@@ -39,6 +39,8 @@ const CADASTROS: Array<{ chave: string; nome: string; dados: () => Promise<unkno
     ],
   },
   { chave: "regras", nome: "Regras de Rateio", dados: () => getPrismaClient().regraRateio.findMany({ omit: sem, orderBy: { id: "asc" } }) },
+  // A Alocação nas Linhas (26/10/2026): as regras da etapa Linhas da apuração. As apurações de antes não a têm: não pedem reapurar.
+  { chave: "alocacaoLinhas", nome: "Alocação nas Linhas", dados: () => getPrismaClient().alocacaoLinha.findMany({ omit: sem, orderBy: { id: "asc" } }) },
   { chave: "indicadores", nome: "Indicadores", dados: () => getPrismaClient().indicadorEstrutura.findMany({ omit: sem, orderBy: { id: "asc" } }) },
   { chave: "painel", nome: "Painel de Bordo", dados: () => getPrismaClient().painelItem.findMany({ omit: sem, orderBy: { id: "asc" } }) },
 ];

@@ -5,6 +5,7 @@ import { dreService } from "../dre/dreService.js";
 import { estoqueService } from "../estoque/estoqueService.js";
 import { receitaPreviaService } from "../receitaPrevia/receitaPreviaService.js";
 import { rateiosService } from "../volumes/rateiosService.js";
+import { resultadosLinhaService } from "../resultadosLinha/resultadosLinhaService.js";
 import { auditar } from "../auditoriaService.js";
 import { divergenciasService } from "../divergencias/divergenciasService.js";
 import { assinaturaDosCadastros, cadastrosMudados, fraseDosCadastros } from "./assinaturaCadastros.js";
@@ -19,7 +20,7 @@ import { NOME_DA_CHAVE as NOME_DA_CHAVE_RATEIO } from "../volumes/rateiosService
  *
  * Apurar a competência refaz, em ordem, tudo o que forma o resultado do mês —
  * a classificação dos lançamentos, o saldo de estoque, a receita prévia, os
- * rateios e a DRE — e congela o retrato: a partir daí, nenhum recálculo avulso
+ * rateios, a DRE e as linhas (26/10/2026) — e congela o retrato: a partir daí, nenhum recálculo avulso
  * (reclassificar, apurar só os rateios…) nem a recarga de um cadastro mexe nos
  * valores do mês. Só a reapuração da competência, enquanto ela está aberta ou
  * em conferência, os refaz; depois do fechamento, só a reabertura com
@@ -47,7 +48,7 @@ const anterior = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes:
 async function competenciaPorAnoMes(ano: number, mes: number) {
   const c = await getPrismaClient().competencia.findUnique({
     where: { ano_mes: { ano, mes } },
-    select: { id: true, status: true, apuradaEm: true, apuracoes: true, entradasApuradas: true, cadastrosAssinatura: true, fechadaEm: true, fechadaPor: true },
+    select: { id: true, status: true, apuradaEm: true, apuracoes: true, entradasApuradas: true, cadastrosAssinatura: true, fechadaEm: true, fechadaPor: true, apuracaoLinhas: true },
   });
   if (!c) throw new RegraApuracaoError(404, `A competência ${rotulo(ano, mes)} não existe.`);
   return c;
@@ -105,7 +106,7 @@ export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
   const where = { competenciaId };
   const q = (x: Prisma.Decimal | null | undefined) => (x ?? new Prisma.Decimal(0)).toFixed(4);
   const d = (x: Date | null | undefined) => x?.toISOString() ?? null;
-  const [contabeis, manuais, receita, importacoes, ...listas] = await Promise.all([
+  const [contabeis, manuais, receita, importacoes, documentos, ...listas] = await Promise.all([
     prisma.lancamentoContabil.aggregate({ where, _count: true, _sum: { valorMovimento: true }, _max: { criadoEm: true } }),
     prisma.lancamentoManual.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
     prisma.lancamentoReceita.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
@@ -113,6 +114,13 @@ export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
     prisma.importacao.findMany({
       where: { ...where, status: "CONCLUIDA", substituidaEm: null, comparacao: false, tipo: { notIn: TIPOS_FORA_DA_APURACAO } },
       select: { id: true },
+      orderBy: { id: "asc" },
+    }),
+    // As requisições e as notas fiscais (26/10/2026): a tarefa delas leva os custos às linhas (a etapa Linhas). As
+    // apurações de antes não as têm no retrato: não acusam mudança.
+    prisma.importacao.findMany({
+      where: { ...where, status: "CONCLUIDA", substituidaEm: null, comparacao: false, tipo: { in: ["REQUISICOES", "NOTAS_FISCAIS"] } },
+      select: { id: true, linhasAceitas: true },
       orderBy: { id: "asc" },
     }),
     prisma.projeto.aggregate({ where, _count: true, _sum: { quantidade: true }, _max: { atualizadoEm: true } }),
@@ -133,6 +141,7 @@ export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
     manuais: { rotulo: "lançamentos manuais", n: manuais._count, soma: q(manuais._sum.valor), ultima: d(manuais._max.atualizadoEm) },
     receita: { rotulo: "lançamentos de receita", n: receita._count, soma: q(receita._sum.valor), ultima: d(receita._max.atualizadoEm) },
     importacoes: { rotulo: "importações", n: importacoes.length, soma: importacoes.map((i) => i.id).join(",") },
+    documentos: { rotulo: "requisições e notas fiscais", n: documentos.reduce((s, i) => s + (i.linhasAceitas ?? 0), 0), soma: documentos.map((i) => i.id).join(",") },
   };
   // As listas de rateio guardam a última alteração (um registro digitado pode
   // mudar de unidade ou de etapa sem mudar a soma); as demais, só a criação.
@@ -182,7 +191,7 @@ async function telasSemValor(competenciaId: string): Promise<string[]> {
   const prisma = getPrismaClient();
   // A Receita (22/10/2026): a receita calculada das listas (as prévias) ou os ajustes manuais; antes, só os ajustes, que
   // são opcionais — e o mês com a receita calculada e sem ajuste dava o aviso.
-  const [manuais, receitaCalculada, receitaManual, importados, digitados, estoque, conferencia] = await Promise.all([
+  const [manuais, receitaCalculada, receitaManual, importados, digitados, estoque, conferencia, requisicoes, notas] = await Promise.all([
     prisma.lancamentoManual.count({ where: { competenciaId } }),
     prisma.receitaPrevia.count({ where: { competenciaId } }),
     prisma.lancamentoReceita.count({ where: { competenciaId } }),
@@ -190,8 +199,12 @@ async function telasSemValor(competenciaId: string): Promise<string[]> {
     prisma.indicadorDigitado.count({ where: { competenciaId } }),
     prisma.estoqueSaldo.count({ where: { competenciaId } }),
     prisma.conferenciaPlanilha.count({ where: { competenciaId } }),
+    prisma.requisicaoItem.count({ where: { competenciaId } }),
+    prisma.notaFiscalItem.count({ where: { competenciaId } }),
   ]);
   return [
+    // Sem os documentos, os custos vão às linhas sem a tarefa (26/10/2026: a etapa Linhas).
+    requisicoes + notas ? null : "Importações (nenhuma requisição nem nota fiscal: os custos vão às linhas sem a tarefa)",
     manuais ? null : "Lançamentos (nenhum lançamento manual)",
     receitaCalculada + receitaManual ? null : "Receita (nenhuma receita calculada nem ajuste manual)",
     importados + digitados ? null : "Indicadores (nenhum indicador importado ou digitado)",
@@ -380,6 +393,8 @@ export const apuracaoService = {
     const semRegra = chavesSemRegra(await regrasDeRateio(), ano, mes);
     if (semRegra.length) motivosNaoFechar.push(`Rateios sem regra vigente no mês: ${semRegra.map((k) => NOME_DA_CHAVE_RATEIO[k] ?? k).join(", ")} (Cadastros da Controladoria / Regras de Rateio).`);
     if (mudou.length) motivosNaoFechar.push("As entradas ou os Cadastros da Controladoria mudaram depois da apuração: reapure antes de fechar.");
+    // A etapa Linhas (26/10/2026): o mês apurado antes dela fecha só depois de reapurado, com as linhas gravadas.
+    else if (apurada && c.status !== "FECHADA" && c.apuracaoLinhas === null) motivosNaoFechar.push("A competência foi apurada antes da etapa Linhas: reapure antes de fechar.");
     if (pendentes) motivosNaoFechar.push(`Há ${pendentes} ${plural(pendentes, "lançamento", "lançamentos")} com pendência de classificação.`);
     if (naoClassificados) motivosNaoFechar.push(`Há ${naoClassificados} ${plural(naoClassificados, "lançamento", "lançamentos")} sem classificação.`);
     // Todas as listas obrigatórias importadas (17/10/2026; a DRE do Comercial e o saldo inicial do estoque são opcionais).
@@ -507,6 +522,10 @@ export const apuracaoService = {
       const d = await dreService.apurar(ano, mes, usuarioId);
       etapas.push({ etapa, resumo: d });
       avisos.push(...d.avisos);
+      // A DRE de cada unidade dividida entre as linhas (26/10/2026): os avisos dela ficam na etapa Linhas do mês.
+      etapa = "linhas";
+      const l = await resultadosLinhaService.apurar(c.id);
+      etapas.push({ etapa, resumo: { registros: l.registros, linhas: l.linhas, semLinha: l.semLinha, avisos: l.avisos.length } });
     } catch (e) {
       await prisma.competencia.update({ where: { id: c.id }, data: { apuradaEm: null, apuradaPor: null, entradasApuradas: Prisma.DbNull } });
       const msg = e instanceof Error ? e.message : String(e);
