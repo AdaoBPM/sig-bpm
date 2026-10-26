@@ -5,14 +5,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp } from "lucide-react";
 import { toast } from "sonner";
 
+import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/context/PermissionContext";
+import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { plural } from "@/lib/texto";
 
+import { Seletor, useExercicios } from "@/app/relatorios/components/SeletorPeriodo";
 import { formato, mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 
-import { resultadosLinhaService, type DocumentosDoMes, type ImportacaoDeDocumentos } from "./services/resultadosLinhaService";
+import { resultadosLinhaService, type DocumentosDoMes, type ImportacaoDeDocumentos } from "../services/resultadosLinhaService";
 
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
@@ -26,6 +28,7 @@ function Situacao({ tipo }: { tipo: DocumentosDoMes["requisicoes"] }) {
       {vigente ? (
         <p className="text-gray-800" title={`${vigente.nomeArquivo}, em ${dataHora(vigente.importadoEm)}${vigente.usuario ? ` por ${vigente.usuario}` : ""}`}>
           {linha(vigente)}
+          <span className="block text-xs text-gray-500">{`${dataHora(vigente.importadoEm)}${vigente.usuario ? ` · ${vigente.usuario}` : ""}`}</span>
         </p>
       ) : (
         <p className="text-gray-400">Sem importação</p>
@@ -37,17 +40,23 @@ function Situacao({ tipo }: { tipo: DocumentosDoMes["requisicoes"] }) {
 }
 
 /**
- * As requisições e as notas fiscais de cada mês do exercício (26/10/2026): a tarefa delas leva os custos às linhas nos
- * Resultados por Linha. Importar envia o LISTAS REALIZADO (RESULTADOS) do mês (as abas Requisições (Lista) e Notas Fiscais
- * (Lista)), também num mês fechado: os documentos não entram na DRE.
+ * A Importação dos Resultados por Linha (26/10/2026): as requisições e as notas fiscais de cada mês do exercício — a
+ * tarefa delas leva os custos às linhas. Importar envia o LISTAS REALIZADO (RESULTADOS) do mês (as abas Requisições
+ * (Lista) e Notas Fiscais (Lista)), também num mês fechado: os documentos não entram na DRE.
  */
-export function DocumentosDialog({ ano, onFechar }: { ano: number; onFechar: () => void }) {
+export function ImportacaoContent() {
+  useRegistrarAcessoTela("/resultados-por-linha/importacao");
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const pode = hasPermission("resultados_linha:editar");
+  const pode = hasPermission("resultados_linha_importacao:editar");
+  // Os exercícios com alguma competência apurada (as fechadas e as abertas: os documentos valem também nos meses abertos).
+  const exercicios = useExercicios(false);
+  const [anoEscolhido, setAno] = useState<number | null>(null);
+  const ano = anoEscolhido ?? exercicios.anos[0];
   const consulta = useQuery({
     queryKey: ["resultados-por-linha", "documentos", ano],
-    queryFn: () => resultadosLinhaService.documentos(ano),
+    queryFn: () => resultadosLinhaService.documentos(ano!),
+    enabled: !!ano,
     // Enquanto alguma importação processa, a lista se atualiza a cada 2 segundos.
     refetchInterval: (q) => (q.state.data?.some((m) => m.requisicoes.ultima?.status === "PROCESSANDO" || m.notas.ultima?.status === "PROCESSANDO") ? 2000 : false),
   });
@@ -64,18 +73,43 @@ export function DocumentosDialog({ ano, onFechar }: { ano: number; onFechar: () 
     onSettled: () => setProgresso(null),
   });
   return (
-    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Requisições e Notas Fiscais de {ano}</DialogTitle>
-          <DialogDescription>
-            A tarefa de cada requisição e nota fiscal leva os custos às linhas (Cadastros da Controladoria › Linhas › Tarefas). Importe o LISTAS REALIZADO
-            (RESULTADOS) do mês: as abas Requisições (Lista) e Notas Fiscais (Lista) substituem as do mês, também num mês fechado (os documentos não entram na
-            DRE).
-          </DialogDescription>
-        </DialogHeader>
-        {consulta.isError ? <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os documentos.")}</p> : null}
-        <div className="overflow-x-auto rounded-sm border border-gray-200">
+    <div className="space-y-6">
+      <CabecalhoDaTela
+        titulo="Importação"
+        sobre={
+          <p>
+            As requisições e as notas fiscais de cada mês do exercício. A tarefa de cada uma leva os custos às linhas nos Resultados por Linha
+            (Cadastros da Controladoria › Linhas › Tarefas); sem elas, os custos do mês vão às linhas pelas regras da Alocação nas Linhas. Os documentos não
+            entram na DRE: importá-los não pede reapurar e vale também num mês fechado.
+          </p>
+        }
+        comoUsar={
+          <ul>
+            <li>Escolha o exercício: a tabela mostra, em cada mês, as requisições e as notas fiscais importadas (os itens, o valor, quando e por quem).</li>
+            <li>
+              “Importar” (quem edita a Importação, na tela Perfis) envia o LISTAS REALIZADO (RESULTADOS) do mês: as abas Requisições (Lista) e Notas Fiscais
+              (Lista) substituem as do mês, também num mês fechado. A importação segue em segundo plano; a tabela se atualiza sozinha até terminar.
+            </li>
+            <li>Se uma aba for recusada, o motivo aparece em vermelho no mês, e a importação anterior continua valendo.</li>
+          </ul>
+        }
+        acoes={
+          ano ? (
+            <Seletor
+              rotulo="Exercício"
+              valor={String(ano)}
+              opcoes={exercicios.anos.map((a) => ({ valor: String(a), rotulo: String(a) }))}
+              onMudar={(v) => setAno(Number(v))}
+              largura="w-28"
+            />
+          ) : null
+        }
+      />
+      {consulta.isError ? <p className="text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar os documentos.")}</p> : null}
+      {!ano && !exercicios.carregando ? (
+        <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma competência apurada ainda.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-bpm-primary text-left text-xs font-bold text-black">
@@ -125,23 +159,18 @@ export function DocumentosDialog({ ano, onFechar }: { ano: number; onFechar: () 
             </tbody>
           </table>
         </div>
-        <input
-          ref={entrada}
-          type="file"
-          accept=".xlsx,.xlsm,.xls"
-          className="hidden"
-          onChange={(e) => {
-            const arquivo = e.target.files?.[0];
-            e.target.value = "";
-            if (arquivo && mesEscolhido) importar.mutate({ mes: mesEscolhido, arquivo });
-          }}
-        />
-        <DialogFooter>
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            Fechar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+      <input
+        ref={entrada}
+        type="file"
+        accept=".xlsx,.xlsm,.xls"
+        className="hidden"
+        onChange={(e) => {
+          const arquivo = e.target.files?.[0];
+          e.target.value = "";
+          if (arquivo && mesEscolhido) importar.mutate({ mes: mesEscolhido, arquivo });
+        }}
+      />
+    </div>
   );
 }

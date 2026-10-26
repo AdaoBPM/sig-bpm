@@ -9,6 +9,7 @@ import {
   ChartPie,
   SlidersHorizontal,
   Factory,
+  FileUp,
   HandCoins,
   HardHat,
   PackageCheck,
@@ -111,8 +112,18 @@ export const navGrupos: NavGrupo[] = [
     titulo: "Apuração dos Resultados",
     itens: [
       { title: "Resultados por Obra", href: "/resultados-por-obra", icon: HardHat, emDesenvolvimento: true },
-      // Pronta desde 26/10/2026: a DRE de cada linha, com os rateios para as obras.
-      { title: "Resultados por Linha", href: "/resultados-por-linha", icon: ChartColumn, permission: "resultados_linha:ler", recurso: "RESULTADOS_POR_LINHA" },
+      {
+        // Pronta desde 26/10/2026: a Importação (as requisições e as notas fiscais) e os Resultados (a DRE de cada linha, os
+        // rateios por obras e a conferência).
+        title: "Resultados por Linha",
+        href: "/resultados-por-linha/importacao",
+        icon: ChartColumn,
+        recurso: "RESULTADOS_POR_LINHA",
+        telas: [
+          { title: "Importação", href: "/resultados-por-linha/importacao", icon: FileUp, permission: "resultados_linha_importacao:ler" },
+          { title: "Resultados", href: "/resultados-por-linha/resultados", icon: ChartColumn, permission: "resultados_linha:ler" },
+        ],
+      },
       {
         // Antes, Resultados Realizados (renomeado em 14/10/2026).
         title: "Resultados Empresariais",
@@ -290,6 +301,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
   [/^\/central-de-conectividade\/biblioteca-de-apis(\/|$)/, "biblioteca_apis:ler"],
+  [/^\/resultados-por-linha\/importacao(\/|$)/, "resultados_linha_importacao:ler"],
   [/^\/resultados-por-linha(\/|$)/, "resultados_linha:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
   // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
@@ -366,7 +378,8 @@ export const pageTitles: Record<string, string> = {
   "/auditoria": "Auditoria",
   "/divergencias": "Divergências",
   "/relatorios/resultados": "Resultados",
-  "/resultados-por-linha": "Resultados por Linha",
+  "/resultados-por-linha/importacao": "Importação",
+  "/resultados-por-linha/resultados": "Resultados",
   "/relatorios/painel": "Painel de Bordo",
   "/cenarios/sinteticos": "Cenários Sintéticos",
   "/cenarios/analiticos": "Cenários Analíticos",

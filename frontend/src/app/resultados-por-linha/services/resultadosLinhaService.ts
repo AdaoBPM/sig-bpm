@@ -2,16 +2,10 @@ import { api } from "@/lib/api";
 
 import type { LinhaResultado, MesRelatorio } from "@/app/relatorios/services/relatoriosService";
 
-/** Os Resultados por Linha (26/10/2026): o exercício até um mês, os documentos de cada mês e a importação deles. */
+/** Os Resultados por Linha (26/10/2026): a tela Resultados (o exercício até um mês) e a Importação (os documentos de cada mês). */
 const base = "/proxy/resultados-por-linha";
 
 export type Origem = { nivel: string; rotulo: string; meses: Array<number | null> };
-export type CustoRateado = {
-  /** A base da linha: "m³ produzido" (Matriz e Filial) ou "dias de acompanhamento" (Serviços). */
-  base: string;
-  meses: Array<{ custo: number | null; base: number | null; unitario: number | null }>;
-  total: { custo: number; base: number; unitario: number | null };
-};
 export type LinhaDoNegocio = {
   id: string;
   codigo: string;
@@ -21,7 +15,6 @@ export type LinhaDoNegocio = {
   ativo: boolean;
   resultado: LinhaResultado[];
   rateios: LinhaResultado[];
-  custoRateado: CustoRateado;
   origem: Origem[];
 };
 export type ResultadosPorLinha = {

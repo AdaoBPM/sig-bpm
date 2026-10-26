@@ -378,22 +378,6 @@ export const resultadosLinhaService = {
     const temValor = (linhaId: string) => porMes.some((r) => [...(r?.valores.get(linhaId)?.values() ?? [])].some((v) => Math.abs(v) >= 0.005));
     const comValor = linhas.filter((l) => l.ativo || temValor(l.id));
 
-    /** O custo rateado (o que vai para as obras) por unidade da base da linha, mês a mês. */
-    const custoPorUnidade = (l: LinhaDoNegocio) => {
-      const base: Base = l.unidade === 3 ? "DIAS_ACOMPANHAMENTO" : "M3_PRODUZIDO";
-      const meses_ = porMes.map((r, i) => {
-        if (!r) return { custo: null, base: null, unitario: null };
-        let custo = 0;
-        const obra = r.naObra.get(l.id) ?? new Map<string, number>();
-        for (const [codigo, v] of r.valores.get(l.id) ?? []) if (CUSTOS.has(prefixo(codigo))) custo += v - (obra.get(codigo) ?? 0);
-        const b = pesosDaBase(base, l.unidade, dados[i]!).get(l.id) ?? 0;
-        return { custo: arredonda(custo), base: b, unitario: b ? arredonda(custo / b) : null };
-      });
-      const custo = meses_.reduce((s, x) => s + (x.custo ?? 0), 0);
-      const b = meses_.reduce((s, x) => s + (x.base ?? 0), 0);
-      return { base: base === "M3_PRODUZIDO" ? "m³ produzido" : "dias de acompanhamento", meses: meses_, total: { custo: arredonda(custo), base: b, unitario: b ? arredonda(custo / b) : null } };
-    };
-
     /** De que passo vieram os valores da linha (a receita e os custos), mês a mês; só os passos com valor. */
     const origemDa = (linhaId: string) =>
       (Object.keys(ROTULO_DO_NIVEL) as Nivel[])
@@ -423,7 +407,6 @@ export const resultadosLinhaService = {
         ativo: l.ativo,
         resultado: tabela(l.id, l.unidade, noResultado, false),
         rateios: tabela(l.id, l.unidade, nosRateios, true),
-        custoRateado: custoPorUnidade(l),
         origem: origemDa(l.id),
       })),
       conferencia: {
