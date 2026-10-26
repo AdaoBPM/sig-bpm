@@ -32,8 +32,8 @@ export default function AlocacaoLinhasPage() {
               </li>
               <li>
                 Base por Linha divide o que a DRE dá a cada unidade entre as linhas dela, pelo volume de cada uma nas listas do mês: Volume Produzido (m³),
-                Projetos Liberados (m³), Metalurgia Consumida (kg, pela linha que consome), Armadura (kg), Dias de Acompanhamento ou Receita Bruta (a
-                Receita Prévia). A linha sem volume no mês não recebe.
+                Projetos Liberados (m³), Metalúrgica: Interna (kg) e Armadura: Interna (kg) — os kg que cada linha consome —, Dias de Acompanhamento ou
+                Receita Bruta (a Receita Prévia). A linha sem volume no mês não recebe.
               </li>
               <li>
                 A ordem nos Resultados por Linha: a tarefa das requisições e das notas fiscais (Linhas › Tarefas), a regra do centro, a obra (os centros

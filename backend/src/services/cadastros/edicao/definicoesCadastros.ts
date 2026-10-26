@@ -1160,8 +1160,8 @@ const regras: DefinicaoCadastro = {
 export const BASES_DAS_LINHAS: Array<[string, string]> = [
   ["M3_PRODUZIDO", "Volume Produzido (m³)"],
   ["M3_PROJETOS", "Projetos Liberados (m³)"],
-  ["KG_METALURGIA", "Metalurgia Consumida (kg)"],
-  ["KG_ARMADURA", "Armadura (kg)"],
+  ["KG_METALURGIA", "Metalúrgica: Interna (kg)"],
+  ["KG_ARMADURA", "Armadura: Interna (kg)"],
   ["DIAS_ACOMPANHAMENTO", "Dias de Acompanhamento"],
   ["RECEITA", "Receita Bruta"],
 ];
@@ -1221,7 +1221,7 @@ const alocacaoLinhas: DefinicaoCadastro = {
       rotulo: "Base",
       tipo: "opcao",
       visivelSe: { campo: "destino", valores: ["BASE"] },
-      ajuda: "O volume de cada linha nas listas do mês: a Produção, os Projetos, a Metalurgia (pela linha que consome), as Armaduras, os Acompanhamentos ou a Receita Prévia.",
+      ajuda: "O volume de cada linha nas listas do mês: a Produção, os Projetos, a Metalúrgica e a Armadura internas (os kg que cada linha consome), os Acompanhamentos ou a Receita Prévia.",
       opcoes: opcoesFixas(BASES_DAS_LINHAS),
     },
     { nome: "vigenciaInicio", rotulo: "Vigência: início", rotuloColuna: "Início", tipo: "data", obrigatorio: true, padrao: `${new Date().getFullYear()}-01-01` },
