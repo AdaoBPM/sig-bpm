@@ -28,6 +28,60 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 27/10/2026, tarde
+  {
+    publicada: "2026-10-27T12:35",
+    processo: TODO_O_SIG,
+    tela: "Sobre Esta Tela",
+    itens: [
+      "Os textos do Sobre e do Como Usar de cada tela trazem só o caminho e o uso atuais, com os nomes novos das telas do Fechamento Mensal.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T12:35",
+    processo: "Resultados Empresariais",
+    tela: "Resultados",
+    rota: RESULTADOS,
+    itens: [
+      "No Exportar, em Excel, a caixa Incluir a Aba Detalhes acrescenta no fim do arquivo os movimentos do balancete de cada aba exportada, item a item (a emissão, o cliente ou fornecedor e o histórico), com a parte que vai à aba, como no Exportar dos extratos.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T12:35",
+    processo: "Fechamento Mensal",
+    tela: "Totais",
+    rota: "/competencias/0000-00/indicadores",
+    itens: [
+      "A tela Totais junta os Indicadores e os Rateios do mês, cada um numa aba.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T12:35",
+    processo: "Fechamento Mensal",
+    tela: "Prévias",
+    rota: "/competencias/0000-00/receita-previa",
+    itens: [
+      "A tela Prévias (Prévias de Receita e Estoque) junta a Receita e o Estoque do mês, cada um numa aba.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T12:35",
+    processo: "Fechamento Mensal",
+    tela: "Resultados",
+    rota: DRE,
+    itens: [
+      "A tela DRE do mês passa a se chamar Resultados.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T12:35",
+    processo: "Controle de Usuários",
+    tela: "Perfis",
+    rota: "/perfis",
+    itens: [
+      "Na matriz do perfil, as telas Totais (abas Indicadores e Rateios) e Prévias (abas Receita e Estoque) do Fechamento Mensal, com as permissões que cada perfil já tinha; a DRE do mês aparece como Resultados.",
+    ],
+  },
   // 27/10/2026
   {
     publicada: "2026-10-27T08:38",
