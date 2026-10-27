@@ -27,6 +27,7 @@ import {
   ListOrdered,
   ListTree,
   Percent,
+  PanelsTopLeft,
   Presentation,
   Rows3,
   Shuffle,
@@ -86,6 +87,8 @@ export const navGrupos: NavGrupo[] = [
       { title: "Indicadores VPR", href: "/analises-gerenciais/indicadores-vpr", icon: Target, emDesenvolvimento: true },
       // Custos Operacionais (15/10/2026), em desenvolvimento.
       { title: "Custos Operacionais", href: "/analises-gerenciais/custos-operacionais", icon: Calculator, emDesenvolvimento: true },
+      // Painéis de Bordo (27/10/2026), em desenvolvimento.
+      { title: "Painéis de Bordo", href: "/analises-gerenciais/paineis-de-bordo", icon: PanelsTopLeft, emDesenvolvimento: true },
     ],
   },
   {
