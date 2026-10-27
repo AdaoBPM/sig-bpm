@@ -764,10 +764,12 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             </li>
             <li>
               Configurações, antes da Capa, é preliminar à apresentação: não tem páginas, não conta nos slides e não entra na tela inteira nem no PDF. Nela, o
-              Cenário de Comparação é o orçado dos cards (Painel de Bordo e Indicadores) e das tabelas: de início, o cenário marcado como Orçamento (acompanha
-              a marcação); ou escolha um dos cenários da lista — todos os públicos, de qualquer exercício, com o ano, o tipo (Sintético ou
-              Analítico) e a marcação em etiquetas — para o relatório ficar com ele, mesmo que a marcação mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). Quem edita a tela
-              escolhe, e a escolha se salva na hora (“Salvo às…”, embaixo da lista); os demais só veem.
+              Cenário de Comparação é o orçado dos cards (Painel de Bordo e Indicadores) e das tabelas: de início, o cenário marcado como Orçamento (a
+              etiqueta amarela; o relatório acompanha a marcação até que se escolha um cenário); ou escolha um dos cenários da lista — todos os públicos, de
+              qualquer exercício, com o ano, o tipo (Sintético ou Analítico) e a marcação em etiquetas — para o relatório ficar com ele, mesmo que a marcação
+              mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). Quem edita a tela escolhe, e a escolha se salva na hora (“Salvo
+              às…”, embaixo da lista); os demais só veem. Embaixo, “Excluir Relatório” (de quem o criou ou do Administrador, enquanto nenhum grupo está
+              finalizado) exclui o relatório, com todas as abas, depois da confirmação.
             </li>
             <li>
               Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
@@ -1071,7 +1073,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
           onMudar={mudarPagina}
         />
       )}
-      {relatorio.podeExcluir ? (
+      {/* O Excluir Relatório só na aba Configurações (27/10/2026, pedido do Adão), embaixo do Cenário de Comparação. */}
+      {configuracoes && relatorio.podeExcluir ? (
         <div className="flex justify-end">
           <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" onClick={() => setConfirmar("excluir")}>
             <Trash2 className="size-4" />

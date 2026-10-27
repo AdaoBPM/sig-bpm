@@ -28,7 +28,9 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
   // A escolha em gravação; undefined: a gravada.
   const [escolhido, setEscolhido] = useState<string | null | undefined>(undefined);
   const gravado = consulta.data?.cenarioComparadoId ?? null;
-  const atual = escolhido === undefined ? gravado : escolhido;
+  // Sem cenário escolhido (o relatório acompanha a marcação), o marcado como Orçamento fica em destaque na lista (27/10/2026: sai
+  // a linha "Orçamento (a marcação)", redundante com a do cenário marcado).
+  const atual = escolhido === undefined ? (gravado ?? consulta.data?.marcado?.id ?? null) : escolhido;
   const [salvoEm, setSalvoEm] = useState<Date | null>(null);
   const gravar = useMutation({
     mutationFn: (cenarioComparadoId: string | null) => relatoriosExecutivosService.gravarConfiguracoes(relatorioId, cenarioComparadoId),
@@ -57,9 +59,15 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
       <div>
         <h2 className="text-base font-bold text-gray-900">Cenário de Comparação</h2>
         <p className="mt-1 text-sm text-gray-600">
-          O orçado dos cards do Painel de Bordo e dos Indicadores (o destaque do desvio e os gráficos) e das tabelas de Resultados. Escolha a marcação
-          Orçamento (o cenário marcado, qualquer que seja, de qualquer exercício) ou um dos cenários; num cenário de outro exercício, valem os mesmos meses dele.
+          O orçado dos cards do Painel de Bordo e dos Indicadores (o destaque do desvio e os gráficos) e das tabelas de Resultados. De início, o cenário
+          marcado como Orçamento (o relatório acompanha a marcação até que se escolha um cenário); num cenário de outro exercício, valem os mesmos meses dele.
         </p>
+        {/* Sem cenário escolhido e sem o marcado na lista: o que vale hoje. */}
+        {gravado === null && !c.cenarios.some((x) => x.id === c.marcado?.id) ? (
+          <p className="mt-1 text-sm text-gray-600">
+            {c.marcado ? `Hoje, o relatório compara com ${c.marcado.nome}, o cenário marcado como Orçamento.` : "Nenhum cenário está marcado como Orçamento: escolha um cenário para os cards terem o orçado."}
+          </p>
+        ) : null}
       </div>
       {/* Todos os cenários (22/10/2026), com o ano, o tipo e a marcação em etiquetas; o escolhido em destaque. */}
       <fieldset disabled={!c.podeEditar || gravar.isPending} className="overflow-x-auto rounded-sm border border-gray-200">
@@ -75,19 +83,6 @@ export function ConfiguracoesDoRelatorio({ relatorioId }: { relatorioId: string 
             </tr>
           </thead>
           <tbody>
-            <Linha marcada={atual === null} onMarcar={() => escolher(null)}>
-              <td className="px-3 py-2">
-                <span className="font-semibold text-gray-900">Orçamento (a marcação)</span>
-                <span className="block text-xs text-gray-500">
-                  {c.marcado ? `Hoje, o cenário ${c.marcado.nome}; se a marcação mudar de cenário, o relatório acompanha.` : "Nenhum cenário está marcado como Orçamento: os cards ficam sem o orçado."}
-                </span>
-              </td>
-              <td className="px-3 py-2 text-gray-700">{c.marcado?.ano ?? "—"}</td>
-              <td className="px-3 py-2" />
-              <td className="px-3 py-2">
-                <Etiqueta classe={ETIQUETA_DA_MARCACAO}>Orçamento</Etiqueta>
-              </td>
-            </Linha>
             {c.cenarios.map((x) => (
               <Linha key={x.id} marcada={atual === x.id} onMarcar={() => escolher(x.id)}>
                 <td className="px-3 py-2 font-medium text-gray-900">{x.nome}</td>
