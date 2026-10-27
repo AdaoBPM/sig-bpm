@@ -22,7 +22,7 @@ export default function PainelBordoPage() {
                 mesmo quadro ficam juntos. A Ordem põe os itens em sequência; os quadros seguem a ordem do primeiro item de cada um.
               </li>
               <li>
-                O Nome aparece no card, com a Metodologia e o Comportamento à direita (a Abreviação não aparece mais no card, desde 21/10/2026); o Comportamento diz o lado bom (↑ quanto maior, melhor; ↓ quanto menor, melhor) e define o sinal
+                O Nome aparece no card, com a Metodologia e o Comportamento à direita; o Comportamento diz o lado bom (↑ quanto maior, melhor; ↓ quanto menor, melhor) e define o sinal
                 do desvio.
               </li>
               <li>
@@ -38,12 +38,12 @@ export default function PainelBordoPage() {
               <li>Use “Novo” para incluir um item; o lápis edita, e a exclusão fica dentro da edição. Inativo, o item sai do Painel de Bordo.</li>
               <li>
                 Mudar o cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá,
-                ela não fecha, e a DRE mostra o aviso. Os cards dos
+                ela não fecha, e a tela Resultados do mês mostra o aviso. Os cards dos
                 Relatórios Executivos acham o item pelo quadro, pelo nome e pela abreviação: mudá-los tira o card do relatório.
               </li>
             </ul>
           }
-          descricao="Os itens do Painel de Bordo (Resultados e Performance). O Painel de Bordo de Resultados Empresariais, o dos cenários e os cards dos Relatórios Executivos usam os itens ativos daqui. Cada item tem a sua Metodologia, uma fórmula sobre os indicadores. Carregado com os itens e as contas que a ferramenta já mostrava."
+          descricao="Os itens do Painel de Bordo (Resultados e Performance). O Painel de Bordo de Resultados Empresariais, o dos cenários e os cards dos Relatórios Executivos usam os itens ativos daqui. Cada item tem a sua Metodologia, uma fórmula sobre os indicadores."
         />
       </PermissionGuard>
     </ProtectedLayout>

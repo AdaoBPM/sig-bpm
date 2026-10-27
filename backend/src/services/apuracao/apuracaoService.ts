@@ -206,9 +206,10 @@ async function telasSemValor(competenciaId: string): Promise<string[]> {
     // Sem os documentos, os custos vão às linhas sem a tarefa (26/10/2026: a etapa Linhas).
     requisicoes + notas ? null : "Importações (nenhuma requisição nem nota fiscal: os custos vão às linhas sem a tarefa)",
     manuais ? null : "Lançamentos (nenhum lançamento manual)",
-    receitaCalculada + receitaManual ? null : "Receita (nenhuma receita calculada nem ajuste manual)",
-    importados + digitados ? null : "Indicadores (nenhum indicador importado ou digitado)",
-    estoque ? null : "Estoque (nenhum saldo)",
+    // As abas pelo caminho (27/10/2026): Receita e Estoque em Prévias, Indicadores em Totais.
+    receitaCalculada + receitaManual ? null : "Prévias › Receita (nenhuma receita calculada nem ajuste manual)",
+    importados + digitados ? null : "Totais › Indicadores (nenhum indicador importado ou digitado)",
+    estoque ? null : "Prévias › Estoque (nenhum saldo)",
     conferencia ? null : "Conferência (a planilha não foi enviada)",
   ].filter((x): x is string => x !== null);
 }

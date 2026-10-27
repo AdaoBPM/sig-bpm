@@ -36,7 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
-import { etapasDoMes } from "@/lib/etapasDoMes";
+import { etapasDoMes, rotulosDaEtapa } from "@/lib/etapasDoMes";
 import { migalhas } from "@/lib/navigation-config";
 import type { Novidade } from "@/lib/novidades";
 
@@ -92,7 +92,7 @@ export function AppHeader() {
     queryFn: () => relatoriosExecutivosService.obter(idDoRelatorio!),
     enabled: !!idDoRelatorio,
   });
-  const caminho = migalhas(pathname, (chave) => etapas.find((e) => e.chave === chave)?.rotulo ?? null, relatorio.data?.rotuloMes ?? null);
+  const caminho = migalhas(pathname, (trecho) => rotulosDaEtapa(etapas, trecho), relatorio.data?.rotuloMes ?? null);
 
   async function handleLogout() {
     if (!podeSair()) return;

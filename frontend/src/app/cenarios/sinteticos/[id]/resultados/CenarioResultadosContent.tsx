@@ -124,7 +124,7 @@ export function CenarioResultadosContent() {
         }
         comoUsar={
           <ul>
-            <li>Troque de cenário no nome dele, na barra do topo; ao lado, a tela Indicadores.</li>
+            <li>Troque de cenário no nome dele, na barra do topo; ao lado, o Painel de Bordo, com a aba Indicadores.</li>
             {analitico ? <li>No cenário analítico, a DRE é calculada a partir das premissas e não se edita aqui: os valores mudam com as premissas.</li> : null}
             <li>Escolha a visão nas abas: Consolidado ou cada unidade (as que o seu perfil lê).</li>
             {analitico ? (

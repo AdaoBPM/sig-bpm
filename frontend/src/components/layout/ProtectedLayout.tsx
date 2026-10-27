@@ -16,7 +16,7 @@ import { BarraDoCenario, lerRotaDoCenario } from "@/app/cenarios/components/Barr
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
-import { lerRotaDoMes } from "@/lib/etapasDoMes";
+import { abasDoMes, lerRotaDoMes } from "@/lib/etapasDoMes";
 import { abasDaTela, grupoDaTela, permissaoDaTela, primeiraTelaPermitida } from "@/lib/navigation-config";
 import { AbasDaTela } from "@/components/shared/AbasDaTela";
 
@@ -59,7 +59,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   // Nas telas de um cenário sintético, a barra do cenário (Resultados e Indicadores).
   const doCenario = lerRotaDoCenario(pathname);
   // Nas telas com abas (17/10/2026: os Cadastros da Controladoria), o nome da tela e as abas que o perfil alcança.
-  const abas = abasDaTela(pathname, hasPermission);
+  // Nas etapas do mês com abas (27/10/2026: Totais e Prévias), o nome da etapa e as abas dela.
+  const abas = abasDaTela(pathname, hasPermission) ?? abasDoMes(pathname, hasPermission);
 
   return (
     <SidebarProvider>

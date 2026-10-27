@@ -311,13 +311,14 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ler"],
   [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ler"],
   [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ler"],
-  [/^\/competencias\/[^/]+\/receita-previa/, "receita:ler"],
-  [/^\/competencias\/[^/]+\/rateios/, "rateios:ler"],
-  [/^\/competencias\/[^/]+\/estoque/, "estoque:ler"],
+  // As abas das telas Totais e Prévias (27/10/2026).
+  [/^\/competencias\/[^/]+\/receita-previa/, "previas.receita:ler"],
+  [/^\/competencias\/[^/]+\/rateios/, "totais.rateios:ler"],
+  [/^\/competencias\/[^/]+\/estoque/, "previas.estoque:ler"],
   [/^\/competencias\/[^/]+\/conferencia-planilha/, "conferencia:ler"],
   [/^\/competencias\/[^/]+\/dre/, "dre:ler"],
   [/^\/competencias\/[^/]+\/linhas/, "linhas_mes:ler"],
-  [/^\/competencias\/[^/]+\/indicadores/, "indicadores_mes:ler"],
+  [/^\/competencias\/[^/]+\/indicadores/, "totais.indicadores:ler"],
   [/^\/competencias(\/|$)/, "fechamento:ler"],
 ];
 
@@ -378,11 +379,12 @@ export type Migalha = { rotulo: string; href?: string };
  * O caminho no topo (G2 do levantamento de layout): "Fechamento Mensal › 08/2026 ›
  * Classificação" nas telas do mês; "Grupo de telas › Tela" nas demais.
  */
-export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string | null, rotuloDoRelatorio?: string | null): Migalha[] {
+export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => string[] | null, rotuloDoRelatorio?: string | null): Migalha[] {
   const mes = pathname.match(/^\/competencias\/(\d{4})-(\d{2})(?:\/([^/]+))?/);
   if (mes) {
-    const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? getPageTitle(pathname)) : null;
-    return [{ rotulo: "Fechamento Mensal", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...(etapa ? [{ rotulo: etapa }] : [])];
+    // Nas etapas com abas (Totais e Prévias, 27/10/2026), a etapa e a aba: "08/2026 › Totais › Rateios".
+    const etapa = mes[3] ? (rotuloDaEtapa(mes[3]) ?? [getPageTitle(pathname)]) : [];
+    return [{ rotulo: "Fechamento Mensal", href: "/competencias" }, { rotulo: `${mes[2]}/${mes[1]}` }, ...etapa.map((rotulo) => ({ rotulo }))];
   }
   // As telas de um cenário: "Cenários Sintéticos › Resultados" (ou "Cenários Analíticos › Resultados", 13/10/2026).
   const cenario = pathname.match(/^\/cenarios\/(sinteticos|analiticos)\/[^/]+\/([^/]+)/);

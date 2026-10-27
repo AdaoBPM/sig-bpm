@@ -615,7 +615,7 @@ export function PainelContent() {
             <li>Troque entre as abas Resultados e Performance (os unitários) e Indicadores. Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>Os itens (os cards), os quadros e a ordem deles vêm do cadastro Cadastros da Controladoria / Analítico / Painel de Bordo: nome, comportamento, grupo, quadro, Metodologia e formato.</li>
             <li>
-              Na aba Indicadores (antes, a tela Indicadores), os indicadores do exercício mês a mês até o Período, com o acumulado e, nas colunas de
+              Na aba Indicadores, os indicadores do exercício mês a mês até o Período, com o acumulado e, nas colunas de
               rótulo preto, o orçado do último mês e o acumulado do orçado. O Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem
               também nela; fora do Orçamento, as colunas do orçado trazem o nome da marcação escolhida na Comparação (Previsão SET/26, Previsão
               Acum.…), como em Resultados. Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo; use os filtros nos rótulos das colunas;

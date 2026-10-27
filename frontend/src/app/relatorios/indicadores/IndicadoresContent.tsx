@@ -52,6 +52,7 @@ export function IndicadoresContent({ periodoFixo }: { periodoFixo?: { ano: numbe
         titulo="Indicadores"
         comoUsar={
           <ul>
+            {periodoFixo ? <li>A tela Totais tem duas abas: Indicadores (esta, com os indicadores gerenciais do mês) e Rateios (os percentuais de cada chave de rateio).</li> : null}
             <li>
               {periodoFixo
                 ? "Os valores do mês desta competência; troque o mês no seletor da barra de etapas. Num mês não apurado, os indicadores da DRE ficam sem valor."

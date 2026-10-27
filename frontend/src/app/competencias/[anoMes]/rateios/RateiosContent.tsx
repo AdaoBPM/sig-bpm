@@ -60,10 +60,11 @@ export function RateiosContent() {
         selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do rateio" /> : null}
         comoUsar={
           <ul>
+            <li>A tela Totais tem duas abas: Indicadores (os indicadores gerenciais do mês) e Rateios (esta, com os percentuais de cada chave de rateio).</li>
             <li>Cada seção é uma chave de rateio, com o volume total no título e um card por destino: o percentual em destaque e o volume apurado.</li>
             <li>Um “Hoje:” em amarelo, sob o volume, é o volume atual das listas, diferente do apurado: reapure para usá-lo.</li>
             <li>Para conferir os volumes de origem, veja as Listas Operacionais.</li>
-            <li>Depois da apuração da DRE, a tela fica congelada: o que mudar só entra ao reapurar a competência na DRE.</li>
+            <li>Depois da apuração, a aba fica congelada: o que mudar só entra ao reapurar a competência, na tela Resultados.</li>
           </ul>
         }
         sobre={
@@ -75,7 +76,7 @@ export function RateiosContent() {
         }
         acoes={
           !bloqueada && dados ? (
-            <PermissionGuard permission="rateios:editar">
+            <PermissionGuard permission="totais.rateios:editar">
               <Button
                 type="button"
                 onClick={() => apurar.mutate()}
@@ -116,7 +117,7 @@ export function RateiosContent() {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-800" />
           <p className="text-sm text-yellow-800">
             As listas mudaram depois da apuração. Em amarelo, sob o destino, está o volume de hoje, diferente do apurado; os percentuais
-            ainda usam o apurado. {bloqueada ? "Reapure a competência na DRE para usar os volumes de hoje." : "Apure de novo para usá-los."}
+            ainda usam o apurado. {bloqueada ? "Reapure a competência, na tela Resultados, para usar os volumes de hoje." : "Apure de novo para usá-los."}
           </p>
         </div>
       ) : null}

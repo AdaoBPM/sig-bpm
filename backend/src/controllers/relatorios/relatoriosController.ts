@@ -40,7 +40,7 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
       acao: "EXPORTACAO",
       entidade: "relatorio",
       entidadeId: relatorio,
-      metadados: { formato: request.query.formato, ano: request.query.ano, ate: request.query.ate, visoes: r.visoes, arquivo: r.nomeArquivo },
+      metadados: { formato: request.query.formato, ano: request.query.ano, ate: request.query.ate, visoes: r.visoes, arquivo: r.nomeArquivo, ...(request.query.detalhes === "1" ? { detalhes: true } : {}) },
     });
     response.setHeader("Content-Type", r.tipo);
     response.setHeader("Content-Disposition", `attachment; filename="${r.nomeArquivo.normalize("NFD").replace(/[^ -~]/g, "")}"; filename*=UTF-8''${encodeURIComponent(r.nomeArquivo)}`);
@@ -56,10 +56,10 @@ async function enviarArquivo(request: Request, response: Response, relatorio: st
  * as mesmas rotas com ?etapa=1 e vê o mês aberto, se o usuário tem a tela dela (indicadores_mes, 14/10/2026).
  */
 const tem = (request: Request, p: string) => request.user!.permissions.includes(p);
-const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
+const somenteFechadas = (request: Request) => !(request.query.etapa === "1" && tem(request, "totais.indicadores:ler"));
 /** Os indicadores: a tela Indicadores dos Resultados Empresariais ou a etapa do Fechamento Mensal (?etapa=1). */
 // A aba Indicadores do Painel de Bordo (19/10/2026; antes, a tela Indicadores).
-const podeIndicadores = (request: Request) => tem(request, "relatorio_painel.indicadores:ler") || (request.query.etapa === "1" && tem(request, "indicadores_mes:ler"));
+const podeIndicadores = (request: Request) => tem(request, "relatorio_painel.indicadores:ler") || (request.query.etapa === "1" && tem(request, "totais.indicadores:ler"));
 
 /** As unidades das linhas que o perfil vê (26/10/2026): as das abas Matriz, Filial e Serviços que ele lê. */
 const unidadesDasLinhas = (request: Request) => [1, 2, 3].filter((u) => tem(request, `relatorio_resultados.${ABA_DA_VISAO[u]}:ler`));
@@ -173,8 +173,10 @@ export const relatoriosController = {
     else if (g.success && g.data) e = { tipo: "centro", grupo: g.data };
     else if (v.success && typeof v.data === "number") e = { tipo: "visao", visao: v.data as 0 | 1 | 2 | 3 | 4 | 5 };
     else return response.status(400).json({ error: "Visão inválida: use ?visao=0..5, ?grupo= ou ?escopo=unidades|centros." });
+    // ?detalhes=1 (27/10/2026): no Excel, a aba Detalhes no fim, com os movimentos do balancete de cada aba.
+    const detalhes = request.query.detalhes === "1";
     return enviarArquivo(request, response, "resultados", () =>
-      exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, acesso),
+      exportacaoRelatoriosService.resultados(p.ano, p.ate, e, formato.data, request.user!.nome, acesso, detalhes),
     );
   },
 

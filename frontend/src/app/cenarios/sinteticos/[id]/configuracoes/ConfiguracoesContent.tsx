@@ -78,7 +78,7 @@ export function ConfiguracoesContent() {
             )}
             {analitico ? null : (
               <li>
-                Na aba Indicadores Manuais (antes, no Painel de Bordo), os quadros de lotação e os indicadores do Comercial e do Administrativo, que
+                Na aba Indicadores Manuais, os quadros de lotação e os indicadores do Comercial e do Administrativo, que
                 não saem da DRE: vêm da aba das metas do arquivo importado; clique numa linha para digitar os meses (as células digitadas ficam em
                 amarelo) ou no indicador, sem a permissão de editar, para ver o gráfico. O Painel de Bordo, aba Indicadores, mostra todos os
                 indicadores do cenário.

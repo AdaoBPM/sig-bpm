@@ -245,7 +245,7 @@ const centros: DefinicaoCadastro = {
     { nome: "codigoRM", rotulo: "Código RM", tipo: "texto", travaComMovimento: true, ajuda: "A chave do balancete. Vazio só para centros mantidos fora do RM." },
     { nome: "coligada", rotulo: "Coligada", tipo: "inteiro" },
     { nome: "nomeRM", rotulo: "Nome no RM", tipo: "texto", obrigatorio: true },
-    { nome: "nomeControladoria", rotulo: "Centro de custo (controladoria)", tipo: "texto", travaComMovimento: true, ajuda: "Agrupa os centros na visão por centro de custo (DRE e Resultados)." },
+    { nome: "nomeControladoria", rotulo: "Centro de custo (controladoria)", tipo: "texto", travaComMovimento: true, ajuda: "Agrupa os centros na visão por centro de custo (Resultados, no mês e em Resultados Empresariais)." },
     {
       nome: "departamento",
       rotulo: "Departamento",
@@ -904,7 +904,7 @@ const estruturaIndicadores: DefinicaoCadastro = {
     { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, travaComMovimento: true },
     { nome: "sentido", rotulo: "Comportamento", rotuloColuna: "Comp.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(SENTIDOS) },
     { nome: "unidade", rotulo: "Unidade de Medida", rotuloColuna: "Und.", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(UNIDADES_DE_INDICADOR) },
-    { nome: "descricao", rotulo: "Descrição", tipo: "texto", larguraInteira: true, naTabela: false, ajuda: "O texto que a tela Indicadores mostra sob o nome." },
+    { nome: "descricao", rotulo: "Descrição", tipo: "texto", larguraInteira: true, naTabela: false, ajuda: "O texto que a aba Indicadores do Painel de Bordo mostra sob o nome." },
     { nome: "formula", rotulo: "Metodologia", tipo: "formula", larguraInteira: true, naTabela: false, opcoes: itensDaFormula },
     { nome: "metodologiaTexto", rotulo: "Metodologia", tipo: "texto", derivado: true, noFormulario: false },
     { nome: "modo", rotulo: "Acumulado", tipo: "opcao", obrigatorio: true, opcoes: opcoesFixas(MODOS_DO_ACUMULADO) },
@@ -1388,7 +1388,7 @@ const painelBordo: DefinicaoCadastro = {
       larguraInteira: true,
       ajudaAoLado: true,
       opcoes: opcoesFixas(FORMATOS_DO_PAINEL),
-      ajuda: "O mesmo no Atual e no Acumulado (21/10/2026; antes, o Acumulado podia ter outro). A unidade vai no rótulo do card (Atual (R$ M)…), e não nos valores.",
+      ajuda: "O mesmo no Atual e no Acumulado. A unidade vai no rótulo do card (Atual (R$ M)…), e não nos valores.",
     },
     {
       nome: "percentual",

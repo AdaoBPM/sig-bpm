@@ -5,7 +5,16 @@ import { Download, FileImage, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 
 import { mensagemDoErro, nomeDoArquivo } from "../../competencias/[anoMes]/dre/components/ExportarDRE";
@@ -30,6 +39,7 @@ export function ExportarRelatorio({
   padrao,
   rotulo = "Exportar",
   imagem,
+  detalhes = false,
 }: {
   caminho?: string;
   endereco?: string;
@@ -42,13 +52,19 @@ export function ExportarRelatorio({
    * (recolhida ou expandida), num PNG com `nome`.
    */
   imagem?: { nome: string };
+  /**
+   * A caixa “Incluir a Aba Detalhes” no Excel (27/10/2026: os Resultados Empresariais): marcada, o pedido leva
+   * detalhes=1, e o arquivo traz no fim a aba Detalhes, com os movimentos do balancete, como no Exportar dos extratos.
+   */
+  detalhes?: boolean;
 }) {
   const [gerando, setGerando] = useState(false);
+  const [comDetalhes, setComDetalhes] = useState(false);
 
   async function baixar(formato: Formato, o: OpcaoExportar) {
     setGerando(true);
     try {
-      const r = await api.get<Blob>(o.url ?? endereco ?? `/proxy/relatorios/${caminho}/exportar`, { params: { ...o.params, formato }, responseType: "blob" });
+      const r = await api.get<Blob>(o.url ?? endereco ?? `/proxy/relatorios/${caminho}/exportar`, { params: { ...o.params, formato, ...(formato === "xlsx" && detalhes && comDetalhes ? { detalhes: 1 } : {}) }, responseType: "blob" });
       const url = URL.createObjectURL(r.data);
       const a = document.createElement("a");
       a.href = url;
@@ -98,6 +114,17 @@ export function ExportarRelatorio({
               {formato === "xlsx" ? <FileSpreadsheet className="size-3.5" /> : <FileText className="size-3.5" />}
               {formato === "xlsx" ? "Excel" : "PDF"}
             </DropdownMenuLabel>
+            {formato === "xlsx" && detalhes ? (
+              <DropdownMenuCheckboxItem
+                checked={comDetalhes}
+                onCheckedChange={setComDetalhes}
+                closeOnClick={false}
+                className="pl-6"
+                title="Acrescenta, no fim do arquivo, a aba Detalhes: os movimentos do balancete de cada aba, item a item"
+              >
+                Incluir a Aba Detalhes
+              </DropdownMenuCheckboxItem>
+            ) : null}
             {opcoes.filter((o) => formato === "xlsx" || o.pdf).map((o) => (
               <DropdownMenuItem key={o.chave} onClick={() => void baixar(formato, o)} className="pl-6">
                 {formato === "xlsx" ? o.excel : o.pdf}

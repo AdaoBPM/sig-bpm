@@ -109,7 +109,7 @@ export function LancamentosManuaisContent() {
             </li>
           </ul>
         }
-        sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes, em qualquer aba de resultado (desde 21/10/2026). É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
+        sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes, em qualquer aba de resultado. É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
         acoes={
           !fechada && dados ? (
             <PermissionGuard permission="lancamentos_manuais:editar">

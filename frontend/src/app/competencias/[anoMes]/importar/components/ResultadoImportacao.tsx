@@ -625,7 +625,7 @@ function ConcluidaLotacao({ imp }: { imp: ImportacaoDetalhe }) {
       </div>
       {resumo ? (
         <p className="text-sm text-gray-600">
-          Aba lida: {resumo.aba}.{resumo.modo === "CARGA_RETROATIVA" ? " Carga retroativa (19/10/2026), sem reabrir a competência." : ""} Os centros aparecem na aba Quadro de
+          Aba lida: {resumo.aba}.{resumo.modo === "CARGA_RETROATIVA" ? " Carga retroativa, sem reabrir a competência." : ""} Os centros aparecem na aba Quadro de
           Lotação das Listas e são a referência do quadro de lotação dos Cenários Analíticos; não entram na apuração nem nos indicadores de quadro de
           lotação (esses seguem a aba Indicadores (Admin.)).
         </p>
@@ -663,7 +663,7 @@ function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
             Aba lida: {resumo.aba}.{" "}
             {metas
               ? "Os valores são o orçado do Painel de Bordo (Resultados Empresariais); não entram na apuração."
-              : "Os valores vão para a tela Indicadores (Resultados Empresariais); não entram na apuração."}
+              : "Os valores vão para a aba Indicadores do Painel de Bordo (Resultados Empresariais); não entram na apuração."}
           </p>
         </div>
       ) : null}

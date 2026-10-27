@@ -96,7 +96,7 @@ export function ListaIndicadores() {
         sobre={
           <p>
             Os indicadores numerados do {lista.rotulo}, como na aba Realizado (SIG) do INDICADORES DE RESULTADO, com o valor do mês importado
-            da aba {aba} ou digitado aqui, que substitui o importado. São os mesmos valores da tela Indicadores e do Painel de Bordo; não entram
+            da aba {aba} ou digitado aqui, que substitui o importado. São os mesmos valores do Painel de Bordo, também na aba Indicadores; não entram
             na apuração.
           </p>
         }

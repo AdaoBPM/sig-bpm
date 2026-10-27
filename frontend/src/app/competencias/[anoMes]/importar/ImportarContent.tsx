@@ -185,7 +185,7 @@ export function ImportarContent() {
             <li>Na aba Em Vigor, clique numa linha para abrir o relatório: linhas aceitas, recusadas e avisos.</li>
             <li>
               A aba Em Vigor mostra sempre todos os tipos, também os não importados. Para fechar a competência, todos precisam estar importados, menos os
-              marcados como Opcional (a DRE do Comercial e o saldo inicial do estoque); os que faltam aparecem nos motivos do Fechar Competência, na DRE. O
+              marcados como Opcional (a DRE do Comercial e o saldo inicial do estoque); os que faltam aparecem nos motivos do Fechar Competência, na tela Resultados. O
               arquivo recusado por não ter registros do mês (o mês sem movimento daquela lista) aparece como Sem Registros no Mês e conta como entregue.
             </li>
             <li>A aba Histórico guarda todas as importações, inclusive as recusadas e as substituídas.</li>
@@ -197,9 +197,9 @@ export function ImportarContent() {
           <>
             <p>
               O balancete (LISTAS REALIZADO (RESULTADOS)), as listas operacionais — as abas (Resumo), Produção (Armaduras), Produção
-              (Metalúrgica) e as demais do LISTAS REALIZADO (OPERAÇÃO) —, o Quadro de Lotação por centro de custo (desde 19/10/2026; a referência do
+              (Metalúrgica) e as demais do LISTAS REALIZADO (OPERAÇÃO) —, o Quadro de Lotação por centro de custo (a referência do
               quadro de lotação dos Cenários Analíticos, fora da apuração), os indicadores do Administrativo e do Comercial, a DRE do Comercial
-              e o saldo inicial do estoque entram por aqui (desde 15/10/2026, o balancete é detalhado: um movimento por linha, com o cliente ou fornecedor, a emissão e o histórico, que o extrato de uma conta na DRE abre no modal Balancete; as abas Requisições (Lista) e Notas Fiscais (Lista) saíram e, desde 26/10/2026, voltaram: a tarefa dos itens leva os custos às linhas, na etapa Linhas da apuração) (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
+              e o saldo inicial do estoque entram por aqui (o balancete é detalhado: um movimento por linha, com o cliente ou fornecedor, a emissão e o histórico, que o extrato de uma conta na DRE abre no modal Balancete; nas abas Requisições (Lista) e Notas Fiscais (Lista), a tarefa dos itens leva os custos às linhas, na etapa Linhas da apuração) (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
               lote anterior por inteiro.
             </p>
             <p>

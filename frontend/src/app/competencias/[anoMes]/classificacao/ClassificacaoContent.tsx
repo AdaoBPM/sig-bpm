@@ -215,14 +215,14 @@ export function ClassificacaoContent() {
               tipo só (&lt;ERRO!&gt;, &lt;DEP.!&gt;, &lt;ATR.!&gt;, Sem Destino na DRE, Centro de Custo Sem Cadastro ou Sem Aba de Resultado), filtre pela coluna Verificação.
             </li>
             <li>
-              “Sem Aba de Resultado” (21/10/2026) é o lançamento que nenhuma aba de resultado soma — a linha da DRE da conta não combina com o balde do
+              “Sem Aba de Resultado” é o lançamento que nenhuma aba de resultado soma — a linha da DRE da conta não combina com o balde do
               centro (por exemplo, uma conta de custo de produção num centro de balde DESPESAS) — e ficaria fora do resultado. Nos Serviços
               Complementares, as contas de Montagem dos centros de balde COMPLEMENTAR entram na linha equivalente dos Complementares; sem ela, a pendência
               aparece.
             </li>
             <li>Use os filtros nos rótulos das colunas (centro de custo, conta, classificação…) para achar os lançamentos.</li>
             <li>Corrija a causa no cadastro (Centros de Custo, Contas de Resultado ou Reclassificações) e clique em “Reclassificar”.</li>
-            <li>Sem pendências, siga para a DRE e apure a competência.</li>
+            <li>Sem pendências, siga para a tela Resultados e apure a competência.</li>
           </ul>
         }
         sobre={

@@ -85,10 +85,11 @@ export function EstoqueContent() {
         }
         comoUsar={
           <ul>
+            <li>A tela Prévias (Prévias de Receita e Estoque) tem duas abas: Receita (a receita prévia do mês) e Estoque (esta, com o saldo de estoque prévio).</li>
             <li>Os cards no alto trazem o saldo de cada linha (Estrutura, Alveolares, Estacas) e o geral, em m³ e em reais, com o Preço Médio.</li>
             <li>Use os filtros nos rótulos das colunas; nas colunas de Movimento, por exemplo, para ver só as obras que se moveram no mês. A coluna Valoração diz como o saldo da obra foi valorado.</li>
             <li>Use “Apurar Estoque” para calcular o saldo; o mês seguinte parte dele.</li>
-            <li>Depois da apuração da DRE, a tela fica congelada: o que mudar só entra ao reapurar a competência na DRE.</li>
+            <li>Depois da apuração, a aba fica congelada: o que mudar só entra ao reapurar a competência, na tela Resultados.</li>
           </ul>
         }
         sobre={
@@ -100,7 +101,7 @@ export function EstoqueContent() {
         }
         acoes={
           !bloqueada && dados ? (
-            <PermissionGuard permission="estoque:editar">
+            <PermissionGuard permission="previas.estoque:editar">
               <Button
                 type="button"
                 onClick={() => apurar.mutate()}

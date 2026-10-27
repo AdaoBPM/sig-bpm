@@ -7,7 +7,7 @@ import { RateiosContent } from "./RateiosContent";
 export default function RateiosPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="rateios:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="totais.rateios:ler" fallback={<SemLeitura />}>
         <RateiosContent />
       </PermissionGuard>
     </ProtectedLayout>

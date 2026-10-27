@@ -282,7 +282,7 @@ export function ConferenciaPlanilhaContent() {
         <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700">{mensagemDeErro(consulta.error, "Erro ao carregar a conferência.")}</div>
       ) : null}
       {r?.conferencia && !r.apuradaEm ? (
-        <div className="rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">A competência ainda não foi apurada: apure-a (tela da DRE) para comparar.</div>
+        <div className="rounded-sm border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">A competência ainda não foi apurada: apure-a (tela Resultados) para comparar.</div>
       ) : null}
 
       {r?.resumo && !r.visoes.length ? <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Seu perfil não tem acesso a nenhuma aba desta tela.</p> : null}

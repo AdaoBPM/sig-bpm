@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
  */
 export function AvisoCongelado({ anoMes, fechada, oQue }: { anoMes: string; fechada: boolean; oQue: string }) {
   const explicacao = fechada
-    ? `Competência fechada: os valores ${oQue} não podem ser recalculados. Para mudar, reabra a competência na tela da DRE.`
-    : `Os valores ${oQue} estão congelados pela apuração da competência. Para recalcular, reapure a competência na tela da DRE.`;
+    ? `Competência fechada: os valores ${oQue} não podem ser recalculados. Para mudar, reabra a competência na tela Resultados.`
+    : `Os valores ${oQue} estão congelados pela apuração da competência. Para recalcular, reapure a competência na tela Resultados.`;
   return (
     <Link
       href={`/competencias/${anoMes}/dre`}
@@ -22,7 +22,7 @@ export function AvisoCongelado({ anoMes, fechada, oQue }: { anoMes: string; fech
       className={cn(buttonVariants(), "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm")}
     >
       <Lock className="size-4" />
-      {fechada ? "Fechada · Reabrir na DRE" : "Congelada pela Apuração · Reapurar na DRE"}
+      {fechada ? "Fechada · Reabrir em Resultados" : "Congelada pela Apuração · Reapurar em Resultados"}
     </Link>
   );
 }

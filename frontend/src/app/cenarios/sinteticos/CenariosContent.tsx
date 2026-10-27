@@ -151,7 +151,7 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
               importar um arquivo no cenário ou mudar o nome, a descrição, a visualização, a referência e o comparativo, abra o cenário e vá em
               Configurações. Cada marcação fica ativa em um cenário só: marcar outro tira a marcação do anterior.
             </li>
-            <li>O cenário marcado como Orçamento dá o orçado das telas Indicadores e Painel de Bordo de Resultados Empresariais.</li>
+            <li>O cenário marcado como Orçamento dá o orçado do Painel de Bordo de Resultados Empresariais, também na aba Indicadores.</li>
             <li>A DRE do cenário se edita na tela Resultados dele, sem precisar de planilha. Um cenário marcado não se exclui; marcado ou com a versão congelada, não se edita: a DRE, os indicadores manuais, a referência, o nome, a descrição, o comparativo e as justificativas (a visualização, sim). Tire a marcação (ou marque outro cenário) antes.</li>
             <li>
               Ao criar (Novo Cenário) ou editar um cenário, escolha a Visualização: Particular (só você, que criou, e os Administradores

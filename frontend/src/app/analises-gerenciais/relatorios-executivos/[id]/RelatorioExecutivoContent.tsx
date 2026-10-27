@@ -716,7 +716,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as oito abas: Capa, Introdução,
               Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
               Serviços), Administrativo (Performance Administrativa) e Encerramento. Todos os que leem a tela veem todas as
-              abas, e todos os que a editam editam todas (desde 23/10/2026, sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
+              abas, e todos os que a editam editam todas (sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
               na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O check verde ao lado do nome (o das etapas feitas do Fechamento Mensal) diz que o grupo está finalizado (a dica dele mostra quem o
               finalizou e quando).
             </li>
@@ -741,7 +741,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <li>
               Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
               nele para mudar) e o texto no card com o destaque da cor. No menu da edição (logo abaixo das abas, com o bloco escolhido), a formatação do
-              texto da anotação e da legenda da foto: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
+              texto da anotação e da legenda da imagem: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
               verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 144; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana, Georgia e as abertas Roboto, Open Sans, Montserrat, Lato e Poppins; a fonte do texto onde está o cursor fica destacada na lista, em negrito e com o fundo cinza) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
               para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12 a 32; o padrão, 18), e o da fonte, a dele. No menu da edição, escolha a nota: Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
               Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
@@ -768,7 +768,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               cards, ela se destaca sob o mouse e se amplia ao clicar.
             </li>
             <li>
-              Imagem com Legenda (antes, Foto) envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
+              Imagem com Legenda envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
               amarelo-ouro. A imagem aumenta e diminui sempre na mesma proporção. Nas imagens (com legenda, livres e de fundo), o botão de ajustes da barra do
               bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; nas com legenda e nas livres, também a Borda (a
               espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). “Restaurar Ajustes” volta à imagem como veio, e “Trocar
@@ -781,7 +781,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <li>
               Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
               envio) ou o link de um vídeo público do YouTube, do Instagram, do Facebook ou do LinkedIn (o endereço ou o código “incorporar” da
-              plataforma). Ele entra como a foto, com a legenda embaixo; o do computador e o do YouTube aumentam e diminuem na proporção do vídeo. Na edição
+              plataforma). Ele entra como a Imagem com Legenda, com a legenda embaixo; o do computador e o do YouTube aumentam e diminuem na proporção do vídeo. Na edição
               e na leitura, o vídeo tem os controles do player.
             </li>
             <li>

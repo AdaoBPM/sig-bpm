@@ -79,8 +79,8 @@ function Situacao({ dados }: { dados: LinhasDoMes }) {
       {s.podeGravar
         ? "A competência foi fechada antes da etapa Linhas: grave as linhas (botão Gravar), com a Alocação nas Linhas e as tarefas de hoje."
         : s.apurada
-          ? "A competência foi apurada antes da etapa Linhas: reapure-a (DRE › Apurar) para gravar as linhas."
-          : "A competência ainda não foi apurada: as linhas são gravadas na apuração (DRE › Apurar)."}
+          ? "A competência foi apurada antes da etapa Linhas: reapure-a (Resultados › Apurar) para gravar as linhas."
+          : "A competência ainda não foi apurada: as linhas são gravadas na apuração (Resultados › Apurar)."}
     </Destaque>
   );
 }
@@ -210,7 +210,7 @@ export function LinhasContent() {
         }
         comoUsar={
           <ul>
-            <li>Apure a competência (DRE › Apurar): a etapa Linhas vem por último e grava as linhas do mês.</li>
+            <li>Apure a competência (Resultados › Apurar): a etapa Linhas vem por último e grava as linhas do mês.</li>
             <li>
               Confira antes de fechar: a Margem de Contribuição da DRE de cada unidade contra a soma das linhas (iguais, com o que ficou Sem Linha), a margem de
               cada linha, de que passo veio cada valor, os documentos do mês e os avisos.

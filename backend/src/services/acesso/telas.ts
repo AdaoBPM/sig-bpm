@@ -118,12 +118,27 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       { codigo: "classificacao", nome: "Classificação" },
       { codigo: "lancamentos_manuais", nome: "Lançamentos" },
       { codigo: "listas_operacionais", nome: "Listas" },
-      { codigo: "indicadores_mes", nome: "Indicadores" },
-      { codigo: "receita", nome: "Receita" },
-      { codigo: "rateios", nome: "Rateios" },
-      { codigo: "estoque", nome: "Estoque" },
-      // A aba Sem Centros de Custo também na DRE do mês (15/10/2026), antes de Obras.
-      { codigo: "dre", nome: "DRE", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
+      // Totais e Prévias (27/10/2026, pedido do Adão): telas com abas, no lugar das telas Indicadores, Rateios, Receita e
+      // Estoque (as chaves antigas indicadores_mes, rateios, receita e estoque, migradas para as abas).
+      {
+        codigo: "totais",
+        nome: "Totais",
+        abas: [
+          { codigo: "indicadores", nome: "Indicadores" },
+          { codigo: "rateios", nome: "Rateios" },
+        ],
+      },
+      {
+        codigo: "previas",
+        nome: "Prévias",
+        abas: [
+          { codigo: "receita", nome: "Receita" },
+          { codigo: "estoque", nome: "Estoque" },
+        ],
+      },
+      // A aba Sem Centros de Custo também na DRE do mês (15/10/2026), antes de Obras. A tela se chama Resultados desde
+      // 27/10/2026 (antes, DRE); a chave não muda.
+      { codigo: "dre", nome: "Resultados", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
       // A etapa Linhas (26/10/2026): a DRE de cada unidade dividida entre as linhas, gravada na apuração. Editar grava as
       // linhas de uma competência fechada antes dela.
       { codigo: "linhas_mes", nome: "Linhas" },

@@ -10,7 +10,7 @@ import { ChevronDown, Lock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
-import { etapasDoMes, rotuloDoMes } from "@/lib/etapasDoMes";
+import { chaveDaEtapa, etapasDoMes, rotuloDoMes } from "@/lib/etapasDoMes";
 
 import { apuracaoService } from "@/app/competencias/services/apuracaoService";
 import { competenciasService } from "@/app/competencias/services/competenciasService";
@@ -30,7 +30,9 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const etapas = etapasDoMes(hasPermission, user?.acesso);
-  const veSituacao = ["dre:ler", "classificacao:ler", "receita:ler"].some(hasPermission);
+  const veSituacao = ["dre:ler", "classificacao:ler", "previas.receita:ler"].some(hasPermission);
+  // A etapa acesa: nas etapas com abas (Totais e Prévias), a de qualquer aba delas.
+  const etapaAtual = chaveDaEtapa(chave);
 
   const competencias = useQuery({ queryKey: ["competencias", "todos"], queryFn: () => competenciasService.listar() });
   const situacao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes), enabled: veSituacao });
@@ -99,7 +101,7 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
       {/* Quebra em duas linhas quando falta largura, sem rolar a página. */}
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1">
         {etapas.map((e) => {
-          const ativa = e.chave === chave;
+          const ativa = e.chave === etapaAtual;
           return (
             <li key={e.chave} className="flex shrink-0 items-center">
               <Link

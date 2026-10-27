@@ -7,6 +7,7 @@ import { indicadoresService } from "./indicadoresService.js";
 import { RelatorioError, resultadosService } from "./resultadosService.js";
 import { nomeDoGrupoSemCentro, type GrupoSemCentro } from "../dre/semCentroService.js";
 import { resultadosLinhaService } from "../resultadosLinha/resultadosLinhaService.js";
+import { detalhesDosResultados, type AbaDetalhada, type AlvoDosDetalhes } from "./detalhesDosResultados.js";
 import { plural } from "../../utils/plural.js";
 import { limparNome, nomeDoDepartamento, TIPO_ZIP, zipDeArquivos } from "../../lib/arquivosExportados.js";
 
@@ -39,7 +40,7 @@ export type Formato = "xlsx" | "pdf";
 // O que as visões e os centros de custo têm em comum (o orçado das visões não vai para a exportação).
 type Resultados = Pick<Awaited<ReturnType<typeof resultadosService.centros>>, "ano" | "ate" | "meses" | "linhas">;
 /** Uma aba (Excel) ou um conjunto de páginas (PDF); nos centros de custo, o departamento (para o nome do arquivo). */
-export type Bloco = { nome: string; titulo: string; dados: Resultados; departamento?: string };
+export type Bloco = { nome: string; titulo: string; dados: Resultados; departamento?: string; detalhe?: AlvoDosDetalhes | null };
 
 const VISOES: Array<{ visao: 0 | 1 | 2 | 3 | 4 | 5; nome: string }> = [
   { visao: 0, nome: "Consolidado" },
@@ -74,18 +75,23 @@ export type Identificacao = Awaited<ReturnType<typeof identificar>>;
 /** A identificação de um arquivo de fora dos Resultados Empresariais (os cenários, 14/10/2026): o período e quem gerou. */
 export const identificacaoLivre = (periodo: string, usuarioNome: string): Identificacao => ({ periodo, avisos: [], geracao: `Gerado em ${dataHora(new Date())} por ${usuarioNome} · SIG BPM` });
 
+/** O que a aba Detalhes detalha numa visão (27/10/2026): a unidade, ou as cinco no Consolidado. */
+const alvoDaVisao = (visao: number): AlvoDosDetalhes => ({ tipo: "unidades", unidades: visao === 0 ? [1, 2, 3, 4, 5] : [visao] });
+/** Uma aba exportada, para a aba Detalhes: o nome, as linhas dela e o que detalhar. */
+const abaDetalhada = (b: Bloco): AbaDetalhada => ({ nome: b.nome, codigos: b.dados.linhas.map((l) => l.codigo), alvo: b.detalhe ?? null });
+
 // A exportação de Resultados é a tela de Resultados Empresariais: só as competências fechadas (11/10/2026).
 async function blocos(ano: number, ate: number | undefined, escopo: EscopoResultados, acesso: Acesso): Promise<Bloco[]> {
   if (escopo.tipo === "visao") {
     const v = VISOES.find((x) => x.visao === escopo.visao)!;
-    return [{ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) }];
+    return [{ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true), detalhe: alvoDaVisao(v.visao) }];
   }
   if (escopo.tipo === "obra" || escopo.tipo === "obras") {
     const obras = escopo.tipo === "obra" ? [escopo.codigo] : (await resultadosService.listarObras(ano, ate, acesso, true)).obras.map((o) => o.codigo);
     const r: Bloco[] = [];
     for (const codigo of obras) {
       const dados = await resultadosService.obra(ano, codigo, ate, acesso, true);
-      r.push({ nome: dados.obra.nome, titulo: `Obra ${dados.obra.nome} (${codigo})`, dados });
+      r.push({ nome: dados.obra.nome, titulo: `Obra ${dados.obra.nome} (${codigo})`, dados, detalhe: { tipo: "obra", codigo } });
     }
     return r;
   }
@@ -95,7 +101,7 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
     for (const g of grupos) {
       // A aba do Excel tem até 31 caracteres: a DVV abreviada.
       const nome = nomeDoGrupoSemCentro(g).replace("Despesas Variáveis de Venda", "DVV");
-      r.push({ nome, titulo: `Sem Centro de Custo · ${nomeDoGrupoSemCentro(g)}`, dados: await resultadosService.semCentro(ano, g, ate, acesso, true) });
+      r.push({ nome, titulo: `Sem Centro de Custo · ${nomeDoGrupoSemCentro(g)}`, dados: await resultadosService.semCentro(ano, g, ate, acesso, true), detalhe: { tipo: "semCentro", grupo: g } });
     }
     return r;
   }
@@ -105,17 +111,17 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
     for (const id of ids) {
       const dados = await resultadosLinhaService.linha(ano, ate, id, escopo.rateios, escopo.unidades);
       const nome = `${dados.linha.nome} (${dados.linha.nomeUnidade})`;
-      r.push({ nome, titulo: escopo.rateios ? `Rateios por Obras · ${nome}` : `Linha ${nome}`, dados });
+      r.push({ nome, titulo: escopo.rateios ? `Rateios por Obras · ${nome}` : `Linha ${nome}`, dados, detalhe: null });
     }
     return r;
   }
-  if (escopo.tipo === "unidades") return Promise.all(VISOES.map(async (v) => ({ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true) })));
+  if (escopo.tipo === "unidades") return Promise.all(VISOES.map(async (v) => ({ nome: v.nome, titulo: v.nome, dados: await resultadosService.unidade(ano, v.visao, ate, acesso, true), detalhe: alvoDaVisao(v.visao) })));
   // Os centros, com o departamento de cada um (o do cadastro; com mais de um, todos) para o nome do arquivo.
   const lista = (await resultadosService.listarCentros(ano, ate, acesso, true)).grupos;
   const departamento = (g: string) => (lista.find((x) => x.grupo === g)?.departamentos ?? []).map(nomeDoDepartamento).join(" e ") || nomeDoDepartamento(null);
   const grupos = escopo.tipo === "centro" ? [escopo.grupo] : lista.map((g) => g.grupo);
   const r: Bloco[] = [];
-  for (const g of grupos) r.push({ nome: g, titulo: `Centro de Custo ${g}`, dados: await resultadosService.centros(ano, g, ate, acesso, true), departamento: departamento(g) });
+  for (const g of grupos) r.push({ nome: g, titulo: `Centro de Custo ${g}`, dados: await resultadosService.centros(ano, g, ate, acesso, true), departamento: departamento(g), detalhe: { tipo: "centro", grupo: g } });
   return r;
 }
 
@@ -366,9 +372,12 @@ function rodapes(doc: DocumentoPDF, id: Identificacao) {
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const limpar = (nome: string) => nome.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ");
 
-/** O arquivo (Excel ou PDF) com os blocos: uma aba ou um conjunto de páginas por bloco. Também para os cenários. */
-export function arquivoDeResultados(bs: Bloco[], id: Identificacao, formato: Formato, titulo: string, nomeArquivo: string) {
-  if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx(bs.map((b) => abaResultados(b, id)), titulo), visoes: bs.map((b) => b.nome) };
+/**
+ * O arquivo (Excel ou PDF) com os blocos: uma aba ou um conjunto de páginas por bloco. Também para os cenários. No Excel,
+ * `extras` vão no fim (27/10/2026: a aba Detalhes).
+ */
+export function arquivoDeResultados(bs: Bloco[], id: Identificacao, formato: Formato, titulo: string, nomeArquivo: string, extras: AbaEscrita[] = []) {
+  if (formato === "xlsx") return { nomeArquivo, tipo: XLSX, conteudo: gerarXlsx([...bs.map((b) => abaResultados(b, id)), ...extras], titulo), visoes: bs.map((b) => b.nome) };
   const doc = new DocumentoPDF(A4_PAISAGEM);
   for (const b of bs) paginasResultados(doc, b, id);
   rodapes(doc, id);
@@ -379,13 +388,16 @@ export function arquivoDeResultados(bs: Bloco[], id: Identificacao, formato: For
  * Um arquivo Excel por centro de custo, num ZIP (14/10/2026): cada um com o departamento e o centro no nome
  * ("Custos de Produção (CP) - ESTRUTURA - Resultados 2026 até 08.xlsx").
  */
-export function zipDosCentros(bs: Bloco[], id: Identificacao, sufixo: string, nomeArquivo: string) {
-  const conteudo = zipDeArquivos(bs.map((b) => ({ nome: `${b.departamento ?? nomeDoDepartamento(null)} - ${b.nome} - ${sufixo}.xlsx`, conteudo: gerarXlsx([abaResultados(b, id)], `${sufixo} - ${b.nome}`) })));
+export function zipDosCentros(bs: Bloco[], id: Identificacao, sufixo: string, nomeArquivo: string, extras: AbaEscrita[][] = []) {
+  const conteudo = zipDeArquivos(
+    bs.map((b, i) => ({ nome: `${b.departamento ?? nomeDoDepartamento(null)} - ${b.nome} - ${sufixo}.xlsx`, conteudo: gerarXlsx([abaResultados(b, id), ...(extras[i] ?? [])], `${sufixo} - ${b.nome}`) })),
+  );
   return { nomeArquivo: limparNome(nomeArquivo), tipo: TIPO_ZIP, conteudo, visoes: bs.map((b) => b.nome) };
 }
 
 export const exportacaoRelatoriosService = {
-  async resultados(ano: number, ate: number | undefined, escopo: EscopoResultados, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL) {
+  /** `detalhes` (27/10/2026): no Excel, a aba Detalhes no fim (num arquivo por centro, em cada um). */
+  async resultados(ano: number, ate: number | undefined, escopo: EscopoResultados, formato: Formato, usuarioNome: string, acesso: Acesso = ACESSO_TOTAL, detalhes = false) {
     if (escopo.tipo === "centrosArquivos" && formato !== "xlsx") throw new RelatorioError(400, "Um arquivo por centro de custo só sai em Excel.");
     // Sem `ate`, até o último mês apurado (como na tela).
     const bs = await blocos(ano, ate, escopo.tipo === "centrosArquivos" ? { tipo: "centros" } : escopo, acesso);
@@ -416,8 +428,17 @@ export const exportacaoRelatoriosService = {
                     : bs[0].nome;
     const titulo = `Resultados ${ano} - ${nomeVisao}`;
     const nomeArquivo = limpar(`Resultados ${ano} até ${String(ultimo).padStart(2, "0")} - ${nomeVisao}.${formato}`);
-    if (escopo.tipo === "centrosArquivos") return zipDosCentros(bs, id, `Resultados ${ano} até ${String(ultimo).padStart(2, "0")}`, nomeArquivo.replace(/\.xlsx$/, ".zip"));
-    return arquivoDeResultados(bs, id, formato, titulo, nomeArquivo);
+    const det = detalhes && formato === "xlsx" ? await detalhesDosResultados(ano, ultimo, acesso) : null;
+    if (escopo.tipo === "centrosArquivos") {
+      const sufixo = `Resultados ${ano} até ${String(ultimo).padStart(2, "0")}`;
+      const extras = det ? await Promise.all(bs.map(async (b) => [await det.aba([abaDetalhada(b)], `${sufixo} - ${b.nome}`)])) : [];
+      return zipDosCentros(bs, id, sufixo, nomeArquivo.replace(/\.xlsx$/, ".zip"), extras);
+    }
+    // Em Todas as Unidades, o Consolidado é a soma das outras cinco: na aba Detalhes, só elas.
+    const detalhadas = escopo.tipo === "unidades" ? bs.filter((b) => b.nome !== "Consolidado") : bs;
+    const notas = escopo.tipo === "unidades" ? ["O Consolidado é a soma das cinco unidades: os movimentos dele são os delas."] : [];
+    const extras = det ? [await det.aba(detalhadas.map(abaDetalhada), titulo, notas)] : [];
+    return arquivoDeResultados(bs, id, formato, titulo, nomeArquivo, extras);
   },
 
   /**

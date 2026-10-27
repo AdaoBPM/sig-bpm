@@ -34,20 +34,20 @@ export default function EstruturaIndicadoresPage() {
                 Média Ponderada (pelo Peso da Média, montado como a Metodologia), Último Mês (os de posição, como o quadro de lotação, e os
                 atingimentos acumulados, como os do GME 8) ou Fórmula do Acumulado (uma segunda fórmula, montada como a Metodologia com os itens
                 no Acumulado no Ano, que dá o acumulado: nas Eficiências da Operação Totais, os acumulados da Matriz e da Filial ponderados pelas
-                receitas acumuladas de cada uma). O Cálculo do Sistema (a conta no código) ficou só para voltar atrás: todos os indicadores têm
+                receitas acumuladas de cada uma). O Cálculo do Sistema (a conta no código) serve só para voltar atrás: todos os indicadores têm
                 Metodologia.
               </li>
-              <li>A Descrição é o texto que a tela Indicadores de Resultados Empresariais mostra sob o nome.</li>
-              <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os indicadores inativos (que saem das telas Indicadores e Painel de Bordo de Resultados Empresariais).</li>
+              <li>A Descrição é o texto que a aba Indicadores do Painel de Bordo de Resultados Empresariais mostra sob o nome.</li>
+              <li>Marque “Apenas Ativas”, ao lado dos botões, para esconder os indicadores inativos (que saem do Painel de Bordo de Resultados Empresariais, também da aba Indicadores).</li>
               <li>
                 Um indicador não pode usar a si mesmo, nem por outro (A usa B, que usa A): o cadastro recusa o ciclo. Nos cenários, o indicador que usa
                 outros é calculado com os valores deles no cenário (os importados, com as metas).
               </li>
               <li>O Nome de um indicador com metas em cenários, valores importados ou digitados, usado no Painel de Bordo ou na Metodologia de outro indicador, não muda, e o indicador não se exclui: inative-o.</li>
-              <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a DRE mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
+              <li>Mudar este cadastro com uma competência apurada e ainda não fechada pede reapurar (vale para todos os Cadastros da Controladoria): até lá, ela não fecha, e a tela Resultados do mês mostra o aviso. Ao gravar, a mensagem diz quais competências reapurar.</li>
             </ul>
           }
-          descricao="Os indicadores de resultado, com a fórmula que os calcula nas telas Indicadores, Painel de Bordo e Exportar de Resultados Empresariais: linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento (o cenário marcado) e outros indicadores do cadastro. Carregados com as contas que a ferramenta já fazia, conferidas mês a mês."
+          descricao="Os indicadores de resultado, com a fórmula que os calcula no Painel de Bordo de Resultados Empresariais (também na aba Indicadores e no Exportar): linhas da DRE apurada por unidade, totalizadores das Listas, indicadores do Comercial e do Administrativo e metas do Orçamento (o cenário marcado) e outros indicadores do cadastro."
         />
       </PermissionGuard>
     </ProtectedLayout>

@@ -268,7 +268,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
             <li>
               Editar: pode alterar (importar, apurar, fechar, editar cadastros…) — na tela, o que é comum a ela; na aba, o que se faz dentro dela. Os
               recortes valem por cima: com recorte por departamento (ou por centro de custo), o Fechamento Mensal não mostra Classificação,
-              Lançamentos, Receita, Rateios, Estoque e Conferência, nem o Controle de Usuários mostra a Auditoria (essas telas mostram lançamentos de
+              Lançamentos, Prévias › Receita, Totais › Rateios, Prévias › Estoque e Conferência, nem o Controle de Usuários mostra a Auditoria (essas telas e abas mostram lançamentos de
               todos os departamentos); com recorte por setor, o Fechamento Mensal mostra só Competências, Importações e Listas.
             </li>
           </ul>

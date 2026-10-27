@@ -106,11 +106,12 @@ export function ReceitaPreviaContent() {
         selo={bloqueada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da receita prévia" /> : null}
         comoUsar={
           <ul>
+            <li>A tela Prévias (Prévias de Receita e Estoque) tem duas abas: Receita (esta, com a receita prévia do mês) e Estoque (o saldo de estoque prévio).</li>
             <li>Cada quadro (Matriz, Filial e Serviços) mostra a receita bruta, os impostos e a receita líquida, com a abertura em venda global e mercantil.</li>
             <li>Clique numa linha com lupa para abrir a memória de cálculo, com uma aba por origem (Produção, Expedição, Saídas, Devoluções, Serviços e Lanç. Manuais). Filtre e ordene pelos rótulos das colunas; o total acompanha o filtro.</li>
             <li>A linha Variação do Estoque abre só as estacas que a movimentam.</li>
             <li>Em Lançamentos Manuais de Receita, “Novo Lançamento” inclui ajustes, que entram na próxima apuração.</li>
-            <li>Depois da apuração da DRE, a tela fica congelada: o que mudar só entra ao reapurar a competência na DRE.</li>
+            <li>Depois da apuração, a aba fica congelada: o que mudar só entra ao reapurar a competência, na tela Resultados.</li>
           </ul>
         }
         sobre={
@@ -121,7 +122,7 @@ export function ReceitaPreviaContent() {
         }
         acoes={
           !bloqueada && dados ? (
-            <PermissionGuard permission="receita:editar">
+            <PermissionGuard permission="previas.receita:editar">
               <Button
                 type="button"
                 onClick={() => apurar.mutate()}

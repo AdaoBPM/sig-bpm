@@ -195,7 +195,7 @@ function Lista() {
             <li>A faixa acima da tabela traz o Total da lista e as somas por unidade ou linha, como a aba Totais.</li>
             <li>Registros importados se corrigem no arquivo, reimportado em Importações.</li>
             <li>Use “Novo Registro” para incluir um registro digitado; o lápis e a lixeira editam e excluem os digitados.</li>
-            <li>As listas formam os rateios, a receita prévia e o estoque: depois de alterá-las, reapure a competência na DRE.</li>
+            <li>As listas formam os rateios, a receita prévia e o estoque: depois de alterá-las, reapure a competência na tela Resultados.</li>
           </ul>
         }
         sobre={

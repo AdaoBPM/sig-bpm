@@ -800,7 +800,7 @@ export function ResultadosContent() {
               da conta na DRE e, na Produção e na DVV, pela filial do lançamento. Clique no valor de um mês para ver os lançamentos. Os Gastos Gerais
               Variáveis ficam de fora (nos cenários, vêm das premissas). “Exportar” baixa o grupo na tela ou todos (um por aba no Excel, um por página no PDF); o Coordenador não vê a aba.
             </li>
-            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da DRE, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
+            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da tela Resultados do Fechamento Mensal, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
             <li>Expandida, role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
@@ -834,7 +834,11 @@ export function ResultadosContent() {
               e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo, a Linha ou a Obra Atual) e, de qualquer aba, todas as unidades,
               todos os centros de custo, todas sem centro de custo, todas as linhas, os rateios por obras de todas as linhas e todas as obras (uma por aba ou por
               página). Em Excel, também um arquivo por centro de
-              custo, num ZIP, com o departamento e o centro no nome de cada arquivo. Em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que
+              custo, num ZIP, com o departamento e o centro no nome de cada arquivo. Ainda em Excel, marque “Incluir a Aba Detalhes” antes de
+              escolher a opção: no fim do arquivo (em cada arquivo, no ZIP) vem a aba Detalhes, como no Exportar dos extratos — os movimentos do
+              balancete de cada aba exportada, item a item, em cada competência fechada (a emissão, o cliente ou fornecedor e o histórico), com a
+              parte que vai à aba (nos rateios, pelo percentual do destino). A receita prévia e os lançamentos manuais não são movimentos do
+              balancete e ficam fora; as linhas (Linhas e Rateios por Obras) não abrem os lançamentos. Em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que
               está (os níveis e os grupos abertos ou fechados, os meses recolhidos ou não), mas inteira: todas as linhas e colunas, sem os botões.
             </li>
           </ul>
@@ -881,6 +885,7 @@ export function ResultadosContent() {
                 caminho="resultados"
                 opcoes={opcoesExportar}
                 padrao={`Resultados ${ano}`}
+                detalhes
                 imagem={{ nome: `Resultados ${ano} - ${VISOES.find((v) => v.chave === visao)?.nome ?? ""}` }}
               /> : null}
             </div>

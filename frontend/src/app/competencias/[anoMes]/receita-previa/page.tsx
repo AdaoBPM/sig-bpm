@@ -7,7 +7,7 @@ import { ReceitaPreviaContent } from "./ReceitaPreviaContent";
 export default function ReceitaPreviaPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="receita:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="previas.receita:ler" fallback={<SemLeitura />}>
         <ReceitaPreviaContent />
       </PermissionGuard>
     </ProtectedLayout>

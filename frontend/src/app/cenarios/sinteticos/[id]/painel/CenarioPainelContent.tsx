@@ -58,7 +58,7 @@ export function CenarioPainelContent() {
               ficam antes do botão.
             </li>
             <li>
-              Troque entre as abas Resultados e Performance (os unitários) e Indicadores (antes, a tela Indicadores). Aparecem só as abas que o seu
+              Troque entre as abas Resultados e Performance (os unitários) e Indicadores. Aparecem só as abas que o seu
               perfil lê (Controle de Usuários / Perfis).
             </li>
             <li>
@@ -96,8 +96,8 @@ export function CenarioPainelContent() {
         sobre={
           <>
             <p>
-              O Painel de Bordo do cenário: os mesmos quadros do Painel de Bordo de Resultados Empresariais, com os indicadores do cenário (os da tela
-              Indicadores dele: os que saem da DRE do cenário, os lançamentos manuais e os importados) no lugar do realizado, e os do cenário comparado
+              O Painel de Bordo do cenário: os mesmos quadros do Painel de Bordo de Resultados Empresariais, com os indicadores do cenário (os da aba
+              Indicadores: os que saem da DRE do cenário, os lançamentos manuais e os importados) no lugar do realizado, e os do cenário comparado
               no lugar do orçado.
             </p>
             <p>

@@ -70,7 +70,7 @@ export function ListaLotacao() {
             Os colaboradores do mês por centro de custo, CLT e PJ, importados da aba {ABA}. São a referência do quadro de lotação realizado dos grupos de
             centros de custo nos Cenários Analíticos (os totais e as Médias de Referência saem desta lista). Não entram na apuração e não mudam os
             indicadores de quadro de lotação do mês, que seguem a aba Indicadores (Admin.) (aba Administrativo). De 01 a 08/2026, a lista entrou por uma
-            carga retroativa (19/10/2026), sem reabrir as competências.
+            carga retroativa, sem reabrir as competências.
           </p>
         }
       />

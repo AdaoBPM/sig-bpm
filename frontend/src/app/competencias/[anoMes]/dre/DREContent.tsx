@@ -494,7 +494,7 @@ export function DREContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="DRE"
+        titulo="Resultados"
         comoUsar={
           <ul>
             <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo, Sem Centros de Custo ou Obras (com a lista dos centros, dos grupos ou das obras à esquerda). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
@@ -542,15 +542,15 @@ export function DREContent() {
               bloqueada” aparece quando uma competência anterior tem entradas ou cadastros alterados: reapure as anteriores, em ordem, pelos botões
               “Ir para MM/AAAA”.
             </li>
-            <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo). Na confirmação, um aviso lista as telas do mês sem nenhum valor (Lançamentos, Receita, Indicadores, Estoque, Conferência), para conferir antes de fechar; ele não impede o fechamento. “Exportar”, na linha do título, baixa a DRE; “Reaberturas” mostra o histórico das reaberturas.</li>
+            <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo). Na confirmação, um aviso lista as telas do mês sem nenhum valor (Importações sem requisições nem notas fiscais, Lançamentos, Prévias › Receita, Totais › Indicadores, Prévias › Estoque, Conferência), para conferir antes de fechar; ele não impede o fechamento. “Exportar”, na linha do título, baixa a DRE; “Reaberturas” mostra o histórico das reaberturas.</li>
             <li>Use “Exportar” para baixar a DRE em Excel ou PDF; em Excel, também um arquivo por centro de custo (num ZIP, com o departamento e o centro no nome de cada arquivo).</li>
           </ul>
         }
         sobre={
           <>
             <p>
-              A DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da receita prévia e dos
-              lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99). Clique numa
+              Os resultados do mês: a DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da
+              receita prévia e dos lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99). Clique numa
               linha para ver como o valor foi formado e chegar aos lançamentos de origem.
             </p>
             <p>

@@ -51,7 +51,9 @@ export type UsuarioAutenticado = {
  * lançamentos de todos os departamentos: quem tem o recorte não as alcança, mesmo com a tela liberada, senão o recorte
  * seria contornado. O mesmo vale para o recorte por centro de custo (Coordenador).
  */
-const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "receita", "rateios", "estoque", "linhas_mes", "conferencia", "auditoria"]);
+const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "previas", "linhas_mes", "conferencia", "auditoria"]);
+/** As abas fora do recorte numa tela que ele alcança (27/10/2026): os Rateios, na tela Totais (os Indicadores ficam). */
+const ABAS_FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["totais.rateios"]);
 /** O recorte por setor (Alimentador) é o das listas operacionais: no Fechamento Mensal, só Competências, Importações e Listas. */
 const TELAS_DO_FECHAMENTO = new Set(CATALOGO_DE_TELAS.find((g) => g.recurso === "FECHAMENTO_MENSAL")!.telas.map((t) => t.codigo));
 const DENTRO_DO_RECORTE_DE_SETOR = new Set(["competencias", "importacao", "listas_operacionais"]);
@@ -67,7 +69,7 @@ export function permissoesDasRotas(
   const tela = (area: string) => area.split(".")[0];
   return areasDaMatriz(permissoes, (area, acao) => {
     if (recortes.recorteDepartamento || recortes.recorteCentro) {
-      if (FORA_DO_RECORTE_DE_DEPARTAMENTO.has(tela(area))) return true;
+      if (FORA_DO_RECORTE_DE_DEPARTAMENTO.has(tela(area)) || ABAS_FORA_DO_RECORTE_DE_DEPARTAMENTO.has(area)) return true;
       // O apurar da competência (a edição da DRE) mostra todos os departamentos.
       if (area === "dre" && acao === "EDITAR") return true;
       // As linhas (26/10/2026) juntam os lançamentos de todos os departamentos, como a etapa Linhas.
