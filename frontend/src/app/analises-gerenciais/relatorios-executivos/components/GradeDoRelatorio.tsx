@@ -20,7 +20,7 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 import { AjustesDaImagemDialog, ImagemComMoldura } from "./AjustesDaImagem";
-import { CortarImagemDialog, type TamanhoDaImagem } from "./CortarImagem";
+import { CortarImagemDialog, type CorteDaImagem } from "./CortarImagem";
 import { CamadaDoFundo } from "./FundoDoSlide";
 import { NaTelaPadrao, TELA_PADRAO } from "./TelaPadrao";
 import { BarraDoSumario, ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
@@ -551,12 +551,12 @@ export function GradeDoRelatorio({
     if (h <= b.h) return mudarBloco(b.id, m);
     reposicionar(b.id, m, { x: b.x, y: b.y, w: b.w, h });
   };
-  /** O Cortar e Posicionar aplicado (27/10/2026): o tamanho dentro da página e o corte (sem ele, a proporção da imagem). */
-  const aplicarCorte = (b: Bloco, t: TamanhoDaImagem) => {
+  /** O Cortar e Posicionar aplicado (27/10/2026): o tamanho dentro da página, o corte (sem ele, a proporção da imagem) e os ajustes. */
+  const aplicarCorte = (b: Bloco, t: CorteDaImagem) => {
     const w = Math.min(COLUNAS, t.w);
     const x = Math.min(b.x, COLUNAS - w);
     const y = Math.max(0, Math.min(b.y, linhas - t.h));
-    reposicionar(b.id, { recorte: t.recorte } as Partial<Bloco>, { x, y, w, h: t.h });
+    reposicionar(b.id, { recorte: t.recorte, ajustes: t.ajustes } as Partial<Bloco>, { x, y, w, h: t.h });
   };
   const aoMudarLeiaute = (novo: Layout[]) => {
     const pos = new Map(novo.map((l) => [l.i, l]));

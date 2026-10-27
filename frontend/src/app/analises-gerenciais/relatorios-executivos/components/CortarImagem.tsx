@@ -8,14 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
-import { enderecoDaFoto, type Bloco, type RecorteDaImagem } from "../services/relatoriosExecutivosService";
-import { estiloDosAjustes } from "./AjustesDaImagem";
+import type { AjustesDeImagem, Bloco, RecorteDaImagem } from "../services/relatoriosExecutivosService";
+import { ControlesDosAjustes } from "./AjustesDaImagem";
 import { CamadaDoFundo } from "./FundoDoSlide";
 
 type Foto = Extract<Bloco, { tipo: "FOTO" }>;
 type Modo = "PROPORCAO" | "PRONTO" | "ATUAL";
-/** O tamanho escolhido: as colunas e as linhas do bloco e, fora da proporção da imagem, o corte. */
-export type TamanhoDaImagem = { w: number; h: number; recorte?: RecorteDaImagem };
+/** O que o modal aplica: as colunas e as linhas do bloco, o corte (sem ele, a imagem inteira, na proporção) e os ajustes. */
+export type CorteDaImagem = { w: number; h: number; recorte?: RecorteDaImagem; ajustes?: AjustesDeImagem };
 
 /** As frações da tela dos tamanhos prontos (27/10/2026): de inteira a ¼, na largura e na altura. */
 const FRACOES: Array<[number, string]> = [
@@ -33,8 +33,10 @@ const CENTRO: RecorteDaImagem = { zoom: 1, x: 0.5, y: 0.5 };
 /**
  * O modal Cortar e Posicionar (27/10/2026, pedido do Adão), nas imagens com legenda e nas livres: o tamanho do bloco — na
  * proporção da imagem (a largura em colunas; as linhas acompanham), num tamanho pronto (as frações da tela, de inteira a
- * ¼, na largura e na altura) ou o tamanho atual — e, fora da proporção, o corte: a imagem cobre o quadro, e se arrasta
- * para posicionar e se aumenta pelo Tamanho (ou pela roda do mouse), como a Imagem de Fundo.
+ * ¼, na largura e na altura) ou o tamanho atual —, o corte e os ajustes. Como na Imagem de Fundo, a imagem cobre o quadro
+ * em qualquer tamanho: arraste-a para posicionar, aumente-a pelo Tamanho (ou pela roda do mouse), e o Restaurar a volta ao
+ * centro, no tamanho original; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência. Na proporção da
+ * imagem e sem aumentar, ela fica inteira (sem corte).
  */
 export function CortarImagemDialog({
   relatorioId,
@@ -55,13 +57,14 @@ export function CortarImagemDialog({
   linhasNaProporcao: (w: number) => number;
   /** As medidas (px) do quadro da imagem num bloco de `w` × `h`. */
   quadro: (w: number, h: number) => { largura: number; altura: number };
-  onAplicar: (t: TamanhoDaImagem) => void;
+  onAplicar: (t: CorteDaImagem) => void;
   onFechar: () => void;
 }) {
   const [modo, setModo] = useState<Modo>(bloco.recorte ? "ATUAL" : "PROPORCAO");
   const [largura, setLargura] = useState(Math.min(colunas, bloco.w));
   const [pronto, setPronto] = useState<[number, number]>([1 / 2, 1 / 2]);
   const [r, setR] = useState<RecorteDaImagem>(bloco.recorte ?? CENTRO);
+  const [ajustes, setAjustes] = useState(bloco.ajustes);
   const tamanho =
     modo === "PROPORCAO"
       ? { w: largura, h: linhasNaProporcao(largura) }
@@ -70,11 +73,12 @@ export function CortarImagemDialog({
         : { w: bloco.w, h: bloco.h };
   const q = quadro(tamanho.w, tamanho.h);
   const proporcaoDoQuadro = modo === "PROPORCAO" ? bloco.proporcao : q.largura / q.altura;
-  // A miniatura do quadro: até 640 × 320 px, na proporção dele.
-  const mini = proporcaoDoQuadro >= 2 ? { largura: 640, altura: 640 / proporcaoDoQuadro } : { largura: 320 * proporcaoDoQuadro, altura: 320 };
+  // A miniatura do quadro: até 560 × 240 px, na proporção dele (o modal, com os ajustes, cabe numa tela de 1080 px).
+  const mini = proporcaoDoQuadro >= 560 / 240 ? { largura: 560, altura: 560 / proporcaoDoQuadro } : { largura: 240 * proporcaoDoQuadro, altura: 240 };
   const caixa = useRef<HTMLDivElement>(null);
   const arrasto = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
-  const corta = modo !== "PROPORCAO";
+  // Na proporção da imagem, sem aumentar, ela fica inteira; aumentada, ou nos outros tamanhos, é cortada no quadro.
+  const corta = modo !== "PROPORCAO" || r.zoom > 1;
   // O quanto a imagem passa do quadro (px), na largura e na altura: o arrasto de tudo isso a leva de uma ponta à outra.
   const sobras = () => {
     const el = caixa.current;
@@ -96,12 +100,13 @@ export function CortarImagemDialog({
         <DialogHeader>
           <DialogTitle>Cortar e Posicionar a Imagem</DialogTitle>
           <DialogDescription>
-            Escolha o tamanho do bloco: na proporção da imagem (a imagem inteira, sem cortar), num tamanho pronto (frações da tela) ou o tamanho atual. Fora da
-            proporção, a imagem cobre o quadro: arraste-a para posicionar e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la.
+            Escolha o tamanho do bloco: na proporção da imagem, num tamanho pronto (frações da tela) ou o tamanho atual. A imagem cobre o quadro: arraste-a
+            para posicionar; o Tamanho (ou a roda do mouse sobre ela) a aumenta, e o Restaurar a volta ao centro, no tamanho original. Embaixo, o brilho, a
+            matiz, a saturação, o desfoque e a transparência.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          {opcao("PROPORCAO", "Na Proporção da Imagem", "A imagem inteira, sem cortar: escolha a largura; a altura acompanha a proporção dela")}
+          {opcao("PROPORCAO", "Na Proporção da Imagem", "A largura em colunas; a altura acompanha a proporção da imagem, que fica inteira (aumentada, é cortada no quadro)")}
           {opcao("PRONTO", "Tamanho Pronto", "Uma fração da largura e da altura da tela; a imagem é cortada para cobrir o quadro")}
           {opcao("ATUAL", "Tamanho Atual", "O tamanho do bloco de agora; a imagem é cortada para cobrir o quadro")}
         </div>
@@ -163,71 +168,63 @@ export function CortarImagemDialog({
         ) : null}
         <p className="text-xs text-gray-500">
           O bloco fica com {tamanho.w === 1 ? "1 coluna" : `${tamanho.w} colunas`} × {tamanho.h} linhas
-          {tamanho.h > linhas ? `: passa da altura da página (${linhas} linhas)` : ""}.
+          {tamanho.h > linhas ? `: passa da altura da página (${linhas} linhas)` : ""}
+          {corta ? "" : "; a imagem fica inteira, sem corte (aumente o Tamanho para cortá-la e arrastá-la no quadro)"}.
         </p>
         <div className="flex justify-center rounded-sm bg-gray-100 p-3">
+          {/* O quadro do bloco, com a imagem como ficará: arrastar a posiciona, e a roda do mouse a aumenta. O xadrez mostra as
+              imagens claras, as transparentes e a Transparência. */}
           <div
             ref={caixa}
-            className={`relative overflow-hidden rounded-sm border border-gray-300 bg-white ${corta ? "cursor-grab touch-none select-none active:cursor-grabbing" : ""}`}
+            className="relative cursor-grab touch-none overflow-hidden rounded-sm border border-gray-300 bg-white bg-[repeating-conic-gradient(var(--color-gray-200)_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] select-none active:cursor-grabbing"
             style={{ width: mini.largura, height: mini.altura, maxWidth: "100%" }}
-            onPointerDown={
-              corta
-                ? (e) => {
-                    e.preventDefault();
-                    e.currentTarget.setPointerCapture(e.pointerId);
-                    arrasto.current = { px: e.clientX, py: e.clientY, x: r.x, y: r.y };
-                  }
-                : undefined
-            }
-            onPointerMove={
-              corta
-                ? (e) => {
-                    const a = arrasto.current;
-                    if (!a) return;
-                    const s = sobras();
-                    mudar({ x: s.x > 0 ? entre(a.x - (e.clientX - a.px) / s.x, 0, 1) : a.x, y: s.y > 0 ? entre(a.y - (e.clientY - a.py) / s.y, 0, 1) : a.y });
-                  }
-                : undefined
-            }
+            onPointerDown={(e) => {
+              // Sem selecionar os textos do modal ao arrastar.
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              arrasto.current = { px: e.clientX, py: e.clientY, x: r.x, y: r.y };
+            }}
+            onPointerMove={(e) => {
+              const a = arrasto.current;
+              if (!a) return;
+              // Até 2 px de sobra (a imagem do tamanho do quadro, com o arredondamento da miniatura): nada a arrastar nesse sentido.
+              const s = sobras();
+              mudar({ x: s.x > 2 ? entre(a.x - (e.clientX - a.px) / s.x, 0, 1) : a.x, y: s.y > 2 ? entre(a.y - (e.clientY - a.py) / s.y, 0, 1) : a.y });
+            }}
             onPointerUp={() => (arrasto.current = null)}
             onPointerCancel={() => (arrasto.current = null)}
-            onWheel={corta ? (e) => mudar({ zoom: entre(r.zoom - e.deltaY * 0.001, 1, ZOOM_MAXIMO) }) : undefined}
+            onWheel={(e) => mudar({ zoom: entre(r.zoom - e.deltaY * 0.001, 1, ZOOM_MAXIMO) })}
           >
-            {corta ? (
-              <CamadaDoFundo relatorioId={relatorioId} fundo={{ arquivo: bloco.arquivo, proporcao: bloco.proporcao, ...r, ajustes: bloco.ajustes }} className="absolute inset-0" />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- a imagem vem do servidor, pelo proxy, com o login.
-              <img src={enderecoDaFoto(relatorioId, bloco.arquivo)} alt="" draggable={false} className="size-full object-contain" style={estiloDosAjustes(bloco.ajustes)} />
-            )}
+            <CamadaDoFundo relatorioId={relatorioId} fundo={{ arquivo: bloco.arquivo, proporcao: bloco.proporcao, ...r, ajustes }} className="absolute inset-0" />
           </div>
         </div>
-        {corta ? (
-          <div className="flex items-center gap-3">
-            <label htmlFor="imagem-tamanho" className="shrink-0 text-sm font-medium">
-              Tamanho
-            </label>
-            <input
-              id="imagem-tamanho"
-              type="range"
-              min={1}
-              max={ZOOM_MAXIMO}
-              step={0.01}
-              value={r.zoom}
-              onChange={(e) => mudar({ zoom: Number(e.target.value) })}
-              className="min-w-0 flex-1 accent-black"
-            />
-            <span className="w-12 shrink-0 text-right text-sm text-gray-600">{Math.round(r.zoom * 100)}%</span>
-            <Button type="button" variant="outline" className="rounded-sm" onClick={() => setR(CENTRO)} title="A imagem centralizada, no tamanho que cobre o quadro">
-              <RotateCcw className="size-4" />
-              Restaurar
-            </Button>
-          </div>
-        ) : null}
+        <div className="flex items-center gap-3">
+          <label htmlFor="imagem-tamanho" className="shrink-0 text-sm font-medium">
+            Tamanho
+          </label>
+          <input
+            id="imagem-tamanho"
+            type="range"
+            min={1}
+            max={ZOOM_MAXIMO}
+            step={0.01}
+            value={r.zoom}
+            onChange={(e) => mudar({ zoom: Number(e.target.value) })}
+            className="min-w-0 flex-1 accent-black"
+          />
+          <span className="w-12 shrink-0 text-right text-sm text-gray-600">{Math.round(r.zoom * 100)}%</span>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={() => setR(CENTRO)} title="A imagem no centro do quadro, no tamanho original (100%)">
+            <RotateCcw className="size-4" />
+            Restaurar
+          </Button>
+        </div>
+        {/* Os ajustes, como na Imagem de Fundo; a borda e o sombreamento ficam nos Ajustes da Imagem. */}
+        <ControlesDosAjustes ajustes={ajustes} onMudar={setAjustes} />
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} onClick={() => onAplicar(corta ? { ...tamanho, recorte: r } : tamanho)}>
+          <Button type="button" className={botaoPrimario} onClick={() => onAplicar({ ...tamanho, recorte: corta ? r : undefined, ajustes })}>
             Aplicar
           </Button>
         </DialogFooter>

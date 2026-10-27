@@ -141,11 +141,15 @@ function Deslizante({ c, ajustes, onMudar }: { c: Controle; ajustes: AjustesDeIm
 }
 
 /**
- * Os controles deslizantes e o Restaurar (o modal das imagens e o da Imagem de Fundo); com `comMoldura` (as imagens com
- * legenda e as livres, 22/10/2026), também a Borda (a espessura e a cor) e o Sombreamento (a intensidade e o desfoque).
+ * Os controles deslizantes e o Restaurar (o modal das imagens, o da Imagem de Fundo e o Cortar e Posicionar); com
+ * `comMoldura` (as imagens com legenda e as livres, 22/10/2026), também a Borda (a espessura e a cor) e o Sombreamento (a
+ * intensidade e o desfoque). O Restaurar Ajustes volta só os controles mostrados: sem a moldura (o Cortar e Posicionar,
+ * 27/10/2026), a borda e o sombreamento ficam.
  */
 export function ControlesDosAjustes({ ajustes, onMudar, comMoldura = false }: { ajustes: AjustesDeImagem | undefined; onMudar: (a: AjustesDeImagem | undefined) => void; comMoldura?: boolean }) {
   const titulo = "pt-1 text-xs font-bold tracking-wide text-gray-500 uppercase";
+  const mostrados = comMoldura ? NUMERICOS : CONTROLES;
+  const restaurados = semPadroes({ ...ajustes, ...Object.fromEntries(mostrados.map((c) => [c.chave, c.padrao])) });
   return (
     <div className="space-y-2">
       {CONTROLES.map((c) => (
@@ -191,7 +195,14 @@ export function ControlesDosAjustes({ ajustes, onMudar, comMoldura = false }: { 
         </>
       ) : null}
       <div className="flex justify-end">
-        <Button type="button" variant="outline" className="rounded-sm" disabled={!ajustes} onClick={() => onMudar(undefined)} title="A imagem como veio, sem os ajustes">
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-sm"
+          disabled={mostrados.every((c) => valorDe(ajustes, c) === c.padrao)}
+          onClick={() => onMudar(restaurados)}
+          title="A imagem como veio, sem os ajustes"
+        >
           <RotateCcw className="size-4" />
           Restaurar Ajustes
         </Button>
