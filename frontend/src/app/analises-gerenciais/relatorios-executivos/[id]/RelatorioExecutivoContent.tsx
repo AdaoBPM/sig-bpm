@@ -814,13 +814,15 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <li>
               Imagem com Legenda envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
               amarelo-ouro. Ao adicionar a imagem (e, depois, pelo botão Cortar e Posicionar do menu da edição), o modal Cortar e Posicionar escolhe o tamanho
-              do bloco: Na Proporção da Imagem (a largura em colunas; a altura acompanha, e a imagem fica inteira), Tamanho Pronto (as frações da tela, de
-              inteira a 1/4 na largura e na altura) ou Tamanho Atual. Como na Imagem de Fundo, a imagem cobre o quadro: arraste-a para posicioná-la, use o
-              Tamanho (ou a roda do mouse) para aumentá-la, e o Restaurar a volta ao centro, no tamanho original; na proporção, aumentá-la a corta no quadro.
-              Embaixo, o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência. Inteira, a imagem aumenta e diminui sempre na mesma proporção, pelos
+              do bloco: Na Proporção da Imagem (a lista da largura em colunas; a altura acompanha, e a imagem fica inteira), Tamanho Pronto (a lista das
+              frações do slide, de inteira a 1/4 na largura e na altura, cada uma com o desenho dela no slide) ou Tamanho Atual (ao lado, as colunas e as
+              linhas do bloco). Como na Imagem de Fundo, a imagem cobre o quadro: arraste-a para posicioná-la e use o Tamanho (ou a roda do mouse) para
+              aumentá-la; na proporção, aumentá-la a corta no quadro. Embaixo, o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; “Restaurar
+              Ajustes”, no rodapé, volta a imagem ao centro, a 100% e sem os ajustes. Inteira, a imagem aumenta e diminui sempre na mesma proporção, pelos
               cantos; cortada, por todos os quadrados de ancoragem, e continua cobrindo o quadro. Nas imagens (com legenda, livres e de fundo), o botão de
               ajustes da barra do bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; nas com legenda e nas livres, também a Borda (a
-              espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). “Restaurar Ajustes” volta à imagem como veio, e “Trocar
+              espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). Nas barras dos modais das imagens, o valor também se digita (a
+              barra acompanha). “Restaurar Ajustes”, no canto esquerdo do rodapé, volta à imagem como veio, e “Trocar
               Imagem” põe outra imagem no lugar, com os ajustes de agora (o bloco fica na proporção da nova; na cortada, o quadro fica, e a nova o cobre).
             </li>
             <li>
@@ -835,7 +837,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             </li>
             <li>
               Imagem de Fundo envia uma imagem (reduzida a até 2560 px) e abre o modal Imagem de Fundo, com a miniatura da tela inteira: arraste a imagem
-              para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; Restaurar a centraliza no tamanho que cobre a tela. Ela
+              para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; “Restaurar Ajustes” a centraliza a 100% (o tamanho que
+              cobre a tela) e sem os ajustes. Ela
               ocupa o fundo do slide inteiro, por cima do cabeçalho (a faixa tracejada da miniatura) e atrás dos blocos; cada página tem uma. Na página, ela
               aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide. No modal, “Aplicar
               Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.

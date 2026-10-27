@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ImageUp, RotateCcw } from "lucide-react";
+import { ImageUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import { enderecoDaFoto, type Fundo } from "../services/relatoriosExecutivosService";
-import { ControlesDosAjustes, estiloDosAjustes } from "./AjustesDaImagem";
+import { ajustesNoPadrao, ajustesRestaurados, BarraComValor, BotaoRestaurarAjustes, ControlesDosAjustes, estiloDosAjustes } from "./AjustesDaImagem";
 import { enviarImagem } from "./enviarImagem";
 import { TELA_PADRAO } from "./TelaPadrao";
 
@@ -99,7 +99,9 @@ export function AjustarFundoDialog({
           <DialogTitle>Imagem de Fundo</DialogTitle>
           <DialogDescription>
             A imagem cobre o slide inteiro, por cima do cabeçalho, atrás dos blocos. Arraste-a para posicionar; o Tamanho (ou a roda do mouse sobre ela) a
-            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência. “Trocar Imagem” põe outra imagem no lugar, com a posição, o tamanho e os ajustes. Com “Aplicar Em Todo o Grupo”, a imagem vai para todas as páginas do grupo.
+            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência (os valores também se digitam). “Restaurar Ajustes” volta a imagem
+            ao centro, a 100% e sem os ajustes, e “Trocar Imagem” põe outra imagem no lugar, com a posição, o tamanho e os ajustes. Com “Aplicar Em Todo o
+            Grupo”, a imagem vai para todas as páginas do grupo.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -127,28 +129,11 @@ export function AjustarFundoDialog({
             <span className="absolute top-1/2 left-2 -translate-y-1/2 rounded-sm bg-black/50 px-1.5 text-[10px] text-white">Cabeçalho</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <label htmlFor="fundo-tamanho" className="shrink-0 text-sm font-medium">
-            Tamanho
-          </label>
-          <input
-            id="fundo-tamanho"
-            type="range"
-            min={1}
-            max={ZOOM_MAXIMO}
-            step={0.01}
-            value={f.zoom}
-            onChange={(e) => mudar({ zoom: Number(e.target.value) })}
-            className="min-w-0 flex-1 accent-black"
-          />
-          <span className="w-12 shrink-0 text-right text-sm text-gray-600">{Math.round(f.zoom * 100)}%</span>
-          <Button type="button" variant="outline" className="rounded-sm" onClick={() => mudar({ zoom: 1, x: 0.5, y: 0.5 })} title="A imagem centralizada, no tamanho que cobre a tela">
-            <RotateCcw className="size-4" />
-            Restaurar
-          </Button>
+        {/* O Tamanho (em %), como as barras dos ajustes da imagem (21/10/2026). */}
+        <div className="space-y-2">
+          <BarraComValor id="fundo-tamanho" rotulo="Tamanho" min={100} max={ZOOM_MAXIMO * 100} valor={Math.round(f.zoom * 100)} unidade="%" onMudar={(v) => mudar({ zoom: v / 100 })} />
+          <ControlesDosAjustes ajustes={f.ajustes} onMudar={(ajustes) => mudar({ ajustes })} />
         </div>
-        {/* Os ajustes da imagem (21/10/2026). */}
-        <ControlesDosAjustes ajustes={f.ajustes} onMudar={(ajustes) => mudar({ ajustes })} />
         {grupo ? (
           <label className="flex items-center gap-2 text-sm" title={`A mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas de ${grupo}`}>
             <input type="checkbox" className="accent-black" checked={todoOGrupo} onChange={(e) => setTodoOGrupo(e.target.checked)} />
@@ -156,10 +141,17 @@ export function AjustarFundoDialog({
           </label>
         ) : null}
         <DialogFooter className="sm:justify-between">
-          <Button type="button" variant="outline" className="rounded-sm" disabled={enviando} onClick={() => seletor.current?.click()} title="Outra imagem no lugar desta, com a posição, o tamanho e os ajustes de agora">
-            <ImageUp className="size-4" />
-            {enviando ? "Enviando…" : "Trocar Imagem"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <BotaoRestaurarAjustes
+              disabled={ajustesNoPadrao(f.ajustes) && f.zoom === 1 && f.x === 0.5 && f.y === 0.5}
+              titulo="A imagem no centro, a 100% e sem os ajustes"
+              onClick={() => mudar({ zoom: 1, x: 0.5, y: 0.5, ajustes: ajustesRestaurados(f.ajustes) })}
+            />
+            <Button type="button" variant="outline" className="rounded-sm" disabled={enviando} onClick={() => seletor.current?.click()} title="Outra imagem no lugar desta, com a posição, o tamanho e os ajustes de agora">
+              <ImageUp className="size-4" />
+              {enviando ? "Enviando…" : "Trocar Imagem"}
+            </Button>
+          </div>
           <input
             ref={seletor}
             type="file"

@@ -116,40 +116,112 @@ function semPadroes(a: AjustesDeImagem): AjustesDeImagem | undefined {
   return Object.keys(r).length ? r : undefined;
 }
 
-function Deslizante({ c, ajustes, onMudar }: { c: Controle; ajustes: AjustesDeImagem | undefined; onMudar: (a: AjustesDeImagem | undefined) => void }) {
+/**
+ * Uma barra dos ajustes (27/10/2026, pedido do Adão): o rótulo, o controle deslizante e o valor, que também se digita — a
+ * barra acompanha o que se digita dentro dos limites; ao sair do campo (ou no Enter), o valor fora deles fica no limite.
+ */
+export function BarraComValor({
+  id,
+  rotulo,
+  min,
+  max,
+  valor,
+  unidade,
+  onMudar,
+}: {
+  id: string;
+  rotulo: string;
+  min: number;
+  max: number;
+  valor: number;
+  unidade: string;
+  onMudar: (v: number) => void;
+}) {
+  // O que se digita, enquanto o campo está em uso; fora dele, o valor da barra.
+  const [texto, setTexto] = useState<string | null>(null);
+  const ler = (t: string) => {
+    const n = Number(t.trim().replace(",", "."));
+    return t.trim() !== "" && Number.isFinite(n) ? Math.round(n) : null;
+  };
   return (
     <div className="flex items-center gap-3">
-      <label htmlFor={`ajuste-${c.chave}`} className="w-28 shrink-0 text-sm font-medium">
-        {c.rotulo}
+      <label htmlFor={id} className="w-28 shrink-0 text-sm font-medium">
+        {rotulo}
       </label>
-      <input
-        id={`ajuste-${c.chave}`}
-        type="range"
-        min={c.min}
-        max={c.max}
-        step={1}
-        value={valorDe(ajustes, c)}
-        onChange={(e) => onMudar(semPadroes({ ...ajustes, [c.chave]: Number(e.target.value) }))}
-        className="min-w-0 flex-1 accent-black"
-      />
-      <span className="w-16 shrink-0 text-right text-sm text-gray-600">
-        {valorDe(ajustes, c)}
-        {c.unidade}
+      <input id={id} type="range" min={min} max={max} step={1} value={valor} onChange={(e) => onMudar(Number(e.target.value))} className="min-w-0 flex-1 accent-black" />
+      <span className="flex w-20 shrink-0 items-center justify-end gap-1 text-sm text-gray-600">
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label={`${rotulo} (valor)`}
+          value={texto ?? String(valor)}
+          onFocus={(e) => e.currentTarget.select()}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            const n = ler(e.target.value);
+            if (n !== null && n >= min && n <= max) onMudar(n);
+          }}
+          onBlur={() => {
+            const n = texto === null ? null : ler(texto);
+            if (n !== null) onMudar(Math.min(max, Math.max(min, n)));
+            setTexto(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className="h-7 w-12 rounded-sm border border-gray-300 bg-white px-1.5 text-right text-sm text-gray-900"
+        />
+        <span className="w-5">{unidade.trim()}</span>
       </span>
     </div>
   );
 }
 
+function Deslizante({ c, ajustes, onMudar }: { c: Controle; ajustes: AjustesDeImagem | undefined; onMudar: (a: AjustesDeImagem | undefined) => void }) {
+  return (
+    <BarraComValor
+      id={`ajuste-${c.chave}`}
+      rotulo={c.rotulo}
+      min={c.min}
+      max={c.max}
+      valor={valorDe(ajustes, c)}
+      unidade={c.unidade}
+      onMudar={(v) => onMudar(semPadroes({ ...ajustes, [c.chave]: v }))}
+    />
+  );
+}
+
 /**
- * Os controles deslizantes e o Restaurar (o modal das imagens, o da Imagem de Fundo e o Cortar e Posicionar); com
- * `comMoldura` (as imagens com legenda e as livres, 22/10/2026), também a Borda (a espessura e a cor) e o Sombreamento (a
- * intensidade e o desfoque). O Restaurar Ajustes volta só os controles mostrados: sem a moldura (o Cortar e Posicionar,
+ * Os ajustes de volta ao padrão (o Restaurar Ajustes): só os controles mostrados — sem a moldura (o Cortar e Posicionar,
  * 27/10/2026), a borda e o sombreamento ficam.
+ */
+export function ajustesRestaurados(a: AjustesDeImagem | undefined, comMoldura = false) {
+  const mostrados = comMoldura ? NUMERICOS : CONTROLES;
+  return semPadroes({ ...a, ...Object.fromEntries(mostrados.map((c) => [c.chave, c.padrao])) });
+}
+
+/** Os controles mostrados, todos no padrão (o Restaurar Ajustes, sem efeito). */
+export function ajustesNoPadrao(a: AjustesDeImagem | undefined, comMoldura = false) {
+  return (comMoldura ? NUMERICOS : CONTROLES).every((c) => valorDe(a, c) === c.padrao);
+}
+
+/** O Restaurar Ajustes (27/10/2026), no canto esquerdo do rodapé dos modais das imagens, na altura do Cancelar e do Aplicar. */
+export function BotaoRestaurarAjustes({ disabled, titulo, onClick }: { disabled: boolean; titulo: string; onClick: () => void }) {
+  return (
+    <Button type="button" variant="outline" className="rounded-sm" disabled={disabled} onClick={onClick} title={titulo}>
+      <RotateCcw className="size-4" />
+      Restaurar Ajustes
+    </Button>
+  );
+}
+
+/**
+ * Os controles deslizantes (o modal das imagens, o da Imagem de Fundo e o Cortar e Posicionar); com `comMoldura` (as
+ * imagens com legenda e as livres, 22/10/2026), também a Borda (a espessura e a cor) e o Sombreamento (a intensidade e o
+ * desfoque). O Restaurar Ajustes fica no rodapé de cada modal (`BotaoRestaurarAjustes`).
  */
 export function ControlesDosAjustes({ ajustes, onMudar, comMoldura = false }: { ajustes: AjustesDeImagem | undefined; onMudar: (a: AjustesDeImagem | undefined) => void; comMoldura?: boolean }) {
   const titulo = "pt-1 text-xs font-bold tracking-wide text-gray-500 uppercase";
-  const mostrados = comMoldura ? NUMERICOS : CONTROLES;
-  const restaurados = semPadroes({ ...ajustes, ...Object.fromEntries(mostrados.map((c) => [c.chave, c.padrao])) });
   return (
     <div className="space-y-2">
       {CONTROLES.map((c) => (
@@ -194,19 +266,6 @@ export function ControlesDosAjustes({ ajustes, onMudar, comMoldura = false }: { 
           ))}
         </>
       ) : null}
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-sm"
-          disabled={mostrados.every((c) => valorDe(ajustes, c) === c.padrao)}
-          onClick={() => onMudar(restaurados)}
-          title="A imagem como veio, sem os ajustes"
-        >
-          <RotateCcw className="size-4" />
-          Restaurar Ajustes
-        </Button>
-      </div>
     </div>
   );
 }
@@ -256,8 +315,8 @@ export function AjustesDaImagemDialog({
         <DialogHeader>
           <DialogTitle>Ajustes da Imagem</DialogTitle>
           <DialogDescription>
-            O brilho, a matiz, a saturação, o desfoque e a transparência da imagem no slide{comMoldura ? ", a borda e o sombreamento" : ""}. “Trocar Imagem” põe
-            outra imagem no lugar, com estes ajustes.
+            O brilho, a matiz, a saturação, o desfoque e a transparência da imagem no slide{comMoldura ? ", a borda e o sombreamento" : ""}; os valores também
+            se digitam. “Restaurar Ajustes” volta à imagem como veio, e “Trocar Imagem” põe outra imagem no lugar, com estes ajustes.
           </DialogDescription>
         </DialogHeader>
         {/* A prévia sobre o xadrez, para a transparência aparecer. */}
@@ -266,10 +325,13 @@ export function AjustesDaImagemDialog({
         </div>
         <ControlesDosAjustes ajustes={a} onMudar={setA} comMoldura={comMoldura} />
         <DialogFooter className="sm:justify-between">
-          <Button type="button" variant="outline" className="rounded-sm" disabled={enviando} onClick={() => seletor.current?.click()} title="Outra imagem no lugar desta, com os ajustes de agora">
-            <ImageUp className="size-4" />
-            {enviando ? "Enviando…" : "Trocar Imagem"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <BotaoRestaurarAjustes disabled={ajustesNoPadrao(a, comMoldura)} titulo="A imagem como veio, sem os ajustes" onClick={() => setA(ajustesRestaurados(a, comMoldura))} />
+            <Button type="button" variant="outline" className="rounded-sm" disabled={enviando} onClick={() => seletor.current?.click()} title="Outra imagem no lugar desta, com os ajustes de agora">
+              <ImageUp className="size-4" />
+              {enviando ? "Enviando…" : "Trocar Imagem"}
+            </Button>
+          </div>
           <input
             ref={seletor}
             type="file"
