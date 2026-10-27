@@ -30,6 +30,7 @@ import {
   PanelsTopLeft,
   Presentation,
   Rows3,
+  Scale,
   Shuffle,
   Split,
   Table2,
@@ -113,6 +114,8 @@ export const navGrupos: NavGrupo[] = [
     titulo: "Apuração dos Resultados",
     itens: [
       { title: "Resultados por Obra", href: "/resultados-por-obra", icon: HardHat, emDesenvolvimento: true },
+      // O Balanço Patrimonial (27/10/2026), em desenvolvimento.
+      { title: "Balanço Patrimonial", href: "/balanco-patrimonial", icon: Scale, emDesenvolvimento: true },
       // Os Resultados por Linha (26/10/2026) não são um processo: a etapa Linhas do Fechamento Mensal e a aba Linhas dos
       // Resultados Empresariais (os Rateios das Linhas, guardados para os Resultados por Obra).
       {
