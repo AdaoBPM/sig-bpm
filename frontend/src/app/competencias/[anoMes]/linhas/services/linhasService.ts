@@ -1,5 +1,7 @@
 import { api } from "@/lib/api";
 
+import type { LinhasResultados, ResultadosDaLinha } from "@/app/relatorios/services/relatoriosService";
+
 import type { StatusCompetencia } from "../../../services/competenciasService";
 
 /** A etapa Linhas (26/10/2026): a DRE de cada unidade dividida entre as linhas, gravada na apuração. */
@@ -15,6 +17,10 @@ export type LinhasDoMes = {
 
 export const linhasService = {
   doMes: async (anoMes: string) => (await api.get<{ data: LinhasDoMes }>(`/proxy/competencias/${anoMes}/linhas`)).data.data,
+  /** As linhas do mês (27/10/2026), para a lista, como na aba Linhas dos Resultados Empresariais. */
+  lista: async (anoMes: string) => (await api.get<{ data: LinhasResultados }>(`/proxy/competencias/${anoMes}/linhas/lista`)).data.data,
+  /** A DRE de uma linha no mês, da receita à Margem de Contribuição. */
+  linha: async (anoMes: string, id: string) => (await api.get<{ data: ResultadosDaLinha }>(`/proxy/competencias/${anoMes}/linhas/linha/${id}`)).data.data,
   /** Grava as linhas de uma competência fechada antes da etapa Linhas. */
   gravar: async (anoMes: string) => (await api.post<{ data: LinhasDoMes }>(`/proxy/competencias/${anoMes}/linhas/gravar`)).data.data,
 };

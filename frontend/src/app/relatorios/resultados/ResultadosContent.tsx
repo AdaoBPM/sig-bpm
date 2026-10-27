@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState, useSyncExternalStore, type ReactNode, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
 
@@ -21,7 +21,18 @@ import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreS
 import { ExportarRelatorio, type OpcaoExportar } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { TabelaEstatica, TabelaLarga } from "../components/TabelaLarga";
-import { formato, mensagemDeErro, relatoriosService, type Celula, type LinhaResultado, type MesRelatorio, type Resultados, type MarcacaoComparavel } from "../services/relatoriosService";
+import {
+  formato,
+  mensagemDeErro,
+  relatoriosService,
+  type Celula,
+  type LinhaDoNegocio,
+  type LinhaResultado,
+  type MesRelatorio,
+  type Resultados,
+  type ResultadosDaLinha,
+  type MarcacaoComparavel,
+} from "../services/relatoriosService";
 
 /** As visões da DRE, como as abas Resultados (…) da planilha, e os centros de custo. */
 const VISOES = [
@@ -170,6 +181,7 @@ export function TabelaResultados({
   edicao,
   doCenario = false,
   estatico,
+  soOMes = false,
 }: {
   dados: Resultados;
   titulo: string;
@@ -191,6 +203,8 @@ export function TabelaResultados({
    * setas dos grupos e a rolagem (a tabela inteira, na largura das colunas).
    */
   estatico?: { nivel: Nivel; linhas?: string[]; recolhido: boolean };
+  /** Um mês só (27/10/2026: a etapa Linhas do Fechamento Mensal): sem as colunas do total do exercício, que o repetiriam. */
+  soOMes?: boolean;
 }) {
   // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
   // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
@@ -257,9 +271,7 @@ export function TabelaResultados({
   const larguras = [
     420,
     ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, ...(unitarioNoMes ? [64] : []), ...(comOrcadoNoMes ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
-    104,
-    52,
-    ...(comUnitario ? [64] : []),
+    ...(soOMes ? [] : [104, 52, ...(comUnitario ? [64] : [])]),
     ...(comOrcado ? [104, ...LARGURAS_DO_ORCADO.slice(1), ...LARGURAS_DA_VARIACAO] : []),
   ];
   /** Os rótulos do orçado (pretos) e, nos totais, da variação (amarelo-ouro, como os demais). */
@@ -325,9 +337,13 @@ export function TabelaResultados({
               </Fragment>
               ),
             )}
-            <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
-            <th className={th}>%</th>
-            {comUnitario ? <th className={th}>R$/m³</th> : null}
+            {soOMes ? null : (
+              <>
+                <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
+                <th className={th}>%</th>
+                {comUnitario ? <th className={th}>R$/m³</th> : null}
+              </>
+            )}
             {comOrcado ? rotulosDoOrcado(rotuloDoOrcadoTotal, true) : null}
           </tr>
         }
@@ -407,9 +423,13 @@ export function TabelaResultados({
                     </Fragment>
                   );
                 })}
-                <td className={`${td} border-l border-gray-300 ${fundo}`}>{valorDa(l, l.total)}</td>
-                <td className={`${pct} ${fundo}`}>{fracao(l, l.total.pct, temPct(l))}</td>
-                {comUnitario ? <td className={`${pct} ${fundo}`}>{unitario(l, l.total.unitario)}</td> : null}
+                {soOMes ? null : (
+                  <>
+                    <td className={`${td} border-l border-gray-300 ${fundo}`}>{valorDa(l, l.total)}</td>
+                    <td className={`${pct} ${fundo}`}>{fracao(l, l.total.pct, temPct(l))}</td>
+                    {comUnitario ? <td className={`${pct} ${fundo}`}>{unitario(l, l.total.unitario)}</td> : null}
+                  </>
+                )}
                 {comOrcado ? celulasDoOrcado(l, l.total, l.orcado?.total, true) : null}
               </tr>
             );
@@ -635,8 +655,6 @@ function VisaoLinhas({ ano, ate, escolhida, onEscolher, rateios }: { ano: number
   if (lista.isError) return <Erro erro={lista.error} padrao="Erro ao carregar as linhas." />;
   if (lista.isPending) return <Carregando />;
   if (linhas.length === 0) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma linha das unidades que o seu perfil lê.</p>;
-  const unidades = [...new Set(linhas.map((l) => l.unidade))];
-  const escolhidaAgora = linhas.find((l) => l.id === id);
   const semLinhas = lista.data?.semLinhas ?? [];
   return (
     <div className="space-y-4">
@@ -646,6 +664,33 @@ function VisaoLinhas({ ano, ate, escolhida, onEscolher, rateios }: { ano: number
           etapa Linhas e {semLinhas.length === 1 ? "aparece" : "aparecem"} sem valor: grave as linhas em Fechamento Mensal › competência › Linhas.
         </div>
       ) : null}
+      <PainelDeLinhas linhas={linhas} id={id} onEscolher={onEscolher} linha={linha} rateios={rateios} />
+    </div>
+  );
+}
+
+/**
+ * A lista das linhas à esquerda, por unidade, e a DRE da escolhida: a aba Linhas (e a Rateios por Obras) dos Resultados
+ * Empresariais e, com um mês só (`soOMes`, 27/10/2026), a etapa Linhas do Fechamento Mensal.
+ */
+export function PainelDeLinhas({
+  linhas,
+  id,
+  onEscolher,
+  linha,
+  rateios = false,
+  soOMes = false,
+}: {
+  linhas: LinhaDoNegocio[];
+  id: string | null;
+  onEscolher: (l: string) => void;
+  linha: UseQueryResult<ResultadosDaLinha>;
+  rateios?: boolean;
+  soOMes?: boolean;
+}) {
+  const unidades = [...new Set(linhas.map((l) => l.unidade))];
+  const escolhidaAgora = linhas.find((l) => l.id === id);
+  return (
       <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
         <div className="rounded-sm border border-gray-200 bg-white">
           <ul className="max-h-[60vh] overflow-y-auto py-1" aria-label="Linhas">
@@ -686,11 +731,11 @@ function VisaoLinhas({ ano, ate, escolhida, onEscolher, rateios }: { ano: number
               visao={{ unidade: escolhidaAgora.unidade }}
               nomeVisao={escolhidaAgora.nome}
               consultas={false}
+              soOMes={soOMes}
             />
           )}
         </div>
       </div>
-    </div>
   );
 }
 

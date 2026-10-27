@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
+import { PainelDeLinhas } from "@/app/relatorios/resultados/ResultadosContent";
 
 import { mensagemDeErro } from "../conferencia-planilha/services/conferenciaService";
 import { dataHora, inteiro, lerAnoMes, rotuloCompetencia } from "../utils/formatacao";
@@ -20,7 +21,6 @@ const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
 // O que arredonda para zero sai sem o sinal ("0", e não "-0").
 const valor = (v: number | null) => (v === null ? "—" : inteiro(Math.round(v) || 0));
-const pct = (v: number | null, base: number | null) => (v === null || !base ? "—" : `${((v / base) * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`);
 
 type Linha = { chave: string; rotulo: ReactNode; valores: ReactNode[]; destaque?: boolean };
 
@@ -85,8 +85,29 @@ function Situacao({ dados }: { dados: LinhasDoMes }) {
   );
 }
 
+/**
+ * A DRE de cada linha no mês (27/10/2026, pedido do Adão): a lista à esquerda, por unidade, e a DRE da escolhida, da receita
+ * à Margem de Contribuição, como a aba Linhas dos Resultados Empresariais, só com o mês da competência.
+ */
+function DREDasLinhas({ anoMes }: { anoMes: string }) {
+  const [escolhida, setEscolhida] = useState<string | null>(null);
+  const lista = useQuery({ queryKey: ["linhas-do-mes", anoMes, "lista"], queryFn: () => linhasService.lista(anoMes) });
+  const linhas = lista.data?.linhas ?? [];
+  const id = (escolhida && linhas.some((l) => l.id === escolhida) ? escolhida : linhas[0]?.id) ?? null;
+  const linha = useQuery({ queryKey: ["linhas-do-mes", anoMes, "linha", id], queryFn: () => linhasService.linha(anoMes, id!), enabled: id !== null });
+  if (lista.isError) {
+    return (
+      <div className="rounded-sm border border-red-200 bg-red-50 p-4">
+        <p className="text-sm text-red-700">{mensagemDeErro(lista.error, "Erro ao carregar as linhas.")}</p>
+      </div>
+    );
+  }
+  if (lista.isPending) return <Carregando />;
+  if (linhas.length === 0) return <p className="rounded-sm border border-gray-200 bg-white p-6 text-sm text-gray-600">Nenhuma linha das unidades que o seu perfil lê.</p>;
+  return <PainelDeLinhas linhas={linhas} id={id} onEscolher={setEscolhida} linha={linha} soOMes />;
+}
+
 function Conferencia({ dados }: { dados: LinhasDoMes }) {
-  const comLinhas = dados.linhas.filter((l) => l.receitaLiquida !== null || l.mc !== null);
   return (
     <div className="space-y-6">
       <Tabela
@@ -103,16 +124,6 @@ function Conferencia({ dados }: { dados: LinhasDoMes }) {
             uma linha.
           </p>
         }
-      />
-      <Tabela
-        titulo="Margem de Contribuição por Linha"
-        colunas={["Unidade", "Receita Líquida", "Margem de Contribuição", "% MC"]}
-        linhas={comLinhas.map((l) => ({
-          chave: l.id,
-          rotulo: `${l.nome}${l.ativo ? "" : " (Inativa)"}`,
-          valores: [l.nomeUnidade, valor(l.receitaLiquida), valor(l.mc), pct(l.mc, l.receitaLiquida)],
-        }))}
-        rodape={<p className="text-xs text-gray-500">A DRE de cada linha, mês a mês, fica em Resultados Empresariais › Resultados, abas Linhas e Rateios por Obras, depois do fechamento.</p>}
       />
       {dados.niveis.length ? (
         <Tabela
@@ -172,6 +183,8 @@ export function LinhasContent() {
     mutationFn: () => linhasService.gravar(anoMes),
     onSuccess: (dados) => {
       queryClient.setQueryData(["linhas-do-mes", anoMes], dados);
+      queryClient.invalidateQueries({ queryKey: ["linhas-do-mes", anoMes, "lista"] });
+      queryClient.invalidateQueries({ queryKey: ["linhas-do-mes", anoMes, "linha"] });
       // Resultados Empresariais passam a mostrar o mês nas abas Linhas e Rateios por Obras.
       queryClient.invalidateQueries({ queryKey: ["relatorios", "resultados"] });
       toast.success(`Linhas de ${rotuloCompetencia(periodo!.ano, periodo!.mes)} gravadas.`);
@@ -212,15 +225,21 @@ export function LinhasContent() {
           <ul>
             <li>Apure a competência (Resultados › Apurar): a etapa Linhas vem por último e grava as linhas do mês.</li>
             <li>
-              Confira antes de fechar: a Margem de Contribuição da DRE de cada unidade contra a soma das linhas (iguais, com o que ficou Sem Linha), a margem de
-              cada linha, de que passo veio cada valor, os documentos do mês e os avisos.
+              Escolha a linha na lista à esquerda, por unidade: a tabela mostra a DRE dela no mês, da receita à Margem de Contribuição, com o % e o R$/m³ da
+              unidade dela, como a aba Linhas dos Resultados Empresariais. A lista traz as linhas das unidades (Matriz, Filial e Serviços) cujas abas o seu
+              perfil lê na tela Resultados, e a linha inativa só quando tem valor no mês.
+            </li>
+            <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada grupo abre e fecha só ele.</li>
+            <li>
+              Embaixo, confira antes de fechar: a Margem de Contribuição da DRE de cada unidade contra a soma das linhas (iguais, com o que ficou Sem Linha), de
+              que passo veio cada valor, os documentos do mês e os avisos.
             </li>
             <li>Para corrigir, ajuste a Alocação nas Linhas, as tarefas das linhas ou os documentos (etapa Importações) e reapure.</li>
             <li>
               Uma competência fechada antes da etapa Linhas mostra o botão Gravar: grava as linhas uma vez, com a Alocação nas Linhas e as tarefas de hoje. Depois,
               só reabrindo e reapurando.
             </li>
-            <li>A DRE de cada linha no exercício fica em Resultados Empresariais › Resultados, nas abas Linhas e Rateios por Obras.</li>
+            <li>O exercício de cada linha, mês a mês, fica em Resultados Empresariais › Resultados, nas abas Linhas e Rateios por Obras (com as competências fechadas).</li>
           </ul>
         }
         acoes={
@@ -248,7 +267,12 @@ export function LinhasContent() {
       ) : (
         <>
           <Situacao dados={dados} />
-          {dados.situacao.gravadaEm ? <Conferencia dados={dados} /> : null}
+          {dados.situacao.gravadaEm ? (
+            <>
+              <DREDasLinhas anoMes={anoMes} />
+              <Conferencia dados={dados} />
+            </>
+          ) : null}
         </>
       )}
       <Dialog open={confirmar} onOpenChange={(aberto) => !gravar.isPending && setConfirmar(aberto)}>

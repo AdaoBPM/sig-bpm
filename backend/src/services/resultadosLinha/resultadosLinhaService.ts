@@ -358,6 +358,8 @@ function comTotais(itens: Map<string, number>, est: LinhaDRE[], noEscopo: Set<st
 
 const arredonda = (x: number) => Math.round(x * 100) / 100;
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
+/** O mês no rótulo das colunas, como nos Resultados Empresariais ("SET/26"). */
+const MESES_CURTOS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ROL = "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL";
 /** As linhas da DRE das abas Linhas (da receita à Margem de Contribuição) e Rateios por Obras (os custos, sobre os volumes). */
 const DO_RESULTADO = new Set([...ITENS, ...SECOES, "RO", "IRB", "CPV", "MB", "MC"]);
@@ -421,7 +423,19 @@ function itensDaLinha(g: Gravado, chave: string, est: LinhaDRE[], s: Set<string>
  * As competências fechadas do exercício até o mês. Só as que têm as linhas gravadas contam como apuradas; as fechadas
  * antes da etapa Linhas (26/10/2026) e ainda sem a gravação vão em `semLinhas`.
  */
-async function periodo(ano: number, ate?: number) {
+/**
+ * Os meses das abas: as competências fechadas do exercício até `ate` (Resultados Empresariais) ou, com `soOMes`
+ * (27/10/2026: a etapa Linhas do Fechamento Mensal), só a competência `ate`, em qualquer situação, com as linhas da
+ * última apuração.
+ */
+async function periodo(ano: number, ate?: number, soOMes = false) {
+  if (soOMes && ate) {
+    const c = await getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano, mes: ate } }, select: { id: true, apuracaoLinhas: true } });
+    if (!c) throw new RegraLinhasError(404, `A competência ${rotulo(ano, ate)} não existe.`);
+    const gravada = c.apuracaoLinhas !== null;
+    const rotuloDoMes = `${MESES_CURTOS[ate - 1]}/${String(ano).slice(2)}`;
+    return { ultimo: ate, meses: [{ mes: ate, rotulo: rotuloDoMes, apurado: gravada, competenciaId: gravada ? c.id : null }], semLinhas: gravada ? [] : [rotuloDoMes] };
+  }
   const { ultimo, meses } = await mesesDoExercicio(ano, ate, true);
   const ids = meses.flatMap((m) => (m.competenciaId ? [m.competenciaId] : []));
   const comps = await getPrismaClient().competencia.findMany({ where: { id: { in: ids } }, select: { id: true, apuracaoLinhas: true } });
@@ -496,8 +510,8 @@ export const resultadosLinhaService = {
    * As linhas das unidades pedidas, para a lista das abas Linhas e Rateios por Obras dos Resultados Empresariais: as ativas
    * e as inativas com valor nas competências fechadas do exercício até o mês.
    */
-  async listar(ano: number, ate: number | undefined, unidades: number[]) {
-    const p = await periodo(ano, ate);
+  async listar(ano: number, ate: number | undefined, unidades: number[], soOMes = false) {
+    const p = await periodo(ano, ate, soOMes);
     const ids = p.meses.flatMap((m) => (m.competenciaId ? [m.competenciaId] : []));
     const comValor = new Set(
       (await getPrismaClient().resultadoLinha.groupBy({ by: ["linhaId"], where: { competenciaId: { in: ids }, linhaId: { not: null }, valor: { not: 0 } } })).map((x) => x.linhaId),
@@ -510,10 +524,10 @@ export const resultadosLinhaService = {
    * A DRE de uma linha mês a mês, da receita à Margem de Contribuição (a aba Linhas), ou só os custos dela que não vieram
    * dos centros de obra, sobre os volumes (`rateios`: a aba Rateios por Obras, o que os Resultados por Obra levam às obras).
    */
-  async linha(ano: number, ate: number | undefined, linhaId: string, rateios: boolean, unidades: number[]) {
+  async linha(ano: number, ate: number | undefined, linhaId: string, rateios: boolean, unidades: number[], soOMes = false) {
     const l = (await linhasDoNegocio()).find((x) => x.id === linhaId && unidades.includes(x.unidade));
     if (!l) throw new RegraLinhasError(404, "A linha não existe ou não é de uma unidade que o seu perfil lê.");
-    const [p, est] = await Promise.all([periodo(ano, ate), estruturaDaDRE()]);
+    const [p, est] = await Promise.all([periodo(ano, ate, soOMes), estruturaDaDRE()]);
     const g = await gravados(p.meses.flatMap((m) => (m.competenciaId ? [m.competenciaId] : [])), l.id);
     const s = escopo(est, rateios ? DOS_RATEIOS : DO_RESULTADO);
     const valores = p.meses.map((m) => (m.competenciaId ? itensDaLinha(g.get(m.competenciaId)!, l.id, est, s, rateios) : new Map<string, number>()));

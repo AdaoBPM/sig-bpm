@@ -12,4 +12,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 export const resultadosLinhaRoutes = Router({ mergeParams: true });
 
 resultadosLinhaRoutes.get("/", autenticacao, verificarPermissao("linhas_mes:ler"), asyncHandler(resultadosLinhaController.doMes));
+// A lista das linhas e a DRE de uma no mês (27/10/2026), como a aba Linhas dos Resultados Empresariais.
+resultadosLinhaRoutes.get("/lista", autenticacao, verificarPermissao("linhas_mes:ler"), asyncHandler(resultadosLinhaController.lista));
+resultadosLinhaRoutes.get("/linha/:linhaId", autenticacao, verificarPermissao("linhas_mes:ler"), asyncHandler(resultadosLinhaController.linha));
 resultadosLinhaRoutes.post("/gravar", autenticacao, verificarPermissao("linhas_mes:editar"), asyncHandler(resultadosLinhaController.gravar));
