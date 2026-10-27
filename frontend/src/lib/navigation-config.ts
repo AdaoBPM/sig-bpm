@@ -9,6 +9,7 @@ import {
   ChartPie,
   SlidersHorizontal,
   Factory,
+  FileSpreadsheet,
   HandCoins,
   HardHat,
   PackageCheck,
@@ -90,6 +91,8 @@ export const navGrupos: NavGrupo[] = [
       { title: "Custos Operacionais", href: "/analises-gerenciais/custos-operacionais", icon: Calculator, emDesenvolvimento: true },
       // Painéis de Bordo (27/10/2026), em desenvolvimento.
       { title: "Painéis de Bordo", href: "/analises-gerenciais/paineis-de-bordo", icon: PanelsTopLeft, emDesenvolvimento: true },
+      // Demonstrativos Financeiros (27/10/2026), em desenvolvimento.
+      { title: "Demonstrativos Financeiros", href: "/analises-gerenciais/demonstrativos-financeiros", icon: FileSpreadsheet, emDesenvolvimento: true },
     ],
   },
   {
