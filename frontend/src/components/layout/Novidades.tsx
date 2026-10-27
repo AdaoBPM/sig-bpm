@@ -100,9 +100,9 @@ export function NovidadesDialog({ lista, novas, onFechar }: { lista: Novidade[];
             <Sparkles className="size-5 text-bpm-primary" />
             Novidades
           </DialogTitle>
+          {/* O texto do alto (27/10/2026, pedido do Adão): sem a contagem das telas com novidades (a etiqueta Nova as marca). */}
           <DialogDescription>
             {primeiroNome ? `Olá, ${primeiroNome}. ` : ""}
-            {novas.length ? `Desde a sua última visita, há novidades em ${plural(telasCom(novas), "uma tela", `${telasCom(novas)} telas`)}, com a etiqueta Nova. ` : ""}
             Estas são as atualizações do SIG nas telas que você acessa, das mais recentes para as mais antigas.
           </DialogDescription>
         </DialogHeader>
