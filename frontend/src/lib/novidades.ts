@@ -28,6 +28,42 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 27/10/2026, fim da tarde
+  {
+    publicada: "2026-10-27T14:51",
+    processo: "Relatórios Executivos",
+    rota: RE,
+    itens: [
+      "O slide é montado na tela padrão (1920 × 1080) e, na apresentação e no PDF, se ajusta inteiro à tela de quem abre: os blocos ficam nos mesmos lugares em qualquer resolução.",
+      "Transições, antes do Adicionar: Esmaecer, Rolar Vertical ou Rolar Horizontal, para os slides do grupo aberto.",
+      "Na Imagem de Fundo, Aplicar Em Todo o Grupo põe a mesma imagem, com a posição e os ajustes, em todas as páginas do grupo.",
+      "A Anotação e o Texto Livre crescem sozinhos quando o texto passa da altura da caixa.",
+      "Cortar e Posicionar (ao adicionar uma imagem e no menu da edição): o tamanho do bloco — na proporção da imagem, numa fração do slide ou o atual —, a posição e o tamanho da imagem no quadro e os ajustes de brilho, matiz, saturação, desfoque e transparência.",
+      "Nos modais das imagens, os valores das barras também se digitam, e o Restaurar Ajustes fica no rodapé.",
+      "Ao criar um relatório a partir de outro, as imagens de fundo vêm sempre, mesmo sem manter as imagens e os textos.",
+      "O Excluir Relatório fica na aba Configurações. Na lista do Cenário de Comparação, sem cenário escolhido, fica em destaque o marcado como Orçamento.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T14:51",
+    processo: "Fechamento Mensal",
+    tela: "Linhas",
+    rota: "/competencias/0000-00/linhas",
+    itens: ["A etapa Linhas mostra a DRE das linhas no mês, na mesma estrutura da aba Linhas dos Resultados Empresariais."],
+  },
+  {
+    publicada: "2026-10-27T14:51",
+    processo: "Resultados Empresariais",
+    tela: "Resultados",
+    rota: RESULTADOS,
+    itens: ["A aba Rateios por Obras saiu da tela; ela volta, como Rateios das Linhas, no processo Resultados por Obra."],
+  },
+  {
+    publicada: "2026-10-27T14:51",
+    processo: "Painéis de Bordo",
+    soAdministrador: true,
+    itens: ["Novo processo em Análises Gerenciais, em desenvolvimento."],
+  },
   // 27/10/2026, tarde
   {
     publicada: "2026-10-27T12:35",
