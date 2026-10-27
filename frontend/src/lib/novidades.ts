@@ -28,6 +28,82 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 27/10/2026
+  {
+    publicada: "2026-10-27T08:38",
+    processo: TODO_O_SIG,
+    tela: "Menu Lateral",
+    itens: [
+      "A Central de Conectividade passa para cima da Controladoria.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Resultados Empresariais",
+    tela: "Resultados",
+    rota: RESULTADOS,
+    itens: [
+      "As abas Linhas e Rateios por Obras, antes de Obras: a DRE de cada linha de produto e de obra, da receita à Margem de Contribuição, e só os custos dela que não vieram dos centros de obra, com a lista das linhas por unidade.",
+      "O Exportar traz a Linha Atual, Todas as Linhas e os Rateios por Obras de Todas as Linhas.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Fechamento Mensal",
+    tela: "Linhas",
+    rota: "/competencias/0000-00/linhas",
+    itens: [
+      "A etapa Linhas, depois da DRE: a apuração divide a DRE de cada unidade entre as linhas de produto e de obra e grava o resultado, que o fechamento trava.",
+      "A conferência do mês antes de fechar: a Margem de Contribuição da DRE de cada unidade contra a soma das linhas, a margem de cada linha, de que passo veio cada valor, os documentos e os avisos.",
+      "Nas competências fechadas antes da etapa, o botão Gravar grava as linhas uma vez; a competência apurada antes dela não fecha sem reapurar.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Fechamento Mensal",
+    tela: "Importações",
+    rota: "/competencias/0000-00/importar",
+    itens: [
+      "As Requisições e as Notas Fiscais voltaram (as abas Requisições (Lista) e Notas Fiscais (Lista) do LISTAS REALIZADO (RESULTADOS), também no Importar Arquivo): a tarefa delas leva os custos às linhas. Importá-las depois de apurar pede reapurar.",
+      "As listas avisam os registros que citam uma linha inativa.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Cadastros da Controladoria",
+    tela: "Alocação nas Linhas",
+    rota: "/cadastros/alocacao-linhas",
+    itens: [
+      "A aba Alocação nas Linhas: as regras com que os custos sem tarefa chegam às linhas — cada centro de custo, ou o rateio dos centros sem regra própria, vai a uma linha ou se divide por uma base (volume produzido, projetos, kg da metalúrgica e da armadura, dias de acompanhamento ou receita).",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Cadastros da Controladoria",
+    tela: "Regras de Rateio",
+    rota: "/cadastros/regras-rateio",
+    itens: [
+      "Nos rateios fixos, cada destino com percentual se divide entre as linhas da unidade dele, somando 100%: é como a parte do rateio chega às linhas na etapa Linhas.",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Cenários Analíticos",
+    rota: "/cenarios/analiticos",
+    itens: [
+      "As premissas trazem só as linhas ativas do cadastro (a Metalúrgica passa a ser linha de apoio, inativa).",
+    ],
+  },
+  {
+    publicada: "2026-10-27T08:38",
+    processo: "Controle de Usuários",
+    tela: "Perfis",
+    rota: "/perfis",
+    itens: [
+      "Na matriz do perfil: a aba Alocação nas Linhas, a etapa Linhas do Fechamento Mensal (Editar grava as linhas dos meses fechados) e as abas Linhas e Rateios por Obras dos Resultados Empresariais.",
+      "O grupo Central de Conectividade antes da Controladoria, como no menu.",
+    ],
+  },
   // 26/10/2026
   {
     publicada: "2026-10-26T15:47",
