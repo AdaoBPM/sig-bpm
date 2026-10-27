@@ -28,6 +28,26 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 27/10/2026, noite
+  {
+    publicada: "2026-10-27T15:29",
+    processo: "Relatórios Executivos",
+    rota: RE,
+    itens: ["Na barra do topo, a situação do relatório (Em Elaboração ou Finalizado) fica à direita, depois das abas."],
+  },
+  {
+    publicada: "2026-10-27T15:29",
+    processo: "Fechamento Mensal",
+    tela: "Barra de Etapas",
+    rota: "/competencias/0000-00/importar",
+    itens: ["A situação da competência fica à direita da barra de etapas, depois de Divergências."],
+  },
+  {
+    publicada: "2026-10-27T15:29",
+    processo: "Balanço Patrimonial",
+    soAdministrador: true,
+    itens: ["Novo processo em Apuração dos Resultados, em desenvolvimento."],
+  },
   // 27/10/2026, fim da tarde
   {
     publicada: "2026-10-27T14:51",
