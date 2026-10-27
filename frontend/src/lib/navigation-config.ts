@@ -27,6 +27,8 @@ import {
   Library,
   ListOrdered,
   ListTree,
+  MessageSquareWarning,
+  NotebookPen,
   Percent,
   PanelsTopLeft,
   Presentation,
@@ -134,7 +136,11 @@ export const navGrupos: NavGrupo[] = [
           { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "relatorio_painel:ler" },
         ],
       },
+      // A Contestação de Gastos (27/10/2026), em desenvolvimento, logo acima do Fechamento Mensal.
+      { title: "Contestação de Gastos", href: "/contestacao-de-gastos", icon: MessageSquareWarning, emDesenvolvimento: true },
       { title: "Fechamento Mensal", href: "/competencias", icon: CalendarCheck, permission: "fechamento:ler", recurso: "FECHAMENTO_MENSAL" },
+      // Os Registros dos Indicadores (27/10/2026), em desenvolvimento, logo acima dos Cadastros da Apuração.
+      { title: "Registros dos Indicadores", href: "/registros-dos-indicadores", icon: NotebookPen, emDesenvolvimento: true },
       {
         title: "Cadastros da Apuração",
         href: "/cadastros/reclassificacoes",
@@ -151,10 +157,11 @@ export const navGrupos: NavGrupo[] = [
   },
   {
     // A Central de Conectividade (24/10/2026; antes da Controladoria desde 26/10/2026): a Biblioteca de APIs, que abre os
-    // dados do SIG a outros aplicativos, e as Integrações, ainda em desenvolvimento.
+    // dados do SIG a outros aplicativos, e as Integrações e Consultas, ainda em desenvolvimento.
     titulo: "Central de Conectividade",
     itens: [
-      { title: "Integrações", href: "/central-de-conectividade/integracoes", icon: Cable, emDesenvolvimento: true },
+      // Integrações e Consultas (27/10/2026; o endereço continua o das Integrações).
+      { title: "Integrações e Consultas", href: "/central-de-conectividade/integracoes", icon: Cable, emDesenvolvimento: true },
       {
         title: "Biblioteca de APIs",
         href: "/central-de-conectividade/biblioteca-de-apis",
