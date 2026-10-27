@@ -87,6 +87,8 @@ export const usuariosService = {
   perfis: async (): Promise<Perfil[]> => (await api.get<{ data: Perfil[] }>("/proxy/perfis")).data.data,
   criarPerfil: async (d: DadosPerfil): Promise<Perfil[]> => (await api.post<{ data: Perfil[] }>("/proxy/perfis", d)).data.data,
   atualizarPerfil: async (id: string, d: DadosPerfil): Promise<Perfil[]> => (await api.put<{ data: Perfil[] }>(`/proxy/perfis/${id}`, d)).data.data,
+  // Inativar e reativar (27/10/2026), a ação da lista dos perfis.
+  mudarSituacaoPerfil: async (id: string, ativo: boolean): Promise<Perfil[]> => (await api.patch<{ data: Perfil[] }>(`/proxy/perfis/${id}/situacao`, { ativo })).data.data,
   excluirPerfil: async (id: string): Promise<Perfil[]> => (await api.delete<{ data: Perfil[] }>(`/proxy/perfis/${id}`)).data.data,
 };
 

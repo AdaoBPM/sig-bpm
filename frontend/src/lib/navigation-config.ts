@@ -220,12 +220,13 @@ export const navGrupos: NavGrupo[] = [
       },
       {
         title: "Controle de Usuários",
-        href: "/usuarios",
+        // Os Perfis antes dos Usuários (27/10/2026): o grupo abre nos Perfis.
+        href: "/perfis",
         icon: UserCog,
         recurso: "CONTROLE_USUARIOS",
         telas: [
-          { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ler" },
           { title: "Perfis", href: "/perfis", icon: KeyRound, permission: "perfis:ler" },
+          { title: "Usuários", href: "/usuarios", icon: Users, permission: "usuarios:ler" },
           { title: "Auditoria", href: "/auditoria", icon: History, permission: "auditoria:ler" },
         ],
       },

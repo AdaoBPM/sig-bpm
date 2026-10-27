@@ -200,8 +200,9 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
     nome: "Controle de Usuários",
     area: "controle_usuarios",
     telas: [
-      { codigo: "usuarios", nome: "Usuários" },
+      // Os Perfis antes dos Usuários (27/10/2026), como no menu.
       { codigo: "perfis", nome: "Perfis" },
+      { codigo: "usuarios", nome: "Usuários" },
       { codigo: "auditoria", nome: "Auditoria" },
     ],
   },

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/DataTable";
@@ -25,10 +25,12 @@ function resumoPermissoes(p: Perfil) {
   return `${leitura} ${plural(leitura, "tela", "telas")} com leitura, ${telas("EDITAR")} com edição`;
 }
 
+// Com iniciais maiúsculas (27/10/2026), como os nomes da interface.
 const recorte = (p: Perfil) =>
-  [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null, p.recorteCentro ? "por centro de custo" : null].filter(Boolean).join(", ");
+  [p.recorteSetor ? "Por Setor" : null, p.recorteDepartamento ? "Por Departamento" : null, p.recorteCentro ? "Por Centro de Custo" : null].filter(Boolean).join(", ");
 /** O Acesso a Informações Sensíveis (27/10/2026). */
-const sensiveis = (p: Perfil) => (p.informacoesSensiveis ? "Com acesso" : "Sem acesso");
+const sensiveis = (p: Perfil) => (p.informacoesSensiveis ? "Com Acesso" : "Sem Acesso");
+const ehAdministrador = (p: Perfil) => p.codigo === "ADMINISTRADOR";
 
 const COLUNAS: Coluna<Perfil>[] = [
   { chave: "perfil", rotulo: "Perfil", valor: (p) => p.nome },
@@ -44,6 +46,8 @@ export function PerfisContent() {
   useRegistrarAcessoTela("/perfis");
   const queryClient = useQueryClient();
   const [editando, setEditando] = useState<Perfil | null | "novo">(null);
+  // Os perfis inativos só com "Mostrar Inativados" (27/10/2026).
+  const [mostrarInativados, setMostrarInativados] = useState(false);
   const perfis = useQuery({ queryKey: ["perfis"], queryFn: usuariosService.perfis });
   const opcoes = useQuery({ queryKey: ["usuarios", "opcoes"], queryFn: usuariosService.opcoes });
   const excluir = useMutation({
@@ -54,7 +58,18 @@ export function PerfisContent() {
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir o perfil.")),
   });
-  const tabela = useTabelaFiltravel(perfis.data, COLUNAS);
+  // Inativar e reativar (27/10/2026), a ação da lista: como a caixa Ativo do modal.
+  const situacao = useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => usuariosService.mudarSituacaoPerfil(id, ativo),
+    onSuccess: (_, v) => {
+      toast.success(v.ativo ? "Perfil reativado." : "Perfil inativado.");
+      queryClient.invalidateQueries({ queryKey: ["perfis"] });
+      queryClient.invalidateQueries({ queryKey: ["usuarios"] });
+    },
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível mudar a situação do perfil.")),
+  });
+  const inativos = (perfis.data ?? []).filter((p) => !p.ativo).length;
+  const tabela = useTabelaFiltravel(perfis.data?.filter((p) => mostrarInativados || p.ativo), COLUNAS);
 
   return (
     <div className="space-y-6">
@@ -62,7 +77,16 @@ export function PerfisContent() {
         titulo="Perfis de Usuário"
         comoUsar={
           <ul>
-            <li>Use “Novo Perfil” para criar um tipo de usuário; o lápis edita e a lixeira exclui (os perfis que vêm com a ferramenta — Administrador, Contador, Coordenador e Gestor — não têm a lixeira: só se inativam).</li>
+            <li>
+              Use “Novo Perfil” para criar um tipo de usuário. Na linha, o lápis edita, o botão de desligar inativa o perfil (os usuários dele deixam de
+              entrar; o de ligar o reativa) e a lixeira exclui. A lista mostra só os perfis ativos; marque “Mostrar Inativados”, antes de “Novo Perfil”,
+              para ver também os inativos (em cinza). Você não inativa o seu próprio perfil.
+            </li>
+            <li>
+              Só os perfis criados nesta tela têm a lixeira, e só sem usuários (troque o perfil deles antes). Os que vêm
+              com a ferramenta — Administrador, Contador, Coordenador e Gestor — são perfis de sistema: não se excluem, só se inativam, para a instalação
+              nunca ficar sem os tipos de usuário básicos.
+            </li>
             <li>
               O Administrador é um perfil de sistema com acesso total a todas as telas, sem recortes (as telas novas entram sozinhas): não se exclui
               nem se inativa, as permissões dele não mudam (só a descrição se edita), não fica sem usuário ativo, e só um Administrador promove outro
@@ -89,6 +113,11 @@ export function PerfisContent() {
           </p>
         }
         acoes={
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-gray-700" title="Mostra também os perfis inativos, em cinza">
+            <input type="checkbox" checked={mostrarInativados} onChange={(e) => setMostrarInativados(e.target.checked)} className="size-4 accent-black" />
+            Mostrar Inativados{inativos ? <span className="text-gray-500">({inativos})</span> : null}
+          </label>
         <PermissionGuard permission="perfis:editar">
           <Button
             type="button"
@@ -97,9 +126,10 @@ export function PerfisContent() {
             className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
           >
             <Plus className="size-4" />
-            Novo perfil
+            Novo Perfil
           </Button>
         </PermissionGuard>
+        </div>
         }
       />
 
@@ -139,6 +169,23 @@ export function PerfisContent() {
                   <Button type="button" variant="ghost" size="icon" aria-label="Editar" disabled={!opcoes.data} onClick={() => setEditando(p)}>
                     <Pencil className="size-4" />
                   </Button>
+                  {/* Inativar ou reativar (27/10/2026), em todos os perfis menos o Administrador. */}
+                  {!ehAdministrador(p) ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={p.ativo ? "Inativar" : "Reativar"}
+                      title={p.ativo ? "Inativar o perfil: os usuários dele deixam de entrar" : "Reativar o perfil"}
+                      disabled={situacao.isPending}
+                      onClick={() => {
+                        const aviso = p.usuarios ? ` Os ${p.usuarios} ${plural(p.usuarios, "usuário", "usuários")} dele deixam de entrar no SIG até o perfil ser reativado.` : "";
+                        if (!p.ativo || window.confirm(`Inativar o perfil ${p.nome}?${aviso}`)) situacao.mutate({ id: p.id, ativo: !p.ativo });
+                      }}
+                    >
+                      {p.ativo ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+                    </Button>
+                  ) : null}
                   {!p.sistema ? (
                     <Button
                       type="button"

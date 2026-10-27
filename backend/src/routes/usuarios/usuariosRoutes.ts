@@ -31,4 +31,6 @@ export const perfisRoutes = Router();
 perfisRoutes.get("/", autenticacao, verificarAlgumaPermissao("perfis:ler", "usuarios:ler"), asyncHandler(c.listarPerfis));
 perfisRoutes.post("/", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.criarPerfil));
 perfisRoutes.put("/:id", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.atualizarPerfil));
+// Inativar e reativar (27/10/2026), a ação da lista.
+perfisRoutes.patch("/:id/situacao", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.mudarSituacaoPerfil));
 perfisRoutes.delete("/:id", autenticacao, verificarPermissao("perfis:editar"), asyncHandler(c.excluirPerfil));

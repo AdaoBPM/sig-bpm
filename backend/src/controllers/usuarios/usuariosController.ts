@@ -90,6 +90,13 @@ export const usuariosController = {
     return responder(response, () => usuariosService.atualizarPerfil(String(request.params.id), b.data as never, request.user!.sub));
   },
 
+  /** Inativa ou reativa o perfil (27/10/2026, a ação da lista). */
+  async mudarSituacaoPerfil(request: Request, response: Response) {
+    const b = z.object({ ativo: z.boolean() }).safeParse(request.body);
+    if (!b.success) return invalido(response, b.error);
+    return responder(response, () => usuariosService.mudarSituacaoPerfil(String(request.params.id), b.data.ativo, request.user!.sub));
+  },
+
   excluirPerfil: (request: Request, response: Response) => responder(response, () => usuariosService.excluirPerfil(String(request.params.id), request.user!.sub)),
 
   /** O aviso de quem está com o SIG aberto; ao Administrador, devolve quem está online (24/10/2026). */

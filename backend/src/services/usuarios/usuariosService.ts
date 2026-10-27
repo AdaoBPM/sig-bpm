@@ -386,6 +386,26 @@ export const usuariosService = {
   },
 
   /** Exclui um perfil que não é de sistema e não tem usuários. */
+  /**
+   * Inativa ou reativa um perfil (27/10/2026, a ação Inativar da lista dos perfis), como a caixa Ativo do modal: o
+   * Administrador não se inativa, nem o perfil de quem está inativando. Inativo, os usuários dele não entram.
+   */
+  async mudarSituacaoPerfil(id: string, ativo: boolean, quem: string) {
+    const prisma = getPrismaClient();
+    const p = await prisma.perfil.findUnique({ where: { id }, select: { id: true, codigo: true, nome: true, ativo: true } });
+    if (!p) throw new RegraUsuarioError(404, "Perfil não encontrado.");
+    if (ehPerfilAdministrador(p)) throw new RegraUsuarioError(409, "O perfil Administrador não pode ser excluído nem inativado.");
+    if (!ativo && (await prisma.usuario.findUniqueOrThrow({ where: { id: quem }, select: { perfilId: true } })).perfilId === id) {
+      throw new RegraUsuarioError(409, "Você não pode inativar o seu próprio perfil.");
+    }
+    if (p.ativo === ativo) return this.listarPerfis();
+    const antes = (await this.listarPerfis()).find((x) => x.id === id);
+    await prisma.perfil.update({ where: { id }, data: { ativo } });
+    const lista = await this.listarPerfis();
+    await auditar({ usuarioId: quem, acao: "ALTERACAO", entidade: "perfil", entidadeId: id, antes, depois: lista.find((x) => x.id === id), metadados: { nome: p.nome } });
+    return lista;
+  },
+
   async excluirPerfil(id: string, quem: string) {
     const prisma = getPrismaClient();
     const p = await prisma.perfil.findUnique({ where: { id }, select: { sistema: true, nome: true, codigo: true, _count: { select: { usuarios: true } } } });
