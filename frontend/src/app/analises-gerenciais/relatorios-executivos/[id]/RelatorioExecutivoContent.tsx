@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
+import { EtiquetasDaBarra } from "@/components/layout/EtiquetasDaBarra";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -755,9 +756,9 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
         comoUsar={
           <ul>
             <li>
-              A barra do topo mostra o mês (clique nele para ir a outro relatório), a situação do relatório e as oito abas: Capa, Introdução,
-              Resultados (Demonstrativo de Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de
-              Serviços), Administrativo (Performance Administrativa) e Encerramento. Todos os que leem a tela veem todas as
+              A barra do topo mostra o mês (clique nele para ir a outro relatório), as oito abas — Capa, Introdução, Resultados (Demonstrativo de
+              Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de Serviços), Administrativo
+              (Performance Administrativa) e Encerramento — e, à direita, a situação do relatório. Todos os que leem a tela veem todas as
               abas, e todos os que a editam editam todas (sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
               na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O check verde ao lado do nome (o das etapas feitas do Fechamento Mensal) diz que o grupo está finalizado (a dica dele mostra quem o
               finalizou e quando).
@@ -1271,8 +1272,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
 
 /**
  * A barra do relatório (16/10/2026), no topo da tela, no formato da barra de etapas do Fechamento Mensal: o mês em
- * amarelo-ouro (o menu dele leva aos outros relatórios), a situação do relatório e as abas (o nome curto; o título na dica), com o ícone de check
- * nos finalizados (a dica diz quem finalizou e quando).
+ * amarelo-ouro (o menu dele leva aos outros relatórios), as abas (o nome curto; o título na dica), com o ícone de check
+ * nos finalizados (a dica diz quem finalizou e quando), e, à direita, a situação do relatório.
  */
 function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio; chave: string; onMudar: (chave: string) => void }) {
   const router = useRouter();
@@ -1304,7 +1305,6 @@ function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio;
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <EtiquetaSituacao situacao={relatorio.situacao} />
       </div>
       {/* Quebra em duas linhas quando falta largura, sem rolar a página. */}
       <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
@@ -1344,6 +1344,10 @@ function BarraDoRelatorio({ relatorio, chave, onMudar }: { relatorio: Relatorio;
           );
         })}
       </ol>
+      {/* A situação do relatório à direita da barra (27/10/2026; antes, ao lado do mês). */}
+      <EtiquetasDaBarra>
+        <EtiquetaSituacao situacao={relatorio.situacao} />
+      </EtiquetasDaBarra>
     </nav>
   );
 }

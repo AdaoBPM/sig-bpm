@@ -8,6 +8,7 @@ import { ChevronDown, Lock } from "lucide-react";
 import { usePermissions } from "@/context/PermissionContext";
 import { podeSair } from "@/lib/alteracoesPendentes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EtiquetasDaBarra } from "@/components/layout/EtiquetasDaBarra";
 
 import { cenariosService, rotuloDoCenario, rotuloVersao } from "../services/cenariosService";
 import { EtiquetaMarcacao, EtiquetaVigente } from "./EtiquetasCenario";
@@ -90,8 +91,8 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
           );
         })}
       </ol>
-      {/* As etiquetas da versão e da marcação à direita da barra (13/10/2026; antes, ao lado do nome do cenário). */}
-      <div className="flex shrink-0 items-center gap-2 px-1 xl:ml-auto">
+      {/* As etiquetas da versão e da marcação à direita da barra (13/10/2026; o padrão das barras desde 27/10/2026, EtiquetasDaBarra). */}
+      <EtiquetasDaBarra>
         {atual ? (
           <span
             className="inline-flex items-center gap-1 rounded-sm border border-gray-300 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-700"
@@ -105,7 +106,7 @@ export function BarraDoCenario({ id, tela }: { id: string; tela: string }) {
         {/* Depois da versão, a etiqueta Vigente e a da marcação, com os símbolos (14/10/2026). */}
         {atual?.vigente ? <EtiquetaVigente classe={ETIQUETA} /> : null}
         <EtiquetaMarcacao marcacao={atual?.marcacao ?? null} classe={ETIQUETA} />
-      </div>
+      </EtiquetasDaBarra>
     </nav>
   );
 }

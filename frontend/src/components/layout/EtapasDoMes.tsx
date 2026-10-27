@@ -16,6 +16,7 @@ import { apuracaoService } from "@/app/competencias/services/apuracaoService";
 import { competenciasService } from "@/app/competencias/services/competenciasService";
 import { StatusCompetenciaBadge } from "@/app/competencias/components/StatusCompetenciaBadge";
 import { SinalDadosNovos } from "@/components/shared/SinalDadosNovos";
+import { EtiquetasDaBarra } from "./EtiquetasDaBarra";
 
 type Props = { anoMes: string; chave: string | null; resto: string };
 
@@ -96,10 +97,9 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {atual ? <StatusCompetenciaBadge status={atual.status} /> : null}
       </div>
       {/* Quebra em duas linhas quando falta largura, sem rolar a página. */}
-      <ol className="flex min-w-0 flex-wrap items-center gap-y-1">
+      <ol className="flex min-w-0 flex-wrap items-center gap-y-1 xl:ml-2">
         {etapas.map((e) => {
           const ativa = e.chave === etapaAtual;
           return (
@@ -116,6 +116,12 @@ export function EtapasDoMes({ anoMes, chave, resto }: Props) {
           );
         })}
       </ol>
+      {/* A situação da competência à direita da barra (27/10/2026; antes, ao lado do mês), como nas barras dos cenários e dos relatórios. */}
+      {atual ? (
+        <EtiquetasDaBarra>
+          <StatusCompetenciaBadge status={atual.status} />
+        </EtiquetasDaBarra>
+      ) : null}
     </nav>
   );
 }
