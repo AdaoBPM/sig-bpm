@@ -72,7 +72,7 @@ export type Bloco = Posicao &
         espacamento?: number;
       }
     /** Uma foto (16/10/2026): o arquivo, guardado no servidor, a legenda e a proporção (largura ÷ altura). */
-    | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean; /** Os ajustes da imagem (21/10/2026). */ ajustes?: AjustesDeImagem }
+    | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean; /** Os ajustes da imagem (21/10/2026). */ ajustes?: AjustesDeImagem; /** O corte (27/10/2026): a imagem cobre o quadro, que tem o tamanho escolhido, com o zoom e a posição; sem ele, o quadro tem a proporção da imagem. */ recorte?: RecorteDaImagem }
     /**
      * Um vídeo (20/10/2026): um arquivo do computador (`arquivo`, guardado no servidor, até 200 MB) ou um link do YouTube,
      * Instagram, Facebook ou LinkedIn (`url`, o endereço colado), com a legenda e a proporção; vazio, o quadro esperando o vídeo.
@@ -136,8 +136,15 @@ export type AjustesDeImagem = {
   sombraDesfoque?: number;
 };
 export type Fundo = { arquivo: string; proporcao: number; zoom: number; x: number; y: number; ajustes?: AjustesDeImagem };
+/**
+ * O corte de uma imagem (27/10/2026): como a Imagem de Fundo, a imagem cobre o quadro (`zoom` de 1 a 4, a partir do tamanho
+ * que cobre; `x` e `y` de 0 a 1, a posição).
+ */
+export type RecorteDaImagem = { zoom: number; x: number; y: number };
+/** A transição dos slides de um grupo (27/10/2026), guardada em cada página dele. */
+export type Transicao = "ESMAECER" | "ROLAR_VERTICAL" | "ROLAR_HORIZONTAL";
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
-export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo };
+export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo; /** A transição do grupo (27/10/2026): a mesma em todas as páginas dele. */ transicao?: Transicao };
 /** A Capa (20/10/2026): a primeira aba; os slides dela não entram na contagem. */
 export const CHAVE_DA_CAPA = "CAPA";
 /**

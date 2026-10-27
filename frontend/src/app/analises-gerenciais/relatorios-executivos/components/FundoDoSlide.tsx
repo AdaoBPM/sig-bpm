@@ -12,6 +12,7 @@ import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 import { enderecoDaFoto, type Fundo } from "../services/relatoriosExecutivosService";
 import { ControlesDosAjustes, estiloDosAjustes } from "./AjustesDaImagem";
 import { enviarImagem } from "./enviarImagem";
+import { TELA_PADRAO } from "./TelaPadrao";
 
 /** O zoom da Imagem de Fundo: de 1 (o tamanho que cobre a tela) a 4. */
 const ZOOM_MAXIMO = 4;
@@ -38,10 +39,9 @@ export function CamadaDoFundo({ relatorioId, fundo, className, style }: { relato
   );
 }
 
-/** A tela inteira (a da apresentação): a proporção e a altura do cabeçalho do slide (24 px de margem e 40 px do título). */
+/** A tela do slide (a padrão, 27/10/2026): a proporção e a altura do cabeçalho do slide (24 px de margem e 40 px do título). */
 function daTela() {
-  const largura = typeof window === "undefined" ? 1920 : window.screen.width;
-  const altura = typeof window === "undefined" ? 1080 : window.screen.height;
+  const { largura, altura } = TELA_PADRAO;
   return { proporcao: largura / altura, cabecalho: (24 + 40) / altura };
 }
 
@@ -50,8 +50,23 @@ function daTela() {
  * para posicioná-la; o Tamanho (ou a roda do mouse sobre ela) a aumenta. A faixa tracejada do topo é o cabeçalho do
  * slide, que a imagem cobre.
  */
-export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: { relatorioId: string; fundo: Fundo; onAplicar: (f: Fundo) => void; onFechar: () => void }) {
+export function AjustarFundoDialog({
+  relatorioId,
+  fundo,
+  grupo,
+  onAplicar,
+  onFechar,
+}: {
+  relatorioId: string;
+  fundo: Fundo;
+  /** O nome do grupo aberto (27/10/2026), para a caixa Aplicar Em Todo o Grupo. */
+  grupo?: string;
+  onAplicar: (f: Fundo, todoOGrupo: boolean) => void;
+  onFechar: () => void;
+}) {
   const [f, setF] = useState(fundo);
+  // A mesma Imagem de Fundo em todas as páginas do grupo (27/10/2026, pedido do Adão).
+  const [todoOGrupo, setTodoOGrupo] = useState(false);
   const caixa = useRef<HTMLDivElement>(null);
   const arrasto = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
   const tela = daTela();
@@ -84,7 +99,7 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
           <DialogTitle>Imagem de Fundo</DialogTitle>
           <DialogDescription>
             A imagem cobre o slide inteiro, por cima do cabeçalho, atrás dos blocos. Arraste-a para posicionar; o Tamanho (ou a roda do mouse sobre ela) a
-            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência. “Trocar Imagem” põe outra imagem no lugar, com a posição, o tamanho e os ajustes.
+            aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência. “Trocar Imagem” põe outra imagem no lugar, com a posição, o tamanho e os ajustes. Com “Aplicar Em Todo o Grupo”, a imagem vai para todas as páginas do grupo.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -134,6 +149,12 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
         </div>
         {/* Os ajustes da imagem (21/10/2026). */}
         <ControlesDosAjustes ajustes={f.ajustes} onMudar={(ajustes) => mudar({ ajustes })} />
+        {grupo ? (
+          <label className="flex items-center gap-2 text-sm" title={`A mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas de ${grupo}`}>
+            <input type="checkbox" className="accent-black" checked={todoOGrupo} onChange={(e) => setTodoOGrupo(e.target.checked)} />
+            Aplicar Em Todo o Grupo ({grupo})
+          </label>
+        ) : null}
         <DialogFooter className="sm:justify-between">
           <Button type="button" variant="outline" className="rounded-sm" disabled={enviando} onClick={() => seletor.current?.click()} title="Outra imagem no lugar desta, com a posição, o tamanho e os ajustes de agora">
             <ImageUp className="size-4" />
@@ -154,7 +175,7 @@ export function AjustarFundoDialog({ relatorioId, fundo, onAplicar, onFechar }: 
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={enviando} onClick={() => onAplicar(f)}>
+          <Button type="button" className={botaoPrimario} disabled={enviando} onClick={() => onAplicar(f, todoOGrupo)}>
             Aplicar
           </Button>
           </div>

@@ -77,7 +77,7 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO"; /** As opções do gráfico, como nos cards do Painel (22/10/2026). */ tipoGrafico?: "barras" | "area"; comRotulos?: boolean }
   | { tipo: "ANOTACAO"; nota: "POSITIVO" | "NEGATIVO" | "ATENCAO"; texto: string; /** O título (16/10/2026; sem ele, o nome da nota). */ titulo?: string; /** O texto formatado (17/10/2026), em HTML (limpo na tela, ao mostrar). */ html?: string; tamanhoTitulo?: number; /** A fonte do título e o espaçamento entre as linhas (20/10/2026). */ fonteTitulo?: FonteDoTexto; espacamento?: number }
   /** Uma foto (16/10/2026): o arquivo (na pasta do relatório; vazio, o quadro esperando a imagem), a legenda e a proporção (largura ÷ altura). */
-  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean; /** Os ajustes da imagem (21/10/2026). */ ajustes?: AjustesDeImagem }
+  | { tipo: "FOTO"; arquivo: string; legenda: string; proporcao: number; /** A legenda formatada (17/10/2026), em HTML. */ legendaHtml?: string; /** A Imagem Livre (21/10/2026): só a imagem, sem o fundo, a moldura e a legenda. */ livre?: boolean; /** Os ajustes da imagem (21/10/2026). */ ajustes?: AjustesDeImagem; /** O corte (27/10/2026): a imagem cobre o quadro, que tem o tamanho escolhido, com o zoom e a posição; sem ele, o quadro tem a proporção da imagem. */ recorte?: RecorteDaImagem }
   /**
    * Um vídeo (20/10/2026): um arquivo do computador (na pasta do relatório, até 200 MB) ou um link do YouTube, Instagram,
    * Facebook ou LinkedIn (`url`, o endereço colado; a tela monta o player incorporado), com a legenda e a proporção. Vazio
@@ -107,13 +107,17 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
 /** Os ajustes de uma imagem (21/10/2026): brilho e saturação em % (100 = como veio), matiz em graus, desfoque em px e transparência em %; sem um deles, o padrão. */
 export type AjustesDeImagem = { brilho?: number; matiz?: number; saturacao?: number; desfoque?: number; transparencia?: number };
 export type FundoDaPagina = { arquivo: string; proporcao: number; zoom: number; x: number; y: number; ajustes?: AjustesDeImagem };
+/** O corte de uma imagem (27/10/2026): ela cobre o quadro, com o zoom (1 a 4) e a posição (0 a 1), como a Imagem de Fundo. */
+export type RecorteDaImagem = { zoom: number; x: number; y: number };
+/** A transição dos slides de um grupo (27/10/2026), guardada em cada página dele. */
+export type TransicaoDoGrupo = "ESMAECER" | "ROLAR_VERTICAL" | "ROLAR_HORIZONTAL";
 
 /**
  * As páginas de uma aba (16/10/2026): cada departamento tem uma ou mais páginas, cada uma com a sua grade de blocos. Ficam
  * na coluna `blocos` da aba; a lista antiga (só os blocos, de antes das páginas) vira uma página.
  */
 /** O nome da página (16/10/2026), o do slide na apresentação; sem ele, "Página N". */
-export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[]; fundo?: FundoDaPagina };
+export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[]; fundo?: FundoDaPagina; transicao?: TransicaoDoGrupo };
 export function paginasDe(json: unknown): PaginaDoRelatorio[] {
   const lista = Array.isArray(json) ? json : [];
   if (!lista.length) return [{ id: "p1", blocos: [] }];

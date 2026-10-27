@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -33,7 +33,7 @@ import { BarraDeEdicao, COLUNAS, escrevendoAgora, GradeDoRelatorio, larguraDoSli
 import { ColarNoSlideDialog, type Colado, type ComoColar } from "../components/ColarNoSlideDialog";
 import { copiaDe, copiaPeloTexto, formatacaoBasica, TIPO_DA_COPIA, useCopia, type Copia } from "../components/copiarColar";
 import { deTexto, limparHtml } from "../components/TextoRico";
-import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
+import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario, type Transicao } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
 const novoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -51,6 +51,14 @@ const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 
 
 /** A aba e a página abertas. */
 type Aberta = { chave: string; pagina: string | null };
+
+/** As transições do botão Transições (27/10/2026): Nenhuma tira a do grupo. */
+const TRANSICOES: Array<{ valor: Transicao | undefined; rotulo: string }> = [
+  { valor: undefined, rotulo: "Nenhuma" },
+  { valor: "ESMAECER", rotulo: "Esmaecer" },
+  { valor: "ROLAR_VERTICAL", rotulo: "Rolar Vertical" },
+  { valor: "ROLAR_HORIZONTAL", rotulo: "Rolar Horizontal" },
+];
 
 /**
  * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as sete abas (17/10/2026: Introdução, Resultados,
@@ -212,7 +220,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     return { x: 0, y: fim + k, ...t };
   };
   // O bloco adicionado (24/10/2026: também o colado) fica escolhido, com o menu da edição dele.
-  const [escolher, setEscolher] = useState<{ id: string } | undefined>(undefined);
+  const [escolher, setEscolher] = useState<{ id: string; cortar?: boolean } | undefined>(undefined);
   const incluir = (novos: ConteudoDoBloco[]) => {
     const blocos = novos.map((n, k) => ({ ...n, id: novoId(), ...posicao(n, k) }) as Bloco);
     mudarPagina([...daPagina, ...blocos]);
@@ -233,7 +241,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       const p = ultimo && ultimo.x + ultimo.w + t.w <= COLUNAS ? { x: ultimo.x + ultimo.w, y: ultimo.y } : { x: 0, y: fim };
       const id = novoId();
       mudarPagina([...daPagina, { tipo: "FOTO", arquivo: nome, legenda: "", proporcao, ...(livre ? { livre: true } : {}), id, ...p, w: t.w, h }]);
-      setEscolher({ id });
+      // A imagem adicionada abre o Cortar e Posicionar (27/10/2026); o Cancelar a deixa como entrou.
+      setEscolher({ id, cortar: true });
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
   });
@@ -247,7 +256,12 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     },
     onSuccess: ({ nome, proporcao }, { id }) => {
       const largura = larguraDoSlide();
-      mudarPagina(daPagina.map((b) => (b.id === id && b.tipo === "FOTO" ? { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura, !!b.livre) } : b)));
+      // O quadro cortado (27/10/2026) fica do tamanho dele, com a imagem centralizada; o outro, na proporção da imagem.
+      mudarPagina(
+        daPagina.map((b) =>
+          b.id !== id || b.tipo !== "FOTO" ? b : b.recorte ? { ...b, arquivo: nome, proporcao, recorte: { zoom: 1, x: 0.5, y: 0.5 } } : { ...b, arquivo: nome, proporcao, h: linhasDaFoto(b.w, proporcao, largura, !!b.livre) },
+        ),
+      );
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível enviar a foto.")),
   });
@@ -342,8 +356,11 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     setEscolher({ id });
   };
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
+  // A transição do grupo (27/10/2026): a das páginas dele (todas iguais); a página nova entra com ela.
+  const transicaoDoGrupo = daAba[0]?.transicao;
+  const mudarTransicao = (transicao: Transicao | undefined) => mudarPaginas(daAba.map((p) => ({ ...p, transicao })));
   const novaPagina = () => {
-    const nova = { id: novoId(), blocos: [] };
+    const nova: Pagina = { id: novoId(), blocos: [], ...(transicaoDoGrupo ? { transicao: transicaoDoGrupo } : {}) };
     mudarPaginas([...daAba.slice(0, nPagina + 1), nova, ...daAba.slice(nPagina + 1)]);
     setAberta({ chave, pagina: nova.id });
   };
@@ -365,7 +382,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   // Introdução: os slides da Capa e do Encerramento (20/10/2026) não contam.
   const comConteudo = relatorio.abas.flatMap((a) => {
     const ps = a.visivel ? (paginas[a.chave] ?? []) : [];
-    return ps.flatMap((p, k) => (p.blocos.length || p.fundo ? [{ aba: a.chave, chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos, fundo: p.fundo }] : []));
+    return ps.flatMap((p, k) => (p.blocos.length || p.fundo ? [{ aba: a.chave, chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos, fundo: p.fundo, transicao: p.transicao }] : []));
   });
   const contados = comConteudo.filter((x) => !ABAS_SEM_NUMERO.has(x.aba)).length;
   let contagem = 0;
@@ -595,6 +612,31 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 </span>
               )
             ) : null}
+            {/* As transições dos slides do grupo aberto (27/10/2026, pedido do Adão), antes do Adicionar. */}
+            {editavel ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button type="button" className={botaoPrimario} title={`A transição dos slides de ${aba?.nome ?? "este grupo"}: ${TRANSICOES.find((t) => t.valor === transicaoDoGrupo)?.rotulo ?? "Nenhuma"}`}>
+                      <Clapperboard className="size-4" />
+                      Transições
+                      <ChevronDown className="size-4" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="w-max min-w-44 [&_[role=menuitem]]:whitespace-nowrap">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-xs text-gray-500">Slides de {aba?.nome}</DropdownMenuLabel>
+                    {TRANSICOES.map((t) => (
+                      <DropdownMenuItem key={t.rotulo} onClick={() => mudarTransicao(t.valor)}>
+                        <Check className={`size-4 ${t.valor === transicaoDoGrupo ? "" : "invisible"}`} />
+                        {t.rotulo}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
             {editavel ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -731,7 +773,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
               dois cliques nele (ou o lápis) o editam, e arrastar a aba de uma página para outra posição a troca de lugar (a ordem dos slides acompanha). Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
               blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de uma aba para a outra.
-              A página tem o tamanho do que cabe na tela inteira (o contorno tracejado): os blocos não passam dele.
+              A página tem o tamanho da tela padrão, 1920 × 1080 (o contorno tracejado): os blocos não passam dele. Na apresentação e no PDF, o slide se
+              reduz ou se amplia por inteiro para caber na tela de quem abre, com a mesma aparência e os blocos nos mesmos lugares em qualquer resolução.
             </li>
             <li>
               Na sua aba, “Adicionar” traz nove opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
@@ -744,12 +787,13 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               texto da anotação e da legenda da imagem: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
               verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 144; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana, Georgia e as abertas Roboto, Open Sans, Montserrat, Lato e Poppins; a fonte do texto onde está o cursor fica destacada na lista, em negrito e com o fundo cinza) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
               para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12 a 32; o padrão, 18), e o da fonte, a dele. No menu da edição, escolha a nota: Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
-              Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto.
+              Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto. Enquanto você escreve, ela cresce
+              sozinha quando o texto passa da altura dela (até o pé da página), e os blocos de baixo descem.
             </li>
             <li>
               Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (no menu da edição; o tamanho até 144 e o
               branco servem aos textos sobre a Imagem de Fundo), mas sem o destaque lateral, o título, o ícone e o fundo: na edição, o contorno tracejado aparece com o mouse
-              sobre ele. Na apresentação, ele não se destaca nem se amplia.
+              sobre ele. Como a anotação, ele cresce sozinho enquanto você escreve. Na apresentação, ele não se destaca nem se amplia.
             </li>
             <li>
               Sumário abre o modal Adicionar Sumário: listar as Telas (cada uma com o número do primeiro slide dela) ou as Telas e Slides (abaixo de cada
@@ -769,14 +813,18 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             </li>
             <li>
               Imagem com Legenda envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
-              amarelo-ouro. A imagem aumenta e diminui sempre na mesma proporção. Nas imagens (com legenda, livres e de fundo), o botão de ajustes da barra do
+              amarelo-ouro. Ao adicionar a imagem (e, depois, pelo botão Cortar e Posicionar do menu da edição), o modal Cortar e Posicionar escolhe o tamanho
+              do bloco: Na Proporção da Imagem (a largura em colunas; a altura acompanha, sem cortar), Tamanho Pronto (as frações da tela, de inteira a 1/4 na
+              largura e na altura) ou Tamanho Atual; fora da proporção, a imagem cobre o quadro: arraste-a para posicioná-la e use o Tamanho (ou a roda do
+              mouse) para aumentá-la. Na proporção, ela aumenta e diminui sempre na mesma proporção, pelos cantos; cortada, por todos os quadrados de
+              ancoragem, e a imagem continua cobrindo o quadro. Nas imagens (com legenda, livres e de fundo), o botão de ajustes da barra do
               bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; nas com legenda e nas livres, também a Borda (a
               espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). “Restaurar Ajustes” volta à imagem como veio, e “Trocar
-              Imagem” põe outra imagem no lugar, com os ajustes de agora (o bloco fica na proporção da nova).
+              Imagem” põe outra imagem no lugar, com os ajustes de agora (o bloco fica na proporção da nova; na cortada, o quadro fica, e a nova o cobre).
             </li>
             <li>
               Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
-              slide). Ela aumenta e diminui na mesma proporção (até duas linhas de altura ou uma coluna de largura, o que vier antes) e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
+              slide). Como ela, abre o Cortar e Posicionar ao entrar; na proporção, aumenta e diminui na mesma proporção (até duas linhas de altura ou uma coluna de largura, o que vier antes) e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
             </li>
             <li>
               Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
@@ -788,7 +836,13 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               Imagem de Fundo envia uma imagem (reduzida a até 2560 px) e abre o modal Imagem de Fundo, com a miniatura da tela inteira: arraste a imagem
               para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; Restaurar a centraliza no tamanho que cobre a tela. Ela
               ocupa o fundo do slide inteiro, por cima do cabeçalho (a faixa tracejada da miniatura) e atrás dos blocos; cada página tem uma. Na página, ela
-              aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide.
+              aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide. No modal, “Aplicar
+              Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.
+            </li>
+            <li>
+              “Transições”, antes do Adicionar, escolhe como os slides do grupo aberto entram na apresentação: Esmaecer (o novo aparece sobre o anterior),
+              Rolar Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou da esquerda), ou
+              Nenhuma (a troca na hora). Vale para todas as páginas do grupo, também as novas; a marca no menu mostra a escolhida.
             </li>
             <li>
               Como no Canva: clique num bloco para escolhê-lo (o contorno tracejado, com o mouse sobre um bloco, mostra qual o clique escolhe). O escolhido fica destacado
@@ -816,7 +870,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               navegador), Copiar e Colar (o bloco; veja acima), o gráfico dos cards do Painel e dos Indicadores (em
               ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), Configurar (as opções do
               gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
-              imagem, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
+              imagem, o Cortar e Posicionar, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
             </li>
             <li>
               “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
@@ -833,7 +887,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               não se selecionam.
             </li>
             <li>
-              “Exportar” baixa os slides em PDF, como na apresentação (um slide por página, na proporção da tela): Toda a Apresentação, o Grupo Atual (a aba do
+              “Exportar” baixa os slides em PDF, como na apresentação (um slide por página, na tela padrão, 1920 × 1080): Toda a Apresentação, o Grupo Atual (a aba do
               relatório aberta: Capa, Introdução, Administrativo…) ou a Aba Atual (a página aberta), com o número de slides de cada um. Vale o que está na tela, gravado
               ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
             </li>
@@ -1103,9 +1157,12 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
         <AjustarFundoDialog
           relatorioId={relatorio.id}
           fundo={ajustandoFundo}
+          grupo={aba?.nome}
           onFechar={() => setAjustandoFundo(null)}
-          onAplicar={(f) => {
-            mudarFundo(f);
+          onAplicar={(f, todoOGrupo) => {
+            // Em todas as páginas do grupo (27/10/2026) ou só na aberta.
+            if (todoOGrupo) mudarPaginas(daAba.map((p) => ({ ...p, fundo: f })));
+            else mudarFundo(f);
             setAjustandoFundo(null);
           }}
         />

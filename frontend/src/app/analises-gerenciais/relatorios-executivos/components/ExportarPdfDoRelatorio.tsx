@@ -15,6 +15,7 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import { SlideDoRelatorio, type Slide } from "./ApresentacaoDoRelatorio";
+import { TELA_PADRAO } from "./TelaPadrao";
 import type { DadosDoRelatorio, TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -130,8 +131,8 @@ export function ExportarPdfDoRelatorio({
       cancelado = true;
     };
   }, [fila, k]);
-  const largura = typeof window === "undefined" ? 1920 : window.screen.width;
-  const altura = typeof window === "undefined" ? 1080 : window.screen.height;
+  // A tela padrão (27/10/2026; antes, a tela de quem exportava): o PDF sai igual em qualquer monitor.
+  const { largura, altura } = TELA_PADRAO;
   const contagem = (n: number) => (n === 1 ? "1 slide" : `${n} slides`);
   return (
     <>
@@ -164,7 +165,7 @@ export function ExportarPdfDoRelatorio({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-      {/* O slide em desenho, fora da tela, no tamanho da tela inteira (o da apresentação). */}
+      {/* O slide em desenho, fora da tela, no tamanho da tela padrão (o da apresentação). */}
       {fila ? (
         <div aria-hidden className="pointer-events-none fixed top-0 left-[-100000px] select-none" style={{ width: largura, height: altura }}>
           {/* isolate: o fundo do slide fica atrás do separador do rodapé (que fica atrás da Imagem de Fundo). */}

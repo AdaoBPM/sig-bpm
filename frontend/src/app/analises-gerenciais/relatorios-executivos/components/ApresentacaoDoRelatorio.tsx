@@ -10,13 +10,34 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 
 import { CamadaDoFundo } from "./FundoDoSlide";
 import { GradeDoRelatorio, linhasDaPagina } from "./GradeDoRelatorio";
-import type { Bloco, DadosDoRelatorio, Fundo, TelaDoSumario } from "../services/relatoriosExecutivosService";
+import { TelaNaEscala } from "./TelaPadrao";
+import type { Bloco, DadosDoRelatorio, Fundo, TelaDoSumario, Transicao } from "../services/relatoriosExecutivosService";
 
 /**
  * Um slide: o título da aba (`nome`: Introdução, Performance da Produção…), o nome da página (`pagina`), os blocos e a
  * Imagem de Fundo (20/10/2026), e o número dele na contagem que começa na Introdução (`numero`, de `total`; nulo na Capa e no Encerramento).
  */
-export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[]; fundo?: Fundo; numero: number | null; total: number };
+export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[]; fundo?: Fundo; numero: number | null; total: number; transicao?: Transicao };
+
+/**
+ * As transições (27/10/2026, pedido do Adão), as do grupo do slide que entra: Esmaecer (o slide novo aparece sobre o
+ * anterior), Rolar Vertical e Rolar Horizontal (o novo empurra o anterior: para a frente, de baixo ou da direita; para
+ * trás, de cima ou da esquerda). Sem transição, o slide troca na hora.
+ */
+const DURACAO_DA_TRANSICAO = 600;
+const ESTILO_DAS_TRANSICOES = `
+@keyframes re-esmaecer { from { opacity: 0 } to { opacity: 1 } }
+@keyframes re-entra-x { from { transform: translateX(calc(var(--sentido) * 100%)) } to { transform: none } }
+@keyframes re-sai-x { from { transform: none } to { transform: translateX(calc(var(--sentido) * -100%)) } }
+@keyframes re-entra-y { from { transform: translateY(calc(var(--sentido) * 100%)) } to { transform: none } }
+@keyframes re-sai-y { from { transform: none } to { transform: translateY(calc(var(--sentido) * -100%)) } }
+`;
+type Troca = { de: number; sentido: 1 | -1; transicao: Transicao };
+function animacao(t: Troca, papel: "entra" | "sai"): React.CSSProperties | undefined {
+  const nome = t.transicao === "ESMAECER" ? (papel === "entra" ? "re-esmaecer" : null) : `re-${papel}-${t.transicao === "ROLAR_HORIZONTAL" ? "x" : "y"}`;
+  if (!nome) return undefined;
+  return { animation: `${nome} ${DURACAO_DA_TRANSICAO}ms ease-in-out both`, ["--sentido" as string]: t.sentido };
+}
 
 /** Entra na tela inteira do navegador (a página toda; a apresentação a cobre, sem o menu lateral). */
 export function entrarEmTelaInteira() {
@@ -52,7 +73,22 @@ export function ApresentacaoDoRelatorio({
   tipo: TipoGrafico;
   onSair: () => void;
 }) {
-  const [k, setK] = useState(inicial);
+  const [k, setKAgora] = useState(inicial);
+  // A troca em andamento (27/10/2026): o slide que sai, o sentido e a transição do que entra.
+  const [troca, setTroca] = useState<Troca | null>(null);
+  const setK = (proximo: number | ((x: number) => number)) => {
+    const j = typeof proximo === "function" ? proximo(k) : proximo;
+    if (j === k) return;
+    const transicao = slides[j]?.transicao;
+    setTroca(transicao ? { de: k, sentido: j > k ? 1 : -1, transicao } : null);
+    setKAgora(j);
+  };
+  // O slide que sai some no fim da transição (também se a animação não terminar, como numa aba escondida).
+  useEffect(() => {
+    if (!troca) return;
+    const t = window.setTimeout(() => setTroca(null), DURACAO_DA_TRANSICAO + 100);
+    return () => window.clearTimeout(t);
+  }, [troca]);
   // Os botões aparecem quando o mouse se move e somem 2,5 s depois (ficam enquanto o mouse está sobre eles).
   const [comBotoes, setComBotoes] = useState(false);
   const sobreOsBotoes = useRef(false);
@@ -109,7 +145,18 @@ export function ApresentacaoDoRelatorio({
   const botao = "inline-flex size-9 items-center justify-center rounded-sm text-gray-100 hover:bg-gray-700 hover:text-white disabled:pointer-events-none disabled:opacity-40";
   return (
     <div role="dialog" aria-modal aria-label={`Apresentação: Relatório Executivo de ${periodo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
-      <SlideDoRelatorio relatorioId={relatorioId} periodo={periodo} slide={slide} sumario={sumario} dados={dados} cores={cores} tipo={tipo} />
+      <style>{ESTILO_DAS_TRANSICOES}</style>
+      {/* O slide na tela padrão, na escala da tela de quem apresenta (27/10/2026); na troca, o que sai e o que entra. */}
+      <TelaNaEscala>
+        {troca && slides[troca.de] ? (
+          <div key={`sai-${slides[troca.de].chave}`} aria-hidden className="absolute inset-0 bg-background" style={animacao(troca, "sai")}>
+            <SlideDoRelatorio relatorioId={relatorioId} periodo={periodo} slide={slides[troca.de]} sumario={sumario} dados={dados} cores={cores} tipo={tipo} />
+          </div>
+        ) : null}
+        <div key={`entra-${slide?.chave}`} className="absolute inset-0 bg-background" style={troca ? animacao(troca, "entra") : undefined}>
+          <SlideDoRelatorio relatorioId={relatorioId} periodo={periodo} slide={slide} sumario={sumario} dados={dados} cores={cores} tipo={tipo} />
+        </div>
+      </TelaNaEscala>
       <nav
         aria-label="Slides"
         onMouseEnter={() => (sobreOsBotoes.current = true)}

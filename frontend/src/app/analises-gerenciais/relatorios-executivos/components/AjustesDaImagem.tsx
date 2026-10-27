@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
-import { enderecoDaFoto, type AjustesDeImagem } from "../services/relatoriosExecutivosService";
+import { enderecoDaFoto, type AjustesDeImagem, type RecorteDaImagem } from "../services/relatoriosExecutivosService";
 import { enviarImagem } from "./enviarImagem";
 import { COR_PADRAO, CORES_DA_FONTE } from "./TextoRico";
 
@@ -57,11 +57,36 @@ export function estiloDosAjustes(a: AjustesDeImagem | undefined): CSSProperties 
  * contorno da imagem (drop-shadow: no PNG transparente, a do desenho), centralizada; o espaço em volta dela (o desfoque)
  * sai do tamanho da imagem, para a sombra não ser cortada pelo bloco.
  */
-export function ImagemComMoldura({ src, alt, proporcao, ajustes }: { src: string; alt: string; proporcao: number; ajustes: AjustesDeImagem | undefined }) {
+export function ImagemComMoldura({ src, alt, proporcao, ajustes, recorte }: { src: string; alt: string; proporcao: number; ajustes: AjustesDeImagem | undefined; recorte?: RecorteDaImagem }) {
   const borda = valorDe(ajustes, BORDA);
   const intensidade = valorDe(ajustes, SOMBRA[0]);
   const desfoque = valorDe(ajustes, SOMBRA[1]);
   const folga = intensidade ? desfoque : 0;
+  // A imagem cortada (27/10/2026, o Cortar e Posicionar): ela cobre o quadro inteiro, com o zoom e a posição, como a Imagem
+  // de Fundo; a borda e a sombra, em volta do quadro.
+  if (recorte) {
+    const ponto = `${recorte.x * 100}% ${recorte.y * 100}%`;
+    return (
+      <div className="h-full w-full" style={{ padding: folga }}>
+        <div
+          className="h-full w-full overflow-hidden"
+          style={{
+            ...(borda ? { border: `${borda}px solid ${corDaBorda(ajustes)}` } : {}),
+            ...(intensidade ? { filter: `drop-shadow(0 0 ${desfoque}px rgb(0 0 0 / ${intensidade / 100}))` } : {}),
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- a imagem vem do servidor, pelo proxy, com o login. */}
+          <img
+            src={src}
+            alt={alt}
+            draggable={false}
+            className="block size-full max-w-none object-cover"
+            style={{ objectPosition: ponto, transform: `scale(${recorte.zoom})`, transformOrigin: ponto, ...estiloDosAjustes(ajustes) }}
+          />
+        </div>
+      </div>
+    );
+  }
   // Os cq (container query) são as medidas do espaço da imagem; a largura, a que cabe na largura e na altura dele.
   const largura = `min(100cqw - ${2 * borda}px, (100cqh - ${2 * borda}px) * ${proporcao || 1})`;
   return (

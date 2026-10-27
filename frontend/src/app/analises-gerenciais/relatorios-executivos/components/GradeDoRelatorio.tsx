@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useCallback, useContext, useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
-import { ChartColumn, CircleAlert, CirclePlay, ClipboardPaste, Copy, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import { ChartColumn, CircleAlert, CirclePlay, ClipboardPaste, Copy, Crop, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -20,7 +20,9 @@ import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOr
 
 import { enderecoDaFoto, type Bloco, type DadosDoRelatorio, type Fundo, type Nota, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 import { AjustesDaImagemDialog, ImagemComMoldura } from "./AjustesDaImagem";
+import { CortarImagemDialog, type TamanhoDaImagem } from "./CortarImagem";
 import { CamadaDoFundo } from "./FundoDoSlide";
+import { NaTelaPadrao, TELA_PADRAO } from "./TelaPadrao";
 import { BarraDoSumario, ConfigurarSumarioDialog, ListaDoSumario } from "./SumarioDoRelatorio";
 import { alturaDaLinha, BarraDeTexto, familiaDa, TAMANHO_DO_TITULO, TextoRico } from "./TextoRico";
 import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoVideo";
@@ -81,6 +83,7 @@ function tamanhoMinimo(b: Bloco, largura: number) {
   if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: 6 };
   // A Imagem Livre (22/10/2026) diminui até duas linhas de altura ou uma coluna de largura, o que vier antes (a altura
   // acompanha a largura, na proporção da imagem); a com legenda, até 2 × 2.
+  if (b.tipo === "FOTO" && b.recorte) return { minW: 2, minH: 2 };
   if (b.tipo === "FOTO" && b.livre) {
     const minW = Array.from({ length: COLUNAS }, (_, k) => k + 1).find((w) => linhasSemMinimo(w, b.proporcao, largura) >= 2) ?? COLUNAS;
     return { minW, minH: linhasDaFoto(minW, b.proporcao, largura, true) };
@@ -114,12 +117,11 @@ function GradeDeFundo({ largura }: { largura: number }) {
 }
 
 /**
- * As linhas de uma página (16/10/2026): só o espaço útil da tela inteira, onde a apresentação a mostra — a altura da tela,
+ * As linhas de uma página (16/10/2026): só o espaço útil da tela padrão, onde a apresentação a mostra — a altura dela,
  * menos o topo do slide (24 px de margem, o título em 40 px e 16 px abaixo dele) e a margem de baixo (24 px).
  */
 export function linhasDaPagina() {
-  const altura = typeof window === "undefined" ? 1080 : window.screen.height;
-  const grade = altura - 24 - 40 - 16 - 24;
+  const grade = TELA_PADRAO.altura - 24 - 40 - 16 - 24;
   // A grade: 12 px em cima e embaixo, e cada linha com 12 px entre elas.
   return Math.max(8, Math.floor((grade - MARGEM) / (ALTURA_DA_LINHA + MARGEM)));
 }
@@ -131,8 +133,8 @@ export function linhasDaPagina() {
  * inteira, os blocos ficavam mais largos e mais baixos, e a imagem, na proporção dela, mais estreita que a legenda).
  */
 export function larguraDoSlide() {
-  const largura = typeof window === "undefined" ? 1920 : window.screen.width;
-  return largura - 64 + 24;
+  // A da tela padrão (27/10/2026; antes, a da tela de quem abria).
+  return TELA_PADRAO.largura - 64 + 24;
 }
 
 /** O card do Painel sem o gráfico fica com 2/5 da largura (as duas colunas dos valores, do mesmo tamanho); com ele, 5/2. */
@@ -194,7 +196,17 @@ function linhasSemMinimo(w: number, proporcao: number, largura: number, extra = 
  * do vídeo); os vídeos do Instagram, do Facebook e do LinkedIn (a publicação, com o texto dela), livres.
  */
 const naProporcao = (b: Bloco | undefined): b is Extract<Bloco, { tipo: "FOTO" | "VIDEO" }> =>
-  b?.tipo === "FOTO" || (b?.tipo === "VIDEO" && (b.origem === "ARQUIVO" || !!videoDoLink(b.url)?.comandos));
+  // A imagem cortada (27/10/2026) tem o quadro livre: a imagem cobre o tamanho que ele tiver.
+  (b?.tipo === "FOTO" && !b.recorte) || (b?.tipo === "VIDEO" && (b.origem === "ARQUIVO" || !!videoDoLink(b.url)?.comandos));
+
+/**
+ * As medidas, em px da tela padrão, do quadro da imagem de um bloco de `w` × `h` (27/10/2026, o Cortar e Posicionar): a
+ * largura das colunas e a altura das linhas, menos a legenda (na Imagem com Legenda).
+ */
+export function quadroDaImagem(w: number, h: number, livre: boolean) {
+  const coluna = (larguraDoSlide() - MARGEM * (COLUNAS - 1) - MARGEM * 2) / COLUNAS;
+  return { largura: coluna * w + MARGEM * (w - 1), altura: Math.max(1, (ALTURA_DA_LINHA + MARGEM) * h - MARGEM - (livre ? 0 : ALTURA_DA_LEGENDA)) };
+}
 
 /**
  * Os quadrados de ancoragem do bloco escolhido (24/10/2026, como no Canva): os quatro cantos e o meio dos lados; nos
@@ -335,8 +347,8 @@ export function GradeDoRelatorio({
   refazer?: () => void;
   /** O Colar do menu da edição (24/10/2026: o bloco copiado); sem ele, quase apagado. */
   colar?: () => void;
-  /** O bloco a escolher (24/10/2026: o colado ou o adicionado); um objeto novo a cada vez. */
-  escolher?: { id: string };
+  /** O bloco a escolher (24/10/2026: o colado ou o adicionado); um objeto novo a cada vez. `cortar` (27/10/2026): a imagem adicionada abre o Cortar e Posicionar. */
+  escolher?: { id: string; cortar?: boolean };
   /** Na imagem do slide (22/10/2026: a exportação em PDF): os vídeos como quadros com o ícone. */
   paraImagem?: boolean;
   /** As telas e os slides do relatório, com os números (20/10/2026), para os blocos de Sumário. */
@@ -359,6 +371,8 @@ export function GradeDoRelatorio({
   onMudar: (blocos: Bloco[]) => void;
 }) {
   const [configurando, setConfigurando] = useState<string | null>(null);
+  // A imagem no Cortar e Posicionar (27/10/2026).
+  const [cortando, setCortando] = useState<string | null>(() => (escolher?.cortar ? escolher.id : null));
   // O slide na largura da tela inteira (caixa) e a escala dele no espaço da tela (area): 1 na apresentação, menor na edição.
   const LARGURA = larguraDoSlide();
   const area = useRef<HTMLDivElement>(null);
@@ -390,6 +404,7 @@ export function GradeDoRelatorio({
   if (escolher !== escolherVisto) {
     setEscolherVisto(escolher);
     if (escolher) setSelecionado(escolher.id);
+    if (escolher?.cortar) setCortando(escolher.id);
   }
   const escolhido = editavel ? blocos.find((b) => b.id === selecionado) : undefined;
   const campoDoEscolhido = useCallback(() => (selecionado ? (campos.current.get(selecionado) ?? null) : null), [selecionado]);
@@ -515,6 +530,34 @@ export function GradeDoRelatorio({
     novo.h = sombra.h = h;
   };
   const mudarBloco = (id: string, m: Partial<Bloco>) => onMudar(blocos.map((b) => (b.id === id ? ({ ...b, ...m } as Bloco) : b)));
+  /**
+   * O bloco com outra posição e outro tamanho (27/10/2026): os que ele encobre descem para logo abaixo dele (em cascata),
+   * como no arrasto.
+   */
+  const reposicionar = (id: string, m: Partial<Bloco>, novo: { x: number; y: number; w: number; h: number }) => {
+    const l = blocos.map((b) => ({ i: b.id, x: b.x, y: b.y, w: b.w, h: b.h, ...(b.id === id ? novo : {}) })) as Layout[];
+    empurrar(l, l.find((b) => b.i === id)!);
+    const pos = new Map(l.map((b) => [b.i, b]));
+    onMudar(blocos.map((b) => ({ ...b, ...(b.id === id ? m : {}), x: pos.get(b.id)!.x, y: pos.get(b.id)!.y, w: pos.get(b.id)!.w, h: pos.get(b.id)!.h }) as Bloco));
+  };
+  /**
+   * As caixas de texto crescem com o texto (27/10/2026, pedido do Adão): na anotação e no Texto Livre, o texto que passa da
+   * altura do bloco o aumenta (em linhas da grade, até o pé da página), e os blocos de baixo descem.
+   */
+  const mudarTexto = (b: Bloco, m: Partial<Bloco>) => {
+    const el = campos.current.get(b.id);
+    const falta = editavel && (b.tipo === "ANOTACAO" || b.tipo === "TEXTO") && "html" in m && el ? el.scrollHeight - el.clientHeight : 0;
+    const h = falta > 1 ? Math.min(linhas - b.y, b.h + Math.ceil(falta / (ALTURA_DA_LINHA + MARGEM))) : b.h;
+    if (h <= b.h) return mudarBloco(b.id, m);
+    reposicionar(b.id, m, { x: b.x, y: b.y, w: b.w, h });
+  };
+  /** O Cortar e Posicionar aplicado (27/10/2026): o tamanho dentro da página e o corte (sem ele, a proporção da imagem). */
+  const aplicarCorte = (b: Bloco, t: TamanhoDaImagem) => {
+    const w = Math.min(COLUNAS, t.w);
+    const x = Math.min(b.x, COLUNAS - w);
+    const y = Math.max(0, Math.min(b.y, linhas - t.h));
+    reposicionar(b.id, { recorte: t.recorte } as Partial<Bloco>, { x, y, w, h: t.h });
+  };
   const aoMudarLeiaute = (novo: Layout[]) => {
     const pos = new Map(novo.map((l) => [l.i, l]));
     const mudou = blocos.some((b) => {
@@ -566,6 +609,7 @@ export function GradeDoRelatorio({
             colar={colar}
             onMudar={(m) => escolhido && mudarBloco(escolhido.id, m)}
             onConfigurar={() => escolhido && setConfigurando(escolhido.id)}
+            onCortar={() => escolhido && setCortando(escolhido.id)}
             onExcluir={() => escolhido && excluir(escolhido.id)}
           />
         </>
@@ -663,7 +707,7 @@ export function GradeDoRelatorio({
               // O card do Painel sem recorte (16/10/2026): a dica do mês, ao passar o mouse no gráfico, sai dos limites do card.
               className={`h-full ${b.tipo === "PAINEL" ? "" : "overflow-hidden"} ${amplia ? `cursor-zoom-in rounded-sm transition duration-200 ${imagemLivre ? "hover:drop-shadow-lg" : "hover:bg-background hover:shadow-lg"}` : ""}`}
               style={realce?.id === b.id ? { transform: `scale(${realce.escala})`, transformOrigin: realce.origem } : undefined}
-              onMouseEnter={amplia ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget.getBoundingClientRect()) }) : undefined}
+              onMouseEnter={amplia ? (e) => setRealce({ id: b.id, ...destaqueNaTela(e.currentTarget) }) : undefined}
               onMouseLeave={amplia ? () => setRealce(null) : undefined}
               onClick={amplia ? (e) => setAmpliado(oQueAmpliar(b, e.currentTarget, e.target as HTMLElement)) : undefined}
             >
@@ -680,7 +724,7 @@ export function GradeDoRelatorio({
                 onCarregarImagem={onCarregarImagem ? (arquivo) => onCarregarImagem(b.id, arquivo) : undefined}
                 onEscolherVideo={onEscolherVideo ? () => onEscolherVideo(b.id) : undefined}
                 paraImagem={paraImagem}
-                onMudar={(m) => mudarBloco(b.id, m)}
+                onMudar={(m) => mudarTexto(b, m)}
               />
             </div>
           </div>
@@ -724,12 +768,35 @@ export function GradeDoRelatorio({
           onFechar={() => setConfigurando(null)}
           onAplicar={(ajustes, troca) => {
             // Com a imagem trocada (22/10/2026), o bloco fica com a altura da proporção da nova; os ajustes ficam.
-            const nova = troca ? { arquivo: troca.arquivo, proporcao: troca.proporcao, h: linhasDaFoto(doCard.w, troca.proporcao, LARGURA, !!doCard.livre) } : {};
+            // Com o corte (27/10/2026), o quadro fica, e a nova imagem o cobre, centralizada.
+            const nova = !troca
+              ? {}
+              : doCard.recorte
+                ? { arquivo: troca.arquivo, proporcao: troca.proporcao, recorte: { zoom: 1, x: 0.5, y: 0.5 } }
+                : { arquivo: troca.arquivo, proporcao: troca.proporcao, h: linhasDaFoto(doCard.w, troca.proporcao, LARGURA, !!doCard.livre) };
             mudarBloco(doCard.id, { ajustes, ...nova } as Partial<Bloco>);
             setConfigurando(null);
           }}
         />
       ) : null}
+      {(() => {
+        const b = blocos.find((x) => x.id === cortando);
+        return b?.tipo === "FOTO" && b.arquivo ? (
+          <CortarImagemDialog
+            relatorioId={relatorioId}
+            bloco={b}
+            colunas={COLUNAS}
+            linhas={linhas}
+            linhasNaProporcao={(w) => linhasDaFoto(w, b.proporcao, LARGURA, !!b.livre)}
+            quadro={(w, h) => quadroDaImagem(w, h, !!b.livre)}
+            onFechar={() => setCortando(null)}
+            onAplicar={(t) => {
+              aplicarCorte(b, t);
+              setCortando(null);
+            }}
+          />
+        ) : null;
+      })()}
       {doCard?.tipo === "SUMARIO" ? (
         <ConfigurarSumarioDialog
           titulo="Configurar Sumário"
@@ -782,7 +849,10 @@ export function GradeDoRelatorio({
  * O destaque de um bloco (16/10/2026): a escala (até 1,1) e o ponto de origem dela que deixam o bloco ampliado dentro da
  * tela (8 px das bordas). Em cada direção, a origem fica no meio, se cabe; senão, encosta no lado que não tem espaço.
  */
-function destaqueNaTela(r: DOMRect) {
+function destaqueNaTela(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  // O slide em escala na tela (27/10/2026: a tela padrão): a origem volta às medidas do bloco.
+  const naTela = r.width / el.offsetWidth || 1;
   const folga = 8;
   const eixo = (inicio: number, tamanho: number, limite: number) => {
     const antes = Math.max(0, inicio - folga);
@@ -795,7 +865,7 @@ function destaqueNaTela(r: DOMRect) {
   };
   const x = eixo(r.left, r.width, window.innerWidth);
   const y = eixo(r.top, r.height, window.innerHeight);
-  return { escala: Math.min(x.escala, y.escala), origem: `${x.o}px ${y.o}px` };
+  return { escala: Math.min(x.escala, y.escala), origem: `${x.o / naTela}px ${y.o / naTela}px` };
 }
 
 type Recorte = { x: number; y: number; w: number; h: number };
@@ -843,7 +913,11 @@ function oQueAmpliar(b: Bloco, bloco: HTMLElement, alvo: HTMLElement) {
  */
 function BlocoAmpliado({ w, h, onFechar, children }: { w: number; h: number; onFechar: () => void; children: React.ReactNode }) {
   const borda = 16;
-  const escala = Math.min((window.innerWidth * 0.94) / (w + 2 * borda), (window.innerHeight * 0.92) / (h + 2 * borda));
+  // Dentro do slide em escala (27/10/2026: a tela padrão), a camada cobre a caixa do slide, nas medidas dela.
+  const naTela = useContext(NaTelaPadrao);
+  const largura = naTela ? TELA_PADRAO.largura : window.innerWidth;
+  const altura = naTela ? TELA_PADRAO.altura : window.innerHeight;
+  const escala = Math.min((largura * 0.94) / (w + 2 * borda), (altura * 0.92) / (h + 2 * borda));
   return (
     // data-bloco-ampliado: com ele aberto, as setas e o espaço não mudam o slide (o vídeo ampliado usa o teclado).
     <div role="dialog" aria-modal aria-label="Bloco ampliado" data-bloco-ampliado className="fixed inset-0 z-[70] flex cursor-zoom-out items-center justify-center bg-black/75" onClick={onFechar}>
@@ -924,6 +998,7 @@ export function BarraDeEdicao({
   colar,
   onMudar = () => undefined,
   onConfigurar = () => undefined,
+  onCortar = () => undefined,
   onExcluir = () => undefined,
 }: {
   b?: Bloco;
@@ -936,6 +1011,8 @@ export function BarraDeEdicao({
   colar?: () => void;
   onMudar?: (m: Partial<Bloco>) => void;
   onConfigurar?: () => void;
+  /** O Cortar e Posicionar da imagem (27/10/2026). */
+  onCortar?: () => void;
   onExcluir?: () => void;
 }) {
   const botao = "inline-flex size-7 items-center justify-center rounded-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:cursor-default disabled:text-gray-300 disabled:hover:bg-transparent";
@@ -984,6 +1061,10 @@ export function BarraDeEdicao({
       {/* Os ajustes da imagem (21/10/2026): brilho, matiz, saturação, desfoque e transparência. */}
       <button type="button" className={`${botao} ${imagem?.ajustes ? "text-gray-900" : ""}`} disabled={!imagem} title="Ajustes da imagem" aria-label="Ajustes da imagem" onClick={onConfigurar}>
         <SlidersHorizontal className="size-4" />
+      </button>
+      {/* O Cortar e Posicionar (27/10/2026): o tamanho na proporção da imagem, um tamanho pronto ou o atual, e o corte. */}
+      <button type="button" className={`${botao} ${imagem?.recorte ? "text-gray-900" : ""}`} disabled={!imagem} title="Cortar e posicionar a imagem" aria-label="Cortar e posicionar a imagem" onClick={onCortar}>
+        <Crop className="size-4" />
       </button>
       {separador}
       {(Object.keys(NOTAS) as Nota[]).map((n) => {
@@ -1151,7 +1232,7 @@ function ConteudoDoBloco({
     // A Imagem Livre (21/10/2026): só a imagem, na proporção dela, sem a legenda e sem o fundo (o PNG transparente continua
     // transparente sobre o slide).
     return (
-      <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" proporcao={b.proporcao} ajustes={b.ajustes} />
+      <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" proporcao={b.proporcao} ajustes={b.ajustes} recorte={b.recorte} />
     );
   }
   if (b.tipo === "FOTO") {
@@ -1160,7 +1241,7 @@ function ConteudoDoBloco({
       <figure className="flex h-full flex-col gap-2">
         <div className="min-h-0 flex-1">
           {b.arquivo ? (
-            <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Imagem"} proporcao={b.proporcao} ajustes={b.ajustes} />
+            <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Imagem"} proporcao={b.proporcao} ajustes={b.ajustes} recorte={b.recorte} />
           ) : (
             // O quadro sem a imagem (17/10/2026: o relatório importado sem as imagens): cinza, com o botão de carregar.
             <label
