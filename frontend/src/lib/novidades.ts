@@ -28,7 +28,14 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
-  // 27/10/2026, noite
+  // 27/10/2026, 15:37
+  {
+    publicada: "2026-10-27T15:37",
+    processo: "Demonstrativos Financeiros",
+    soAdministrador: true,
+    itens: ["Novo processo em Análises Gerenciais, em desenvolvimento."],
+  },
+  // 27/10/2026, 15:29
   {
     publicada: "2026-10-27T15:29",
     processo: "Relatórios Executivos",
