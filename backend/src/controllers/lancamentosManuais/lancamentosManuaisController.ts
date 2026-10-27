@@ -35,11 +35,12 @@ function corpo(request: Request, response: Response) {
 }
 
 export const lancamentosManuaisController = {
-  async listar(request: Request, response: Response) {
+  /** Os lançamentos de uma aba (27/10/2026): Controladoria ou Contestações. */
+  listar: (aba: "controladoria" | "contestacoes") => async (request: Request, response: Response) => {
     const c = competencia(request, response);
     if (!c) return;
     try {
-      return response.json({ data: await lancamentosManuaisService.listar(c.ano, c.mes) });
+      return response.json({ data: await lancamentosManuaisService.listar(c.ano, c.mes, aba) });
     } catch (error) {
       return responderRegra(response, error);
     }

@@ -56,7 +56,8 @@ export type UsuarioAutenticado = {
  * lançamentos de todos os departamentos: quem tem o recorte não as alcança, mesmo com a tela liberada, senão o recorte
  * seria contornado. O mesmo vale para o recorte por centro de custo (Coordenador).
  */
-const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "previas", "linhas_mes", "conferencia", "auditoria"]);
+// As Validações das contestações (27/10/2026) mostram as de todos os departamentos, como os Lançamentos.
+const FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["classificacao", "lancamentos_manuais", "previas", "linhas_mes", "conferencia", "auditoria", "contestacoes_validacoes"]);
 /** As abas fora do recorte numa tela que ele alcança (27/10/2026): os Rateios, na tela Totais (os Indicadores ficam). */
 const ABAS_FORA_DO_RECORTE_DE_DEPARTAMENTO = new Set(["totais.rateios"]);
 /** O recorte por setor (Alimentador) é o das listas operacionais: no Fechamento Mensal, só Competências, Importações e Listas. */

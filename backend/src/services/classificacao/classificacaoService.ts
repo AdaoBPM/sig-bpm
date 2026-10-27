@@ -75,13 +75,13 @@ export const classificacaoService = {
       );
     }
 
-    const [lancamentos, centros, contas, reclassificacoes] = await Promise.all([
+    const [lancamentos, centros, contas, reclassificacoes, contestacoes] = await Promise.all([
       prisma.lancamentoContabil.findMany({
         where: { competenciaId },
         select: { id: true, codigoCentroCusto: true, contaResultadoId: true, filial: true },
       }),
+      // Todos os centros (27/10/2026): os do balancete pelo código; o de uma contestação, pelo id (com ou sem código).
       prisma.centroCusto.findMany({
-        where: { codigoRM: { not: null } },
         select: {
           id: true,
           codigoRM: true,
@@ -105,11 +105,19 @@ export const classificacaoService = {
         where: { ativo: true },
         select: { codigoCentroCusto: true, contaOrigemId: true, contaDestinoId: true },
       }),
+      // As contestações validadas no balancete (27/10/2026): o centro e a conta novos valem no lugar dos do RM.
+      prisma.contestacao.findMany({
+        where: { competenciaId, situacao: "VALIDADA", formaValidacao: "NO_BALANCETE", lancamentoContabilId: { not: null } },
+        select: { id: true, lancamentoContabilId: true, centroNovoId: true, contaNovaId: true },
+      }),
     ]);
 
     const centroPorCodigo = new Map<string, CentroParaClassificar>(
-      centros.map((c) => [c.codigoRM!, c]),
+      centros.filter((c) => c.codigoRM).map((c) => [c.codigoRM!, c]),
     );
+    const centroPorId = new Map(centros.map((c) => [c.id, c]));
+    const contestacaoDo = new Map(contestacoes.map((c) => [c.lancamentoContabilId!, c]));
+    let contestados = 0;
     const contaPorId = new Map<string, ContaParaClassificar>(
       contas.map(({ linhaDRE, ...c }) => [
         c.id,
@@ -138,11 +146,13 @@ export const classificacaoService = {
         ? destinoDe.get(`${l.codigoCentroCusto}|${l.contaResultadoId}`)
         : undefined;
       if (destino) reclassificados++;
-      const conta = contaPorId.get(destino ?? l.contaResultadoId)!;
-      const centro = l.codigoCentroCusto
-        ? (centroPorCodigo.get(l.codigoCentroCusto) ?? null)
-        : null;
-      const c = classificarLancamento(l.codigoCentroCusto, centro, conta);
+      // A contestação validada no balancete: a conta nova (sem ela, a de sempre) e o centro novo (sem ele, o do RM).
+      const ct = contestacaoDo.get(l.id);
+      if (ct) contestados++;
+      const conta = contaPorId.get(ct?.contaNovaId ?? destino ?? l.contaResultadoId)!;
+      const centroNovo = ct?.centroNovoId ? (centroPorId.get(ct.centroNovoId) ?? null) : null;
+      const centro = centroNovo ?? (l.codigoCentroCusto ? (centroPorCodigo.get(l.codigoCentroCusto) ?? null) : null);
+      const c = { ...classificarLancamento(centroNovo ? centroNovo.codigoRM : l.codigoCentroCusto, centro, conta), contestacaoId: ct?.id ?? null };
       // Sem aba de resultado (21/10/2026): a combinação da linha e do balde que nenhuma aba soma.
       const linha = c.linhaDREId ? linhaPorId.get(c.linhaDREId) : undefined;
       if (c.validacao === "OK" && linha && linha.tipo === "ITEM") {
@@ -178,6 +188,7 @@ export const classificacaoService = {
       lancamentos: lancamentos.length,
       manuais,
       reclassificados,
+      contestados,
       porValidacao: Object.fromEntries(contagem),
       duracaoMs: Date.now() - inicio,
     };

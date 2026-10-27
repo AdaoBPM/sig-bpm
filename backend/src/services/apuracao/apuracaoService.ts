@@ -106,6 +106,9 @@ export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
   const where = { competenciaId };
   const q = (x: Prisma.Decimal | null | undefined) => (x ?? new Prisma.Decimal(0)).toFixed(4);
   const d = (x: Date | null | undefined) => x?.toISOString() ?? null;
+  // As contestações validadas no balancete (27/10/2026) mudam o centro e a conta dos lançamentos: a última validação entra
+  // na data dos lançamentos do balancete (assim também pede reapurar o mês apurado antes delas existirem).
+  const contestadas = await prisma.contestacao.aggregate({ where: { competenciaId, situacao: "VALIDADA", formaValidacao: "NO_BALANCETE" }, _count: true, _max: { validadaEm: true } });
   const [contabeis, manuais, receita, importacoes, documentos, ...listas] = await Promise.all([
     prisma.lancamentoContabil.aggregate({ where, _count: true, _sum: { valorMovimento: true }, _max: { criadoEm: true } }),
     prisma.lancamentoManual.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),
@@ -137,7 +140,16 @@ export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
   ]);
   const NOMES = ["projetos", "produção (m³)", "produção (pistas)", "produção de armadura", "produção da metalurgia", "expedição", "montagem", "acompanhamentos", "medições", "devoluções", "saídas"];
   const r: Retrato = {
-    contabeis: { rotulo: "lançamentos do balancete", n: contabeis._count, soma: q(contabeis._sum.valorMovimento), ultima: d(contabeis._max.criadoEm) },
+    contabeis: {
+      rotulo: "lançamentos do balancete",
+      n: contabeis._count,
+      soma: q(contabeis._sum.valorMovimento),
+      ultima: d(
+        contestadas._count && contestadas._max.validadaEm && (!contabeis._max.criadoEm || contestadas._max.validadaEm > contabeis._max.criadoEm)
+          ? contestadas._max.validadaEm
+          : contabeis._max.criadoEm,
+      ),
+    },
     manuais: { rotulo: "lançamentos manuais", n: manuais._count, soma: q(manuais._sum.valor), ultima: d(manuais._max.atualizadoEm) },
     receita: { rotulo: "lançamentos de receita", n: receita._count, soma: q(receita._sum.valor), ultima: d(receita._max.atualizadoEm) },
     importacoes: { rotulo: "importações", n: importacoes.length, soma: importacoes.map((i) => i.id).join(",") },

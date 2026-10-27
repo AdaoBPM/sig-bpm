@@ -5,12 +5,15 @@ import { autenticacao } from "../../middlewares/autenticacao.js";
 import { verificarPermissao } from "../../middlewares/verificarPermissao.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 
-const ler = verificarPermissao("lancamentos_manuais:ler");
-const editar = verificarPermissao("lancamentos_manuais:editar");
+// As abas (27/10/2026): a Controladoria (os lançamentos digitados) e a Contestações (os vindos das contestações).
+const ler = verificarPermissao("lancamentos_manuais.controladoria:ler");
+const editar = verificarPermissao("lancamentos_manuais.controladoria:editar");
+const lerContestacoes = verificarPermissao("lancamentos_manuais.contestacoes:ler");
 
 /** Lançamentos de uma competência: montado em /competencias/:anoMes/lancamentos-manuais. */
 export const lancamentosDaCompetenciaRoutes = Router({ mergeParams: true });
-lancamentosDaCompetenciaRoutes.get("/", autenticacao, ler, asyncHandler(c.listar));
+lancamentosDaCompetenciaRoutes.get("/", autenticacao, ler, asyncHandler(c.listar("controladoria")));
+lancamentosDaCompetenciaRoutes.get("/contestacoes", autenticacao, lerContestacoes, asyncHandler(c.listar("contestacoes")));
 lancamentosDaCompetenciaRoutes.post("/", autenticacao, editar, asyncHandler(c.criar));
 lancamentosDaCompetenciaRoutes.post("/copiar-anterior", autenticacao, editar, asyncHandler(c.copiarDoMesAnterior));
 

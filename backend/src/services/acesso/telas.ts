@@ -104,6 +104,25 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "indicadores", nome: "Indicadores" }] },
     ],
   },
+  // As Contestações de Gastos (27/10/2026, pedido do Adão), logo acima do Fechamento Mensal, como no menu: a tela
+  // Contestações, com as abas Solicitadas (as do usuário; Editar contesta, no balancete das contas) e Recebidas (as dos
+  // centros de que ele é o responsável; Editar acata e recusa), e a tela Validações (todas; Editar processa e muda a situação).
+  {
+    recurso: "CONTESTACOES_GASTOS",
+    nome: "Contestações de Gastos",
+    area: "contestacoes_gastos",
+    telas: [
+      {
+        codigo: "contestacoes",
+        nome: "Contestações",
+        abas: [
+          { codigo: "solicitadas", nome: "Solicitadas" },
+          { codigo: "recebidas", nome: "Recebidas" },
+        ],
+      },
+      { codigo: "contestacoes_validacoes", nome: "Validações" },
+    ],
+  },
   {
     recurso: "FECHAMENTO_MENSAL",
     nome: "Fechamento Mensal",
@@ -112,7 +131,15 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       { codigo: "competencias", nome: "Competências" },
       { codigo: "importacao", nome: "Importações" },
       { codigo: "classificacao", nome: "Classificação" },
-      { codigo: "lancamentos_manuais", nome: "Lançamentos" },
+      // Os Lançamentos com abas (27/10/2026): Controladoria (os de antes) e Contestações (os vindos das contestações validadas).
+      {
+        codigo: "lancamentos_manuais",
+        nome: "Lançamentos",
+        abas: [
+          { codigo: "controladoria", nome: "Controladoria" },
+          { codigo: "contestacoes", nome: "Contestações" },
+        ],
+      },
       { codigo: "listas_operacionais", nome: "Listas" },
       // Totais e Prévias (27/10/2026, pedido do Adão): telas com abas, no lugar das telas Indicadores, Rateios, Receita e
       // Estoque (as chaves antigas indicadores_mes, rateios, receita e estoque, migradas para as abas).

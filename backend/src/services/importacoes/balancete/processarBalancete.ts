@@ -6,6 +6,7 @@ import { ArquivoInvalidoError, lerAba } from "../../../lib/xlsx.js";
 import { logger } from "../../../utils/logger.js";
 import { ehCentroDeObra } from "../../classificacao/centrosObra.js";
 import { classificacaoService } from "../../classificacao/classificacaoService.js";
+import { contestacoesService } from "../../contestacoes/contestacoesService.js";
 import { caminhoDoArquivo } from "../arquivosImportados.js";
 import { escolherAba, recusarImportacao as recusar, registrarProgresso as progresso } from "../statusImportacao.js";
 import {
@@ -285,6 +286,14 @@ export async function processarBalancete(importacaoId: string): Promise<void> {
       }
     } catch (error) {
       logger("error", "Falha ao comparar os meses fechados", { importacaoId, error: error instanceof Error ? error.message : String(error) });
+    }
+
+    // As contestações dos itens do balancete substituído voltam a apontar para eles (27/10/2026), antes da classificação
+    // (que aplica as validadas no balancete).
+    try {
+      await contestacoesService.religar(competencia.id);
+    } catch (error) {
+      logger("error", "Falha ao religar as contestações após a importação", { importacaoId, error: error instanceof Error ? error.message : String(error) });
     }
 
     // A classificação corre logo depois, no mesmo trabalho da fila. Se falhar,

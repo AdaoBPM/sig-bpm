@@ -6,6 +6,7 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { lerAba } from "../../../lib/xlsx.js";
 import { retratoEntradas } from "../../apuracao/apuracaoService.js";
 import { auditar } from "../../auditoriaService.js";
+import { contestacoesService } from "../../contestacoes/contestacoesService.js";
 import { classificarLancamento, type ContaParaClassificar } from "../../classificacao/regrasClassificacao.js";
 import { caminhoDoArquivo, diretorioUploads } from "../arquivosImportados.js";
 import { ABA_BALANCETE, conferirTotal, interpretarBalancete } from "./leiauteBalancete.js";
@@ -236,6 +237,8 @@ export async function substituirBalanceteDetalhado(opcoes: {
       },
       { timeout: 300_000 },
     );
+    // As contestações dos itens voltam a apontar para eles (27/10/2026).
+    await contestacoesService.religar(competencia.id);
     // O retrato das entradas da apuração: o dos lançamentos novos (os mesmos totais), nos meses apurados.
     if (competencia.entradasApuradas) {
       await prisma.competencia.update({ where: { id: competencia.id }, data: { entradasApuradas: (await retratoEntradas(competencia.id)) as Prisma.InputJsonValue } });

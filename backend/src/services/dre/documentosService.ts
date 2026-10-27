@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { MENSAGEM_SENSIVEL, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
+import { contestacoesService } from "../contestacoes/contestacoesService.js";
 import { CENTRO_DE_OBRA } from "./obrasService.js";
 import { RegraDREError } from "./dreService.js";
 
@@ -14,7 +15,7 @@ const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${
  * vêm. A linha da DRE dá o recorte do Gestor por departamento, como no extrato.
  */
 export const documentosService = {
-  async listar(ano: number, mes: number, filtro: { linha: string; conta: string; centro: string | null; filial: number | null }, acesso: Acesso = ACESSO_TOTAL) {
+  async listar(ano: number, mes: number, filtro: { linha: string; conta: string; centro: string | null; filial: number | null; adotada?: string | null }, acesso: Acesso = ACESSO_TOTAL) {
     const prisma = getPrismaClient();
     const c = await prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true } });
     if (!c) throw new RegraDREError(404, `A competência ${rotulo(ano, mes)} não existe.`);
@@ -39,7 +40,9 @@ export const documentosService = {
         where: {
           competenciaId: c.id,
           contaResultado: { reduzido: filtro.conta },
-          ...(filtro.centro ? { codigoCentroCusto: filtro.centro } : {}),
+          // O centro e a conta que valem (27/10/2026): com a contestação validada no balancete, o centro e a conta novos.
+          ...(filtro.adotada ? { contaAdotada: { reduzido: filtro.adotada } } : {}),
+          ...(filtro.centro ? { OR: [{ centroCusto: { codigoRM: filtro.centro } }, { centroCustoId: null, codigoCentroCusto: filtro.centro }] } : {}),
           ...(filtro.filial ? { filial: filtro.filial } : {}),
         },
         select: {
@@ -52,6 +55,8 @@ export const documentosService = {
           historico: true,
           valorMovimento: true,
           centroCusto: { select: { codigoRM: true, nomeRM: true } },
+          contaAdotada: { select: { reduzido: true, descricao: true } },
+          contestacaoId: true,
         },
         // Sem emissão primeiro, como no SQLite (23/10/2026).
         orderBy: [{ emissao: { sort: "asc", nulls: "first" } }, { linhaArquivo: "asc" }],
@@ -59,6 +64,14 @@ export const documentosService = {
       // O mês tem o balancete detalhado (com o detalhe de algum movimento)?
       prisma.lancamentoContabil.count({ where: { competenciaId: c.id, OR: [{ historico: { not: null } }, { cliForn: { not: null } }, { emissao: { not: null } }] } }),
     ]);
+    // As contestações (27/10/2026): a aplicada em cada movimento (o número e o que mudou, para o ícone) e a última de cada
+    // um (a situação, na coluna Ações).
+    const aplicadas = await prisma.contestacao.findMany({
+      where: { id: { in: [...new Set(lancamentos.flatMap((l) => (l.contestacaoId ? [l.contestacaoId] : [])))] } },
+      select: { id: true, numero: true, centroNovoId: true, contaNovaId: true },
+    });
+    const aplicada = new Map(aplicadas.map((x) => [x.id, x]));
+    const situacoes = await contestacoesService.doBalancete(lancamentos.map((l) => l.id));
     return {
       conta: conta ?? { reduzido: filtro.conta, descricao: "" },
       /** O balancete do mês é o detalhado (sem ele, cada linha é a soma da filial, do centro e da conta). */
@@ -72,6 +85,11 @@ export const documentosService = {
         emissao: l.emissao,
         historico: l.historico,
         valor: l.valorMovimento.toFixed(2),
+        // O centro do balancete, quando o que vale é outro (a contestação), e a conta que vale na DRE, quando é outra.
+        centroOriginal: l.centroCusto && l.codigoCentroCusto && l.centroCusto.codigoRM !== l.codigoCentroCusto ? { codigoRM: l.codigoCentroCusto, nome: l.nomeCentroCusto } : null,
+        contaNaDRE: l.contaAdotada && l.contaAdotada.reduzido !== filtro.conta ? l.contaAdotada : null,
+        contestacaoAplicada: l.contestacaoId && aplicada.get(l.contestacaoId) ? { numero: aplicada.get(l.contestacaoId)!.numero, centro: !!aplicada.get(l.contestacaoId)!.centroNovoId, conta: !!aplicada.get(l.contestacaoId)!.contaNovaId } : null,
+        contestacao: situacoes.get(l.id) ?? null,
       })),
     };
   },

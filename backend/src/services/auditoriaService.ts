@@ -89,6 +89,7 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   relatorio_executivo: "Relatório Executivo",
   api: "Biblioteca de APIs",
   api_bloqueio: "Bloqueio na Biblioteca de APIs",
+  contestacao: "Contestação de gasto",
 };
 
 /** Deixa o JSON gravável: Decimal e Date viram texto, undefined some. */

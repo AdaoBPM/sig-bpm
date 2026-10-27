@@ -153,11 +153,13 @@ export const dreController = {
         conta: z.string().trim().min(1).max(50),
         centro: z.string().trim().max(50).optional(),
         filial: z.coerce.number().int().min(1).max(99).optional(),
+        // A conta que vale na DRE (27/10/2026): com a reclassificação ou a contestação, a do lançamento do extrato.
+        adotada: z.string().trim().max(50).optional(),
       })
       .safeParse(request.query);
     if (!q.success) return response.status(400).json({ error: "Dados inválidos." });
     return responder(response, () =>
-      documentosService.listar(c.ano, c.mes, { linha: q.data.linha, conta: q.data.conta, centro: q.data.centro || null, filial: q.data.filial ?? null }, request.user!.acesso),
+      documentosService.listar(c.ano, c.mes, { linha: q.data.linha, conta: q.data.conta, centro: q.data.centro || null, filial: q.data.filial ?? null, adotada: q.data.adotada || null }, request.user!.acesso),
     );
   },
 

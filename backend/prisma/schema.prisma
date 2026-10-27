@@ -40,6 +40,8 @@ enum RecursoSistema {
   ANALISES_GERENCIAIS
   /// A Central de Conectividade (24/10/2026): a Biblioteca de APIs (e as Integrações, em desenvolvimento).
   CENTRAL_CONECTIVIDADE
+  /// As Contestações de Gastos (27/10/2026): as telas Contestações (Solicitadas e Recebidas) e Validações.
+  CONTESTACOES_GASTOS
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
@@ -150,6 +152,8 @@ model Usuario {
   /// LISTA: os centros de custo que o usuário alcança, quando o perfil tem
   /// recorte por centro de custo.
   centros       UsuarioCentro[]
+  /// As contestações de gastos que o usuário pediu (27/10/2026).
+  contestacoes  Contestacao[]
   /// Com recorte por centro de custo: o usuário vê também os resultados das
   /// obras, nas linhas da DRE da gestão dele (e nas abertas a todos).
   veObras       Boolean @default(false) @map("ve_obras")
@@ -450,6 +454,8 @@ model CentroCusto {
   resultadosApurados   ResultadoApurado[]
   usuarios             UsuarioCentro[]
   alocacoesLinhas      AlocacaoLinha[]
+  contestacoesAntes    Contestacao[] @relation("ContestacaoCentroAntes")
+  contestacoesNovas    Contestacao[] @relation("ContestacaoCentroNovo")
 
   @@index([nomeControladoria])
   @@index([balde])
@@ -485,6 +491,9 @@ model ContaResultado {
   lancamentosContabeis LancamentoContabil[]
   lancamentosAdotados  LancamentoContabil[] @relation("ContaAdotada")
   lancamentosManuais   LancamentoManual[]
+  contestacoesBalancete Contestacao[] @relation("ContestacaoContaBalancete")
+  contestacoesAntes     Contestacao[] @relation("ContestacaoContaAntes")
+  contestacoesNovas     Contestacao[] @relation("ContestacaoContaNova")
   reclassificacoesOrigem  ReclassificacaoConta[] @relation("ReclassificacaoOrigem")
   reclassificacoesDestino ReclassificacaoConta[] @relation("ReclassificacaoDestino")
 
@@ -757,6 +766,7 @@ model Competencia {
 
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
+  contestacoes         Contestacao[]
   estoqueSaldos        EstoqueSaldo[]
   estoqueIniciais      EstoqueSaldoInicial[]
   indicadoresImportados IndicadorImportado[]
@@ -1101,6 +1111,9 @@ model LancamentoContabil {
   /// quando houver. É o equivalente da coluna ETIQUETA da planilha.
   etiqueta     String?
   validacao    ValidacaoLancamento  @default(OK)
+  /// A contestação validada no balancete que a classificação aplicou (27/10/2026): o centro e a conta dela valem no
+  /// lugar dos do balancete (que ficam, para mostrar o original). Derivado, como os demais.
+  contestacaoId String?             @map("contestacao_id")
 
   criadoEm DateTime @default(now()) @map("criado_em")
 
@@ -1110,6 +1123,8 @@ model LancamentoContabil {
   contaResultado ContaResultado @relation(fields: [contaResultadoId], references: [id])
   contaAdotada   ContaResultado? @relation("ContaAdotada", fields: [contaAdotadaId], references: [id])
   linhaDRE       LinhaDRE?      @relation(fields: [linhaDREId], references: [id])
+  /// As contestações deste item (27/10/2026).
+  contestacoes   Contestacao[]
 
   @@index([competenciaId, validacao])
   @@index([competenciaId, etiqueta])
@@ -1138,6 +1153,8 @@ model LancamentoManual {
   linhaDREId       String?      @map("linha_dre_id")
   /// DECIMAL: aritmética sempre em JavaScript.
   valor            Decimal
+  /// A contestação de que o lançamento veio (27/10/2026: a aba Contestações dos Lançamentos; nulo, a aba Controladoria).
+  contestacaoId    String?      @map("contestacao_id")
   criadoPor        String?      @map("criado_por")
   criadoEm         DateTime     @default(now()) @map("criado_em")
   atualizadoEm     DateTime     @updatedAt @map("atualizado_em")
@@ -1146,8 +1163,10 @@ model LancamentoManual {
   centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id], onDelete: Restrict)
   contaResultado ContaResultado? @relation(fields: [contaResultadoId], references: [id])
   linhaDRE       LinhaDRE?       @relation(fields: [linhaDREId], references: [id])
+  contestacao    Contestacao?    @relation(fields: [contestacaoId], references: [id], onDelete: Restrict)
 
   @@index([competenciaId, motivo])
+  @@index([contestacaoId])
   @@map("lancamentos_manuais")
 }
 
@@ -2489,4 +2508,83 @@ model ApiBloqueio {
 
   @@unique([tipo, valor])
   @@map("api_bloqueios")
+}
+
+/// ENUM: a situação de uma contestação de gasto (27/10/2026).
+enum SituacaoContestacao {
+  /// À espera do responsável pelo centro de custo (o novo; sem centro novo, o do item).
+  PENDENTE
+  /// Aceita pelo responsável (ou pedida por ele): espera a Controladoria.
+  ACATADA
+  /// Recusada pelo responsável.
+  RECUSADA
+  /// Corrigida pela Controladoria: no próprio balancete da competência (aberta) ou por lançamentos manuais.
+  VALIDADA
+}
+
+/// ENUM: como a contestação validada foi corrigida (27/10/2026).
+enum FormaValidacaoContestacao {
+  /// No lançamento do balancete da competência dele (aberta): a classificação aplica o centro e a conta novos.
+  NO_BALANCETE
+  /// Pelos dois lançamentos manuais (o estorno e o novo) da aba Contestações de uma competência aberta.
+  LANCAMENTO_MANUAL
+}
+
+/// A contestação de um movimento do balancete (27/10/2026, pedido do Adão): o usuário sugere outro centro de custo e/ou
+/// outra conta de resultado para o item; o responsável pelo centro acata ou recusa; a Controladoria valida (corrige o
+/// item no balancete, na competência aberta, ou por lançamentos manuais numa competência aberta seguinte).
+model Contestacao {
+  id                   String  @id @default(uuid())
+  /// O número da contestação, para as telas.
+  numero               Int     @unique @default(autoincrement())
+  competenciaId        String  @map("competencia_id")
+  /// O item contestado; nulo enquanto uma reimportação do balancete não o encontra de novo (religado pela identidade).
+  lancamentoContabilId String? @map("lancamento_contabil_id")
+  // --- a identidade do item, como veio do balancete (para religar depois de uma reimportação) ---
+  filial               Int
+  codigoCentroCusto    String? @map("codigo_centro_custo")
+  nomeCentroCusto      String? @map("nome_centro_custo")
+  contaBalanceteId     String  @map("conta_balancete_id")
+  emissao              DateTime?
+  cliForn              String? @map("cli_forn")
+  historico            String?
+  /// DECIMAL: o valor do movimento, no sinal do balancete.
+  valor                Decimal
+  // --- o antes (o centro e a conta que valiam na DRE ao contestar) e o depois sugerido ---
+  centroAntesId        String? @map("centro_antes_id")
+  contaAntesId         String  @map("conta_antes_id")
+  centroNovoId         String? @map("centro_novo_id")
+  contaNovaId          String? @map("conta_nova_id")
+  /// O motivo do pedido (opcional).
+  motivo               String?
+  situacao             SituacaoContestacao @default(PENDENTE)
+  solicitanteId        String   @map("solicitante_id")
+  solicitadaEm         DateTime @default(now()) @map("solicitada_em")
+  /// Quem acatou ou recusou (o responsável) e quando.
+  respondidaPorId      String?   @map("respondida_por_id")
+  respondidaEm         DateTime? @map("respondida_em")
+  /// A última justificativa (a da recusa ou a da mudança de situação em Validações), com quem e quando.
+  justificativa        String?
+  justificadaPorId     String?   @map("justificada_por_id")
+  justificadaEm        DateTime? @map("justificada_em")
+  validadaPorId        String?   @map("validada_por_id")
+  validadaEm           DateTime? @map("validada_em")
+  formaValidacao       FormaValidacaoContestacao? @map("forma_validacao")
+  atualizadaEm         DateTime  @updatedAt @map("atualizada_em")
+
+  competencia        Competencia         @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  lancamentoContabil LancamentoContabil? @relation(fields: [lancamentoContabilId], references: [id], onDelete: SetNull)
+  contaBalancete     ContaResultado      @relation("ContestacaoContaBalancete", fields: [contaBalanceteId], references: [id])
+  centroAntes        CentroCusto?        @relation("ContestacaoCentroAntes", fields: [centroAntesId], references: [id])
+  contaAntes         ContaResultado      @relation("ContestacaoContaAntes", fields: [contaAntesId], references: [id])
+  centroNovo         CentroCusto?        @relation("ContestacaoCentroNovo", fields: [centroNovoId], references: [id])
+  contaNova          ContaResultado?     @relation("ContestacaoContaNova", fields: [contaNovaId], references: [id])
+  solicitante        Usuario             @relation(fields: [solicitanteId], references: [id])
+  lancamentosManuais LancamentoManual[]
+
+  @@index([situacao])
+  @@index([competenciaId])
+  @@index([lancamentoContabilId])
+  @@index([solicitanteId])
+  @@map("contestacoes")
 }

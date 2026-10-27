@@ -57,6 +57,13 @@ type LancamentoDetalhe = {
   descricao?: string;
   valor: string;
   parcela: string;
+  /**
+   * As correções (27/10/2026): o centro do balancete (o original), quando o que vale é outro — por uma contestação —, e a
+   * contestação aplicada (o número e o que ela mudou). A conta original é `conta`; a que vale, `contaAdotada`.
+   */
+  centroOriginal?: { codigoRM: string | null; nome: string | null } | null;
+  contestacaoId?: string | null;
+  contestacao?: { numero: number; centro: boolean; conta: boolean } | null;
 };
 
 type Bloco =
@@ -83,6 +90,7 @@ const selecaoContabil = {
   centroCusto: { select: { codigoRM: true, nomeRM: true } },
   contaResultado: { select: { reduzido: true, descricao: true } },
   contaAdotada: { select: { reduzido: true, descricao: true } },
+  contestacaoId: true,
 } satisfies Prisma.LancamentoContabilSelect;
 type Contabil = Prisma.LancamentoContabilGetPayload<{ select: typeof selecaoContabil }>;
 
@@ -101,6 +109,9 @@ function paraDetalhe(l: Contabil, multiplicador: Decimal): LancamentoDetalhe {
     alocacao: l.alocacao,
     valor: l.valorMovimento.toFixed(2),
     parcela: l.valorMovimento.times(multiplicador).toFixed(2),
+    // O centro do balancete, quando o que vale é outro (a contestação validada no balancete).
+    centroOriginal: l.centroCusto && l.codigoCentroCusto && l.centroCusto.codigoRM !== l.codigoCentroCusto ? { codigoRM: l.codigoCentroCusto, nome: l.nomeCentroCusto } : null,
+    contestacaoId: l.contestacaoId,
   };
 }
 
@@ -115,7 +126,8 @@ const porValor = (a: { valor: string }, b: { valor: string }) => Math.abs(Number
 function agrupar(ls: Contabil[]): Contabil[] {
   const grupos = new Map<string, Contabil>();
   for (const l of ls) {
-    const k = [l.filial, l.codigoCentroCusto ?? "", l.centroCusto?.codigoRM ?? "", l.contaResultado.reduzido, l.contaAdotada?.reduzido ?? "", l.balde ?? "", l.alocacao ?? ""].join("|");
+    // O movimento contestado fica à parte (27/10/2026): o ícone mostra o original e a contestação dele.
+    const k = [l.filial, l.codigoCentroCusto ?? "", l.centroCusto?.codigoRM ?? "", l.contaResultado.reduzido, l.contaAdotada?.reduzido ?? "", l.balde ?? "", l.alocacao ?? "", l.contestacaoId ?? ""].join("|");
     const g = grupos.get(k);
     if (g) g.valorMovimento = g.valorMovimento.plus(l.valorMovimento);
     else grupos.set(k, { ...l });
@@ -410,6 +422,19 @@ export const detalhamentoService = {
       }
     }
 
+    // As contestações aplicadas nos lançamentos do extrato (27/10/2026): o número e o que cada uma mudou, para o ícone.
+    const comContestacao = blocos.flatMap((b) => ("lancamentos" in b ? b.lancamentos : [])).filter((l) => l.contestacaoId);
+    if (comContestacao.length) {
+      const cs = await prisma.contestacao.findMany({
+        where: { id: { in: [...new Set(comContestacao.map((l) => l.contestacaoId!))] } },
+        select: { id: true, numero: true, centroNovoId: true, contaNovaId: true },
+      });
+      const porId = new Map(cs.map((x) => [x.id, x]));
+      for (const l of comContestacao) {
+        const x = porId.get(l.contestacaoId!);
+        l.contestacao = x ? { numero: x.numero, centro: !!x.centroNovoId, conta: !!x.contaNovaId } : null;
+      }
+    }
     const somaOrigens = blocos.length ? somar(blocos.map((b) => new Decimal(b.total))) : null;
     return {
       competencia: { ano, mes },

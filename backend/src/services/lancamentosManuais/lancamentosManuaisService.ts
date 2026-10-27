@@ -112,9 +112,13 @@ async function exigirAbaDeResultado(d: { balde: BaldeAlocacao | null; linhaDREId
 async function competenciaDoLancamento(id: string) {
   const atual = await getPrismaClient().lancamentoManual.findUnique({
     where: { id },
-    select: { competencia: { select: { ano: true, mes: true, status: true } } },
+    select: { contestacaoId: true, competencia: { select: { ano: true, mes: true, status: true } } },
   });
   if (!atual) throw new RegraLancamentoManualError(404, "Lançamento não encontrado.");
+  // Os lançamentos das contestações (27/10/2026) não se editam nem se excluem um a um: o par sai pela aba Contestações.
+  if (atual.contestacaoId) {
+    throw new RegraLancamentoManualError(409, "O lançamento é de uma contestação: na aba Contestações, a lixeira desfaz a importação dela (os dois lançamentos).");
+  }
   return atual.competencia;
 }
 
@@ -131,10 +135,33 @@ const SELECAO = {
     select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true },
   },
   linhaDRE: { select: { codigo: true, descricao: true, grupo: true } },
+  // A contestação de que o lançamento veio (27/10/2026: a aba Contestações).
+  contestacao: {
+    select: {
+      id: true,
+      numero: true,
+      historico: true,
+      cliForn: true,
+      solicitante: { select: { nome: true } },
+      competencia: { select: { ano: true, mes: true } },
+    },
+  },
 } as const;
 
 type Linha = Prisma.LancamentoManualGetPayload<{ select: typeof SELECAO }>;
-const apresentar = ({ valor, ...l }: Linha) => ({ ...l, valor: valor.toFixed(2) });
+const apresentar = ({ valor, contestacao, ...l }: Linha) => ({
+  ...l,
+  valor: valor.toFixed(2),
+  contestacao: contestacao
+    ? {
+        id: contestacao.id,
+        numero: contestacao.numero,
+        item: contestacao.historico || contestacao.cliForn || null,
+        solicitante: contestacao.solicitante.nome,
+        competencia: rotulo(contestacao.competencia.ano, contestacao.competencia.mes),
+      }
+    : null,
+});
 
 function dados(input: LancamentoManualInput) {
   return {
@@ -148,10 +175,11 @@ function dados(input: LancamentoManualInput) {
 }
 
 export const lancamentosManuaisService = {
-  async listar(ano: number, mes: number) {
+  /** Os lançamentos de uma aba (27/10/2026): Controladoria (os digitados) ou Contestações (os vindos das contestações). */
+  async listar(ano: number, mes: number, aba: "controladoria" | "contestacoes" = "controladoria") {
     const competencia = await competenciaPorAnoMes(ano, mes);
     const itens = await getPrismaClient().lancamentoManual.findMany({
-      where: { competenciaId: competencia.id },
+      where: { competenciaId: competencia.id, contestacaoId: aba === "contestacoes" ? { not: null } : null },
       orderBy: [{ motivo: "asc" }, { criadoEm: "asc" }, { id: "asc" }],
       select: SELECAO,
     });
@@ -233,14 +261,15 @@ export const lancamentosManuaisService = {
     if (!anterior) {
       throw new RegraLancamentoManualError(404, `Não há competência ${rotulo(anoAnt, mesAnt)} para copiar.`);
     }
-    if ((await prisma.lancamentoManual.count({ where: { competenciaId: competencia.id } })) > 0) {
+    // Só os da Controladoria (27/10/2026): os das contestações não se copiam.
+    if ((await prisma.lancamentoManual.count({ where: { competenciaId: competencia.id, contestacaoId: null } })) > 0) {
       throw new RegraLancamentoManualError(
         409,
         "Esta competência já tem lançamentos manuais. A cópia só é feita numa competência vazia.",
       );
     }
     const origem = await prisma.lancamentoManual.findMany({
-      where: { competenciaId: anterior.id },
+      where: { competenciaId: anterior.id, contestacaoId: null },
       orderBy: [{ motivo: "asc" }, { criadoEm: "asc" }, { id: "asc" }],
       select: {
         motivo: true,
@@ -278,6 +307,29 @@ export const lancamentosManuaisService = {
       metadados: { de: rotulo(anoAnt, mesAnt), para: rotulo(ano, mes), copiados: origem.length },
     });
     return { copiados: origem.length };
+  },
+
+  /**
+   * Os lançamentos de uma contestação (27/10/2026: o Importar da aba Contestações): o estorno e o novo, com as mesmas
+   * verificações dos digitados (a conta, o centro e uma aba de resultado que os some), juntos — ou nenhum.
+   */
+  async criarDeContestacao(
+    competenciaId: string,
+    contestacaoId: string,
+    motivo: string,
+    pares: Array<{ filial: number; centroCustoId: string | null; contaResultadoId: string; descricao: string; valor: Prisma.Decimal }>,
+    usuarioId: string,
+  ) {
+    const prisma = getPrismaClient();
+    const dadosDosPares = [];
+    for (const p of pares) {
+      const derivados = await resolver({ motivo, filial: p.filial, centroCustoId: p.centroCustoId, contaResultadoId: p.contaResultadoId, descricao: p.descricao, valor: p.valor.toFixed(2) });
+      dadosDosPares.push({ ...p, ...derivados });
+    }
+    const agora = Date.now();
+    await prisma.lancamentoManual.createMany({
+      data: dadosDosPares.map((p, k) => ({ competenciaId, contestacaoId, motivo, criadoPor: usuarioId, criadoEm: new Date(agora + k), ...p })),
+    });
   },
 
   /** Recalcula os derivados com o cadastro vigente. Chamado na reclassificação. */
