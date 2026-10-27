@@ -28,6 +28,25 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 27/10/2026, 16:00
+  {
+    publicada: "2026-10-27T16:00",
+    processo: "Contestação de Gastos",
+    soAdministrador: true,
+    itens: ["Novo processo em Apuração dos Resultados, logo acima do Fechamento Mensal, em desenvolvimento."],
+  },
+  {
+    publicada: "2026-10-27T16:00",
+    processo: "Registros dos Indicadores",
+    soAdministrador: true,
+    itens: ["Novo processo em Apuração dos Resultados, logo acima dos Cadastros da Apuração, em desenvolvimento."],
+  },
+  {
+    publicada: "2026-10-27T16:00",
+    processo: "Integrações e Consultas",
+    soAdministrador: true,
+    itens: ["O processo Integrações, da Central de Conectividade, passa a se chamar Integrações e Consultas."],
+  },
   // 27/10/2026, 15:37
   {
     publicada: "2026-10-27T15:37",
