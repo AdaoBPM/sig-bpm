@@ -75,8 +75,8 @@ export function RelatoriosExecutivosContent() {
               <li>
                 “Novo Relatório” cria o relatório de uma competência fechada que ainda não tem. Em Importar de, escolha o relatório de onde vêm os cards (com
                 os dados da competência nova), as fotos e as anotações das abas (de início, o mais recente), ou Nenhum, para começar com as abas vazias; sem
-                “Manter Imagens e Anotações”, só os cards vêm do relatório escolhido; depois,
-                cada gestor ajusta as abas dele.
+                “Manter Imagens e Anotações”, só os cards e as Imagens de Fundo das páginas vêm do relatório escolhido (as Imagens de Fundo vêm sempre);
+                depois, cada gestor ajusta as abas dele.
               </li>
             ) : null}
             <li>Use os filtros nos rótulos das colunas.</li>
@@ -182,8 +182,8 @@ function NovoRelatorioDialog({ dados, onFechar }: { dados: ListaDeRelatorios; on
           </select>
           <p className="text-xs text-gray-500">
             {manter || !importarDe
-              ? "Os cards (com os dados da competência nova), as fotos e as anotações das abas do relatório escolhido."
-              : "Só os cards (com os dados da competência nova) das abas do relatório escolhido."}
+              ? "Os cards (com os dados da competência nova), as fotos, as anotações e as Imagens de Fundo das abas do relatório escolhido."
+              : "Só os cards (com os dados da competência nova) e as Imagens de Fundo das abas do relatório escolhido."}
           </p>
           {/* Manter as fotos e as anotações da origem (17/10/2026); sem a marca, só os cards. */}
           {importarDe ? (

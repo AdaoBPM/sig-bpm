@@ -280,7 +280,7 @@ export const relatoriosExecutivosService = {
     }
     const origem = dados.importarDe ? await doRelatorio(dados.importarDe) : null;
     // Sem "Manter Imagens e Anotações" (17/10/2026), as anotações vêm em branco (o tipo da nota e o título ficam) e as
-    // fotos, sem a imagem e sem a legenda (o quadro cinza, esperando a imagem); os cards vêm iguais.
+    // fotos, sem a imagem e sem a legenda (o quadro cinza, esperando a imagem); os cards e as Imagens de Fundo vêm iguais.
     const manter = dados.manterImagensEAnotacoes !== false;
     const esvaziar = (b: BlocoDoRelatorio): BlocoDoRelatorio =>
       b.tipo === "ANOTACAO"
@@ -292,8 +292,9 @@ export const relatoriosExecutivosService = {
             ? { ...b, arquivo: "", url: "", legenda: "", legendaHtml: undefined }
             : b;
     const daOrigem = new Map(
-      // Sem as imagens, a página sai também sem a Imagem de Fundo (20/10/2026).
-      (origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos).map((p) => (manter ? p : { ...p, fundo: undefined, blocos: p.blocos.map(esvaziar) }))]),
+      // A Imagem de Fundo da página vem sempre (27/10/2026, pedido do Adão; antes, saía junto das imagens): sem as imagens e
+      // as anotações, só os blocos se esvaziam.
+      (origem?.abas ?? []).map((a) => [a.departamento, paginasDe(a.blocos).map((p) => (manter ? p : { ...p, blocos: p.blocos.map(esvaziar) }))]),
     );
     const r = await prisma.relatorioExecutivo.create({
       data: {
