@@ -25,12 +25,16 @@ function resumoPermissoes(p: Perfil) {
   return `${leitura} ${plural(leitura, "tela", "telas")} com leitura, ${telas("EDITAR")} com edição`;
 }
 
-const recorte = (p: Perfil) => [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null].filter(Boolean).join(", ");
+const recorte = (p: Perfil) =>
+  [p.recorteSetor ? "por setor" : null, p.recorteDepartamento ? "por departamento" : null, p.recorteCentro ? "por centro de custo" : null].filter(Boolean).join(", ");
+/** O Acesso a Informações Sensíveis (27/10/2026). */
+const sensiveis = (p: Perfil) => (p.informacoesSensiveis ? "Com acesso" : "Sem acesso");
 
 const COLUNAS: Coluna<Perfil>[] = [
   { chave: "perfil", rotulo: "Perfil", valor: (p) => p.nome },
   { chave: "permissoes", rotulo: "Permissões", valor: resumoPermissoes },
   { chave: "recorte", rotulo: "Recorte", valor: recorte },
+  { chave: "sensiveis", rotulo: "Informações Sensíveis", valor: sensiveis },
   { chave: "usuarios", rotulo: "Usuários", tipo: "numero", valor: (p) => p.usuarios, texto: (p) => String(p.usuarios) },
   { chave: "situacao", rotulo: "Situação", valor: (p) => (p.ativo ? "Ativo" : "Inativo") },
   { chave: "acoes", rotulo: "", semFiltro: true },
@@ -68,6 +72,13 @@ export function PerfisContent() {
             <li>A caixa do grupo ou da tela marca (e desmarca) tudo o que está abaixo dela; o traço na caixa mostra que só parte está marcada. A aba só vale com a tela lida: marcar a aba marca a leitura da tela, e desmarcar a leitura da tela desmarca as abas.</li>
             <li>As permissões valem também no servidor: uma aba sem permissão não aparece e os dados dela não são enviados.</li>
             <li>Os recortes por setor e por departamento limitam o que os usuários do perfil alcançam, por cima dos grupos. O recorte por departamento limita as movimentações da DRE às linhas dos departamentos do usuário (as da Receita Bruta, da Receita Líquida e dos Impostos Operacionais ficam abertas a todos) e os centros de custo aos dele; o recorte por centro de custo (o Coordenador) limita a visão por centro de custo aos centros marcados no usuário (de uma gestão), com as movimentações deles, e nas unidades deixa só as movimentações abertas a todos; com recorte por departamento ou por centro de custo, o Fechamento Mensal não mostra as etapas e as abas com lançamentos de todos os departamentos (Classificação, Lançamentos, Prévias › Receita, Totais › Rateios, Prévias › Estoque, Conferência), nem o Controle de Usuários a Auditoria; com recorte por setor, o Fechamento Mensal mostra só Competências, Importações e Listas.</li>
+            <li>
+              “Acesso a Informações Sensíveis”, no perfil, libera as movimentações das linhas de Mão de Obra Direta e Indireta da DRE (Remunerações CLT
+              e PJ, Horas Extras, Multas Rescisórias, Encargos e Benefícios e Pró Labore Diretoria). Sem ele, os usuários do perfil veem os valores
+              dessas linhas, mas elas não abrem o extrato nem o balancete (em nenhuma visão: unidades, centros de custo, obras e sem centro de custo) e
+              ficam fora da aba Detalhes do Exportar. O perfil novo vem sem ele; o Administrador tem sempre. A coluna Informações Sensíveis da lista
+              mostra quem tem.
+            </li>
           </ul>
         }
         sobre={
@@ -109,7 +120,7 @@ export function PerfisContent() {
           isLoading={perfis.isPending}
           error={perfis.isError ? mensagemDeErro(perfis.error, "Erro ao carregar os perfis.") : null}
           emptyMessage="Nenhum perfil"
-          columns={["Perfil", "Permissões", "Recorte", "Usuários", "Situação", ""]}
+          columns={["Perfil", "Permissões", "Recorte", "Informações Sensíveis", "Usuários", "Situação", ""]}
           renderRow={(p) => (
             <tr key={p.id} className={`border-b border-gray-100 hover:bg-gray-50 ${p.ativo ? "" : "text-gray-400"}`}>
               <td className="px-4 py-3 text-sm">
@@ -120,6 +131,7 @@ export function PerfisContent() {
               <td className="px-4 py-3 text-xs text-gray-600">
                 {recorte(p) || "—"}
               </td>
+              <td className="px-4 py-3 text-xs text-gray-600">{sensiveis(p)}</td>
               <td className="px-4 py-3 text-sm">{p.usuarios}</td>
               <td className="px-4 py-3 text-sm">{p.ativo ? "Ativo" : "Inativo"}</td>
               <td className="px-4 py-3 text-right whitespace-nowrap">

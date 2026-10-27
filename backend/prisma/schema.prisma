@@ -79,6 +79,11 @@ model Perfil {
   /// Recorte por centro de custo (Coordenador, 11/10/2026): o usuário só vê os
   /// centros marcados nele (da gestão dele), e as movimentações só dentro deles.
   recorteCentro       Boolean @default(false) @map("recorte_centro")
+  /// Acesso a Informações Sensíveis (27/10/2026): sem ele, o usuário não vê as movimentações das linhas de Mão de Obra
+  /// Direta e Indireta (as remunerações CLT e PJ, as horas extras, as multas rescisórias, os encargos e benefícios e o
+  /// pró-labore) — os extratos, os documentos e a aba Detalhes do Exportar; os valores da DRE ficam. Os perfis que já
+  /// existiam ficaram com ele (o que viam continua igual).
+  informacoesSensiveis Boolean @default(true) @map("informacoes_sensiveis")
 
   /// LISTA: o que este perfil pode fazer, por recurso e ação.
   permissoes PerfilPermissao[]

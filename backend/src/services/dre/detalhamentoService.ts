@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import { manualNoSinalDoBalancete, type Composicao, type OrigemValor, type ParcelaRateio } from "./apuracaoUnidades.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { MENSAGEM_SENSIVEL, podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
 import { CENTRO_DE_OBRA, sinalDaLinha } from "./obrasService.js";
 import { deveriaTerCentro, ehGrupoSemCentro, grupoSemCentro, nomeDoGrupoSemCentro, veSemCentros } from "./semCentroService.js";
@@ -286,8 +286,10 @@ export const detalhamentoService = {
     const prisma = getPrismaClient();
     const c = await prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true } });
     if (!c) throw new RegraDREError(404, `A competência ${rotulo(ano, mes)} não existe.`);
-    const linha = await prisma.linhaDRE.findUnique({ where: { codigo }, select: { id: true, codigo: true, descricao: true, tipo: true, grupoSigla: true } });
+    const linha = await prisma.linhaDRE.findUnique({ where: { codigo }, select: { id: true, codigo: true, descricao: true, tipo: true, grupoSigla: true, atribuicaoSigla: true } });
     if (!linha) throw new RegraDREError(404, `A linha ${codigo} não está na estrutura da DRE.`);
+    // As informações sensíveis (27/10/2026): sem o acesso, nenhuma movimentação da Mão de Obra Direta e Indireta.
+    if (!podeVerSensiveis(acesso, linha)) throw new RegraDREError(403, MENSAGEM_SENSIVEL(linha.descricao));
     // Recorte do Gestor (Passo 22): só as movimentações das linhas dos seus departamentos. O do Coordenador: nas
     // unidades, só as linhas abertas a todos; nos centros de custo, as dos seus centros.
     // Nas obras, as linhas que o usuário vê nelas (o Coordenador com a opção: as da gestão dele).

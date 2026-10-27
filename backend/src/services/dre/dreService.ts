@@ -1,7 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerCentro, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerCentro, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
 import { apurarUnidades, type LinhaEstrutura } from "./apuracaoUnidades.js";
 import { atribuicoesDoCentro, prefixoDaAtribuicao } from "./recorteCentros.js";
@@ -37,6 +37,7 @@ export async function estrutura(): Promise<LinhaEstrutura[]> {
       grupo: true,
       grupoSigla: true,
       atribuicao: true,
+      atribuicaoSigla: true,
       descricao: true,
       expressao: true,
       unidades: { select: { unidadeNegocio: { select: { codigo: true } } } },
@@ -67,7 +68,8 @@ function montarLinhas(linhas: LinhaEstrutura[], valores: ValorGravado[], acesso:
         descricao: l.descricao,
         valor: porLinha.get(l.id)?.valor.toFixed(2) ?? null,
         composicao: porLinha.get(l.id)?.composicao ?? null,
-        podeDetalhar: podeVerMovimentos(acesso, l),
+        // Sem o Acesso a Informações Sensíveis (27/10/2026), as linhas de Mão de Obra Direta e Indireta sem a lupa.
+        podeDetalhar: podeVerMovimentos(acesso, l) && podeVerSensiveis(acesso, l),
       })),
   };
 }
@@ -286,7 +288,7 @@ export const dreService = {
             descricao: l.descricao,
             valor: a?.valor.toFixed(2) ?? null,
             composicao: a && centros.size > 1 ? { regra: "Soma dos centros do agrupamento", centros: a.centros.sort(porCodigo) } : null,
-            podeDetalhar: true,
+            podeDetalhar: podeVerSensiveis(acesso, l),
           };
         }),
     };

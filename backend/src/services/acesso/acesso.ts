@@ -34,6 +34,11 @@ export type Acesso = {
   centros: string[];
   /** Com recorte por centro de custo: vê os resultados das obras, nas linhas da gestão dele. */
   veObras: boolean;
+  /**
+   * Acesso a Informações Sensíveis (27/10/2026): vê as movimentações das linhas de Mão de Obra Direta e Indireta
+   * (`podeVerSensiveis`). Do perfil.
+   */
+  informacoesSensiveis: boolean;
 };
 
 export type UsuarioAutenticado = {
@@ -103,6 +108,7 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
           recorteSetor: true,
           recorteDepartamento: true,
           recorteCentro: true,
+          informacoesSensiveis: true,
           permissoesTelas: { select: { chave: true, acao: true } },
         },
       },
@@ -136,12 +142,23 @@ export async function carregarUsuario(filtro: { id: string } | { email: string }
       gestao: usuario.gestao,
       centros: usuario.centros.map((c) => c.centroCustoId),
       veObras: usuario.veObras,
+      informacoesSensiveis: usuario.perfil.informacoesSensiveis,
     },
   };
 }
 
 /** Acesso irrestrito: o de quem não tem recorte nenhum (o Contábil). Para scripts e chamadas internas. */
-export const ACESSO_TOTAL: Acesso = { recorteSetor: false, setores: [], recorteDepartamento: false, departamentos: [], recorteCentro: false, gestao: null, centros: [], veObras: false };
+export const ACESSO_TOTAL: Acesso = {
+  recorteSetor: false,
+  setores: [],
+  recorteDepartamento: false,
+  departamentos: [],
+  recorteCentro: false,
+  gestao: null,
+  centros: [],
+  veObras: false,
+  informacoesSensiveis: true,
+};
 
 /** O usuário alcança esta lista operacional? */
 export const alcancaLista = (acesso: Acesso, tipo: string) => !acesso.recorteSetor || acesso.setores.includes(tipo as TipoImportacao);

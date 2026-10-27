@@ -2,7 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { ESTILO, type AbaEscrita, type Celula } from "../../lib/xlsxEscrita.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { linhaSensivel, podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import type { Composicao, OrigemValor, ParcelaRateio } from "../dre/apuracaoUnidades.js";
 import { grupoDoCentro } from "../dre/dreService.js";
 import { sinalDaLinha } from "../dre/obrasService.js";
@@ -57,7 +57,7 @@ const selecao = {
   contaAdotada: { select: { reduzido: true, descricao: true } },
 } satisfies Prisma.LancamentoContabilSelect;
 type Movimento = Prisma.LancamentoContabilGetPayload<{ select: typeof selecao }>;
-type LinhaDaDRE = { id: string; codigo: string; descricao: string; tipo: string; grupoSigla: string };
+type LinhaDaDRE = { id: string; codigo: string; descricao: string; tipo: string; grupoSigla: string; atribuicaoSigla: string | null };
 
 const COLUNAS: Array<[string, number, boolean?]> = [
   ["Aba", 18],
@@ -104,7 +104,7 @@ function doFiltro(ms: Movimento[], f: NonNullable<OrigemValor["contabil"]>) {
 export async function detalhesDosResultados(ano: number, ate: number, acesso: Acesso = ACESSO_TOTAL) {
   const prisma = getPrismaClient();
   const competencias = await prisma.competencia.findMany({ where: { ano, mes: { lte: ate }, status: "FECHADA" }, select: { id: true, mes: true }, orderBy: { mes: "asc" } });
-  const linhas = await prisma.linhaDRE.findMany({ select: { id: true, codigo: true, descricao: true, tipo: true, grupoSigla: true } });
+  const linhas = await prisma.linhaDRE.findMany({ select: { id: true, codigo: true, descricao: true, tipo: true, grupoSigla: true, atribuicaoSigla: true } });
   const porId = new Map<string, LinhaDaDRE>(linhas.map((l) => [l.id, l]));
   const movimentos = new Map<string, Map<string, Movimento[]>>();
   const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true, departamento: true } });
@@ -147,7 +147,8 @@ export async function detalhesDosResultados(ano: number, ate: number, acesso: Ac
         continue;
       }
       const ordem = new Map(a.codigos.map((c, i) => [c, i]));
-      const naAba = (l: LinhaDaDRE | undefined): l is LinhaDaDRE => !!l && ordem.has(l.codigo);
+      // Sem o Acesso a Informações Sensíveis (27/10/2026), sem os movimentos da Mão de Obra Direta e Indireta.
+      const naAba = (l: LinhaDaDRE | undefined): l is LinhaDaDRE => !!l && ordem.has(l.codigo) && podeVerSensiveis(acesso, l);
       let soma = new Prisma.Decimal(0);
       let somaNaAba = new Prisma.Decimal(0);
       for (const c of competencias) {
@@ -245,8 +246,12 @@ export async function detalhesDosResultados(ano: number, ate: number, acesso: Ac
         { valor: Number(somaNaAba), estilo: ESTILO.destaqueMoeda },
       ]);
     }
+    // As linhas sensíveis que ficaram de fora (27/10/2026), no aviso.
+    const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
+    const semSensiveis = !acesso.informacoesSensiveis && abas.some((a) => a.alvo && a.codigos.some((c) => { const l = porCodigo.get(c); return !!l && linhaSensivel(l); }));
     const avisos = [
       ...(semLancamentos.length ? [`${semLancamentos.join(", ")}: as linhas não abrem os lançamentos, e ficam fora desta aba.`] : []),
+      ...(semSensiveis ? ["Os movimentos das linhas de Mão de Obra Direta e Indireta são informações sensíveis, e ficam fora desta aba: o seu perfil não tem acesso a elas."] : []),
       ...(algumMovimento && !algumDetalhe ? ["O balancete do período foi importado sem o detalhe dos movimentos: cada linha é a soma da filial, do centro de custo e da conta."] : []),
     ];
     linhasDaAba.splice(2, 0, ...avisos.map((v) => [{ valor: v, estilo: ESTILO.aviso }]));

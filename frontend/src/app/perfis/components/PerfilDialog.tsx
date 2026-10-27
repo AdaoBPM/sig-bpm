@@ -60,6 +60,8 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
   const [recorteSetor, setRecorteSetor] = useState(editando?.recorteSetor ?? false);
   const [recorteDepartamento, setRecorteDepartamento] = useState(editando?.recorteDepartamento ?? false);
   const [recorteCentro, setRecorteCentro] = useState(editando?.recorteCentro ?? false);
+  // O Acesso a Informações Sensíveis (27/10/2026): no perfil novo, desmarcado; o Administrador tem sempre.
+  const [informacoesSensiveis, setInformacoesSensiveis] = useState(admin || (editando?.informacoesSensiveis ?? false));
   const [nivel, setNivel] = useState<Record<string, number>>(() => {
     const m: Record<string, number> = {};
     for (const p of editando?.permissoes ?? []) m[p.chave] = Math.max(m[p.chave] ?? 0, NIVEL[p.acao]);
@@ -79,7 +81,7 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
     Object.entries(nivel).flatMap(([chave, n]) => opcoes.acoes.filter((a) => NIVEL[a] <= n).map((acao) => ({ chave, acao })));
   const salvar = useMutation({
     mutationFn: () => {
-      const d = { nome, descricao: descricao || null, ativo, recorteSetor, recorteDepartamento, recorteCentro, permissoes: permissoes() };
+      const d = { nome, descricao: descricao || null, ativo, recorteSetor, recorteDepartamento, recorteCentro, informacoesSensiveis, permissoes: permissoes() };
       return editando ? usuariosService.atualizarPerfil(editando.id, d) : usuariosService.criarPerfil({ ...d, codigo });
     },
     onSuccess: () => {
@@ -184,6 +186,17 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
               <input type="checkbox" checked={recorteCentro} onChange={(e) => setRecorteCentro(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
               <span>
                 Recorta por Centro de Custo<span className="text-gray-500">: o usuário só vê as movimentações e os centros de custo marcados nele (de uma gestão)</span>
+              </span>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-900">
+              <input type="checkbox" checked={informacoesSensiveis} onChange={(e) => setInformacoesSensiveis(e.target.checked)} disabled={admin} className="size-4 accent-black disabled:opacity-60" />
+              <span>
+                Acesso a Informações Sensíveis
+                <span className="text-gray-500">
+                  : o usuário vê as movimentações das linhas de Mão de Obra Direta e Indireta (Remunerações CLT e PJ, Horas Extras, Multas Rescisórias,
+                  Encargos e Benefícios e Pró Labore Diretoria); sem ele, vê os valores dessas linhas, mas não os extratos, os balancetes e a aba Detalhes
+                  do Exportar delas
+                </span>
               </span>
             </label>
           </div>

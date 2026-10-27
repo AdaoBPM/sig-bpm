@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { MENSAGEM_SENSIVEL, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { CENTRO_DE_OBRA } from "./obrasService.js";
 import { RegraDREError } from "./dreService.js";
 
@@ -18,8 +18,10 @@ export const documentosService = {
     const prisma = getPrismaClient();
     const c = await prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true } });
     if (!c) throw new RegraDREError(404, `A competência ${rotulo(ano, mes)} não existe.`);
-    const linha = await prisma.linhaDRE.findUnique({ where: { codigo: filtro.linha }, select: { descricao: true, grupoSigla: true } });
+    const linha = await prisma.linhaDRE.findUnique({ where: { codigo: filtro.linha }, select: { descricao: true, grupoSigla: true, atribuicaoSigla: true } });
     if (!linha) throw new RegraDREError(404, `A linha ${filtro.linha} não está na estrutura da DRE.`);
+    // As informações sensíveis (27/10/2026): sem o acesso, nenhum movimento da Mão de Obra Direta e Indireta.
+    if (!podeVerSensiveis(acesso, linha)) throw new RegraDREError(403, MENSAGEM_SENSIVEL(linha.descricao));
     // O Coordenador (recorte por centro de custo) consulta as linhas fechadas a ele só num centro seu.
     const doCentroDele =
       acesso.recorteCentro &&

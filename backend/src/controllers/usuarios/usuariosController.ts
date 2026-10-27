@@ -29,6 +29,8 @@ const perfilSchema = z.object({
   recorteSetor: z.boolean().default(false),
   recorteDepartamento: z.boolean().default(false),
   recorteCentro: z.boolean().default(false),
+  // O Acesso a Informações Sensíveis (27/10/2026): sem ele, as movimentações da Mão de Obra Direta e Indireta ficam ocultas.
+  informacoesSensiveis: z.boolean().default(false),
   // A matriz por tela e por aba (14/10/2026): a chave é a tela ou "tela.aba" do catálogo.
   permissoes: z
     .array(

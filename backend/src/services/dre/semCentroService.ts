@@ -128,7 +128,7 @@ export const semCentroService = {
       grupo: { codigo: grupo, nome: nomeDoGrupoSemCentro(grupo) },
       apuradoEm: ap?.apuradoEm ?? null,
       congelado: ap?.congelado ?? false,
-      linhas: linhasDaObra(linhas, itens, false),
+      linhas: linhasDaObra(linhas, itens, false, acesso),
     };
   },
 };

@@ -36,6 +36,8 @@ export type LinhaEstrutura = {
   grupo: string;
   grupoSigla: string;
   atribuicao: string | null;
+  /** A sigla da atribuição (MOD, MOI…): as linhas de Mão de Obra Direta e Indireta são as sensíveis (27/10/2026). */
+  atribuicaoSigla: string | null;
   descricao: string;
   expressao: string | null;
   unidades: number[];

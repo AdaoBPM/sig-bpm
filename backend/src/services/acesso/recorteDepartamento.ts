@@ -112,6 +112,25 @@ export function podeVerLinhaNaObra(acesso: Acesso, l: { grupoSigla: string; desc
 }
 
 /**
+ * As linhas com informações sensíveis (27/10/2026, pedido do Adão): as de Mão de Obra Direta (MOD) e Indireta (MOI) de
+ * cada grupo da DRE — as Remunerações CLT e PJ, as Horas Extras, as Multas Rescisórias, os Encargos e Benefícios e o Pró
+ * Labore Diretoria. A Mão de Obra Terceirizada (MOT) não é delas.
+ */
+const ATRIBUICOES_SENSIVEIS = new Set(["MOD", "MOI"]);
+export const linhaSensivel = (l: { atribuicaoSigla: string | null }) => ATRIBUICOES_SENSIVEIS.has(l.atribuicaoSigla ?? "");
+
+/**
+ * O usuário vê as movimentações desta linha, quanto às informações sensíveis? Sem o Acesso a Informações Sensíveis do
+ * perfil, não as das linhas de Mão de Obra Direta e Indireta (os extratos, os documentos e a aba Detalhes do Exportar),
+ * em qualquer visão (unidades, centros de custo, obras e sem centro); os valores da DRE ficam. Vale por cima dos recortes.
+ */
+export const podeVerSensiveis = (acesso: Acesso, l: { atribuicaoSigla: string | null }) => acesso.informacoesSensiveis || !linhaSensivel(l);
+
+/** A mensagem da movimentação sensível recusada. */
+export const MENSAGEM_SENSIVEL = (descricao: string) =>
+  `As movimentações de "${descricao}" são informações sensíveis (Mão de Obra Direta e Indireta): o seu perfil não tem acesso a elas.`;
+
+/**
  * Nas visões por centro de custo, as linhas cujas movimentações o usuário consulta: o Gestor, as dos departamentos
  * dele (como nas unidades); o Coordenador, todas as dos seus centros (o centro já recorta).
  */

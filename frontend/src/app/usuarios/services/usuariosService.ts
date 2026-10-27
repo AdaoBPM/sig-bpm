@@ -30,6 +30,8 @@ export type Usuario = {
 export type CentroDaGestao = { id: string; codigoRM: string | null; nome: string; agrupamento: string | null; gestao: DepartamentoAcesso };
 
 export type Perfil = PerfilResumo & {
+  /** Acesso a Informações Sensíveis (27/10/2026): as movimentações da Mão de Obra Direta e Indireta. */
+  informacoesSensiveis: boolean;
   descricao: string | null;
   sistema: boolean;
   ordem: number;
@@ -69,6 +71,7 @@ export type DadosPerfil = {
   recorteSetor: boolean;
   recorteDepartamento: boolean;
   recorteCentro: boolean;
+  informacoesSensiveis: boolean;
   permissoes: Permissao[];
 };
 

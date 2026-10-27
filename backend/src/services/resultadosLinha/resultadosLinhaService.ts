@@ -60,7 +60,7 @@ async function estruturaDaDRE(): Promise<LinhaDRE[]> {
   const ls = await getPrismaClient().linhaDRE.findMany({
     where: { ativo: true },
     orderBy: { ordem: "asc" },
-    select: { id: true, codigo: true, tipo: true, grupo: true, grupoSigla: true, descricao: true, expressao: true, unidades: { select: { unidadeNegocio: { select: { codigo: true } } } } },
+    select: { id: true, codigo: true, tipo: true, grupo: true, grupoSigla: true, atribuicaoSigla: true, descricao: true, expressao: true, unidades: { select: { unidadeNegocio: { select: { codigo: true } } } } },
   });
   return ls.map(({ unidades, ...l }) => ({ ...l, unidades: unidades.map((u) => u.unidadeNegocio.codigo) }));
 }

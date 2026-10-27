@@ -877,6 +877,10 @@ export function ResultadosContent() {
               “(Corrigida de: …)” e a conta do balancete em vermelho.
             </li>
             <li>
+              Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações
+              CLT e PJ, Horas Extras, Multas Rescisórias, Encargos e Benefícios e Pró Labore Diretoria) mostram os valores, mas não abrem o extrato, e os movimentos delas ficam fora da aba Detalhes do Exportar.
+            </li>
+            <li>
               “Exportar”, ao lado do período, baixa em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o %
               e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo, a Linha ou a Obra Atual) e, de qualquer aba, todas as unidades,
               todos os centros de custo, todas sem centro de custo, todas as linhas e todas as obras (uma por aba ou por

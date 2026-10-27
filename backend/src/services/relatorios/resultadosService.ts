@@ -1,6 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerLinhaNaObra, podeVerMovimentos } from "../acesso/recorteDepartamento.js";
+import { podeVerLinhaNaObra, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { cenarioDaComparacao, rotuloDaComparacao, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
 import { obrasService } from "../dre/obrasService.js";
@@ -28,7 +28,7 @@ export class RelatorioError extends Error {
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${String(ano).slice(2)}`;
 
-export type LinhaEstrutura = { id: string; codigo: string; tipo: string; grupo: string; grupoSigla: string; descricao: string };
+export type LinhaEstrutura = { id: string; codigo: string; tipo: string; grupo: string; grupoSigla: string; atribuicaoSigla: string | null; descricao: string };
 type Celula = { valor: number | null; pct: number | null; unitario: number | null };
 
 /**
@@ -58,7 +58,7 @@ export async function estrutura(): Promise<LinhaEstrutura[]> {
   return getPrismaClient().linhaDRE.findMany({
     where: { ativo: true },
     orderBy: { ordem: "asc" },
-    select: { id: true, codigo: true, tipo: true, grupo: true, grupoSigla: true, descricao: true },
+    select: { id: true, codigo: true, tipo: true, grupo: true, grupoSigla: true, atribuicaoSigla: true, descricao: true },
   });
 }
 
@@ -145,7 +145,8 @@ export function montar(
         descricao: l.descricao,
         volume,
         /** O usuário alcança os lançamentos da linha (o recorte do Gestor por departamento), como na DRE. */
-        podeDetalhar: visao === "centros" || (visao === "obras" ? podeVerLinhaNaObra(acesso, l) : podeVerMovimentos(acesso, l)),
+        // Sem o Acesso a Informações Sensíveis (27/10/2026), as linhas de Mão de Obra Direta e Indireta sem a lupa, em todas as visões.
+        podeDetalhar: podeVerSensiveis(acesso, l) && (visao === "centros" || (visao === "obras" ? podeVerLinhaNaObra(acesso, l) : podeVerMovimentos(acesso, l))),
         meses,
         total: {
           valor: total,

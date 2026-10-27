@@ -1,7 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
-import { podeVerLinhaNaObra } from "../acesso/recorteDepartamento.js";
+import { podeVerLinhaNaObra, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import type { LinhaEstrutura } from "./apuracaoUnidades.js";
 import { avaliarEstrutura, soSoma } from "./consolidacao.js";
 import { estrutura, RegraDREError } from "./dreService.js";
@@ -64,7 +64,7 @@ const CALCULADOS = new Set([
 type Movimento = { codigoCentroCusto: string | null; nomeCentroCusto: string | null; linhaDREId: string | null; valorMovimento: Decimal };
 
 /** Os itens de uma obra (com o sinal da DRE), e os subtotais e totais pela estrutura. */
-export function linhasDaObra(linhas: LinhaEstrutura[], itens: Map<string, { valor: Decimal; n: number }>, completa: boolean) {
+export function linhasDaObra(linhas: LinhaEstrutura[], itens: Map<string, { valor: Decimal; n: number }>, completa: boolean, acesso: Acesso = ACESSO_TOTAL) {
   // As contas com soma zero no mês ficam de fora, como nos centros.
   itens = new Map([...itens].filter(([, a]) => !a.valor.isZero()));
   const diretos = new Map([...itens].map(([c, a]) => [c, a.valor]));
@@ -93,7 +93,8 @@ export function linhasDaObra(linhas: LinhaEstrutura[], itens: Map<string, { valo
         descricao: l.descricao,
         valor: l.tipo === "SECAO" ? null : (valor?.toFixed(2) ?? null),
         composicao: null,
-        podeDetalhar: true,
+        // Sem o Acesso a Informações Sensíveis (27/10/2026), as linhas de Mão de Obra Direta e Indireta sem a lupa.
+        podeDetalhar: podeVerSensiveis(acesso, l),
       };
     });
 }
@@ -172,7 +173,7 @@ export const obrasService = {
       obra: { codigo: o.codigo, nome: o.nome },
       apuradoEm: ap?.apuradoEm ?? null,
       congelado: ap?.congelado ?? false,
-      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento && !acesso.recorteCentro).filter((l) => !CALCULADOS.has(l.codigo)),
+      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento && !acesso.recorteCentro, acesso).filter((l) => !CALCULADOS.has(l.codigo)),
     };
   },
 };

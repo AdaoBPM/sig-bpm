@@ -94,6 +94,8 @@ export type DadosPerfil = {
   recorteSetor: boolean;
   recorteDepartamento: boolean;
   recorteCentro?: boolean;
+  /** Acesso a Informações Sensíveis (27/10/2026): as movimentações da Mão de Obra Direta e Indireta. */
+  informacoesSensiveis?: boolean;
   permissoes: Permissao[];
 };
 
@@ -311,6 +313,7 @@ export const usuariosService = {
         recorteSetor: true,
         recorteDepartamento: true,
         recorteCentro: true,
+        informacoesSensiveis: true,
         permissoes: { select: { recurso: true, acao: true } },
         permissoesTelas: { select: { chave: true, acao: true } },
         _count: { select: { usuarios: true } },
@@ -333,6 +336,7 @@ export const usuariosService = {
         recorteSetor: d.recorteSetor,
         recorteDepartamento: d.recorteDepartamento,
         recorteCentro: d.recorteCentro ?? false,
+        informacoesSensiveis: d.informacoesSensiveis ?? false,
         ordem: (await prisma.perfil.count()) + 1,
         permissoesTelas: { create: normalizarPermissoes(d.permissoes) },
       },
@@ -350,8 +354,8 @@ export const usuariosService = {
     if (ehPerfilAdministrador(atual)) {
       exigirAdministrador(await ehAdministrador(quemEdita), "edita o perfil Administrador");
       if (!d.ativo) throw new RegraUsuarioError(409, "O perfil Administrador não pode ser inativado.");
-      // Só a descrição muda: o nome, a situação, os recortes e as permissões (todas) são fixos.
-      d = { ...d, nome: atual.nome, ativo: true, recorteSetor: false, recorteDepartamento: false, recorteCentro: false, permissoes: MATRIZ_COMPLETA };
+      // Só a descrição muda: o nome, a situação, os recortes, o acesso às informações sensíveis e as permissões (todas) são fixos.
+      d = { ...d, nome: atual.nome, ativo: true, recorteSetor: false, recorteDepartamento: false, recorteCentro: false, informacoesSensiveis: true, permissoes: MATRIZ_COMPLETA };
     }
     const antes = (await this.listarPerfis()).find((p) => p.id === id);
     const permissoes = normalizarPermissoes(d.permissoes);
@@ -371,6 +375,7 @@ export const usuariosService = {
           recorteSetor: d.recorteSetor,
           recorteDepartamento: d.recorteDepartamento,
           recorteCentro: d.recorteCentro ?? false,
+          informacoesSensiveis: d.informacoesSensiveis ?? false,
           permissoesTelas: { create: permissoes },
         },
       }),

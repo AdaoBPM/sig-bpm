@@ -521,6 +521,10 @@ export function DREContent() {
               No extrato, o lançamento reclassificado (Cadastros da Apuração / Reclassificações) mostra a conta corrigida, a que vale na DRE, com
               “(Corrigida de: …)” e a conta do balancete em vermelho.
             </li>
+            <li>
+              Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações
+              CLT e PJ, Horas Extras, Multas Rescisórias, Encargos e Benefícios e Pró Labore Diretoria) mostram os valores, mas não abrem o extrato.
+            </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados. A DRE do centro traz só os custos e as despesas de mão de obra, gastos gerais e depreciação.</li>
             <li>Em Obras, escolha a obra na lista à esquerda (o código do centro de custo da obra fica acima do nome; a busca aceita os dois): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, sem as margens e os resultados calculados.</li>
