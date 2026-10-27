@@ -185,7 +185,7 @@ export function LinhasContent() {
       queryClient.setQueryData(["linhas-do-mes", anoMes], dados);
       queryClient.invalidateQueries({ queryKey: ["linhas-do-mes", anoMes, "lista"] });
       queryClient.invalidateQueries({ queryKey: ["linhas-do-mes", anoMes, "linha"] });
-      // Resultados Empresariais passam a mostrar o mês nas abas Linhas e Rateios por Obras.
+      // Resultados Empresariais passam a mostrar o mês na aba Linhas.
       queryClient.invalidateQueries({ queryKey: ["relatorios", "resultados"] });
       toast.success(`Linhas de ${rotuloCompetencia(periodo!.ano, periodo!.mes)} gravadas.`);
       setConfirmar(false);
@@ -239,7 +239,7 @@ export function LinhasContent() {
               Uma competência fechada antes da etapa Linhas mostra o botão Gravar: grava as linhas uma vez, com a Alocação nas Linhas e as tarefas de hoje. Depois,
               só reabrindo e reapurando.
             </li>
-            <li>O exercício de cada linha, mês a mês, fica em Resultados Empresariais › Resultados, nas abas Linhas e Rateios por Obras (com as competências fechadas).</li>
+            <li>O exercício de cada linha, mês a mês, fica em Resultados Empresariais › Resultados, na aba Linhas (com as competências fechadas).</li>
           </ul>
         }
         acoes={

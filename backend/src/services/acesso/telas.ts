@@ -91,18 +91,14 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
     nome: "Resultados Empresariais",
     area: "resultados",
     telas: [
-      // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Empresariais; as abas Linhas e Rateios por Obras (26/10/2026),
-      // antes de Obras.
+      // A aba Sem Centros de Custo (14/10/2026), só nos Resultados Empresariais; a aba Linhas (26/10/2026), antes de Obras.
+      // A aba Rateios das Linhas (26/10/2026, antes Rateios por Obras; a chave rateios_linhas) saiu da tela em 27/10/2026, a
+      // pedido do Adão: o código fica (a visão rateios_linhas do relatório e da exportação, o `rateios` do PainelDeLinhas e do
+      // resultadosLinhaService.linha) para o processo Resultados por Obra. Fora do catálogo, nenhum perfil a alcança.
       {
         codigo: "relatorio_resultados",
         nome: "Resultados",
-        abas: [
-          ...COM_CENTROS_E_OBRAS.slice(0, 7),
-          { codigo: "sem_centros", nome: "Sem Centros de Custo" },
-          { codigo: "linhas", nome: "Linhas" },
-          { codigo: "rateios_obras", nome: "Rateios por Obras" },
-          COM_CENTROS_E_OBRAS[7],
-        ],
+        abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, { codigo: "linhas", nome: "Linhas" }, COM_CENTROS_E_OBRAS[7]],
       },
       // Os Indicadores são uma aba do Painel de Bordo (19/10/2026; antes, uma tela).
       { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "indicadores", nome: "Indicadores" }] },

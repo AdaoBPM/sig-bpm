@@ -73,7 +73,7 @@ export function permissoesDasRotas(
       // O apurar da competência (a edição da DRE) mostra todos os departamentos.
       if (area === "dre" && acao === "EDITAR") return true;
       // As linhas (26/10/2026) juntam os lançamentos de todos os departamentos, como a etapa Linhas.
-      if (area === "relatorio_resultados.linhas" || area === "relatorio_resultados.rateios_obras") return true;
+      if (area === "relatorio_resultados.linhas" || area === "relatorio_resultados.rateios_linhas") return true;
     }
     if (recortes.recorteSetor && TELAS_DO_FECHAMENTO.has(tela(area)) && !DENTRO_DO_RECORTE_DE_SETOR.has(tela(area))) return true;
     return false;

@@ -14,7 +14,7 @@ import { ABA_DA_VISAO } from "../../services/acesso/telas.js";
 
 const anoSchema = z.coerce.number().int().min(2025).max(2100);
 const ateSchema = z.coerce.number().int().min(1).max(12).optional();
-const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.literal("sem_centros"), z.literal("linhas"), z.literal("rateios_obras"), z.coerce.number().int().min(0).max(5)]);
+const visaoSchema = z.union([z.literal("centros"), z.literal("obras"), z.literal("sem_centros"), z.literal("linhas"), z.literal("rateios_linhas"), z.coerce.number().int().min(0).max(5)]);
 const obraSchema = z.string().trim().regex(/^1.9[89]./, "Obra inválida").max(40).optional();
 const grupoSchema = z.string().trim().min(1).max(200).optional();
 const linhaSchema = z.string().trim().min(1).max(60).optional();
@@ -92,7 +92,7 @@ export const relatoriosController = {
   /**
    * ?visao=0..5 (0 Consolidado) ou ?visao=centros: sem ?grupo, a lista dos agrupamentos; com ele, o agrupamento. Ou
    * ?visao=obras: sem ?obra, a lista das obras; com ela (o código do centro 1.98 ou 1.99), a obra. Ou ?visao=linhas e
-   * ?visao=rateios_obras (26/10/2026): sem ?linha, a lista das linhas; com ela, a DRE da linha ou o rateado dela.
+   * ?visao=rateios_linhas (26/10/2026): sem ?linha, a lista das linhas; com ela, a DRE da linha ou o rateado dela.
    */
   async resultados(request: Request, response: Response) {
     const p = periodo(request, response);
@@ -118,11 +118,11 @@ export const relatoriosController = {
       return responder(response, () => (g.data ? resultadosService.centros(p.ano, g.data, p.ate, acesso, true) : resultadosService.listarCentros(p.ano, p.ate, acesso, true)));
     }
     // As linhas (26/10/2026), gravadas na etapa Linhas da apuração: as das unidades que o perfil lê.
-    if (v.data === "linhas" || v.data === "rateios_obras") {
+    if (v.data === "linhas" || v.data === "rateios_linhas") {
       const l = linhaSchema.safeParse(request.query.linha || undefined);
       if (!l.success) return response.status(400).json({ error: "Linha inválida" });
       const unidades = unidadesDasLinhas(request);
-      const rateios = v.data === "rateios_obras";
+      const rateios = v.data === "rateios_linhas";
       return responder(response, () => (l.data ? resultadosLinhaService.linha(p.ano, p.ate, l.data, rateios, unidades) : resultadosLinhaService.listar(p.ano, p.ate, unidades)));
     }
     const visao = v.data as 0 | 1 | 2 | 3 | 4 | 5;
@@ -161,12 +161,12 @@ export const relatoriosController = {
       else if (g.success && g.data && ehGrupoSemCentro(g.data)) e = { tipo: "semCentro", grupo: g.data };
       else return response.status(400).json({ error: "Grupo inválido" });
     }
-    // As linhas (26/10/2026): a da tela ou todas, na aba Linhas ou na Rateios por Obras.
-    else if (escopo === "linhas" || escopo === "rateios_obras" || (v.success && (v.data === "linhas" || v.data === "rateios_obras"))) {
-      const rateios = escopo === "rateios_obras" || (v.success && v.data === "rateios_obras");
+    // As linhas (26/10/2026): a da tela ou todas, na aba Linhas ou na Rateios das Linhas.
+    else if (escopo === "linhas" || escopo === "rateios_linhas" || (v.success && (v.data === "linhas" || v.data === "rateios_linhas"))) {
+      const rateios = escopo === "rateios_linhas" || (v.success && v.data === "rateios_linhas");
       const unidades = unidadesDasLinhas(request);
       const l = linhaSchema.safeParse(request.query.linha || undefined);
-      if (escopo === "linhas" || escopo === "rateios_obras") e = { tipo: "linhas", rateios, unidades };
+      if (escopo === "linhas" || escopo === "rateios_linhas") e = { tipo: "linhas", rateios, unidades };
       else if (l.success && l.data) e = { tipo: "linha", id: l.data, rateios, unidades };
       else return response.status(400).json({ error: "Linha inválida" });
     }

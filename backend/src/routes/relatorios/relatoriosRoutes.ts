@@ -19,9 +19,9 @@ relatoriosRoutes.get("/resultados/exportar", autenticacao, verificarAba("relator
   // As obras e os movimentos sem centro de custo (14/10/2026): a aba deles, de um ou de todos.
   if (escopo === "obras" || r.query.visao === "obras") return ["obras"];
   if (escopo === "sem_centros" || r.query.visao === "sem_centros") return ["sem_centros"];
-  // As linhas (26/10/2026): a aba Linhas ou a Rateios por Obras.
+  // As linhas (26/10/2026): a aba Linhas ou a Rateios das Linhas.
   if (escopo === "linhas" || r.query.visao === "linhas") return ["linhas"];
-  if (escopo === "rateios_obras" || r.query.visao === "rateios_obras") return ["rateios_obras"];
+  if (escopo === "rateios_linhas" || r.query.visao === "rateios_linhas") return ["rateios_linhas"];
   if (escopo === "centros" || escopo === "centros_arquivos" || r.query.grupo !== undefined) return ["centros"];
   const a = abaDaVisao(r.query.visao ?? 0);
   return a ? [a] : null;

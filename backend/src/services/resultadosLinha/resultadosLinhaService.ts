@@ -14,7 +14,7 @@ import { linhasDoNegocio, pesosDaBase, receitaDoMes, volumeDaLinhaDRE, volumesDo
  * Os Resultados por Linha (26/10/2026, pedido do Adão): a DRE de cada linha de produto e de obra, da receita à Margem de
  * Contribuição. A etapa Linhas da apuração da competência, depois da DRE, parte da DRE apurada de cada unidade (Matriz,
  * Filial e Serviços), a divide entre as linhas dela e grava o resultado (ResultadoLinha), que fica congelado com o
- * fechamento. Resultados Empresariais (as abas Linhas e Rateios por Obras) e a etapa Linhas do mês leem o gravado. A
+ * fechamento. Resultados Empresariais (as abas Linhas e Rateios das Linhas) e a etapa Linhas do mês leem o gravado. A
  * divisão:
  *
  * - a receita (bruta e líquida, por natureza), pela Receita Prévia das linhas;
@@ -26,7 +26,7 @@ import { linhasDoNegocio, pesosDaBase, receitaDoMes, volumeDaLinhaDRE, volumesDo
  * - os volumes (as linhas P e S), pelas listas, na regra da aba Totais.
  *
  * A soma das linhas de cada unidade é a DRE da unidade (a Conferência). A parte de cada custo que veio dos centros de obra
- * é direta nas obras; o resto é o que a aba Rateios por Obras leva às obras (os Resultados por Obra).
+ * é direta nas obras; o resto é o que a aba Rateios das Linhas leva às obras (os Resultados por Obra).
  */
 
 const Decimal = Prisma.Decimal;
@@ -39,7 +39,7 @@ const CHAVES_DE_RATEIO = new Set(["PROJETO", "PRODUCAO", "METALURGIA", "ARMADURA
 const ITENS = new Set(["P", "S", "ROB", "ROL", "CPP", "CSM", "CSC", "DVV"]);
 const SECOES = new Set(["PS", "P", "S"]);
 const CUSTOS = new Set(["CPP", "CSM", "CSC", "DVV"]);
-/** A aba Rateios por Obras: só os custos (e os volumes, a base). */
+/** A aba Rateios das Linhas: só os custos (e os volumes, a base). */
 const DOS_RATEIOS = new Set(["PS", "P", "S", "CPP", "CSM", "CSC", "CPV", "DVV"]);
 const NATUREZA_DA_RECEITA: Record<string, string> = {
   RBPF: "PRE_FABRICADO", RLPF: "PRE_FABRICADO", RBF: "FRETE", RLF: "FRETE", RBM: "MONTAGEM", RLM: "MONTAGEM",
@@ -361,7 +361,7 @@ const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${
 /** O mês no rótulo das colunas, como nos Resultados Empresariais ("SET/26"). */
 const MESES_CURTOS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ROL = "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL";
-/** As linhas da DRE das abas Linhas (da receita à Margem de Contribuição) e Rateios por Obras (os custos, sobre os volumes). */
+/** As linhas da DRE das abas Linhas (da receita à Margem de Contribuição) e Rateios das Linhas (os custos, sobre os volumes). */
 const DO_RESULTADO = new Set([...ITENS, ...SECOES, "RO", "IRB", "CPV", "MB", "MC"]);
 
 export class RegraLinhasError extends Error {
@@ -507,7 +507,7 @@ export const resultadosLinhaService = {
   },
 
   /**
-   * As linhas das unidades pedidas, para a lista das abas Linhas e Rateios por Obras dos Resultados Empresariais: as ativas
+   * As linhas das unidades pedidas, para a lista das abas Linhas e Rateios das Linhas dos Resultados Empresariais: as ativas
    * e as inativas com valor nas competências fechadas do exercício até o mês.
    */
   async listar(ano: number, ate: number | undefined, unidades: number[], soOMes = false) {
@@ -522,7 +522,7 @@ export const resultadosLinhaService = {
 
   /**
    * A DRE de uma linha mês a mês, da receita à Margem de Contribuição (a aba Linhas), ou só os custos dela que não vieram
-   * dos centros de obra, sobre os volumes (`rateios`: a aba Rateios por Obras, o que os Resultados por Obra levam às obras).
+   * dos centros de obra, sobre os volumes (`rateios`: a aba Rateios das Linhas, o que os Resultados por Obra levam às obras).
    */
   async linha(ano: number, ate: number | undefined, linhaId: string, rateios: boolean, unidades: number[], soOMes = false) {
     const l = (await linhasDoNegocio()).find((x) => x.id === linhaId && unidades.includes(x.unidade));

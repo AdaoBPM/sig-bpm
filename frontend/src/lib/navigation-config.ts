@@ -110,8 +110,8 @@ export const navGrupos: NavGrupo[] = [
     titulo: "Apuração dos Resultados",
     itens: [
       { title: "Resultados por Obra", href: "/resultados-por-obra", icon: HardHat, emDesenvolvimento: true },
-      // Os Resultados por Linha (26/10/2026) não são um processo: a etapa Linhas do Fechamento Mensal e as abas Linhas e
-      // Rateios por Obras dos Resultados Empresariais.
+      // Os Resultados por Linha (26/10/2026) não são um processo: a etapa Linhas do Fechamento Mensal e a aba Linhas dos
+      // Resultados Empresariais (os Rateios das Linhas, guardados para os Resultados por Obra).
       {
         // Antes, Resultados Realizados (renomeado em 14/10/2026).
         title: "Resultados Empresariais",

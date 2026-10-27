@@ -32,7 +32,7 @@ export type EscopoResultados =
   | { tipo: "obras" }
   | { tipo: "semCentro"; grupo: GrupoSemCentro }
   | { tipo: "semCentros" }
-  // As linhas (26/10/2026): uma (a da tela) ou todas, das unidades que o perfil lê; `rateios`, a aba Rateios por Obras.
+  // As linhas (26/10/2026): uma (a da tela) ou todas, das unidades que o perfil lê; `rateios`, a aba Rateios das Linhas.
   | { tipo: "linha"; id: string; rateios: boolean; unidades: number[] }
   | { tipo: "linhas"; rateios: boolean; unidades: number[] };
 export type Formato = "xlsx" | "pdf";
@@ -111,7 +111,7 @@ async function blocos(ano: number, ate: number | undefined, escopo: EscopoResult
     for (const id of ids) {
       const dados = await resultadosLinhaService.linha(ano, ate, id, escopo.rateios, escopo.unidades);
       const nome = `${dados.linha.nome} (${dados.linha.nomeUnidade})`;
-      r.push({ nome, titulo: escopo.rateios ? `Rateios por Obras · ${nome}` : `Linha ${nome}`, dados, detalhe: null });
+      r.push({ nome, titulo: escopo.rateios ? `Rateios das Linhas · ${nome}` : `Linha ${nome}`, dados, detalhe: null });
     }
     return r;
   }
@@ -421,10 +421,10 @@ export const exportacaoRelatoriosService = {
                 ? `sem centro de custo - ${bs[0].nome}`
                 : escopo.tipo === "linhas"
                   ? escopo.rateios
-                    ? "rateios por obras de todas as linhas"
+                    ? "rateios das linhas de todas as linhas"
                     : "todas as linhas"
                   : escopo.tipo === "linha" && escopo.rateios
-                    ? `rateios por obras - ${bs[0].nome}`
+                    ? `rateios das linhas - ${bs[0].nome}`
                     : bs[0].nome;
     const titulo = `Resultados ${ano} - ${nomeVisao}`;
     const nomeArquivo = limpar(`Resultados ${ano} até ${String(ultimo).padStart(2, "0")} - ${nomeVisao}.${formato}`);

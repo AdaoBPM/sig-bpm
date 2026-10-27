@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { permissoesDasRotas } from "../src/services/acesso/acesso.js";
+import { chaveValida } from "../src/services/acesso/telas.js";
 import { alocar, fracoesDaTarefa, numeroDaObra, porPesos, semLinha, type Passo } from "../src/services/resultadosLinha/alocacaoNasLinhas.js";
 
 const soma = (xs: Array<{ valor: number }>) => xs.reduce((s, x) => s + x.valor, 0);
@@ -48,13 +49,19 @@ describe("Resultados por Linha (26/10/2026)", () => {
   });
 
   it("as linhas juntam todos os departamentos: fora do recorte por departamento e por centro de custo", () => {
-    const matriz = ["relatorio_resultados", "relatorio_resultados.linhas", "relatorio_resultados.rateios_obras", "linhas_mes"].map((chave) => ({ chave, acao: "EDITAR" as const }));
+    const matriz = ["relatorio_resultados", "relatorio_resultados.linhas", "linhas_mes"].map((chave) => ({ chave, acao: "EDITAR" as const }));
     const sem = permissoesDasRotas(matriz, { recorteSetor: false, recorteDepartamento: false });
-    for (const p of ["relatorio_resultados.linhas:ler", "relatorio_resultados.rateios_obras:ler", "linhas_mes:ler", "linhas_mes:editar"]) assert.ok(sem.includes(p), p);
+    for (const p of ["relatorio_resultados.linhas:ler", "linhas_mes:ler", "linhas_mes:editar"]) assert.ok(sem.includes(p), p);
     for (const recorte of [{ recorteDepartamento: true }, { recorteDepartamento: false, recorteCentro: true }]) {
       const com = permissoesDasRotas(matriz, { recorteSetor: false, ...recorte });
       assert.ok(com.includes("relatorio_resultados:ler"));
-      for (const p of ["relatorio_resultados.linhas:ler", "relatorio_resultados.rateios_obras:ler", "linhas_mes:ler"]) assert.ok(!com.includes(p), p);
+      for (const p of ["relatorio_resultados.linhas:ler", "linhas_mes:ler"]) assert.ok(!com.includes(p), p);
     }
+  });
+
+  it("os Rateios das Linhas ficam fora da tela (27/10/2026): fora do catálogo, nenhuma matriz os alcança", () => {
+    for (const c of ["relatorio_resultados.rateios_obras", "relatorio_resultados.rateios_linhas"]) assert.ok(!chaveValida(c), c);
+    const matriz = ["relatorio_resultados", "relatorio_resultados.rateios_linhas"].map((chave) => ({ chave, acao: "EDITAR" as const }));
+    assert.ok(!permissoesDasRotas(matriz, { recorteSetor: false, recorteDepartamento: false }).includes("relatorio_resultados.rateios_linhas:ler"));
   });
 });

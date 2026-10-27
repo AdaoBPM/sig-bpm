@@ -51,7 +51,7 @@ export function verificarAba(tela: string, acao: "ler" | "editar", aba: (request
 /** A aba de uma visão da DRE pelo número (0 Consolidado, 1 a 5 as unidades), ou "centros"/"obras". */
 export function abaDaVisao(v: unknown): string | null {
   const s = String(v ?? "0");
-  if (s === "centros" || s === "obras" || s === "consolidado" || s === "sem_centros" || s === "linhas" || s === "rateios_obras") return s;
+  if (s === "centros" || s === "obras" || s === "consolidado" || s === "sem_centros" || s === "linhas" || s === "rateios_linhas") return s;
   const n = Number(s);
   return Number.isInteger(n) && n >= 0 && n <= 5 ? ABA_DA_VISAO[n] : null;
 }

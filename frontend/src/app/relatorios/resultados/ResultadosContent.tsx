@@ -35,7 +35,7 @@ import {
 } from "../services/relatoriosService";
 
 /** As visões da DRE, como as abas Resultados (…) da planilha, e os centros de custo. */
-const VISOES = [
+const VISOES: Array<{ chave: string; aba: string; nome: string; foraDaTela?: boolean }> = [
   { chave: "0", aba: "consolidado", nome: "Consolidado" },
   { chave: "1", aba: "matriz", nome: "Matriz" },
   { chave: "2", aba: "filial", nome: "Filial" },
@@ -47,7 +47,9 @@ const VISOES = [
   { chave: "sem_centros", aba: "sem_centros", nome: "Sem Centros de Custo" },
   // As linhas de produto e de obra (26/10/2026), gravadas na etapa Linhas da apuração: a DRE de cada uma e o rateado dela.
   { chave: "linhas", aba: "linhas", nome: "Linhas" },
-  { chave: "rateios_obras", aba: "rateios_obras", nome: "Rateios por Obras" },
+  // Os Rateios das Linhas (antes, Rateios por Obras): os custos de cada linha que não vieram dos centros de obra, sobre os
+  // volumes. Fora da tela desde 27/10/2026 (pedido do Adão), com o código guardado para o processo Resultados por Obra.
+  { chave: "rateios_linhas", aba: "rateios_linhas", nome: "Rateios das Linhas", foraDaTela: true },
   // As obras (centros 1.98 e 1.99), como a aba Obras da DRE (11/10/2026).
   { chave: "obras", aba: "obras", nome: "Obras" },
 ];
@@ -635,7 +637,7 @@ function VisaoObras({ ano, ate, escolhida, onEscolher: setEscolhida }: { ano: nu
   );
 }
 
-/** A linha escolhida (a primeira da lista, sem escolha), a mesma nas abas Linhas e Rateios por Obras: a lista e o id, também para o Exportar. */
+/** A linha escolhida (a primeira da lista, sem escolha), a mesma nas abas Linhas e Rateios das Linhas: a lista e o id, também para o Exportar. */
 function useLinhaEscolhida(ano: number, ate: number, ativo: boolean, escolhida: string | null) {
   const lista = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "linhas"], queryFn: () => relatoriosService.linhas(ano, ate), enabled: ativo });
   const linhas = lista.data?.linhas ?? [];
@@ -646,7 +648,7 @@ function useLinhaEscolhida(ano: number, ate: number, ativo: boolean, escolhida: 
 /**
  * As linhas de produto e de obra (26/10/2026): a lista à esquerda, por unidade, e a DRE da escolhida, da receita à Margem
  * de Contribuição (a aba Linhas) ou só os custos dela que não vieram dos centros de obra, sobre os volumes (`rateios`: a
- * aba Rateios por Obras). Os valores são os gravados na etapa Linhas da apuração de cada competência fechada.
+ * aba Rateios das Linhas). Os valores são os gravados na etapa Linhas da apuração de cada competência fechada.
  */
 function VisaoLinhas({ ano, ate, escolhida, onEscolher, rateios }: { ano: number; ate: number; escolhida: string | null; onEscolher: (l: string) => void; rateios: boolean }) {
   const { lista, id } = useLinhaEscolhida(ano, ate, true, escolhida);
@@ -670,7 +672,7 @@ function VisaoLinhas({ ano, ate, escolhida, onEscolher, rateios }: { ano: number
 }
 
 /**
- * A lista das linhas à esquerda, por unidade, e a DRE da escolhida: a aba Linhas (e a Rateios por Obras) dos Resultados
+ * A lista das linhas à esquerda, por unidade, e a DRE da escolhida: a aba Linhas (e a Rateios das Linhas) dos Resultados
  * Empresariais e, com um mês só (`soOMes`, 27/10/2026), a etapa Linhas do Fechamento Mensal.
  */
 export function PainelDeLinhas({
@@ -727,7 +729,7 @@ export function PainelDeLinhas({
             <TabelaResultados
               key={`${id}-${rateios}`}
               dados={linha.data}
-              titulo={rateios ? `Rateios por Obras · ${escolhidaAgora.nome}` : `${escolhidaAgora.nome} · ${escolhidaAgora.nomeUnidade}`}
+              titulo={rateios ? `Rateios das Linhas · ${escolhidaAgora.nome}` : `${escolhidaAgora.nome} · ${escolhidaAgora.nomeUnidade}`}
               visao={{ unidade: escolhidaAgora.unidade }}
               nomeVisao={escolhidaAgora.nome}
               consultas={false}
@@ -757,7 +759,7 @@ export function ResultadosContent() {
   // As abas que o perfil lê (14/10/2026).
   const { hasPermission } = usePermissions();
   const le = (aba: string) => hasPermission(`relatorio_resultados.${aba}:ler`);
-  const visoes = VISOES.filter((v) => (v.chave !== "obras" || comObras) && (v.chave !== "sem_centros" || comSemCentros) && le(v.aba));
+  const visoes = VISOES.filter((v) => !v.foraDaTela && (v.chave !== "obras" || comObras) && (v.chave !== "sem_centros" || comSemCentros) && le(v.aba));
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
   const [visaoEscolhida, setVisao] = useState("0");
@@ -774,9 +776,9 @@ export function ResultadosContent() {
   const [semCentro, setSemCentro] = useState<string | null>(null);
   const { codigo: obraEscolhida } = useObraEscolhida(ano ?? 0, ate ?? 0, visao === "obras" && !!ano && !!ate, obra);
   const { codigo: semCentroEscolhido } = useSemCentroEscolhido(ano ?? 0, ate ?? 0, visao === "sem_centros" && !!ano && !!ate, semCentro);
-  // A linha escolhida (26/10/2026): a mesma nas abas Linhas e Rateios por Obras.
+  // A linha escolhida (26/10/2026): a mesma nas abas Linhas e Rateios das Linhas.
   const [linha, setLinha] = useState<string | null>(null);
-  const nasLinhas = visao === "linhas" || visao === "rateios_obras";
+  const nasLinhas = visao === "linhas" || visao === "rateios_linhas";
   const { id: linhaEscolhida } = useLinhaEscolhida(ano ?? 0, ate ?? 0, nasLinhas && !!ano && !!ate, linha);
   const periodo = { ano, ate };
   // O Exportar (14/10/2026: na altura do título, com as opções de todas as abas): o que está na tela (a visão, o centro,
@@ -815,8 +817,9 @@ export function ResultadosContent() {
       : []),
     ...(veSemCentrosNaAba ? [{ chave: "sem_centros", excel: "Todas Sem Centro de Custo (uma por aba)", pdf: "Todas Sem Centro de Custo (uma por página)", params: { ...periodo, escopo: "sem_centros" } }] : []),
     ...(le("linhas") ? [{ chave: "linhas", excel: "Todas as Linhas (uma por aba)", pdf: "Todas as Linhas (uma por página)", params: { ...periodo, escopo: "linhas" } }] : []),
-    ...(le("rateios_obras")
-      ? [{ chave: "rateios_obras", excel: "Rateios por Obras de Todas as Linhas (uma por aba)", pdf: "Rateios por Obras de Todas as Linhas (uma por página)", params: { ...periodo, escopo: "rateios_obras" } }]
+    // Os Rateios das Linhas, fora da tela (27/10/2026): a aba não está no catálogo dos perfis, e ninguém a lê.
+    ...(le("rateios_linhas") && !VISOES.find((v) => v.chave === "rateios_linhas")?.foraDaTela
+      ? [{ chave: "rateios_linhas", excel: "Rateios das Linhas de Todas as Linhas (uma por aba)", pdf: "Rateios das Linhas de Todas as Linhas (uma por página)", params: { ...periodo, escopo: "rateios_linhas" } }]
       : []),
     ...(veObrasNaAba ? [{ chave: "obras", excel: "Todas as Obras (uma por aba)", pdf: "Todas as Obras (uma por página)", params: { ...periodo, escopo: "obras" } }] : []),
   ];
@@ -829,13 +832,12 @@ export function ResultadosContent() {
         comoUsar={
           <ul>
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo, Linhas e Rateios por Obras (com a lista das linhas à esquerda, por unidade) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo, Linhas (com a lista das linhas à esquerda, por unidade) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
-              Em Linhas, a DRE de cada linha de produto e de obra, da receita à Margem de Contribuição, com o % e o R$/m³ da unidade dela; em Rateios por Obras, só
-              os custos da linha que não vieram dos centros de obra (os desses centros já são das obras), sobre os volumes — o que os Resultados por Obra vão
-              levar a cada obra. A linha escolhida vale nas duas abas, e a lista traz só as linhas das unidades (Matriz, Filial e Serviços) que o seu perfil lê.
-              Os valores são os gravados na etapa Linhas do Fechamento Mensal; uma competência fechada antes da etapa aparece sem valor até alguém gravar as
-              linhas dela lá. Os valores não abrem os lançamentos, e quem tem recorte por departamento ou por centro de custo não vê as duas abas.
+              Em Linhas, a DRE de cada linha de produto e de obra, da receita à Margem de Contribuição, com o % e o R$/m³ da unidade dela. A lista traz só as
+              linhas das unidades (Matriz, Filial e Serviços) que o seu perfil lê. Os valores são os gravados na etapa Linhas do Fechamento Mensal; uma
+              competência fechada antes da etapa aparece sem valor até alguém gravar as linhas dela lá. Os valores não abrem os lançamentos, e quem tem recorte
+              por departamento ou por centro de custo não vê a aba.
             </li>
             <li>
               Em Sem Centros de Custo, os lançamentos do balancete que deveriam ter um centro de custo e não têm um do cadastro, pela regra da
@@ -877,13 +879,13 @@ export function ResultadosContent() {
             <li>
               “Exportar”, ao lado do período, baixa em Excel (todas as colunas) ou PDF (A4 deitada: cada mês com a participação embaixo, e o total com o %
               e o R$/m³) o que está na tela (a Visão, o Centro de Custo, o Sem Centro de Custo, a Linha ou a Obra Atual) e, de qualquer aba, todas as unidades,
-              todos os centros de custo, todas sem centro de custo, todas as linhas, os rateios por obras de todas as linhas e todas as obras (uma por aba ou por
+              todos os centros de custo, todas sem centro de custo, todas as linhas e todas as obras (uma por aba ou por
               página). Em Excel, também um arquivo por centro de
               custo, num ZIP, com o departamento e o centro no nome de cada arquivo. Ainda em Excel, marque “Incluir a Aba Detalhes” antes de
               escolher a opção: no fim do arquivo (em cada arquivo, no ZIP) vem a aba Detalhes, como no Exportar dos extratos — os movimentos do
               balancete de cada aba exportada, item a item, em cada competência fechada (a emissão, o cliente ou fornecedor e o histórico), com a
               parte que vai à aba (nos rateios, pelo percentual do destino). A receita prévia e os lançamentos manuais não são movimentos do
-              balancete e ficam fora; as linhas (Linhas e Rateios por Obras) não abrem os lançamentos. Em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que
+              balancete e ficam fora; a aba Linhas não abre os lançamentos. Em Imagem, a Tabela Atual baixa a tabela da tela num PNG, do jeito que
               está (os níveis e os grupos abertos ou fechados, os meses recolhidos ou não), mas inteira: todas as linhas e colunas, sem os botões.
             </li>
           </ul>
@@ -959,7 +961,7 @@ export function ResultadosContent() {
           ) : visao === "obras" ? (
             <VisaoObras ano={ano} ate={ate} escolhida={obra} onEscolher={setObra} />
           ) : nasLinhas ? (
-            <VisaoLinhas ano={ano} ate={ate} escolhida={linha} onEscolher={setLinha} rateios={visao === "rateios_obras"} />
+            <VisaoLinhas ano={ano} ate={ate} escolhida={linha} onEscolher={setLinha} rateios={visao === "rateios_linhas"} />
           ) : (
             <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} comparaCom={comparacao.comparaCom} />
           )}

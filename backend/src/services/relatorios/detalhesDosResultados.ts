@@ -16,7 +16,7 @@ import { deveriaTerCentro, grupoSemCentro, type GrupoSemCentro } from "../dre/se
  *   regra, e os de rateio, × o percentual do destino), como o extrato de cada valor. O Consolidado junta as cinco.
  * - Nos centros de custo, nas obras e sem centro de custo, os lançamentos deles nas linhas da aba.
  * A receita prévia e os lançamentos manuais não são movimentos do balancete e ficam fora, como na aba Detalhes do extrato;
- * as linhas (Linhas e Rateios por Obras) não abrem os lançamentos.
+ * as linhas (a aba Linhas e, nos Resultados por Obra, os Rateios das Linhas) não abrem os lançamentos.
  */
 export type AlvoDosDetalhes =
   | { tipo: "unidades"; unidades: number[] }
