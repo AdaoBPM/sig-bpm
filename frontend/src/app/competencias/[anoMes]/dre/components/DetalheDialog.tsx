@@ -13,6 +13,8 @@ import { MemoriaCalculoDialog } from "../../receita-previa/components/MemoriaCal
 import type { Natureza } from "../../receita-previa/services/receitaPreviaService";
 import { moeda } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, UNIDADES, type BlocoDetalhe, type LancamentoDetalhe, type VisaoDetalhe } from "../services/dreService";
+import { IconeDaCorrecao } from "@/components/shared/IconeDaCorrecao";
+
 import { BalanceteDialog } from "./BalanceteDialog";
 import { ExportarExtrato } from "./ExportarExtrato";
 import { plural } from "@/lib/texto";
@@ -91,8 +93,9 @@ const contaTexto = (l: Lancamento) => `${(l.contaAdotada ?? l.conta).reduzido} �
 
 /**
  * Os lançamentos de um bloco, com filtro e ordem nos rótulos das colunas. Nos contábeis (diretos e de rateio), a conta
- * abre o balancete dela no mês (15/10/2026; antes, as requisições e as notas fiscais). Reclassificado, o lançamento
- * mostra a conta corrigida, com "(Corrigida de: …)" em vermelho.
+ * abre o balancete dela no mês (15/10/2026; antes, as requisições e as notas fiscais). Reclassificado ou contestado
+ * (27/10/2026), o lançamento mostra o centro e a conta que valem, com o ícone que abre o original (antes, a conta
+ * corrigida com "(Corrigida de: …)" em vermelho).
  */
 function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamentos: Lancamento[]; multiplica: boolean; onDocumentos?: (l: Lancamento) => void }) {
   const colunas = useMemo<Coluna<Lancamento>[]>(
@@ -125,6 +128,15 @@ function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamen
                     <>
                       <span>{l.centro.codigoRM ?? "sem código"}</span>
                       <span className="text-gray-500"> · {l.centro.nome}</span>
+                      {/* O centro corrigido por uma contestação (27/10/2026): o ícone abre o do balancete. */}
+                      {l.centroOriginal ? (
+                        <IconeDaCorrecao
+                          campo="centro"
+                          original={`${l.centroOriginal.codigoRM ?? "sem código"} · ${l.centroOriginal.nome ?? ""}`}
+                          atual={`${l.centro.codigoRM ?? "sem código"} · ${l.centro.nome ?? ""}`}
+                          origem={l.contestacao ? { tipo: "contestacao", numero: l.contestacao.numero } : { tipo: "reclassificacao" }}
+                        />
+                      ) : null}
                     </>
                   ) : (
                     <span className="text-gray-400">—</span>
@@ -150,8 +162,15 @@ function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamen
                       <span className="text-gray-500"> · {(l.contaAdotada ?? l.conta).descricao}</span>
                     </>
                   )}
-                  {/* A conta corrigida pela reclassificação (15/10/2026; antes, a do balancete com "reclassificada para"). */}
-                  {l.contaAdotada ? <span className="font-bold text-red-700"> (Corrigida de: {l.conta.reduzido})</span> : null}
+                  {/* A conta corrigida (a reclassificação ou uma contestação, 27/10/2026): o ícone abre a do balancete. */}
+                  {l.contaAdotada ? (
+                    <IconeDaCorrecao
+                      campo="conta"
+                      original={`${l.conta.reduzido} · ${l.conta.descricao}`}
+                      atual={`${l.contaAdotada.reduzido} · ${l.contaAdotada.descricao}`}
+                      origem={l.contestacao?.conta ? { tipo: "contestacao", numero: l.contestacao.numero } : { tipo: "reclassificacao" }}
+                    />
+                  ) : null}
                   {l.descricao ? <div className="text-gray-500">{l.descricao}</div> : null}
                 </td>
                 <td className="px-4 py-1.5 text-gray-600">{l.balde ?? "—"}</td>

@@ -31,7 +31,7 @@ export const NOVIDADES: Novidade[] = [
   // 27/10/2026, 16:00
   {
     publicada: "2026-10-27T16:00",
-    processo: "Contestação de Gastos",
+    processo: "Contestações de Gastos",
     soAdministrador: true,
     itens: ["Novo processo em Apuração dos Resultados, logo acima do Fechamento Mensal, em desenvolvimento."],
   },

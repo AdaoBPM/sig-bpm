@@ -25,6 +25,7 @@ import {
   Layers,
   LayoutDashboard,
   Library,
+  ListChecks,
   ListOrdered,
   ListTree,
   MessageSquareWarning,
@@ -136,8 +137,27 @@ export const navGrupos: NavGrupo[] = [
           { title: "Painel de Bordo", href: "/relatorios/painel", icon: LayoutDashboard, permission: "relatorio_painel:ler" },
         ],
       },
-      // A Contestação de Gastos (27/10/2026), em desenvolvimento, logo acima do Fechamento Mensal.
-      { title: "Contestação de Gastos", href: "/contestacao-de-gastos", icon: MessageSquareWarning, emDesenvolvimento: true },
+      // As Contestações de Gastos (27/10/2026, pedido do Adão), logo acima do Fechamento Mensal: a tela Contestações, com as
+      // abas Solicitadas (as do usuário) e Recebidas (as dos centros de que ele é o responsável), e a tela Validações.
+      {
+        title: "Contestações de Gastos",
+        href: "/contestacoes-de-gastos/solicitadas",
+        icon: MessageSquareWarning,
+        recurso: "CONTESTACOES_GASTOS",
+        telas: [
+          {
+            title: "Contestações",
+            href: "/contestacoes-de-gastos/solicitadas",
+            icon: MessageSquareWarning,
+            permission: "contestacoes:ler",
+            abas: [
+              { title: "Solicitadas", href: "/contestacoes-de-gastos/solicitadas", icon: MessageSquareWarning, permission: "contestacoes.solicitadas:ler" },
+              { title: "Recebidas", href: "/contestacoes-de-gastos/recebidas", icon: MessageSquareWarning, permission: "contestacoes.recebidas:ler" },
+            ],
+          },
+          { title: "Validações", href: "/contestacoes-de-gastos/validacoes", icon: ListChecks, permission: "contestacoes_validacoes:ler" },
+        ],
+      },
       { title: "Fechamento Mensal", href: "/competencias", icon: CalendarCheck, permission: "fechamento:ler", recurso: "FECHAMENTO_MENSAL" },
       // Os Registros dos Indicadores (27/10/2026), em desenvolvimento, logo acima dos Cadastros da Apuração.
       { title: "Registros dos Indicadores", href: "/registros-dos-indicadores", icon: NotebookPen, emDesenvolvimento: true },
@@ -326,7 +346,9 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/competencias\/[^/]+\/divergencias/, "divergencia:ler"],
   [/^\/competencias\/[^/]+\/importar/, "importacao:ler"],
   [/^\/competencias\/[^/]+\/classificacao/, "classificacao:ler"],
-  [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais:ler"],
+  // As abas dos Lançamentos (27/10/2026).
+  [/^\/competencias\/[^/]+\/lancamentos-manuais/, "lancamentos_manuais.controladoria:ler"],
+  [/^\/competencias\/[^/]+\/lancamentos-contestacoes/, "lancamentos_manuais.contestacoes:ler"],
   [/^\/competencias\/[^/]+\/listas/, "listas_operacionais:ler"],
   // As abas das telas Totais e Prévias (27/10/2026).
   [/^\/competencias\/[^/]+\/receita-previa/, "previas.receita:ler"],

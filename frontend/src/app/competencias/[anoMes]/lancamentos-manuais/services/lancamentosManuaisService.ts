@@ -23,6 +23,8 @@ export type LancamentoManual = {
   centroCusto: { id: string; codigoRM: string | null; nomeRM: string } | null;
   contaResultado: ContaOpcao | null;
   linhaDRE: { codigo: string; descricao: string; grupo: string } | null;
+  /** A contestação de que o lançamento veio (27/10/2026: a aba Contestações). */
+  contestacao: { id: string; numero: number; item: string | null; solicitante: string; competencia: string } | null;
 };
 
 export type ListaLancamentos = {
@@ -45,6 +47,11 @@ export type LancamentoEntrada = {
 export const lancamentosManuaisService = {
   listar: async (anoMes: string): Promise<ListaLancamentos> => {
     const { data } = await api.get<{ data: ListaLancamentos }>(`/proxy/competencias/${anoMes}/lancamentos-manuais`);
+    return data.data;
+  },
+  /** Os lançamentos das contestações (27/10/2026: a aba Contestações). */
+  listarContestacoes: async (anoMes: string): Promise<ListaLancamentos> => {
+    const { data } = await api.get<{ data: ListaLancamentos }>(`/proxy/competencias/${anoMes}/lancamentos-manuais/contestacoes`);
     return data.data;
   },
   opcoes: async (): Promise<OpcoesLancamento> => {

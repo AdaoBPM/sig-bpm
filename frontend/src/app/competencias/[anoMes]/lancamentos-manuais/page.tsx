@@ -7,7 +7,7 @@ import { LancamentosManuaisContent } from "./LancamentosManuaisContent";
 export default function LancamentosManuaisPage() {
   return (
     <ProtectedLayout>
-      <PermissionGuard permission="lancamentos_manuais:ler" fallback={<SemLeitura />}>
+      <PermissionGuard permission="lancamentos_manuais.controladoria:ler" fallback={<SemLeitura />}>
         <LancamentosManuaisContent />
       </PermissionGuard>
     </ProtectedLayout>

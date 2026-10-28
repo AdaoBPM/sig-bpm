@@ -873,8 +873,14 @@ export function ResultadosContent() {
               Balancete, o “Exportar” baixa só a conta: o lançamento numa aba e os movimentos que o modal mostra (no recorte da caixa) na outra.
             </li>
             <li>
-              No extrato, o lançamento reclassificado (Cadastros da Apuração / Reclassificações) mostra a conta corrigida, a que vale na DRE, com
-              “(Corrigida de: …)” e a conta do balancete em vermelho.
+              No extrato e no balancete, o centro de custo e a conta são os que valem na DRE. Os corrigidos — pela reclassificação (Cadastros da Apuração /
+              Reclassificações) ou por uma contestação validada (Contestações de Gastos) — têm um ícone ao lado, que abre o original (o do balancete do
+              RM) e o corrigido.
+            </li>
+            <li>
+              No balancete, a coluna Ações tem “Contestar” (de quem edita Contestações de Gastos › Contestações › Solicitadas): o modal sugere o novo centro
+              de custo e/ou a nova conta de resultado do movimento (as listas buscam por código ou nome) e, se quiser, o motivo. O movimento com uma
+              contestação em andamento mostra o número e a situação dela.
             </li>
             <li>
               Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações

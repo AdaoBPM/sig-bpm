@@ -22,6 +22,15 @@ export type AbaDaEtapa = { caminho: string; rotulo: string; permissao: string };
 
 /** As etapas com abas: as abas de cada uma, na ordem da tela. */
 const ABAS_DAS_ETAPAS: Record<string, { rotulo: string; icone: LucideIcon; abas: AbaDaEtapa[] }> = {
+  // Os Lançamentos com abas (27/10/2026): Controladoria (os digitados) e Contestações (os vindos das contestações).
+  lancamentos: {
+    rotulo: "Lançamentos",
+    icone: NotebookPen,
+    abas: [
+      { caminho: "lancamentos-manuais", rotulo: "Controladoria", permissao: "lancamentos_manuais.controladoria:ler" },
+      { caminho: "lancamentos-contestacoes", rotulo: "Contestações", permissao: "lancamentos_manuais.contestacoes:ler" },
+    ],
+  },
   totais: {
     rotulo: "Totais",
     icone: Gauge,
@@ -73,7 +82,7 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
   const todas: Etapa[] = [
     { caminho: "importar", chave: "importar", rotulo: "Importações", icone: Upload, permissao: "importacao:ler" },
     { caminho: "classificacao", chave: "classificacao", rotulo: "Classificação", icone: ListChecks, permissao: "classificacao:ler" },
-    { caminho: "lancamentos-manuais", chave: "lancamentos-manuais", rotulo: "Lançamentos", icone: NotebookPen, permissao: "lancamentos_manuais:ler" },
+    ...[etapaComAbas("lancamentos", hasPermission)].filter((e): e is Etapa => e !== null),
     ...(primeiraLista
       ? [{ caminho: `listas/${primeiraLista}`, chave: "listas", rotulo: "Listas", icone: Rows3, permissao: "listas_operacionais:ler" }]
       : []),

@@ -98,6 +98,10 @@ export function LancamentosManuaisContent() {
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         comoUsar={
           <ul>
+            <li>
+              Esta é a aba Controladoria: os lançamentos digitados. Os que vêm das contestações de gastos ficam na aba Contestações, ao lado; os dois
+              entram no resultado da competência.
+            </li>
             <li>Use “Novo Lançamento” para incluir a RN e outros ajustes; o lápis e a lixeira editam e excluem.</li>
             <li>Num mês ainda sem lançamentos, “Copiar do Mês Anterior” traz os do mês anterior para revisar.</li>
             <li>Use os filtros nos rótulos das colunas; o total no rodapé da tabela acompanha o filtro.</li>
@@ -112,7 +116,7 @@ export function LancamentosManuaisContent() {
         sobre={<p>O que não vem do balancete do RM — a RN e outros ajustes, em qualquer aba de resultado. É a versão sistêmica da aba Gastos (Lanç. Manuais).</p>}
         acoes={
           !fechada && dados ? (
-            <PermissionGuard permission="lancamentos_manuais:editar">
+            <PermissionGuard permission="lancamentos_manuais.controladoria:editar">
               <div className="flex gap-2">
                 {itens.length === 0 ? (
                   <Button
@@ -122,7 +126,7 @@ export function LancamentosManuaisContent() {
                     className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
                   >
                     <Copy className="size-4" />
-                    Copiar do mês anterior
+                    Copiar do Mês Anterior
                   </Button>
                 ) : null}
                 <Button
@@ -131,7 +135,7 @@ export function LancamentosManuaisContent() {
                   className="bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm"
                 >
                   <Plus className="size-4" />
-                  Novo lançamento
+                  Novo Lançamento
                 </Button>
               </div>
             </PermissionGuard>
@@ -201,7 +205,7 @@ export function LancamentosManuaisContent() {
                 </td>
                 <td className="px-4 py-0 text-right whitespace-nowrap">
                   {!fechada ? (
-                    <PermissionGuard permission="lancamentos_manuais:editar">
+                    <PermissionGuard permission="lancamentos_manuais.controladoria:editar">
                       <Button type="button" variant="ghost" size="icon" onClick={() => setEditando(l)} aria-label="Editar">
                         <Pencil className="size-4" />
                       </Button>

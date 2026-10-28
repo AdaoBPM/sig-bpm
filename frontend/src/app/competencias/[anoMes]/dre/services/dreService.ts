@@ -68,7 +68,14 @@ export type LancamentoDetalhe = {
   descricao?: string;
   valor: string;
   parcela: string;
+  /** O centro do balancete, quando o que vale é outro (uma contestação; 27/10/2026). */
+  centroOriginal?: { codigoRM: string | null; nome: string | null } | null;
+  /** A contestação aplicada no lançamento: o número e o que ela mudou (o centro, a conta). */
+  contestacao?: { numero: number; centro: boolean; conta: boolean } | null;
 };
+
+/** A situação de uma contestação (27/10/2026). */
+export type SituacaoContestacao = "PENDENTE" | "ACATADA" | "RECUSADA" | "VALIDADA";
 
 /** Um item de requisição ou de nota fiscal do mês (abas Requisições (Lista) e Notas Fiscais (Lista)). */
 /** Um movimento do balancete detalhado (15/10/2026): o cliente ou fornecedor, a emissão e o histórico. */
@@ -81,6 +88,12 @@ export type MovimentoDoBalancete = {
   emissao: string | null;
   historico: string | null;
   valor: string;
+  /** O centro do balancete, quando o que vale é outro (a contestação; 27/10/2026), e a conta que vale na DRE, quando é outra. */
+  centroOriginal: { codigoRM: string | null; nome: string | null } | null;
+  contaNaDRE: { reduzido: string; descricao: string } | null;
+  /** A contestação aplicada no movimento (o número e o que mudou) e a última contestação dele (a situação). */
+  contestacaoAplicada: { numero: number; centro: boolean; conta: boolean } | null;
+  contestacao: { numero: number; situacao: SituacaoContestacao } | null;
 };
 /** O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais). */
 export type BalanceteDaConta = {
@@ -146,8 +159,15 @@ const paramsDoDetalhe = (linha: string, visao: VisaoDetalhe) => ({
 export const dreService = {
   /** As requisições e as notas fiscais de uma conta no mês (o extrato de uma conta): a linha (o recorte), a conta e, quando vêm, o centro e a filial. */
   /** O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais). */
-  balancete: async (anoMes: string, filtro: { linha: string; conta: string; centro?: string | null; filial?: number | null }): Promise<BalanceteDaConta> => {
-    const params = { linha: filtro.linha, conta: filtro.conta, ...(filtro.centro ? { centro: filtro.centro } : {}), ...(filtro.filial ? { filial: filtro.filial } : {}) };
+  balancete: async (anoMes: string, filtro: { linha: string; conta: string; centro?: string | null; filial?: number | null; adotada?: string | null }): Promise<BalanceteDaConta> => {
+    const params = {
+      linha: filtro.linha,
+      conta: filtro.conta,
+      ...(filtro.centro ? { centro: filtro.centro } : {}),
+      ...(filtro.filial ? { filial: filtro.filial } : {}),
+      // A conta que vale na DRE (27/10/2026), no balancete do lançamento.
+      ...(filtro.adotada ? { adotada: filtro.adotada } : {}),
+    };
     const { data } = await api.get<{ data: BalanceteDaConta }>(`/proxy/competencias/${anoMes}/dre/documentos`, { params });
     return data.data;
   },
