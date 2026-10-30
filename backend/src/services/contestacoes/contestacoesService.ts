@@ -1,8 +1,8 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { DepartamentoAcesso, FormaValidacaoContestacao, SituacaoContestacao } from "../../generated/prisma/enums.js";
-import type { Acesso } from "../acesso/acesso.js";
-import { departamentoDaLinha, gestaoDoCentro, MENSAGEM_SENSIVEL, podeVerMovimentos, podeVerSensiveis, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
+import { carregarUsuariosAtivos, type Acesso } from "../acesso/acesso.js";
+import { departamentoDaLinha, gestaoDoCentro, MENSAGEM_SENSIVEL, podeVerCentro, podeVerMovimentos, podeVerSensiveis, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { auditar } from "../auditoriaService.js";
 import { classificacaoService } from "../classificacao/classificacaoService.js";
 import { manualNoSinalDoBalancete } from "../dre/apuracaoUnidades.js";
@@ -16,9 +16,10 @@ import { lancamentosManuaisService } from "../lancamentosManuais/lancamentosManu
  * conta nova é do departamento do centro (o novo; sem ele, o do item) ou do Extra-Operacional. Com Contestar Anteriores
  * e Posteriores (30/10/2026), os movimentos do mesmo fornecedor, conta e centro de custo nas competências anteriores e nas
  * seguintes (as já importadas) entram na mesma contestação: ela é uma só (a situação, a resposta e a validação), com
- * vários movimentos. O responsável pelo centro — o novo; sem centro novo, o do item — acata ou recusa (aba Recebidas): são
- * os usuários com o centro na lista deles (os Coordenadores); sem nenhum, os Gestores do departamento do centro; sem
- * ninguém, só a Controladoria, em Validações. Quem pede e é o responsável já tem a contestação acatada.
+ * vários movimentos. Quem responde pelo centro — o novo; sem centro novo, o do item — acata ou recusa (aba Recebidas): os
+ * usuários com Editar em Contestações › Recebidas, cada um no seu recorte (30/10/2026: a lista de centros do Coordenador
+ * e do Estratégico, os departamentos do Gestor; sem recorte, todos). Quem pede e responde pelo centro já tem a
+ * contestação acatada.
  *
  * Em Validações, Processar corrige os movimentos das acatadas: na competência ainda aberta, no próprio balancete (a
  * classificação aplica o centro e a conta novos e guarda os do RM, para mostrar o original); na fechada, o movimento espera
@@ -226,37 +227,33 @@ function resumo(xs: LancamentoDoMovimento[]) {
   };
 }
 
+/** Quem responde: o id, o nome e se tem recorte (sem recorte, é a Controladoria: o Administrador, o Contador). */
+type Respondente = { id: string; nome: string; comRecorte: boolean };
+const PERMISSAO_DE_RESPONDER = "contestacoes.recebidas:editar";
+const temRecorte = (a: Acesso) => a.recorteCentro || a.recorteDepartamento;
+
 /**
- * Os responsáveis (os ids dos usuários) por cada centro: os usuários ativos, de perfil ativo, com o centro na lista
- * deles (os Coordenadores); sem nenhum, os Gestores ativos (perfil com recorte por departamento) do departamento do centro.
+ * Quem responde (acata ou recusa) às contestações de cada centro (30/10/2026, decisão do Adão): os usuários ativos, de
+ * perfil ativo, com Editar em Contestações › Recebidas, cada um no seu recorte — com recorte por centro de custo (o
+ * Coordenador, o Estratégico), os centros da lista dele; por departamento (o Gestor), os centros dos departamentos dele;
+ * sem recorte (o Administrador, o Contador), todos. Sem centro (o movimento sem centro, quando só a conta muda), os sem
+ * recorte.
  */
-async function responsaveisDosCentros(centroIds: string[]): Promise<Map<string, string[]>> {
-  const prisma = getPrismaClient();
+async function responsaveisDosCentros(centroIds: Array<string | null>): Promise<Map<string | null, Respondente[]>> {
   const ids = [...new Set(centroIds)];
-  const r = new Map<string, string[]>();
+  const r = new Map<string | null, Respondente[]>();
   if (!ids.length) return r;
-  const [vinculos, centros, gestores] = await Promise.all([
-    prisma.usuarioCentro.findMany({
-      where: { centroCustoId: { in: ids }, usuario: { ativo: true, perfil: { ativo: true } } },
-      select: { centroCustoId: true, usuarioId: true },
-    }),
-    prisma.centroCusto.findMany({ where: { id: { in: ids } }, select: { id: true, departamento: true } }),
-    prisma.usuario.findMany({
-      where: { ativo: true, perfil: { ativo: true, recorteDepartamento: true } },
-      select: { id: true, departamentos: { select: { departamento: true } } },
-    }),
+  const [usuarios, centros] = await Promise.all([
+    carregarUsuariosAtivos().then((us) => us.filter((u) => u.permissions.includes(PERMISSAO_DE_RESPONDER))),
+    getPrismaClient().centroCusto.findMany({ where: { id: { in: ids.filter((x): x is string => !!x) } }, select: { id: true, departamento: true } }),
   ]);
-  for (const v of vinculos) r.set(v.centroCustoId, [...(r.get(v.centroCustoId) ?? []), v.usuarioId]);
-  for (const c of centros) {
-    if (r.get(c.id)?.length) continue;
-    const g = gestaoDoCentro(c.departamento);
-    const doDepartamento = g ? gestores.filter((u) => u.departamentos.some((d) => d.departamento === g)).map((u) => u.id) : [];
-    if (doDepartamento.length) r.set(c.id, doDepartamento);
-  }
+  const respondente = (u: (typeof usuarios)[number]): Respondente => ({ id: u.sub, nome: u.nome, comRecorte: temRecorte(u.acesso) });
+  for (const c of centros) r.set(c.id, usuarios.filter((u) => podeVerCentro(u.acesso, c)).map(respondente));
+  if (ids.includes(null)) r.set(null, usuarios.filter((u) => !temRecorte(u.acesso)).map(respondente));
   return r;
 }
 
-/** Os nomes dos usuários (os responsáveis, quem respondeu, quem justificou e quem validou). */
+/** Os nomes dos usuários (quem respondeu, quem justificou e quem validou). */
 async function nomes(ids: Array<string | null | undefined>) {
   const lista = [...new Set(ids.filter((x): x is string => !!x))];
   if (!lista.length) return new Map<string, string>();
@@ -273,11 +270,10 @@ const corrigivelNoBalancete = (m: MovimentoDaContestacao) => !m.formaValidacao &
 
 /** A contestação para as telas: os movimentos, o antes e o depois, a situação, quem fez o quê e os responsáveis. */
 async function apresentar(ls: Linha[], usuarioId: string) {
-  const responsaveis = await responsaveisDosCentros(ls.map(centroAlvo).filter((x): x is string => !!x));
-  const ns = await nomes([...ls.flatMap((c) => [c.respondidaPorId, c.justificadaPorId, c.validadaPorId]), ...[...responsaveis.values()].flat()]);
+  const responsaveis = await responsaveisDosCentros(ls.map(centroAlvo));
+  const ns = await nomes(ls.flatMap((c) => [c.respondidaPorId, c.justificadaPorId, c.validadaPorId]));
   return ls.map((c) => {
-    const alvo = centroAlvo(c);
-    const resp = alvo ? (responsaveis.get(alvo) ?? []) : [];
+    const resp = responsaveis.get(centroAlvo(c)) ?? [];
     const manual = c.lancamentosManuais[0]?.competencia;
     const acatada = c.situacao === "ACATADA";
     const paraLancamentos = acatada ? c.movimentos.filter(esperaLancamentos) : [];
@@ -343,31 +339,20 @@ async function apresentar(ls: Linha[], usuarioId: string) {
       formaValidacao: c.formaValidacao,
       /** Onde a contestação virou lançamentos manuais (a competência), quando virou. */
       lancadaEm: manual ? rotulo(manual.ano, manual.mes) : null,
-      responsaveis: resp.map((id) => ns.get(id) ?? id),
-      /** O usuário é um dos responsáveis (acata ou recusa a pendente, na aba Recebidas). */
-      souResponsavel: resp.includes(usuarioId),
+      /** Quem responde com recorte (os nomes); a Controladoria (os sem recorte) à parte. */
+      responsaveis: resp.filter((x) => x.comRecorte).map((x) => x.nome),
+      controladoria: resp.some((x) => !x.comRecorte),
+      /** O usuário é um dos que respondem (acata ou recusa a pendente, na aba Recebidas). */
+      souResponsavel: resp.some((x) => x.id === usuarioId),
     };
   });
 }
 
-/** Os centros de que o usuário é o responsável (a aba Recebidas). */
-async function centrosDoResponsavel(usuarioId: string): Promise<string[]> {
-  const prisma = getPrismaClient();
-  const u = await prisma.usuario.findUniqueOrThrow({
-    where: { id: usuarioId },
-    select: { centros: { select: { centroCustoId: true } }, departamentos: { select: { departamento: true } }, perfil: { select: { recorteDepartamento: true } } },
-  });
-  const proprios = u.centros.map((c) => c.centroCustoId);
-  if (!u.perfil.recorteDepartamento || !u.departamentos.length) return proprios;
-  // Os do departamento do Gestor que não têm Coordenador.
-  const deps = new Set<string>(u.departamentos.map((d) => d.departamento));
-  const todos = await prisma.centroCusto.findMany({ select: { id: true, departamento: true } });
-  const doDepartamento = todos.filter((c) => {
-    const g = gestaoDoCentro(c.departamento);
-    return g !== null && deps.has(g);
-  });
-  const responsaveis = await responsaveisDosCentros(doDepartamento.map((c) => c.id));
-  return [...new Set([...proprios, ...doDepartamento.filter((c) => responsaveis.get(c.id)?.includes(usuarioId)).map((c) => c.id)])];
+/** Os centros do recorte do usuário (a aba Recebidas); nulo sem recorte (todos). */
+async function centrosDoRecorte(acesso: Acesso): Promise<string[] | null> {
+  if (!temRecorte(acesso)) return null;
+  const todos = await getPrismaClient().centroCusto.findMany({ select: { id: true, departamento: true } });
+  return todos.filter((c) => podeVerCentro(acesso, c)).map((c) => c.id);
 }
 
 async function exigirContestacao(id: string) {
@@ -507,9 +492,9 @@ export const contestacoesService = {
     const outros = d.anteriores || d.posteriores ? await combinacao(l, u.acesso, d) : null;
     const extras = [...(d.anteriores ? (outros?.anteriores ?? []) : []), ...(d.posteriores ? (outros?.posteriores ?? []) : [])];
     const alvo = d.centroNovoId ?? l.centroCustoId;
-    const responsaveis = alvo ? ((await responsaveisDosCentros([alvo])).get(alvo) ?? []) : [];
-    // Quem pede e é o responsável pelo centro: acatada na hora.
-    const acatada = responsaveis.includes(u.id);
+    const responsaveis = (await responsaveisDosCentros([alvo])).get(alvo) ?? [];
+    // Quem pede e responde pelo centro (no recorte dele): acatada na hora.
+    const acatada = responsaveis.some((x) => x.id === u.id);
     const agora = new Date();
     const criada = await prisma.contestacao.create({
       data: {
@@ -556,8 +541,9 @@ export const contestacoesService = {
     let where: Prisma.ContestacaoWhereInput = {};
     if (aba === "solicitadas") where = { solicitanteId: u.id };
     if (aba === "recebidas") {
-      const centros = await centrosDoResponsavel(u.id);
-      where = { OR: [{ centroNovoId: { in: centros } }, { centroNovoId: null, centroAntesId: { in: centros } }] };
+      // As do recorte do usuário (o centro novo; sem ele, o do movimento); sem recorte, todas.
+      const centros = await centrosDoRecorte(u.acesso);
+      if (centros) where = { OR: [{ centroNovoId: { in: centros } }, { centroNovoId: null, centroAntesId: { in: centros } }] };
     }
     const ls = await prisma.contestacao.findMany({ where, select: SELECAO, orderBy: [{ solicitadaEm: "desc" }] });
     return apresentar(ls, u.id);
@@ -581,8 +567,8 @@ export const contestacoesService = {
     const c = await exigirContestacao(id);
     if (c.situacao !== "PENDENTE") throw new RegraContestacaoError(409, `A contestação nº ${c.numero} está ${ROTULO_SITUACAO[c.situacao].toLowerCase()}: só a pendente se acata ou recusa.`);
     const alvo = centroAlvo(c);
-    const responsaveis = alvo ? ((await responsaveisDosCentros([alvo])).get(alvo) ?? []) : [];
-    if (!responsaveis.includes(u.id)) throw new RegraContestacaoError(403, "Só o responsável pelo centro de custo acata ou recusa a contestação.");
+    const responsaveis = (await responsaveisDosCentros([alvo])).get(alvo) ?? [];
+    if (!responsaveis.some((x) => x.id === u.id)) throw new RegraContestacaoError(403, "Só quem responde pelo centro de custo (no seu recorte) acata ou recusa a contestação.");
     const agora = new Date();
     const justificativa = d.justificativa?.trim() || null;
     const salva = await prisma.contestacao.update({

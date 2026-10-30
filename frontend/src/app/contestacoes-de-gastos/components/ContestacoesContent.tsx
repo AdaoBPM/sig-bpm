@@ -22,7 +22,7 @@ import { plural } from "@/lib/texto";
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 import { moeda } from "@/app/competencias/[anoMes]/utils/formatacao";
 
-import { contestacoesService, mensagemDeErro, ROTULO_SITUACAO, type Contestacao, type SituacaoContestacao } from "../services/contestacoesService";
+import { contestacoesService, mensagemDeErro, quemResponde, ROTULO_SITUACAO, type Contestacao, type SituacaoContestacao } from "../services/contestacoesService";
 
 export type AbaDasContestacoes = "solicitadas" | "recebidas" | "validacoes";
 
@@ -112,7 +112,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível responder a contestação.")),
   });
 
-  const responsavel = (c: Contestacao) => (c.situacao === "PENDENTE" ? c.responsaveis.join(", ") || "Controladoria" : c.respondidaPor);
+  const responsavel = (c: Contestacao) => (c.situacao === "PENDENTE" ? quemResponde(c) : c.respondidaPor);
   const colunas: Coluna<Contestacao>[] = enxuta
     ? (
         [
@@ -150,7 +150,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
 
   const titulos: Record<AbaDasContestacoes, { titulo: string; sobre: string }> = {
     solicitadas: { titulo: "Contestações", sobre: "As contestações que você pediu, com a situação de cada uma." },
-    recebidas: { titulo: "Contestações", sobre: "As contestações dos centros de custo de que você é o responsável: acate ou recuse as pendentes." },
+    recebidas: { titulo: "Contestações", sobre: "As contestações dos centros de custo do seu recorte: acate ou recuse as pendentes." },
     validacoes: { titulo: "Validações", sobre: "Todas as contestações, de todos os usuários e de todas as competências: processe as acatadas e mude a situação de qualquer uma." },
   };
 
@@ -175,9 +175,10 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
               histórico e o valor), com a correção dele.
             </li>
             <li>
-              A contestação vai para o responsável pelo centro de custo (o novo; sem centro novo, o do movimento): os usuários com o centro na lista
-              deles (os Coordenadores); sem eles, os Gestores do departamento do centro; sem ninguém, só a Controladoria, em Validações. Quem pede e é o
-              responsável já tem a contestação acatada.
+              A contestação vai para quem responde pelo centro de custo (o novo; sem centro novo, o do movimento): os usuários com Editar em Contestações
+              › Recebidas, cada um no seu recorte (Controle de Usuários › Perfis) — com recorte por centro de custo, os centros da lista dele; por
+              departamento, os centros dos departamentos dele; sem recorte (a Controladoria), todos. Qualquer um deles acata ou recusa. Quem pede e
+              responde pelo centro já tem a contestação acatada.
             </li>
             <li>
               As situações: Pendente (o responsável ainda não respondeu), Acatada (o responsável aceitou; espera a Controladoria), Recusada e Validada (a
@@ -309,7 +310,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
               </td>
               <td className="px-3 py-2">
                 {c.situacao === "PENDENTE" ? (
-                  <span className="text-gray-600">Aguarda {c.responsaveis.join(", ") || "a Controladoria"}</span>
+                  <span className="text-gray-600">Aguarda {quemResponde(c)}</span>
                 ) : c.respondidaPor ? (
                   <>
                     {c.respondidaPor}
@@ -437,8 +438,8 @@ function LinhaEnxuta({
       ) : null}
       <td className="px-2 py-2">
         {c.situacao === "PENDENTE" ? (
-          <span className="line-clamp-4 text-gray-600" title={`Aguarda ${c.responsaveis.join(", ") || "a Controladoria"}`}>
-            Aguarda {c.responsaveis.join(", ") || "a Controladoria"}
+          <span className="line-clamp-4 text-gray-600" title={`Aguarda ${quemResponde(c)}`}>
+            Aguarda {quemResponde(c)}
           </span>
         ) : c.respondidaPor ? (
           <>

@@ -1,4 +1,5 @@
 import { getPrismaClient } from "../../config/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import type { AcaoPermissao, DepartamentoAcesso, TipoImportacao } from "../../generated/prisma/enums.js";
 import { areasDaMatriz, CATALOGO_DE_TELAS, MATRIZ_COMPLETA } from "./telas.js";
 
@@ -86,36 +87,49 @@ export function permissoesDasRotas(
   });
 }
 
+const SELECAO_DO_USUARIO = {
+  id: true,
+  nome: true,
+  email: true,
+  senhaHash: true,
+  ativo: true,
+  setores: { select: { tipoLista: true } },
+  departamentos: { select: { departamento: true } },
+  gestao: true,
+  veObras: true,
+  centros: { select: { centroCustoId: true } },
+  perfil: {
+    select: {
+      codigo: true,
+      nome: true,
+      ativo: true,
+      recorteSetor: true,
+      recorteDepartamento: true,
+      recorteCentro: true,
+      informacoesSensiveis: true,
+      permissoesTelas: { select: { chave: true, acao: true } },
+    },
+  },
+} satisfies Prisma.UsuarioSelect;
+
 /** O usuário com permissões e recortes; nulo se não existe, está inativo ou tem perfil inativo. */
 export async function carregarUsuario(filtro: { id: string } | { email: string }): Promise<(UsuarioAutenticado & { senhaHash: string }) | null> {
-  const usuario = await getPrismaClient().usuario.findUnique({
-    where: filtro,
-    select: {
-      id: true,
-      nome: true,
-      email: true,
-      senhaHash: true,
-      ativo: true,
-      setores: { select: { tipoLista: true } },
-      departamentos: { select: { departamento: true } },
-      gestao: true,
-      veObras: true,
-      centros: { select: { centroCustoId: true } },
-      perfil: {
-        select: {
-          codigo: true,
-          nome: true,
-          ativo: true,
-          recorteSetor: true,
-          recorteDepartamento: true,
-          recorteCentro: true,
-          informacoesSensiveis: true,
-          permissoesTelas: { select: { chave: true, acao: true } },
-        },
-      },
-    },
-  });
+  const usuario = await getPrismaClient().usuario.findUnique({ where: filtro, select: SELECAO_DO_USUARIO });
   if (!usuario || !usuario.ativo || !usuario.perfil.ativo) return null;
+  return montarUsuario(usuario);
+}
+
+/** Os usuários ativos, de perfil ativo, com as permissões e os recortes (30/10/2026: quem responde às contestações). */
+export async function carregarUsuariosAtivos(): Promise<UsuarioAutenticado[]> {
+  const us = await getPrismaClient().usuario.findMany({ where: { ativo: true, perfil: { ativo: true } }, select: SELECAO_DO_USUARIO });
+  return us.map((u) => {
+    const { senhaHash: _senha, ...x } = montarUsuario(u);
+    return x;
+  });
+}
+
+/** As permissões e os recortes do usuário, a partir do registro dele (SELECAO_DO_USUARIO). */
+function montarUsuario(usuario: Prisma.UsuarioGetPayload<{ select: typeof SELECAO_DO_USUARIO }>): UsuarioAutenticado & { senhaHash: string } {
   if (usuario.perfil.codigo === CODIGO_ADMINISTRADOR) {
     return {
       sub: usuario.id,

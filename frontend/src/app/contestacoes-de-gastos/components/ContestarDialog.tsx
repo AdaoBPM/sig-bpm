@@ -13,7 +13,7 @@ import { plural } from "@/lib/texto";
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 import { moeda } from "@/app/competencias/[anoMes]/utils/formatacao";
 
-import { contaCabeNoCentro, contestacoesService, mensagemDeErro, ROTULO_DEPARTAMENTO, type ResumoDaCombinacao } from "../services/contestacoesService";
+import { contaCabeNoCentro, contestacoesService, mensagemDeErro, quemResponde, ROTULO_DEPARTAMENTO, type ResumoDaCombinacao } from "../services/contestacoesService";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : null);
 const somar = (...xs: string[]) => (xs.reduce((s, x) => s + Math.round(Number(x) * 100), 0) / 100).toFixed(2);
@@ -95,7 +95,7 @@ export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: 
       toast.success(
         c.situacao === "ACATADA"
           ? `Contestação nº ${c.numero}${quantos} acatada: você é o responsável pelo centro de custo. Ela espera a validação da Controladoria.`
-          : `Contestação nº ${c.numero}${quantos} enviada${c.responsaveis.length ? ` a ${c.responsaveis.join(", ")}` : " à Controladoria (o centro não tem responsável)"}.`.replace(/\.\.$/, "."),
+          : `Contestação nº ${c.numero}${quantos} enviada ${c.responsaveis.length ? `a ${quemResponde(c)}` : "à Controladoria"}.`.replace(/\.\.$/, "."),
       );
       onCriada();
     },

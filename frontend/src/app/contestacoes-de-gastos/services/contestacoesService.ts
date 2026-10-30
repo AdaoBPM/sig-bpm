@@ -70,7 +70,9 @@ export type Contestacao = {
   formaValidacao: "NO_BALANCETE" | "LANCAMENTO_MANUAL" | null;
   /** A competência em que a contestação virou lançamentos manuais. */
   lancadaEm: string | null;
+  /** Quem responde pelo centro, com recorte (os nomes); a Controladoria (os sem recorte) em `controladoria`. */
   responsaveis: string[];
+  controladoria: boolean;
   souResponsavel: boolean;
 };
 
@@ -107,6 +109,13 @@ export type PreviaDaContestacao = {
  */
 export const contaCabeNoCentro = (departamentoDoCentro: DepartamentoDoRecorte | null, departamentoDaConta: DepartamentoDoRecorte | null) =>
   !departamentoDoCentro || departamentoDaConta === departamentoDoCentro || departamentoDaConta === "EXTRA_OPERACIONAL";
+
+/** Quem responde, para as telas: "Maiko Arcaro, Marcelo Rech e a Controladoria". */
+export function quemResponde(c: Pick<Contestacao, "responsaveis" | "controladoria">) {
+  const partes = [...c.responsaveis, ...(c.controladoria ? ["a Controladoria"] : [])];
+  if (!partes.length) return "ninguém (nenhum usuário responde pelo centro)";
+  return partes.length > 1 ? `${partes.slice(0, -1).join(", ")} e ${partes[partes.length - 1]}` : partes[0];
+}
 
 export const ROTULO_SITUACAO: Record<SituacaoContestacao, string> = { PENDENTE: "Pendente", ACATADA: "Acatada", RECUSADA: "Recusada", VALIDADA: "Validada" };
 
