@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, Sigma } from "lucide-react";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -432,7 +433,10 @@ export function DREContent() {
   // As abas que o perfil lê (14/10/2026).
   const { hasPermission } = usePermissions();
   const visoes = VISOES.filter((v) => hasPermission(`dre.${v.aba}:ler`));
-  const [visaoEscolhida, setVisao] = useState<Visao>("consolidado");
+  // A visão (a aba) lembrada ao recarregar (30/10/2026): guardada como texto; a de uma unidade, o número dela.
+  const [visaoLembrada, setVisaoLembrada] = useAbaLembrada("visao", "consolidado");
+  const visaoEscolhida: Visao = /^\d+$/.test(visaoLembrada) ? Number(visaoLembrada) : (visaoLembrada as Visao);
+  const setVisao = (v: Visao) => setVisaoLembrada(String(v));
   const visao: Visao | null = visoes.some((v) => v.visao === visaoEscolhida) ? visaoEscolhida : (visoes[0]?.visao ?? null);
   const leConsolidado = visoes.some((v) => v.visao === "consolidado");
   const [avisos, setAvisos] = useState<string[]>([]);

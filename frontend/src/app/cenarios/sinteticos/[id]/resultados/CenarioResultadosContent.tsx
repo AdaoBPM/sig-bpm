@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { ExportarRelatorio, type OpcaoExportar } from "@/app/relatorios/components/ExportarRelatorio";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -77,7 +78,7 @@ export function CenarioResultadosContent() {
   const { id } = useParams<{ id: string }>();
   const t = useTipoDoCenario();
   useRegistrarAcessoTela(`${t.base}/${id}/resultados`);
-  const [escolhida, setVisao] = useState("0");
+  const [escolhida, setVisao] = useAbaLembrada("visao", "0");
   // Quem edita os cenários edita a DRE aqui mesmo (12/10/2026; antes, na tela Editar, que deixou de existir).
   const { hasPermission } = usePermissions();
   // O cenário marcado (12/10/2026) ou com a versão congelada (13/10/2026) não se edita: a tabela fica só para leitura, com o aviso.

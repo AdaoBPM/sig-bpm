@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { usePermissions } from "@/context/PermissionContext";
@@ -39,7 +40,7 @@ const ABAS = [
 export function PremissasContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela(`/cenarios/analiticos/${id}/premissas`);
-  const [escolhida, setAba] = useState("1");
+  const [escolhida, setAba] = useAbaLembrada("unidade", "1");
   const { hasPermission } = usePermissions();
   // As abas que o perfil lê, e a edição de cada uma (14/10/2026).
   const abaDaChave = (c: string) => ({ 1: "matriz", 2: "filial", 3: "servicos" })[c] ?? c;

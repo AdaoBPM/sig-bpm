@@ -7,6 +7,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { AlertTriangle, ArrowRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -147,7 +148,7 @@ export function ClassificacaoContent() {
   const periodo = lerAnoMes(anoMes);
   const queryClient = useQueryClient();
 
-  const [situacao, setSituacao] = useState<Situacao>("PENDENCIAS");
+  const [situacao, setSituacao] = useAbaLembrada<Situacao>("situacao", "PENDENCIAS", ["TODOS", "PENDENCIAS"]);
 
   const apuracao = useQuery({ queryKey: ["apuracao", anoMes], queryFn: () => apuracaoService.situacao(anoMes) });
   const resumo = useQuery({

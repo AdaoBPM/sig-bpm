@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -574,7 +575,7 @@ export function PainelContent() {
   const [ateEscolhido, setAte] = useState<number | null>(null);
   // A aba pedida no endereço (?aba=indicadores: o endereço antigo da tela Indicadores, 19/10/2026).
   const pedida = useSearchParams().get("aba");
-  const [aba, setAba] = useState(pedida ?? "resultados");
+  const [aba, setAba] = useAbaLembrada("aba", pedida ?? "resultados");
   const { hasPermission } = usePermissions();
   const comIndicadores = hasPermission("relatorio_painel.indicadores:ler");
   // O tipo dos gráficos (Barras ou Área), lembrado neste navegador; as cores dos sinais, as da Acessibilidade do menu do usuário.

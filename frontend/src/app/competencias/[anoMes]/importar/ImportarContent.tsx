@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Upload } from "lucide-react";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -121,7 +122,7 @@ export function ImportarContent() {
   const { hasPermission } = usePermissions();
 
   const periodo = lerAnoMes(anoMes);
-  const [aba, setAba] = useState<"vigor" | "historico">("vigor");
+  const [aba, setAba] = useAbaLembrada<"vigor" | "historico">("aba", "vigor", ["vigor", "historico"]);
   const [aberta, setAberta] = useState<string | null>(null);
   // Reimportar um tipo (da linha da tabela): o formulário de um tipo só.
   const [envio, setEnvio] = useState<{ tipo?: string } | null>(null);

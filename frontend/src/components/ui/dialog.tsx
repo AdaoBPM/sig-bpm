@@ -131,7 +131,9 @@ function DialogContent({
   )
   return (
     <DialogPortal>
-      <DialogOverlay />
+      {/* O fundo escuro também no modal aberto sobre outro (30/10/2026): o de baixo fica escurecido (forceRender; sem ele, o
+          Base UI não desenha o fundo dos modais aninhados). */}
+      <DialogOverlay forceRender />
       <DialogPrimitive.Popup
         ref={popup}
         initialFocus={initialFocus ?? focoInicial}

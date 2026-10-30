@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +32,7 @@ const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR"
 export function JustificativasCenario({ id, podeEditar }: { id: string; podeEditar: boolean }) {
   const { base } = useTipoDoCenario();
   const consulta = useQuery({ queryKey: ["cenarios", id, "justificativas"], queryFn: () => cenariosService.justificativas(id) });
-  const [visao, setVisao] = useState("0");
+  const [visao, setVisao] = useAbaLembrada("justificativas", "0");
   const [soPendentes, setSoPendentes] = useState(false);
   const dados = consulta.data;
   const atual = dados?.visoes.find((v) => String(v.visao) === visao);

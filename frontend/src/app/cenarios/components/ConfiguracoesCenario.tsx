@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { usePermissions } from "@/context/PermissionContext";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export type AbaDasConfiguracoes = "cenario" | "referencia" | "indices" | "compar
 export function ConfiguracoesCenario({ cenario, abaInicial = "cenario" }: { cenario: Cenario; abaInicial?: AbaDasConfiguracoes }) {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [escolhida, setAba] = useState<AbaDasConfiguracoes>(abaInicial);
+  const [escolhida, setAba] = useAbaLembrada<AbaDasConfiguracoes>("aba", abaInicial);
   // As ações do cenário (13/10/2026; antes, ícones na lista dos cenários): marcar e excluir.
   const [acao, setAcao] = useState<"marcar" | "excluir" | null>(null);
   const t = useTipoDoCenario();

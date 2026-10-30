@@ -5,6 +5,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { CampoBusca } from "@/components/shared/Filtros";
@@ -762,7 +763,7 @@ export function ResultadosContent() {
   const visoes = VISOES.filter((v) => !v.foraDaTela && (v.chave !== "obras" || comObras) && (v.chave !== "sem_centros" || comSemCentros) && le(v.aba));
   const [anoEscolhido, setAno] = useState<number | null>(null);
   const [ateEscolhido, setAte] = useState<number | null>(null);
-  const [visaoEscolhida, setVisao] = useState("0");
+  const [visaoEscolhida, setVisao] = useAbaLembrada("visao", "0");
   const visao = visoes.some((v) => v.chave === visaoEscolhida) ? visaoEscolhida : (visoes[0]?.chave ?? "");
   // O centro escolhido fica aqui: o Exportar dele vai para a linha das abas, como nas demais visões.
   const [escolhido, setEscolhido] = useState<string | null>(null);

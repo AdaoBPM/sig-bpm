@@ -86,7 +86,8 @@ function SheetContent({
   )
   return (
     <SheetPortal>
-      <SheetOverlay />
+      {/* O fundo escuro também no painel aberto sobre um modal (30/10/2026), como nos modais aninhados. */}
+      <SheetOverlay forceRender />
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}

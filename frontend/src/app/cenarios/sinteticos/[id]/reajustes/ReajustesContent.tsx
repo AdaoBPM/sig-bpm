@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -104,7 +105,7 @@ export function ReajustesContent() {
   const { hasPermission } = usePermissions();
   const cenario = useQuery({ queryKey: ["cenarios", id], queryFn: () => cenariosService.obter(id) });
   const comComparativo = !!cenario.data?.comparadoComId && hasPermission(t.perm("reajustes", "ler", "justificativas"));
-  const [escolhida, setAba] = useState<"historico" | "justificativas">("historico");
+  const [escolhida, setAba] = useAbaLembrada<"historico" | "justificativas">("aba", "historico", ["historico", "justificativas"]);
   // As abas que o perfil lê (14/10/2026).
   const aba = comComparativo && (escolhida === "justificativas" || !podeHistorico) ? "justificativas" : podeHistorico ? "historico" : null;
   // Nos analíticos (19/10/2026), a tela se chama Histórico e a aba do log, Alterações.

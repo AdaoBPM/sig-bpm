@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/PermissionContext";
@@ -37,7 +38,7 @@ export function CenarioPainelContent() {
   const abasDosIndicadores = useAbasDosIndicadoresDoCenario();
   // A aba pedida no endereço (?aba=indicadores, o endereço antigo da tela Indicadores: a primeira delas).
   const pedida = useSearchParams().get("aba");
-  const [aba, setAba] = useState(pedida === "indicadores" ? (abasDosIndicadores[0]?.chave ?? "resultados") : (pedida ?? "resultados"));
+  const [aba, setAba] = useAbaLembrada("aba", pedida === "indicadores" ? (abasDosIndicadores[0]?.chave ?? "resultados") : (pedida ?? "resultados"));
   const analitico = t.tipo === "ANALITICO";
   const router = useRouter();
   const [tipoGrafico, setTipoGrafico] = useTipoGrafico();

@@ -6,6 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { AlertTriangle, CheckCircle2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -192,7 +193,9 @@ export function ConferenciaPlanilhaContent() {
   const [limiteTexto, setLimiteTexto] = useState(variacaoGuardada);
   const limiteDebounced = useDebounce(limiteTexto, 400);
   const limite = lerLimite(limiteDebounced) ?? 0.05;
-  const [unidade, setUnidade] = useState(0);
+  const [unidadeLembrada, setUnidadeLembrada] = useAbaLembrada("unidade", "0");
+  const unidade = Number(unidadeLembrada);
+  const setUnidade = (u: number) => setUnidadeLembrada(String(u));
   const [soDiferencas, setSoDiferencas] = useState(false);
   const [enviando, setEnviando] = useState(false);
 

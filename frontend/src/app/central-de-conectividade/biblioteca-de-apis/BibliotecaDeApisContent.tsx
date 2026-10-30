@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Eye, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
@@ -243,7 +244,7 @@ const ORIGEM_DA_ABA = { resultados: "Resultados Empresariais", cenarios: "Cenár
 export function BibliotecaDeApisContent() {
   useRegistrarAcessoTela("/central-de-conectividade/biblioteca-de-apis");
   const consulta = useQuery({ queryKey: ["conectividade", "catalogo"], queryFn: conectividadeService.catalogo });
-  const [aba, setAba] = useState<ChaveDaAba>("conectar");
+  const [aba, setAba] = useAbaLembrada<ChaveDaAba>("aba", "conectar", ABAS.map((a) => a.chave));
   const [previa, setPrevia] = useState<ApiDoCatalogo | null>(null);
   const c = consulta.data;
   return (
