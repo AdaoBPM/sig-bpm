@@ -150,7 +150,10 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
 
   const titulos: Record<AbaDasContestacoes, { titulo: string; sobre: string }> = {
     solicitadas: { titulo: "Contestações", sobre: "As contestações que você pediu, com a situação de cada uma." },
-    recebidas: { titulo: "Contestações", sobre: "As contestações dos centros de custo do seu recorte: acate ou recuse as pendentes." },
+    recebidas: {
+      titulo: "Contestações",
+      sobre: "As contestações pedidas por outros usuários para os centros de custo do seu recorte (as suas ficam em Solicitadas): acate ou recuse as pendentes.",
+    },
     validacoes: { titulo: "Validações", sobre: "Todas as contestações, de todos os usuários e de todas as competências: processe as acatadas e mude a situação de qualquer uma." },
   };
 
@@ -177,8 +180,9 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
             <li>
               A contestação vai para quem responde pelo centro de custo (o novo; sem centro novo, o do movimento): os usuários com Editar em Contestações
               › Recebidas, cada um no seu recorte (Controle de Usuários › Perfis) — com recorte por centro de custo, os centros da lista dele; por
-              departamento, os centros dos departamentos dele; sem recorte (a Controladoria), todos. Qualquer um deles acata ou recusa. Quem pede e
-              responde pelo centro já tem a contestação acatada.
+              departamento, os centros dos departamentos dele; sem recorte (a Controladoria), todos. Qualquer um deles acata ou recusa, na aba
+              Recebidas, que só traz as pedidas por outros usuários (as suas ficam em Solicitadas). Quem pede e responde pelo centro já tem a
+              contestação acatada.
             </li>
             <li>
               As situações: Pendente (o responsável ainda não respondeu), Acatada (o responsável aceitou; espera a Controladoria), Recusada e Validada (a

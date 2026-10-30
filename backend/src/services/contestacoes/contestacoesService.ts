@@ -541,9 +541,13 @@ export const contestacoesService = {
     let where: Prisma.ContestacaoWhereInput = {};
     if (aba === "solicitadas") where = { solicitanteId: u.id };
     if (aba === "recebidas") {
-      // As do recorte do usuário (o centro novo; sem ele, o do movimento); sem recorte, todas.
+      // As pedidas por outros usuários (as do próprio ficam em Solicitadas), do recorte dele (o centro novo; sem ele, o do
+      // movimento); sem recorte, todas.
       const centros = await centrosDoRecorte(u.acesso);
-      if (centros) where = { OR: [{ centroNovoId: { in: centros } }, { centroNovoId: null, centroAntesId: { in: centros } }] };
+      where = {
+        solicitanteId: { not: u.id },
+        ...(centros ? { OR: [{ centroNovoId: { in: centros } }, { centroNovoId: null, centroAntesId: { in: centros } }] } : {}),
+      };
     }
     const ls = await prisma.contestacao.findMany({ where, select: SELECAO, orderBy: [{ solicitadaEm: "desc" }] });
     return apresentar(ls, u.id);
