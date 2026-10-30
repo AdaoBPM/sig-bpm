@@ -18,6 +18,8 @@ type Props = {
   linha: string;
   /** Sem unidade, o consolidado. */
   unidade?: number;
+  /** A obra (o centro 1.98 ou 1.99, 30/10/2026): só os registros dela, na aba Obras. */
+  obra?: string;
   /** "Consolidado", "Matriz"… para o título. */
   nomeVisao: string;
   /** O mês no título ("AGO/26"), quando a tela mostra vários meses (Resultados). */
@@ -37,10 +39,10 @@ const quantidade = (v: number | null, medida: string | null) =>
  * Pistas, Metalurgia, Expedição, Montagem, Acompanhamento), somadas por obra,
  * pela mesma regra da aba Totais que a apuração usa.
  */
-export function VolumesDialog({ anoMes, linha, unidade, nomeVisao, valorApurado, onFechar, rotuloMes }: Props) {
+export function VolumesDialog({ anoMes, linha, unidade, obra, nomeVisao, valorApurado, onFechar, rotuloMes }: Props) {
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["dre", anoMes, "volumes", linha, unidade ?? "consolidado"],
-    queryFn: () => dreService.volumes(anoMes, linha, unidade),
+    queryKey: ["dre", anoMes, "volumes", linha, unidade ?? "consolidado", obra ?? ""],
+    queryFn: () => dreService.volumes(anoMes, linha, unidade, obra),
   });
   const medida = data?.medida ?? null;
   const difere = data && valorApurado !== null && Math.abs(Number(data.total) - Number(valorApurado)) >= 0.005;

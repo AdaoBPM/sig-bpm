@@ -9,7 +9,8 @@ import { Seletor } from "./SeletorPeriodo";
 /**
  * A Comparação de Resultados Empresariais (21/10/2026; de início, "Compara Com"): o cenário comparado (as colunas pretas de Resultados e o
  * orçado do Painel de Bordo), entre os cenários marcados (de qualquer exercício, desde 22/10/2026: num de outro, valem os
- * mesmos meses dele; o ano aparece na opção) (Previsão, Orçamento, Anterior e Vendido). O padrão (23/10/2026; antes, o Orçamento) é a
+ * mesmos meses dele) (Previsão, Orçamento, Anterior e Vendido). A lista mostra só o nome da marcação (30/10/2026, pedido do
+ * Adão; antes, também o nome do cenário e o ano). O padrão (23/10/2026; antes, o Orçamento) é a
  * primeira marcação que houver, nessa ordem; a escolha fica guardada no navegador e vale nas duas telas (a lista fica só em Resultados).
  */
 const CHAVE = "sig.comparaCom";
@@ -51,9 +52,9 @@ export function SeletorComparaCom({ valor, opcoes, onMudar }: { valor: MarcacaoC
     <Seletor
       rotulo="Comparação"
       valor={valor}
-      largura="w-56"
+      largura="w-36"
       onMudar={(v) => onMudar(v as MarcacaoComparavel)}
-      opcoes={opcoes.map((o) => ({ valor: o.marcacao, rotulo: `${o.cenario.nome === o.rotulo ? o.rotulo : `${o.rotulo} · ${o.cenario.nome}`} (${o.cenario.ano})` }))}
+      opcoes={opcoes.map((o) => ({ valor: o.marcacao, rotulo: o.rotulo }))}
     />
   );
 }

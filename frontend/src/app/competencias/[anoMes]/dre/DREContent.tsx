@@ -44,8 +44,8 @@ const VISOES: Array<{ visao: Visao; aba: string; nome: string }> = [
  */
 const detalhavel = (l: LinhaDRE) => !ehVolume(l) && (l.tipo === "ITEM" || l.descricao === "Impostos Operacionais") && l.podeDetalhar !== false;
 
-/** Linhas de volume (Produção, Expedição, Montagem, Acompanhamento): abrem as listas por obra, no consolidado e nas unidades. */
-const listavel = (l: LinhaDRE, visao: VisaoDetalhe) => ehVolume(l) && l.tipo === "ITEM" && ("unidade" in visao || "consolidado" in visao);
+/** Linhas de volume (Produção, Expedição, Montagem, Acompanhamento): abrem as listas por obra, no consolidado, nas unidades e na obra (só as dela). */
+const listavel = (l: LinhaDRE, visao: VisaoDetalhe) => ehVolume(l) && l.tipo === "ITEM" && ("unidade" in visao || "consolidado" in visao || "obra" in visao);
 
 function Composicao({ l }: { l: LinhaDRE }) {
   const c = l.composicao;
@@ -163,6 +163,7 @@ function TabelaDRE({
           anoMes={anoMes}
           linha={listasDe.codigo}
           unidade={"unidade" in visao ? visao.unidade : undefined}
+          obra={"obra" in visao ? visao.obra : undefined}
           nomeVisao={nomeVisao}
           valorApurado={listasDe.valor}
           onFechar={() => setListasDe(null)}
@@ -317,7 +318,8 @@ function VisaoCentros({ anoMes, escolhido, onEscolher }: { anoMes: string; escol
 /**
  * A visão por obra (09/10/2026): a lista das obras do mês — os centros de obra do RM (1.98 e 1.99) com lançamento —
  * com busca (sem o resultado de cada uma, pedido de 09/10/2026), à esquerda da DRE da obra, como em Centros de Custo. A DRE da obra tem todos os
- * movimentos: receita operacional, impostos, custos, despesas e receitas e despesas financeiras.
+ * movimentos: receita operacional, impostos, custos, despesas e receitas e despesas financeiras; e, no grupo PS, os volumes da obra
+ * nas listas (30/10/2026).
  */
 function VisaoObras({ anoMes, escolhida, onEscolher }: { anoMes: string; escolhida: string | null; onEscolher: (obra: string) => void }) {
   const [busca, setBusca] = useState("");
@@ -572,7 +574,8 @@ export function DREContent() {
           <>
             <p>
               Os resultados do mês: a DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da
-              receita prévia e dos lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99). Clique numa
+              receita prévia e dos lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99) e,
+              em Produção e Serviços (PS), os volumes da obra nas Listas Operacionais. Clique numa
               linha para ver como o valor foi formado e chegar aos lançamentos de origem.
             </p>
             <p>

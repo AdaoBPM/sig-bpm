@@ -117,7 +117,13 @@ function DialogContent({
     if ((e.target as Element).closest?.('[role="switch"], [role="checkbox"], [role="radio"], [role="option"], [data-altera]')) marcarSujo()
   }
   const [cabecalhos, setCabecalhos] = React.useState(0)
-  const popup = React.useRef<HTMLDivElement>(null)
+  const popup = React.useRef<HTMLDivElement | null>(null)
+  // O recuo de baixo do modal (30/10/2026), para o rodapé preso: a posição fixa conta a partir dele, e ele muda de um
+  // modal para outro (p-4, pb-0…). Medido quando o modal aparece (o portal o monta depois).
+  const prenderPopup = React.useCallback((el: HTMLDivElement | null) => {
+    popup.current = el
+    if (el) el.style.setProperty("--recuo-do-rodape", getComputedStyle(el).paddingBottom)
+  }, [])
   const focoInicial = React.useCallback(() => popup.current?.querySelector<HTMLElement>(FOCAVEIS) ?? true, [])
   const contexto = React.useMemo(
     () => ({
@@ -135,7 +141,7 @@ function DialogContent({
           Base UI não desenha o fundo dos modais aninhados). */}
       <DialogOverlay forceRender />
       <DialogPrimitive.Popup
-        ref={popup}
+        ref={prenderPopup}
         initialFocus={initialFocus ?? focoInicial}
         data-slot="dialog-content"
         onInputCapture={avisoAoSair ? marcarSujo : undefined}
@@ -181,11 +187,13 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
 }) {
+  // Preso embaixo, inteiro, ao rolar o modal (30/10/2026; antes, só o do extrato, e o pé dele ficava fora da borda até o fim
+  // da rolagem), como o título em cima. O fundo é opaco (o cinza claro sobre o do modal): o conteúdo passa por baixo dele.
   return (
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "sticky bottom-[calc(var(--recuo-do-rodape,1rem)*-1)] z-10 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-[color-mix(in_srgb,var(--muted)_50%,var(--popover))] p-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}

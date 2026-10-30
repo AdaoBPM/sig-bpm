@@ -446,6 +446,7 @@ export function TabelaResultados({
           anoMes={anoMes(consulta.mes)}
           linha={consulta.linha.codigo}
           unidade={"unidade" in visao ? visao.unidade : undefined}
+          obra={"obra" in visao ? visao.obra : undefined}
           nomeVisao={nomeVisao}
           rotuloMes={consulta.mes.rotulo}
           valorApurado={(() => {
@@ -848,7 +849,7 @@ export function ResultadosContent() {
               da conta na DRE e, na Produção e na DVV, pela filial do lançamento. Clique no valor de um mês para ver os lançamentos. Os Gastos Gerais
               Variáveis ficam de fora (nos cenários, vêm das premissas). “Exportar” baixa o grupo na tela ou todos (um por aba no Excel, um por página no PDF); o Coordenador não vê a aba.
             </li>
-            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da tela Resultados do Fechamento Mensal, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
+            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da tela Resultados do Fechamento Mensal, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No alto, Produção e Serviços (PS): os volumes da obra nas Listas Operacionais (Produção, Expedição, Montagem e Acompanhamento, pelo número da obra), que dão também o R$/m³ da obra. No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
             <li>Expandida, role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
@@ -859,7 +860,7 @@ export function ResultadosContent() {
               depois do total, o acumulado de janeiro até ele. Depois do orçado acumulado, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷
               orçado) e Eficiência (% realizado − % orçado, em pontos percentuais). O orçado é o do cenário escolhido em “Comparação”, ao lado do
               período, entre os cenários marcados (Previsão, Orçamento, Anterior e Vendido, em
-              Criação de Cenários; o padrão é a primeira marcação que houver, nessa ordem, até você escolher outra), de qualquer exercício (o ano aparece na opção; num cenário de outro exercício, valem os mesmos meses dele); fora do Orçamento, as colunas trazem o nome da marcação (PREVISÃO AGO/26…). Sem cenário, zero. A escolha vale
+              Criação de Cenários; o padrão é a primeira marcação que houver, nessa ordem, até você escolher outra), de qualquer exercício (a lista mostra só o nome da marcação; num cenário de outro exercício, valem os mesmos meses dele); fora do Orçamento, as colunas trazem o nome da marcação (PREVISÃO AGO/26…). Sem cenário, zero. A escolha vale
               também no Painel de Bordo. Os centros de custo não têm orçado.
             </li>
             <li>Clique no valor de um mês, numa linha com lupa, para ver os lançamentos de origem daquele mês (ou, nas linhas de volume, as listas somadas por obra); clicar na descrição abre o mês de referência.</li>

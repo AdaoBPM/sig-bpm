@@ -137,7 +137,7 @@ export const relatoriosExecutivosController = {
     // `versao` e `forcar` (23/10/2026): a conferência de que ninguém gravou a aba depois que o usuário a abriu.
     const corpo = z
       .object({
-        paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200), fundo: fundo.optional(), transicao: z.enum(["ESMAECER", "ROLAR_VERTICAL", "ROLAR_HORIZONTAL"]).optional() })).min(1).max(30),
+        paginas: z.array(z.object({ id: z.string().min(1).max(40), nome: z.string().max(60).optional(), blocos: z.array(bloco).max(200), fundo: fundo.optional(), transicao: z.enum(["ESMAECER", "ROLAR_VERTICAL", "ROLAR_HORIZONTAL"]).optional(), avancarApos: z.number().int().min(1).max(3600).optional() })).min(1).max(30),
         versao: z.string().max(40).optional(),
         forcar: z.boolean().optional(),
       })

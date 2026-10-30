@@ -175,7 +175,10 @@ export const dreController = {
       if (!u.success) return response.status(400).json({ error: "Unidade inválida" });
       unidade = u.data;
     }
-    return responder(response, () => volumesDaLinha(c.ano, c.mes, linha.data, unidade, request.user!.acesso));
+    // ?obra= (30/10/2026): só os registros da obra (a linha de volume na aba Obras).
+    const o = obraSchema.safeParse(request.query.obra);
+    if (!o.success) return response.status(400).json({ error: "Obra inválida" });
+    return responder(response, () => volumesDaLinha(c.ano, c.mes, linha.data, unidade, request.user!.acesso, o.data));
   },
 
   async apurar(request: Request, response: Response) {

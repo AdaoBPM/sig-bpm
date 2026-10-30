@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronRightIcon, ChevronsLeft, ChevronsRight, Minimize2 } from "lucide-react";
 
 import { BpmLogo } from "@/components/layout/BpmLogo";
@@ -17,7 +17,7 @@ import type { Bloco, DadosDoRelatorio, Fundo, TelaDoSumario, Transicao } from ".
  * Um slide: o título da aba (`nome`: Introdução, Performance da Produção…), o nome da página (`pagina`), os blocos e a
  * Imagem de Fundo (20/10/2026), e o número dele na contagem que começa na Introdução (`numero`, de `total`; nulo na Capa e no Encerramento).
  */
-export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[]; fundo?: Fundo; numero: number | null; total: number; transicao?: Transicao };
+export type Slide = { chave: string; nome: string; pagina: string; blocos: Bloco[]; fundo?: Fundo; numero: number | null; total: number; transicao?: Transicao; /** Avançar Após, em segundos. */ avancarApos?: number };
 
 /**
  * As transições (27/10/2026, pedido do Adão), as do grupo do slide que entra: Esmaecer (o slide novo aparece sobre o
@@ -48,7 +48,8 @@ export function entrarEmTelaInteira() {
  * A apresentação do relatório (16/10/2026): em tela inteira (a função do navegador), sem o menu lateral, uma página
  * por slide, só para leitura, na altura da página (o espaço útil da tela inteira). Os botões de recuar, avançar e sair ficam
  * no centro da base, em cinza escuro, e só aparecem quando o mouse se move; as setas do teclado também mudam o slide, e
- * Esc encerra. Sem seleção de textos; o bloco se destaca sob o mouse e, clicado, se amplia (GradeDoRelatorio, ampliavel).
+ * Esc encerra. Sem seleção de textos; o bloco se destaca sob o mouse e, clicado, se amplia (GradeDoRelatorio, ampliavel). O
+ * slide com Avançar Após (30/10/2026) passa sozinho ao próximo.
  */
 export function ApresentacaoDoRelatorio({
   relatorioId,
@@ -120,6 +121,17 @@ export function ApresentacaoDoRelatorio({
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     onSair();
   };
+  // Avançar Após (30/10/2026, pedido do Adão): o slide com os segundos passa sozinho ao próximo (o último fica). O tempo
+  // conta de novo a cada troca; com um bloco ampliado, o slide espera.
+  const avancarApos = slides[k]?.avancarApos;
+  const avancarSozinho = useEffectEvent(() => {
+    if (!document.querySelector("[data-bloco-ampliado]")) ir(1);
+  });
+  useEffect(() => {
+    if (!avancarApos || k >= slides.length - 1) return;
+    const t = window.setTimeout(avancarSozinho, avancarApos * 1000);
+    return () => window.clearTimeout(t);
+  }, [k, avancarApos, slides.length]);
   useEffect(() => {
     // Sair da tela inteira pelo navegador (Esc) encerra a apresentação.
     const aoMudar = () => {

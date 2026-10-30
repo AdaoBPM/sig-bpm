@@ -117,7 +117,7 @@ export type TransicaoDoGrupo = "ESMAECER" | "ROLAR_VERTICAL" | "ROLAR_HORIZONTAL
  * na coluna `blocos` da aba; a lista antiga (só os blocos, de antes das páginas) vira uma página.
  */
 /** O nome da página (16/10/2026), o do slide na apresentação; sem ele, "Página N". */
-export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[]; fundo?: FundoDaPagina; transicao?: TransicaoDoGrupo };
+export type PaginaDoRelatorio = { id: string; nome?: string; blocos: BlocoDoRelatorio[]; fundo?: FundoDaPagina; transicao?: TransicaoDoGrupo; /** Avançar Após (30/10/2026), em segundos. */ avancarApos?: number };
 export function paginasDe(json: unknown): PaginaDoRelatorio[] {
   const lista = Array.isArray(json) ? json : [];
   if (!lista.length) return [{ id: "p1", blocos: [] }];

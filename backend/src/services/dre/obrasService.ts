@@ -5,6 +5,8 @@ import { podeVerLinhaNaObra, podeVerSensiveis } from "../acesso/recorteDepartame
 import type { LinhaEstrutura } from "./apuracaoUnidades.js";
 import { avaliarEstrutura, soSoma } from "./consolidacao.js";
 import { estrutura, RegraDREError } from "./dreService.js";
+import { volumesDasObras } from "./volumesDaLinhaService.js";
+import { numeroDaObra } from "../resultadosLinha/alocacaoNasLinhas.js";
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -17,7 +19,9 @@ const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${
  * (obras de venda da Matriz e da Filial) —, pela linha da DRE em que foram
  * classificados, antes de qualquer rateio. Todos os tipos de movimento entram:
  * receita operacional, impostos, custos, despesas e receitas e despesas
- * financeiras.
+ * financeiras. O grupo Produção e Serviços (PS) vem das listas operacionais
+ * (30/10/2026, pedido do Adão): os volumes da obra (`volumesDasObras`), e a
+ * obra só com volume no mês também se consulta.
  *
  * Os centros de obra não estão no cadastro de centros de custo: a obra é
  * identificada pelo código do centro no RM, como veio no balancete, e o nome
@@ -135,6 +139,17 @@ async function movimentos(competenciaId: string, linhas: LinhaEstrutura[], acess
   return [...obras].map(([codigo, o]) => ({ codigo, nome: nomeDe(o, codigo), itens: o.itens }));
 }
 
+/**
+ * Os volumes da obra no mês (30/10/2026, pedido do Adão): as linhas do grupo PS (P e S) que o usuário alcança, das listas
+ * operacionais, pelo número da obra (o do centro 1.98 ou 1.99).
+ */
+async function volumesDaObra(competenciaId: string, linhas: LinhaEstrutura[], acesso: Acesso, obra: string) {
+  const numero = numeroDaObra(obra);
+  const alcancadas = new Set(linhas.filter((l) => podeVerLinhaNaObra(acesso, l)).map((l) => l.codigo));
+  const vs = (await volumesDasObras(competenciaId, linhas, numero)).get(numero) ?? new Map<string, Decimal>();
+  return new Map([...vs].filter(([codigo, v]) => alcancadas.has(codigo) && !v.isZero()).map(([codigo, v]) => [codigo, { valor: v, n: 1 }]));
+}
+
 /** O total da obra na lista: o Resultado Líquido; no recorte, a soma das linhas que o usuário vê. */
 function totalDa(linhas: Array<{ codigo: string; tipo: string; valor: string | null }>) {
   const rl = linhas.find((l) => l.codigo === RL);
@@ -166,14 +181,15 @@ export const obrasService = {
     const c = await competencia(ano, mes);
     const ap = await apuracao(c.id);
     const linhas = await estrutura();
-    const [o] = await movimentos(c.id, linhas, acesso, obra);
-    if (!o) throw new RegraDREError(404, `Nenhum lançamento da obra ${obra} em ${rotulo(ano, mes)}.`);
+    const [[o], volumes] = await Promise.all([movimentos(c.id, linhas, acesso, obra), volumesDaObra(c.id, linhas, acesso, obra)]);
+    if (!o && !volumes.size) throw new RegraDREError(404, `Nenhum lançamento nem volume da obra ${obra} em ${rotulo(ano, mes)}.`);
+    const itens = new Map([...volumes, ...(o?.itens ?? [])]);
     return {
       competencia: { ano, mes, status: c.status },
-      obra: { codigo: o.codigo, nome: o.nome },
+      obra: { codigo: obra, nome: o?.nome ?? obra },
       apuradoEm: ap?.apuradoEm ?? null,
       congelado: ap?.congelado ?? false,
-      linhas: linhasDaObra(linhas, o.itens, !acesso.recorteDepartamento && !acesso.recorteCentro, acesso).filter((l) => !CALCULADOS.has(l.codigo)),
+      linhas: linhasDaObra(linhas, itens, !acesso.recorteDepartamento && !acesso.recorteCentro, acesso).filter((l) => !CALCULADOS.has(l.codigo)),
     };
   },
 };

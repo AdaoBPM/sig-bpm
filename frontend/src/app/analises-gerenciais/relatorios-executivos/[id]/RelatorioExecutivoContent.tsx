@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { EtiquetasDaBarra } from "@/components/layout/EtiquetasDaBarra";
@@ -32,9 +32,10 @@ import { CONFIGURACOES, ConfiguracoesDoRelatorio } from "../components/Configura
 import { MAXIMO_DO_VIDEO, proporcaoDoArquivo, TIPOS_DE_VIDEO, VideoDialog, videoDoTexto, type VideoEscolhido } from "../components/VideoDialog";
 import { BarraDeEdicao, COLUNAS, escrevendoAgora, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, linhasDoTexto, lugarLivre, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { ColarNoSlideDialog, type Colado, type ComoColar } from "../components/ColarNoSlideDialog";
+import { TransicoesDoSlide, type AjusteDoSlide } from "../components/TransicoesDoSlide";
 import { copiaDe, copiaPeloTexto, formatacaoBasica, TIPO_DA_COPIA, useCopia, type Copia } from "../components/copiarColar";
 import { deTexto, limparHtml } from "../components/TextoRico";
-import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario, type Transicao } from "../services/relatoriosExecutivosService";
+import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
 const novoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -52,14 +53,6 @@ const nomeDaPagina = (p: Pagina, k: number) => p.nome?.trim() || `Página ${k + 
 
 /** A aba e a página abertas. */
 type Aberta = { chave: string; pagina: string | null };
-
-/** As transições do botão Transições (27/10/2026): Nenhuma tira a do grupo. */
-const TRANSICOES: Array<{ valor: Transicao | undefined; rotulo: string }> = [
-  { valor: undefined, rotulo: "Nenhuma" },
-  { valor: "ESMAECER", rotulo: "Esmaecer" },
-  { valor: "ROLAR_VERTICAL", rotulo: "Rolar Vertical" },
-  { valor: "ROLAR_HORIZONTAL", rotulo: "Rolar Horizontal" },
-];
 
 /**
  * Um Relatório Executivo (15/10/2026): o de uma competência fechada, com as sete abas (17/10/2026: Introdução, Resultados,
@@ -357,11 +350,14 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     setEscolher({ id });
   };
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
-  // A transição do grupo (27/10/2026): a das páginas dele (todas iguais); a página nova entra com ela.
-  const transicaoDoGrupo = daAba[0]?.transicao;
-  const mudarTransicao = (transicao: Transicao | undefined) => mudarPaginas(daAba.map((p) => ({ ...p, transicao })));
+  // A transição e o Avançar Após de cada página (30/10/2026; antes, a transição do grupo, igual em todas): na aberta ou, com
+  // "Aplicar ao Grupo", em todas as do grupo. A página nova entra com os da aberta.
+  const ajusteDaPagina = { ...(pagina?.transicao ? { transicao: pagina.transicao } : {}), ...(pagina?.avancarApos ? { avancarApos: pagina.avancarApos } : {}) };
+  const grupoUniforme = daAba.every((p) => p.transicao === pagina?.transicao && (p.avancarApos ?? 0) === (pagina?.avancarApos ?? 0));
+  const mudarAjuste = (ajuste: AjusteDoSlide, aoGrupo: boolean) =>
+    mudarPaginas(daAba.map((p) => (aoGrupo || p.id === pagina?.id ? { ...p, transicao: ajuste.transicao, avancarApos: ajuste.avancarApos } : p)));
   const novaPagina = () => {
-    const nova: Pagina = { id: novoId(), blocos: [], ...(transicaoDoGrupo ? { transicao: transicaoDoGrupo } : {}) };
+    const nova: Pagina = { id: novoId(), blocos: [], ...ajusteDaPagina };
     mudarPaginas([...daAba.slice(0, nPagina + 1), nova, ...daAba.slice(nPagina + 1)]);
     setAberta({ chave, pagina: nova.id });
   };
@@ -383,7 +379,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   // Introdução: os slides da Capa e do Encerramento (20/10/2026) não contam.
   const comConteudo = relatorio.abas.flatMap((a) => {
     const ps = a.visivel ? (paginas[a.chave] ?? []) : [];
-    return ps.flatMap((p, k) => (p.blocos.length || p.fundo ? [{ aba: a.chave, chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos, fundo: p.fundo, transicao: p.transicao }] : []));
+    return ps.flatMap((p, k) => (p.blocos.length || p.fundo ? [{ aba: a.chave, chave: `${a.chave}|${p.id}`, nome: a.titulo, pagina: nomeDaPagina(p, k), blocos: p.blocos, fundo: p.fundo, transicao: p.transicao, avancarApos: p.avancarApos }] : []));
   });
   const contados = comConteudo.filter((x) => !ABAS_SEM_NUMERO.has(x.aba)).length;
   let contagem = 0;
@@ -613,30 +609,16 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 </span>
               )
             ) : null}
-            {/* As transições dos slides do grupo aberto (27/10/2026, pedido do Adão), antes do Adicionar. */}
-            {editavel ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button type="button" className={botaoPrimario} title={`A transição dos slides de ${aba?.nome ?? "este grupo"}: ${TRANSICOES.find((t) => t.valor === transicaoDoGrupo)?.rotulo ?? "Nenhuma"}`}>
-                      <Clapperboard className="size-4" />
-                      Transições
-                      <ChevronDown className="size-4" />
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="end" className="w-max min-w-44 [&_[role=menuitem]]:whitespace-nowrap">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="text-xs text-gray-500">Slides de {aba?.nome}</DropdownMenuLabel>
-                    {TRANSICOES.map((t) => (
-                      <DropdownMenuItem key={t.rotulo} onClick={() => mudarTransicao(t.valor)}>
-                        <Check className={`size-4 ${t.valor === transicaoDoGrupo ? "" : "invisible"}`} />
-                        {t.rotulo}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* As transições (27/10/2026, pedido do Adão), antes do Adicionar: a do slide aberto ou a do grupo, e o Avançar Após. */}
+            {editavel && pagina ? (
+              <TransicoesDoSlide
+                key={pagina.id}
+                ajuste={ajusteDaPagina}
+                nomeDoSlide={nomeDaPagina(pagina, nPagina)}
+                nomeDoGrupo={aba?.nome ?? "este grupo"}
+                uniforme={grupoUniforme}
+                onMudar={mudarAjuste}
+              />
             ) : null}
             {editavel ? (
               <DropdownMenu>
@@ -847,9 +829,12 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.
             </li>
             <li>
-              “Transições”, antes do Adicionar, escolhe como os slides do grupo aberto entram na apresentação: Esmaecer (o novo aparece sobre o anterior),
-              Rolar Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou da esquerda), ou
-              Nenhuma (a troca na hora). Vale para todas as páginas do grupo, também as novas; a marca no menu mostra a escolhida.
+              “Transições”, antes do Adicionar, escolhe como o slide aberto entra na apresentação: Esmaecer (o novo aparece sobre o anterior), Rolar
+              Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou da esquerda), ou Nenhuma
+              (a troca na hora); a marca na lista mostra a escolhida. Com “Aplicar ao Grupo” marcado, a escolha vale para todos os slides do grupo
+              (marcar a caixa já leva a transição e o avanço do slide aberto a todos; ela abre marcada quando todos já são iguais). Em “Avançar Após”,
+              digite os segundos: na apresentação, o slide passa sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A página
+              nova entra com a transição e o avanço da aberta.
             </li>
             <li>
               Como no Canva: clique num bloco para escolhê-lo (o contorno tracejado, com o mouse sobre um bloco, mostra qual o clique escolhe). O escolhido fica destacado

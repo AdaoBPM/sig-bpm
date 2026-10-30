@@ -234,9 +234,9 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
           </div>
         ) : null}
         {/* O extrato em Excel (24/10/2026): as movimentações numa aba e os detalhes, item a item, em outra. O pé fica preso
-            embaixo, como o título em cima, para o botão aparecer sem rolar o extrato. */}
+            embaixo (o DialogFooter), como o título em cima, para o botão aparecer sem rolar o extrato. */}
         {data ? (
-          <DialogFooter className="sticky -bottom-4 z-10 bg-popover">
+          <DialogFooter>
             <ExportarExtrato anoMes={anoMes} linha={linha} visao={visao} />
           </DialogFooter>
         ) : null}

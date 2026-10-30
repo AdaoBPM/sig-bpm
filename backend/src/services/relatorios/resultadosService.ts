@@ -228,7 +228,8 @@ export const resultadosService = {
         if (!m.competenciaId) return mapa;
         try {
           const dre = await obrasService.consultar(ano, m.mes, codigo, acesso);
-          nome = dre.obra.nome;
+          // No mês só com os volumes (sem lançamento), o nome é o código.
+          if (dre.obra.nome !== codigo) nome = dre.obra.nome;
           for (const l of dre.linhas) if (l.valor !== null && l.tipo !== "SECAO") mapa.set(l.codigo, Number(l.valor));
         } catch (error) {
           if (!(error instanceof RegraDREError && error.status === 404)) throw error; // sem lançamento no mês
@@ -238,12 +239,15 @@ export const resultadosService = {
     );
     if (valores.every((m) => m.size === 0)) throw new RelatorioError(404, `Nenhum lançamento da obra ${codigo} em ${ano}.`);
     const apurado = meses.map((m) => m.competenciaId !== null);
+    const montadas = montar(linhas, "obras", apurado, valores, valores, acesso);
+    // As seções ficam de fora, menos a Produção e Serviços (PS) da obra com volume (30/10/2026), como no Consolidado.
+    const comVolume = montadas.some((l) => l.volume && l.tipo !== "SECAO");
     return {
       ano,
       ate: ultimo,
       obra: { codigo, nome },
       meses: meses.map(({ mes, rotulo, competenciaId }) => ({ mes, rotulo, apurado: competenciaId !== null })),
-      linhas: montar(linhas, "obras", apurado, valores, valores, acesso).filter((l) => l.tipo !== "SECAO"),
+      linhas: montadas.filter((l) => l.tipo !== "SECAO" || (comVolume && l.volume)),
     };
   },
 

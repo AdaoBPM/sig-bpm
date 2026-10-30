@@ -144,7 +144,7 @@ export type RecorteDaImagem = { zoom: number; x: number; y: number };
 /** A transição dos slides de um grupo (27/10/2026), guardada em cada página dele. */
 export type Transicao = "ESMAECER" | "ROLAR_VERTICAL" | "ROLAR_HORIZONTAL";
 /** Uma página da aba (16/10/2026): cada departamento tem uma ou mais, cada uma com a sua grade. */
-export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo; /** A transição do grupo (27/10/2026): a mesma em todas as páginas dele. */ transicao?: Transicao };
+export type Pagina = { id: string; /** O nome (16/10/2026), o do slide; sem ele, "Página N". */ nome?: string; blocos: Bloco[]; fundo?: Fundo; /** A transição do slide (27/10/2026; até 30/10/2026, a mesma em todas as páginas do grupo). */ transicao?: Transicao; /** Avançar Após (30/10/2026): na apresentação, o slide passa sozinho ao próximo depois desses segundos. */ avancarApos?: number };
 /** A Capa (20/10/2026): a primeira aba; os slides dela não entram na contagem. */
 export const CHAVE_DA_CAPA = "CAPA";
 /**

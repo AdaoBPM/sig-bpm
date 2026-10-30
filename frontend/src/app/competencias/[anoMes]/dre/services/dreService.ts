@@ -191,9 +191,9 @@ export const dreService = {
       },
       responseType: "blob",
     }),
-  /** As listas que formam uma linha de volume (Produção, Expedição…), por obra; sem unidade, o consolidado. */
-  volumes: async (anoMes: string, linha: string, unidade?: number): Promise<VolumesDaLinha> => {
-    const { data } = await api.get<{ data: VolumesDaLinha }>(`/proxy/competencias/${anoMes}/dre/volumes`, { params: { linha, unidade } });
+  /** As listas que formam uma linha de volume (Produção, Expedição…), por obra; sem unidade, o consolidado; com a obra, só as dela. */
+  volumes: async (anoMes: string, linha: string, unidade?: number, obra?: string): Promise<VolumesDaLinha> => {
+    const { data } = await api.get<{ data: VolumesDaLinha }>(`/proxy/competencias/${anoMes}/dre/volumes`, { params: { linha, unidade, obra } });
     return data.data;
   },
   consolidado: async (anoMes: string): Promise<DREUnidade> => {
