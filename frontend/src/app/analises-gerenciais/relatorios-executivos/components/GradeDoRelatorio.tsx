@@ -813,11 +813,11 @@ export function GradeDoRelatorio({
         <ConfigurarTabelaDialog
           relatorioId={relatorioId}
           titulo="Configurar Tabela"
-          inicial={{ visao: doCard.visao, nivel: doCard.nivel, linhas: doCard.linhas, recolhido: doCard.recolhido }}
+          inicial={{ visao: doCard.visao, nivel: doCard.nivel, linhas: doCard.linhas, recolhido: doCard.recolhido, colunas: doCard.colunas }}
           onFechar={() => setConfigurando(null)}
           onAplicar={(o) => {
             // Sem as linhas (todas), o campo sai do bloco.
-            mudarBloco(doCard.id, { ...o, linhas: o.linhas } as Partial<Bloco>);
+            mudarBloco(doCard.id, { ...o, linhas: o.linhas, colunas: o.colunas } as Partial<Bloco>);
             setConfigurando(null);
           }}
         />

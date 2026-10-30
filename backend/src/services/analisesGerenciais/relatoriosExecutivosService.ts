@@ -94,9 +94,10 @@ export type BlocoDoRelatorio = { id: string; x: number; y: number; w: number; h:
   | { tipo: "SUMARIO"; listar: "TELAS" | "TELAS_E_SLIDES"; telas: AbaRelatorioExecutivo[]; linha?: "PONTOS" | "TRACOS" | "LINHA" | "NENHUM"; estilos?: { telas?: EstiloDoSumario; slides?: EstiloDoSumario } }
   /**
    * A tabela de Resultados (22/10/2026): a visão da DRE (0 Consolidado, 1 a 5 as unidades), as linhas escolhidas (os
-   * códigos; sem elas, todas), o nível (1 Totais, 2 Atribuições, 3 Contas) e os meses anteriores recolhidos ou não.
+   * códigos; sem elas, todas), o nível (1 Totais, 2 Atribuições, 3 Contas), os meses anteriores recolhidos ou não e as
+   * colunas opcionais (30/10/2026: o R$/m³, a Diferença, o Atingimento e a Eficiência; sem elas, todas).
    */
-  | { tipo: "TABELA"; visao: 0 | 1 | 2 | 3 | 4 | 5; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean }
+  | { tipo: "TABELA"; visao: 0 | 1 | 2 | 3 | 4 | 5; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean; colunas?: { unitario: boolean; diferenca: boolean; atingimento: boolean; eficiencia: boolean } }
 );
 
 /**

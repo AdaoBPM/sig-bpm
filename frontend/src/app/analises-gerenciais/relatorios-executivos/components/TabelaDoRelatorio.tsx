@@ -11,11 +11,20 @@ import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 import { estrutura, linhasDaDRE, NIVEIS, RECUO, semPrimeiroTotalDaRol, type Nivel } from "@/app/competencias/[anoMes]/dre/components/NiveisDRE";
 
-import { relatoriosExecutivosService, VISOES_DA_TABELA, type Bloco, type VisaoDaTabela } from "../services/relatoriosExecutivosService";
+import { relatoriosExecutivosService, VISOES_DA_TABELA, type Bloco, type ColunasDaTabela, type VisaoDaTabela } from "../services/relatoriosExecutivosService";
 
 type BlocoTabela = Extract<Bloco, { tipo: "TABELA" }>;
-/** As opções da tabela: a visão, o nível, as linhas escolhidas (sem elas, todas) e os meses anteriores recolhidos. */
-export type OpcoesDaTabela = Pick<BlocoTabela, "visao" | "nivel" | "linhas" | "recolhido">;
+/** As opções da tabela: a visão, o nível, as linhas escolhidas (sem elas, todas), os meses anteriores recolhidos e as colunas. */
+export type OpcoesDaTabela = Pick<BlocoTabela, "visao" | "nivel" | "linhas" | "recolhido" | "colunas">;
+
+/** As colunas opcionais (30/10/2026, pedido do Adão), na ordem do modal; de início, todas. */
+const COLUNAS: Array<{ chave: keyof ColunasDaTabela; rotulo: string; detalhe: string }> = [
+  { chave: "unitario", rotulo: "Valores Unitários (R$/m³)", detalhe: "O R$/m³ do mês, do total e do orçado." },
+  { chave: "diferenca", rotulo: "Diferença", detalhe: "O realizado menos o orçado." },
+  { chave: "atingimento", rotulo: "Atingimento", detalhe: "O realizado sobre o orçado." },
+  { chave: "eficiencia", rotulo: "Eficiência", detalhe: "O % realizado menos o % orçado." },
+];
+const TODAS_AS_COLUNAS: ColunasDaTabela = { unitario: true, diferenca: true, atingimento: true, eficiencia: true };
 
 /** A tabela de Resultados de uma visão do relatório (a mesma consulta para os blocos e o modal). */
 function useResultados(relatorioId: string, visao: VisaoDaTabela) {
@@ -74,7 +83,7 @@ export function TabelaDoBloco({ relatorioId, b }: { relatorioId: string; b: Bloc
           visao={b.visao === 0 ? { consolidado: true } : { unidade: b.visao }}
           nomeVisao={nome}
           consultas={false}
-          estatico={{ nivel: b.nivel, linhas: b.linhas, recolhido: b.recolhido ?? true }}
+          estatico={{ nivel: b.nivel, linhas: b.linhas, recolhido: b.recolhido ?? true, colunas: b.colunas }}
         />
       </div>
     </div>
@@ -83,8 +92,9 @@ export function TabelaDoBloco({ relatorioId, b }: { relatorioId: string; b: Bloc
 
 /**
  * O Adicionar Tabela e o Configurar Tabela (22/10/2026): a aba (a visão de Resultados), o modo (Totais, Atribuições ou
- * Contas, como os níveis da tela Resultados), os meses anteriores ao do relatório (recolhidos ou não) e os totais e as
- * contas que entram (de início, todos; marcar um total marca as linhas dele).
+ * Contas, como os níveis da tela Resultados), os meses anteriores ao do relatório (recolhidos ou não), as colunas opcionais
+ * (30/10/2026: o R$/m³, a Diferença, o Atingimento e a Eficiência) e os totais e as contas que entram (de início, todos;
+ * marcar um total marca as linhas dele).
  */
 export function ConfigurarTabelaDialog({
   relatorioId,
@@ -102,6 +112,9 @@ export function ConfigurarTabelaDialog({
   const [visao, setVisao] = useState<VisaoDaTabela>(inicial?.visao ?? 0);
   const [nivel, setNivel] = useState<Nivel>(inicial?.nivel ?? 1);
   const [recolhido, setRecolhido] = useState(inicial?.recolhido ?? true);
+  const [colunas, setColunas] = useState<ColunasDaTabela>(inicial?.colunas ?? TODAS_AS_COLUNAS);
+  // Despesas e Extra e RN não têm o R$/m³.
+  const semUnitario = visao === 4 || visao === 5;
   // As linhas marcadas; null: todas (as da visão, mesmo as que entrarem depois).
   const [marcadas, setMarcadas] = useState<Set<string> | null>(inicial?.linhas ? new Set(inicial.linhas) : null);
   const consulta = useResultados(relatorioId, visao);
@@ -125,7 +138,15 @@ export function ConfigurarTabelaDialog({
     // Os códigos mudam de uma visão para a outra: a nova começa com todas.
     if (v !== visao) setMarcadas(null);
   };
-  const aplicar = () => onAplicar({ visao, nivel, recolhido, linhas: marcadas === null ? undefined : linhas.map((l) => l.codigo).filter((c) => marcadas.has(c)) });
+  const aplicar = () =>
+    onAplicar({
+      visao,
+      nivel,
+      recolhido,
+      linhas: marcadas === null ? undefined : linhas.map((l) => l.codigo).filter((c) => marcadas.has(c)),
+      // Com todas as colunas, o campo sai do bloco.
+      colunas: COLUNAS.every((c) => colunas[c.chave]) ? undefined : colunas,
+    });
   return (
     <Dialog open onOpenChange={(a) => (!a ? onFechar() : undefined)}>
       <DialogContent avisoAoSair className="flex max-h-[90vh] flex-col rounded-sm sm:max-w-2xl">
@@ -155,6 +176,33 @@ export function ConfigurarTabelaDialog({
             <legend className="mb-1.5 text-sm leading-none font-medium">Meses Anteriores</legend>
             <OpcaoEmLinha nome="meses-da-tabela" marcada={recolhido} onMarcar={() => setRecolhido(true)} rotulo="Recolhidos" detalhe="Só o mês do relatório e os totais do exercício." />
             <OpcaoEmLinha nome="meses-da-tabela" marcada={!recolhido} onMarcar={() => setRecolhido(false)} rotulo="Expandidos" detalhe="Todos os meses, de janeiro ao do relatório, e os totais." />
+          </fieldset>
+          <fieldset>
+            <legend className="mb-1.5 text-sm leading-none font-medium">Colunas</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {COLUNAS.map((c) => {
+                const desabilitada = c.chave === "unitario" && semUnitario;
+                return (
+                  <label
+                    key={c.chave}
+                    className={`flex items-start gap-2 rounded-sm border border-gray-200 px-2.5 py-2 text-sm ${desabilitada ? "text-gray-400" : "cursor-pointer hover:bg-gray-50"}`}
+                    title={desabilitada ? "Despesas e Extra e RN não têm o R$/m³" : undefined}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-3.5 shrink-0 accent-black"
+                      disabled={desabilitada}
+                      checked={colunas[c.chave] && !desabilitada}
+                      onChange={(e) => setColunas((x) => ({ ...x, [c.chave]: e.target.checked }))}
+                    />
+                    <span>
+                      <span className="block font-medium">{c.rotulo}</span>
+                      <span className="block text-xs text-gray-500">{c.detalhe}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </fieldset>
           <fieldset>
             <legend className="mb-1.5 flex w-full items-center gap-3 text-sm leading-none font-medium">

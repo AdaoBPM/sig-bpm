@@ -96,11 +96,13 @@ export type Bloco = Posicao &
     /**
      * A tabela de Resultados (22/10/2026), como a da tela Resultados: a visão (0 Consolidado, 1 a 5 as unidades), o nível
      * (1 Totais, 2 Atribuições, 3 Contas), as linhas escolhidas (os códigos; sem elas, todas) e os meses anteriores ao do
-     * relatório recolhidos (só o mês e os totais) ou não.
+     * relatório recolhidos (só o mês e os totais) ou não; as colunas opcionais (30/10/2026; sem elas, todas).
      */
-    | { tipo: "TABELA"; visao: VisaoDaTabela; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean }
+    | { tipo: "TABELA"; visao: VisaoDaTabela; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean; colunas?: ColunasDaTabela }
   );
 export type VisaoDaTabela = 0 | 1 | 2 | 3 | 4 | 5;
+/** As colunas que a tabela mostra ou não (30/10/2026, pedido do Adão): o R$/m³ e as três da variação. */
+export type ColunasDaTabela = { unitario: boolean; diferenca: boolean; atingimento: boolean; eficiencia: boolean };
 /** As visões da tabela (as abas de Resultados das unidades), com o nome. */
 export const VISOES_DA_TABELA: Array<{ visao: VisaoDaTabela; nome: string }> = [
   { visao: 0, nome: "Consolidado" },

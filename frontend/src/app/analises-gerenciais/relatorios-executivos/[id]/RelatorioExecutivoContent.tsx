@@ -793,7 +793,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <li>
               Tabela abre o modal Adicionar Tabela: a tabela de Resultados de uma aba (Consolidado, Matriz, Filial, Serviços, Despesas e Extra ou RN), até o mês do relatório, como na
               tela Resultados, com o orçado e a variação. Escolha o Modo (Totais, Atribuições ou Contas, como os níveis da tela), os Meses Anteriores (Recolhidos: só o mês do relatório e os totais;
-              Expandidos: de janeiro ao mês do relatório) e os Totais e Contas que entram (de início, todos; marcar um total marca as linhas dele). A tabela inteira cabe no bloco: ela
+              Expandidos: de janeiro ao mês do relatório), as Colunas (Valores Unitários, o R$/m³, que Despesas e Extra e RN não têm; Diferença; Atingimento; e Eficiência: marcadas,
+              entram; de início, todas) e os Totais e Contas que entram (de início, todos; marcar um total marca as linhas dele). A tabela inteira cabe no bloco: ela
               se reduz na proporção (aumente o bloco para lê-la maior; menos linhas, como em Totais, ficam maiores). A engrenagem do menu da edição muda as opções. Na apresentação, como os
               cards, ela se destaca sob o mouse e se amplia ao clicar.
             </li>

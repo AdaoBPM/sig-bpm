@@ -203,9 +203,10 @@ export function TabelaResultados({
   /**
    * A tabela fixa (22/10/2026: os blocos de tabela dos Relatórios Executivos): o nível, as linhas escolhidas (sem elas,
    * todas) e os meses anteriores recolhidos ou não vêm de fora; sem as consultas, os botões dos níveis e dos meses, as
-   * setas dos grupos e a rolagem (a tabela inteira, na largura das colunas).
+   * setas dos grupos e a rolagem (a tabela inteira, na largura das colunas). `colunas` (30/10/2026): o R$/m³ e as colunas
+   * da variação que entram (sem ele, todas).
    */
-  estatico?: { nivel: Nivel; linhas?: string[]; recolhido: boolean };
+  estatico?: { nivel: Nivel; linhas?: string[]; recolhido: boolean; colunas?: { unitario: boolean; diferenca: boolean; atingimento: boolean; eficiencia: boolean } };
   /** Um mês só (27/10/2026: a etapa Linhas do Fechamento Mensal): sem as colunas do total do exercício, que o repetiriam. */
   soOMes?: boolean;
 }) {
@@ -215,8 +216,8 @@ export function TabelaResultados({
   const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel", estatico?.nivel, !estatico);
   const linhasEscolhidas = estatico?.linhas;
   const escolhidas = useMemo(() => (linhasEscolhidas ? new Set(linhasEscolhidas) : null), [linhasEscolhidas]);
-  // Sem o R$/m³ em Despesas e Extra e no RN (21/10/2026).
-  const comUnitario = !("unidade" in visao && (visao.unidade === 4 || visao.unidade === 5));
+  // Sem o R$/m³ em Despesas e Extra e no RN (21/10/2026), nem na tabela fixa sem ele (30/10/2026).
+  const comUnitario = !("unidade" in visao && (visao.unidade === 4 || visao.unidade === 5)) && (estatico?.colunas?.unitario ?? true);
   // Na edição, as contas da linha que a caixa dela marca: ela mesma (se se edita) e as editáveis abaixo dela.
   const contasDaLinha = (l: LinhaResultado) => (edicao ? [l, ...niveis.abaixo(l)].filter(edicao.editavel).map((x) => x.codigo) : []);
   const [consulta, setConsulta] = useState<{ linha: LinhaResultado; mes: MesRelatorio } | null>(null);
@@ -264,7 +265,13 @@ export function TabelaResultados({
   // Colunas estreitas (12/10/2026): numa tela de 1920 px, o mês de referência, o orçado dele, os totais, o orçado
   // total e as variações cabem juntos; os rótulos do orçado quebram em duas linhas (ORÇADO / MAR/26).
   const LARGURAS_DO_ORCADO = comUnitario ? [100, 52, 64] : [100, 52];
-  const LARGURAS_DA_VARIACAO = [96, 96, 84];
+  // As colunas da variação, depois do orçado total; a tabela fixa escolhe quais entram (30/10/2026).
+  const variacoes = [
+    { chave: "diferenca", rotulo: "DIFERENÇA", largura: 96, celula: diferenca },
+    { chave: "atingimento", rotulo: "ATINGIMENTO", largura: 96, celula: atingimento },
+    { chave: "eficiencia", rotulo: "EFICIÊNCIA", largura: 84, celula: eficiencia },
+  ].filter((v) => estatico?.colunas?.[v.chave as "diferenca" | "atingimento" | "eficiencia"] ?? true);
+  const LARGURAS_DA_VARIACAO = variacoes.map((v) => v.largura);
   const th = "px-1.5 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
@@ -285,13 +292,13 @@ export function TabelaResultados({
       </th>
       <th className={`${th} ${ROTULO_DO_ORCADO}`}>%</th>
       {comUnitario ? <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th> : null}
-      {variacao ? (
-        <>
-          <th className={`${th} border-l border-gray-300`}>DIFERENÇA</th>
-          <th className={th}>ATINGIMENTO</th>
-          <th className={th}>EFICIÊNCIA</th>
-        </>
-      ) : null}
+      {variacao
+        ? variacoes.map((v, k) => (
+            <th key={v.chave} className={`${th} ${k === 0 ? "border-l border-gray-300" : ""}`}>
+              {v.rotulo}
+            </th>
+          ))
+        : null}
     </>
   );
   // A tabela fixa, sem a rolagem (os Relatórios Executivos); na tela, a larga, com os rótulos presos no topo.
@@ -365,13 +372,13 @@ export function TabelaResultados({
                 <td className={`${td} ${fundoDoOrcado(l)}`}>{orcadoDa(l, o?.valor ?? undefined)}</td>
                 <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? fracao(l, o.pct, temPct(l)) : ""}</td>
                 {comUnitario ? <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? unitario(l, o.unitario) : ""}</td> : null}
-                {variacao ? (
-                  <>
-                    <td className={`${td} border-l border-gray-100 ${fundo}`}>{diferenca(l, r, o)}</td>
-                    <td className={`${td} ${fundo}`}>{atingimento(l, r, o)}</td>
-                    <td className={`${td} ${fundo}`}>{eficiencia(l, r, o)}</td>
-                  </>
-                ) : null}
+                {variacao
+                  ? variacoes.map((v, k) => (
+                      <td key={v.chave} className={`${td} ${k === 0 ? "border-l border-gray-100" : ""} ${fundo}`}>
+                        {v.celula(l, r, o)}
+                      </td>
+                    ))
+                  : null}
               </>
             );
             const dica = (m: MesRelatorio) => (detalhavel(l) ? `Ver os lançamentos de origem de ${m.rotulo}` : `Ver as listas por obra de ${m.rotulo}`);
