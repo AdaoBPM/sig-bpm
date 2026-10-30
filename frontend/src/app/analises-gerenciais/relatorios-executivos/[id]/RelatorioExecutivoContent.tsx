@@ -32,7 +32,7 @@ import { CONFIGURACOES, ConfiguracoesDoRelatorio } from "../components/Configura
 import { MAXIMO_DO_VIDEO, proporcaoDoArquivo, TIPOS_DE_VIDEO, VideoDialog, videoDoTexto, type VideoEscolhido } from "../components/VideoDialog";
 import { BarraDeEdicao, COLUNAS, escrevendoAgora, GradeDoRelatorio, larguraDoSlide, linhasDaFoto, linhasDaPagina, linhasDoTexto, lugarLivre, tamanhoInicial } from "../components/GradeDoRelatorio";
 import { ColarNoSlideDialog, type Colado, type ComoColar } from "../components/ColarNoSlideDialog";
-import { TransicoesDoSlide, type AjusteDoSlide } from "../components/TransicoesDoSlide";
+import { TransicoesDoSlide, type MudancaDoSlide } from "../components/TransicoesDoSlide";
 import { copiaDe, copiaPeloTexto, formatacaoBasica, TIPO_DA_COPIA, useCopia, type Copia } from "../components/copiarColar";
 import { deTexto, limparHtml } from "../components/TextoRico";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
@@ -350,12 +350,15 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     setEscolher({ id });
   };
   // As páginas (16/10/2026): a nova entra depois da aberta; excluir pede confirmação quando a página tem blocos.
-  // A transição e o Avançar Após de cada página (30/10/2026; antes, a transição do grupo, igual em todas): na aberta ou, com
-  // "Aplicar ao Grupo", em todas as do grupo. A página nova entra com os da aberta.
+  // A transição e o Avançar Após de cada página (30/10/2026; antes, a transição do grupo, igual em todas): cada um na aberta
+  // ou, com o "Aplicar ao Grupo" dele, em todas as do grupo. A página nova entra com os da aberta.
   const ajusteDaPagina = { ...(pagina?.transicao ? { transicao: pagina.transicao } : {}), ...(pagina?.avancarApos ? { avancarApos: pagina.avancarApos } : {}) };
-  const grupoUniforme = daAba.every((p) => p.transicao === pagina?.transicao && (p.avancarApos ?? 0) === (pagina?.avancarApos ?? 0));
-  const mudarAjuste = (ajuste: AjusteDoSlide, aoGrupo: boolean) =>
-    mudarPaginas(daAba.map((p) => (aoGrupo || p.id === pagina?.id ? { ...p, transicao: ajuste.transicao, avancarApos: ajuste.avancarApos } : p)));
+  const uniformes = {
+    transicao: daAba.every((p) => p.transicao === pagina?.transicao),
+    avancarApos: daAba.every((p) => (p.avancarApos ?? 0) === (pagina?.avancarApos ?? 0)),
+  };
+  const mudarAjuste = (m: MudancaDoSlide, aoGrupo: boolean) =>
+    mudarPaginas(daAba.map((p) => (aoGrupo || p.id === pagina?.id ? { ...p, [m.campo]: m.valor } : p)));
   const novaPagina = () => {
     const nova: Pagina = { id: novoId(), blocos: [], ...ajusteDaPagina };
     mudarPaginas([...daAba.slice(0, nPagina + 1), nova, ...daAba.slice(nPagina + 1)]);
@@ -616,7 +619,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 ajuste={ajusteDaPagina}
                 nomeDoSlide={nomeDaPagina(pagina, nPagina)}
                 nomeDoGrupo={aba?.nome ?? "este grupo"}
-                uniforme={grupoUniforme}
+                uniformes={uniformes}
                 onMudar={mudarAjuste}
               />
             ) : null}
@@ -831,10 +834,10 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <li>
               “Transições”, antes do Adicionar, escolhe como o slide aberto entra na apresentação: Esmaecer (o novo aparece sobre o anterior), Rolar
               Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou da esquerda), ou Nenhuma
-              (a troca na hora); a marca na lista mostra a escolhida. Com “Aplicar ao Grupo” marcado, a escolha vale para todos os slides do grupo
-              (marcar a caixa já leva a transição e o avanço do slide aberto a todos; ela abre marcada quando todos já são iguais). Em Cronômetro,
-              “Avançar Após”, digite os segundos: na apresentação, o slide passa sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A página
-              nova entra com a transição e o avanço da aberta.
+              (a troca na hora); a marca na lista mostra a escolhida. Em Cronômetro, “Avançar Após”, digite os segundos: na apresentação, o slide passa
+              sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A transição e o Cronômetro têm cada um o seu “Aplicar ao Grupo”:
+              marcado, a mudança vale para todos os slides do grupo (marcar a caixa já leva a transição, ou o avanço, do slide aberto a todos; ela abre
+              marcada quando todos já são iguais); desmarcado, só para o slide aberto. A página nova entra com a transição e o avanço da aberta.
             </li>
             <li>
               Como no Canva: clique num bloco para escolhê-lo (o contorno tracejado, com o mouse sobre um bloco, mostra qual o clique escolhe). O escolhido fica destacado
