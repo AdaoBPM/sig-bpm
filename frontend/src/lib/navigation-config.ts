@@ -14,7 +14,6 @@ import {
   HardHat,
   PackageCheck,
   ShieldCheck,
-  Target,
   TrendingUp,
   Columns3,
   Database,
@@ -88,8 +87,8 @@ export const navGrupos: NavGrupo[] = [
         permission: "relatorios_executivos:ler",
         recurso: "ANALISES_GERENCIAIS",
       },
-      { title: "Resultados ROVA", href: "/analises-gerenciais/resultados-rova", icon: TrendingUp, emDesenvolvimento: true },
-      { title: "Indicadores VPR", href: "/analises-gerenciais/indicadores-vpr", icon: Target, emDesenvolvimento: true },
+      // Resultados PROVA (30/10/2026, pedido do Adão; antes, Resultados ROVA), em desenvolvimento. O Indicadores VPR saiu.
+      { title: "Resultados PROVA", href: "/analises-gerenciais/resultados-prova", icon: TrendingUp, emDesenvolvimento: true },
       // Custos Operacionais (15/10/2026), em desenvolvimento.
       { title: "Custos Operacionais", href: "/analises-gerenciais/custos-operacionais", icon: Calculator, emDesenvolvimento: true },
       // Painéis de Bordo (27/10/2026), em desenvolvimento.
@@ -371,7 +370,7 @@ export function permissaoDaTela(pathname: string): string | null {
 export function primeiraTelaPermitida(pode: (p: string) => boolean): string | null {
   for (const g of navGrupos) {
     for (const item of g.itens) {
-      // As telas em desenvolvimento (Resultados ROVA…) não são início de ninguém (17/10/2026).
+      // As telas em desenvolvimento (Resultados PROVA…) não são início de ninguém (17/10/2026).
       if (item.emDesenvolvimento) continue;
       const permitido = itemPermitido(item, pode);
       if (permitido) return permitido.href;
