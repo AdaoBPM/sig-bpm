@@ -10,7 +10,7 @@ import { EtiquetasDaBarra } from "@/components/layout/EtiquetasDaBarra";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { podeSair, useAlteracoesPendentes, useSalvamentoPendente } from "@/lib/alteracoesPendentes";
 import { plural } from "@/lib/texto";
@@ -330,7 +330,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     video.mutate({ v: { origem: "ARQUIVO", arquivo, proporcao: await proporcaoDoArquivo(arquivo) }, quadro: null });
   };
   // O texto entra como Texto Livre ou Anotação (com a formatação básica, se escolhida, nos limites do servidor), no lugar
-  // mais perto do alto da página em que caiba; a imagem, como a do Adicionar (com Legenda, Livre ou de Fundo).
+  // mais perto do alto da página em que caiba; a imagem, como a do Adicionar (com Legenda ou Livre) ou a de Fundo.
   const aplicarColado = (c: Colado, como: ComoColar) => {
     setColado(null);
     if (como.tipo === "IMAGEM") {
@@ -634,43 +634,51 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                   }
                 />
                 {/* Na largura das opções, sem quebrar linha (22/10/2026: "Imagem com Legenda" quebrava). */}
+                {/* Em três grupos (30/10/2026, pedido do Adão): Objetos, Texto e Imagem e Vídeo; a Imagem de Fundo vai para os botões das páginas. */}
                 <DropdownMenuContent align="end" className="w-max min-w-44 [&_[role=menuitem]]:whitespace-nowrap">
-                  <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando(true)}>
-                    <LayoutGrid className="size-4" />
-                    Cards
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => incluir([{ tipo: "ANOTACAO", nota: "POSITIVO", texto: "" }])}>
-                    <StickyNote className="size-4" />
-                    Anotação
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => incluir([{ tipo: "TEXTO", texto: "" }])}>
-                    <Type className="size-4" />
-                    Texto Livre
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAdicionandoSumario(true)}>
-                    <ListOrdered className="size-4" />
-                    Sumário
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAdicionandoTabela(true)}>
-                    <Table2 className="size-4" />
-                    Tabela
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => seletorDeFoto.current?.click()}>
-                    <ImagePlus className="size-4" />
-                    Imagem com Legenda
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => seletorDeImagem.current?.click()}>
-                    <Imagem className="size-4" />
-                    Imagem Livre
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => seletorDeFundo.current?.click()}>
-                    <ImageUp className="size-4" />
-                    Imagem de Fundo
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
-                    <Video className="size-4" />
-                    Vídeo
-                  </DropdownMenuItem>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-xs text-gray-500">Objetos</DropdownMenuLabel>
+                    <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando(true)}>
+                      <LayoutGrid className="size-4" />
+                      Cards
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAdicionandoTabela(true)}>
+                      <Table2 className="size-4" />
+                      Tabela
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-xs text-gray-500">Texto</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => incluir([{ tipo: "ANOTACAO", nota: "POSITIVO", texto: "" }])}>
+                      <StickyNote className="size-4" />
+                      Anotação
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => incluir([{ tipo: "TEXTO", texto: "" }])}>
+                      <Type className="size-4" />
+                      Texto Livre
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAdicionandoSumario(true)}>
+                      <ListOrdered className="size-4" />
+                      Sumário
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-xs text-gray-500">Imagem e Vídeo</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => seletorDeFoto.current?.click()}>
+                      <ImagePlus className="size-4" />
+                      Imagem com Legenda
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => seletorDeImagem.current?.click()}>
+                      <Imagem className="size-4" />
+                      Imagem Livre
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEscolhendoVideo("novo")}>
+                      <Video className="size-4" />
+                      Vídeo
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
@@ -764,7 +772,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               reduz ou se amplia por inteiro para caber na tela de quem abre, com a mesma aparência e os blocos nos mesmos lugares em qualquer resolução.
             </li>
             <li>
-              Na sua aba, “Adicionar” traz nove opções, que entram na página aberta. Cards abre a lista dos cards do Painel de Bordo e
+              Na sua aba, “Adicionar” traz oito opções, em três grupos, que entram na página aberta: Objetos (Cards e Tabela), Texto (Anotação, Texto
+              Livre e Sumário) e Imagem e Vídeo (Imagem com Legenda, Imagem Livre e Vídeo). Cards abre a lista dos cards do Painel de Bordo e
               dos Indicadores (o card de destaque, com o valor do mês e o acumulado, cada um com o orçado num quadro cinza e a faixa de melhor ou pior, como no Painel), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
               Painel e os dos Indicadores com os rótulos e em barras (o Configurar Gráfico do card muda); a Metodologia, à direita do nome, ocupa até metade da largura dos valores, quebrando as linhas. Os cards trazem só as competências fechadas, até o mês do relatório.
             </li>
@@ -823,11 +832,12 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               e na leitura, o vídeo tem os controles do player.
             </li>
             <li>
-              Imagem de Fundo envia uma imagem (reduzida a até 2560 px) e abre o modal Imagem de Fundo, com a miniatura da tela inteira: arraste a imagem
+              A Imagem de Fundo fica nos botões ao lado das páginas: o ícone de imagem envia uma (reduzida a até 2560 px) e abre o modal Imagem de Fundo,
+              com a miniatura da tela inteira: arraste a imagem
               para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; “Restaurar Ajustes” a centraliza a 100% (o tamanho que
               cobre a tela) e sem os ajustes. Ela
               ocupa o fundo do slide inteiro, por cima do cabeçalho (a faixa tracejada da miniatura) e atrás dos blocos; cada página tem uma. Na página, ela
-              aparece atrás da grade; os botões ao lado das páginas a ajustam e a removem. Uma página só com a Imagem de Fundo já é um slide. No modal, “Aplicar
+              aparece atrás da grade; com ela, o ícone de imagem dá lugar aos de ajustá-la e removê-la. Uma página só com a Imagem de Fundo já é um slide. No modal, “Aplicar
               Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.
             </li>
             <li>
@@ -1004,7 +1014,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 >
                   <FileX2 className="size-4" />
                 </button>
-                {/* A Imagem de Fundo da página (20/10/2026): ajustar e remover, quando ela tem uma. */}
+                {/* A Imagem de Fundo da página (20/10/2026): sem ela, o ícone que a envia (30/10/2026, pedido do Adão; antes, no
+                    Adicionar); com ela, no lugar dele, os de ajustar e remover. */}
                 {pagina?.fundo ? (
                   <>
                     <button type="button" className={botaoIcone} onClick={() => setAjustandoFundo(pagina.fundo ?? null)} title="Ajustar a Imagem de Fundo da página" aria-label="Ajustar a Imagem de Fundo">
@@ -1014,7 +1025,18 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                       <ImageOff className="size-4" />
                     </button>
                   </>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    className={botaoIcone}
+                    disabled={!pagina || imagemDeFundo.isPending}
+                    onClick={() => seletorDeFundo.current?.click()}
+                    title={imagemDeFundo.isPending ? "Enviando a Imagem de Fundo…" : "Imagem de Fundo da página"}
+                    aria-label="Imagem de Fundo da página"
+                  >
+                    <ImageUp className="size-4" />
+                  </button>
+                )}
                 <span className="mx-1 h-5 w-px bg-gray-200" />
               </>
             ) : null}
