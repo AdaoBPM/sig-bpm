@@ -13,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
@@ -50,6 +51,8 @@ export function LancamentosContestacoesContent() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const [importando, setImportando] = useState(false);
+  // A contestação cuja importação se exclui (a lixeira), à espera da confirmação no modal.
+  const [excluindo, setExcluindo] = useState<NonNullable<LancamentoManual["contestacao"]> | null>(null);
   const lista = useQuery({ queryKey: ["lancamentos-manuais", anoMes, "contestacoes"], queryFn: () => lancamentosManuaisService.listarContestacoes(anoMes), enabled: periodo !== null });
   const pendentes = useQuery({
     queryKey: ["contestacoes", "para-lancamentos", anoMes],
@@ -64,7 +67,8 @@ export function LancamentosContestacoesContent() {
   const desfazer = useMutation({
     mutationFn: (id: string) => contestacoesService.desfazerImportacao(id),
     onSuccess: () => {
-      toast.success("Importação desfeita: a contestação voltou à lista do Importar.");
+      toast.success("Importação excluída: os lançamentos saíram, e a contestação voltou à lista do Importar.");
+      setExcluindo(null);
       invalidar();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível desfazer a importação.")),
@@ -109,7 +113,10 @@ export function LancamentosContestacoesContent() {
               na conta novos (com a filial do movimento). Uma combinação que nenhuma aba de resultado soma é recusada, com o motivo, e a contestação fica
               na lista.
             </li>
-            <li>A lixeira desfaz a importação de uma contestação: os lançamentos dela saem, e ela volta à lista do Importar (acatada).</li>
+            <li>
+              A lixeira exclui a importação de uma contestação, depois da confirmação num modal: os lançamentos dela saem (o estorno e o novo), e ela volta à
+              lista do Importar (acatada).
+            </li>
             <li>Os lançamentos entram na DRE na próxima apuração. Use os filtros nos rótulos das colunas; o total no rodapé acompanha o filtro.</li>
           </ul>
         }
@@ -196,12 +203,10 @@ export function LancamentosContestacoesContent() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label="Desfazer a importação"
-                      title="Desfazer a importação da contestação (os lançamentos dela)"
+                      aria-label="Excluir a contestação importada"
+                      title="Excluir a contestação importada (os lançamentos dela; ela volta ao Importar)"
                       disabled={desfazer.isPending}
-                      onClick={() => {
-                        if (window.confirm(`Desfazer a importação da contestação nº ${l.contestacao!.numero}? Os lançamentos dela saem, e ela volta à lista do Importar.`)) desfazer.mutate(l.contestacao!.id);
-                      }}
+                      onClick={() => setExcluindo(l.contestacao)}
                     >
                       <Trash2 className="size-4 text-red-700" />
                     </Button>
@@ -222,6 +227,39 @@ export function LancamentosContestacoesContent() {
             invalidar();
           }}
         />
+      ) : null}
+      {excluindo ? (
+        <Dialog open onOpenChange={(o) => (!o ? setExcluindo(null) : undefined)}>
+          <DialogContent className="rounded-sm sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Excluir a Contestação Importada nº {excluindo.numero}</DialogTitle>
+              <DialogDescription>
+                Os lançamentos dela em {rotuloMes} saem (o estorno e o lançamento novo), e a contestação volta à lista do Importar, acatada, para ser
+                importada de novo. A exclusão fica no log de auditoria.
+              </DialogDescription>
+            </DialogHeader>
+            <ul className="min-w-0 space-y-1 overflow-hidden rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+              {itens
+                .filter((l) => l.contestacao?.id === excluindo.id)
+                .map((l) => (
+                  <li key={l.id} className="flex justify-between gap-4">
+                    <span className="min-w-0 truncate text-gray-700" title={l.descricao}>
+                      {l.contaResultado?.reduzido ?? "—"} · {l.descricao}
+                    </span>
+                    <span className="whitespace-nowrap text-gray-900">{moeda(l.valor)}</span>
+                  </li>
+                ))}
+            </ul>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setExcluindo(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" className="rounded-sm bg-red-700 font-bold text-white hover:bg-red-800" disabled={desfazer.isPending} onClick={() => desfazer.mutate(excluindo.id)}>
+                {desfazer.isPending ? "Excluindo…" : "Excluir"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   );
