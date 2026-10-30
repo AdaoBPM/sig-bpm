@@ -161,18 +161,25 @@ export function linhasDaDRE<L extends Linha>(todas: L[]) {
 /**
  * O estado dos níveis de uma tabela de linhas da DRE. As seções P e S não
  * aparecem; PRODUÇÃO E SERVIÇOS (PS) só quando há volumes, e (com eles) só em
- * Contas. `chave` guarda o nível escolhido no navegador; com `fixo` (22/10/2026: as tabelas dos Relatórios Executivos),
- * o nível é esse, sem o do navegador.
+ * Contas — ou, com `psSempre` (30/10/2026, pedido do Adão: Resultados Empresariais e as telas do Fechamento Mensal), em
+ * todos os níveis, aberta (as linhas de volume são as bases dos totais; a seta dela ainda a fecha). `chave` guarda o nível
+ * escolhido no navegador; com `fixo` (22/10/2026: as tabelas dos Relatórios Executivos), o nível é esse, sem o do navegador.
  */
-export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: Nivel) {
+export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: Nivel, psSempre = false) {
   const linhas = useMemo(() => linhasDaDRE(todas), [todas]);
   const { nivel, acima, comFilhos, soContas } = useMemo(() => estrutura(linhas), [linhas]);
+  const ps = linhas.find((l) => l.tipo === "SECAO")?.codigo;
+  const fechadosDo = (n: Nivel) => {
+    const f = fechadosAte(n, nivel, comFilhos, soContas);
+    if (ps && psSempre) f.delete(ps);
+    return f;
+  };
   const [nivelGeral, setNivelGeral] = useState<Nivel>(() => fixo ?? nivelGuardado(chave));
-  const [fechados, setFechados] = useState<Set<string>>(() => fechadosAte(fixo ?? nivelGuardado(chave), nivel, comFilhos, soContas));
+  const [fechados, setFechados] = useState<Set<string>>(() => fechadosDo(fixo ?? nivelGuardado(chave)));
   const escolherNivel = (n: Nivel) => {
     setNivelGeral(n);
     guardarNivel(chave, n);
-    setFechados(fechadosAte(n, nivel, comFilhos, soContas));
+    setFechados(fechadosDo(n));
   };
   const alternar = (codigo: string) =>
     setFechados((f) => {
@@ -181,9 +188,9 @@ export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: 
       else novo.add(codigo);
       return novo;
     });
-  const ps = linhas.find((l) => l.tipo === "SECAO")?.codigo;
   const visivel = (l: L) =>
-    !(acima.get(l.codigo) ?? []).some((g) => fechados.has(g)) && !(ps && nivelGeral !== 3 && (l.codigo === ps || (acima.get(l.codigo) ?? []).includes(ps)));
+    !(acima.get(l.codigo) ?? []).some((g) => fechados.has(g)) &&
+    !(ps && !psSempre && nivelGeral !== 3 && (l.codigo === ps || (acima.get(l.codigo) ?? []).includes(ps)));
   return {
     linhas,
     nivelGeral,

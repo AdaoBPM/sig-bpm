@@ -98,7 +98,7 @@ function EnviarPlanilha({ anoMes, coluna, onEnviada }: { anoMes: string; coluna:
 function Tabela({ visao, soDiferencas }: { visao: VisaoConferencia; soDiferencas: boolean }) {
   // Sem o primeiro total da ROL, que repete o segundo, como na DRE (22/10/2026).
   const semRolRepetida = useMemo(() => semPrimeiroTotalDaRol(visao.linhas), [visao.linhas]);
-  const niveis = useNiveisDRE(semRolRepetida, "sig.conferencia.nivel");
+  const niveis = useNiveisDRE(semRolRepetida, "sig.conferencia.nivel", undefined, true);
   // Com "Só as Diferenças", todas as linhas com diferença aparecem, sem os grupos fechados escondê-las.
   const linhas = soDiferencas ? niveis.linhas.filter((l) => l.destaque) : niveis.linhas.filter(niveis.visivel);
   const destaque = (l: LinhaConferencia) => l.tipo !== "ITEM";
