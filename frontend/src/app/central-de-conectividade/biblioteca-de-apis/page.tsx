@@ -4,7 +4,7 @@ import { SemLeitura } from "@/components/shared/SemLeitura";
 
 import { BibliotecaDeApisContent } from "./BibliotecaDeApisContent";
 
-/** A Biblioteca de APIs (24/10/2026, Central de Conectividade). */
+/** A tela APIs (24/10/2026; até 30/10/2026, o processo Biblioteca de APIs), na Central de Conectividade. */
 export default function BibliotecaDeApisPage() {
   return (
     <ProtectedLayout>

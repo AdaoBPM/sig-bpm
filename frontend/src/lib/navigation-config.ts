@@ -175,24 +175,17 @@ export const navGrupos: NavGrupo[] = [
     ],
   },
   {
-    // A Central de Conectividade (24/10/2026; antes da Controladoria desde 26/10/2026): a Biblioteca de APIs, que abre os
-    // dados do SIG a outros aplicativos, e as Integrações e Consultas, ainda em desenvolvimento.
-    titulo: "Central de Conectividade",
-    itens: [
-      // Integrações e Consultas (27/10/2026; o endereço continua o das Integrações).
-      { title: "Integrações e Consultas", href: "/central-de-conectividade/integracoes", icon: Cable, emDesenvolvimento: true },
-      {
-        title: "Biblioteca de APIs",
-        href: "/central-de-conectividade/biblioteca-de-apis",
-        icon: Library,
-        permission: "biblioteca_apis:ler",
-        recurso: "CENTRAL_CONECTIVIDADE",
-      },
-    ],
-  },
-  {
     titulo: "Controladoria",
     itens: [
+      // A Central de Conectividade (30/10/2026, pedido do Adão: um processo da Controladoria, acima dos Cadastros da
+      // Controladoria): a tela APIs, que abre os dados do SIG a outros aplicativos. O endereço da tela continua o mesmo.
+      {
+        title: "Central de Conectividade",
+        href: "/central-de-conectividade/biblioteca-de-apis",
+        icon: Cable,
+        recurso: "CENTRAL_CONECTIVIDADE",
+        telas: [{ title: "APIs", href: "/central-de-conectividade/biblioteca-de-apis", icon: Library, permission: "biblioteca_apis:ler" }],
+      },
       {
         title: "Cadastros da Controladoria",
         href: "/cadastros/unidades",
@@ -411,7 +404,7 @@ export const pageTitles: Record<string, string> = {
   "/relatorios/painel": "Painel de Bordo",
   "/cenarios/sinteticos": "Cenários Sintéticos",
   "/cenarios/analiticos": "Cenários Analíticos",
-  "/central-de-conectividade/biblioteca-de-apis": "Biblioteca de APIs",
+  "/central-de-conectividade/biblioteca-de-apis": "APIs",
 };
 
 /** Uma parte do caminho no topo da tela; sem href, é a tela atual. */

@@ -87,8 +87,8 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   tipo_movimento: "Tipo de movimento",
   tabela_estaca: "Tabela de estacas",
   relatorio_executivo: "Relatório Executivo",
-  api: "Biblioteca de APIs",
-  api_bloqueio: "Bloqueio na Biblioteca de APIs",
+  api: "APIs",
+  api_bloqueio: "Bloqueio nas APIs",
   contestacao: "Contestação de gasto",
 };
 

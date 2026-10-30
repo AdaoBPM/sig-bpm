@@ -59,7 +59,7 @@ const envSchema = z
 
 const parsed = envSchema.parse(process.env);
 if (process.env.API_EXTERNA && process.env.API_EXTERNA !== parsed.API_EXTERNA) {
-  console.warn(`API_EXTERNA="${process.env.API_EXTERNA}" não é desligada, https nem http: a API da Biblioteca de APIs fica desligada.`);
+  console.warn(`API_EXTERNA="${process.env.API_EXTERNA}" não é desligada, https nem http: as APIs da Central de Conectividade ficam desligadas.`);
 }
 
 export const env = {

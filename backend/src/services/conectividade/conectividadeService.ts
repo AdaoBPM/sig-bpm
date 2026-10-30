@@ -50,9 +50,9 @@ const podeUsar = (u: UsuarioAutenticado) => u.permissions.includes("biblioteca_a
 
 /** O usuário e o endereço liberados (os controles da tela) e a Biblioteca de APIs no perfil. */
 async function exigirLiberado(u: UsuarioAutenticado, origem: Origem) {
-  if (!podeUsar(u)) throw new ApiError(403, "O seu perfil não tem a Biblioteca de APIs (Central de Conectividade). Peça ao Administrador do SIG.", "SEM_BIBLIOTECA");
-  if (await bloqueado("USUARIO", u.sub)) throw new ApiError(403, "O seu acesso às APIs está bloqueado na Biblioteca de APIs.", "USUARIO_BLOQUEADO");
-  if (await bloqueado("ENDERECO", origem.endereco)) throw new ApiError(403, "Este endereço está bloqueado na Biblioteca de APIs.", "ENDERECO_BLOQUEADO");
+  if (!podeUsar(u)) throw new ApiError(403, "O seu perfil não tem a tela APIs (Central de Conectividade). Peça ao Administrador do SIG.", "SEM_BIBLIOTECA");
+  if (await bloqueado("USUARIO", u.sub)) throw new ApiError(403, "O seu acesso às APIs está bloqueado na Central de Conectividade.", "USUARIO_BLOQUEADO");
+  if (await bloqueado("ENDERECO", origem.endereco)) throw new ApiError(403, "Este endereço está bloqueado na Central de Conectividade.", "ENDERECO_BLOQUEADO");
 }
 
 const registrar = (acao: (typeof ACOES_DA_API)[number] | "LOGIN_FALHA", u: { sub: string; nome: string } | null, origem: Origem, metadados: Record<string, unknown>) =>
@@ -112,7 +112,7 @@ export const conectividadeService = {
       const api = apiDoCodigo(codigo);
       if (!api) throw new ApiError(404, `Nenhuma API com o código "${codigo}". A lista está em GET /api/v1/apis.`, "API_INEXISTENTE");
       await exigirLiberado(u, origem);
-      if (await bloqueado("API", codigo)) throw new ApiError(403, "Esta API está bloqueada na Biblioteca de APIs.", "API_BLOQUEADA");
+      if (await bloqueado("API", codigo)) throw new ApiError(403, "Esta API está bloqueada na Central de Conectividade.", "API_BLOQUEADA");
       const { formato: _, ...parametros } = consulta;
       const resposta = await api.executar(parametros, u, formato);
       await registrar("ACESSO_API", u, origem, { codigo, formato, status: 200, ms: Date.now() - inicio });

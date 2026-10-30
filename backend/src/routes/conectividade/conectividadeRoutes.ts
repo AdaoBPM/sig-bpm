@@ -21,7 +21,7 @@ apiExternaRoutes.post("/token", tokenPorEndereco, tokenPorEmail, asyncHandler(c.
 apiExternaRoutes.get("/apis", asyncHandler(autenticacaoDaApi), pedidosPorUsuario, asyncHandler(c.catalogoDaApi));
 apiExternaRoutes.get("/apis/:codigo", asyncHandler(autenticacaoDaApi), pedidosPorUsuario, asyncHandler(c.executar));
 
-/** A tela Biblioteca de APIs, montada em /conectividade: Ler vê o catálogo, a prévia e os próprios acessos; Editar, os de todos e os bloqueios. */
+/** A tela APIs (Central de Conectividade), montada em /conectividade: Ler vê o catálogo, a prévia e os próprios acessos; Editar, os de todos e os bloqueios. */
 export const conectividadeRoutes = Router();
 const ler = verificarPermissao("biblioteca_apis:ler");
 conectividadeRoutes.get("/catalogo", autenticacao, ler, asyncHandler(c.catalogo));

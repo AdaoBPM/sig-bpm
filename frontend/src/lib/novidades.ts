@@ -387,7 +387,8 @@ export const NOVIDADES: Novidade[] = [
   },
   {
     publicada: "2026-10-26T09:56",
-    processo: "Biblioteca de APIs",
+    processo: "Central de Conectividade",
+    tela: "APIs",
     rota: "/central-de-conectividade/biblioteca-de-apis",
     itens: [
       "A nova Central de Conectividade, com a Biblioteca de APIs: as DREs, os cards e os indicadores do Painel de Bordo dos Resultados Empresariais e dos Cenários para outros aplicativos (planilhas, o Power BI), em tabela ou em visual, com o login e a senha do SIG.",

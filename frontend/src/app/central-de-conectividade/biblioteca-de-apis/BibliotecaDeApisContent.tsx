@@ -69,7 +69,7 @@ function Situacao({ c }: { c: Catalogo }) {
       <Destaque>
         <strong>As APIs estão desligadas neste endereço.</strong> O TI da BPM as liga depois de pôr o SIG atrás do endereço com HTTPS (regra de segurança do
         TI: o login e o token não podem passar pela rede sem criptografia). Até lá, os aplicativos recebem a recusa “API desligada”, sem a senha ser conferida.
-        A biblioteca, a pré-visualização e os bloqueios já funcionam aqui.
+        O catálogo, a pré-visualização e os bloqueios já funcionam aqui.
       </Destaque>
     );
   }
@@ -235,7 +235,7 @@ type ChaveDaAba = (typeof ABAS)[number]["chave"];
 const ORIGEM_DA_ABA = { resultados: "Resultados Empresariais", cenarios: "Cenários" } as const;
 
 /**
- * A Biblioteca de APIs (24/10/2026, pedido do Adão; a Central de Conectividade): o catálogo das APIs que abrem a outros
+ * A tela APIs (24/10/2026, pedido do Adão; até 30/10/2026, o processo Biblioteca de APIs), na Central de Conectividade: o catálogo das APIs que abrem a outros
  * aplicativos os dados das DREs, dos cards e dos indicadores dos Resultados Empresariais e dos Cenários — com o código, os
  * parâmetros, os formatos (dados e visual) e a pré-visualização —, como conectar e os acessos (quem e de onde), com os
  * controles deslizantes de quem edita a tela para bloquear APIs, usuários e endereços. Em abas, com os blocos um abaixo do
@@ -250,10 +250,10 @@ export function BibliotecaDeApisContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Biblioteca de APIs"
+        titulo="APIs"
         sobre={
           <p>
-            As APIs que abrem os dados do SIG a outros aplicativos (planilhas, o Power BI, sistemas da empresa): as DREs, os cards e os indicadores do Painel de
+            Na Central de Conectividade, da Controladoria, as APIs que abrem os dados do SIG a outros aplicativos (planilhas, o Power BI, sistemas da empresa): as DREs, os cards e os indicadores do Painel de
             Bordo dos Resultados Empresariais e dos Cenários, em tabela (os valores) ou em visual (os cards e as tabelas em SVG). O aplicativo entra com o código
             da API e o login e a senha do SIG, e lê só o que esse login lê no SIG. Segue as regras do TI da BPM para API: ligada só pelo TI, só por HTTPS, o
             token no cabeçalho, o limite de tentativas e o registro de cada pedido na Auditoria.
@@ -282,25 +282,25 @@ export function BibliotecaDeApisContent() {
             <li>
               Acesso às APIs (os últimos 7, 30 ou 90 dias): os destaques do período (os pedidos, os recusados, os usuários e os endereços — os computadores ou
               servidores que chamam as APIs) e, um abaixo do outro, os pedidos por dia, por usuário, por endereço e por API e os últimos pedidos, com o motivo das
-              recusas. Quem só lê a Biblioteca vê os próprios acessos. “Exportar”, ao lado do período, leva os últimos pedidos em Excel ou PDF.
+              recusas. Quem só lê a tela vê os próprios acessos. “Exportar”, ao lado do período, leva os últimos pedidos em Excel ou PDF.
             </li>
             <li>
-              Quem edita a Biblioteca (o perfil com Editar na Central de Conectividade) vê os acessos de todos e bloqueia ou libera, nos controles deslizantes, uma
+              Quem edita a tela (o perfil com Editar em APIs, na Central de Conectividade) vê os acessos de todos e bloqueia ou libera, nos controles deslizantes, uma
               API (no cartão dela, nas abas das origens), um usuário ou um endereço (nas tabelas de Acesso às APIs): o bloqueio vale na hora, para os pedidos e para
               o token, e fica na Auditoria. Os bloqueados sem pedidos no período continuam nas tabelas, para liberar.
             </li>
             <li>
-              Para um usuário usar as APIs, o perfil dele precisa da Biblioteca de APIs (Ler) e da leitura das telas dos dados, na tela Perfis. Na Auditoria, os
+              Para um usuário usar as APIs, o perfil dele precisa da tela APIs (Ler, na Central de Conectividade) e da leitura das telas dos dados, na tela Perfis. Na Auditoria, os
               pedidos às APIs entram com “Incluir Acessos”, como os acessos às telas.
             </li>
           </ul>
         }
       />
-      <Abas rotulo="Abas da Biblioteca de APIs" ativa={aba} onMudar={(a) => setAba(a as ChaveDaAba)} abas={[...ABAS]} />
+      <Abas rotulo="Abas de APIs" ativa={aba} onMudar={(a) => setAba(a as ChaveDaAba)} abas={[...ABAS]} />
       {aba === "acessos" ? (
         <AcessosDaApi />
       ) : consulta.isError ? (
-        <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar a Biblioteca de APIs.")} />
+        <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as APIs.")} />
       ) : !c ? (
         <div className="h-96 animate-pulse rounded-sm bg-gray-100" />
       ) : aba === "conectar" ? (

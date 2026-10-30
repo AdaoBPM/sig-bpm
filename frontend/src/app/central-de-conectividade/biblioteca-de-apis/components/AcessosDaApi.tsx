@@ -28,7 +28,7 @@ const diaCurto = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
 const MOTIVO: Record<string, string> = {
   API_DESLIGADA: "API desligada",
   HTTPS_OBRIGATORIO: "sem HTTPS",
-  SEM_BIBLIOTECA: "sem a Biblioteca no perfil",
+  SEM_BIBLIOTECA: "sem a tela APIs no perfil",
   SEM_PERMISSAO: "sem a leitura dos dados",
   USUARIO_BLOQUEADO: "usuário bloqueado",
   ENDERECO_BLOQUEADO: "endereço bloqueado",
@@ -64,7 +64,7 @@ function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: number; 
 }
 
 /**
- * Os acessos às APIs (24/10/2026, a Auditoria): quem edita a Biblioteca vê os de todos — os pedidos por dia, os usuários e
+ * Os acessos às APIs (24/10/2026, a Auditoria): quem edita a tela APIs vê os de todos — os pedidos por dia, os usuários e
  * os endereços que chamam, as APIs mais pedidas e os últimos pedidos — e bloqueia ou libera um usuário ou um endereço no
  * controle deslizante; quem só lê vê os próprios.
  */
@@ -113,7 +113,7 @@ export function AcessosDaApi() {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-gray-600">{a.todos ? "Os pedidos de todos os usuários às APIs." : "Os seus pedidos às APIs (quem edita a Biblioteca vê os de todos)."}</p>
+        <p className="text-sm text-gray-600">{a.todos ? "Os pedidos de todos os usuários às APIs." : "Os seus pedidos às APIs (quem edita a tela vê os de todos)."}</p>
         <span className="flex overflow-hidden rounded-sm border border-gray-300" role="radiogroup" aria-label="Período">
           {PERIODOS.map((d) => (
             <button
@@ -130,7 +130,7 @@ export function AcessosDaApi() {
         </span>
         {/* O Exportar dos Últimos Pedidos (30/10/2026). */}
         <ExportarTabela
-          titulo={`Biblioteca de APIs · Últimos Pedidos · ${dias} dias`}
+          titulo={`APIs · Últimos Pedidos · ${dias} dias`}
           colunas={COLUNAS_DOS_PEDIDOS}
           linhas={a.ultimos}
         />

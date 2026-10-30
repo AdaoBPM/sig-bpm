@@ -22,11 +22,11 @@ export const openApiSpec = {
     { name: "Auth", description: "Autenticação JWT" },
     { name: "Auditoria", description: "Registro de ações de negócio" },
     {
-      name: "Biblioteca de APIs",
+      name: "Central de Conectividade",
       description:
         "Os dados das DREs, dos cards e dos indicadores dos Resultados Empresariais e dos Cenários para outros aplicativos (24/10/2026). " +
         "Fora do SIG, o endereço é o do SIG com o prefixo /api (http(s)://servidor/api/v1/…). Na produção, só depois que o TI liga a API (a API_EXTERNA; antes, 503) e só por HTTPS (regra do TI);" +
-        "o token vale uma hora; cada pedido exige a Biblioteca de APIs (Ler) e a leitura da tela dos dados no perfil, e fica na Auditoria.",
+        "o token vale uma hora; cada pedido exige a tela APIs da Central de Conectividade (Ler) e a leitura da tela dos dados no perfil, e fica na Auditoria.",
     },
   ],
   components: {
@@ -249,7 +249,7 @@ export const openApiSpec = {
     },
     "/v1/token": {
       post: {
-        tags: ["Biblioteca de APIs"],
+        tags: ["Central de Conectividade"],
         summary: "Pedir o token da API",
         description: "Com o e-mail e a senha do SIG. Limite: 20 tentativas erradas por e-mail e 30 por endereço a cada 15 minutos.",
         requestBody: {
@@ -259,7 +259,7 @@ export const openApiSpec = {
         responses: {
           "200": { description: "{ data: { token, tipo: \"Bearer\", expiraEm } }" },
           "401": { description: "E-mail ou senha inválidos", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-          "403": { description: "Sem HTTPS, sem a Biblioteca de APIs no perfil, ou o usuário ou o endereço bloqueados" },
+          "403": { description: "Sem HTTPS, sem a tela APIs no perfil, ou o usuário ou o endereço bloqueados" },
           "422": { description: "O e-mail e a senha não vieram" },
           "429": { description: "Muitas tentativas" },
           "503": { description: "A API ainda não foi ligada pelo TI (API_DESLIGADA)" },
@@ -268,20 +268,20 @@ export const openApiSpec = {
     },
     "/v1/apis": {
       get: {
-        tags: ["Biblioteca de APIs"],
+        tags: ["Central de Conectividade"],
         summary: "As APIs que o usuário do token lê",
         security: [{ BearerAuth: [] }],
         responses: {
           "200": { description: "{ data: [{ codigo, nome, origem, descricao, formatos, parametros, bloqueada }], meta: { total } }" },
           "401": { description: "Sem o token, ou o token inválido ou vencido" },
-          "403": { description: "Sem HTTPS, sem a Biblioteca de APIs no perfil, ou o usuário ou o endereço bloqueados" },
+          "403": { description: "Sem HTTPS, sem a tela APIs no perfil, ou o usuário ou o endereço bloqueados" },
           "503": { description: "A API ainda não foi ligada pelo TI (API_DESLIGADA)" },
         },
       },
     },
     "/v1/apis/{codigo}": {
       get: {
-        tags: ["Biblioteca de APIs"],
+        tags: ["Central de Conectividade"],
         summary: "Os dados de uma API",
         description:
           "Códigos: resultados-dre, resultados-painel, resultados-indicadores, cenarios, cenario-dre, cenario-painel e cenario-indicadores. " +
