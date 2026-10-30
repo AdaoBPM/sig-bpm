@@ -684,6 +684,11 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 Reabrir
               </Button>
             ) : null}
+            <Button type="button" className={botaoPrimario} disabled={!slides.length} title={slides.length ? "Apresentar as páginas em tela inteira" : "Nenhuma página com blocos para apresentar"} onClick={apresentar}>
+              <Presentation className="size-4" />
+              Apresentar
+            </Button>
+            {/* O Exportar no fim da barra, como nas demais telas (30/10/2026). */}
             <ExportarPdfDoRelatorio
               relatorioId={relatorio.id}
               periodo={relatorio.rotuloMes}
@@ -695,10 +700,6 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               cores={cores}
               tipo={tipo}
             />
-            <Button type="button" className={botaoPrimario} disabled={!slides.length} title={slides.length ? "Apresentar as páginas em tela inteira" : "Nenhuma página com blocos para apresentar"} onClick={apresentar}>
-              <Presentation className="size-4" />
-              Apresentar
-            </Button>
             <input
               ref={seletorDeFoto}
               type="file"

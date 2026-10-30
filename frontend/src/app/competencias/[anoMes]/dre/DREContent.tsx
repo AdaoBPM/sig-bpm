@@ -485,7 +485,7 @@ export function DREContent() {
   const cabecalho = leConsolidado ? consolidado.data : unidade.data;
   const consulta = visao === "consolidado" ? consolidado : unidade;
 
-  // O Exportar (21/10/2026: na linha do título, logo depois do Reabrir Competência; antes, ao lado das abas). Centros, sem
+  // O Exportar (21/10/2026: na linha do título, no fim da barra, desde 30/10/2026; antes, ao lado das abas). Centros, sem
   // centros e obras: o Exportar desde a importação do balancete (15/10/2026).
   const exportar =
     visao === "centros" ? (

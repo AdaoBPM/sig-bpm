@@ -20,7 +20,7 @@ import { dataHora } from "../../utils/formatacao";
 import { mensagemDeErro } from "../services/dreService";
 import { plural } from "@/lib/texto";
 
-type Props = { anoMes: string; onAvisos: (avisos: string[]) => void; /** O Exportar da DRE (21/10/2026), logo depois do Reabrir Competência. */ exportar?: ReactNode };
+type Props = { anoMes: string; onAvisos: (avisos: string[]) => void; /** O Exportar da DRE (21/10/2026), no fim da barra, depois do Reaberturas (30/10/2026). */ exportar?: ReactNode };
 
 const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font-bold text-black shadow-sm";
 
@@ -136,13 +136,13 @@ export function AcoesApuracao({ anoMes, onAvisos, exportar }: Props) {
             </Button>
           </PermissionGuard>
         ) : null}
-        {exportar}
         {s.reaberturas.length > 0 ? (
           <Button type="button" className={botaoPrimario} onClick={() => setHistorico(true)}>
             <History className="size-4" />
             Reaberturas ({s.reaberturas.length})
           </Button>
         ) : null}
+        {exportar}
       </div>
       {historico ? <HistoricoReaberturas reaberturas={s.reaberturas} onFechar={() => setHistorico(false)} /> : null}
       {excluindo && s.paraExcluir ? (

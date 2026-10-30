@@ -187,8 +187,6 @@ export function ReceitaPreviaContent() {
             <p className="text-sm text-gray-600">Entram na receita na próxima apuração.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* O Exportar dos lançamentos de receita (30/10/2026), junto da tabela deles. */}
-            <ExportarTabela titulo={`Receita Prévia · Lançamentos Manuais de Receita · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />
             {!fechada ? (
               <PermissionGuard permission="lancamentos_manuais:editar">
                 <Button
@@ -198,10 +196,12 @@ export function ReceitaPreviaContent() {
                   className="rounded-sm border border-black text-black hover:bg-gray-100"
                 >
                   <Plus className="size-4" />
-                  Novo lançamento
+                  Novo Lançamento
                 </Button>
               </PermissionGuard>
             ) : null}
+            {/* O Exportar dos lançamentos de receita (30/10/2026), junto da tabela deles, por último. */}
+            <ExportarTabela titulo={`Receita Prévia · Lançamentos Manuais de Receita · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />
           </div>
         </div>
         <QuadroTabela
