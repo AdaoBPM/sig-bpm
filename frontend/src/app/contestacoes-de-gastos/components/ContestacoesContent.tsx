@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Cog, ListTree, PencilLine, X } from "lucide-react";
+import { Check, Cog, EllipsisVertical, FileText, ListTree, MessageSquareText, PencilLine, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
@@ -12,6 +12,7 @@ import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -32,6 +33,11 @@ const de = (c: Contestacao) => [c.centroNovo ? c.centroAntes : null, c.contaNova
 const para = (c: Contestacao) => [c.centroNovo, c.contaNova].filter(Boolean).join(" / ");
 /** As competências da contestação: a do movimento ou, com as anteriores e posteriores, da primeira à última. */
 export const periodo = (c: Contestacao) => (c.competencias.length > 1 ? `${c.competencias[0]} a ${c.competencias[c.competencias.length - 1]}` : c.competencia);
+/** O período curto, no mesmo ano ("01 a 09/2026"). */
+const periodoCurto = (c: Contestacao) => {
+  const [p, u] = [c.competencias[0], c.competencias[c.competencias.length - 1]];
+  return c.competencias.length > 1 && p.slice(3) === u.slice(3) ? `${p.slice(0, 2)} a ${u}` : periodo(c);
+};
 /** O valor e, com mais de um movimento, quantos ("R$ 1.200,00 em 6 movimentos"). */
 const valorEMovimentos = (c: Contestacao) => `${moeda(c.valor)}${c.movimentos.length > 1 ? ` em ${c.movimentos.length} movimentos` : ""}`;
 const anterioresEPosteriores = (c: Contestacao) =>
@@ -48,7 +54,7 @@ const ESTILO_SITUACAO: Record<SituacaoContestacao, string> = {
  * O detalhe da correção, pelos movimentos: no balancete, pelos lançamentos (e de que competência), os que esperam o Importar
  * — com mais de um movimento, quantos de cada.
  */
-function detalheDaCorrecao(c: Contestacao) {
+function detalheDaCorrecao(c: Contestacao, comParaLancamentos: boolean) {
   const n = c.movimentos.length;
   const { noBalancete, porLancamentos, paraLancamentos } = c.correcao;
   const quantos = (k: number) => (n > 1 ? ` (${k})` : "");
@@ -56,12 +62,16 @@ function detalheDaCorrecao(c: Contestacao) {
   const lancamentos = porLancamentos ? `Lançamentos de ${c.lancadaEm ?? "—"}${quantos(porLancamentos)}` : null;
   if (c.situacao === "VALIDADA") return [balancete, lancamentos].filter(Boolean).join("; ") || "Sem correção pelo SIG";
   if (c.situacao !== "ACATADA") return null;
-  return [balancete, lancamentos, paraLancamentos ? `Para os Lançamentos${quantos(paraLancamentos)}` : null].filter(Boolean).join("; ") || null;
+  const espera = comParaLancamentos && paraLancamentos ? `Para os Lançamentos${quantos(paraLancamentos)}` : null;
+  return [balancete, lancamentos, espera].filter(Boolean).join("; ") || null;
 }
 
-/** A situação, com o detalhe da validação (no balancete, pelos lançamentos ou fora do SIG). */
-function Situacao({ c }: { c: Contestacao }) {
-  const detalhe = detalheDaCorrecao(c);
+/**
+ * A situação, com o detalhe da validação (no balancete, pelos lançamentos ou fora do SIG); nas abas Solicitadas e
+ * Recebidas, sem os movimentos que esperam o Importar (o que é da Controladoria).
+ */
+function Situacao({ c, comParaLancamentos = true }: { c: Contestacao; comParaLancamentos?: boolean }) {
+  const detalhe = detalheDaCorrecao(c, comParaLancamentos);
   return (
     <span className="inline-flex flex-col gap-0.5">
       <span className={`inline-block w-fit rounded-sm border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${ESTILO_SITUACAO[c.situacao]}`}>{ROTULO_SITUACAO[c.situacao]}</span>
@@ -83,7 +93,12 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
   const [recusando, setRecusando] = useState<Contestacao | null>(null);
   const [alterando, setAlterando] = useState<Contestacao | null>(null);
   const [vendo, setVendo] = useState<Contestacao | null>(null);
+  const [lendo, setLendo] = useState<{ c: Contestacao; o: "motivo" | "justificativa" } | null>(null);
   const [processando, setProcessando] = useState(false);
+  // As abas Solicitadas e Recebidas (30/10/2026, pedido do Adão): a tabela enxuta, com o Motivo, a Justificativa, os
+  // movimentos e a resposta no menu da coluna Ações.
+  const enxuta = aba !== "validacoes";
+  const podeResponder = (c: Contestacao) => aba === "recebidas" && c.situacao === "PENDENTE" && c.souResponsavel && hasPermission("contestacoes.recebidas:editar");
   const atualizar = () => queryClient.invalidateQueries({ queryKey: ["contestacoes"] });
   const responder = useMutation({
     mutationFn: (d: { id: string; acatar: boolean; justificativa: string | null }) => contestacoesService.responder(d.id, { acatar: d.acatar, justificativa: d.justificativa }),
@@ -95,20 +110,37 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível responder a contestação.")),
   });
 
-  const colunas: Coluna<Contestacao>[] = [
-    { chave: "numero", rotulo: "Nº", tipo: "numero", valor: (c) => c.numero },
-    { chave: "competencia", rotulo: "Competência", valor: (c) => c.competencias.join(", "), texto: periodo },
-    { chave: "movimento", rotulo: "Movimento", valor: movimento },
-    { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (c) => Number(c.valor), texto: (c) => moeda(c.valor) },
-    { chave: "de", rotulo: "De", valor: de },
-    { chave: "para", rotulo: "Para", valor: para },
-    ...(aba !== "solicitadas" ? [{ chave: "solicitante", rotulo: "Solicitante", valor: (c: Contestacao) => c.solicitante }] : []),
-    { chave: "motivo", rotulo: "Motivo", valor: (c) => c.motivo },
-    { chave: "situacao", rotulo: "Situação", valor: (c) => ROTULO_SITUACAO[c.situacao] },
-    { chave: "responsavel", rotulo: "Responsável", valor: (c) => (c.situacao === "PENDENTE" ? c.responsaveis.join(", ") || "Controladoria" : c.respondidaPor) },
-    { chave: "justificativa", rotulo: "Justificativa", valor: (c) => c.justificativa },
-    ...(aba !== "solicitadas" ? [{ chave: "acoes", rotulo: "Ações", semFiltro: true } as Coluna<Contestacao>] : []),
-  ];
+  const responsavel = (c: Contestacao) => (c.situacao === "PENDENTE" ? c.responsaveis.join(", ") || "Controladoria" : c.respondidaPor);
+  const colunas: Coluna<Contestacao>[] = enxuta
+    ? (
+        [
+          { chave: "numero", rotulo: "Nº", tipo: "numero", valor: (c) => c.numero },
+          { chave: "competencia", rotulo: "Competência", valor: (c) => c.competencias.join(", "), texto: periodo },
+          { chave: "fornecedor", rotulo: "Fornecedor", valor: (c) => c.cliForn },
+          { chave: "filial", rotulo: "Filial", tipo: "numero", valor: (c) => c.filial, texto: (c) => String(c.filial) },
+          { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (c) => Number(c.valor), texto: (c) => moeda(c.valor) },
+          { chave: "de", rotulo: "De", valor: de },
+          { chave: "para", rotulo: "Para", valor: para },
+          ...(aba === "recebidas" ? [{ chave: "solicitante", rotulo: "Solicitante", valor: (c: Contestacao) => c.solicitante }] : []),
+          { chave: "responsavel", rotulo: "Responsável", valor: responsavel },
+          { chave: "situacao", rotulo: "Situação", valor: (c) => ROTULO_SITUACAO[c.situacao] },
+          { chave: "acoes", rotulo: "Ações", semFiltro: true },
+        ] as Coluna<Contestacao>[]
+      ).map((c) => ({ ...c, classe: "px-2!" }))
+    : [
+        { chave: "numero", rotulo: "Nº", tipo: "numero", valor: (c) => c.numero },
+        { chave: "competencia", rotulo: "Competência", valor: (c) => c.competencias.join(", "), texto: periodo },
+        { chave: "movimento", rotulo: "Movimento", valor: movimento },
+        { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (c) => Number(c.valor), texto: (c) => moeda(c.valor) },
+        { chave: "de", rotulo: "De", valor: de },
+        { chave: "para", rotulo: "Para", valor: para },
+        { chave: "solicitante", rotulo: "Solicitante", valor: (c) => c.solicitante },
+        { chave: "motivo", rotulo: "Motivo", valor: (c) => c.motivo },
+        { chave: "situacao", rotulo: "Situação", valor: (c) => ROTULO_SITUACAO[c.situacao] },
+        { chave: "responsavel", rotulo: "Responsável", valor: responsavel },
+        { chave: "justificativa", rotulo: "Justificativa", valor: (c) => c.justificativa },
+        { chave: "acoes", rotulo: "Ações", semFiltro: true },
+      ];
   const tabela = useTabelaFiltravel(consulta.data, colunas);
   const acatadas = (consulta.data ?? []).filter((c) => c.situacao === "ACATADA");
   const diretos = acatadas.reduce((s, c) => s + c.correcao.diretos, 0);
@@ -137,7 +169,8 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
               “Contestar Anteriores” e “Contestar Posteriores” levam junto os movimentos do mesmo fornecedor, na mesma conta e no mesmo centro de custo,
               nas competências anteriores e nas seguintes já importadas (sem os que já têm uma contestação em andamento); marcadas, o modal mostra o
               total que muda de centro e/ou de conta, competência por competência. A contestação é uma só: a coluna Competência mostra da primeira à
-              última, o Valor é o total, e “Ver Movimentos”, na coluna Movimento, lista cada um, com a correção dele.
+              última, o Valor é o total, e “Ver Movimentos”{enxuta ? ", no menu da coluna Ações," : ", na coluna Movimento,"} lista cada um (a emissão, o
+              histórico e o valor), com a correção dele.
             </li>
             <li>
               A contestação vai para o responsável pelo centro de custo (o novo; sem centro novo, o do movimento): os usuários com o centro na lista
@@ -146,10 +179,17 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
             </li>
             <li>
               As situações: Pendente (o responsável ainda não respondeu), Acatada (o responsável aceitou; espera a Controladoria), Recusada e Validada (a
-              Controladoria corrigiu o movimento — no balancete, ou pelos lançamentos da aba Contestações dos Lançamentos). A justificativa (da recusa ou
-              da mudança de situação em Validações) aparece na coluna Justificativa.
+              Controladoria corrigiu o movimento — no balancete, ou pelos lançamentos da aba Contestações dos Lançamentos).{" "}
+              {enxuta
+                ? "O motivo (de quem pediu) e a justificativa (da recusa ou da mudança de situação em Validações) ficam no menu da coluna Ações."
+                : "O motivo e a justificativa (da recusa ou da mudança de situação) ficam nas colunas Motivo e Justificativa."}
             </li>
-            {aba === "recebidas" ? <li>Na coluna Ações, “Acatar” aceita a contestação pendente e “Recusar” a recusa (a justificativa é opcional).</li> : null}
+            {aba === "recebidas" ? (
+              <li>
+                No menu da coluna Ações, “Acatar” aceita a contestação pendente e “Recusar” a recusa (a justificativa é opcional). O menu fica destacado
+                quando a contestação espera a sua resposta.
+              </li>
+            ) : null}
             {aba === "validacoes" ? (
               <>
                 <li>
@@ -198,7 +238,20 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
           emptyMessage="Nenhuma contestação"
           emptyHint={aba === "solicitadas" ? "Conteste um movimento no balancete de uma conta (o extrato das linhas, nos Resultados)." : "Nada por aqui."}
           columns={colunas.map((c) => c.rotulo)}
-          renderRow={(c) => (
+          renderRow={(c) =>
+            enxuta ? (
+              <LinhaEnxuta
+                key={c.id}
+                c={c}
+                aba={aba}
+                podeResponder={podeResponder(c)}
+                respondendo={responder.isPending}
+                onVerMovimentos={() => setVendo(c)}
+                onLer={(o) => setLendo({ c, o })}
+                onAcatar={() => responder.mutate({ id: c.id, acatar: true, justificativa: null })}
+                onRecusar={() => setRecusando(c)}
+              />
+            ) : (
             <tr key={c.id} className="border-b border-gray-100 align-top text-xs hover:bg-gray-50">
               <td className="px-3 py-2 font-medium">{c.numero}</td>
               <td className="px-3 py-2 whitespace-nowrap">
@@ -243,12 +296,10 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
                 {c.centroNovo ? <div>{c.centroNovo}</div> : null}
                 {c.contaNova ? <div>{c.contaNova}</div> : null}
               </td>
-              {aba !== "solicitadas" ? (
-                <td className="px-3 py-2">
-                  {c.solicitante}
-                  <div className="text-gray-500">{dataHora(c.solicitadaEm)}</div>
-                </td>
-              ) : null}
+              <td className="px-3 py-2">
+                {c.solicitante}
+                <div className="text-gray-500">{dataHora(c.solicitadaEm)}</div>
+              </td>
               <td className="px-3 py-2 text-gray-700">{c.motivo ?? <span className="text-gray-400">—</span>}</td>
               <td className="px-3 py-2">
                 <Situacao c={c} />
@@ -278,38 +329,22 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
                   <span className="text-gray-400">—</span>
                 )}
               </td>
-              {aba === "recebidas" ? (
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {c.situacao === "PENDENTE" && c.souResponsavel && hasPermission("contestacoes.recebidas:editar") ? (
-                    <span className="inline-flex gap-1.5">
-                      <Button type="button" size="sm" variant="outline" className="h-7 rounded-sm px-2 text-xs" disabled={responder.isPending} onClick={() => responder.mutate({ id: c.id, acatar: true, justificativa: null })}>
-                        <Check className="size-3.5" />
-                        Acatar
-                      </Button>
-                      <Button type="button" size="sm" variant="outline" className="h-7 rounded-sm border-red-300 px-2 text-xs text-red-700 hover:bg-red-50" onClick={() => setRecusando(c)}>
-                        <X className="size-3.5" />
-                        Recusar
-                      </Button>
-                    </span>
-                  ) : null}
-                </td>
-              ) : null}
-              {aba === "validacoes" ? (
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {hasPermission("contestacoes_validacoes:editar") ? (
-                    <Button type="button" size="sm" variant="outline" className="h-7 rounded-sm px-2 text-xs" onClick={() => setAlterando(c)}>
-                      <PencilLine className="size-3.5" />
-                      Alterar Status
-                    </Button>
-                  ) : null}
-                </td>
-              ) : null}
+              <td className="px-3 py-2 whitespace-nowrap">
+                {hasPermission("contestacoes_validacoes:editar") ? (
+                  <Button type="button" size="sm" variant="outline" className="h-7 rounded-sm px-2 text-xs" onClick={() => setAlterando(c)}>
+                    <PencilLine className="size-3.5" />
+                    Alterar Status
+                  </Button>
+                ) : null}
+              </td>
             </tr>
-          )}
+            )
+          }
         />
       </QuadroTabela>
 
       {vendo ? <MovimentosDialog c={vendo} onFechar={() => setVendo(null)} /> : null}
+      {lendo ? <TextoDaContestacaoDialog c={lendo.c} o={lendo.o} onFechar={() => setLendo(null)} /> : null}
       {recusando ? <RecusarDialog c={recusando} pendente={responder.isPending} onFechar={() => setRecusando(null)} onRecusar={(j) => responder.mutate({ id: recusando.id, acatar: false, justificativa: j })} /> : null}
       {alterando ? (
         <AlterarStatusDialog
@@ -337,6 +372,169 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
   );
 }
 
+/**
+ * A linha das abas Solicitadas e Recebidas (30/10/2026, pedido do Adão): o fornecedor, a filial, o antes e o depois com
+ * espaço (no máximo três quebras de linha por contestação), a situação e o menu Ações — o Motivo, a Justificativa, Ver
+ * Movimentos e, na Recebidas, Acatar e Recusar.
+ */
+function LinhaEnxuta({
+  c,
+  aba,
+  podeResponder,
+  respondendo,
+  onVerMovimentos,
+  onLer,
+  onAcatar,
+  onRecusar,
+}: {
+  c: Contestacao;
+  aba: AbaDasContestacoes;
+  podeResponder: boolean;
+  respondendo: boolean;
+  onVerMovimentos: () => void;
+  onLer: (o: "motivo" | "justificativa") => void;
+  onAcatar: () => void;
+  onRecusar: () => void;
+}) {
+  return (
+    <tr className="border-b border-gray-100 align-top text-xs hover:bg-gray-50">
+      <td className="px-2 py-2 font-medium">{c.numero}</td>
+      <td className="px-2 py-2 whitespace-nowrap" title={c.competencias.join(", ")}>
+        {periodoCurto(c)}
+        {c.competencias.length > 1 ? (
+          <div className="text-gray-500">
+            {c.competencias.length} {plural(c.competencias.length, "competência", "competências")}
+          </div>
+        ) : null}
+      </td>
+      <td className="min-w-36 px-2 py-2">
+        <div className="line-clamp-4" title={c.cliForn ?? undefined}>
+          {c.cliForn ?? <span className="text-gray-400">—</span>}
+        </div>
+      </td>
+      <td className="px-2 py-2">{c.filial}</td>
+      <td className="px-2 py-2 text-right whitespace-nowrap" title={c.movimentos.length > 1 ? `Em ${c.movimentos.length} movimentos; o contestado: ${moeda(c.valorDoMovimento)}` : undefined}>
+        {moeda(c.valor)}
+      </td>
+      {/* De e Para com a maior parte da largura: até quatro linhas — com o centro e a conta, duas para cada (o nome inteiro no título). */}
+      <td className="min-w-52 px-2 py-2">
+        {c.centroNovo ? <TextoEmLinhas texto={c.centroAntes ?? "—"} duas={!!c.contaNova} /> : null}
+        {c.contaNova ? <TextoEmLinhas texto={c.contaAntes ?? "—"} duas={!!c.centroNovo} /> : null}
+      </td>
+      <td className="min-w-52 px-2 py-2 font-medium">
+        {c.centroNovo ? <TextoEmLinhas texto={c.centroNovo} duas={!!c.contaNova} /> : null}
+        {c.contaNova ? <TextoEmLinhas texto={c.contaNova} duas={!!c.centroNovo} /> : null}
+      </td>
+      {aba === "recebidas" ? (
+        <td className="px-2 py-2">
+          {c.solicitante}
+          <div className="whitespace-nowrap text-gray-500">{dataCurta(c.solicitadaEm)}</div>
+        </td>
+      ) : null}
+      <td className="px-2 py-2">
+        {c.situacao === "PENDENTE" ? (
+          <span className="line-clamp-4 text-gray-600" title={`Aguarda ${c.responsaveis.join(", ") || "a Controladoria"}`}>
+            Aguarda {c.responsaveis.join(", ") || "a Controladoria"}
+          </span>
+        ) : c.respondidaPor ? (
+          <>
+            <span className="whitespace-nowrap">{c.respondidaPor}</span>
+            <div className="whitespace-nowrap text-gray-500">{dataHora(c.respondidaEm)}</div>
+          </>
+        ) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </td>
+      <td className="px-2 py-2">
+        <Situacao c={c} comParaLancamentos={false} />
+      </td>
+      <td className="px-2 py-2 whitespace-nowrap">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className={`size-7 rounded-sm ${podeResponder ? "border-bpm-primary bg-bpm-primary hover:bg-bpm-primary-hover" : ""}`}
+                aria-label={`Ações da contestação nº ${c.numero}`}
+                title={podeResponder ? "Ações (a contestação espera a sua resposta: acate ou recuse)" : "Ações: Motivo, Justificativa e Ver Movimentos"}
+              >
+                <EllipsisVertical className="size-4" />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-auto min-w-44">
+            <DropdownMenuItem disabled={!c.motivo} onClick={() => onLer("motivo")}>
+              <MessageSquareText />
+              Motivo
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={!c.justificativa} onClick={() => onLer("justificativa")}>
+              <FileText />
+              Justificativa
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onVerMovimentos}>
+              <ListTree />
+              Ver Movimentos
+            </DropdownMenuItem>
+            {aba === "recebidas" ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={!podeResponder || respondendo} onClick={onAcatar}>
+                  <Check />
+                  Acatar
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" disabled={!podeResponder} onClick={onRecusar}>
+                  <X />
+                  Recusar
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </td>
+    </tr>
+  );
+}
+
+/** Um centro ou uma conta em até duas linhas (com o outro na célula) ou quatro, com o texto inteiro no título (o raro nome mais longo). */
+function TextoEmLinhas({ texto, duas }: { texto: string; duas: boolean }) {
+  return (
+    <div className={duas ? "line-clamp-2" : "line-clamp-4"} title={texto}>
+      {texto}
+    </div>
+  );
+}
+
+/** O Motivo (de quem pediu) ou a Justificativa (da recusa ou da mudança de situação) de uma contestação, num modal pequeno. */
+function TextoDaContestacaoDialog({ c, o, onFechar }: { c: Contestacao; o: "motivo" | "justificativa"; onFechar: () => void }) {
+  const motivo = o === "motivo";
+  const autoria = motivo
+    ? `${c.solicitante}, ${dataHora(c.solicitadaEm)}`
+    : [c.justificadaPor ?? "SIG", dataHora(c.justificadaEm)].filter(Boolean).join(", ");
+  return (
+    <Dialog open onOpenChange={(x) => (!x ? onFechar() : undefined)}>
+      <DialogContent className="rounded-sm sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {motivo ? "Motivo" : "Justificativa"} da Contestação nº {c.numero}
+          </DialogTitle>
+          <DialogDescription>
+            {c.cliForn ?? "—"} · {valorEMovimentos(c)} · {ROTULO_SITUACAO[c.situacao]}
+          </DialogDescription>
+        </DialogHeader>
+        <p className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm whitespace-pre-wrap text-gray-900">{(motivo ? c.motivo : c.justificativa) ?? "—"}</p>
+        <p className="text-xs text-gray-500">{autoria}</p>
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const ROTULO_CORRECAO = { NO_BALANCETE: "No balancete", LANCAMENTO_MANUAL: "Pelos lançamentos" } as const;
 
 /** Ver Movimentos: os movimentos da contestação (o contestado e os das anteriores e posteriores), com a correção de cada um. */
@@ -357,8 +555,9 @@ function MovimentosDialog({ c, onFechar }: { c: Contestacao; onFechar: () => voi
         <DialogHeader>
           <DialogTitle>Movimentos da Contestação nº {c.numero}</DialogTitle>
           <DialogDescription>
-            {c.cliForn ?? "—"} · {c.contaBalancete ?? "—"} · {c.centroAntes ?? "sem centro de custo"}: o movimento contestado e os das {anterioresEPosteriores(c)}
-            . Todos vão para {para(c) || "—"}.
+            {c.cliForn ?? "—"} · {c.contaBalancete ?? "—"} · {c.centroAntes ?? "sem centro de custo"}:{" "}
+            {c.movimentos.length > 1 ? `o movimento contestado e os das ${anterioresEPosteriores(c)}. Todos vão` : "o movimento contestado. Ele vai"} para{" "}
+            {para(c) || "—"}.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-auto rounded-sm border border-gray-200">
