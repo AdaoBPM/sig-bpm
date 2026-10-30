@@ -107,6 +107,59 @@ describe("percentuais fixos em todos os destinos", () => {
     assert.equal(v(3, "CSC.CLT"), 110); // 1.000 × 5% + 200 × 30%
     assert.equal(v(1, "CP.CLT") + v(2, "CP.CLT") + v(3, "CSM.CLT") + v(3, "CSC.CLT"), 1200);
   });
+
+  // Os lançamentos das contestações de competências fechadas (30/10/2026): o estorno e o novo com rateio se dividem pelos
+  // percentuais da competência do movimento, numa parcela à parte.
+  describe("os percentuais da competência do movimento contestado", () => {
+    const base = { linhas, receitas: [], totais: new Map(), percentuais: new Map([["METALURGIA|MATRIZ", D(0.8)], ["METALURGIA|FILIAL", D(0.2)]]) };
+    const setembro = new Map([["set", { rotulo: "09/2026", percentuais: new Map([["METALURGIA|MATRIZ", D(0.6)], ["METALURGIA|FILIAL", D(0.4)]]) }]]);
+    const v = (r: ReturnType<typeof apurarUnidades>, u: number, c: string) => Number(r.resultados.find((x) => x.unidade === u && x.codigo === c)?.valor ?? 0);
+
+    it("o estorno da Metalurgia sai com os percentuais de setembro, e o mês continua com os dele", () => {
+      const r = apurarUnidades({
+        ...base,
+        percentuaisDe: setembro,
+        lancamentos: [{ filial: 1, linhaDREId: "CP.CLT", balde: "METALURGIA", alocacao: "RATEIO", valor: D(5000) }],
+        manuais: [
+          { linhaDREId: "CP.CLT", balde: "METALURGIA", valor: D(-10000), filial: 1, rateioDe: "set" },
+          { linhaDREId: "CP.CLT", balde: "MATRIZ", valor: D(10000), filial: 1, rateioDe: "set" },
+        ],
+      });
+      assert.equal(v(r, 1, "CP.CLT"), 8000); // 5.000 × 80% − 10.000 × 60% + 10.000 direto
+      assert.equal(v(r, 2, "CP.CLT"), -3000); // 5.000 × 20% − 10.000 × 40%: a Filial devolve o que recebeu em setembro
+      const c = r.resultados.find((x) => x.unidade === 1 && x.codigo === "CP.CLT")?.composicao;
+      assert.deepEqual(c?.rateios?.map((p) => [p.chave, p.competencia ?? null, p.competenciaId ?? null, p.valor]), [
+        ["METALURGIA", null, null, "4000.00"],
+        ["METALURGIA", "09/2026", "set", "-6000.00"],
+      ]);
+    });
+
+    it("uma chave com percentual fixo em Serviços só na competência do movimento vai para Serviços com ele", () => {
+      const r = apurarUnidades({
+        ...base,
+        percentuais: new Map([["PRODUCAO|MATRIZ", D(0.6)], ["PRODUCAO|FILIAL", D(0.4)]]),
+        percentuaisDe: new Map([["set", { rotulo: "09/2026", percentuais: new Map([["PRODUCAO|MATRIZ", D(0.5)], ["PRODUCAO|FILIAL", D(0.3)], ["PRODUCAO|MONTAGEM", D(0.2)]]) }]]),
+        lancamentos: [],
+        manuais: [{ linhaDREId: "CP.CLT", balde: "PRODUCAO", valor: D(-1000), filial: 1, rateioDe: "set" }],
+      });
+      assert.equal(v(r, 1, "CP.CLT"), -500);
+      assert.equal(v(r, 2, "CP.CLT"), -300);
+      assert.equal(v(r, 3, "CSM.CLT"), -200);
+    });
+
+    it("sem volume na competência do movimento, o aviso diz qual; sem os percentuais dela, valem os do mês", () => {
+      const semVolume = apurarUnidades({
+        ...base,
+        percentuaisDe: new Map([["set", { rotulo: "09/2026", percentuais: new Map() }]]),
+        lancamentos: [],
+        manuais: [{ linhaDREId: "CP.CLT", balde: "METALURGIA", valor: D(-100), filial: 1, rateioDe: "set" }],
+      });
+      assert.equal(v(semVolume, 1, "CP.CLT"), 0);
+      assert.ok(semVolume.avisos.some((a) => a.includes("Rateio de Metalurgia sem volume em 09/2026: -100.00")));
+      const semOrigem = apurarUnidades({ ...base, lancamentos: [], manuais: [{ linhaDREId: "CP.CLT", balde: "METALURGIA", valor: D(-100), filial: 1, rateioDe: "out" }] });
+      assert.equal(v(semOrigem, 1, "CP.CLT"), -80);
+    });
+  });
 });
 
 describe("consolidação e visão por centro de custo", () => {

@@ -170,11 +170,20 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
   });
   const sinalDaLinhaManual = async (linhaId: string) =>
     manualNoSinalDoBalancete((await prisma.linhaDRE.findUnique({ where: { id: linhaId }, select: { grupoSigla: true } }))?.grupoSigla ?? "", new Decimal(1));
-  const blocoManual = async (where: Prisma.LancamentoManualWhereInput, linhaId: string, multiplicador: Decimal, titulo: string, filtro: string) => {
+  // `percentual`: nos de rateio (30/10/2026), o percentual da parcela, como nos contábeis (o "× %" e a coluna Na Linha).
+  const blocoManual = async (where: Prisma.LancamentoManualWhereInput, linhaId: string, multiplicador: Decimal, titulo: string, filtro: string, percentual?: string) => {
     const ms = await prisma.lancamentoManual.findMany({ where: { competenciaId, linhaDREId: linhaId, ...where }, select: selecaoManual, orderBy: [{ criadoEm: "asc" }, { id: "asc" }] });
     if (!ms.length) return;
     const m = (await sinalDaLinhaManual(linhaId)).times(multiplicador);
-    blocos.push({ tipo: "MANUAL", titulo, unidade, filtro, total: somar(ms.map((x) => x.valor.times(m))).toFixed(2), lancamentos: ms.map((x) => linhaManual(x, x.valor.times(m))).sort(porValor) });
+    blocos.push({
+      tipo: "MANUAL",
+      titulo,
+      unidade,
+      filtro,
+      ...(percentual ? { percentual } : {}),
+      total: somar(ms.map((x) => x.valor.times(m))).toFixed(2),
+      lancamentos: ms.map((x) => linhaManual(x, x.valor.times(m))).sort(porValor),
+    });
   };
 
   const blocoContabil = async (f: NonNullable<OrigemValor["contabil"]>, titulo: string) => {
@@ -216,6 +225,18 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
 
   for (const r of (c.rateios ?? []) as ParcelaRateio[]) {
     if (!r.linhaId) continue;
+    // A parcela com os percentuais de outra competência (30/10/2026): só os lançamentos manuais que os levam.
+    if (r.competenciaId) {
+      await blocoManual(
+        { balde: r.chave as never, competenciaRateioId: r.competenciaId },
+        r.linhaId,
+        new Decimal(r.percentual),
+        `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}, com os percentuais de ${r.competencia}`,
+        `balde ${r.chave}, percentual de ${r.competencia}`,
+        r.percentual,
+      );
+      continue;
+    }
     const ls = await prisma.lancamentoContabil.findMany({
       where: { competenciaId, linhaDREId: r.linhaId, alocacao: "RATEIO", balde: r.chave as never },
       select: selecaoContabil,
@@ -232,7 +253,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
       lancamentos: agrupar(ls).map((l) => paraDetalhe(l, p)).sort(porValor),
     });
     // Os manuais do balde da chave (21/10/2026), na mesma linha de base, × o percentual.
-    await blocoManual({ balde: r.chave as never }, r.linhaId, p, `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}`, `balde ${r.chave}`);
+    await blocoManual({ balde: r.chave as never, competenciaRateioId: null }, r.linhaId, p, `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}`, `balde ${r.chave}`, r.percentual);
   }
 
   if (o.manual) {

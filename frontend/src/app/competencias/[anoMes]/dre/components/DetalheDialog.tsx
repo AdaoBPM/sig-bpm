@@ -174,8 +174,8 @@ function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamen
                   {l.descricao ? <div className="text-gray-500">{l.descricao}</div> : null}
                 </td>
                 <td className="px-4 py-1.5 text-gray-600">{l.balde ?? "—"}</td>
-                <td className="px-4 py-1.5 text-right">{moeda(l.valor)}</td>
-                {multiplica ? <td className="px-4 py-1.5 text-right">{moeda(l.parcela)}</td> : null}
+                <td className="px-4 py-1.5 text-right whitespace-nowrap">{moeda(l.valor)}</td>
+                {multiplica ? <td className="px-4 py-1.5 text-right whitespace-nowrap">{moeda(l.parcela)}</td> : null}
               </tr>
             ))
           )}

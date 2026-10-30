@@ -25,6 +25,8 @@ export type LancamentoManual = {
   linhaDRE: { codigo: string; descricao: string; grupo: string } | null;
   /** A contestação de que o lançamento veio (27/10/2026: a aba Contestações). */
   contestacao: { id: string; numero: number; item: string | null; solicitante: string; competencia: string } | null;
+  /** A competência dos percentuais de rateio (MM/AAAA, 30/10/2026): a do movimento contestado; nulo, os do próprio mês (ou sem rateio). */
+  rateioDe: string | null;
 };
 
 export type ListaLancamentos = {

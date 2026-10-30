@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { BaldeAlocacao } from "../../generated/prisma/enums.js";
 import type { LancamentoManualInput } from "../../schemas/lancamentosManuais/lancamentoManualSchema.js";
 import { auditar } from "../auditoriaService.js";
-import { abasQueSomam } from "../dre/apuracaoUnidades.js";
+import { abasQueSomam, CHAVES_DE_RATEIO } from "../dre/apuracaoUnidades.js";
 
 /** Erro de regra — vira 400/404/409 no controller, não 500. */
 export class RegraLancamentoManualError extends Error {
@@ -135,6 +135,8 @@ const SELECAO = {
     select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true },
   },
   linhaDRE: { select: { codigo: true, descricao: true, grupo: true } },
+  // A competência dos percentuais de rateio (30/10/2026: os lançamentos de uma contestação com rateio).
+  competenciaRateio: { select: { ano: true, mes: true } },
   // A contestação de que o lançamento veio (27/10/2026: a aba Contestações).
   contestacao: {
     select: {
@@ -149,9 +151,11 @@ const SELECAO = {
 } as const;
 
 type Linha = Prisma.LancamentoManualGetPayload<{ select: typeof SELECAO }>;
-const apresentar = ({ valor, contestacao, ...l }: Linha) => ({
+const apresentar = ({ valor, contestacao, competenciaRateio, ...l }: Linha) => ({
   ...l,
   valor: valor.toFixed(2),
+  // Só no de rateio: no direto (o lançamento novo num centro sem rateio), os percentuais não valem.
+  rateioDe: competenciaRateio && CHAVES_DE_RATEIO.has(l.balde ?? "") ? rotulo(competenciaRateio.ano, competenciaRateio.mes) : null,
   contestacao: contestacao
     ? {
         id: contestacao.id,
@@ -317,7 +321,7 @@ export const lancamentosManuaisService = {
     competenciaId: string,
     contestacaoId: string,
     motivo: string,
-    pares: Array<{ filial: number; centroCustoId: string | null; contaResultadoId: string; descricao: string; valor: Prisma.Decimal }>,
+    pares: Array<{ filial: number; centroCustoId: string | null; contaResultadoId: string; descricao: string; valor: Prisma.Decimal; competenciaRateioId?: string | null }>,
     usuarioId: string,
   ) {
     const prisma = getPrismaClient();

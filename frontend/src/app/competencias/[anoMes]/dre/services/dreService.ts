@@ -2,7 +2,8 @@ import { api } from "@/lib/api";
 
 import type { StatusCompetencia } from "../../../services/competenciasService";
 
-export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string };
+/** `competencia`: a parcela dos lançamentos manuais com os percentuais de outra competência (MM/AAAA, 30/10/2026). */
+export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string; competencia?: string };
 export type ParcelaUnidade = { unidade: number; nome: string; valor: string };
 export type ParcelaCentro = { codigoRM: string | null; nome: string; valor: string };
 export type Composicao = {

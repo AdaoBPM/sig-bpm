@@ -16,7 +16,8 @@ type Decimal = Prisma.Decimal;
  * Os lançamentos manuais (21/10/2026; antes, só os do balde RN, na aba RN): os do balde RN continuam na aba RN; os
  * demais entram como um lançamento do balancete do mesmo balde, filial e linha, com o valor digitado (o da DRE)
  * levado ao sinal do balancete (nas receitas, o sinal trocado) — e passam pelas mesmas regras de cada aba, inclusive os
- * rateios.
+ * rateios. Os de rateio das contestações de competências fechadas (30/10/2026) se dividem pelos percentuais da
+ * competência do movimento (`rateioDe`), cada uma numa parcela à parte: a correção sai como o movimento entrou.
  *
  * Os Serviços Complementares (21/10/2026, pedido do usuário): cada linha de custo complementar (CSC) soma também os
  * lançamentos diretos do balde COMPLEMENTAR na linha equivalente da Montagem (CSM, a mesma atribuição e descrição) — os
@@ -49,9 +50,19 @@ export type LancamentoClassificado = {
   balde: string | null;
   alocacao: string | null;
   valor: Decimal;
+  /** O lançamento de rateio dividido pelos percentuais de outra competência (o id dela, em `percentuaisDe`). */
+  rateioDe?: string;
 };
 
-export type LancamentoManualApuracao = { linhaDREId: string | null; balde: string | null; valor: Decimal; /** A filial (21/10/2026): a regra das abas usa a filial, como no balancete. */ filial?: number };
+export type LancamentoManualApuracao = {
+  linhaDREId: string | null;
+  balde: string | null;
+  valor: Decimal;
+  /** A filial (21/10/2026): a regra das abas usa a filial, como no balancete. */
+  filial?: number;
+  /** A competência dos percentuais de rateio (30/10/2026: os lançamentos de uma contestação de competência fechada). */
+  rateioDe?: string | null;
+};
 
 export type ReceitaPreviaApuracao = { unidade: number; natureza: string; receitaBruta: Decimal; receitaLiquida: Decimal };
 
@@ -61,6 +72,8 @@ export type DadosApuracao = {
   manuais: LancamentoManualApuracao[];
   /** Percentual por chave e destino (ex.: "PRODUCAO|MATRIZ"). */
   percentuais: Map<string, Decimal>;
+  /** Os percentuais das outras competências dos lançamentos manuais (`rateioDe`), pelo id, com o rótulo (MM/AAAA). */
+  percentuaisDe?: Map<string, { rotulo: string; percentuais: Map<string, Decimal> }>;
   /** Volumes da aba Totais, pelo código da linha (ex.: PREFABRICADO_MATRIZ). */
   totais: Map<string, Decimal>;
   receitas: ReceitaPreviaApuracao[];
@@ -68,7 +81,17 @@ export type DadosApuracao = {
 
 /** Um balde de lançamentos diretos, de uma filial ou de todas. */
 export type ParBalde = { balde: string; filial?: number };
-export type ParcelaRateio = { chave: string; destino: string; base: string; percentual: string; valor: string; linhaId?: string };
+export type ParcelaRateio = {
+  chave: string;
+  destino: string;
+  base: string;
+  percentual: string;
+  valor: string;
+  linhaId?: string;
+  /** A parcela dos lançamentos manuais com os percentuais de outra competência (30/10/2026): o id e o rótulo dela. */
+  competenciaId?: string;
+  competencia?: string;
+};
 export type ParcelaUnidade = { unidade: number; nome: string; valor: string };
 /**
  * De onde o valor saiu, na forma de filtros sobre os dados da competência —
@@ -266,18 +289,28 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       avisos.push(`Lançamento manual de ${m.valor.toFixed(2)} em "${linha.descricao}" (balde ${m.balde ?? "-"}, filial ${m.filial ?? "-"}): nenhuma aba de resultado soma essa combinação; ficou fora do resultado.`);
     }
     if (n(m.balde) === "RN") continue;
-    manuaisComoBalancete.push({ filial: m.filial ?? 1, linhaDREId: linha.id, balde: m.balde, alocacao: rateioManual ? "RATEIO" : "DIRETO", valor: manualNoSinalDoBalancete(linha.grupoSigla, m.valor) });
+    // O de rateio com os percentuais de outra competência (30/10/2026) fica à parte, com a competência.
+    const rateioDe = rateioManual && m.rateioDe && d.percentuaisDe?.has(m.rateioDe) ? m.rateioDe : undefined;
+    manuaisComoBalancete.push({
+      filial: m.filial ?? 1,
+      linhaDREId: linha.id,
+      balde: m.balde,
+      alocacao: rateioManual ? "RATEIO" : "DIRETO",
+      valor: manualNoSinalDoBalancete(linha.grupoSigla, m.valor),
+      ...(rateioDe ? { rateioDe } : {}),
+    });
   }
   const lancamentos = [...d.lancamentos, ...manuaisComoBalancete];
 
   // Somas dos lançamentos, na forma dos SOMASES da Gastos (Contábil): os
-  // diretos por filial, linha e balde; os de rateio por chave e linha.
+  // diretos por filial, linha e balde; os de rateio por chave e linha (os com os percentuais de outra competência, também
+  // por ela).
   const direto = new Map<string, Decimal>();
   const rateio = new Map<string, Decimal>();
   const somar = (m: Map<string, Decimal>, k: string, v: Decimal) => m.set(k, (m.get(k) ?? zero()).plus(v));
   for (const l of lancamentos) {
     if (!l.linhaDREId) continue;
-    if (l.alocacao === "RATEIO") somar(rateio, `${l.balde}|${l.linhaDREId}`, l.valor);
+    if (l.alocacao === "RATEIO") somar(rateio, `${l.balde}|${l.linhaDREId}${l.rateioDe ? `|${l.rateioDe}` : ""}`, l.valor);
     else somar(direto, `${l.filial}|${l.linhaDREId}|${l.balde}`, l.valor);
   }
   const somaDireto = (linhaId: string | undefined, filtro: { filial?: number; balde?: (b: string) => boolean } = {}) => {
@@ -303,21 +336,33 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   };
   const descreverPares = (pares: ParBalde[]) =>
     pares.map((p) => (p.filial === undefined ? `balde ${p.balde}` : `balde ${p.balde} da filial ${p.filial}`)).join(" + ");
-  const somaRateio = (chave: string, linhaId: string | undefined) => (linhaId ? (rateio.get(`${chave}|${linhaId}`) ?? zero()) : zero());
-  const pct = (chave: string, destino: string) => d.percentuais.get(`${chave}|${destino}`) ?? zero();
+  /**
+   * As bases do rateio da chave na linha: a dos lançamentos do mês, com os percentuais dele, e a dos lançamentos manuais
+   * de cada outra competência (30/10/2026), com os percentuais dela. Com `exige`, só as em que a chave tem regra para
+   * esse destino (o percentual fixo de uma chave em outra unidade).
+   */
+  type BaseDoRateio = { base: Decimal; percentuais: Map<string, Decimal>; competencia?: { id: string; rotulo: string } };
+  const basesDoRateio = (chave: string, linhaId: string | undefined, exige?: string): BaseDoRateio[] => {
+    if (!linhaId) return [];
+    const fontes: BaseDoRateio[] = [{ base: rateio.get(`${chave}|${linhaId}`) ?? zero(), percentuais: d.percentuais }];
+    for (const [id, o] of d.percentuaisDe ?? []) fontes.push({ base: rateio.get(`${chave}|${linhaId}|${id}`) ?? zero(), percentuais: o.percentuais, competencia: { id, rotulo: o.rotulo } });
+    return fontes.filter((f) => !f.base.isZero() && (!exige || f.percentuais.has(`${chave}|${exige}`)));
+  };
+  const pct = (chave: string, destino: string, percentuais: Map<string, Decimal>) => percentuais.get(`${chave}|${destino}`) ?? zero();
   const total = (codigo: string) => d.totais.get(codigo) ?? zero();
   const previa = (unidade: number, natureza: string) =>
     d.receitas.find((r) => r.unidade === unidade && r.natureza === natureza) ?? { receitaBruta: zero(), receitaLiquida: zero() };
   const manualRN = (linhaId: string) =>
     d.manuais.filter((m) => m.linhaDREId === linhaId && n(m.balde) === "RN").reduce((a, m) => a.plus(m.valor), zero());
 
-  const parcela = (chave: string, destino: string, linhaBase: LinhaEstrutura | undefined, base: Decimal, p: Decimal): ParcelaRateio => ({
+  const parcela = (chave: string, destino: string, linhaBase: LinhaEstrutura | undefined, base: Decimal, p: Decimal, competencia?: BaseDoRateio["competencia"]): ParcelaRateio => ({
     chave,
     destino,
     base: `${linhaBase?.codigo ?? "?"}: ${base.toFixed(2)}`,
     percentual: p.toFixed(10),
     valor: base.times(p).toFixed(2),
     linhaId: linhaBase?.id,
+    ...(competencia ? { competenciaId: competencia.id, competencia: competencia.rotulo } : {}),
   });
 
   // Valores por unidade, linha → valor.
@@ -398,22 +443,19 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
         let v = dir;
         const rateios: ParcelaRateio[] = [];
         for (const chave of RATEIOS_PRODUCAO) {
-          const base = somaRateio(chave, l.id);
-          if (base.isZero()) continue;
-          const p = pct(chave, destino);
-          rateios.push(parcela(chave, destino, l, base, p));
-          v = v.plus(base.times(p));
+          for (const f of basesDoRateio(chave, l.id)) {
+            const p = pct(chave, destino, f.percentuais);
+            rateios.push(parcela(chave, destino, l, f.base, p, f.competencia));
+            v = v.plus(f.base.times(p));
+          }
         }
         // O acompanhamento com percentual fixo na Matriz ou na Filial (14/10/2026): a base é a mesma conta na montagem
         // (CSM), onde os lançamentos dele estão.
-        if (d.percentuais.has(`ACOMPANHAMENTO|${destino}`)) {
-          const linhaBase = linhaCSM(l);
-          const base = somaRateio("ACOMPANHAMENTO", linhaBase?.id);
-          if (!base.isZero()) {
-            const p = pct("ACOMPANHAMENTO", destino);
-            rateios.push(parcela("ACOMPANHAMENTO", destino, linhaBase, base, p));
-            v = v.plus(base.times(p));
-          }
+        const linhaBase = linhaCSM(l);
+        for (const f of basesDoRateio("ACOMPANHAMENTO", linhaBase?.id, destino)) {
+          const p = pct("ACOMPANHAMENTO", destino, f.percentuais);
+          rateios.push(parcela("ACOMPANHAMENTO", destino, linhaBase, f.base, p, f.competencia));
+          v = v.plus(f.base.times(p));
         }
         gravar(u, l, v, {
           regra: `Diretos (${descreverPares(paresCusto)}) + rateios × percentual da unidade`,
@@ -504,23 +546,25 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
         const dir = somaDireto(l.id, { balde: (b) => b === (montagem ? "OBRAS" : "COMPLEMENTAR") }).plus(dirPar);
         let v = dir;
         const rateios: ParcelaRateio[] = [];
-        const partes: Array<[string, LinhaEstrutura | undefined]> = [
+        const partes: Array<[string, LinhaEstrutura | undefined, string?]> = [
           ["ACOMPANHAMENTO", montagem ? l : linhaCSM(l)],
           ["METALURGIA", linhaCP(l)],
           ["ARMADURA", linhaCP(l)],
-          // Projeto e Produção com percentual fixo em Serviços (14/10/2026): a base é a mesma conta na produção (CP).
-          ...(["PROJETO", "PRODUCAO"] as const).filter((c) => d.percentuais.has(`${c}|${destino}`)).map((c): [string, LinhaEstrutura | undefined] => [c, linhaCP(l)]),
+          // Projeto e Produção com percentual fixo em Serviços (14/10/2026): a base é a mesma conta na produção (CP), nos
+          // percentuais com a regra delas para a unidade.
+          ["PROJETO", linhaCP(l), destino],
+          ["PRODUCAO", linhaCP(l), destino],
         ];
         // A depreciação de montagem fica com o acompanhamento inteiro: o bloco
         // complementar não tem linha de depreciação (aba Resultados (Serviços),
         // linha 68, correção do usuário de 06/10/2026).
         const acompanhamentoInteiro = montagem && n(l.descricao) === n("Depreciação do Maquinário");
-        for (const [chave, linhaBase] of partes) {
-          const baseV = somaRateio(chave, linhaBase?.id);
-          if (baseV.isZero()) continue;
-          const p = chave === "ACOMPANHAMENTO" && acompanhamentoInteiro ? zero().plus(1) : pct(chave, destino);
-          rateios.push(parcela(chave, destino, linhaBase, baseV, p));
-          v = v.plus(baseV.times(p));
+        for (const [chave, linhaBase, exige] of partes) {
+          for (const f of basesDoRateio(chave, linhaBase?.id, exige)) {
+            const p = chave === "ACOMPANHAMENTO" && acompanhamentoInteiro ? zero().plus(1) : pct(chave, destino, f.percentuais);
+            rateios.push(parcela(chave, destino, linhaBase, f.base, p, f.competencia));
+            v = v.plus(f.base.times(p));
+          }
         }
         gravar(u, l, v, {
           regra: `Diretos do balde ${montagem ? "OBRAS" : "COMPLEMENTAR"}${par ? " (também os da linha da Montagem)" : ""} + rateios × percentual de ${destino.toLowerCase()}`,
@@ -571,8 +615,9 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
       // usuário de 06/10/2026): é o centro ADM. DE OBRAS que transforma em
       // rateio os juros e descontos lançados nele.
       const despesaFinanceira = l.grupoSigla === "DFC" || l.grupoSigla === "DFNC";
-      const acompanhamento = despesaFinanceira || financeira ? somaRateio("ACOMPANHAMENTO", l.id) : zero();
-      const rateios = acompanhamento.isZero() ? [] : [parcela("ACOMPANHAMENTO", "DESPESAS", l, acompanhamento, zero().plus(financeira ? -1 : 1))];
+      const bases = despesaFinanceira || financeira ? basesDoRateio("ACOMPANHAMENTO", l.id) : [];
+      const acompanhamento = bases.reduce((a, f) => a.plus(f.base), zero());
+      const rateios = bases.map((f) => parcela("ACOMPANHAMENTO", "DESPESAS", l, f.base, zero().plus(financeira ? -1 : 1), f.competencia));
       gravar(u, l, financeira ? c.plus(acompanhamento).neg() : c.plus(acompanhamento), {
         regra: financeira
           ? "−(lançamentos contábeis diretos + rateio de acompanhamento inteiro)"
@@ -612,8 +657,13 @@ export function apurarUnidades(d: DadosApuracao): { resultados: ResultadoLinha[]
   // Todo custo e despesa vai para algum lugar: uma chave com lançamentos de rateio e sem volume no mês (todos os
   // percentuais zero) deixa esses lançamentos fora de todas as unidades. O aviso diz quanto ficou de fora. As receitas e
   // as despesas financeiras do acompanhamento vão inteiras para Despesas e Extra e não dependem dos percentuais.
-  for (const [chave, valor] of rateiosSemVolume({ ...d, lancamentos })) {
+  for (const [chave, valor] of rateiosSemVolume({ ...d, lancamentos: lancamentos.filter((l) => !l.rateioDe) })) {
     avisos.push(`Rateio de ${NOME_DA_CHAVE[chave] ?? chave} sem volume no mês: ${valor.toFixed(2)} em lançamentos de rateio não foram para nenhuma unidade.`);
+  }
+  for (const [id, o] of d.percentuaisDe ?? []) {
+    for (const [chave, valor] of rateiosSemVolume({ linhas: d.linhas, percentuais: o.percentuais, lancamentos: lancamentos.filter((l) => l.rateioDe === id) })) {
+      avisos.push(`Rateio de ${NOME_DA_CHAVE[chave] ?? chave} sem volume em ${o.rotulo}: ${valor.toFixed(2)} em lançamentos manuais com os percentuais dessa competência não foram para nenhuma unidade.`);
+    }
   }
 
   // --- Subtotais e totais, pela estrutura, com os itens da unidade ---------

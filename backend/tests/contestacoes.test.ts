@@ -35,7 +35,7 @@ describe("Contestações de Gastos: os lançamentos das anteriores e posteriores
     centroAntesId: centro,
     contaAntesId: conta,
     valor: new Prisma.Decimal(valor),
-    competencia: { ano, mes },
+    competencia: { id: `${ano}-${mes}`, ano, mes },
   });
 
   it("soma os movimentos pela filial, pelo centro e pela conta de antes, com as competências", () => {
@@ -53,5 +53,21 @@ describe("Contestações de Gastos: os lançamentos das anteriores e posteriores
     assert.deepEqual(g1.competencias, ["01/2026", "02/2026"]);
     assert.equal(grupos.find((g) => g.filial === 2)!.valor.toFixed(2), "10.00");
     assert.equal(grupos.find((g) => g.centroAntesId === null)!.movimentos, 1);
+    assert.ok(grupos.every((g) => g.competenciaRateioId === null));
+  });
+
+  it("os movimentos com rateio não se somam entre competências: cada grupo leva a sua", () => {
+    const grupos = agruparParaLancamentos(
+      [m(1, "met", "k1", "100", 2026, 1), m(1, "met", "k1", "200", 2026, 2), m(1, "met", "k1", "50", 2026, 2), m(1, "c1", "k1", "7", 2026, 1), m(1, "c1", "k1", "3", 2026, 2)],
+      (x) => x.centroAntesId === "met",
+    );
+    assert.deepEqual(
+      grupos.map((g) => [g.centroAntesId, g.competenciaRateioId, g.valor.toFixed(2), g.competencias.join(" ")]),
+      [
+        ["met", "2026-1", "100.00", "01/2026"],
+        ["met", "2026-2", "250.00", "02/2026"],
+        ["c1", null, "10.00", "01/2026 02/2026"],
+      ],
+    );
   });
 });

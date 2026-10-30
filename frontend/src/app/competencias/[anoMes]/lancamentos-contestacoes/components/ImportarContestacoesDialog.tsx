@@ -81,8 +81,8 @@ export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImpo
           <DialogDescription>
             As contestações acatadas com movimentos que não puderam ser corrigidos no balancete (a competência do movimento está fechada). Os movimentos das
             marcadas viram lançamentos em {rotuloMes} — somados pela filial, pelo centro de custo e pela conta de antes, o estorno no centro e na conta de
-            antes e o lançamento no centro e na conta novos — e a contestação com todos os movimentos corrigidos fica validada; as outras continuam na lista,
-            para as competências seguintes.
+            antes e o lançamento no centro e na conta novos; com rateio, um par por competência, dividido pelos percentuais dela — e a contestação com
+            todos os movimentos corrigidos fica validada; as outras continuam na lista, para as competências seguintes.
           </DialogDescription>
         </DialogHeader>
         {consulta.isError ? (

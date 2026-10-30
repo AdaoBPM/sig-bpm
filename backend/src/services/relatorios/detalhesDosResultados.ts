@@ -179,7 +179,8 @@ export async function detalhesDosResultados(ano: number, ate: number, acesso: Ac
               partes.push({ linha, bloco: `${prefixo}Lançamentos Contábeis Diretos da Linha da Montagem`, ms: doFiltro(porLinha.get(f.linhaId) ?? [], f), fator: () => new Prisma.Decimal(1) });
             }
             for (const r of (comp.rateios ?? []) as ParcelaRateio[]) {
-              if (!r.linhaId) continue;
+              // A parcela com os percentuais de outra competência é só de lançamentos manuais, que ficam fora.
+              if (!r.linhaId || r.competenciaId) continue;
               const p = new Prisma.Decimal(r.percentual);
               const ms = (porLinha.get(r.linhaId) ?? []).filter((m) => m.alocacao === "RATEIO" && m.balde === r.chave);
               partes.push({ linha, bloco: `${prefixo}Rateio: ${ROTULO_DO_RATEIO[r.chave] ?? r.chave} → ${ROTULO_DO_RATEIO[r.destino] ?? r.destino}`, ms, fator: () => p });

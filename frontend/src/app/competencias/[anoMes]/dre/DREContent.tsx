@@ -55,8 +55,9 @@ function Composicao({ l }: { l: LinhaDRE }) {
       <p>{c.regra}</p>
       {c.direto !== undefined ? <p>Diretos: {moeda(c.direto)}</p> : null}
       {c.rateios?.map((r) => (
-        <p key={`${r.chave}|${r.destino}`}>
-          Rateio {ROTULO_CHAVE[r.chave] ?? r.chave}: {r.base.split(": ")[1] ? moeda(r.base.split(": ")[1]) : r.base} ×{" "}
+        <p key={`${r.chave}|${r.destino}|${r.competencia ?? ""}`}>
+          Rateio {ROTULO_CHAVE[r.chave] ?? r.chave}
+          {r.competencia ? ` (lançamentos manuais, com os percentuais de ${r.competencia})` : ""}: {r.base.split(": ")[1] ? moeda(r.base.split(": ")[1]) : r.base} ×{" "}
           {(Number(r.percentual) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}% = {moeda(r.valor)}
         </p>
       ))}
@@ -533,6 +534,10 @@ export function DREContent() {
               mesmo fornecedor, conta e centro de custo nas competências anteriores e nas seguintes, com o total que muda. O movimento com uma contestação
               em andamento mostra o número e a situação dela; o que chega à linha pelo rateio de outra (como os da Metalurgia nas linhas de Serviços)
               mostra “Rateio”: contesta-se na linha de origem.
+            </li>
+            <li>
+              Os lançamentos de rateio das contestações de competências fechadas (Lançamentos / Contestações) entram no extrato em blocos à parte,
+              “com os percentuais de” cada competência dos movimentos: o percentual é o daquela competência, e não o deste mês.
             </li>
             <li>
               Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações

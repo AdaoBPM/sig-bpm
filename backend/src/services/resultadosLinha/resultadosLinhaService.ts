@@ -50,9 +50,12 @@ const MC = "MC.MARGEM_DE_CONTRIBUICAO_MC";
 type LinhaDRE = LinhaEstrutura & { expressao: string | null; unidades: number[] };
 type Par = { balde: string; filial?: number };
 type OrigemContabil = { linhaId: string; pares?: Par[]; baldes?: string[]; fator?: string };
-type Composicao = { origem?: { contabil?: OrigemContabil; contabilPar?: OrigemContabil }; rateios?: Array<{ chave: string; destino?: string; percentual: string; linhaId?: string }> };
-/** Um grupo de lançamentos (os contábeis e os manuais) com o mesmo contexto: a linha da DRE, o balde, a filial, o centro e a conta. */
-type Fonte = { linhaDREId: string; balde: string; filial: number; rateio: boolean; centroCustoId: string | null; codigoCentro: string | null; reduzido: string | null; valor: number };
+type Composicao = { origem?: { contabil?: OrigemContabil; contabilPar?: OrigemContabil }; rateios?: Array<{ chave: string; destino?: string; percentual: string; linhaId?: string; competenciaId?: string }> };
+/**
+ * Um grupo de lançamentos (os contábeis e os manuais) com o mesmo contexto: a linha da DRE, o balde, a filial, o centro e a
+ * conta — e, nos manuais de rateio com os percentuais de outra competência (30/10/2026), ela.
+ */
+type Fonte = { linhaDREId: string; balde: string; filial: number; rateio: boolean; rateioDe: string | null; centroCustoId: string | null; codigoCentro: string | null; reduzido: string | null; valor: number };
 type Regra = { origem: string; centroCustoId: string | null; balde: string | null; destino: string; linhaId: string | null; base: string | null };
 type DadosDoMes = { volumes: Volume[]; receita: ItemDaReceita[] };
 
@@ -91,26 +94,46 @@ async function fontesDoMes(competenciaId: string): Promise<Fonte[]> {
     }),
     prisma.lancamentoManual.findMany({
       where: { competenciaId, linhaDREId: { not: null } },
-      select: { linhaDREId: true, balde: true, filial: true, valor: true, centroCustoId: true, centroCusto: { select: { codigoRM: true } }, contaResultado: { select: { reduzido: true } }, linhaDRE: { select: { grupoSigla: true } } },
+      select: {
+        linhaDREId: true,
+        balde: true,
+        filial: true,
+        valor: true,
+        competenciaRateioId: true,
+        centroCustoId: true,
+        centroCusto: { select: { codigoRM: true } },
+        contaResultado: { select: { reduzido: true } },
+        linhaDRE: { select: { grupoSigla: true } },
+      },
     }),
   ]);
   const grupos = new Map<string, Fonte>();
   const somar = (f: Omit<Fonte, "valor">, v: number) => {
-    const k = [f.linhaDREId, f.balde, f.filial, f.rateio ? 1 : 0, f.centroCustoId ?? "", f.codigoCentro ?? "", f.reduzido ?? ""].join("|");
+    const k = [f.linhaDREId, f.balde, f.filial, f.rateio ? 1 : 0, f.rateioDe ?? "", f.centroCustoId ?? "", f.codigoCentro ?? "", f.reduzido ?? ""].join("|");
     const g = grupos.get(k);
     if (g) g.valor += v;
     else grupos.set(k, { ...f, valor: v });
   };
   for (const l of contabeis) {
     somar(
-      { linhaDREId: l.linhaDREId!, balde: l.balde ?? "", filial: l.filial, rateio: l.alocacao === "RATEIO", centroCustoId: l.centroCustoId, codigoCentro: l.codigoCentroCusto, reduzido: l.contaResultado.reduzido },
+      { linhaDREId: l.linhaDREId!, balde: l.balde ?? "", filial: l.filial, rateio: l.alocacao === "RATEIO", rateioDe: null, centroCustoId: l.centroCustoId, codigoCentro: l.codigoCentroCusto, reduzido: l.contaResultado.reduzido },
       Number(l.valorMovimento),
     );
   }
   for (const m of manuais) {
     if (n(m.balde) === "RN") continue;
+    const rateio = CHAVES_DE_RATEIO.has(m.balde ?? "");
     somar(
-      { linhaDREId: m.linhaDREId!, balde: m.balde ?? "", filial: m.filial, rateio: CHAVES_DE_RATEIO.has(m.balde ?? ""), centroCustoId: m.centroCustoId, codigoCentro: m.centroCusto?.codigoRM ?? null, reduzido: m.contaResultado?.reduzido ?? null },
+      {
+        linhaDREId: m.linhaDREId!,
+        balde: m.balde ?? "",
+        filial: m.filial,
+        rateio,
+        rateioDe: rateio && m.competenciaRateioId !== competenciaId ? m.competenciaRateioId : null,
+        centroCustoId: m.centroCustoId,
+        codigoCentro: m.centroCusto?.codigoRM ?? null,
+        reduzido: m.contaResultado?.reduzido ?? null,
+      },
       Number(manualNoSinalDoBalancete(m.linhaDRE!.grupoSigla, m.valor)),
     );
   }
@@ -295,7 +318,7 @@ async function calcularMes(
     for (const x of comp?.rateios ?? []) {
       const linhaId = x.linhaId ?? comp?.origem?.contabil?.linhaId;
       const p = Number(x.percentual);
-      for (const f of linhaId ? (fontesDaLinha.get(linhaId) ?? []) : []) if (f.rateio && f.balde === x.chave) partes.push({ f, a: p * f.valor, destino: x.destino });
+      for (const f of linhaId ? (fontesDaLinha.get(linhaId) ?? []) : []) if (f.rateio && f.balde === x.chave && f.rateioDe === (x.competenciaId ?? null)) partes.push({ f, a: p * f.valor, destino: x.destino });
     }
     const refeito = partes.reduce((s, p) => s + p.a, 0);
     if (Math.abs(V - refeito) >= 0.01) {

@@ -34,7 +34,7 @@ const COLUNAS: Coluna<LancamentoManual>[] = [
   { chave: "conta", rotulo: "Conta", valor: (l) => l.contaResultado?.reduzido },
   { chave: "descricao", rotulo: "Descrição", valor: (l) => l.descricao },
   { chave: "destino", rotulo: "Destino na DRE", valor: (l) => l.linhaDRE?.descricao ?? "sem destino" },
-  { chave: "rateio", rotulo: "Rateio", valor: (l) => l.balde },
+  { chave: "rateio", rotulo: "Rateio", valor: (l) => l.balde, texto: (l) => (l.rateioDe ? `${l.balde ?? "—"} · percentuais de ${l.rateioDe}` : l.balde) },
   { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valor), texto: (l) => moeda(l.valor) },
   { chave: "acoes", rotulo: "", semFiltro: true },
 ];
@@ -98,7 +98,8 @@ export function LancamentosContestacoesContent() {
           <p>
             Os lançamentos das contestações de gastos com movimentos que não puderam ser corrigidos no balancete (a competência do movimento estava
             fechada): para cada contestação, o estorno no centro de custo e na conta de antes e o lançamento no centro e na conta novos. Entram no
-            resultado da competência, como os da aba Controladoria.
+            resultado da competência, como os da aba Controladoria; os com rateio se dividem entre as unidades pelos percentuais da competência do
+            movimento.
           </p>
         }
         comoUsar={
@@ -114,6 +115,12 @@ export function LancamentosContestacoesContent() {
               Os valores ficam no sinal da DRE: o estorno tira o valor dos movimentos do centro e da conta de antes, e o lançamento novo o põe no centro e
               na conta novos (com a filial do movimento). Uma combinação que nenhuma aba de resultado soma é recusada, com o motivo, e a contestação fica
               na lista.
+            </li>
+            <li>
+              Com rateio no centro de antes ou no novo (Projeto, Produção, Metalurgia, Armadura ou Acompanhamento), há um estorno e um lançamento novo
+              para cada competência dos movimentos, e a apuração divide os dois entre as unidades pelos percentuais de rateio dessa competência, e não
+              pelos desta: a correção tira de cada unidade o que ela recebeu do movimento. A coluna Rateio mostra a competência dos percentuais, e a
+              memória de cálculo da DRE mostra essa parcela à parte.
             </li>
             <li>
               A lixeira exclui a importação de uma contestação, depois da confirmação num modal: os lançamentos dela saem (o estorno e o novo), e ela volta à
@@ -196,6 +203,11 @@ export function LancamentosContestacoesContent() {
               </td>
               <td className="px-4 text-sm">
                 <BaldeBadge balde={l.balde} />
+                {l.rateioDe ? (
+                  <div className="text-xs whitespace-nowrap text-gray-500" title={`Dividido entre as unidades pelos percentuais de rateio de ${l.rateioDe}, a competência do movimento`}>
+                    percentuais de {l.rateioDe}
+                  </div>
+                ) : null}
               </td>
               <td className="px-4 text-right text-sm whitespace-nowrap text-gray-900">{moeda(l.valor)}</td>
               <td className="px-4 py-0 text-right whitespace-nowrap">

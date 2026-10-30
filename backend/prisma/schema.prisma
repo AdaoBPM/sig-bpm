@@ -768,7 +768,8 @@ model Competencia {
   divergencias         Divergencia[]
 
   lancamentosContabeis LancamentoContabil[]
-  lancamentosManuais   LancamentoManual[]
+  lancamentosManuais   LancamentoManual[] @relation("LancamentoManualCompetencia")
+  lancamentosManuaisDoRateio LancamentoManual[] @relation("LancamentoManualCompetenciaRateio")
   contestacoes         Contestacao[]
   movimentosContestados ContestacaoMovimento[]
   estoqueSaldos        EstoqueSaldo[]
@@ -1161,11 +1162,15 @@ model LancamentoManual {
   valor            Decimal
   /// A contestação de que o lançamento veio (27/10/2026: a aba Contestações dos Lançamentos; nulo, a aba Controladoria).
   contestacaoId    String?      @map("contestacao_id")
+  /// A competência dos percentuais de rateio (30/10/2026): nos lançamentos de uma contestação de competência fechada com
+  /// rateio, a do movimento, para que a correção divida o valor entre as unidades como ele foi dividido; nulo, os da própria competência.
+  competenciaRateioId String?   @map("competencia_rateio_id")
   criadoPor        String?      @map("criado_por")
   criadoEm         DateTime     @default(now()) @map("criado_em")
   atualizadoEm     DateTime     @updatedAt @map("atualizado_em")
 
-  competencia    Competencia     @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  competencia    Competencia     @relation("LancamentoManualCompetencia", fields: [competenciaId], references: [id], onDelete: Cascade)
+  competenciaRateio Competencia? @relation("LancamentoManualCompetenciaRateio", fields: [competenciaRateioId], references: [id], onDelete: SetNull)
   centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id], onDelete: Restrict)
   contaResultado ContaResultado? @relation(fields: [contaResultadoId], references: [id])
   linhaDRE       LinhaDRE?       @relation(fields: [linhaDREId], references: [id])

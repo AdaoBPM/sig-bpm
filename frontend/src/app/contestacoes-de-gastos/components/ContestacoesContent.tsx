@@ -205,8 +205,9 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
                 <li>
                   “Processar” corrige os movimentos das acatadas: com a competência do movimento aberta, no próprio balancete (a classificação aplica o
                   centro e a conta novos; a competência apurada pede reapuração); com ela fechada, o movimento fica para o Importar da aba Contestações
-                  dos Lançamentos, para virar o estorno e o lançamento novo numa competência aberta. A contestação fica validada quando todos os
-                  movimentos dela estão corrigidos; o detalhe da situação mostra onde estão.
+                  dos Lançamentos, para virar o estorno e o lançamento novo numa competência aberta (com rateio, divididos entre as unidades pelos
+                  percentuais da competência do movimento). A contestação fica validada quando todos os movimentos dela estão corrigidos; o detalhe da
+                  situação mostra onde estão.
                 </li>
                 <li>
                   Na coluna Ações, “Alterar Status” muda a situação de qualquer contestação, com a justificativa (obrigatória). Tirar uma validada (ou
