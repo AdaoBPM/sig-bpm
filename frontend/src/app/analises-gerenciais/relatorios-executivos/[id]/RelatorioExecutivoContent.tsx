@@ -618,7 +618,6 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 key={pagina.id}
                 ajuste={ajusteDaPagina}
                 nomeDoSlide={nomeDaPagina(pagina, nPagina)}
-                nomeDoGrupo={aba?.nome ?? "este grupo"}
                 uniformes={uniformes}
                 onMudar={mudarAjuste}
               />
@@ -832,10 +831,10 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.
             </li>
             <li>
-              “Transições”, antes do Adicionar, escolhe como o slide aberto entra na apresentação: Esmaecer (o novo aparece sobre o anterior), Rolar
-              Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou da esquerda), ou Nenhuma
-              (a troca na hora); a marca na lista mostra a escolhida. Em Cronômetro, “Avançar Após”, digite os segundos: na apresentação, o slide passa
-              sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A transição e o Cronômetro têm cada um o seu “Aplicar ao Grupo”:
+              “Transições”, antes do Adicionar: em Animação, a lista Tipo escolhe como o slide aberto entra na apresentação: Esmaecer (o novo aparece
+              sobre o anterior), Rolar Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou
+              da esquerda), ou Nenhuma (a troca na hora). Em Cronômetro, “Avançar Após”, digite os segundos: na apresentação, o slide passa
+              sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A Animação e o Cronômetro têm cada um o seu “Aplicar ao Grupo”:
               marcado, a mudança vale para todos os slides do grupo (marcar a caixa já leva a transição, ou o avanço, do slide aberto a todos; ela abre
               marcada quando todos já são iguais); desmarcado, só para o slide aberto. A página nova entra com a transição e o avanço da aberta.
             </li>
