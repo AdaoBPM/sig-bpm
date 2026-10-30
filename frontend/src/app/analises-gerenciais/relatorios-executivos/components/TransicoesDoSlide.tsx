@@ -98,6 +98,9 @@ export function TransicoesDoSlide({
               />
               Aplicar ao Grupo
             </label>
+            {/* O Cronômetro (30/10/2026, pedido do Adão): um grupo de opções à parte, com o rótulo como o da lista. */}
+            <div className="my-1 border-t border-gray-200" />
+            <p className="px-2 py-1.5 text-xs text-gray-500">Cronômetro</p>
             <label className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-800">
               Avançar Após
               <input

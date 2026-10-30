@@ -832,8 +832,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               “Transições”, antes do Adicionar, escolhe como o slide aberto entra na apresentação: Esmaecer (o novo aparece sobre o anterior), Rolar
               Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou da esquerda), ou Nenhuma
               (a troca na hora); a marca na lista mostra a escolhida. Com “Aplicar ao Grupo” marcado, a escolha vale para todos os slides do grupo
-              (marcar a caixa já leva a transição e o avanço do slide aberto a todos; ela abre marcada quando todos já são iguais). Em “Avançar Após”,
-              digite os segundos: na apresentação, o slide passa sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A página
+              (marcar a caixa já leva a transição e o avanço do slide aberto a todos; ela abre marcada quando todos já são iguais). Em Cronômetro,
+              “Avançar Após”, digite os segundos: na apresentação, o slide passa sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A página
               nova entra com a transição e o avanço da aberta.
             </li>
             <li>
