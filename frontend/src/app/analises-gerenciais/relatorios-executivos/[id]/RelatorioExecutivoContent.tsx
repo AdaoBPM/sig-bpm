@@ -864,7 +864,9 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               direita: Desfazer e Refazer (Ctrl+Z e Ctrl+Y, ou Ctrl+Shift+Z: as alterações desta sessão, em todas as abas, até 100 passos; a digitação seguida
               conta como um passo, e o Desfazer abre a aba e a página da alteração; dentro de um texto em edição, o Ctrl+Z desfaz a digitação, como no
               navegador), Copiar e Colar (o bloco; veja acima), o gráfico dos cards do Painel e dos Indicadores (em
-              ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), Configurar (as opções do
+              ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), o Zoom do card (100%,
+              125%, 150%, 200%, 250% ou 300%: o conteúdo inteiro — os textos, os valores e o gráfico — maior, no mesmo bloco; o que não couber, aumente o
+              bloco), Configurar (as opções do
               gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
               imagem, o Cortar e Posicionar, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
             </li>

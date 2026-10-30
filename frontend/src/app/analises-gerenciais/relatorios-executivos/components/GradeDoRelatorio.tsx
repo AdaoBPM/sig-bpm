@@ -2,13 +2,14 @@
 
 import { useCallback, useContext, useEffect, useRef, useState, useLayoutEffect } from "react";
 import GridLayout, { type Layout } from "react-grid-layout";
-import { ChartColumn, CircleAlert, CirclePlay, ClipboardPaste, Copy, Crop, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import { ChartColumn, CircleAlert, CirclePlay, ClipboardPaste, Copy, Crop, ImagePlus, Redo2, Settings, SlidersHorizontal, ThumbsDown, ThumbsUp, Trash2, Undo2, ZoomIn } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { blocoComparado, CardDoPainel, type FormatacaoDoCard, type Cores } from "@/app/relatorios/painel/PainelContent";
 import type { ItemPainel } from "@/app/relatorios/services/relatoriosService";
@@ -981,6 +982,60 @@ function ConfigurarGraficoDialog({
   );
 }
 
+/** Os Zooms dos cards (30/10/2026, pedido do Adão): 100% (o padrão, sem o campo no bloco) a 300%. */
+const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3];
+const rotuloDoZoom = (z: number) => `${Math.round(z * 100)}%`;
+
+/** O botão do Zoom do card, no menu da edição: o zoom de agora e a lista dos zooms. */
+function BotaoDoZoom({ zoom, botao, desabilitado, onEscolher }: { zoom: number; botao: string; desabilitado: boolean; onEscolher: (z: number) => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            className={`${botao} w-auto min-w-12 gap-0.5 px-1 text-xs font-semibold`}
+            disabled={desabilitado}
+            title="Zoom do card"
+            aria-label={`Zoom do card: ${rotuloDoZoom(zoom)}`}
+          >
+            <ZoomIn className="size-4" />
+            {desabilitado ? null : rotuloDoZoom(zoom)}
+          </button>
+        }
+      />
+      <DropdownMenuContent align="start" className="w-36">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-xs text-gray-500">Zoom do Card</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={String(zoom)} onValueChange={(v) => onEscolher(Number(v))}>
+            {ZOOMS.map((z) => (
+              <DropdownMenuRadioItem key={z} value={String(z)} closeOnClick>
+                {z === 1 ? "100% (padrão)" : rotuloDoZoom(z)}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * O card com o Zoom (30/10/2026, pedido do Adão): o conteúdo inteiro (os textos, os valores e o gráfico) maior, na mesma
+ * proporção, no mesmo bloco — montado numa área menor (1/zoom do bloco) e ampliado até o tamanho dele. O que não couber,
+ * o usuário resolve aumentando o bloco. A Metodologia em até metade da largura dos valores (22/10/2026), quebrando as linhas.
+ */
+function CardComZoom({ zoom = 1, children }: { zoom?: number; children: React.ReactNode }) {
+  if (zoom === 1) return <div className="h-full [&_[data-metodologia]]:max-w-[50%]">{children}</div>;
+  return (
+    <div className="h-full overflow-hidden">
+      <div className="origin-top-left [&_[data-metodologia]]:max-w-[50%]" style={{ width: `${100 / zoom}%`, height: `${100 / zoom}%`, transform: `scale(${zoom})` }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /**
  * O menu único da edição (24/10/2026, pedido do Adão; antes, a barra de cada bloco, com o mouse sobre ele), logo abaixo
  * das abas, preso no alto ao rolar e centralizado, na largura dos botões (24/10/2026: sem o nome do bloco — ele fica na dica
@@ -1054,6 +1109,8 @@ export function BarraDeEdicao({
           <ChartColumn className="size-4" />
         </button>
       )}
+      {/* O Zoom do card (30/10/2026): o conteúdo inteiro maior, no mesmo bloco. */}
+      <BotaoDoZoom zoom={card?.zoom ?? 1} botao={botao} desabilitado={!card} onEscolher={(z) => onMudar({ zoom: z === 1 ? undefined : z } as Partial<Bloco>)} />
       {/* O Configurar: as opções do gráfico dos cards com gráfico, o sumário ou a tabela. */}
       <button type="button" className={botao} disabled={!configurar} title={configurar ?? "Configurar"} aria-label={configurar ?? "Configurar"} onClick={onConfigurar}>
         <Settings className="size-4" />
@@ -1335,8 +1392,7 @@ function ConteudoDoBloco({
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
     const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} soAcumulado={!!b.soAcumulado} comRotulos={b.comRotulos ?? false} />;
     // Sem o nome do grupo em cima do card (22/10/2026; antes, "PRODUÇÃO: MATRIZ"…): o card ocupa o bloco inteiro.
-    // A Metodologia em até metade da largura dos valores (22/10/2026), quebrando as linhas.
-    return <div className="h-full [&_[data-metodologia]]:max-w-[50%]">{card}</div>;
+    return <CardComZoom zoom={b.zoom}>{card}</CardComZoom>;
   }
   const i = dados.indicadores.indicadores.find((x) => x.nome === b.nome);
   if (!i) return indisponivel(`O indicador ${b.nome} não está mais no cadastro Indicadores (Cadastros da Controladoria / Analítico).`);
@@ -1361,7 +1417,7 @@ function ConteudoDoBloco({
     serie: daSerie,
   };
   return (
-    <div className="h-full [&_[data-metodologia]]:max-w-[50%]">
+    <CardComZoom zoom={b.zoom}>
       <CardDoPainel
         i={item}
         rotuloMes={dados.painel.rotuloMes}
@@ -1372,6 +1428,6 @@ function ConteudoDoBloco({
         comRotulos={b.comRotulos ?? false}
         formatacao={{ mes: f, acumulado: f }}
       />
-    </div>
+    </CardComZoom>
   );
 }

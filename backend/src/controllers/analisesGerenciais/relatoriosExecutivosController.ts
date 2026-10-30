@@ -54,6 +54,7 @@ function aba(request: Request, response: Response) {
   if (!r.success) response.status(400).json({ error: "Aba inválida." });
   return r.success ? r.data : null;
 }
+const zoomDoCard = z.union([z.literal(1.25), z.literal(1.5), z.literal(2), z.literal(2.5), z.literal(3)]).optional();
 const posicao = { id: z.string().min(1).max(60), x: z.number().int().min(0).max(24), y: z.number().int().min(0).max(2000), w: z.number().int().min(1).max(24), h: z.number().int().min(1).max(200) };
 // A fonte, o espaçamento entre as linhas e a formatação de um nível do Sumário (20/10/2026).
 const fonteDoTexto = z.enum(FONTES_DO_TEXTO);
@@ -62,8 +63,9 @@ const estiloDoSumario = z.object({ negrito: z.boolean().optional(), italico: z.b
 /** O corte de uma imagem (27/10/2026): o zoom (1 a 4) e a posição (0 a 1), como na Imagem de Fundo. */
 const recorte = z.object({ zoom: z.number().min(1).max(4), x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 const bloco = z.discriminatedUnion("tipo", [
-  z.object({ ...posicao, tipo: z.literal("PAINEL"), aba: z.enum(["resultados", "performance"]), quadro: z.string().max(200), titulo: z.string().max(200), sigla: z.string().max(60), comGrafico: z.boolean(), soAcumulado: z.boolean().optional(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), cores: z.enum(["padrao", "daltonismo"]).optional() }),
-  z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200), grafico: z.enum(["MESES", "ACUMULADO"]).optional(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional() }),
+  // O Zoom do card (30/10/2026): 125% a 300% (sem ele, 100%).
+  z.object({ ...posicao, tipo: z.literal("PAINEL"), aba: z.enum(["resultados", "performance"]), quadro: z.string().max(200), titulo: z.string().max(200), sigla: z.string().max(60), comGrafico: z.boolean(), soAcumulado: z.boolean().optional(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), cores: z.enum(["padrao", "daltonismo"]).optional(), zoom: zoomDoCard }),
+  z.object({ ...posicao, tipo: z.literal("INDICADOR"), nome: z.string().min(1).max(200), grafico: z.enum(["MESES", "ACUMULADO"]).optional(), tipoGrafico: z.enum(["barras", "area"]).optional(), comRotulos: z.boolean().optional(), zoom: zoomDoCard }),
   z.object({ ...posicao, tipo: z.literal("ANOTACAO"), nota: z.enum(["POSITIVO", "NEGATIVO", "ATENCAO"]), texto: z.string().max(5000), titulo: z.string().max(120).optional(), html: z.string().max(30000).optional(), tamanhoTitulo: z.number().int().min(8).max(48).optional(), fonteTitulo: fonteDoTexto.optional(), espacamento }),
   z.object({ ...posicao, tipo: z.literal("FOTO"), arquivo: z.union([z.literal(""), z.string().regex(NOME_DA_FOTO)]), legenda: z.string().max(500), proporcao: z.number().positive().max(50), legendaHtml: z.string().max(5000).optional(), livre: z.boolean().optional(), ajustes: ajustesDeImagem.optional(), recorte: recorte.optional() }),
   // O vídeo (20/10/2026): o arquivo enviado ou o link de um dos sites aceitos (vazios, o quadro esperando o vídeo).

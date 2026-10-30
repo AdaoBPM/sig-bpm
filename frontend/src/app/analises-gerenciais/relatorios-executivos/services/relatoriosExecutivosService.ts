@@ -50,12 +50,14 @@ export type Bloco = Posicao &
         tipoGrafico?: "barras" | "area";
         comRotulos?: boolean;
         cores?: "padrao" | "daltonismo";
+        /** O Zoom do card (30/10/2026): o conteúdo inteiro maior (1,25 a 3), no mesmo bloco; sem ele, 1. */
+        zoom?: number;
       }
     /**
      * O gráfico do card do indicador (22/10/2026): os meses e o acumulado ou só o acumulado; sem ele, só os valores. As
      * opções do gráfico, como as dos cards do Painel.
      */
-    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO"; tipoGrafico?: "barras" | "area"; comRotulos?: boolean }
+    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO"; tipoGrafico?: "barras" | "area"; comRotulos?: boolean; /** O Zoom do card (30/10/2026). */ zoom?: number }
     /** O título da anotação (16/10/2026); sem ele, o nome da nota. */
     | {
         tipo: "ANOTACAO";
