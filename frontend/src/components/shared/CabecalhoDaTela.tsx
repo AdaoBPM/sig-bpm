@@ -17,8 +17,10 @@ type Props = {
   selo?: ReactNode;
   /** Botões à direita do título. */
   acoes?: ReactNode;
-  /** O Exportar da tabela da tela (30/10/2026, `ExportarTabela`): antes das ações. */
+  /** O Exportar da tabela da tela (30/10/2026, `ExportarTabela`): antes das ações (com `exportarPorUltimo`, depois delas). */
   exportar?: ReactNode;
+  /** O Exportar no fim da barra, depois das ações (30/10/2026, pedido do Adão: nos Perfis). */
+  exportarPorUltimo?: boolean;
 };
 
 /**
@@ -32,7 +34,7 @@ type Props = {
  * o componente devolve dois irmãos, sem envoltório: o fixo precisa ser filho
  * direto do contêiner da página, que é o que tem a altura toda.
  */
-export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar }: Props) {
+export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar, exportarPorUltimo = false }: Props) {
   // Numa tela com abas (17/10/2026), o título é o nome da tela, e as abas vêm logo abaixo; o painel Sobre segue o da aba.
   const daTela = useAbasDaTela();
   const ref = useRef<HTMLDivElement>(null);
@@ -87,8 +89,9 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar
         {selo || acoes || exportar ? (
           <div data-tour="acoes-da-tela" className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {selo}
-            {exportar}
+            {exportarPorUltimo ? null : exportar}
             {acoes}
+            {exportarPorUltimo ? exportar : null}
           </div>
         ) : null}
       </div>

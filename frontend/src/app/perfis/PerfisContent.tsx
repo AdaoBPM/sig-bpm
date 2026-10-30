@@ -82,6 +82,7 @@ export function PerfisContent() {
       <CabecalhoDaTela
         titulo="Perfis de Usuário"
         exportar={<ExportarTabela titulo="Perfis de Usuário" colunas={COLUNAS} linhas={tabela.filtradas} />}
+        exportarPorUltimo
         comoUsar={
           <ul>
             <li>
