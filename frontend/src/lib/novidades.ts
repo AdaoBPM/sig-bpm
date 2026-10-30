@@ -28,6 +28,35 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 30/10/2026, 16:57
+  {
+    publicada: "2026-10-30T16:57",
+    processo: TODO_O_SIG,
+    tela: "Exportar",
+    itens: ["O Exportar fica sempre por último na barra de ações das telas, depois dos demais botões e filtros."],
+  },
+  {
+    publicada: "2026-10-30T16:57",
+    processo: "Central de Conectividade",
+    tela: "APIs",
+    rota: "/central-de-conectividade/biblioteca-de-apis",
+    itens: [
+      "A Biblioteca de APIs passa a ser a tela APIs do processo Central de Conectividade, na Controladoria, acima dos Cadastros da Controladoria. O endereço, as APIs e as permissões continuam os mesmos.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T16:57",
+    processo: "Central de Conectividade",
+    soAdministrador: true,
+    itens: ["O processo Integrações e Consultas, em desenvolvimento, saiu do menu."],
+  },
+  {
+    publicada: "2026-10-30T16:57",
+    processo: "Controle de Usuários",
+    tela: "Perfis",
+    rota: "/perfis",
+    itens: ["Na matriz do perfil, a Central de Conectividade fica sob a Controladoria, como no menu, com a tela APIs (antes, Biblioteca de APIs)."],
+  },
   // 30/10/2026, 16:00
   {
     publicada: "2026-10-30T16:00",
