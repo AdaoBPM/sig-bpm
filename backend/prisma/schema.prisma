@@ -769,7 +769,7 @@ model Competencia {
 
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[] @relation("LancamentoManualCompetencia")
-  lancamentosManuaisDoRateio LancamentoManual[] @relation("LancamentoManualCompetenciaRateio")
+  lancamentosManuaisDoMovimento LancamentoManual[] @relation("LancamentoManualCompetenciaMovimento")
   contestacoes         Contestacao[]
   movimentosContestados ContestacaoMovimento[]
   estoqueSaldos        EstoqueSaldo[]
@@ -1162,15 +1162,16 @@ model LancamentoManual {
   valor            Decimal
   /// A contestação de que o lançamento veio (27/10/2026: a aba Contestações dos Lançamentos; nulo, a aba Controladoria).
   contestacaoId    String?      @map("contestacao_id")
-  /// A competência dos percentuais de rateio (30/10/2026): nos lançamentos de uma contestação de competência fechada com
-  /// rateio, a do movimento, para que a correção divida o valor entre as unidades como ele foi dividido; nulo, os da própria competência.
-  competenciaRateioId String?   @map("competencia_rateio_id")
+  /// A competência do movimento (30/10/2026): nos lançamentos de uma contestação, a do movimento que eles corrigem (um
+  /// estorno e um lançamento novo por competência). Com rateio, a apuração divide o valor pelos percentuais dela, como o
+  /// movimento foi dividido. Nulo nos digitados.
+  competenciaMovimentoId String? @map("competencia_movimento_id")
   criadoPor        String?      @map("criado_por")
   criadoEm         DateTime     @default(now()) @map("criado_em")
   atualizadoEm     DateTime     @updatedAt @map("atualizado_em")
 
   competencia    Competencia     @relation("LancamentoManualCompetencia", fields: [competenciaId], references: [id], onDelete: Cascade)
-  competenciaRateio Competencia? @relation("LancamentoManualCompetenciaRateio", fields: [competenciaRateioId], references: [id], onDelete: SetNull)
+  competenciaMovimento Competencia? @relation("LancamentoManualCompetenciaMovimento", fields: [competenciaMovimentoId], references: [id], onDelete: SetNull)
   centroCusto    CentroCusto?    @relation(fields: [centroCustoId], references: [id], onDelete: Restrict)
   contaResultado ContaResultado? @relation(fields: [contaResultadoId], references: [id])
   linhaDRE       LinhaDRE?       @relation(fields: [linhaDREId], references: [id])

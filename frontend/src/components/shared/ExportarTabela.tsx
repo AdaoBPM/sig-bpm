@@ -58,7 +58,7 @@ export function ExportarTabela<T>({
   buscarLinhas,
   quantidade,
 }: {
-  /** O título do arquivo (e o nome dele): a tela e o recorte, como "Lançamentos · Controladoria · 09/2026". */
+  /** O título do arquivo (e o nome dele): a tela e o recorte, como "Lançamentos Manuais · Controladoria · 09/2026". */
   titulo: string;
   subtitulo?: string | null;
   colunas: ColunaExportavel<T>[];

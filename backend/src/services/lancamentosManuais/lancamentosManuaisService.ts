@@ -135,8 +135,10 @@ const SELECAO = {
     select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true },
   },
   linhaDRE: { select: { codigo: true, descricao: true, grupo: true } },
-  // A competência dos percentuais de rateio (30/10/2026: os lançamentos de uma contestação com rateio).
-  competenciaRateio: { select: { ano: true, mes: true } },
+  // A competência do movimento que o lançamento de uma contestação corrige (30/10/2026); com rateio, a dos percentuais.
+  competenciaId: true,
+  competenciaMovimentoId: true,
+  competenciaMovimento: { select: { ano: true, mes: true } },
   // A contestação de que o lançamento veio (27/10/2026: a aba Contestações).
   contestacao: {
     select: {
@@ -151,11 +153,13 @@ const SELECAO = {
 } as const;
 
 type Linha = Prisma.LancamentoManualGetPayload<{ select: typeof SELECAO }>;
-const apresentar = ({ valor, contestacao, competenciaRateio, ...l }: Linha) => ({
+const apresentar = ({ valor, contestacao, competenciaId, competenciaMovimentoId, competenciaMovimento, ...l }: Linha) => ({
   ...l,
   valor: valor.toFixed(2),
-  // Só no de rateio: no direto (o lançamento novo num centro sem rateio), os percentuais não valem.
-  rateioDe: competenciaRateio && CHAVES_DE_RATEIO.has(l.balde ?? "") ? rotulo(competenciaRateio.ano, competenciaRateio.mes) : null,
+  competenciaMovimento: competenciaMovimento ? rotulo(competenciaMovimento.ano, competenciaMovimento.mes) : null,
+  // Os percentuais de outra competência: só no de rateio (no direto, eles não valem) e com o movimento de outro mês.
+  rateioDe:
+    competenciaMovimento && competenciaMovimentoId !== competenciaId && CHAVES_DE_RATEIO.has(l.balde ?? "") ? rotulo(competenciaMovimento.ano, competenciaMovimento.mes) : null,
   contestacao: contestacao
     ? {
         id: contestacao.id,
@@ -321,7 +325,7 @@ export const lancamentosManuaisService = {
     competenciaId: string,
     contestacaoId: string,
     motivo: string,
-    pares: Array<{ filial: number; centroCustoId: string | null; contaResultadoId: string; descricao: string; valor: Prisma.Decimal; competenciaRateioId?: string | null }>,
+    pares: Array<{ filial: number; centroCustoId: string | null; contaResultadoId: string; descricao: string; valor: Prisma.Decimal; competenciaMovimentoId?: string | null }>,
     usuarioId: string,
   ) {
     const prisma = getPrismaClient();

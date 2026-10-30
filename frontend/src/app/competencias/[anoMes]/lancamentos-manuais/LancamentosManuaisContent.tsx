@@ -100,7 +100,7 @@ export function LancamentosManuaisContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Lançamentos Manuais"
-        exportar={<ExportarTabela titulo={`Lançamentos · Controladoria · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
+        exportar={<ExportarTabela titulo={`Lançamentos Manuais · Controladoria · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         comoUsar={
           <ul>

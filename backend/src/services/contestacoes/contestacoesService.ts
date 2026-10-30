@@ -5,7 +5,7 @@ import { carregarUsuariosAtivos, type Acesso } from "../acesso/acesso.js";
 import { departamentoDaLinha, gestaoDoCentro, MENSAGEM_SENSIVEL, podeVerCentro, podeVerMovimentos, podeVerSensiveis, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { auditar } from "../auditoriaService.js";
 import { classificacaoService } from "../classificacao/classificacaoService.js";
-import { CHAVES_DE_RATEIO, manualNoSinalDoBalancete } from "../dre/apuracaoUnidades.js";
+import { manualNoSinalDoBalancete } from "../dre/apuracaoUnidades.js";
 import { lancamentosManuaisService } from "../lancamentosManuais/lancamentosManuaisService.js";
 
 /**
@@ -368,63 +368,45 @@ async function exigirLancamento(id: string) {
 }
 
 /**
- * Os grupos dos lançamentos manuais (30/10/2026): os movimentos que esperam o Importar, somados pela filial, pelo centro e
- * pela conta de antes — um estorno e um lançamento novo por grupo. Os movimentos com rateio (`porCompetencia`) não se
- * somam entre competências: cada grupo deles leva a competência, cujos percentuais dividem o valor entre as unidades.
+ * Os grupos dos lançamentos manuais (30/10/2026): os movimentos que esperam o Importar, somados pela competência, pela
+ * filial, pelo centro e pela conta de antes — um estorno e um lançamento novo por grupo, com a competência do movimento
+ * (a que a aba Contestações dos Lançamentos mostra e, com rateio, a dos percentuais). Na ordem das competências.
  */
 export function agruparParaLancamentos<
   M extends { filial: number; centroAntesId: string | null; contaAntesId: string; valor: Prisma.Decimal; competencia: { id: string; ano: number; mes: number } },
->(ms: M[], porCompetencia: (m: M) => boolean = () => false) {
+>(ms: M[]) {
   const grupos = new Map<
     string,
-    { filial: number; centroAntesId: string | null; contaAntesId: string; competenciaRateioId: string | null; valor: Prisma.Decimal; competencias: string[]; movimentos: number }
+    { competencia: { id: string; ano: number; mes: number }; filial: number; centroAntesId: string | null; contaAntesId: string; valor: Prisma.Decimal; movimentos: number }
   >();
   for (const m of ms) {
-    const competenciaRateioId = porCompetencia(m) ? m.competencia.id : null;
-    const k = `${m.filial}|${m.centroAntesId ?? ""}|${m.contaAntesId}|${competenciaRateioId ?? ""}`;
-    const g = grupos.get(k) ?? { filial: m.filial, centroAntesId: m.centroAntesId, contaAntesId: m.contaAntesId, competenciaRateioId, valor: new Prisma.Decimal(0), competencias: [], movimentos: 0 };
+    const k = `${m.competencia.id}|${m.filial}|${m.centroAntesId ?? ""}|${m.contaAntesId}`;
+    const g = grupos.get(k) ?? { competencia: m.competencia, filial: m.filial, centroAntesId: m.centroAntesId, contaAntesId: m.contaAntesId, valor: new Prisma.Decimal(0), movimentos: 0 };
     g.valor = g.valor.add(m.valor);
     g.movimentos++;
-    const c = rotulo(m.competencia.ano, m.competencia.mes);
-    if (!g.competencias.includes(c)) g.competencias.push(c);
     grupos.set(k, g);
   }
-  // As competências em ordem ("MM/AAAA" pelo ano e pelo mês).
-  const ordem = (r: string) => r.slice(3) + r.slice(0, 2);
-  return [...grupos.values()].map((g) => ({ ...g, competencias: g.competencias.sort((a, b) => ordem(a).localeCompare(ordem(b))) }));
+  return [...grupos.values()].sort((a, b) => a.competencia.ano - b.competencia.ano || a.competencia.mes - b.competencia.mes);
 }
 
 /**
  * Os lançamentos manuais de uma contestação: para cada grupo, o estorno (centro e conta de antes) e o novo (centro e conta
- * novos). Com rateio no estorno ou no novo (o balde do centro; sem centro, o da conta, como no lançamento manual), o par é
- * de uma competência só e leva a competência do movimento (30/10/2026): a apuração divide os dois pelos percentuais dela,
- * como o movimento foi dividido, e não pelos da competência dos lançamentos (`destinoId`).
+ * novos), os dois com a competência do movimento (30/10/2026): com rateio, a apuração os divide pelos percentuais dela,
+ * como o movimento foi dividido, e não pelos da competência dos lançamentos.
  */
 async function lancamentosDaContestacao(
   c: { numero: number; historico: string | null; cliForn: string | null; centroNovoId: string | null; contaNovaId: string | null },
   movimentos: Array<{ filial: number; centroAntesId: string | null; contaAntesId: string; valor: Prisma.Decimal; competencia: { id: string; ano: number; mes: number } }>,
-  destinoId: string,
 ) {
   const prisma = getPrismaClient();
-  const contaIds = [...new Set(movimentos.flatMap((m) => [m.contaAntesId, c.contaNovaId ?? m.contaAntesId]))];
-  const centroIds = [...new Set(movimentos.flatMap((m) => [m.centroAntesId, c.centroNovoId ?? m.centroAntesId]))].filter((x): x is string => x !== null);
-  const [contas, centros] = await Promise.all([
-    prisma.contaResultado.findMany({ where: { id: { in: contaIds } }, select: { id: true, balde: true, linhaDRE: { select: { grupoSigla: true } } } }),
-    prisma.centroCusto.findMany({ where: { id: { in: centroIds } }, select: { id: true, balde: true } }),
-  ]);
-  const rateia = (centroId: string | null, contaId: string) =>
-    CHAVES_DE_RATEIO.has((centroId ? centros.find((x) => x.id === centroId)?.balde : contas.find((x) => x.id === contaId)?.balde) ?? "");
-  const grupos = agruparParaLancamentos(
-    movimentos,
-    (m) => m.competencia.id !== destinoId && (rateia(m.centroAntesId, m.contaAntesId) || rateia(c.centroNovoId ?? m.centroAntesId, c.contaNovaId ?? m.contaAntesId)),
-  );
+  const grupos = agruparParaLancamentos(movimentos);
+  const ids = [...new Set(grupos.flatMap((g) => [g.contaAntesId, c.contaNovaId ?? g.contaAntesId]))];
+  const contas = await prisma.contaResultado.findMany({ where: { id: { in: ids } }, select: { id: true, linhaDRE: { select: { grupoSigla: true } } } });
   // O valor no sinal da DRE (o do lançamento manual): nas receitas, o do balancete trocado.
   const naDRE = (contaId: string, valor: Prisma.Decimal) => manualNoSinalDoBalancete(contas.find((x) => x.id === contaId)?.linhaDRE?.grupoSigla ?? "", valor);
   const item = (c.historico || c.cliForn || "").slice(0, 120);
   return grupos.flatMap((g) => {
-    const cs = g.competencias;
-    const periodo = cs.length > 2 ? `de ${cs[0]} a ${cs[cs.length - 1]}` : cs.length === 2 ? `de ${cs[0]} e ${cs[1]}` : `de ${cs[0]}`;
-    const quando = g.movimentos > 1 ? ` · ${g.movimentos} movimentos ${periodo}` : ` · ${cs[0]}`;
+    const quando = ` · ${g.movimentos > 1 ? `${g.movimentos} movimentos de ` : ""}${rotulo(g.competencia.ano, g.competencia.mes)}`;
     const contaNovaId = c.contaNovaId ?? g.contaAntesId;
     return [
       {
@@ -433,7 +415,7 @@ async function lancamentosDaContestacao(
         contaResultadoId: g.contaAntesId,
         descricao: `Contestação nº ${c.numero}: estorno${item ? ` (${item})` : ""}${quando}`,
         valor: naDRE(g.contaAntesId, g.valor).neg(),
-        competenciaRateioId: g.competenciaRateioId,
+        competenciaMovimentoId: g.competencia.id,
       },
       {
         filial: g.filial,
@@ -441,7 +423,7 @@ async function lancamentosDaContestacao(
         contaResultadoId: contaNovaId,
         descricao: `Contestação nº ${c.numero}${item ? ` (${item})` : ""}${quando}`,
         valor: naDRE(contaNovaId, g.valor),
-        competenciaRateioId: g.competenciaRateioId,
+        competenciaMovimentoId: g.competencia.id,
       },
     ];
   });
@@ -729,9 +711,9 @@ export const contestacoesService = {
 
   /**
    * Importar Selecionadas (aba Contestações dos Lançamentos, numa competência aberta): os movimentos de cada contestação
-   * que esperam os lançamentos viram, somados pela filial, pelo centro e pela conta de antes (com rateio, também pela
-   * competência, que dá os percentuais), o estorno e o lançamento no centro e na conta novos; a contestação com todos
-   * corrigidos fica validada. A que um lançamento não aceita (uma
+   * que esperam os lançamentos viram, somados pela competência, pela filial, pelo centro e pela conta de antes, o estorno e
+   * o lançamento no centro e na conta novos (com a competência do movimento, que, com rateio, dá os percentuais); a
+   * contestação com todos corrigidos fica validada. A que um lançamento não aceita (uma
    * combinação que nenhuma aba soma) fica como estava, com o motivo.
    */
   async importar(ano: number, mes: number, ids: string[], u: UsuarioDaContestacao) {
@@ -749,7 +731,7 @@ export const contestacoesService = {
       const pendentes = c.movimentos.filter(esperaLancamentos);
       if (!pendentes.length) continue;
       try {
-        const pares = await lancamentosDaContestacao(c, pendentes, destino.id);
+        const pares = await lancamentosDaContestacao(c, pendentes);
         await lancamentosManuaisService.criarDeContestacao(destino.id, c.id, MOTIVO_CONTESTACAO, pares, u.id);
         await prisma.contestacaoMovimento.updateMany({ where: { id: { in: pendentes.map((m) => m.id) } }, data: { formaValidacao: "LANCAMENTO_MANUAL" } });
         const depois = c.movimentos.map((m) => (pendentes.includes(m) ? { ...m, formaValidacao: "LANCAMENTO_MANUAL" as const } : m));

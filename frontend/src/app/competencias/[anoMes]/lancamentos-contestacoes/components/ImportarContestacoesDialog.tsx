@@ -27,7 +27,7 @@ const competencias = (c: Contestacao) => {
  * O modal Importar (27/10/2026, a aba Contestações dos Lançamentos): as contestações acatadas com movimentos que não
  * puderam ser corrigidos no balancete (a competência do movimento fechada, ou o movimento fora do balancete reimportado),
  * com os filtros nos rótulos e as caixas (e o Marcar Todos, nas filtradas). Os movimentos das selecionadas viram, somados
- * pela filial, pelo centro e pela conta de antes, o estorno e o lançamento novo desta competência; as outras continuam na
+ * pela competência, pela filial, pelo centro e pela conta de antes, o estorno e o lançamento novo desta competência; as outras continuam na
  * lista, para as competências seguintes.
  */
 export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImportadas }: { anoMes: string; rotuloMes: string; onFechar: () => void; onImportadas: () => void }) {
@@ -80,9 +80,9 @@ export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImpo
           <DialogTitle>Importar Contestações</DialogTitle>
           <DialogDescription>
             As contestações acatadas com movimentos que não puderam ser corrigidos no balancete (a competência do movimento está fechada). Os movimentos das
-            marcadas viram lançamentos em {rotuloMes} — somados pela filial, pelo centro de custo e pela conta de antes, o estorno no centro e na conta de
-            antes e o lançamento no centro e na conta novos; com rateio, um par por competência, dividido pelos percentuais dela — e a contestação com
-            todos os movimentos corrigidos fica validada; as outras continuam na lista, para as competências seguintes.
+            marcadas viram lançamentos em {rotuloMes} — para cada competência dos movimentos (somados pela filial, pelo centro de custo e pela conta de
+            antes), o estorno no centro e na conta de antes e o lançamento no centro e na conta novos; com rateio, divididos pelos percentuais dela — e a
+            contestação com todos os movimentos corrigidos fica validada; as outras continuam na lista, para as competências seguintes.
           </DialogDescription>
         </DialogHeader>
         {consulta.isError ? (

@@ -34,10 +34,21 @@ const COLUNAS: Coluna<LancamentoManual>[] = [
   { chave: "conta", rotulo: "Conta", valor: (l) => l.contaResultado?.reduzido },
   { chave: "descricao", rotulo: "Descrição", valor: (l) => l.descricao },
   { chave: "destino", rotulo: "Destino na DRE", valor: (l) => l.linhaDRE?.descricao ?? "sem destino" },
-  { chave: "rateio", rotulo: "Rateio", valor: (l) => l.balde, texto: (l) => (l.rateioDe ? `${l.balde ?? "—"} · percentuais de ${l.rateioDe}` : l.balde) },
+  { chave: "rateio", rotulo: "Rateio", valor: (l) => l.balde },
   { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (l) => Number(l.valor), texto: (l) => moeda(l.valor) },
   { chave: "acoes", rotulo: "", semFiltro: true },
 ];
+/** O Exportar leva também a competência do movimento, que na tela fica abaixo do número da contestação. */
+const COLUNAS_DO_EXPORTAR: Coluna<LancamentoManual>[] = [
+  COLUNAS[0],
+  { chave: "competenciaMovimento", rotulo: "Competência do Movimento", valor: competenciaDoMovimento },
+  ...COLUNAS.slice(1),
+];
+
+/** A competência do movimento que o lançamento corrige; nos importados antes dela, a da contestação. */
+function competenciaDoMovimento(l: LancamentoManual) {
+  return l.competenciaMovimento ?? l.contestacao?.competencia ?? null;
+}
 
 /**
  * A aba Contestações dos Lançamentos (27/10/2026, pedido do Adão): os lançamentos das contestações acatadas que não
@@ -91,13 +102,14 @@ export function LancamentosContestacoesContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Lançamentos"
-        exportar={<ExportarTabela titulo={`Lançamentos · Contestações · ${rotuloMes}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
+        titulo="Lançamentos Manuais"
+        exportar={<ExportarTabela titulo={`Lançamentos Manuais · Contestações · ${rotuloMes}`} colunas={COLUNAS_DO_EXPORTAR} linhas={tabela.filtradas} />}
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         sobre={
           <p>
             Os lançamentos das contestações de gastos com movimentos que não puderam ser corrigidos no balancete (a competência do movimento estava
-            fechada): para cada contestação, o estorno no centro de custo e na conta de antes e o lançamento no centro e na conta novos. Entram no
+            fechada): para cada contestação e cada competência dos movimentos dela, o estorno no centro de custo e na conta de antes e o lançamento no
+            centro e na conta novos. Entram no
             resultado da competência, como os da aba Controladoria; os com rateio se dividem entre as unidades pelos percentuais da competência do
             movimento.
           </p>
@@ -106,10 +118,14 @@ export function LancamentosContestacoesContent() {
           <ul>
             <li>
               “Importar” abre a lista das contestações acatadas com movimentos que esperam os lançamentos (de competências fechadas), com os filtros nos
-              rótulos e as caixas (“Marcar Todos” marca as filtradas). “Importar Selecionadas” cria, para cada uma, os lançamentos nesta competência: com
-              as anteriores e as posteriores, os movimentos somados pela filial, pelo centro e pela conta de antes (a descrição diz quantos e de que
-              competências). A contestação com todos os movimentos corrigidos fica validada; as não marcadas continuam na lista, para as competências
-              seguintes.
+              rótulos e as caixas (“Marcar Todos” marca as filtradas). “Importar Selecionadas” cria, para cada uma, os lançamentos nesta competência: um
+              estorno e um lançamento novo para cada competência dos movimentos (com as anteriores e as posteriores, uma contestação tem várias), com os
+              movimentos da competência somados pela filial, pelo centro e pela conta de antes. A contestação com todos os movimentos corrigidos fica
+              validada; as não marcadas continuam na lista, para as competências seguintes.
+            </li>
+            <li>
+              A coluna Contestação mostra o número e, abaixo, a competência do movimento que o lançamento corrige e quem pediu a contestação (o título diz
+              também a competência contestada). O “Exportar” leva a competência do movimento numa coluna.
             </li>
             <li>
               Os valores ficam no sinal da DRE: o estorno tira o valor dos movimentos do centro e da conta de antes, e o lançamento novo o põe no centro e
@@ -117,10 +133,10 @@ export function LancamentosContestacoesContent() {
               na lista.
             </li>
             <li>
-              Com rateio no centro de antes ou no novo (Projeto, Produção, Metalurgia, Armadura ou Acompanhamento), há um estorno e um lançamento novo
-              para cada competência dos movimentos, e a apuração divide os dois entre as unidades pelos percentuais de rateio dessa competência, e não
-              pelos desta: a correção tira de cada unidade o que ela recebeu do movimento. A coluna Rateio mostra a competência dos percentuais, e a
-              memória de cálculo da DRE mostra essa parcela à parte.
+              Com rateio no centro de antes ou no novo (Projeto, Produção, Metalurgia, Armadura ou Acompanhamento), a apuração divide o estorno e o
+              lançamento novo entre as unidades pelos percentuais de rateio da competência do movimento, e não pelos desta: a correção tira de cada
+              unidade o que ela recebeu do movimento. O título do balde, na coluna Rateio, diz a competência dos percentuais, e o extrato da linha na DRE
+              mostra essa parcela à parte.
             </li>
             <li>
               A lixeira exclui a importação de uma contestação, depois da confirmação num modal: os lançamentos dela saem (o estorno e o novo), e ela volta à
@@ -173,8 +189,11 @@ export function LancamentosContestacoesContent() {
               <td className="px-4 text-sm">
                 <div className="font-medium text-gray-900">Nº {l.contestacao?.numero ?? "—"}</div>
                 {l.contestacao ? (
-                  <div className="max-w-56 truncate text-xs text-gray-500" title={`${l.contestacao.item ?? ""} · ${l.contestacao.competencia} · ${l.contestacao.solicitante}`}>
-                    {l.contestacao.competencia} · {l.contestacao.solicitante}
+                  <div
+                    className="max-w-56 truncate text-xs text-gray-500"
+                    title={`${l.contestacao.item ?? ""} · o movimento de ${competenciaDoMovimento(l)} (contestado em ${l.contestacao.competencia}) · ${l.contestacao.solicitante}`}
+                  >
+                    {competenciaDoMovimento(l)} · {l.contestacao.solicitante}
                   </div>
                 ) : null}
               </td>
@@ -182,19 +201,19 @@ export function LancamentosContestacoesContent() {
               <td className="px-4 text-sm">
                 <div className="font-medium text-gray-900">{l.contaResultado?.reduzido ?? "—"}</div>
                 {l.centroCusto ? (
-                  <div className="max-w-56 truncate text-xs text-gray-500" title={`${l.centroCusto.codigoRM} ${l.centroCusto.nomeRM}`}>
+                  <div className="max-w-44 truncate text-xs text-gray-500" title={`${l.centroCusto.codigoRM} ${l.centroCusto.nomeRM}`}>
                     centro {l.centroCusto.codigoRM} {l.centroCusto.nomeRM}
                   </div>
                 ) : null}
               </td>
               <td className="px-4 text-sm text-gray-600">
-                <div className="max-w-72 truncate" title={l.descricao}>
+                <div className="max-w-56 truncate" title={l.descricao}>
                   {l.descricao}
                 </div>
               </td>
               <td className="px-4 text-sm text-gray-600">
                 {l.linhaDRE ? (
-                  <div className="max-w-56 truncate" title={`${l.linhaDRE.grupo} › ${l.linhaDRE.descricao}`}>
+                  <div className="max-w-40 truncate" title={`${l.linhaDRE.grupo} › ${l.linhaDRE.descricao}`}>
                     {l.linhaDRE.descricao}
                   </div>
                 ) : (
@@ -202,12 +221,10 @@ export function LancamentosContestacoesContent() {
                 )}
               </td>
               <td className="px-4 text-sm">
-                <BaldeBadge balde={l.balde} />
-                {l.rateioDe ? (
-                  <div className="text-xs whitespace-nowrap text-gray-500" title={`Dividido entre as unidades pelos percentuais de rateio de ${l.rateioDe}, a competência do movimento`}>
-                    percentuais de {l.rateioDe}
-                  </div>
-                ) : null}
+                <BaldeBadge
+                  balde={l.balde}
+                  titulo={l.rateioDe ? `Chave de rateio — dividida entre as unidades pelos percentuais de ${l.rateioDe}, a competência do movimento` : undefined}
+                />
               </td>
               <td className="px-4 text-right text-sm whitespace-nowrap text-gray-900">{moeda(l.valor)}</td>
               <td className="px-4 py-0 text-right whitespace-nowrap">

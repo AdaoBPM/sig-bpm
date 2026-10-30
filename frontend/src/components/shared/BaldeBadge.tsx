@@ -11,7 +11,7 @@ const CHAVES_RATEIO = new Set([
  * distribuídas por percentual; as demais vão inteiras para um destino.
  * A distinção visual existe porque é ela que explica a apuração.
  */
-export function BaldeBadge({ balde }: { balde: string | null }) {
+export function BaldeBadge({ balde, titulo }: { balde: string | null; /** O título no lugar do padrão (ex.: a competência dos percentuais). */ titulo?: string }) {
   if (!balde) {
     return <span className="text-gray-400">—</span>;
   }
@@ -20,7 +20,7 @@ export function BaldeBadge({ balde }: { balde: string | null }) {
 
   return (
     <span
-      title={eRateio ? "Chave de rateio — distribuída por percentual" : "Balde direto"}
+      title={titulo ?? (eRateio ? "Chave de rateio — distribuída por percentual" : "Balde direto")}
       className={
         eRateio
           ? "inline-block rounded-sm border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-800"

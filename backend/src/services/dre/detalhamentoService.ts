@@ -228,7 +228,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
     // A parcela com os percentuais de outra competência (30/10/2026): só os lançamentos manuais que os levam.
     if (r.competenciaId) {
       await blocoManual(
-        { balde: r.chave as never, competenciaRateioId: r.competenciaId },
+        { balde: r.chave as never, competenciaMovimentoId: r.competenciaId },
         r.linhaId,
         new Decimal(r.percentual),
         `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}, com os percentuais de ${r.competencia}`,
@@ -253,7 +253,7 @@ async function blocosDaUnidade(competenciaId: string, unidade: number, c: Compos
       lancamentos: agrupar(ls).map((l) => paraDetalhe(l, p)).sort(porValor),
     });
     // Os manuais do balde da chave (21/10/2026), na mesma linha de base, × o percentual.
-    await blocoManual({ balde: r.chave as never, competenciaRateioId: null }, r.linhaId, p, `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}`, `balde ${r.chave}`, r.percentual);
+    await blocoManual({ balde: r.chave as never, OR: [{ competenciaMovimentoId: null }, { competenciaMovimentoId: competenciaId }] }, r.linhaId, p, `Lançamentos Manuais de Rateio: ${rotuloRateio(r.chave)} → ${rotuloRateio(r.destino)}`, `balde ${r.chave}`, r.percentual);
   }
 
   if (o.manual) {

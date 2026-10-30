@@ -21,10 +21,12 @@ export type Etapa = {
 export type AbaDaEtapa = { caminho: string; rotulo: string; permissao: string };
 
 /** As etapas com abas: as abas de cada uma, na ordem da tela. */
-const ABAS_DAS_ETAPAS: Record<string, { rotulo: string; icone: LucideIcon; abas: AbaDaEtapa[] }> = {
+const ABAS_DAS_ETAPAS: Record<string, { rotulo: string; /** O título no cabeçalho da tela, quando não é o nome da barra. */ titulo?: string; icone: LucideIcon; abas: AbaDaEtapa[] }> = {
   // Os Lançamentos com abas (27/10/2026): Controladoria (os digitados) e Contestações (os vindos das contestações).
   lancamentos: {
     rotulo: "Lançamentos",
+    // O título da tela (30/10/2026, pedido do Adão); na barra das etapas e no caminho do topo, "Lançamentos".
+    titulo: "Lançamentos Manuais",
     icone: NotebookPen,
     abas: [
       { caminho: "lancamentos-manuais", rotulo: "Controladoria", permissao: "lancamentos_manuais.controladoria:ler" },
@@ -98,7 +100,7 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
 }
 
 /**
- * As abas da etapa aberta (Totais ou Prévias) que o perfil alcança, para o cabeçalho da tela: o nome da etapa no título e
+ * As abas da etapa aberta (Lançamentos, Totais ou Prévias) que o perfil alcança, para o cabeçalho da tela: o título da etapa (ou o nome dela) e
  * as abas logo abaixo, como nas telas com abas do menu (AbasDaTela). Nula fora das etapas com abas.
  */
 export function abasDoMes(pathname: string, hasPermission: (p: string) => boolean): { titulo: string; abas: Array<{ title: string; href: string }>; ativa: string } | null {
@@ -107,7 +109,7 @@ export function abasDoMes(pathname: string, hasPermission: (p: string) => boolea
   const etapa = chave && Object.hasOwn(ABAS_DAS_ETAPAS, chave) ? etapaComAbas(chave, hasPermission) : null;
   if (!rota || !etapa?.abas) return null;
   const href = (a: AbaDaEtapa) => `/competencias/${rota.anoMes}/${a.caminho}`;
-  return { titulo: etapa.rotulo, abas: etapa.abas.map((a) => ({ title: a.rotulo, href: href(a) })), ativa: `/competencias/${rota.anoMes}/${rota.chave}` };
+  return { titulo: ABAS_DAS_ETAPAS[etapa.chave].titulo ?? etapa.rotulo, abas: etapa.abas.map((a) => ({ title: a.rotulo, href: href(a) })), ativa: `/competencias/${rota.anoMes}/${rota.chave}` };
 }
 
 /** O nome da etapa de um trecho da rota, com o da aba nas etapas com abas ("rateios" → ["Totais", "Rateios"]). */

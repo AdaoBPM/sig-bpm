@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerCentro, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
-import { apurarUnidades, type LinhaEstrutura } from "./apuracaoUnidades.js";
+import { apurarUnidades, CHAVES_DE_RATEIO, type LinhaEstrutura } from "./apuracaoUnidades.js";
 import { atribuicoesDoCentro, prefixoDaAtribuicao } from "./recorteCentros.js";
 import { apurarCentros, consolidar } from "./consolidacao.js";
 import { plural } from "../../utils/plural.js";
@@ -136,7 +136,7 @@ export const dreService = {
         where: { competenciaId: c.id },
         select: { filial: true, centroCustoId: true, linhaDREId: true, balde: true, alocacao: true, valorMovimento: true },
       }),
-      prisma.lancamentoManual.findMany({ where: { competenciaId: c.id }, select: { linhaDREId: true, balde: true, valor: true, filial: true, competenciaRateioId: true } }),
+      prisma.lancamentoManual.findMany({ where: { competenciaId: c.id }, select: { linhaDREId: true, balde: true, valor: true, filial: true, competenciaMovimentoId: true } }),
       prisma.volumeOperacional.findMany({ where: { competenciaId: c.id }, select: { percentual: true, regraRateio: { select: { chave: true, destino: true } } } }),
       prisma.receitaPrevia.findMany({ where: { competenciaId: c.id }, select: { natureza: true, receitaBruta: true, receitaLiquida: true, unidadeNegocio: { select: { codigo: true } } } }),
       totaisDaCompetencia(c.id),
@@ -147,7 +147,7 @@ export const dreService = {
     if (volumes.length === 0) throw new RegraDREError(409, `Os rateios de ${rotulo(ano, mes)} não foram apurados.`);
     if (receitas.length === 0) throw new RegraDREError(409, `A receita prévia de ${rotulo(ano, mes)} não foi apurada.`);
     // Os percentuais das competências dos movimentos contestados com rateio (30/10/2026), para os lançamentos deles.
-    const outras = [...new Set(manuais.map((m) => m.competenciaRateioId).filter((id): id is string => !!id && id !== c.id))];
+    const outras = [...new Set(manuais.filter((m) => CHAVES_DE_RATEIO.has(m.balde ?? "")).map((m) => m.competenciaMovimentoId).filter((id): id is string => !!id && id !== c.id))];
     const percentuaisDe = new Map(
       (
         await prisma.competencia.findMany({
@@ -161,7 +161,7 @@ export const dreService = {
     const { resultados, avisos } = apurarUnidades({
       linhas,
       lancamentos: lancamentos.map((l) => ({ filial: l.filial, linhaDREId: l.linhaDREId, balde: l.balde, alocacao: l.alocacao, valor: l.valorMovimento })),
-      manuais: manuais.map((m) => ({ linhaDREId: m.linhaDREId, balde: m.balde, valor: m.valor, filial: m.filial, rateioDe: m.competenciaRateioId })),
+      manuais: manuais.map((m) => ({ linhaDREId: m.linhaDREId, balde: m.balde, valor: m.valor, filial: m.filial, rateioDe: m.competenciaMovimentoId })),
       percentuais: new Map(volumes.map((v) => [`${v.regraRateio.chave}|${v.regraRateio.destino}`, v.percentual])),
       percentuaisDe,
       totais: new Map(totais.map((t) => [t.codigo as string, t.quantidade])),
