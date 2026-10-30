@@ -200,8 +200,10 @@ async function combinacao(l: LancamentoDoMovimento, acesso: Acesso, destino: { c
       r.foraDoAcesso++;
       continue;
     }
+    // Já no centro e na conta novos (com um deles escolhido): nada muda.
     const contaAntes = o.contaAdotadaId ?? o.contaResultadoId;
-    if ((destino.centroNovoId ?? o.centroCustoId) === o.centroCustoId && (destino.contaNovaId ?? contaAntes) === contaAntes) continue;
+    const comDestino = !!destino.centroNovoId || !!destino.contaNovaId;
+    if (comDestino && (destino.centroNovoId ?? o.centroCustoId) === o.centroCustoId && (destino.contaNovaId ?? contaAntes) === contaAntes) continue;
     (chave(o) < chave(l) ? r.anteriores : r.posteriores).push(o);
   }
   return r;
