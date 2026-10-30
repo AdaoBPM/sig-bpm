@@ -123,8 +123,8 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
           { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (c) => Number(c.valor), texto: (c) => moeda(c.valor) },
           { chave: "de", rotulo: "De", valor: de },
           { chave: "para", rotulo: "Para", valor: para },
-          ...(aba === "recebidas" ? [{ chave: "solicitante", rotulo: "Solicitante", valor: (c: Contestacao) => c.solicitante }] : []),
-          { chave: "responsavel", rotulo: "Responsável", valor: responsavel },
+          // A mesma estrutura nas duas abas: o Solicitante (na Recebidas) no lugar do Responsável (na Solicitadas).
+          aba === "recebidas" ? { chave: "solicitante", rotulo: "Solicitante", valor: (c: Contestacao) => c.solicitante } : { chave: "responsavel", rotulo: "Responsável", valor: responsavel },
           { chave: "situacao", rotulo: "Situação", valor: (c) => ROTULO_SITUACAO[c.situacao] },
           { chave: "acoes", rotulo: "Ações", semFiltro: true },
         ] as Coluna<Contestacao>[]
@@ -434,26 +434,28 @@ function LinhaEnxuta({
         {c.centroNovo ? <TextoEmLinhas texto={c.centroNovo} duas={!!c.contaNova} /> : null}
         {c.contaNova ? <TextoEmLinhas texto={c.contaNova} duas={!!c.centroNovo} /> : null}
       </td>
+      {/* A mesma estrutura nas duas abas: na Recebidas, o Solicitante no lugar do Responsável, no mesmo formato. */}
       {aba === "recebidas" ? (
         <td className="px-2 py-2">
-          {c.solicitante}
-          <div className="whitespace-nowrap text-gray-500">{dataCurta(c.solicitadaEm)}</div>
+          <span className="whitespace-nowrap">{c.solicitante}</span>
+          <div className="whitespace-nowrap text-gray-500">{dataHora(c.solicitadaEm)}</div>
         </td>
-      ) : null}
-      <td className="px-2 py-2">
-        {c.situacao === "PENDENTE" ? (
-          <span className="line-clamp-4 text-gray-600" title={`Aguarda ${quemResponde(c)}`}>
-            Aguarda {quemResponde(c)}
-          </span>
-        ) : c.respondidaPor ? (
-          <>
-            <span className="whitespace-nowrap">{c.respondidaPor}</span>
-            <div className="whitespace-nowrap text-gray-500">{dataHora(c.respondidaEm)}</div>
-          </>
-        ) : (
-          <span className="text-gray-400">—</span>
-        )}
-      </td>
+      ) : (
+        <td className="px-2 py-2">
+          {c.situacao === "PENDENTE" ? (
+            <span className="line-clamp-4 text-gray-600" title={`Aguarda ${quemResponde(c)}`}>
+              Aguarda {quemResponde(c)}
+            </span>
+          ) : c.respondidaPor ? (
+            <>
+              <span className="whitespace-nowrap">{c.respondidaPor}</span>
+              <div className="whitespace-nowrap text-gray-500">{dataHora(c.respondidaEm)}</div>
+            </>
+          ) : (
+            <span className="text-gray-400">—</span>
+          )}
+        </td>
+      )}
       <td className="px-2 py-2">
         <Situacao c={c} comParaLancamentos={false} />
       </td>
