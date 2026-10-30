@@ -882,7 +882,8 @@ export function ResultadosContent() {
               de custo (os de um departamento da DRE) e/ou a nova conta de resultado (as do departamento do centro e as do Extra-Operacional) do movimento
               (as listas buscam por código ou nome) e, se quiser, o motivo. “Contestar Anteriores” e “Contestar Posteriores” levam junto os movimentos do
               mesmo fornecedor, conta e centro de custo nas competências anteriores e nas seguintes, com o total que muda. O movimento com uma contestação
-              em andamento mostra o número e a situação dela.
+              em andamento mostra o número e a situação dela; o que chega à linha pelo rateio de outra (como os da Metalurgia nas linhas de Serviços)
+              mostra “Rateio”: contesta-se na linha de origem.
             </li>
             <li>
               Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações

@@ -57,6 +57,7 @@ export const documentosService = {
           centroCusto: { select: { codigoRM: true, nomeRM: true } },
           contaAdotada: { select: { reduzido: true, descricao: true } },
           contestacaoId: true,
+          linhaDRE: { select: { codigo: true, descricao: true, grupo: true } },
         },
         // Sem emissão primeiro, como no SQLite (23/10/2026).
         orderBy: [{ emissao: { sort: "asc", nulls: "first" } }, { linhaArquivo: "asc" }],
@@ -90,6 +91,9 @@ export const documentosService = {
         contaNaDRE: l.contaAdotada && l.contaAdotada.reduzido !== filtro.conta ? l.contaAdotada : null,
         contestacaoAplicada: l.contestacaoId && aplicada.get(l.contestacaoId) ? { numero: aplicada.get(l.contestacaoId)!.numero, centro: !!aplicada.get(l.contestacaoId)!.centroNovoId, conta: !!aplicada.get(l.contestacaoId)!.contaNovaId } : null,
         contestacao: situacoes.get(l.id) ?? null,
+        // O reflexo de um rateio (30/10/2026): o movimento é de outra linha da DRE e chega a esta pelo rateio (os da
+        // Metalurgia e da Armadura nas linhas de Serviços, por exemplo). Contesta-se na linha de origem, não no reflexo.
+        rateioDe: l.linhaDRE && l.linhaDRE.codigo !== filtro.linha ? { linha: l.linhaDRE.descricao, grupo: l.linhaDRE.grupo } : null,
       })),
     };
   },

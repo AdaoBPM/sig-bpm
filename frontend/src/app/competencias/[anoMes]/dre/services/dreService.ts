@@ -94,6 +94,8 @@ export type MovimentoDoBalancete = {
   /** A contestação aplicada no movimento (o número e o que mudou) e a última contestação dele (a situação). */
   contestacaoAplicada: { numero: number; centro: boolean; conta: boolean } | null;
   contestacao: { numero: number; situacao: SituacaoContestacao } | null;
+  /** O reflexo de um rateio (30/10/2026): o movimento é de outra linha da DRE (a de origem) e chega a esta pelo rateio. */
+  rateioDe: { linha: string; grupo: string } | null;
 };
 /** O balancete de uma conta no mês (15/10/2026; antes, as requisições e as notas fiscais). */
 export type BalanceteDaConta = {

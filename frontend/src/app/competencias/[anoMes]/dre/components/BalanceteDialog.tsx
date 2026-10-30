@@ -114,6 +114,17 @@ export function BalanceteDialog({
           </span>
         );
       }
+      // O reflexo de um rateio (30/10/2026): contesta-se o movimento na linha de origem, não aqui.
+      if (m.rateioDe) {
+        return podeContestar ? (
+          <span
+            className="text-[11px] whitespace-nowrap text-gray-500"
+            title={`Reflexo do rateio: o movimento é da linha "${m.rateioDe.linha}" (${m.rateioDe.grupo}) e chega a esta pelo rateio. Para contestá-lo, abra o extrato da linha de origem.`}
+          >
+            Rateio
+          </span>
+        ) : null;
+      }
       return podeContestar ? (
         <Button type="button" variant="outline" size="sm" className="h-6 rounded-sm px-2 text-[11px]" onClick={() => setContestando(m)} title="Sugerir outro centro de custo e/ou outra conta para o movimento">
           <MessageSquareWarning className="size-3.5" />
