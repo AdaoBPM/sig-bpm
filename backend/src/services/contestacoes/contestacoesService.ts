@@ -1,8 +1,8 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
-import type { SituacaoContestacao } from "../../generated/prisma/enums.js";
+import type { DepartamentoAcesso, FormaValidacaoContestacao, SituacaoContestacao } from "../../generated/prisma/enums.js";
 import type { Acesso } from "../acesso/acesso.js";
-import { gestaoDoCentro, MENSAGEM_SENSIVEL, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
+import { departamentoDaLinha, gestaoDoCentro, MENSAGEM_SENSIVEL, podeVerMovimentos, podeVerSensiveis, ROTULO_DEPARTAMENTO } from "../acesso/recorteDepartamento.js";
 import { auditar } from "../auditoriaService.js";
 import { classificacaoService } from "../classificacao/classificacaoService.js";
 import { manualNoSinalDoBalancete } from "../dre/apuracaoUnidades.js";
@@ -12,15 +12,19 @@ import { lancamentosManuaisService } from "../lancamentosManuais/lancamentosManu
  * As Contestações de Gastos (27/10/2026, pedido do Adão).
  *
  * No balancete de uma conta (o modal dos movimentos, na DRE do mês e nos Resultados Empresariais), quem edita a aba
- * Solicitadas contesta um item: sugere outro centro de custo e/ou outra conta de resultado (e, se quiser, o motivo). O
- * responsável pelo centro — o novo; sem centro novo, o do item — acata ou recusa (aba Recebidas): são os usuários com o
- * centro na lista deles (os Coordenadores); sem nenhum, os Gestores do departamento do centro; sem ninguém, só a
- * Controladoria, em Validações. Quem pede e é o responsável já tem a contestação acatada.
+ * Solicitadas contesta um item: sugere outro centro de custo e/ou outra conta de resultado (e, se quiser, o motivo). A
+ * conta nova é do departamento do centro (o novo; sem ele, o do item) ou do Extra-Operacional. Com Contestar Anteriores
+ * e Posteriores (30/10/2026), os movimentos do mesmo fornecedor, conta e centro de custo nas competências anteriores e nas
+ * seguintes (as já importadas) entram na mesma contestação: ela é uma só (a situação, a resposta e a validação), com
+ * vários movimentos. O responsável pelo centro — o novo; sem centro novo, o do item — acata ou recusa (aba Recebidas): são
+ * os usuários com o centro na lista deles (os Coordenadores); sem nenhum, os Gestores do departamento do centro; sem
+ * ninguém, só a Controladoria, em Validações. Quem pede e é o responsável já tem a contestação acatada.
  *
- * Em Validações, Processar corrige as acatadas: na competência do item ainda aberta, no próprio balancete (a classificação
- * aplica o centro e a conta novos e guarda os do RM, para mostrar o original); na fechada, a contestação espera os
- * lançamentos manuais da aba Contestações de uma competência aberta (Importar: o estorno no centro e na conta de antes e o
- * lançamento no centro e na conta novos). Alterar Status muda a situação de qualquer uma, com a justificativa.
+ * Em Validações, Processar corrige os movimentos das acatadas: na competência ainda aberta, no próprio balancete (a
+ * classificação aplica o centro e a conta novos e guarda os do RM, para mostrar o original); na fechada, o movimento espera
+ * os lançamentos manuais da aba Contestações de uma competência aberta (Importar: o estorno no centro e na conta de antes e
+ * o lançamento no centro e na conta novos). A contestação fica validada quando todos os movimentos dela estão corrigidos.
+ * Alterar Status muda a situação de qualquer uma, com a justificativa.
  */
 
 export class RegraContestacaoError extends Error {
@@ -40,8 +44,39 @@ export const ROTULO_SITUACAO: Record<SituacaoContestacao, string> = { PENDENTE: 
 /** O motivo dos lançamentos manuais das contestações (a aba Contestações dos Lançamentos). */
 export const MOTIVO_CONTESTACAO = "CONTESTAÇÃO";
 
+/**
+ * A conta cabe no centro de custo (30/10/2026, pedido do Adão): a do departamento do centro ou a do Extra-Operacional. O
+ * centro sem departamento (Almoxarifado, Investimento, Requisição) não restringe — só o do movimento, quando a contestação
+ * muda só a conta (a lista dos centros novos não os tem).
+ */
+export function contaCabeNoCentro(departamentoDoCentro: DepartamentoAcesso | null, departamentoDaConta: DepartamentoAcesso | null) {
+  if (!departamentoDoCentro) return true;
+  return departamentoDaConta === departamentoDoCentro || departamentoDaConta === "EXTRA_OPERACIONAL";
+}
+
+/** A forma da contestação validada, pelos movimentos: os lançamentos manuais, se algum foi por eles; senão, o balancete. */
+function formaDaContestacao(ms: Array<{ formaValidacao: FormaValidacaoContestacao | null }>): FormaValidacaoContestacao | null {
+  if (ms.some((m) => m.formaValidacao === "LANCAMENTO_MANUAL")) return "LANCAMENTO_MANUAL";
+  return ms.some((m) => m.formaValidacao === "NO_BALANCETE") ? "NO_BALANCETE" : null;
+}
+
 const centroSel = { select: { id: true, codigoRM: true, nomeRM: true, departamento: true } } as const;
 const contaSel = { select: { id: true, reduzido: true, descricao: true } } as const;
+const MOVIMENTO_SEL = {
+  id: true,
+  principal: true,
+  lancamentoContabilId: true,
+  filial: true,
+  emissao: true,
+  cliForn: true,
+  historico: true,
+  valor: true,
+  centroAntesId: true,
+  contaAntesId: true,
+  formaValidacao: true,
+  competencia: { select: { id: true, ano: true, mes: true, status: true, apuradaEm: true } },
+} satisfies Prisma.ContestacaoMovimentoSelect;
+type MovimentoDaContestacao = Prisma.ContestacaoMovimentoGetPayload<{ select: typeof MOVIMENTO_SEL }>;
 const SELECAO = {
   id: true,
   numero: true,
@@ -66,9 +101,12 @@ const SELECAO = {
   validadaPorId: true,
   validadaEm: true,
   formaValidacao: true,
+  anteriores: true,
+  posteriores: true,
   centroAntesId: true,
   centroNovoId: true,
-  competencia: { select: { ano: true, mes: true, status: true } },
+  contaNovaId: true,
+  competencia: { select: { id: true, ano: true, mes: true, status: true } },
   contaBalancete: contaSel,
   centroAntes: centroSel,
   contaAntes: contaSel,
@@ -76,11 +114,115 @@ const SELECAO = {
   contaNova: contaSel,
   solicitante: { select: { nome: true } },
   lancamentosManuais: { select: { competencia: { select: { ano: true, mes: true } } }, take: 1 },
+  movimentos: { select: MOVIMENTO_SEL, orderBy: [{ competencia: { ano: "asc" } }, { competencia: { mes: "asc" } }, { emissao: "asc" }] },
 } satisfies Prisma.ContestacaoSelect;
 type Linha = Prisma.ContestacaoGetPayload<{ select: typeof SELECAO }>;
 
+/** O item do balancete, com o que a contestação e as anteriores e posteriores pedem dele. */
+const LANCAMENTO_SEL = {
+  id: true,
+  competenciaId: true,
+  filial: true,
+  codigoCentroCusto: true,
+  nomeCentroCusto: true,
+  contaResultadoId: true,
+  contaAdotadaId: true,
+  centroCustoId: true,
+  emissao: true,
+  cliForn: true,
+  historico: true,
+  valorMovimento: true,
+  linhaDRE: { select: { grupoSigla: true, descricao: true, atribuicaoSigla: true } },
+  competencia: { select: { ano: true, mes: true } },
+} satisfies Prisma.LancamentoContabilSelect;
+type LancamentoDoMovimento = Prisma.LancamentoContabilGetPayload<{ select: typeof LANCAMENTO_SEL }>;
+
 /** O centro que decide a contestação: o novo; sem ele, o do item. */
 const centroAlvo = (c: { centroNovoId: string | null; centroAntesId: string | null }) => c.centroNovoId ?? c.centroAntesId;
+const soma = (xs: Array<{ valor: Prisma.Decimal }>) => xs.reduce((s, x) => s.add(x.valor), new Prisma.Decimal(0));
+
+/** Por que o usuário não contesta o item (o recorte e as informações sensíveis, como no balancete); nulo se pode. */
+function recusaDoAcesso(l: LancamentoDoMovimento, acesso: Acesso): string | null {
+  if (l.linhaDRE && !podeVerSensiveis(acesso, l.linhaDRE)) return MENSAGEM_SENSIVEL(l.linhaDRE.descricao);
+  const doCentroDele = acesso.recorteCentro && !!l.centroCustoId && acesso.centros.includes(l.centroCustoId);
+  if (l.linhaDRE && !podeVerMovimentos(acesso, l.linhaDRE) && !doCentroDele) return "O movimento não é do seu recorte.";
+  return null;
+}
+
+/** O movimento da contestação, a partir do item do balancete: a identidade dele e o centro e a conta que valem hoje. */
+const movimentoDoItem = (l: LancamentoDoMovimento, principal: boolean) => ({
+  competenciaId: l.competenciaId,
+  lancamentoContabilId: l.id,
+  principal,
+  filial: l.filial,
+  codigoCentroCusto: l.codigoCentroCusto,
+  nomeCentroCusto: l.nomeCentroCusto,
+  contaBalanceteId: l.contaResultadoId,
+  emissao: l.emissao,
+  cliForn: l.cliForn,
+  historico: l.historico,
+  valor: l.valorMovimento,
+  centroAntesId: l.centroCustoId,
+  contaAntesId: l.contaAdotadaId ?? l.contaResultadoId,
+});
+
+/**
+ * As anteriores e as posteriores (30/10/2026): os itens do mesmo fornecedor, na mesma conta e no mesmo centro de custo do
+ * balancete (os do RM), nas outras competências já importadas. Ficam de fora os que já têm uma contestação em andamento,
+ * os que o usuário não vê e os que já estão no centro e na conta novos.
+ */
+async function combinacao(l: LancamentoDoMovimento, acesso: Acesso, destino: { centroNovoId: string | null; contaNovaId: string | null }) {
+  const vazio = { anteriores: [] as LancamentoDoMovimento[], posteriores: [] as LancamentoDoMovimento[], emAndamento: 0, foraDoAcesso: 0 };
+  if (!l.cliForn) return vazio;
+  const prisma = getPrismaClient();
+  const outros = await prisma.lancamentoContabil.findMany({
+    where: { cliForn: l.cliForn, contaResultadoId: l.contaResultadoId, codigoCentroCusto: l.codigoCentroCusto, competenciaId: { not: l.competenciaId } },
+    select: LANCAMENTO_SEL,
+    orderBy: [{ competencia: { ano: "asc" } }, { competencia: { mes: "asc" } }, { emissao: "asc" }, { linhaArquivo: "asc" }],
+  });
+  if (!outros.length) return vazio;
+  const emAndamento = new Set(
+    (
+      await prisma.contestacaoMovimento.findMany({
+        where: { lancamentoContabilId: { in: outros.map((o) => o.id) }, contestacao: { situacao: { in: ABERTAS } } },
+        select: { lancamentoContabilId: true },
+      })
+    ).map((m) => m.lancamentoContabilId),
+  );
+  const r = { ...vazio, anteriores: [] as LancamentoDoMovimento[], posteriores: [] as LancamentoDoMovimento[] };
+  const chave = (x: { competencia: { ano: number; mes: number } }) => x.competencia.ano * 100 + x.competencia.mes;
+  for (const o of outros) {
+    if (emAndamento.has(o.id)) {
+      r.emAndamento++;
+      continue;
+    }
+    if (recusaDoAcesso(o, acesso)) {
+      r.foraDoAcesso++;
+      continue;
+    }
+    const contaAntes = o.contaAdotadaId ?? o.contaResultadoId;
+    if ((destino.centroNovoId ?? o.centroCustoId) === o.centroCustoId && (destino.contaNovaId ?? contaAntes) === contaAntes) continue;
+    (chave(o) < chave(l) ? r.anteriores : r.posteriores).push(o);
+  }
+  return r;
+}
+
+/** As anteriores ou as posteriores, para o modal: quantos movimentos, o valor e cada competência. */
+function resumo(xs: LancamentoDoMovimento[]) {
+  const porCompetencia = new Map<string, { competencia: string; movimentos: number; valor: Prisma.Decimal }>();
+  for (const x of xs) {
+    const k = rotulo(x.competencia.ano, x.competencia.mes);
+    const c = porCompetencia.get(k) ?? { competencia: k, movimentos: 0, valor: new Prisma.Decimal(0) };
+    c.movimentos++;
+    c.valor = c.valor.add(x.valorMovimento);
+    porCompetencia.set(k, c);
+  }
+  return {
+    movimentos: xs.length,
+    valor: xs.reduce((s, x) => s.add(x.valorMovimento), new Prisma.Decimal(0)).toFixed(2),
+    competencias: [...porCompetencia.values()].map((c) => ({ ...c, valor: c.valor.toFixed(2) })),
+  };
+}
 
 /**
  * Os responsáveis (os ids dos usuários) por cada centro: os usuários ativos, de perfil ativo, com o centro na lista
@@ -122,8 +264,12 @@ async function nomes(ids: Array<string | null | undefined>) {
 
 const centroTexto = (c: { codigoRM: string | null; nomeRM: string } | null) => (c ? `${c.codigoRM ?? "—"} · ${c.nomeRM}` : null);
 const contaTexto = (c: { reduzido: string; descricao: string } | null) => (c ? `${c.reduzido} · ${c.descricao}` : null);
+/** O movimento sem correção que espera os lançamentos manuais: a competência dele fechada, ou ele fora do balancete reimportado. */
+const esperaLancamentos = (m: MovimentoDaContestacao) => !m.formaValidacao && (m.competencia.status === "FECHADA" || !m.lancamentoContabilId);
+/** O movimento sem correção que o Processar corrige no balancete: a competência dele aberta e ele no balancete. */
+const corrigivelNoBalancete = (m: MovimentoDaContestacao) => !m.formaValidacao && m.competencia.status !== "FECHADA" && !!m.lancamentoContabilId;
 
-/** A contestação para as telas: o item, o antes e o depois, a situação, quem fez o quê e os responsáveis. */
+/** A contestação para as telas: os movimentos, o antes e o depois, a situação, quem fez o quê e os responsáveis. */
 async function apresentar(ls: Linha[], usuarioId: string) {
   const responsaveis = await responsaveisDosCentros(ls.map(centroAlvo).filter((x): x is string => !!x));
   const ns = await nomes([...ls.flatMap((c) => [c.respondidaPorId, c.justificadaPorId, c.validadaPorId]), ...[...responsaveis.values()].flat()]);
@@ -131,10 +277,15 @@ async function apresentar(ls: Linha[], usuarioId: string) {
     const alvo = centroAlvo(c);
     const resp = alvo ? (responsaveis.get(alvo) ?? []) : [];
     const manual = c.lancamentosManuais[0]?.competencia;
+    const acatada = c.situacao === "ACATADA";
+    const paraLancamentos = acatada ? c.movimentos.filter(esperaLancamentos) : [];
     return {
       id: c.id,
       numero: c.numero,
+      /** A competência do movimento contestado ("09/2026"). */
       competencia: rotulo(c.competencia.ano, c.competencia.mes),
+      /** As competências dos movimentos, em ordem (com as anteriores e as posteriores). */
+      competencias: [...new Set(c.movimentos.map((m) => rotulo(m.competencia.ano, m.competencia.mes)))],
       competenciaFechada: c.competencia.status === "FECHADA",
       /** O item ainda está no balancete (uma reimportação pode tê-lo tirado). */
       comItem: c.lancamentoContabilId !== null,
@@ -142,7 +293,34 @@ async function apresentar(ls: Linha[], usuarioId: string) {
       emissao: c.emissao,
       cliForn: c.cliForn,
       historico: c.historico,
-      valor: c.valor.toFixed(2),
+      /** O valor dos movimentos todos (o que muda de centro e/ou de conta). */
+      valor: soma(c.movimentos).toFixed(2),
+      /** O valor do movimento contestado. */
+      valorDoMovimento: c.valor.toFixed(2),
+      anteriores: c.anteriores,
+      posteriores: c.posteriores,
+      movimentos: c.movimentos.map((m) => ({
+        id: m.id,
+        principal: m.principal,
+        competencia: rotulo(m.competencia.ano, m.competencia.mes),
+        competenciaFechada: m.competencia.status === "FECHADA",
+        comItem: m.lancamentoContabilId !== null,
+        filial: m.filial,
+        emissao: m.emissao,
+        cliForn: m.cliForn,
+        historico: m.historico,
+        valor: m.valor.toFixed(2),
+        formaValidacao: m.formaValidacao,
+      })),
+      /** A correção dos movimentos: no balancete, pelos lançamentos, os que o Processar corrige e os que esperam o Importar. */
+      correcao: {
+        noBalancete: c.movimentos.filter((m) => m.formaValidacao === "NO_BALANCETE").length,
+        porLancamentos: c.movimentos.filter((m) => m.formaValidacao === "LANCAMENTO_MANUAL").length,
+        diretos: acatada ? c.movimentos.filter(corrigivelNoBalancete).length : 0,
+        paraLancamentos: paraLancamentos.length,
+        valorParaLancamentos: soma(paraLancamentos).toFixed(2),
+        competenciasParaLancamentos: [...new Set(paraLancamentos.map((m) => rotulo(m.competencia.ano, m.competencia.mes)))],
+      },
       contaBalancete: contaTexto(c.contaBalancete),
       centroAntes: centroTexto(c.centroAntes) ?? (c.codigoCentroCusto ? `${c.codigoCentroCusto} · ${c.nomeCentroCusto ?? ""}` : null),
       contaAntes: contaTexto(c.contaAntes),
@@ -191,96 +369,141 @@ async function centrosDoResponsavel(usuarioId: string): Promise<string[]> {
 }
 
 async function exigirContestacao(id: string) {
-  const c = await getPrismaClient().contestacao.findUnique({ where: { id }, select: { ...SELECAO, competencia: { select: { id: true, ano: true, mes: true, status: true } } } });
+  const c = await getPrismaClient().contestacao.findUnique({ where: { id }, select: SELECAO });
   if (!c) throw new RegraContestacaoError(404, "Contestação não encontrada.");
   return c;
 }
 
-/** O par de lançamentos manuais de uma contestação: o estorno (centro e conta de antes) e o novo (centro e conta novos). */
-async function lancamentosDaContestacao(c: {
-  numero: number;
-  filial: number;
-  valor: Prisma.Decimal;
-  historico: string | null;
-  cliForn: string | null;
-  centroAntesId: string | null;
-  contaAntesId: string;
-  centroNovoId: string | null;
-  contaNovaId: string | null;
-}) {
+async function exigirLancamento(id: string) {
+  const l = await getPrismaClient().lancamentoContabil.findUnique({ where: { id }, select: LANCAMENTO_SEL });
+  if (!l) throw new RegraContestacaoError(404, "Movimento não encontrado no balancete.");
+  return l;
+}
+
+/**
+ * Os grupos dos lançamentos manuais (30/10/2026): os movimentos que esperam o Importar, somados pela filial, pelo centro e
+ * pela conta de antes — um estorno e um lançamento novo por grupo.
+ */
+export function agruparParaLancamentos<M extends { filial: number; centroAntesId: string | null; contaAntesId: string; valor: Prisma.Decimal; competencia: { ano: number; mes: number } }>(ms: M[]) {
+  const grupos = new Map<string, { filial: number; centroAntesId: string | null; contaAntesId: string; valor: Prisma.Decimal; competencias: string[]; movimentos: number }>();
+  for (const m of ms) {
+    const k = `${m.filial}|${m.centroAntesId ?? ""}|${m.contaAntesId}`;
+    const g = grupos.get(k) ?? { filial: m.filial, centroAntesId: m.centroAntesId, contaAntesId: m.contaAntesId, valor: new Prisma.Decimal(0), competencias: [], movimentos: 0 };
+    g.valor = g.valor.add(m.valor);
+    g.movimentos++;
+    const c = rotulo(m.competencia.ano, m.competencia.mes);
+    if (!g.competencias.includes(c)) g.competencias.push(c);
+    grupos.set(k, g);
+  }
+  // As competências em ordem ("MM/AAAA" pelo ano e pelo mês).
+  const ordem = (r: string) => r.slice(3) + r.slice(0, 2);
+  return [...grupos.values()].map((g) => ({ ...g, competencias: g.competencias.sort((a, b) => ordem(a).localeCompare(ordem(b))) }));
+}
+
+/** Os lançamentos manuais de uma contestação: para cada grupo, o estorno (centro e conta de antes) e o novo (centro e conta novos). */
+async function lancamentosDaContestacao(
+  c: { numero: number; historico: string | null; cliForn: string | null; centroNovoId: string | null; contaNovaId: string | null },
+  movimentos: Array<{ filial: number; centroAntesId: string | null; contaAntesId: string; valor: Prisma.Decimal; competencia: { ano: number; mes: number } }>,
+) {
   const prisma = getPrismaClient();
-  const contaNovaId = c.contaNovaId ?? c.contaAntesId;
-  const centroNovoId = c.centroNovoId ?? c.centroAntesId;
-  const contas = await prisma.contaResultado.findMany({
-    where: { id: { in: [c.contaAntesId, contaNovaId] } },
-    select: { id: true, reduzido: true, linhaDRE: { select: { grupoSigla: true } } },
-  });
-  const conta = (id: string) => contas.find((x) => x.id === id)!;
+  const grupos = agruparParaLancamentos(movimentos);
+  const ids = [...new Set(grupos.flatMap((g) => [g.contaAntesId, c.contaNovaId ?? g.contaAntesId]))];
+  const contas = await prisma.contaResultado.findMany({ where: { id: { in: ids } }, select: { id: true, linhaDRE: { select: { grupoSigla: true } } } });
   // O valor no sinal da DRE (o do lançamento manual): nas receitas, o do balancete trocado.
-  const naDRE = (contaId: string) => manualNoSinalDoBalancete(conta(contaId).linhaDRE?.grupoSigla ?? "", c.valor);
+  const naDRE = (contaId: string, valor: Prisma.Decimal) => manualNoSinalDoBalancete(contas.find((x) => x.id === contaId)?.linhaDRE?.grupoSigla ?? "", valor);
   const item = (c.historico || c.cliForn || "").slice(0, 120);
-  return [
-    {
-      filial: c.filial,
-      centroCustoId: c.centroAntesId,
-      contaResultadoId: c.contaAntesId,
-      descricao: `Contestação nº ${c.numero}: estorno${item ? ` (${item})` : ""}`,
-      valor: naDRE(c.contaAntesId).neg(),
-    },
-    {
-      filial: c.filial,
-      centroCustoId: centroNovoId,
-      contaResultadoId: contaNovaId,
-      descricao: `Contestação nº ${c.numero}${item ? ` (${item})` : ""}`,
-      valor: naDRE(contaNovaId),
-    },
-  ];
+  return grupos.flatMap((g) => {
+    const cs = g.competencias;
+    const periodo = cs.length > 2 ? `de ${cs[0]} a ${cs[cs.length - 1]}` : cs.length === 2 ? `de ${cs[0]} e ${cs[1]}` : `de ${cs[0]}`;
+    const quando = g.movimentos > 1 ? ` · ${g.movimentos} movimentos ${periodo}` : ` · ${cs[0]}`;
+    const contaNovaId = c.contaNovaId ?? g.contaAntesId;
+    return [
+      {
+        filial: g.filial,
+        centroCustoId: g.centroAntesId,
+        contaResultadoId: g.contaAntesId,
+        descricao: `Contestação nº ${c.numero}: estorno${item ? ` (${item})` : ""}${quando}`,
+        valor: naDRE(g.contaAntesId, g.valor).neg(),
+      },
+      {
+        filial: g.filial,
+        centroCustoId: c.centroNovoId ?? g.centroAntesId,
+        contaResultadoId: contaNovaId,
+        descricao: `Contestação nº ${c.numero}${item ? ` (${item})` : ""}${quando}`,
+        valor: naDRE(contaNovaId, g.valor),
+      },
+    ];
+  });
 }
 
 export const contestacoesService = {
-  /** Contesta um item do balancete (o botão Contestar do modal). */
-  async criar(d: { lancamentoId: string; centroNovoId: string | null; contaNovaId: string | null; motivo: string | null }, u: UsuarioDaContestacao) {
+  /**
+   * O que o modal Contestar mostra do movimento (30/10/2026): o departamento do centro dele (a lista das contas novas,
+   * quando a contestação muda só a conta) e as anteriores e as posteriores, com o valor de cada competência.
+   */
+  async previa(d: { lancamentoId: string; centroNovoId: string | null; contaNovaId: string | null }, u: UsuarioDaContestacao) {
     const prisma = getPrismaClient();
-    const l = await prisma.lancamentoContabil.findUnique({
-      where: { id: d.lancamentoId },
-      select: {
-        id: true,
-        competenciaId: true,
-        filial: true,
-        codigoCentroCusto: true,
-        nomeCentroCusto: true,
-        contaResultadoId: true,
-        contaAdotadaId: true,
-        centroCustoId: true,
-        emissao: true,
-        cliForn: true,
-        historico: true,
-        valorMovimento: true,
-        linhaDRE: { select: { grupoSigla: true, descricao: true, atribuicaoSigla: true } },
-        competencia: { select: { ano: true, mes: true } },
-      },
-    });
-    if (!l) throw new RegraContestacaoError(404, "Movimento não encontrado no balancete.");
-    // O que o usuário vê (o recorte e as informações sensíveis), como no balancete.
-    if (l.linhaDRE && !podeVerSensiveis(u.acesso, l.linhaDRE)) throw new RegraContestacaoError(403, MENSAGEM_SENSIVEL(l.linhaDRE.descricao));
-    const doCentroDele = u.acesso.recorteCentro && !!l.centroCustoId && u.acesso.centros.includes(l.centroCustoId);
-    if (l.linhaDRE && !podeVerMovimentos(u.acesso, l.linhaDRE) && !doCentroDele) throw new RegraContestacaoError(403, "O movimento não é do seu recorte.");
+    const l = await exigirLancamento(d.lancamentoId);
+    const recusa = recusaDoAcesso(l, u.acesso);
+    if (recusa) throw new RegraContestacaoError(403, recusa);
+    const centro = l.centroCustoId ? await prisma.centroCusto.findUnique({ where: { id: l.centroCustoId }, select: { departamento: true } }) : null;
+    const c = await combinacao(l, u.acesso, d);
+    return {
+      departamentoDoCentro: gestaoDoCentro(centro?.departamento ?? null),
+      semFornecedor: !l.cliForn,
+      valor: l.valorMovimento.toFixed(2),
+      anteriores: resumo(c.anteriores),
+      posteriores: resumo(c.posteriores),
+      /** Os da combinação que ficam de fora: com uma contestação em andamento, ou fora do que o usuário vê. */
+      emAndamento: c.emAndamento,
+      foraDoAcesso: c.foraDoAcesso,
+    };
+  },
+
+  /** Contesta um item do balancete (o botão Contestar do modal), com as anteriores e as posteriores, se marcadas. */
+  async criar(
+    d: { lancamentoId: string; centroNovoId: string | null; contaNovaId: string | null; motivo: string | null; anteriores: boolean; posteriores: boolean },
+    u: UsuarioDaContestacao,
+  ) {
+    const prisma = getPrismaClient();
+    const l = await exigirLancamento(d.lancamentoId);
+    const recusa = recusaDoAcesso(l, u.acesso);
+    if (recusa) throw new RegraContestacaoError(403, recusa);
     if (!d.centroNovoId && !d.contaNovaId) throw new RegraContestacaoError(400, "Sugira o novo centro de custo e/ou a nova conta de resultado.");
     const contaAntesId = l.contaAdotadaId ?? l.contaResultadoId;
     if (d.centroNovoId && d.centroNovoId === l.centroCustoId) throw new RegraContestacaoError(400, "O novo centro de custo é o mesmo do movimento.");
     if (d.contaNovaId && d.contaNovaId === contaAntesId) throw new RegraContestacaoError(400, "A nova conta de resultado é a mesma do movimento.");
+    // O centro que vale depois: o novo (de um departamento da DRE) ou o do movimento.
+    let departamentoAlvo: DepartamentoAcesso | null;
     if (d.centroNovoId) {
-      const c = await prisma.centroCusto.findUnique({ where: { id: d.centroNovoId }, select: { ativo: true, nomeRM: true } });
+      const c = await prisma.centroCusto.findUnique({ where: { id: d.centroNovoId }, select: { ativo: true, nomeRM: true, departamento: true } });
       if (!c) throw new RegraContestacaoError(400, "Centro de custo não encontrado.");
       if (!c.ativo) throw new RegraContestacaoError(400, `O centro de custo ${c.nomeRM} está inativo no cadastro.`);
+      departamentoAlvo = gestaoDoCentro(c.departamento);
+      if (!departamentoAlvo) throw new RegraContestacaoError(400, `O centro de custo ${c.nomeRM} não é de um departamento da DRE.`);
+    } else {
+      const c = l.centroCustoId ? await prisma.centroCusto.findUnique({ where: { id: l.centroCustoId }, select: { departamento: true } }) : null;
+      departamentoAlvo = gestaoDoCentro(c?.departamento ?? null);
     }
     if (d.contaNovaId) {
-      const c = await prisma.contaResultado.findUnique({ where: { id: d.contaNovaId }, select: { ativo: true, reduzido: true, tipoConta: true, linhaDREId: true } });
+      const c = await prisma.contaResultado.findUnique({
+        where: { id: d.contaNovaId },
+        select: { ativo: true, reduzido: true, tipoConta: true, linhaDREId: true, linhaDRE: { select: { grupoSigla: true, descricao: true } } },
+      });
       if (!c) throw new RegraContestacaoError(400, "Conta de resultado não encontrada.");
       if (!c.ativo || c.tipoConta !== "ANALITICA" || !c.linhaDREId) throw new RegraContestacaoError(400, `A conta ${c.reduzido} não é uma conta analítica ativa com destino na DRE.`);
+      if (!contaCabeNoCentro(departamentoAlvo, c.linhaDRE ? departamentoDaLinha(c.linhaDRE) : null)) {
+        throw new RegraContestacaoError(400, `A conta ${c.reduzido} não é do departamento do centro de custo (${ROTULO_DEPARTAMENTO[departamentoAlvo!]}) nem do Extra-Operacional.`);
+      }
     }
-    const aberta = await prisma.contestacao.findFirst({ where: { lancamentoContabilId: l.id, situacao: { in: ABERTAS } }, select: { numero: true } });
-    if (aberta) throw new RegraContestacaoError(409, `O movimento já tem a contestação nº ${aberta.numero} em andamento.`);
+    const aberta = await prisma.contestacaoMovimento.findFirst({
+      where: { lancamentoContabilId: l.id, contestacao: { situacao: { in: ABERTAS } } },
+      select: { contestacao: { select: { numero: true } } },
+    });
+    if (aberta) throw new RegraContestacaoError(409, `O movimento já tem a contestação nº ${aberta.contestacao.numero} em andamento.`);
+    if ((d.anteriores || d.posteriores) && !l.cliForn) throw new RegraContestacaoError(400, "O movimento não tem fornecedor: não há anteriores nem posteriores para contestar.");
+    const outros = d.anteriores || d.posteriores ? await combinacao(l, u.acesso, d) : null;
+    const extras = [...(d.anteriores ? (outros?.anteriores ?? []) : []), ...(d.posteriores ? (outros?.posteriores ?? []) : [])];
     const alvo = d.centroNovoId ?? l.centroCustoId;
     const responsaveis = alvo ? ((await responsaveisDosCentros([alvo])).get(alvo) ?? []) : [];
     // Quem pede e é o responsável pelo centro: acatada na hora.
@@ -305,12 +528,23 @@ export const contestacoesService = {
         motivo: d.motivo?.trim() || null,
         situacao: acatada ? "ACATADA" : "PENDENTE",
         solicitanteId: u.id,
+        anteriores: d.anteriores,
+        posteriores: d.posteriores,
+        movimentos: { create: [movimentoDoItem(l, true), ...extras.map((x) => movimentoDoItem(x, false))] },
         ...(acatada ? { respondidaPorId: u.id, respondidaEm: agora } : {}),
       },
       select: SELECAO,
     });
     const [r] = await apresentar([criada], u.id);
-    await auditar({ usuarioId: u.id, usuarioNome: u.nome, acao: "CRIACAO", entidade: "contestacao", entidadeId: criada.id, depois: r, metadados: { numero: criada.numero, competencia: rotulo(l.competencia.ano, l.competencia.mes) } });
+    await auditar({
+      usuarioId: u.id,
+      usuarioNome: u.nome,
+      acao: "CRIACAO",
+      entidade: "contestacao",
+      entidadeId: criada.id,
+      depois: r,
+      metadados: { numero: criada.numero, competencia: rotulo(l.competencia.ano, l.competencia.mes), movimentos: criada.movimentos.length, anteriores: d.anteriores, posteriores: d.posteriores },
+    });
     return r;
   },
 
@@ -327,16 +561,16 @@ export const contestacoesService = {
     return apresentar(ls, u.id);
   },
 
-  /** Os movimentos contestados de um balancete (o modal): a situação de cada um, para a coluna Ações. */
+  /** Os movimentos contestados de um balancete (o modal): a situação da última contestação de cada um, para a coluna Ações. */
   async doBalancete(lancamentoIds: string[]) {
     if (!lancamentoIds.length) return new Map<string, { numero: number; situacao: SituacaoContestacao }>();
-    const cs = await getPrismaClient().contestacao.findMany({
+    const ms = await getPrismaClient().contestacaoMovimento.findMany({
       where: { lancamentoContabilId: { in: lancamentoIds } },
-      select: { lancamentoContabilId: true, numero: true, situacao: true },
-      orderBy: { solicitadaEm: "asc" },
+      select: { lancamentoContabilId: true, contestacao: { select: { numero: true, situacao: true } } },
+      orderBy: { contestacao: { solicitadaEm: "asc" } },
     });
     // A última de cada movimento.
-    return new Map(cs.map((c) => [c.lancamentoContabilId!, { numero: c.numero, situacao: c.situacao }]));
+    return new Map(ms.map((m) => [m.lancamentoContabilId!, { numero: m.contestacao.numero, situacao: m.contestacao.situacao }]));
   },
 
   /** O responsável acata ou recusa a pendente (aba Recebidas). */
@@ -365,9 +599,10 @@ export const contestacoesService = {
   },
 
   /**
-   * Alterar Status (Validações): qualquer situação, com a justificativa. A que deixa de ser validada desfaz a correção: no
-   * balancete, a classificação deixa de aplicá-la (na próxima apuração); pelos lançamentos manuais, eles saem (com a
-   * competência deles aberta). A que passa a validada por aqui não corrige nada: é a validação feita fora do SIG.
+   * Alterar Status (Validações): qualquer situação, com a justificativa. A que deixa de ser validada (ou a acatada com
+   * movimentos já corrigidos que volta a pendente ou é recusada) desfaz as correções: no balancete, a classificação deixa
+   * de aplicá-las (na próxima apuração); pelos lançamentos manuais, eles saem (com a competência deles aberta). A que passa
+   * a validada por aqui não corrige nada além do que já estava: é a validação feita fora do SIG.
    */
   async alterarSituacao(id: string, d: { situacao: SituacaoContestacao; justificativa: string }, u: UsuarioDaContestacao) {
     const prisma = getPrismaClient();
@@ -376,15 +611,21 @@ export const contestacoesService = {
     if (!justificativa) throw new RegraContestacaoError(400, "Escreva a justificativa.");
     if (c.situacao === d.situacao) throw new RegraContestacaoError(409, `A contestação nº ${c.numero} já está ${ROTULO_SITUACAO[d.situacao].toLowerCase()}.`);
     const agora = new Date();
-    const desfaz = c.situacao === "VALIDADA";
-    if (desfaz && c.formaValidacao === "NO_BALANCETE" && c.competencia.status === "FECHADA") {
-      throw new RegraContestacaoError(409, `A correção da contestação nº ${c.numero} está na competência ${rotulo(c.competencia.ano, c.competencia.mes)}, fechada: reabra a competência antes.`);
+    const desfaz = d.situacao !== "VALIDADA" && c.movimentos.some((m) => m.formaValidacao);
+    const noBalanceteFechado = desfaz ? c.movimentos.find((m) => m.formaValidacao === "NO_BALANCETE" && m.competencia.status === "FECHADA") : undefined;
+    if (noBalanceteFechado) {
+      throw new RegraContestacaoError(409, `A correção da contestação nº ${c.numero} está no balancete de ${rotulo(noBalanceteFechado.competencia.ano, noBalanceteFechado.competencia.mes)}, fechada: reabra a competência antes.`);
     }
-    const manuais = desfaz && c.formaValidacao === "LANCAMENTO_MANUAL" ? await prisma.lancamentoManual.findMany({ where: { contestacaoId: id }, select: { id: true, competencia: { select: { ano: true, mes: true, status: true } } } }) : [];
+    const manuais = desfaz ? await prisma.lancamentoManual.findMany({ where: { contestacaoId: id }, select: { id: true, competencia: { select: { ano: true, mes: true, status: true } } } }) : [];
     const fechada = manuais.find((m) => m.competencia.status === "FECHADA");
     if (fechada) throw new RegraContestacaoError(409, `Os lançamentos da contestação nº ${c.numero} estão na competência ${rotulo(fechada.competencia.ano, fechada.competencia.mes)}, fechada: reabra a competência antes.`);
     const salva = await prisma.$transaction(async (tx) => {
       if (manuais.length) await tx.lancamentoManual.deleteMany({ where: { contestacaoId: id } });
+      if (desfaz) {
+        await tx.contestacaoMovimento.updateMany({ where: { contestacaoId: id, formaValidacao: "NO_BALANCETE" }, data: { formaValidacao: null, corrigidoEm: agora } });
+        await tx.contestacaoMovimento.updateMany({ where: { contestacaoId: id, formaValidacao: "LANCAMENTO_MANUAL" }, data: { formaValidacao: null } });
+      }
+      const sai = c.situacao === "VALIDADA";
       return tx.contestacao.update({
         where: { id },
         data: {
@@ -392,7 +633,11 @@ export const contestacoesService = {
           justificativa,
           justificadaPorId: u.id,
           justificadaEm: agora,
-          ...(d.situacao === "VALIDADA" ? { validadaPorId: u.id, validadaEm: agora, formaValidacao: null } : desfaz ? { validadaPorId: null, validadaEm: null, formaValidacao: null } : {}),
+          ...(d.situacao === "VALIDADA"
+            ? { validadaPorId: u.id, validadaEm: agora, formaValidacao: formaDaContestacao(c.movimentos) }
+            : sai
+              ? { validadaPorId: null, validadaEm: null, formaValidacao: null }
+              : {}),
         },
         select: SELECAO,
       });
@@ -412,27 +657,33 @@ export const contestacoesService = {
   },
 
   /**
-   * Processar (Validações): as acatadas com o item numa competência aberta ficam validadas no balancete — a classificação
-   * aplica o centro e a conta novos (já, na competência ainda não apurada; nas apuradas, na reapuração, que a situação
-   * pede); as demais (competência fechada, ou o item fora do balancete reimportado) esperam a importação para os
-   * lançamentos manuais de uma competência aberta.
+   * Processar (Validações): os movimentos das acatadas com a competência aberta (e no balancete) ficam corrigidos no
+   * balancete — a classificação aplica o centro e a conta novos (já, na competência ainda não apurada; nas apuradas, na
+   * reapuração, que a situação pede); os demais (competência fechada, ou o item fora do balancete reimportado) esperam a
+   * importação para os lançamentos manuais de uma competência aberta. A contestação com todos corrigidos fica validada.
    */
   async processar(u: UsuarioDaContestacao) {
     const prisma = getPrismaClient();
-    const acatadas = await prisma.contestacao.findMany({
-      where: { situacao: "ACATADA" },
-      select: { id: true, numero: true, lancamentoContabilId: true, competencia: { select: { id: true, ano: true, mes: true, status: true, apuradaEm: true } } },
-    });
-    const diretas = acatadas.filter((c) => c.competencia.status !== "FECHADA" && c.lancamentoContabilId);
+    const acatadas = await prisma.contestacao.findMany({ where: { situacao: "ACATADA" }, select: { id: true, numero: true, movimentos: { select: MOVIMENTO_SEL } } });
     const agora = new Date();
-    if (diretas.length) {
-      await prisma.contestacao.updateMany({
-        where: { id: { in: diretas.map((c) => c.id) }, situacao: "ACATADA" },
-        data: { situacao: "VALIDADA", formaValidacao: "NO_BALANCETE", validadaPorId: u.id, validadaEm: agora },
-      });
+    const competencias = new Map<string, MovimentoDaContestacao["competencia"]>();
+    const validadas: number[] = [];
+    let movimentos = 0;
+    let paraLancamentos = 0;
+    for (const c of acatadas) {
+      const diretos = c.movimentos.filter(corrigivelNoBalancete);
+      if (diretos.length) {
+        await prisma.contestacaoMovimento.updateMany({ where: { id: { in: diretos.map((m) => m.id) } }, data: { formaValidacao: "NO_BALANCETE", corrigidoEm: agora } });
+        for (const m of diretos) competencias.set(m.competencia.id, m.competencia);
+        movimentos += diretos.length;
+      }
+      const depois = c.movimentos.map((m) => (diretos.includes(m) ? { ...m, formaValidacao: "NO_BALANCETE" as const } : m));
+      if (depois.every((m) => m.formaValidacao)) {
+        await prisma.contestacao.update({ where: { id: c.id }, data: { situacao: "VALIDADA", formaValidacao: formaDaContestacao(depois), validadaPorId: u.id, validadaEm: agora } });
+        validadas.push(c.numero);
+      } else paraLancamentos++;
     }
     // As competências ainda não apuradas se reclassificam já; as apuradas pedem reapuração.
-    const competencias = new Map(diretas.map((c) => [c.competencia.id, c.competencia]));
     const reclassificadas: string[] = [];
     const reapurar: string[] = [];
     for (const comp of competencias.values()) {
@@ -442,23 +693,18 @@ export const contestacoesService = {
         reclassificadas.push(rotulo(comp.ano, comp.mes));
       }
     }
-    const resumo = {
-      validadas: diretas.length,
-      paraLancamentos: acatadas.length - diretas.length,
-      reclassificadas,
-      reapurar,
-    };
-    await auditar({ usuarioId: u.id, usuarioNome: u.nome, acao: "PROCESSAR", entidade: "contestacao", entidadeId: null, metadados: { ...resumo, numeros: diretas.map((c) => c.numero) } });
-    return resumo;
+    const resumoDoProcessar = { validadas: validadas.length, movimentos, paraLancamentos, reclassificadas, reapurar };
+    await auditar({ usuarioId: u.id, usuarioNome: u.nome, acao: "PROCESSAR", entidade: "contestacao", entidadeId: null, metadados: { ...resumoDoProcessar, numeros: validadas } });
+    return resumoDoProcessar;
   },
 
-  /** As acatadas que não puderam ser corrigidas no balancete (o modal Importar da aba Contestações dos Lançamentos). */
+  /** As acatadas com movimentos que não puderam ser corrigidos no balancete (o modal Importar da aba Contestações dos Lançamentos). */
   async paraLancamentos(ano: number, mes: number, u: UsuarioDaContestacao) {
     const prisma = getPrismaClient();
     const destino = await prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true } });
     if (!destino) throw new RegraContestacaoError(404, `A competência ${rotulo(ano, mes)} não existe.`);
     const ls = await prisma.contestacao.findMany({
-      where: { situacao: "ACATADA", OR: [{ competencia: { status: "FECHADA" } }, { lancamentoContabilId: null }] },
+      where: { situacao: "ACATADA", movimentos: { some: { formaValidacao: null, OR: [{ competencia: { status: "FECHADA" } }, { lancamentoContabilId: null }] } } },
       select: SELECAO,
       orderBy: [{ competencia: { ano: "asc" } }, { competencia: { mes: "asc" } }, { numero: "asc" }],
     });
@@ -466,9 +712,10 @@ export const contestacoesService = {
   },
 
   /**
-   * Importar Selecionadas (aba Contestações dos Lançamentos, numa competência aberta): cada contestação vira o estorno (no
-   * centro e na conta de antes) e o lançamento no centro e na conta novos, e fica validada. A que um lançamento não aceita
-   * (uma combinação que nenhuma aba soma) fica acatada, com o motivo.
+   * Importar Selecionadas (aba Contestações dos Lançamentos, numa competência aberta): os movimentos de cada contestação
+   * que esperam os lançamentos viram, somados pela filial, pelo centro e pela conta de antes, o estorno e o lançamento no
+   * centro e na conta novos; a contestação com todos corrigidos fica validada. A que um lançamento não aceita (uma
+   * combinação que nenhuma aba soma) fica como estava, com o motivo.
    */
   async importar(ano: number, mes: number, ids: string[], u: UsuarioDaContestacao) {
     const prisma = getPrismaClient();
@@ -476,16 +723,22 @@ export const contestacoesService = {
     if (!destino) throw new RegraContestacaoError(404, `A competência ${rotulo(ano, mes)} não existe.`);
     if (destino.status === "FECHADA") throw new RegraContestacaoError(409, `A competência ${rotulo(ano, mes)} está fechada. Importar nela exige reabri-la.`);
     const cs = await prisma.contestacao.findMany({
-      where: { id: { in: ids }, situacao: "ACATADA", OR: [{ competencia: { status: "FECHADA" } }, { lancamentoContabilId: null }] },
-      select: { id: true, numero: true, filial: true, valor: true, historico: true, cliForn: true, centroAntesId: true, contaAntesId: true, centroNovoId: true, contaNovaId: true },
+      where: { id: { in: ids }, situacao: "ACATADA" },
+      select: { id: true, numero: true, historico: true, cliForn: true, centroNovoId: true, contaNovaId: true, movimentos: { select: MOVIMENTO_SEL } },
     });
     const importadas: number[] = [];
     const recusadas: Array<{ numero: number; motivo: string }> = [];
     for (const c of cs) {
+      const pendentes = c.movimentos.filter(esperaLancamentos);
+      if (!pendentes.length) continue;
       try {
-        const pares = await lancamentosDaContestacao(c);
+        const pares = await lancamentosDaContestacao(c, pendentes);
         await lancamentosManuaisService.criarDeContestacao(destino.id, c.id, MOTIVO_CONTESTACAO, pares, u.id);
-        await prisma.contestacao.update({ where: { id: c.id }, data: { situacao: "VALIDADA", formaValidacao: "LANCAMENTO_MANUAL", validadaPorId: u.id, validadaEm: new Date() } });
+        await prisma.contestacaoMovimento.updateMany({ where: { id: { in: pendentes.map((m) => m.id) } }, data: { formaValidacao: "LANCAMENTO_MANUAL" } });
+        const depois = c.movimentos.map((m) => (pendentes.includes(m) ? { ...m, formaValidacao: "LANCAMENTO_MANUAL" as const } : m));
+        if (depois.every((m) => m.formaValidacao)) {
+          await prisma.contestacao.update({ where: { id: c.id }, data: { situacao: "VALIDADA", formaValidacao: formaDaContestacao(depois), validadaPorId: u.id, validadaEm: new Date() } });
+        }
         importadas.push(c.numero);
       } catch (e) {
         recusadas.push({ numero: c.numero, motivo: e instanceof Error ? e.message : String(e) });
@@ -496,8 +749,8 @@ export const contestacoesService = {
   },
 
   /**
-   * Desfaz a importação de uma contestação (a lixeira da aba Contestações dos Lançamentos, na competência aberta): os dois
-   * lançamentos saem, e ela volta a acatada (de novo na lista do Importar).
+   * Desfaz a importação de uma contestação (a lixeira da aba Contestações dos Lançamentos, na competência aberta): os
+   * lançamentos dela saem, os movimentos voltam a esperar o Importar, e ela volta a acatada.
    */
   async desfazerImportacao(id: string, u: UsuarioDaContestacao) {
     const prisma = getPrismaClient();
@@ -508,38 +761,55 @@ export const contestacoesService = {
     if (comp.status === "FECHADA") throw new RegraContestacaoError(409, `A competência ${rotulo(comp.ano, comp.mes)} está fechada.`);
     await prisma.$transaction([
       prisma.lancamentoManual.deleteMany({ where: { contestacaoId: id } }),
+      prisma.contestacaoMovimento.updateMany({ where: { contestacaoId: id, formaValidacao: "LANCAMENTO_MANUAL" }, data: { formaValidacao: null } }),
       prisma.contestacao.update({ where: { id }, data: { situacao: "ACATADA", formaValidacao: null, validadaPorId: null, validadaEm: null } }),
     ]);
     await auditar({ usuarioId: u.id, usuarioNome: u.nome, acao: "EXCLUSAO", entidade: "contestacao", entidadeId: id, metadados: { numero: c.numero, desfeita: rotulo(comp.ano, comp.mes) } });
   },
 
   /**
-   * Depois de reimportar o balancete de uma competência (os lançamentos são gravados de novo): as contestações voltam a
-   * apontar para o item, pela identidade dele (a filial, o centro e a conta do RM, a emissão, o cliente ou fornecedor, o
-   * histórico e o valor). A validada no balancete cujo item não volta fica acatada de novo, com o aviso na justificativa.
+   * Depois de reimportar o balancete de uma competência (os lançamentos são gravados de novo): os movimentos das
+   * contestações voltam a apontar para o item, pela identidade dele (a filial, o centro e a conta do RM, a emissão, o
+   * cliente ou fornecedor, o histórico e o valor). O corrigido no balancete cujo item não volta perde a correção, e a
+   * contestação validada fica acatada de novo, com o aviso na justificativa.
    */
   async religar(competenciaId: string) {
     const prisma = getPrismaClient();
-    const soltas = await prisma.contestacao.findMany({
-      where: { competenciaId, lancamentoContabilId: null, situacao: { not: "RECUSADA" } },
-      select: { id: true, numero: true, situacao: true, formaValidacao: true, filial: true, codigoCentroCusto: true, contaBalanceteId: true, emissao: true, cliForn: true, historico: true, valor: true },
-      orderBy: { numero: "asc" },
+    const soltos = await prisma.contestacaoMovimento.findMany({
+      where: { competenciaId, lancamentoContabilId: null, contestacao: { situacao: { not: "RECUSADA" } } },
+      select: {
+        id: true,
+        principal: true,
+        contestacaoId: true,
+        formaValidacao: true,
+        filial: true,
+        codigoCentroCusto: true,
+        contaBalanceteId: true,
+        emissao: true,
+        cliForn: true,
+        historico: true,
+        valor: true,
+        contestacao: { select: { situacao: true } },
+      },
+      orderBy: [{ contestacao: { numero: "asc" } }],
     });
-    if (!soltas.length) return { religadas: 0, semItem: 0 };
-    const usados = new Set((await prisma.contestacao.findMany({ where: { competenciaId, lancamentoContabilId: { not: null } }, select: { lancamentoContabilId: true } })).map((c) => c.lancamentoContabilId!));
+    if (!soltos.length) return { religadas: 0, semItem: 0 };
+    const usados = new Set(
+      (await prisma.contestacaoMovimento.findMany({ where: { competenciaId, lancamentoContabilId: { not: null } }, select: { lancamentoContabilId: true } })).map((m) => m.lancamentoContabilId!),
+    );
     let religadas = 0;
     let semItem = 0;
-    for (const c of soltas) {
+    for (const m of soltos) {
       const candidatos = await prisma.lancamentoContabil.findMany({
         where: {
           competenciaId,
-          filial: c.filial,
-          codigoCentroCusto: c.codigoCentroCusto,
-          contaResultadoId: c.contaBalanceteId,
-          emissao: c.emissao,
-          cliForn: c.cliForn,
-          historico: c.historico,
-          valorMovimento: c.valor,
+          filial: m.filial,
+          codigoCentroCusto: m.codigoCentroCusto,
+          contaResultadoId: m.contaBalanceteId,
+          emissao: m.emissao,
+          cliForn: m.cliForn,
+          historico: m.historico,
+          valorMovimento: m.valor,
         },
         select: { id: true },
         orderBy: { linhaArquivo: "asc" },
@@ -547,24 +817,28 @@ export const contestacoesService = {
       const l = candidatos.find((x) => !usados.has(x.id));
       if (l) {
         usados.add(l.id);
-        await prisma.contestacao.update({ where: { id: c.id }, data: { lancamentoContabilId: l.id } });
+        await prisma.contestacaoMovimento.update({ where: { id: m.id }, data: { lancamentoContabilId: l.id } });
+        if (m.principal) await prisma.contestacao.update({ where: { id: m.contestacaoId }, data: { lancamentoContabilId: l.id } });
         religadas++;
-      } else {
-        semItem++;
-        if (c.situacao === "VALIDADA" && c.formaValidacao === "NO_BALANCETE") {
-          await prisma.contestacao.update({
-            where: { id: c.id },
-            data: {
-              situacao: "ACATADA",
-              formaValidacao: null,
-              validadaPorId: null,
-              validadaEm: null,
-              justificativa: "O movimento não está no balancete reimportado: a correção no balancete foi desfeita.",
-              justificadaPorId: null,
-              justificadaEm: new Date(),
-            },
-          });
-        }
+        continue;
+      }
+      semItem++;
+      if (m.formaValidacao !== "NO_BALANCETE") continue;
+      const agora = new Date();
+      await prisma.contestacaoMovimento.update({ where: { id: m.id }, data: { formaValidacao: null, corrigidoEm: agora } });
+      if (m.contestacao.situacao === "VALIDADA") {
+        await prisma.contestacao.update({
+          where: { id: m.contestacaoId },
+          data: {
+            situacao: "ACATADA",
+            formaValidacao: null,
+            validadaPorId: null,
+            validadaEm: null,
+            justificativa: "Um movimento não está no balancete reimportado: a correção dele no balancete foi desfeita.",
+            justificadaPorId: null,
+            justificadaEm: agora,
+          },
+        });
       }
     }
     return { religadas, semItem };

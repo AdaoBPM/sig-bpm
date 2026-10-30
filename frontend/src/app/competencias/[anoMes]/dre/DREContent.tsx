@@ -524,8 +524,10 @@ export function DREContent() {
             </li>
             <li>
               No balancete, a coluna Ações tem “Contestar” (de quem edita Contestações de Gastos › Contestações › Solicitadas): o modal sugere o novo centro
-              de custo e/ou a nova conta de resultado do movimento (as listas buscam por código ou nome) e, se quiser, o motivo. O movimento com uma
-              contestação em andamento mostra o número e a situação dela.
+              de custo (os de um departamento da DRE) e/ou a nova conta de resultado (as do departamento do centro e as do Extra-Operacional) do movimento
+              (as listas buscam por código ou nome) e, se quiser, o motivo. “Contestar Anteriores” e “Contestar Posteriores” levam junto os movimentos do
+              mesmo fornecedor, conta e centro de custo nas competências anteriores e nas seguintes, com o total que muda. O movimento com uma contestação
+              em andamento mostra o número e a situação dela.
             </li>
             <li>
               Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações

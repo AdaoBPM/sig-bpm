@@ -456,6 +456,7 @@ model CentroCusto {
   alocacoesLinhas      AlocacaoLinha[]
   contestacoesAntes    Contestacao[] @relation("ContestacaoCentroAntes")
   contestacoesNovas    Contestacao[] @relation("ContestacaoCentroNovo")
+  movimentosContestadosAntes ContestacaoMovimento[] @relation("ContestacaoMovimentoCentroAntes")
 
   @@index([nomeControladoria])
   @@index([balde])
@@ -494,6 +495,8 @@ model ContaResultado {
   contestacoesBalancete Contestacao[] @relation("ContestacaoContaBalancete")
   contestacoesAntes     Contestacao[] @relation("ContestacaoContaAntes")
   contestacoesNovas     Contestacao[] @relation("ContestacaoContaNova")
+  movimentosContestadosBalancete ContestacaoMovimento[] @relation("ContestacaoMovimentoContaBalancete")
+  movimentosContestadosAntes     ContestacaoMovimento[] @relation("ContestacaoMovimentoContaAntes")
   reclassificacoesOrigem  ReclassificacaoConta[] @relation("ReclassificacaoOrigem")
   reclassificacoesDestino ReclassificacaoConta[] @relation("ReclassificacaoDestino")
 
@@ -767,6 +770,7 @@ model Competencia {
   lancamentosContabeis LancamentoContabil[]
   lancamentosManuais   LancamentoManual[]
   contestacoes         Contestacao[]
+  movimentosContestados ContestacaoMovimento[]
   estoqueSaldos        EstoqueSaldo[]
   estoqueIniciais      EstoqueSaldoInicial[]
   indicadoresImportados IndicadorImportado[]
@@ -1125,6 +1129,8 @@ model LancamentoContabil {
   linhaDRE       LinhaDRE?      @relation(fields: [linhaDREId], references: [id])
   /// As contestações deste item (27/10/2026).
   contestacoes   Contestacao[]
+  /// O item nos movimentos das contestações (30/10/2026: o contestado e os das anteriores e posteriores).
+  movimentosContestados ContestacaoMovimento[]
 
   @@index([competenciaId, validacao])
   @@index([competenciaId, etiqueta])
@@ -2570,8 +2576,14 @@ model Contestacao {
   validadaPorId        String?   @map("validada_por_id")
   validadaEm           DateTime? @map("validada_em")
   formaValidacao       FormaValidacaoContestacao? @map("forma_validacao")
+  /// Contestar Anteriores e Posteriores (30/10/2026): os movimentos do mesmo fornecedor, conta e centro de custo nas
+  /// competências anteriores e nas seguintes (as já importadas) entram na contestação (os movimentos dela).
+  anteriores           Boolean   @default(false)
+  posteriores          Boolean   @default(false)
   atualizadaEm         DateTime  @updatedAt @map("atualizada_em")
 
+  /// Os movimentos contestados (30/10/2026): o do balancete aberto (o principal) e os das anteriores e posteriores.
+  movimentos         ContestacaoMovimento[]
   competencia        Competencia         @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
   lancamentoContabil LancamentoContabil? @relation(fields: [lancamentoContabilId], references: [id], onDelete: SetNull)
   contaBalancete     ContaResultado      @relation("ContestacaoContaBalancete", fields: [contaBalanceteId], references: [id])
@@ -2587,4 +2599,47 @@ model Contestacao {
   @@index([lancamentoContabilId])
   @@index([solicitanteId])
   @@map("contestacoes")
+}
+
+/// Um movimento de uma contestação (30/10/2026): o contestado (o principal) ou um do mesmo fornecedor, conta e centro de
+/// custo numa competência anterior ou seguinte (Contestar Anteriores e Posteriores). A contestação é uma só (a situação, a
+/// resposta e a validação); a correção é de cada movimento: no balancete (a competência dele aberta) ou pelos lançamentos
+/// manuais de uma competência aberta.
+model ContestacaoMovimento {
+  id                   String  @id @default(uuid())
+  contestacaoId        String  @map("contestacao_id")
+  competenciaId        String  @map("competencia_id")
+  /// O item do balancete; nulo enquanto uma reimportação não o encontra de novo (religado pela identidade).
+  lancamentoContabilId String? @map("lancamento_contabil_id")
+  /// O movimento em que o usuário clicou em Contestar.
+  principal            Boolean @default(false)
+  // --- a identidade do item, como veio do balancete (para religar depois de uma reimportação) ---
+  filial               Int
+  codigoCentroCusto    String? @map("codigo_centro_custo")
+  nomeCentroCusto      String? @map("nome_centro_custo")
+  contaBalanceteId     String  @map("conta_balancete_id")
+  emissao              DateTime?
+  cliForn              String? @map("cli_forn")
+  historico            String?
+  /// DECIMAL: o valor do movimento, no sinal do balancete.
+  valor                Decimal
+  // --- o centro e a conta que valiam na DRE ao contestar ---
+  centroAntesId        String? @map("centro_antes_id")
+  contaAntesId         String  @map("conta_antes_id")
+  /// Como o movimento foi corrigido; nulo enquanto não foi.
+  formaValidacao       FormaValidacaoContestacao? @map("forma_validacao")
+  /// A última mudança da correção (a validação ou o desfazer): pede a reapuração da competência do movimento.
+  corrigidoEm          DateTime? @map("corrigido_em")
+
+  contestacao        Contestacao         @relation(fields: [contestacaoId], references: [id], onDelete: Cascade)
+  competencia        Competencia         @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  lancamentoContabil LancamentoContabil? @relation(fields: [lancamentoContabilId], references: [id], onDelete: SetNull)
+  contaBalancete     ContaResultado      @relation("ContestacaoMovimentoContaBalancete", fields: [contaBalanceteId], references: [id])
+  centroAntes        CentroCusto?        @relation("ContestacaoMovimentoCentroAntes", fields: [centroAntesId], references: [id])
+  contaAntes         ContaResultado      @relation("ContestacaoMovimentoContaAntes", fields: [contaAntesId], references: [id])
+
+  @@index([contestacaoId])
+  @@index([competenciaId])
+  @@index([lancamentoContabilId])
+  @@map("contestacoes_movimentos")
 }

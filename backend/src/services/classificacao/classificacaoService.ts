@@ -105,11 +105,14 @@ export const classificacaoService = {
         where: { ativo: true },
         select: { codigoCentroCusto: true, contaOrigemId: true, contaDestinoId: true },
       }),
-      // As contestações validadas no balancete (27/10/2026): o centro e a conta novos valem no lugar dos do RM.
-      prisma.contestacao.findMany({
-        where: { competenciaId, situacao: "VALIDADA", formaValidacao: "NO_BALANCETE", lancamentoContabilId: { not: null } },
-        select: { id: true, lancamentoContabilId: true, centroNovoId: true, contaNovaId: true },
-      }),
+      // Os movimentos contestados corrigidos no balancete (27/10/2026; desde 30/10/2026, os de cada contestação, com as
+      // anteriores e as posteriores): o centro e a conta novos valem no lugar dos do RM.
+      prisma.contestacaoMovimento
+        .findMany({
+          where: { competenciaId, formaValidacao: "NO_BALANCETE", lancamentoContabilId: { not: null }, contestacao: { situacao: { in: ["ACATADA", "VALIDADA"] } } },
+          select: { lancamentoContabilId: true, contestacao: { select: { id: true, centroNovoId: true, contaNovaId: true } } },
+        })
+        .then((ms) => ms.map((m) => ({ lancamentoContabilId: m.lancamentoContabilId, ...m.contestacao }))),
     ]);
 
     const centroPorCodigo = new Map<string, CentroParaClassificar>(

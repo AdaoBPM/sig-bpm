@@ -17,12 +17,18 @@ import { moeda } from "../../utils/formatacao";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : null);
 const movimento = (c: Contestacao) => [dataCurta(c.emissao), c.cliForn, c.historico].filter(Boolean).join(" · ") || "—";
+/** As competências dos movimentos que esperam os lançamentos: a única ou da primeira à última. */
+const competencias = (c: Contestacao) => {
+  const cs = c.correcao.competenciasParaLancamentos;
+  return cs.length > 1 ? `${cs[0]} a ${cs[cs.length - 1]}` : (cs[0] ?? c.competencia);
+};
 
 /**
- * O modal Importar (27/10/2026, a aba Contestações dos Lançamentos): as contestações acatadas que não puderam ser
- * corrigidas no balancete (a competência do movimento fechada, ou o movimento fora do balancete reimportado), com os
- * filtros nos rótulos e as caixas (e o Marcar Todos, nas filtradas). As selecionadas viram o estorno e o lançamento novo
- * desta competência e ficam validadas; as outras continuam na lista, para as competências seguintes.
+ * O modal Importar (27/10/2026, a aba Contestações dos Lançamentos): as contestações acatadas com movimentos que não
+ * puderam ser corrigidos no balancete (a competência do movimento fechada, ou o movimento fora do balancete reimportado),
+ * com os filtros nos rótulos e as caixas (e o Marcar Todos, nas filtradas). Os movimentos das selecionadas viram, somados
+ * pela filial, pelo centro e pela conta de antes, o estorno e o lançamento novo desta competência; as outras continuam na
+ * lista, para as competências seguintes.
  */
 export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImportadas }: { anoMes: string; rotuloMes: string; onFechar: () => void; onImportadas: () => void }) {
   const consulta = useQuery({ queryKey: ["contestacoes", "para-lancamentos", anoMes], queryFn: () => contestacoesService.paraLancamentos(anoMes) });
@@ -31,9 +37,16 @@ export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImpo
     () => [
       { chave: "marcar", rotulo: "", semFiltro: true },
       { chave: "numero", rotulo: "Nº", tipo: "numero", valor: (c) => c.numero },
-      { chave: "competencia", rotulo: "Competência", valor: (c) => c.competencia },
+      { chave: "competencia", rotulo: "Competência", valor: (c) => c.correcao.competenciasParaLancamentos.join(", "), texto: competencias },
       { chave: "movimento", rotulo: "Movimento", valor: movimento },
-      { chave: "valor", rotulo: "Valor", tipo: "numero", alinhamento: "direita", valor: (c) => Number(c.valor), texto: (c) => moeda(c.valor) },
+      {
+        chave: "valor",
+        rotulo: "Valor",
+        tipo: "numero",
+        alinhamento: "direita",
+        valor: (c) => Number(c.correcao.valorParaLancamentos),
+        texto: (c) => moeda(c.correcao.valorParaLancamentos),
+      },
       { chave: "de", rotulo: "De", valor: (c) => [c.centroNovo ? c.centroAntes : null, c.contaNova ? c.contaAntes : null].filter(Boolean).join(" / ") },
       { chave: "para", rotulo: "Para", valor: (c) => [c.centroNovo, c.contaNova].filter(Boolean).join(" / ") },
       { chave: "solicitante", rotulo: "Solicitante", valor: (c) => c.solicitante },
@@ -66,9 +79,10 @@ export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImpo
         <DialogHeader>
           <DialogTitle>Importar Contestações</DialogTitle>
           <DialogDescription>
-            As contestações acatadas que não puderam ser corrigidas no balancete (a competência do movimento está fechada). As marcadas viram dois lançamentos
-            em {rotuloMes} — o estorno no centro de custo e na conta de antes e o lançamento no centro e na conta novos — e ficam validadas; as outras
-            continuam na lista, para as competências seguintes.
+            As contestações acatadas com movimentos que não puderam ser corrigidos no balancete (a competência do movimento está fechada). Os movimentos das
+            marcadas viram lançamentos em {rotuloMes} — somados pela filial, pelo centro de custo e pela conta de antes, o estorno no centro e na conta de
+            antes e o lançamento no centro e na conta novos — e a contestação com todos os movimentos corrigidos fica validada; as outras continuam na lista,
+            para as competências seguintes.
           </DialogDescription>
         </DialogHeader>
         {consulta.isError ? (
@@ -113,9 +127,16 @@ export function ImportarContestacoesDialog({ anoMes, rotuloMes, onFechar, onImpo
                           <input type="checkbox" className="accent-black" checked={marcadas.has(c.id)} onChange={() => alternar(c.id)} onClick={(e) => e.stopPropagation()} aria-label={`Marcar a contestação nº ${c.numero}`} />
                         </td>
                         <td className="px-3 py-1.5 font-medium">{c.numero}</td>
-                        <td className="px-3 py-1.5">{c.competencia}</td>
-                        <td className="px-3 py-1.5">{movimento(c)}</td>
-                        <td className="px-3 py-1.5 text-right whitespace-nowrap">{moeda(c.valor)}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">{competencias(c)}</td>
+                        <td className="px-3 py-1.5">
+                          {movimento(c)}
+                          {c.correcao.paraLancamentos > 1 ? (
+                            <div className="text-gray-500">
+                              {c.correcao.paraLancamentos} movimentos (com as {[c.anteriores ? "anteriores" : null, c.posteriores ? "posteriores" : null].filter(Boolean).join(" e ")})
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-1.5 text-right whitespace-nowrap">{moeda(c.correcao.valorParaLancamentos)}</td>
                         <td className="px-3 py-1.5">
                           {c.centroNovo ? <div>{c.centroAntes ?? "—"}</div> : null}
                           {c.contaNova ? <div>{c.contaAntes ?? "—"}</div> : null}

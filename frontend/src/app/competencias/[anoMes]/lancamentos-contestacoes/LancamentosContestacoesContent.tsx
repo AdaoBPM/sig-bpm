@@ -90,24 +90,26 @@ export function LancamentosContestacoesContent() {
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         sobre={
           <p>
-            Os lançamentos das contestações de gastos que não puderam ser corrigidas no balancete (a competência do movimento estava fechada): para cada uma, o
-            estorno no centro de custo e na conta de antes e o lançamento no centro e na conta novos. Entram no resultado da competência, como os da aba
-            Controladoria.
+            Os lançamentos das contestações de gastos com movimentos que não puderam ser corrigidos no balancete (a competência do movimento estava
+            fechada): para cada contestação, o estorno no centro de custo e na conta de antes e o lançamento no centro e na conta novos. Entram no
+            resultado da competência, como os da aba Controladoria.
           </p>
         }
         comoUsar={
           <ul>
             <li>
-              “Importar” abre a lista das contestações acatadas que esperam os lançamentos (de competências fechadas), com os filtros nos rótulos e as caixas
-              (“Marcar Todos” marca as filtradas). “Importar Selecionadas” cria, para cada uma, os dois lançamentos nesta competência e a deixa validada; as
-              não marcadas continuam na lista, para as competências seguintes.
+              “Importar” abre a lista das contestações acatadas com movimentos que esperam os lançamentos (de competências fechadas), com os filtros nos
+              rótulos e as caixas (“Marcar Todos” marca as filtradas). “Importar Selecionadas” cria, para cada uma, os lançamentos nesta competência: com
+              as anteriores e as posteriores, os movimentos somados pela filial, pelo centro e pela conta de antes (a descrição diz quantos e de que
+              competências). A contestação com todos os movimentos corrigidos fica validada; as não marcadas continuam na lista, para as competências
+              seguintes.
             </li>
             <li>
-              Os valores ficam no sinal da DRE: o estorno tira o valor do movimento do centro e da conta de antes, e o lançamento novo o põe no centro e na
-              conta novos (com a filial do movimento). Uma combinação que nenhuma aba de resultado soma é recusada, com o motivo, e a contestação fica na
-              lista.
+              Os valores ficam no sinal da DRE: o estorno tira o valor dos movimentos do centro e da conta de antes, e o lançamento novo o põe no centro e
+              na conta novos (com a filial do movimento). Uma combinação que nenhuma aba de resultado soma é recusada, com o motivo, e a contestação fica
+              na lista.
             </li>
-            <li>A lixeira desfaz a importação de uma contestação: os dois lançamentos saem, e ela volta à lista do Importar (acatada).</li>
+            <li>A lixeira desfaz a importação de uma contestação: os lançamentos dela saem, e ela volta à lista do Importar (acatada).</li>
             <li>Os lançamentos entram na DRE na próxima apuração. Use os filtros nos rótulos das colunas; o total no rodapé acompanha o filtro.</li>
           </ul>
         }
@@ -195,10 +197,10 @@ export function LancamentosContestacoesContent() {
                       variant="ghost"
                       size="icon"
                       aria-label="Desfazer a importação"
-                      title="Desfazer a importação da contestação (os dois lançamentos)"
+                      title="Desfazer a importação da contestação (os lançamentos dela)"
                       disabled={desfazer.isPending}
                       onClick={() => {
-                        if (window.confirm(`Desfazer a importação da contestação nº ${l.contestacao!.numero}? Os dois lançamentos dela saem, e ela volta à lista do Importar.`)) desfazer.mutate(l.contestacao!.id);
+                        if (window.confirm(`Desfazer a importação da contestação nº ${l.contestacao!.numero}? Os lançamentos dela saem, e ela volta à lista do Importar.`)) desfazer.mutate(l.contestacao!.id);
                       }}
                     >
                       <Trash2 className="size-4 text-red-700" />

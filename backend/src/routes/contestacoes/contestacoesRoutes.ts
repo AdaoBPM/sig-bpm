@@ -12,6 +12,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
  */
 export const contestacoesRoutes = Router();
 contestacoesRoutes.get("/opcoes", autenticacao, verificarPermissao("contestacoes.solicitadas:editar"), asyncHandler(c.opcoes));
+contestacoesRoutes.get("/previa", autenticacao, verificarPermissao("contestacoes.solicitadas:editar"), asyncHandler(c.previa));
 contestacoesRoutes.post("/", autenticacao, verificarPermissao("contestacoes.solicitadas:editar"), asyncHandler(c.criar));
 contestacoesRoutes.get("/solicitadas", autenticacao, verificarPermissao("contestacoes.solicitadas:ler"), asyncHandler(c.listar("solicitadas")));
 contestacoesRoutes.get("/recebidas", autenticacao, verificarPermissao("contestacoes.recebidas:ler"), asyncHandler(c.listar("recebidas")));

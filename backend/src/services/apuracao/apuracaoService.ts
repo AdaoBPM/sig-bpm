@@ -106,9 +106,12 @@ export async function retratoEntradas(competenciaId: string): Promise<Retrato> {
   const where = { competenciaId };
   const q = (x: Prisma.Decimal | null | undefined) => (x ?? new Prisma.Decimal(0)).toFixed(4);
   const d = (x: Date | null | undefined) => x?.toISOString() ?? null;
-  // As contestações validadas no balancete (27/10/2026) mudam o centro e a conta dos lançamentos: a última validação entra
-  // na data dos lançamentos do balancete (assim também pede reapurar o mês apurado antes delas existirem).
-  const contestadas = await prisma.contestacao.aggregate({ where: { competenciaId, situacao: "VALIDADA", formaValidacao: "NO_BALANCETE" }, _count: true, _max: { validadaEm: true } });
+  // As contestações corrigidas no balancete (27/10/2026) mudam o centro e a conta dos lançamentos: a última mudança da
+  // correção de um movimento da competência (a validação ou o desfazer) entra na data dos lançamentos do balancete (assim
+  // também pede reapurar o mês apurado antes delas existirem).
+  const contestadas = await prisma.contestacaoMovimento
+    .aggregate({ where: { competenciaId, corrigidoEm: { not: null } }, _count: true, _max: { corrigidoEm: true } })
+    .then((a) => ({ _count: a._count, _max: { validadaEm: a._max.corrigidoEm } }));
   const [contabeis, manuais, receita, importacoes, documentos, ...listas] = await Promise.all([
     prisma.lancamentoContabil.aggregate({ where, _count: true, _sum: { valorMovimento: true }, _max: { criadoEm: true } }),
     prisma.lancamentoManual.aggregate({ where, _count: true, _sum: { valor: true }, _max: { atualizadoEm: true } }),

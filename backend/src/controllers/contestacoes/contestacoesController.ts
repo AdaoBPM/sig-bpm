@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getPrismaClient } from "../../config/prisma.js";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
+import { departamentoDaLinha, gestaoDoCentro } from "../../services/acesso/recorteDepartamento.js";
 import { contestacoesService, RegraContestacaoError, type UsuarioDaContestacao } from "../../services/contestacoes/contestacoesService.js";
 
 /** As contestações de gastos (27/10/2026): o pedido, as abas, a resposta, a validação e a importação para os lançamentos. */
@@ -13,6 +14,14 @@ const criarSchema = z.object({
   centroNovoId: idSchema.nullable().default(null),
   contaNovaId: idSchema.nullable().default(null),
   motivo: z.string().trim().max(500).nullable().default(null),
+  // Contestar Anteriores e Posteriores (30/10/2026): o mesmo fornecedor, conta e centro nas outras competências.
+  anteriores: z.boolean().default(false),
+  posteriores: z.boolean().default(false),
+});
+const previaSchema = z.object({
+  lancamentoId: idSchema,
+  centroNovoId: idSchema.nullable().catch(null).default(null),
+  contaNovaId: idSchema.nullable().catch(null).default(null),
 });
 const responderSchema = z.object({ acatar: z.boolean(), justificativa: z.string().trim().max(500).nullable().default(null) });
 const situacaoSchema = z.object({
@@ -56,7 +65,11 @@ export const contestacoesController = {
   /** A aba (Solicitadas ou Recebidas) ou a tela Validações; a rota confere a permissão de cada uma. */
   listar: (aba: z.infer<typeof abaSchema>) => (request: Request, response: Response) => responder(response, () => contestacoesService.listar(aba, usuario(request))),
 
-  /** As listas do modal Contestar: os centros de custo ativos e as contas analíticas ativas com destino na DRE. */
+  /**
+   * As listas do modal Contestar: os centros de custo ativos de um departamento da DRE (30/10/2026: sem os de Almoxarifado,
+   * Investimento e Requisição) e as contas analíticas ativas com destino na DRE, cada um com o departamento do recorte
+   * (a lista das contas mostra as do departamento do centro e as do Extra-Operacional).
+   */
   async opcoes(_request: Request, response: Response) {
     const prisma = getPrismaClient();
     const [centros, contas] = await Promise.all([
@@ -64,10 +77,25 @@ export const contestacoesController = {
       prisma.contaResultado.findMany({
         where: { ativo: true, tipoConta: "ANALITICA", linhaDREId: { not: null } },
         orderBy: { reduzido: "asc" },
-        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true },
+        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true, linhaDRE: { select: { grupoSigla: true, descricao: true } } },
       }),
     ]);
-    return response.json({ data: { centros, contas } });
+    return response.json({
+      data: {
+        centros: centros.flatMap((c) => {
+          const departamentoDoRecorte = gestaoDoCentro(c.departamento);
+          return departamentoDoRecorte ? [{ ...c, departamentoDoRecorte }] : [];
+        }),
+        contas: contas.map(({ linhaDRE, ...c }) => ({ ...c, departamentoDoRecorte: linhaDRE ? departamentoDaLinha(linhaDRE) : null })),
+      },
+    });
+  },
+
+  /** O que o modal Contestar mostra do movimento: o departamento do centro dele e as anteriores e as posteriores. */
+  async previa(request: Request, response: Response) {
+    const q = previaSchema.safeParse(request.query);
+    if (!q.success) return invalido(response, q.error);
+    return responder(response, () => contestacoesService.previa(q.data, usuario(request)));
   },
 
   async responder(request: Request, response: Response) {
