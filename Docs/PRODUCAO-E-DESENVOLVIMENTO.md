@@ -47,19 +47,25 @@ de banco da empresa, **192.168.0.40:5432** (PostgreSQL 15, ordenação `C`, igua
 | | Desenvolvimento | Teste | Produção |
 |---|---|---|---|
 | Para quê | Fazer as alterações, com o Turbopack | Conferir as alterações já compiladas (as telas abrem em menos de 1 s) | O uso no dia a dia |
-| Endereço | http://localhost:3100 | http://localhost:3200 | http://192.168.0.16:3010 |
-| Backend | porta 3101 (nodemon) | porta 3201 (`backend/dist`) | o container `sig-bpm-backend` |
-| Banco | `backend/prisma/desenvolvimento.db` | o mesmo do desenvolvimento | `/root/dados/sig-bpm/dados/dev.db`, no servidor |
-| Iniciar | `npm run dev` | `npm run teste:construir` (gera, ~1,5 min) e `npm run teste` | o deploy automático da `master` |
+| Endereço | http://localhost:3100 | http://localhost:3200 | http://192.168.0.16:3020 |
+| Backend | porta 3101 (nodemon) | porta 3201 (`backend/dist`) | o container `sig-bpm-pg-backend` |
+| Banco | `sig_bpm_dev` (192.168.0.40), esquema `public` | `sig_bpm_dev`, esquema `teste` (uma cópia da produção) | `sig_bpm`, no servidor |
+| Iniciar | `npm run dev` | `npm run teste:construir` (gera, ~1,5 min) e `npm run teste` | o deploy automático da `postgres` |
 | Marca | borda e etiqueta vermelhas (Desenvolvimento) | borda e etiqueta laranja (Teste) | nenhuma |
 | Cookie da sessão | `bpm_token_dev` | `bpm_token_teste` | `bpm_token` |
 
 - O teste mostra o código do último `npm run teste:construir`: depois de uma alteração, gerar de novo (parar o teste antes) e
-  iniciar. Ele grava no mesmo banco do desenvolvimento: o que se grava num aparece no outro.
+  iniciar.
+- O teste tem os dados da produção: o esquema `teste` do banco do desenvolvimento, com uma cópia do banco da produção
+  (o back-up lógico, só de leitura), e a pasta `backend/uploads-teste`, com uma cópia dos arquivos enviados ao SIG. O que
+  se grava no teste não chega à produção nem ao desenvolvimento, e a cópia não se atualiza sozinha. O login é o da
+  produção (as mesmas senhas).
 - O backend do teste lê o `backend/.env.teste` (fora do git): `NODE_ENV=production`, `PORT=3201`,
-  `DATABASE_URL=file:./prisma/desenvolvimento.db`, `CORS_ORIGIN=http://localhost:3200`, `ENABLE_SWAGGER=false`; o segredo
-  do JWT e os uploads vêm do `.env` comum. As telas do teste falam com o backend 3201 (o `scripts/teste.mjs` passa o
-  `BACKEND_URL`) e recebem a etiqueta pela compilação (`NEXT_PUBLIC_AMBIENTE=teste`).
+  `DATABASE_URL=postgresql://…/sig_bpm_dev?schema=teste` (o backend usa o esquema do parâmetro `schema`, como o
+  `prisma migrate`), `UPLOAD_DIR=./uploads-teste`, `CORS_ORIGIN=http://localhost:3200`, `ENABLE_SWAGGER=false`; o segredo
+  do JWT vem do `.env` comum. As migrações do esquema teste: `npx prisma migrate deploy` com esse `DATABASE_URL` no
+  ambiente. As telas do teste falam com o backend 3201 (o `scripts/teste.mjs` passa o `BACKEND_URL`) e recebem a
+  etiqueta pela compilação (`NEXT_PUBLIC_AMBIENTE=teste`).
 - A compilação do teste fica em `frontend/.next` (a do desenvolvimento, em `frontend/.next/dev`): as duas convivem.
 
 De 15 a 20/10/2026 a ferramenta rodou no notebook em dois ambientes separados, com bancos separados.

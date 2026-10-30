@@ -14,7 +14,10 @@ function createPrismaClient() {
     return null;
   }
 
-  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+  // O esquema do banco (30/10/2026): o parâmetro schema da URL, como no `prisma migrate` (o teste usa o seu, com a cópia
+  // da produção, no banco do desenvolvimento); sem ele, o public.
+  const schema = new URL(env.DATABASE_URL).searchParams.get("schema") ?? undefined;
+  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL }, { schema });
 
   return new PrismaClient({ adapter });
 }
