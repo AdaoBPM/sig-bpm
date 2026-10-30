@@ -12,8 +12,8 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
+import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { atualizarCompetencia } from "@/lib/atualizarCompetencia";
@@ -229,37 +229,26 @@ export function LancamentosContestacoesContent() {
         />
       ) : null}
       {excluindo ? (
-        <Dialog open onOpenChange={(o) => (!o ? setExcluindo(null) : undefined)}>
-          <DialogContent className="rounded-sm sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Excluir a Contestação Importada nº {excluindo.numero}</DialogTitle>
-              <DialogDescription>
-                Os lançamentos dela em {rotuloMes} saem (o estorno e o lançamento novo), e a contestação volta à lista do Importar, acatada, para ser
-                importada de novo. A exclusão fica no log de auditoria.
-              </DialogDescription>
-            </DialogHeader>
-            <ul className="min-w-0 space-y-1 overflow-hidden rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
-              {itens
-                .filter((l) => l.contestacao?.id === excluindo.id)
-                .map((l) => (
-                  <li key={l.id} className="flex justify-between gap-4">
-                    <span className="min-w-0 truncate text-gray-700" title={l.descricao}>
-                      {l.contaResultado?.reduzido ?? "—"} · {l.descricao}
-                    </span>
-                    <span className="whitespace-nowrap text-gray-900">{moeda(l.valor)}</span>
-                  </li>
-                ))}
-            </ul>
-            <DialogFooter>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => setExcluindo(null)}>
-                Cancelar
-              </Button>
-              <Button type="button" className="rounded-sm bg-red-700 font-bold text-white hover:bg-red-800" disabled={desfazer.isPending} onClick={() => desfazer.mutate(excluindo.id)}>
-                {desfazer.isPending ? "Excluindo…" : "Excluir"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmacaoDialog
+          titulo={`Excluir a Contestação Importada nº ${excluindo.numero}`}
+          descricao={`Os lançamentos dela em ${rotuloMes} saem (o estorno e o lançamento novo), e a contestação volta à lista do Importar, acatada, para ser importada de novo. A exclusão fica no log de auditoria.`}
+          pendente={desfazer.isPending}
+          onConfirmar={() => desfazer.mutate(excluindo.id)}
+          onFechar={() => setExcluindo(null)}
+        >
+          <ul className="min-w-0 space-y-1 overflow-hidden rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+            {itens
+              .filter((l) => l.contestacao?.id === excluindo.id)
+              .map((l) => (
+                <li key={l.id} className="flex justify-between gap-4">
+                  <span className="min-w-0 truncate text-gray-700" title={l.descricao}>
+                    {l.contaResultado?.reduzido ?? "—"} · {l.descricao}
+                  </span>
+                  <span className="whitespace-nowrap text-gray-900">{moeda(l.valor)}</span>
+                </li>
+              ))}
+          </ul>
+        </ConfirmacaoDialog>
       ) : null}
     </div>
   );

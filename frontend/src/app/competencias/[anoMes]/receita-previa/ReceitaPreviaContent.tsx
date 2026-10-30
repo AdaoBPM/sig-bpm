@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Calculator, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,8 @@ export function ReceitaPreviaContent() {
   const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza; variacao?: boolean } | null>(null);
   // undefined: diálogo fechado; null: novo; lançamento: edição.
   const [editando, setEditando] = useState<LancamentoReceita | null | undefined>(undefined);
+  // O lançamento cuja exclusão espera a confirmação no modal padrão.
+  const [excluindo, setExcluindo] = useState<LancamentoReceita | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
 
   const receita = useQuery({
@@ -81,6 +84,7 @@ export function ReceitaPreviaContent() {
     mutationFn: (id: string) => receitaPreviaService.excluirLancamento(id),
     onSuccess: () => {
       toast.success("Lançamento excluído. Apure de novo para refletir na receita.");
+      setExcluindo(null);
       atualizarCompetencia(queryClient, anoMes);
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir.")),
@@ -110,7 +114,7 @@ export function ReceitaPreviaContent() {
             <li>Cada quadro (Matriz, Filial e Serviços) mostra a receita bruta, os impostos e a receita líquida, com a abertura em venda global e mercantil.</li>
             <li>Clique numa linha com lupa para abrir a memória de cálculo, com uma aba por origem (Produção, Expedição, Saídas, Devoluções, Serviços e Lanç. Manuais). Filtre e ordene pelos rótulos das colunas; o total acompanha o filtro.</li>
             <li>A linha Variação do Estoque abre só as estacas que a movimentam.</li>
-            <li>Em Lançamentos Manuais de Receita, “Novo Lançamento” inclui ajustes, que entram na próxima apuração.</li>
+            <li>Em Lançamentos Manuais de Receita, “Novo Lançamento” inclui ajustes, que entram na próxima apuração; a lixeira os exclui, depois da confirmação num modal.</li>
             <li>Depois da apuração, a aba fica congelada: o que mudar só entra ao reapurar a competência, na tela Resultados.</li>
           </ul>
         }
@@ -236,9 +240,7 @@ export function ReceitaPreviaContent() {
                         variant="ghost"
                         size="icon"
                         aria-label="Excluir"
-                        onClick={() => {
-                          if (window.confirm(`Excluir o lançamento "${l.observacao}"?`)) excluir.mutate(l.id);
-                        }}
+                        onClick={() => setExcluindo(l)}
                       >
                         <Trash2 className="size-4 text-red-700" />
                       </Button>
@@ -254,6 +256,20 @@ export function ReceitaPreviaContent() {
       {memoria ? <MemoriaCalculoDialog anoMes={anoMes} {...memoria} onFechar={() => setMemoria(null)} /> : null}
       {editando !== undefined ? (
         <LancamentoReceitaDialog key={editando?.id ?? "novo"} anoMes={anoMes} opcoes={opcoes.data} editando={editando} onFechar={() => setEditando(undefined)} />
+      ) : null}
+      {excluindo ? (
+        <ConfirmacaoDialog
+          titulo="Excluir o Lançamento de Receita"
+          descricao="O lançamento sai da competência; apure de novo para refletir na receita. A exclusão fica no log de auditoria."
+          pendente={excluir.isPending}
+          onConfirmar={() => excluir.mutate(excluindo.id)}
+          onFechar={() => setExcluindo(null)}
+        >
+          <p className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            {ROTULO_UNIDADE[excluindo.unidade]} · {rotuloLancamento(excluindo.natureza, excluindo.componente)} · {excluindo.observacao} ·{" "}
+            <span className="font-semibold text-gray-900">{moeda(excluindo.valor)}</span>
+          </p>
+        </ConfirmacaoDialog>
       ) : null}
     </div>
   );

@@ -6,6 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -124,6 +125,8 @@ function Lista() {
 
   // undefined: diálogo fechado; null: novo; registro: edição.
   const [editando, setEditando] = useState<RegistroLista | null | undefined>(undefined);
+  // O registro cuja exclusão espera a confirmação no modal padrão.
+  const [excluindo, setExcluindo] = useState<RegistroLista | null>(null);
 
   const definicoes = useQuery({ queryKey: ["listas", "campos"], queryFn: listasService.campos, staleTime: 30 * 60_000 });
   const dados = useQuery({
@@ -166,6 +169,7 @@ function Lista() {
     mutationFn: (id: string) => listasService.excluir(anoMes, slug, id),
     onSuccess: () => {
       toast.success("Registro excluído.");
+      setExcluindo(null);
       atualizarCompetencia(queryClient, anoMes);
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir.")),
@@ -194,7 +198,7 @@ function Lista() {
             <li>Escolha a lista nas abas e use os filtros nos rótulos das colunas.</li>
             <li>A faixa acima da tabela traz o Total da lista e as somas por unidade ou linha, como a aba Totais.</li>
             <li>Registros importados se corrigem no arquivo, reimportado em Importações.</li>
-            <li>Use “Novo Registro” para incluir um registro digitado; o lápis e a lixeira editam e excluem os digitados.</li>
+            <li>Use “Novo Registro” para incluir um registro digitado; o lápis e a lixeira editam e excluem os digitados (a exclusão, depois da confirmação num modal).</li>
             <li>As listas formam os rateios, a receita prévia e o estoque: depois de alterá-las, reapure a competência na tela Resultados.</li>
           </ul>
         }
@@ -304,9 +308,7 @@ function Lista() {
                         variant="ghost"
                         size="icon"
                         aria-label="Excluir"
-                        onClick={() => {
-                          if (window.confirm("Excluir este registro?")) excluir.mutate(r.id);
-                        }}
+                        onClick={() => setExcluindo(r)}
                       >
                         <Trash2 className="size-4 text-red-700" />
                       </Button>
@@ -328,6 +330,20 @@ function Lista() {
           editando={editando}
           onFechar={() => setEditando(undefined)}
         />
+      ) : null}
+      {excluindo ? (
+        <ConfirmacaoDialog
+          titulo="Excluir o Registro"
+          descricao={`O registro digitado sai da lista ${def?.rotulo ?? ""}. Depois, reapure a competência para refletir nos rateios, na receita prévia e no estoque. A exclusão fica no log de auditoria.`}
+          pendente={excluir.isPending}
+          onConfirmar={() => excluir.mutate(excluindo.id)}
+          onFechar={() => setExcluindo(null)}
+        >
+          <p className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            {[excluindo.data ? dataBR(excluindo.data) : null, excluindo.obra?.codigo, excluindo.unidade, excluindo.linha].filter(Boolean).join(" · ") || "—"} ·{" "}
+            <span className="font-semibold text-gray-900">{quantidadeDe(tipoLista, excluindo.quantidade)}</span>
+          </p>
+        </ConfirmacaoDialog>
       ) : null}
     </div>
   );

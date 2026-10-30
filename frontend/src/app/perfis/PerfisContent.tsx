@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -48,12 +49,15 @@ export function PerfisContent() {
   const [editando, setEditando] = useState<Perfil | null | "novo">(null);
   // Os perfis inativos só com "Mostrar Inativados" (27/10/2026).
   const [mostrarInativados, setMostrarInativados] = useState(false);
+  // A inativação ou a exclusão que espera a confirmação no modal padrão (30/10/2026; antes, a do navegador).
+  const [confirmando, setConfirmando] = useState<{ perfil: Perfil; acao: "inativar" | "excluir" } | null>(null);
   const perfis = useQuery({ queryKey: ["perfis"], queryFn: usuariosService.perfis });
   const opcoes = useQuery({ queryKey: ["usuarios", "opcoes"], queryFn: usuariosService.opcoes });
   const excluir = useMutation({
     mutationFn: (id: string) => usuariosService.excluirPerfil(id),
     onSuccess: () => {
       toast.success("Perfil excluído.");
+      setConfirmando(null);
       queryClient.invalidateQueries({ queryKey: ["perfis"] });
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir o perfil.")),
@@ -63,6 +67,7 @@ export function PerfisContent() {
     mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => usuariosService.mudarSituacaoPerfil(id, ativo),
     onSuccess: (_, v) => {
       toast.success(v.ativo ? "Perfil reativado." : "Perfil inativado.");
+      setConfirmando(null);
       queryClient.invalidateQueries({ queryKey: ["perfis"] });
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
     },
@@ -79,7 +84,7 @@ export function PerfisContent() {
           <ul>
             <li>
               Use “Novo Perfil” para criar um tipo de usuário. Na linha, o lápis edita, o botão de desligar inativa o perfil (os usuários dele deixam de
-              entrar; o de ligar o reativa) e a lixeira exclui. A lista mostra só os perfis ativos; marque “Mostrar Inativados”, antes de “Novo Perfil”,
+              entrar; o de ligar o reativa) e a lixeira exclui — a inativação e a exclusão, depois da confirmação num modal. A lista mostra só os perfis ativos; marque “Mostrar Inativados”, antes de “Novo Perfil”,
               para ver também os inativos (em cinza). Você não inativa o seu próprio perfil.
             </li>
             <li>
@@ -178,10 +183,7 @@ export function PerfisContent() {
                       aria-label={p.ativo ? "Inativar" : "Reativar"}
                       title={p.ativo ? "Inativar o perfil: os usuários dele deixam de entrar" : "Reativar o perfil"}
                       disabled={situacao.isPending}
-                      onClick={() => {
-                        const aviso = p.usuarios ? ` Os ${p.usuarios} ${plural(p.usuarios, "usuário", "usuários")} dele deixam de entrar no SIG até o perfil ser reativado.` : "";
-                        if (!p.ativo || window.confirm(`Inativar o perfil ${p.nome}?${aviso}`)) situacao.mutate({ id: p.id, ativo: !p.ativo });
-                      }}
+                      onClick={() => (p.ativo ? setConfirmando({ perfil: p, acao: "inativar" }) : situacao.mutate({ id: p.id, ativo: true }))}
                     >
                       {p.ativo ? <PowerOff className="size-4" /> : <Power className="size-4" />}
                     </Button>
@@ -193,9 +195,7 @@ export function PerfisContent() {
                       size="icon"
                       aria-label="Excluir"
                       disabled={excluir.isPending}
-                      onClick={() => {
-                        if (window.confirm(`Excluir o perfil ${p.nome}? A exclusão fica no log de auditoria.`)) excluir.mutate(p.id);
-                      }}
+                      onClick={() => setConfirmando({ perfil: p, acao: "excluir" })}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -209,6 +209,30 @@ export function PerfisContent() {
 
       {editando && opcoes.data ? (
         <PerfilDialog key={editando === "novo" ? "novo" : editando.id} opcoes={opcoes.data} editando={editando === "novo" ? null : editando} onFechar={() => setEditando(null)} />
+      ) : null}
+      {confirmando?.acao === "inativar" ? (
+        <ConfirmacaoDialog
+          titulo={`Inativar o Perfil ${confirmando.perfil.nome}`}
+          descricao={
+            confirmando.perfil.usuarios
+              ? `${plural(confirmando.perfil.usuarios, "O usuário dele deixa", `Os ${confirmando.perfil.usuarios} usuários dele deixam`)} de entrar no SIG até o perfil ser reativado (o botão de ligar, com “Mostrar Inativados”).`
+              : "O perfil sai da lista (aparece com “Mostrar Inativados”) e pode ser reativado depois."
+          }
+          acao="Inativar"
+          acaoPendente="Inativando…"
+          pendente={situacao.isPending}
+          onConfirmar={() => situacao.mutate({ id: confirmando.perfil.id, ativo: false })}
+          onFechar={() => setConfirmando(null)}
+        />
+      ) : null}
+      {confirmando?.acao === "excluir" ? (
+        <ConfirmacaoDialog
+          titulo={`Excluir o Perfil ${confirmando.perfil.nome}`}
+          descricao="O perfil sai do SIG, com as permissões dele. A exclusão fica no log de auditoria e não se desfaz."
+          pendente={excluir.isPending}
+          onConfirmar={() => excluir.mutate(confirmando.perfil.id)}
+          onFechar={() => setConfirmando(null)}
+        />
       ) : null}
     </div>
   );

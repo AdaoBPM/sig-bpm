@@ -7,6 +7,7 @@ import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
+import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,8 @@ export function LancamentosManuaisContent() {
   const queryClient = useQueryClient();
   // undefined: diálogo fechado; null: novo; lançamento: edição.
   const [editando, setEditando] = useState<LancamentoManual | null | undefined>(undefined);
+  // O lançamento cuja exclusão espera a confirmação no modal padrão.
+  const [excluindo, setExcluindo] = useState<LancamentoManual | null>(null);
 
   const lista = useQuery({
     queryKey: ["lancamentos-manuais", anoMes],
@@ -62,6 +65,7 @@ export function LancamentosManuaisContent() {
     mutationFn: (id: string) => lancamentosManuaisService.excluir(id),
     onSuccess: () => {
       toast.success("Lançamento excluído.");
+      setExcluindo(null);
       invalidar();
     },
     onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível excluir.")),
@@ -102,7 +106,7 @@ export function LancamentosManuaisContent() {
               Esta é a aba Controladoria: os lançamentos digitados. Os que vêm das contestações de gastos ficam na aba Contestações, ao lado; os dois
               entram no resultado da competência.
             </li>
-            <li>Use “Novo Lançamento” para incluir a RN e outros ajustes; o lápis e a lixeira editam e excluem.</li>
+            <li>Use “Novo Lançamento” para incluir a RN e outros ajustes; o lápis e a lixeira editam e excluem (a exclusão, depois da confirmação num modal).</li>
             <li>Num mês ainda sem lançamentos, “Copiar do Mês Anterior” traz os do mês anterior para revisar.</li>
             <li>Use os filtros nos rótulos das colunas; o total no rodapé da tabela acompanha o filtro.</li>
             <li>
@@ -214,9 +218,7 @@ export function LancamentosManuaisContent() {
                         variant="ghost"
                         size="icon"
                         aria-label="Excluir"
-                        onClick={() => {
-                          if (window.confirm(`Excluir o lançamento "${l.descricao}"?`)) excluir.mutate(l.id);
-                        }}
+                        onClick={() => setExcluindo(l)}
                       >
                         <Trash2 className="size-4 text-red-700" />
                       </Button>
@@ -237,6 +239,19 @@ export function LancamentosManuaisContent() {
           aberto
           onFechar={() => setEditando(undefined)}
         />
+      ) : null}
+      {excluindo ? (
+        <ConfirmacaoDialog
+          titulo="Excluir o Lançamento"
+          descricao="O lançamento sai da competência e da próxima apuração. A exclusão fica no log de auditoria."
+          pendente={excluir.isPending}
+          onConfirmar={() => excluir.mutate(excluindo.id)}
+          onFechar={() => setExcluindo(null)}
+        >
+          <p className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            {excluindo.contaResultado?.reduzido ?? "—"} · {excluindo.descricao} · <span className="font-semibold text-gray-900">{moeda(excluindo.valor)}</span>
+          </p>
+        </ConfirmacaoDialog>
       ) : null}
     </div>
   );

@@ -536,11 +536,6 @@ function TextoDaContestacaoDialog({ c, o, onFechar }: { c: Contestacao; o: "moti
         </DialogHeader>
         <p className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm whitespace-pre-wrap text-gray-900">{(motivo ? c.motivo : c.justificativa) ?? "—"}</p>
         <p className="text-xs text-gray-500">{autoria}</p>
-        <DialogFooter>
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            Fechar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -607,11 +602,6 @@ function MovimentosDialog({ c, onFechar }: { c: Contestacao; onFechar: () => voi
           {c.movimentos.length} {plural(c.movimentos.length, "movimento", "movimentos")} em {c.competencias.length}{" "}
           {plural(c.competencias.length, "competência", "competências")} · Total <span className="font-bold text-gray-900">{moeda(c.valor)}</span>
         </p>
-        <DialogFooter className="shrink-0">
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            Fechar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
