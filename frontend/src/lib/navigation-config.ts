@@ -321,6 +321,10 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/cadastros(\/|$)/, "cadastros_controladoria:ler"],
   [/^\/usuarios(\/|$)/, "usuarios:ler"],
   [/^\/perfis(\/|$)/, "perfis:ler"],
+  // As Contestações de Gastos (30/10/2026): cada aba com a permissão dela (as Novidades das telas também a usam).
+  [/^\/contestacoes-de-gastos\/solicitadas(\/|$)/, "contestacoes.solicitadas:ler"],
+  [/^\/contestacoes-de-gastos\/recebidas(\/|$)/, "contestacoes.recebidas:ler"],
+  [/^\/contestacoes-de-gastos\/validacoes(\/|$)/, "contestacoes_validacoes:ler"],
   [/^\/auditoria(\/|$)/, "auditoria:ler"],
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],

@@ -28,6 +28,122 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 30/10/2026, 15:35
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Contestações de Gastos",
+    tela: "Contestações",
+    rota: "/contestacoes-de-gastos/solicitadas",
+    itens: [
+      "O processo entra em uso: no balancete de uma conta (o modal dos movimentos, nos Resultados do mês e nos Resultados Empresariais), “Contestar” sugere o novo centro de custo e/ou a nova conta de resultado de um movimento, com o motivo.",
+      "Contestar Anteriores e Contestar Posteriores levam junto os movimentos do mesmo fornecedor, conta e centro de custo nas outras competências, com o total que muda; a contestação continua uma só.",
+      "A lista das contas novas traz só as do departamento do centro novo e as do Extra-Operacional, com o balde de rateio de cada uma.",
+      "Nas abas Solicitadas e Recebidas, cada contestação mostra o Fornecedor, a Filial, o De e o Para e a Situação; o menu Ações traz Motivo, Justificativa, Ver Movimentos e, na Recebidas, Acatar e Recusar (com confirmação).",
+      "Respondem pelo centro todos os usuários com Editar na Recebidas, cada um no seu recorte; a Recebidas traz só as pedidas por outros usuários.",
+      "O movimento que chega a uma linha pelo rateio de outra mostra a etiqueta Rateio no lugar do Contestar: ele se contesta na linha de origem.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Contestações de Gastos",
+    tela: "Validações",
+    rota: "/contestacoes-de-gastos/validacoes",
+    itens: [
+      "Processar corrige os movimentos das contestações acatadas: na competência aberta, no próprio balancete; na fechada, pelo Importar da aba Contestações dos Lançamentos Manuais. Alterar Status muda a situação de qualquer contestação, com a justificativa.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Fechamento Mensal",
+    tela: "Lançamentos Manuais",
+    rota: "/competencias/0000-00/lancamentos-manuais",
+    itens: ["O título da tela passa a ser Lançamentos Manuais (na barra das etapas, continua Lançamentos)."],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Fechamento Mensal",
+    tela: "Lançamentos Manuais › Contestações",
+    rota: "/competencias/0000-00/lancamentos-contestacoes",
+    itens: [
+      "A aba Contestações traz, pelo Importar, os lançamentos das contestações acatadas de competências fechadas: para cada competência do movimento, o estorno no centro e na conta de antes e o lançamento no centro e na conta novos; abaixo do número, a competência do movimento.",
+      "Com rateio, os dois se dividem entre as unidades pelos percentuais da competência do movimento, como ele foi dividido.",
+      "A lixeira exclui a importação de uma contestação (os lançamentos dela), e ela volta à lista do Importar.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Fechamento Mensal",
+    tela: "Resultados",
+    rota: DRE,
+    itens: [
+      "Na aba Obras, o grupo Produção e Serviços (PS), com os volumes da obra nas Listas Operacionais.",
+      "Produção e Serviços (PS), com os volumes, aparece também nos níveis Totais e Atribuições.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Fechamento Mensal",
+    tela: "Conferência",
+    rota: "/competencias/0000-00/conferencia-planilha",
+    itens: ["Produção e Serviços (PS), com os volumes, aparece também nos níveis Totais e Atribuições."],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Resultados Empresariais",
+    tela: "Resultados",
+    rota: RESULTADOS,
+    itens: [
+      "A lista Comparação mostra só o nome da marcação: Previsão, Orçamento, Anterior ou Vendido.",
+      "Na aba Obras, o grupo Produção e Serviços (PS), com os volumes da obra nas Listas Operacionais e, com eles, o R$/m³ da obra.",
+      "Produção e Serviços (PS), com os volumes, aparece também nos níveis Totais e Atribuições.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Relatórios Executivos",
+    rota: RE,
+    itens: [
+      "O Adicionar fica em três grupos: Objetos (Cards e Tabela), Texto (Anotação, Texto Livre e Sumário) e Imagem e Vídeo.",
+      "A Imagem de Fundo fica nos ícones ao lado das páginas: o ícone de imagem a envia; com ela na página, os de ajustar e remover.",
+      "O ícone Transições, ao lado dos da Imagem de Fundo, abre o modal Transições do slide: a Animação (o Tipo) e o Cronômetro (Avançar Após, em segundos: na apresentação, o slide passa sozinho ao próximo), cada um com o seu Aplicar ao Grupo.",
+      "Na Tabela, o grupo Colunas escolhe se entram os Valores Unitários (R$/m³), a Diferença, o Atingimento e a Eficiência.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Controle de Usuários",
+    tela: "Perfis",
+    rota: "/perfis",
+    itens: [
+      "Acesso a Informações Sensíveis no perfil: sem ele, o usuário vê os valores das linhas de Mão de Obra Direta e Indireta, mas não as movimentações delas. Os perfis que já existiam continuam com o acesso.",
+      "Inativar e Reativar os perfis (menos o Administrador), com a caixa Mostrar Inativados; no menu, os Perfis vêm antes dos Usuários.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: TODO_O_SIG,
+    tela: "Tabelas",
+    itens: [
+      "O Exportar (Excel e PDF) em todas as telas com tabela, com as linhas que os filtros dos rótulos deixam.",
+      "Ao recarregar a página, a aba que estava aberta continua aberta.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: TODO_O_SIG,
+    tela: "Modais",
+    itens: [
+      "O modal aberto sobre outro escurece também o de baixo.",
+      "O rodapé com os botões fica preso embaixo do modal ao rolar.",
+      "As confirmações (excluir, inativar…) usam o modal do SIG, no lugar da confirmação do navegador.",
+    ],
+  },
+  {
+    publicada: "2026-10-30T15:35",
+    processo: "Resultados PROVA",
+    soAdministrador: true,
+    itens: ["O processo Resultados ROVA, em desenvolvimento, passa a se chamar Resultados PROVA; o Indicadores VPR saiu de Análises Gerenciais."],
+  },
   // 27/10/2026, 16:00
   {
     publicada: "2026-10-27T16:00",
