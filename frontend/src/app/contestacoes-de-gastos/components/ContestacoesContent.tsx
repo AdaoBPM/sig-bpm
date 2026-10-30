@@ -90,6 +90,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const consulta = useQuery({ queryKey: ["contestacoes", aba], queryFn: () => contestacoesService.listar(aba) });
+  const [acatando, setAcatando] = useState<Contestacao | null>(null);
   const [recusando, setRecusando] = useState<Contestacao | null>(null);
   const [alterando, setAlterando] = useState<Contestacao | null>(null);
   const [vendo, setVendo] = useState<Contestacao | null>(null);
@@ -104,6 +105,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
     mutationFn: (d: { id: string; acatar: boolean; justificativa: string | null }) => contestacoesService.responder(d.id, { acatar: d.acatar, justificativa: d.justificativa }),
     onSuccess: (c) => {
       toast.success(`Contestação nº ${c.numero} ${c.situacao === "ACATADA" ? "acatada" : "recusada"}.`);
+      setAcatando(null);
       setRecusando(null);
       void atualizar();
     },
@@ -186,8 +188,9 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
             </li>
             {aba === "recebidas" ? (
               <li>
-                No menu da coluna Ações, “Acatar” aceita a contestação pendente e “Recusar” a recusa (a justificativa é opcional). O menu fica destacado
-                quando a contestação espera a sua resposta.
+                No menu da coluna Ações, “Acatar” aceita a contestação pendente e “Recusar” a recusa (a justificativa é opcional), cada um depois da
+                confirmação num modal (contra o clique acidental). Recusada, a contestação é cancelada, e o movimento contábil permanece como está. O
+                menu fica destacado quando a contestação espera a sua resposta.
               </li>
             ) : null}
             {aba === "validacoes" ? (
@@ -248,7 +251,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
                 respondendo={responder.isPending}
                 onVerMovimentos={() => setVendo(c)}
                 onLer={(o) => setLendo({ c, o })}
-                onAcatar={() => responder.mutate({ id: c.id, acatar: true, justificativa: null })}
+                onAcatar={() => setAcatando(c)}
                 onRecusar={() => setRecusando(c)}
               />
             ) : (
@@ -345,6 +348,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
 
       {vendo ? <MovimentosDialog c={vendo} onFechar={() => setVendo(null)} /> : null}
       {lendo ? <TextoDaContestacaoDialog c={lendo.c} o={lendo.o} onFechar={() => setLendo(null)} /> : null}
+      {acatando ? <AcatarDialog c={acatando} pendente={responder.isPending} onFechar={() => setAcatando(null)} onAcatar={() => responder.mutate({ id: acatando.id, acatar: true, justificativa: null })} /> : null}
       {recusando ? <RecusarDialog c={recusando} pendente={responder.isPending} onFechar={() => setRecusando(null)} onRecusar={(j) => responder.mutate({ id: recusando.id, acatar: false, justificativa: j })} /> : null}
       {alterando ? (
         <AlterarStatusDialog
@@ -606,7 +610,47 @@ function MovimentosDialog({ c, onFechar }: { c: Contestacao; onFechar: () => voi
   );
 }
 
-/** Recusar (aba Recebidas): a justificativa, opcional, aparece para quem pediu. */
+/** O que a contestação muda, para a confirmação de Acatar e Recusar: o centro e/ou a conta de antes e os novos. */
+function DeEPara({ c }: { c: Contestacao }) {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+      <dt className="text-gray-500">Fornecedor</dt>
+      <dd className="text-gray-900">
+        {c.cliForn ?? "—"} · {valorEMovimentos(c)} · {periodo(c)}
+      </dd>
+      <dt className="text-gray-500">De</dt>
+      <dd className="text-gray-900">{de(c) || "—"}</dd>
+      <dt className="text-gray-500">Para</dt>
+      <dd className="font-medium text-gray-900">{para(c) || "—"}</dd>
+    </dl>
+  );
+}
+
+/** Acatar (aba Recebidas): a confirmação, para evitar o clique acidental. */
+function AcatarDialog({ c, pendente, onFechar, onAcatar }: { c: Contestacao; pendente: boolean; onFechar: () => void; onAcatar: () => void }) {
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
+      <DialogContent className="rounded-sm sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Acatar a Contestação nº {c.numero}</DialogTitle>
+          <DialogDescription>Confirme que a contestação procede. Acatada, ela vai para a Controladoria, que valida e corrige o movimento.</DialogDescription>
+        </DialogHeader>
+        <DeEPara c={c} />
+        <DialogFooter>
+          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button type="button" className={botaoPrimario} disabled={pendente} onClick={onAcatar}>
+            <Check className="size-4" />
+            {pendente ? "Acatando…" : "Acatar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Recusar (aba Recebidas): a confirmação, com a justificativa (opcional), que aparece para quem pediu. */
 function RecusarDialog({ c, pendente, onFechar, onRecusar }: { c: Contestacao; pendente: boolean; onFechar: () => void; onRecusar: (justificativa: string | null) => void }) {
   const [texto, setTexto] = useState("");
   return (
@@ -615,9 +659,11 @@ function RecusarDialog({ c, pendente, onFechar, onRecusar }: { c: Contestacao; p
         <DialogHeader>
           <DialogTitle>Recusar a Contestação nº {c.numero}</DialogTitle>
           <DialogDescription>
-            {movimento(c)} · {valorEMovimentos(c)}. A justificativa (opcional) aparece para quem pediu, nas Contestações e em Validações.
+            Confirme a recusa. Recusada, a contestação é cancelada, e o movimento contábil permanece como está. A justificativa (opcional) aparece para quem
+            pediu, nas Contestações e em Validações.
           </DialogDescription>
         </DialogHeader>
+        <DeEPara c={c} />
         <div className="space-y-1.5">
           <Label htmlFor="rc-justificativa">Justificativa (opcional)</Label>
           <textarea id="rc-justificativa" value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={500} rows={3} className="w-full rounded-sm border border-gray-300 px-3 py-2 text-sm" />
@@ -627,6 +673,7 @@ function RecusarDialog({ c, pendente, onFechar, onRecusar }: { c: Contestacao; p
             Cancelar
           </Button>
           <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" disabled={pendente} onClick={() => onRecusar(texto.trim() || null)}>
+            <X className="size-4" />
             {pendente ? "Recusando…" : "Recusar"}
           </Button>
         </DialogFooter>

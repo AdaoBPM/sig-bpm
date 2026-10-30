@@ -119,8 +119,9 @@ export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: 
         <DialogHeader>
           <DialogTitle>Contestar o Movimento</DialogTitle>
           <DialogDescription>
-            Sugira o novo centro de custo e/ou a nova conta de resultado do movimento. A contestação vai para o responsável pelo centro de custo (o novo; sem
-            ele, o de hoje), que a acata ou recusa; acatada, a Controladoria a valida e corrige o movimento.
+            Sugira o novo centro de custo e/ou a nova conta de resultado do movimento. A contestação vai para o responsável do novo centro de custo, que a
+            acata ou recusa (se em branco, fica o atual). Se acatada, a Controladoria valida e corrige o movimento. Se recusada, a contestação é cancelada, e
+            o movimento contábil permanece como está.
           </DialogDescription>
         </DialogHeader>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
