@@ -28,6 +28,15 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 30/10/2026, 16:00
+  {
+    publicada: "2026-10-30T16:00",
+    processo: "Relatórios Executivos",
+    rota: RE,
+    itens: [
+      "O Zoom dos cards: no menu da edição, a lupa amplia o card inteiro (os textos, os valores e o gráfico) em 125%, 150%, 200%, 250% ou 300%, no mesmo bloco; o que não couber, aumente o card.",
+    ],
+  },
   // 30/10/2026, 15:35
   {
     publicada: "2026-10-30T15:35",
