@@ -118,7 +118,7 @@ export function BalanceteDialog({
       if (m.rateioDe) {
         return podeContestar ? (
           <span
-            className="text-[11px] whitespace-nowrap text-gray-500"
+            className="inline-flex items-center rounded-sm border border-yellow-300 bg-yellow-50 px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-yellow-800"
             title={`Reflexo do rateio: o movimento é da linha "${m.rateioDe.linha}" (${m.rateioDe.grupo}) e chega a esta pelo rateio. Para contestá-lo, abra o extrato da linha de origem.`}
           >
             Rateio

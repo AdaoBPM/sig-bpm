@@ -66,7 +66,8 @@ export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: 
   const centros: OpcaoDaBusca[] = centrosDoCadastro.map((c) => ({ id: c.id, codigo: c.codigoRM ?? "—", nome: c.nomeRM, detalhe: c.departamento }));
   const contas: OpcaoDaBusca[] = contasDoCadastro
     .filter((c) => contaCabeNoCentro(departamentoDoCentro, c.departamentoDoRecorte))
-    .map((c) => ({ id: c.id, codigo: c.reduzido, nome: c.descricao, detalhe: [c.departamento, c.atribuicao].filter(Boolean).join(" · ") || null }));
+    // O detalhe: o departamento, a atribuição e o balde da conta (a chave de rateio ou o destino direto).
+    .map((c) => ({ id: c.id, codigo: c.reduzido, nome: c.descricao, detalhe: [c.departamento, c.atribuicao, c.balde ? `Balde ${c.balde}` : null].filter(Boolean).join(" · ") || null }));
   const escolherCentro = (o: OpcaoDaBusca | null) => {
     setCentro(o);
     // A conta escolhida que não cabe no departamento do centro novo sai.

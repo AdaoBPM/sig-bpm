@@ -77,7 +77,7 @@ export const contestacoesController = {
       prisma.contaResultado.findMany({
         where: { ativo: true, tipoConta: "ANALITICA", linhaDREId: { not: null } },
         orderBy: { reduzido: "asc" },
-        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true, linhaDRE: { select: { grupoSigla: true, descricao: true } } },
+        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true, balde: true, linhaDRE: { select: { grupoSigla: true, descricao: true } } },
       }),
     ]);
     return response.json({

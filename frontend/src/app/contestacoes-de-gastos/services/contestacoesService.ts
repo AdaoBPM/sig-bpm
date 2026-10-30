@@ -79,7 +79,16 @@ export type Contestacao = {
 /** O departamento do recorte (o da gestão): o do centro de custo e o da linha da DRE da conta. */
 export type DepartamentoDoRecorte = "PRODUCAO" | "SERVICOS" | "LOGISTICA" | "TECNICO" | "COMERCIAL" | "ADMINISTRATIVO" | "EXTRA_OPERACIONAL";
 export type CentroOpcao = { id: string; codigoRM: string | null; nomeRM: string; departamento: string | null; departamentoDoRecorte: DepartamentoDoRecorte };
-export type ContaOpcao = { id: string; reduzido: string; descricao: string; departamento: string | null; atribuicao: string | null; departamentoDoRecorte: DepartamentoDoRecorte | null };
+export type ContaOpcao = {
+  id: string;
+  reduzido: string;
+  descricao: string;
+  departamento: string | null;
+  atribuicao: string | null;
+  /** O balde da conta (a chave de rateio ou o destino direto). */
+  balde: string | null;
+  departamentoDoRecorte: DepartamentoDoRecorte | null;
+};
 
 export const ROTULO_DEPARTAMENTO: Record<DepartamentoDoRecorte, string> = {
   PRODUCAO: "Produção",
