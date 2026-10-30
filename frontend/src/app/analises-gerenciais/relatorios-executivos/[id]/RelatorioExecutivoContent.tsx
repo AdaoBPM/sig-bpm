@@ -612,16 +612,6 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 </span>
               )
             ) : null}
-            {/* As transições (27/10/2026, pedido do Adão), antes do Adicionar: a do slide aberto ou a do grupo, e o Avançar Após. */}
-            {editavel && pagina ? (
-              <TransicoesDoSlide
-                key={pagina.id}
-                ajuste={ajusteDaPagina}
-                nomeDoSlide={nomeDaPagina(pagina, nPagina)}
-                uniformes={uniformes}
-                onMudar={mudarAjuste}
-              />
-            ) : null}
             {editavel ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -841,7 +831,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
               Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.
             </li>
             <li>
-              “Transições”, antes do Adicionar: em Animação, a lista Tipo escolhe como o slide aberto entra na apresentação: Esmaecer (o novo aparece
+              O ícone Transições, nos botões ao lado das páginas (depois dos da Imagem de Fundo), abre o modal Transições do slide aberto, em que as
+              mudanças valem na hora: em Animação, a lista Tipo escolhe como o slide entra na apresentação: Esmaecer (o novo aparece
               sobre o anterior), Rolar Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou
               da esquerda), ou Nenhuma (a troca na hora). Em Cronômetro, “Avançar Após”, digite os segundos: na apresentação, o slide passa
               sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A Animação e o Cronômetro têm cada um o seu “Aplicar ao Grupo”:
@@ -1037,6 +1028,18 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                     <ImageUp className="size-4" />
                   </button>
                 )}
+                {/* As Transições do slide (30/10/2026, pedido do Adão; antes, o botão Transições do topo): o ícone abre o modal
+                    com a Animação e o Cronômetro, do slide aberto ou do grupo. */}
+                {pagina ? (
+                  <TransicoesDoSlide
+                    key={pagina.id}
+                    className={botaoIcone}
+                    ajuste={ajusteDaPagina}
+                    nomeDoSlide={nomeDaPagina(pagina, nPagina)}
+                    uniformes={uniformes}
+                    onMudar={mudarAjuste}
+                  />
+                ) : null}
                 <span className="mx-1 h-5 w-px bg-gray-200" />
               </>
             ) : null}
