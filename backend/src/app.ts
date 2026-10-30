@@ -25,6 +25,7 @@ import { edicaoCadastrosRoutes } from "./routes/cadastros/edicaoCadastrosRoutes.
 import { divergenciasRoutes } from "./routes/divergencias/divergenciasRoutes.js";
 import { perfisRoutes, presencaRoutes, usuariosRoutes } from "./routes/usuarios/usuariosRoutes.js";
 import { contestacoesDaCompetenciaRoutes, contestacoesRoutes } from "./routes/contestacoes/contestacoesRoutes.js";
+import { exportacoesRoutes } from "./routes/exportacoes/exportacoesRoutes.js";
 import { estoqueRoutes } from "./routes/estoque/estoqueRoutes.js";
 import { rateiosRoutes } from "./routes/rateios/rateiosRoutes.js";
 import { relatoriosRoutes } from "./routes/relatorios/relatoriosRoutes.js";
@@ -59,6 +60,8 @@ app.use(
     credentials: true,
   }),
 );
+// O Exportar das tabelas (30/10/2026) lê o corpo com o limite dele (a tabela inteira de uma tela), antes do comum.
+app.use("/exportacoes", exportacoesRoutes);
 app.use(express.json({ limit: "1mb" }));
 
 registerSwagger(app);

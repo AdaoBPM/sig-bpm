@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Globe, Lock, Plus } from "lucide-react";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -129,6 +130,7 @@ export function CenariosContent({ tipo = "SINTETICO" }: { tipo?: TipoCenario }) 
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo={t.titulo}
+        exportar={<ExportarTabela titulo={t.titulo} colunas={COLUNAS} linhas={tabela.filtradas} />}
         comoUsar={analitico ? COMO_USAR_ANALITICOS : (
           <ul>
             <li>

@@ -26,6 +26,8 @@ type CadastroShellProps = {
   acoes?: ReactNode;
   /** A caixa "Apenas Ativas" (Cadastros da Controladoria), logo antes dos botões. */
   apenasAtivas?: ControleApenasAtivas;
+  /** O Exportar da tabela (30/10/2026, `ExportarTabela`). */
+  exportar?: ReactNode;
   children: ReactNode;
 };
 
@@ -47,6 +49,7 @@ export function CadastroShell({
   filtros,
   acoes,
   apenasAtivas,
+  exportar,
   children,
 }: CadastroShellProps) {
   return (
@@ -55,6 +58,7 @@ export function CadastroShell({
         titulo={titulo}
         sobre={<p>{descricao}</p>}
         comoUsar={comoUsar}
+        exportar={exportar}
         acoes={
           apenasAtivas ? (
             <div className="flex flex-wrap items-center gap-4">

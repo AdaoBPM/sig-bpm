@@ -7,6 +7,7 @@ import { AlertCircle, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/context/PermissionContext";
@@ -23,6 +24,15 @@ const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-1
 const valor = (v: number | null) => (v === null ? "—" : inteiro(Math.round(v) || 0));
 
 type Linha = { chave: string; rotulo: ReactNode; valores: ReactNode[]; destaque?: boolean };
+
+/** O Exportar (30/10/2026): a conferência da Margem de Contribuição, DRE × Soma das Linhas, por unidade. */
+const COLUNAS_DA_CONFERENCIA: ColunaExportavel<LinhasDoMes["unidades"][number]>[] = [
+  { chave: "unidade", rotulo: "Unidade", valor: (u) => u.nome },
+  { chave: "mcDaDRE", rotulo: "MC da DRE", tipo: "numero", moeda: true, valor: (u) => u.mcDaDRE, texto: (u) => valor(u.mcDaDRE) },
+  { chave: "mcDasLinhas", rotulo: "Soma das Linhas", tipo: "numero", moeda: true, valor: (u) => u.mcDasLinhas, texto: (u) => valor(u.mcDasLinhas) },
+  { chave: "diferenca", rotulo: "Diferença", tipo: "numero", moeda: true, valor: (u) => u.mcDasLinhas - u.mcDaDRE, texto: (u) => valor(u.mcDasLinhas - u.mcDaDRE) },
+  { chave: "semLinha", rotulo: "Sem Linha", tipo: "numero", moeda: true, valor: (u) => u.semLinha, texto: (u) => valor(u.semLinha) },
+];
 
 /** Uma tabela no padrão das de Resultados: o nome dela na primeira célula do cabeçalho amarelo-ouro. */
 function Tabela({ titulo, colunas, linhas, rodape }: { titulo: string; colunas: string[]; linhas: Linha[]; rodape?: ReactNode }) {
@@ -205,6 +215,11 @@ export function LinhasContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Linhas"
+        exportar={
+          dados?.situacao.gravadaEm ? (
+            <ExportarTabela titulo={`Linhas · Margem de Contribuição: DRE × Soma das Linhas · ${rotulo}`} colunas={COLUNAS_DA_CONFERENCIA} linhas={dados.unidades} />
+          ) : null
+        }
         sobre={
           <>
             <p>
@@ -232,7 +247,8 @@ export function LinhasContent() {
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada grupo abre e fecha só ele.</li>
             <li>
               Embaixo, confira antes de fechar: a Margem de Contribuição da DRE de cada unidade contra a soma das linhas (iguais, com o que ficou Sem Linha), de
-              que passo veio cada valor, os documentos do mês e os avisos.
+              que passo veio cada valor, os documentos do mês e os avisos. “Exportar” leva a primeira (DRE × Soma das Linhas) em Excel ou PDF; a DRE das linhas
+              se exporta em Resultados Empresariais › Resultados, na aba Linhas.
             </li>
             <li>Para corrigir, ajuste a Alocação nas Linhas, as tarefas das linhas ou os documentos (etapa Importações) e reapure.</li>
             <li>

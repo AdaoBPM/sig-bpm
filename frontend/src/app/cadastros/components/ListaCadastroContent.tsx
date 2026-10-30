@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import { Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { DataTable } from "@/components/shared/DataTable";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -101,6 +102,7 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
   return (
     <CadastroShell
       titulo={titulo}
+      exportar={<ExportarTabela titulo={`Cadastros · ${titulo}`} colunas={colunas} linhas={tabela.filtradas} />}
       descricao={descricao}
       comoUsar={comoUsar}
       acoes={

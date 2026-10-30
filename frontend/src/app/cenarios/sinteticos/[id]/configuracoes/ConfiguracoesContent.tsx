@@ -113,6 +113,7 @@ export function ConfiguracoesContent() {
               Com um cenário comparado, a tela Resultados e a aba Indicadores do Painel de Bordo trazem, em preto e cinza depois do total, os totais dele (e, nos Resultados, a
               Diferença, o Atingimento e a Eficiência), e a tela {analitico ? "Histórico" : "Reajustes"} ganha a aba Justificativas, com as contas acima da variação.
             </li>
+            <li>“Exportar”, ao lado do título do quadro (no Comparativo e nos Índices), leva o que está gravado em Excel ou PDF.</li>
           </ul>
         }
         sobre={

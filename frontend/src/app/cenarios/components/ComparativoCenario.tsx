@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { CampoBusca } from "@/components/shared/Filtros";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -55,6 +56,19 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(verificadas.map((l) => [l.codigo, original(l)])));
   const daTela = analitico ? "Histórico" : "Reajustes";
   const rotuloDoIndice = (i: { descricao: string; variacao: number }) => `${i.descricao} (${duasCasas(Number(i.variacao))}%)`;
+  const colunasExportadas: ColunaExportavel<LinhaDaVariacao>[] = [
+    { chave: "linha", rotulo: "Linha da DRE", valor: (l) => l.descricao },
+    analitico
+      ? {
+          chave: "indice",
+          rotulo: "Índice de Reajuste",
+          valor: (l) => {
+            const i = l.verificada && l.indice ? indices.find((x) => x.chave === l.indice) : undefined;
+            return i ? rotuloDoIndice(i) : "";
+          },
+        }
+      : { chave: "variacao", rotulo: "Variação Máxima (%)", tipo: "numero", valor: (l) => (l.verificada ? l.limite : null), texto: (l) => (l.verificada && l.limite !== null ? duasCasas(l.limite) : "") },
+  ];
   const [todos, setTodos] = useState("");
   // As contas marcadas (15/10/2026): o Preencher Selecionados e o Limpar valem só para elas (antes, para todas).
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set());
@@ -149,7 +163,11 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
         {/* O "Preencher Selecionados" à direita, ao lado do texto (13/10/2026; até 15/10/2026, "Preencher Todos Com"). */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h2 className={TITULO}>{analitico ? "Índices de Reajuste" : "Variação Máxima"}</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className={TITULO}>{analitico ? "Índices de Reajuste" : "Variação Máxima"}</h2>
+              {/* O Exportar (30/10/2026): o que está gravado em cada linha da DRE. */}
+              <ExportarTabela titulo={`Cenário · Comparativo · ${analitico ? "Índices de Reajuste" : "Variação Máxima"}`} colunas={colunasExportadas} linhas={dados.linhas} />
+            </div>
             <p className="mt-1 text-xs text-gray-600">
               {analitico
                 ? "O índice de reajuste de cada conta, na estrutura da DRE vigente. Contas sem índice não serão verificadas."

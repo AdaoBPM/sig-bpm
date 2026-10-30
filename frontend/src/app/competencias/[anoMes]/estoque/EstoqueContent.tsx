@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Calculator, Info } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -78,6 +79,7 @@ export function EstoqueContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Estoque Prévio"
+        exportar={<ExportarTabela titulo={`Estoque Prévio · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
         selo={
           dados?.congelado || dados?.competencia.status === "FECHADA" ? (
             <AvisoCongelado anoMes={anoMes} fechada={dados?.competencia.status === "FECHADA"} oQue="do saldo de estoque" />

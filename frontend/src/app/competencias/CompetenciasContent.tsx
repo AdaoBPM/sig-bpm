@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Check, Circle } from "lucide-react";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { DataTable } from "@/components/shared/DataTable";
 import { etapasDoMes, type Etapa } from "@/lib/etapasDoMes";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -162,6 +163,7 @@ export function CompetenciasContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Fechamento Mensal"
+        exportar={<ExportarTabela titulo="Fechamento Mensal · Competências" colunas={COLUNAS} linhas={tabela.filtradas} />}
         comoUsar={
           <ul>
             <li>Use os filtros nos rótulos das colunas (por exemplo, o ano na coluna Competência).</li>

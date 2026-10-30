@@ -6,6 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -192,6 +193,7 @@ function Lista() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Listas Operacionais"
+        exportar={<ExportarTabela titulo={`Listas Operacionais · ${def?.rotulo ?? ""} · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={colunas} linhas={tabela.filtradas} />}
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="das listas" /> : null}
         comoUsar={
           <ul>

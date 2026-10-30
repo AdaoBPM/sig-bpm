@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -53,6 +54,7 @@ export function ListaLotacao() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Listas Operacionais"
+        exportar={<ExportarTabela titulo={`Listas Operacionais · Quadro de Lotação · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="das listas" /> : null}
         comoUsar={
           <ul>

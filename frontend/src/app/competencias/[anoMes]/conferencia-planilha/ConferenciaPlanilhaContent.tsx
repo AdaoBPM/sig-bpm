@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { CampoArquivo } from "@/components/shared/CampoArquivo";
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/context/PermissionContext";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -216,11 +217,31 @@ export function ConferenciaPlanilhaContent() {
   const coluna = `${MESES_CURTOS[periodo.mes - 1]}/${String(periodo.ano).slice(2)}`;
   const r = consulta.data;
   const visao = r?.visoes.find((v) => v.unidade === unidade) ?? r?.visoes[0];
+  // O Exportar (30/10/2026): as linhas da visão (só as diferenças, com a caixa marcada), em reais e em volumes.
+  const numeroDe = (v: string | number | null) => (v === null ? null : Number(v));
+  const colunasExportadas: ColunaExportavel<LinhaConferencia>[] = [
+    { chave: "linha", rotulo: "Linha da Planilha", tipo: "numero", valor: (l) => l.linha },
+    { chave: "descricao", rotulo: visao?.nome ?? "Linha", valor: (l) => l.descricao },
+    { chave: "ferramenta", rotulo: "Ferramenta", tipo: "numero", moeda: false, valor: (l) => numeroDe(l.sistema), texto: (l) => (l.tipo === "SECAO" ? "" : valor(l, l.sistema)) },
+    { chave: "planilha", rotulo: "Planilha", tipo: "numero", moeda: false, valor: (l) => numeroDe(l.planilha), texto: (l) => (l.tipo === "SECAO" ? "" : valor(l, l.planilha)) },
+    { chave: "diferenca", rotulo: "Diferença", tipo: "numero", moeda: false, valor: (l) => numeroDe(l.diferenca), texto: (l) => (l.tipo === "SECAO" ? "" : valor(l, l.diferenca)) },
+  ];
+  const linhasExportadas = visao ? semPrimeiroTotalDaRol(visao.linhas).filter((l) => !soDiferencas || l.destaque) : [];
 
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Conferência com a Planilha"
+        exportar={
+          visao ? (
+            <ExportarTabela
+              titulo={`Conferência com a Planilha · ${visao.nome} · ${String(periodo.mes).padStart(2, "0")}/${periodo.ano}`}
+              subtitulo={soDiferencas ? `Só as diferenças acima da variação máxima de ${limiteTexto}` : null}
+              colunas={colunasExportadas}
+              linhas={linhasExportadas}
+            />
+          ) : null
+        }
         comoUsar={
           <ul>
             <li>Clique em “Enviar Planilha” e envie o BASE REALIZADO (RESULTADOS) atualizado. A faixa “Planilha em Uso” mostra o arquivo comparado, quando e por quem foi enviado; a faixa seguinte resume as diferenças.</li>

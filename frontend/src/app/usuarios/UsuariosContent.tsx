@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { KeyRound, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -96,6 +97,7 @@ export function UsuariosContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Usuários"
+        exportar={<ExportarTabela titulo="Usuários" colunas={colunas} linhas={tabela.filtradas} />}
         comoUsar={
           <ul>
             <li>Use “Novo Usuário” para cadastrar; o lápis edita o nome, o perfil, os setores, os departamentos, os centros de custo e a situação.</li>

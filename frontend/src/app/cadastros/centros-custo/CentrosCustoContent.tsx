@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { DataTable } from "@/components/shared/DataTable";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -52,6 +53,7 @@ export function CentrosCustoContent() {
     <CadastroShell
       apenasAtivas={ativas.controle}
       titulo="Centros de Custo"
+      exportar={<ExportarTabela titulo="Cadastros · Centros de Custo" colunas={colunas} linhas={tabela.filtradas} />}
       comoUsar={
         <ul>
           <li>Use os filtros nos rótulos das colunas.</li>

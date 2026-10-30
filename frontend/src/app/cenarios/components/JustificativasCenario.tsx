@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Button } from "@/components/ui/button";
 
 import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
@@ -23,6 +24,15 @@ const QUADRO = "rounded-sm border border-l-4 border-gray-200 border-l-bpm-primar
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 // A variação e a máxima com duas casas (13/10/2026), como a comparação (só entra o que passa da máxima em duas casas).
 const percentual = (v: number) => `${v > 0 ? "+" : ""}${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+
+/** O Exportar (30/10/2026): as contas acima da variação da aba, com os meses e a justificativa. */
+const COLUNAS_DAS_JUSTIFICATIVAS: ColunaExportavel<ItemJustificativa>[] = [
+  { chave: "conta", rotulo: "Conta", valor: (i) => (i.ehTotal ? i.descricao : `${i.descricao} (${i.total})`) },
+  { chave: "limite", rotulo: "Variação Máxima (%)", tipo: "numero", valor: (i) => i.limite, texto: (i) => i.limite.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+  { chave: "meses", rotulo: "Meses Acima", valor: (i) => i.meses.map((m) => `${MESES[m.mes - 1]} ${m.variacao === null ? "sem base" : percentual(m.variacao)}`).join("; ") },
+  { chave: "justificativa", rotulo: "Justificativa", valor: (i) => i.justificativa?.texto ?? "" },
+  { chave: "por", rotulo: "Justificada Por", valor: (i) => (i.justificativa ? `${i.justificativa.usuarioNome} em ${new Date(i.justificativa.atualizadoEm).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : "") },
+];
 
 /**
  * A aba Justificativas da tela Reajustes (13/10/2026; antes, da tela Comparativo e, antes, uma tela própria): com um
@@ -73,10 +83,13 @@ export function JustificativasCenario({ id, podeEditar }: { id: string; podeEdit
               <span className="text-gray-600">
                 {atual?.itens.length ?? 0} {plural(atual?.itens.length ?? 0, "conta", "contas")} acima da variação em {atual?.nome}; {(atual?.itens ?? []).filter((i) => !i.justificativa).length} sem justificativa.
               </span>
-              <label className="inline-flex items-center gap-2 text-gray-700">
-                <input type="checkbox" className="accent-black" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} />
-                Só Sem Justificativa
-              </label>
+              <span className="inline-flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-gray-700">
+                  <input type="checkbox" className="accent-black" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} />
+                  Só Sem Justificativa
+                </label>
+                <ExportarTabela titulo={`Cenário · Justificativas · ${atual?.nome ?? ""}`} colunas={COLUNAS_DAS_JUSTIFICATIVAS} linhas={itens} />
+              </span>
             </div>
             {itens.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-gray-500">

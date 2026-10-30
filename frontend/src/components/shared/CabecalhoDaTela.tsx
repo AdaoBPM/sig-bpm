@@ -17,6 +17,8 @@ type Props = {
   selo?: ReactNode;
   /** Botões à direita do título. */
   acoes?: ReactNode;
+  /** O Exportar da tabela da tela (30/10/2026, `ExportarTabela`): antes das ações. */
+  exportar?: ReactNode;
 };
 
 /**
@@ -30,7 +32,7 @@ type Props = {
  * o componente devolve dois irmãos, sem envoltório: o fixo precisa ser filho
  * direto do contêiner da página, que é o que tem a altura toda.
  */
-export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props) {
+export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar }: Props) {
   // Numa tela com abas (17/10/2026), o título é o nome da tela, e as abas vêm logo abaixo; o painel Sobre segue o da aba.
   const daTela = useAbasDaTela();
   const ref = useRef<HTMLDivElement>(null);
@@ -82,9 +84,10 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
             ) : null}
           </div>
         </div>
-        {selo || acoes ? (
+        {selo || acoes || exportar ? (
           <div data-tour="acoes-da-tela" className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {selo}
+            {exportar}
             {acoes}
           </div>
         ) : null}
@@ -94,6 +97,15 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes }: Props)
       <PainelInformacao aberto={sobreAberto} onMudar={setSobreAberto} titulo="Sobre Esta Tela">
         {sobre ? <TextoPainel>{sobre}</TextoPainel> : null}
         {comoUsar ? <SecaoPainel titulo="Como Usar Esta Tela">{comoUsar}</SecaoPainel> : null}
+        {/* O Exportar da tabela (30/10/2026): a explicação vem com ele, em todas as telas que o têm. */}
+        {exportar ? (
+          <SecaoPainel titulo="Exportar">
+            <p>
+              “Exportar”, à direita do título, leva a tabela da tela a um arquivo Excel ou PDF: as linhas que os filtros dos rótulos deixam, na ordem
+              escolhida, e as colunas com rótulo (sem as de ações). O arquivo traz o título da tela, quem o gerou e quando.
+            </p>
+          </SecaoPainel>
+        ) : null}
       </PainelInformacao>
     </>
   );

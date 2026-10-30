@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
@@ -55,6 +56,7 @@ export function RelatoriosExecutivosContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Relatórios Executivos"
+        exportar={<ExportarTabela titulo="Relatórios Executivos" colunas={COLUNAS} linhas={tabela.filtradas} />}
         acoes={
           pode ? (
             <Button type="button" className={botaoPrimario} disabled={!consulta.data || !livres.length} title={consulta.data && !livres.length ? "Todas as competências fechadas já têm relatório" : undefined} onClick={() => setCriando(true)}>

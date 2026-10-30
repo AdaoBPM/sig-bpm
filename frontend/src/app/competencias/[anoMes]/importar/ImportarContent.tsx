@@ -9,6 +9,7 @@ import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Carregando, ErroCarga, Vazio } from "@/components/shared/Estados";
@@ -166,6 +167,7 @@ export function ImportarContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Importações"
+        exportar={aba === "vigor" ? <ExportarTabela titulo={`Importações · Em Vigor · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS_VIGOR} linhas={vigor.filtradas} /> : <ExportarTabela titulo={`Importações · Histórico · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS_HISTORICO} linhas={historico.filtradas} />}
         selo={
           fechada ? (
             <span

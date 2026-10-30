@@ -282,7 +282,7 @@ export function BibliotecaDeApisContent() {
             <li>
               Acesso às APIs (os últimos 7, 30 ou 90 dias): os destaques do período (os pedidos, os recusados, os usuários e os endereços — os computadores ou
               servidores que chamam as APIs) e, um abaixo do outro, os pedidos por dia, por usuário, por endereço e por API e os últimos pedidos, com o motivo das
-              recusas. Quem só lê a Biblioteca vê os próprios acessos.
+              recusas. Quem só lê a Biblioteca vê os próprios acessos. “Exportar”, ao lado do período, leva os últimos pedidos em Excel ou PDF.
             </li>
             <li>
               Quem edita a Biblioteca (o perfil com Editar na Central de Conectividade) vê os acessos de todos e bloqueia ou libera, nos controles deslizantes, uma

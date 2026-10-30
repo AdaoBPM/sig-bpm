@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAlteracoesPendentes } from "@/lib/alteracoesPendentes";
@@ -33,6 +34,13 @@ export function IndicesCenario({ id, podeEditar }: { id: string; podeEditar: boo
 }
 
 type Linha = { chave: string | null; descricao: string; observacao: string; variacao: string; contas: number };
+
+const COLUNAS_DOS_INDICES: ColunaExportavel<IndiceDeReajuste & { contas: number }>[] = [
+  { chave: "descricao", rotulo: "Descrição", valor: (i) => i.descricao },
+  { chave: "observacao", rotulo: "Observação", valor: (i) => i.observacao ?? "" },
+  { chave: "variacao", rotulo: "Variação Máxima (%)", tipo: "numero", valor: (i) => Number(i.variacao), texto: (i) => duasCasas(Number(i.variacao)) },
+  { chave: "contas", rotulo: "Contas", tipo: "numero", valor: (i) => i.contas },
+];
 
 function Lista({ id, indices, podeEditar }: { id: string; indices: Array<IndiceDeReajuste & { contas: number }>; podeEditar: boolean }) {
   const queryClient = useQueryClient();
@@ -66,12 +74,16 @@ function Lista({ id, indices, podeEditar }: { id: string; indices: Array<IndiceD
             não são verificadas.
           </p>
         </div>
-        {podeEditar ? (
-          <Button type="button" variant="outline" className="shrink-0 rounded-sm" onClick={() => setLinhas((atual) => [...atual, { chave: null, descricao: "", observacao: "", variacao: "", contas: 0 }])}>
-            <Plus className="size-4" />
-            Incluir Índice
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* O Exportar (30/10/2026): os índices gravados. */}
+          <ExportarTabela titulo="Cenário · Índices de Reajuste" colunas={COLUNAS_DOS_INDICES} linhas={indices} />
+          {podeEditar ? (
+            <Button type="button" variant="outline" className="shrink-0 rounded-sm" onClick={() => setLinhas((atual) => [...atual, { chave: null, descricao: "", observacao: "", variacao: "", contas: 0 }])}>
+              <Plus className="size-4" />
+              Incluir Índice
+            </Button>
+          ) : null}
+        </div>
       </div>
       <div className="rounded-sm border border-gray-200">
         <table className="tabela-sig w-full border-collapse">

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Cog, EllipsisVertical, FileText, ListTree, MessageSquareText, PencilLine, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -161,6 +162,7 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo={titulos[aba].titulo}
+        exportar={<ExportarTabela titulo={`Contestações de Gastos · ${aba === "validacoes" ? "Validações" : aba === "solicitadas" ? "Solicitadas" : "Recebidas"}`} colunas={colunas} linhas={tabela.filtradas} />}
         sobre={<p>{titulos[aba].sobre}</p>}
         comoUsar={
           <ul>

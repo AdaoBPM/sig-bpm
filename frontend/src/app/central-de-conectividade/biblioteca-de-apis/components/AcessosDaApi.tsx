@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { plural } from "@/lib/texto";
 
@@ -67,6 +68,20 @@ function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: number; 
  * os endereços que chamam, as APIs mais pedidas e os últimos pedidos — e bloqueia ou libera um usuário ou um endereço no
  * controle deslizante; quem só lê vê os próprios.
  */
+/** As colunas dos Últimos Pedidos no Exportar (30/10/2026), como na tabela. */
+const COLUNAS_DOS_PEDIDOS: ColunaExportavel<Acessos["ultimos"][number]>[] = [
+  { chave: "quando", rotulo: "Quando", valor: (u) => dataHora(u.quando) },
+  { chave: "usuario", rotulo: "Usuário", valor: (u) => u.usuario },
+  { chave: "endereco", rotulo: "Endereço", valor: (u) => u.endereco ?? "—" },
+  { chave: "api", rotulo: "API", valor: (u) => `${u.api}${u.formato ? ` · ${u.formato}` : ""}` },
+  {
+    chave: "resultado",
+    rotulo: "Resultado",
+    valor: (u) => (u.status === 200 ? "Atendido" : `Recusado${u.motivo ? ` (${MOTIVO[u.motivo] ?? u.motivo})` : u.status ? ` (${u.status})` : ""}`),
+  },
+  { chave: "tempo", rotulo: "Tempo (ms)", tipo: "numero", valor: (u) => u.ms },
+];
+
 export function AcessosDaApi() {
   const queryClient = useQueryClient();
   const [dias, setDias] = useState(30);
@@ -113,6 +128,12 @@ export function AcessosDaApi() {
             </button>
           ))}
         </span>
+        {/* O Exportar dos Últimos Pedidos (30/10/2026). */}
+        <ExportarTabela
+          titulo={`Biblioteca de APIs · Últimos Pedidos · ${dias} dias`}
+          colunas={COLUNAS_DOS_PEDIDOS}
+          linhas={a.ultimos}
+        />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Indicador rotulo="Pedidos" valor={a.totais.pedidos} detalhe={`nos últimos ${dias} dias`} />

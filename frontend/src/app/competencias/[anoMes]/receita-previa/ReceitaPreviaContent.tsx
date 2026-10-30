@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Calculator, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -114,7 +115,7 @@ export function ReceitaPreviaContent() {
             <li>Cada quadro (Matriz, Filial e Serviços) mostra a receita bruta, os impostos e a receita líquida, com a abertura em venda global e mercantil.</li>
             <li>Clique numa linha com lupa para abrir a memória de cálculo, com uma aba por origem (Produção, Expedição, Saídas, Devoluções, Serviços e Lanç. Manuais). Filtre e ordene pelos rótulos das colunas; o total acompanha o filtro.</li>
             <li>A linha Variação do Estoque abre só as estacas que a movimentam.</li>
-            <li>Em Lançamentos Manuais de Receita, “Novo Lançamento” inclui ajustes, que entram na próxima apuração; a lixeira os exclui, depois da confirmação num modal.</li>
+            <li>Em Lançamentos Manuais de Receita, “Novo Lançamento” inclui ajustes, que entram na próxima apuração; a lixeira os exclui, depois da confirmação num modal; “Exportar”, ao lado, leva a tabela em Excel ou PDF.</li>
             <li>Depois da apuração, a aba fica congelada: o que mudar só entra ao reapurar a competência, na tela Resultados.</li>
           </ul>
         }
@@ -185,19 +186,23 @@ export function ReceitaPreviaContent() {
             <h2 className="text-lg font-bold text-gray-900">Lançamentos Manuais de Receita</h2>
             <p className="text-sm text-gray-600">Entram na receita na próxima apuração.</p>
           </div>
-          {!fechada ? (
-            <PermissionGuard permission="lancamentos_manuais:editar">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditando(null)}
-                className="rounded-sm border border-black text-black hover:bg-gray-100"
-              >
-                <Plus className="size-4" />
-                Novo lançamento
-              </Button>
-            </PermissionGuard>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* O Exportar dos lançamentos de receita (30/10/2026), junto da tabela deles. */}
+            <ExportarTabela titulo={`Receita Prévia · Lançamentos Manuais de Receita · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />
+            {!fechada ? (
+              <PermissionGuard permission="lancamentos_manuais:editar">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditando(null)}
+                  className="rounded-sm border border-black text-black hover:bg-gray-100"
+                >
+                  <Plus className="size-4" />
+                  Novo lançamento
+                </Button>
+              </PermissionGuard>
+            ) : null}
+          </div>
         </div>
         <QuadroTabela
           barra={

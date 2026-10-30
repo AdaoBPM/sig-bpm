@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { DataTable } from "@/components/shared/DataTable";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -75,6 +76,7 @@ export function EstruturaDreContent() {
     <CadastroShell
       apenasAtivas={ativas.controle}
       titulo="Estrutura da DRE"
+      exportar={<ExportarTabela titulo="Cadastros · Estrutura da DRE" colunas={colunas} linhas={tabela.filtradas} />}
       comoUsar={
         <ul>
           <li>Use os filtros nos rótulos das colunas.</li>

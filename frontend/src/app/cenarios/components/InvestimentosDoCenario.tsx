@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,18 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
   if (consulta.isPending) return <Carregando />;
   const dados = consulta.data;
   const pode = editavel && dados.editavel;
+  const colunasDosInvestimentos: ColunaExportavel<InvestimentoDoCenario>[] = [
+    { chave: "nome", rotulo: "Nome de Referência", valor: (i) => i.nomeReferencia },
+    { chave: "unidade", rotulo: "Unidade", valor: (i) => NOME_DA_UNIDADE[i.unidade] },
+    { chave: "conta", rotulo: "Conta", valor: (i) => dados.contas.find((c) => c.unidade === i.unidade)?.rotulo ?? "" },
+    { chave: "descricao", rotulo: "Descrição", valor: (i) => i.descricao },
+    { chave: "condicao", rotulo: "Condição de Pagamento", valor: (i) => i.condicaoPagamento ?? "—" },
+    { chave: "inicio", rotulo: "Início", valor: (i) => MESES[i.inicio - 1] },
+    { chave: "valorTotal", rotulo: "Valor Total", tipo: "numero", moeda: true, valor: (i) => Number(i.valorTotal), texto: (i) => reais(i.valorTotal) },
+    { chave: "valorPosUso", rotulo: "Valor Pós Uso", tipo: "numero", moeda: true, valor: (i) => Number(i.valorPosUso), texto: (i) => reais(i.valorPosUso) },
+    { chave: "vidaUtil", rotulo: "Vida Útil (meses)", tipo: "numero", valor: (i) => i.vidaUtil },
+    { chave: "depreciacao", rotulo: "Depreciação Mensal", tipo: "numero", moeda: true, valor: (i) => Number(i.depreciacaoMensal), texto: (i) => reais(i.depreciacaoMensal) },
+  ];
   // Só os marcados que ainda estão na lista.
   const selecionados = dados.investimentos.filter((i) => marcados.has(i.id));
   const todos = dados.investimentos.length > 0 && selecionados.length === dados.investimentos.length;
@@ -119,25 +132,29 @@ export function InvestimentosDoCenario({ id, editavel }: { id: string; editavel:
               Depreciação Mensal = (Valor Total − Valor Pós Uso) ÷ Vida Útil, a partir do Início.
             </p>
           </div>
-          {pode ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" className={botaoPrimario} onClick={() => setAberto("novo")}>
-                <Plus className="size-4" />
-                Novo Investimento
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-sm border-red-300 text-red-700 hover:bg-red-50"
-                disabled={!selecionados.length}
-                title={selecionados.length ? undefined : "Marque os investimentos na lista"}
-                onClick={() => setExcluindo(true)}
-              >
-                <Trash2 className="size-4" />
-                Excluir Selecionados
-              </Button>
-            </div>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* O Exportar (30/10/2026): a lista dos investimentos. */}
+            <ExportarTabela titulo="Cenário · Investimentos" colunas={colunasDosInvestimentos} linhas={dados.investimentos} />
+            {pode ? (
+              <>
+                <Button type="button" className={botaoPrimario} onClick={() => setAberto("novo")}>
+                  <Plus className="size-4" />
+                  Novo Investimento
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-sm border-red-300 text-red-700 hover:bg-red-50"
+                  disabled={!selecionados.length}
+                  title={selecionados.length ? undefined : "Marque os investimentos na lista"}
+                  onClick={() => setExcluindo(true)}
+                >
+                  <Trash2 className="size-4" />
+                  Excluir Selecionados
+                </Button>
+              </>
+            ) : null}
+          </div>
         </div>
         <div className="overflow-x-auto rounded-sm border border-gray-200 bg-white [--topo-tabela:0px]">
           <table className="tabela-sig w-full min-w-max border-collapse text-sm">

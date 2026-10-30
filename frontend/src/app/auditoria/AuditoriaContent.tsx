@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { Carregando, ErroCarga } from "@/components/shared/Estados";
+import { type ColunaExportavel, ExportarTabela } from "@/components/shared/ExportarTabela";
 import { PainelFiltro } from "@/components/shared/TabelaFiltravel";
 import { Paginacao } from "@/components/shared/Paginacao";
 import { QuadroTabela } from "@/components/shared/QuadroTabela";
@@ -91,11 +92,38 @@ export function AuditoriaContent() {
   const muda = (p: Partial<FiltroAuditoria>) => setFiltro((f) => ({ ...f, ...p, pagina: p.pagina ?? 1 }));
   const rotuloAcao = new Map(opcoes.data?.acoes.map((a) => [a.acao, a.rotulo]));
   const rotuloEntidade = new Map(opcoes.data?.entidades.map((e) => [e.entidade, e.rotulo]));
+  // O Exportar (30/10/2026): as colunas da tabela e todas as páginas dos filtros (até 20 mil registros).
+  const colunasExportadas: ColunaExportavel<RegistroAuditoria>[] = [
+    { chave: "quando", rotulo: "Quando", valor: (r) => dataHora(r.createdAt) },
+    { chave: "usuario", rotulo: "Usuário", valor: (r) => r.usuarioNome ?? "—" },
+    { chave: "acao", rotulo: "Ação", valor: (r) => rotuloAcao.get(r.acao) ?? r.acao },
+    { chave: "entidade", rotulo: "Entidade", valor: (r) => rotuloEntidade.get(r.entidade ?? "") ?? r.entidade ?? "—" },
+    { chave: "registro", rotulo: "Registro", valor: (r) => r.registro ?? "—" },
+  ];
+  const todasAsPaginas = async () => {
+    const itens: RegistroAuditoria[] = [];
+    for (let pagina = 1; pagina <= 100; pagina++) {
+      const p = await auditoriaService.consultar({ ...filtro, pagina }, 200);
+      itens.push(...p.itens);
+      if (itens.length >= p.total || p.itens.length === 0) break;
+    }
+    return itens;
+  };
 
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Auditoria"
+        exportar={
+          <ExportarTabela
+            titulo="Auditoria"
+            subtitulo={[filtro.de ? `De ${filtro.de.split("-").reverse().join("/")}` : null, filtro.ate ? `até ${filtro.ate.split("-").reverse().join("/")}` : null].filter(Boolean).join(" ") || null}
+            colunas={colunasExportadas}
+            linhas={log.data?.itens ?? []}
+            buscarLinhas={todasAsPaginas}
+            quantidade={Math.min(log.data?.total ?? 0, 20_000)}
+          />
+        }
         comoUsar={
           <ul>
             <li>Informe o período em De e Até, à direita do título, e use os filtros nos rótulos das colunas (cada um se limpa no próprio rótulo).</li>

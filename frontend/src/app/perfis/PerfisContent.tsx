@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -80,6 +81,7 @@ export function PerfisContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Perfis de Usuário"
+        exportar={<ExportarTabela titulo="Perfis de Usuário" colunas={COLUNAS} linhas={tabela.filtradas} />}
         comoUsar={
           <ul>
             <li>

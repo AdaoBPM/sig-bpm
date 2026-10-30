@@ -8,6 +8,7 @@ import { AlertTriangle, ArrowRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAbaLembrada } from "@/hooks/useAbaLembrada";
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { useTabelaFiltravel } from "@/components/shared/TabelaFiltravel";
@@ -208,6 +209,7 @@ export function ClassificacaoContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Classificação"
+        exportar={<ExportarTabela titulo={`Classificação · ${situacao === "TODOS" ? "Todos" : "Pendências"} · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
         selo={fechada || apurada ? <AvisoCongelado anoMes={anoMes} fechada={fechada} oQue="da classificação" /> : null}
         comoUsar={
           <ul>

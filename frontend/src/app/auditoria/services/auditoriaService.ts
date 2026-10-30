@@ -37,7 +37,8 @@ export type FiltroAuditoria = {
 };
 
 export const auditoriaService = {
-  consultar: async (f: FiltroAuditoria): Promise<PaginaAuditoria> => {
+  /** Uma página do log; `porPagina` maior (até 200) no Exportar, que traz todas as páginas dos filtros. */
+  consultar: async (f: FiltroAuditoria, porPagina = 50): Promise<PaginaAuditoria> => {
     const params = Object.fromEntries(
       Object.entries({
         ...f,
@@ -45,7 +46,7 @@ export const auditoriaService = {
         entidade: f.entidade?.join(","),
         acao: f.acao?.join(","),
         incluirAcessos: f.incluirAcessos ? "1" : "0",
-        porPagina: 50,
+        porPagina,
       }).filter(([, v]) => v !== undefined && v !== ""),
     );
     return (await api.get<{ data: PaginaAuditoria }>("/proxy/auditoria", { params })).data.data;

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAbaLembrada } from "@/hooks/useAbaLembrada";
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { DataTable } from "@/components/shared/DataTable";
@@ -115,6 +116,7 @@ export function ReajustesContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo={analitico ? "Histórico" : "Reajustes"}
+        exportar={escolhida === "historico" ? <ExportarTabela titulo={analitico ? "Cenário · Histórico" : "Cenário · Reajustes"} colunas={COLUNAS} linhas={tabela.filtradas} /> : null}
         comoUsar={
           <ul>
             <li>
@@ -133,7 +135,7 @@ export function ReajustesContent() {
               mostram a variação (passe o mouse para ver o valor do cenário e o do comparado; “sem base”: o comparado é zero no mês). Digite a
               justificativa e clique em “Gravar”; apagar o texto e gravar a apaga. “Só Sem Justificativa” esconde as já justificadas. Uma conta que
               deixa de passar da variação sai da lista (a justificativa fica guardada). Com o cenário marcado ou com a versão congelada, as
-              justificativas só se leem.
+              justificativas só se leem. “Exportar”, acima da tabela, leva as contas da aba (com os meses e as justificativas) em Excel ou PDF.
             </li>
           </ul>
         }

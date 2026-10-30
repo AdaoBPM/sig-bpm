@@ -6,6 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { LockKeyholeOpen, MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -137,6 +138,7 @@ export function DivergenciasContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Divergências"
+        exportar={<ExportarTabela titulo="Divergências" colunas={colunas} linhas={tabela.filtradas} />}
         comoUsar={
           <ul>
             <li>Troque de mês na barra de etapas, no início da tela; filtre o tipo e a situação nos rótulos da tabela (as abertas vêm primeiro).</li>

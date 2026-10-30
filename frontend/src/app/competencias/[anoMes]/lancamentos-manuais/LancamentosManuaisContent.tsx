@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { BaldeBadge } from "@/components/shared/BaldeBadge";
 import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { DataTable } from "@/components/shared/DataTable";
@@ -99,6 +100,7 @@ export function LancamentosManuaisContent() {
     <div className="space-y-6">
       <CabecalhoDaTela
         titulo="Lançamentos Manuais"
+        exportar={<ExportarTabela titulo={`Lançamentos · Controladoria · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />}
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         comoUsar={
           <ul>
