@@ -113,13 +113,14 @@ export function PerfilDialog({ opcoes, editando, onFechar }: Props) {
       return n;
     });
 
-  // Os grupos de telas do catálogo, sob o título do menu e com o ícone do item dele.
+  // Os grupos de telas do catálogo, sob o título do menu e com o ícone do item dele. Um grupo com vários processos no menu
+  // (as Análises Gerenciais: os Relatórios Executivos e os Painéis de Bordo) aparece uma vez, com o ícone do primeiro.
   const blocos = navGrupos
     .map((s) => ({
       titulo: s.titulo,
-      grupos: s.itens.flatMap((i) => {
+      grupos: s.itens.flatMap((i, n) => {
         const g = opcoes.telas.find((x) => x.recurso === i.recurso);
-        return g ? [{ ...g, icon: i.icon }] : [];
+        return g && s.itens.findIndex((o) => o.recurso === i.recurso) === n ? [{ ...g, icon: i.icon }] : [];
       }),
     }))
     .filter((b) => b.grupos.length > 0);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auditar } from "../../services/auditoriaService.js";
 import { exportacaoRelatoriosService, type EscopoResultados } from "../../services/relatorios/exportacaoRelatoriosService.js";
 import { indicadoresService } from "../../services/relatorios/indicadoresService.js";
+import { orcamentosDoProva } from "../../services/relatorios/orcamento.js";
 import { painelService } from "../../services/relatorios/painelService.js";
 import { RelatorioError, resultadosService } from "../../services/relatorios/resultadosService.js";
 import { veObras } from "../../services/acesso/recorteDepartamento.js";
@@ -83,6 +84,17 @@ function comparaComDe(request: Request) {
   return r.success ? r.data : false;
 }
 
+/**
+ * A Comparação PROVA (31/10/2026): ?prova= as marcações dos cenários, separadas por vírgula (até quatro), na ordem em que
+ * vêm; sem ela, nenhuma (a Comparação Padrão); inválida, false.
+ */
+const provaSchema = z.array(comparaComSchema).min(1).max(4);
+function provaDe(request: Request) {
+  if (request.query.prova === undefined || request.query.prova === "") return [];
+  const r = provaSchema.safeParse(String(request.query.prova).split(","));
+  return r.success ? [...new Set(r.data)] : false;
+}
+
 export const relatoriosController = {
   /** Os cenários marcados (21/10/2026; desde 22/10/2026, de qualquer exercício): as opções do Compara Com. */
   async comparaveis(_request: Request, response: Response) {
@@ -128,7 +140,9 @@ export const relatoriosController = {
     const visao = v.data as 0 | 1 | 2 | 3 | 4 | 5;
     const comparaCom = comparaComDe(request);
     if (comparaCom === false) return response.status(400).json({ error: "Compara Com inválido" });
-    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso, true, comparaCom));
+    const prova = provaDe(request);
+    if (prova === false) return response.status(400).json({ error: "Comparação PROVA inválida" });
+    return responder(response, () => resultadosService.unidade(p.ano, visao, p.ate, acesso, true, comparaCom, prova));
   },
 
   /**
@@ -197,7 +211,9 @@ export const relatoriosController = {
     if (!p) return;
     const comparaCom = comparaComDe(request);
     if (comparaCom === false) return response.status(400).json({ error: "Compara Com inválido" });
-    return responder(response, () => indicadoresService.listar(p.ano, p.ate, somenteFechadas(request), comparaCom));
+    const prova = provaDe(request);
+    if (prova === false) return response.status(400).json({ error: "Comparação PROVA inválida" });
+    return responder(response, () => indicadoresService.listar(p.ano, p.ate, somenteFechadas(request), comparaCom, orcamentosDoProva(prova)));
   },
 
   /** O Painel de Bordo do mês ?ate= (sem ele, o último apurado). */
@@ -206,9 +222,11 @@ export const relatoriosController = {
     if (!p) return;
     const comparaCom = comparaComDe(request);
     if (comparaCom === false) return response.status(400).json({ error: "Compara Com inválido" });
+    const prova = provaDe(request);
+    if (prova === false) return response.status(400).json({ error: "Comparação PROVA inválida" });
     // Só as abas permitidas (Resultados, Performance; 14/10/2026).
     return responder(response, async () => {
-      const r = await painelService.painel(p.ano, p.ate, true, comparaCom);
+      const r = await painelService.painel(p.ano, p.ate, true, comparaCom, orcamentosDoProva(prova));
       return { ...r, abas: r.abas.filter((a) => tem(request, `relatorio_painel.${a.chave}:ler`)) };
     });
   },

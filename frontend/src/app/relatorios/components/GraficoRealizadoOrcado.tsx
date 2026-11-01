@@ -4,7 +4,8 @@ import { createContext, useContext, useId, useState } from "react";
 
 import { Seletor } from "./SeletorPeriodo";
 
-export type MesDoGrafico = { mes: string; realizado: number | null; orcado: number | null };
+/** `comparados` (31/10/2026: os cards PROVA): os valores das séries comparadas do MiniGrafico, na ordem delas. */
+export type MesDoGrafico = { mes: string; realizado: number | null; orcado: number | null; comparados?: Array<number | null> };
 
 /**
  * Os nomes das duas séries (13/10/2026): Realizado e Orçado em Resultados Empresariais; no Painel de Bordo dos cenários,
@@ -148,8 +149,12 @@ function QuadradinhoDaArea() {
   );
 }
 
-/** A legenda das cores: o realizado em amarelo-ouro e o orçado em preto (na Área, a área amarela e a linha preta). */
-export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico }) {
+/**
+ * A legenda das cores: o realizado em amarelo-ouro e o orçado em preto (na Área, a área amarela e a linha preta). Com
+ * `comparados` (31/10/2026: os slides com cards PROVA e a Comparação PROVA), as séries comparadas no lugar do orçado, cada
+ * uma na cor dela (com o nome do cenário na dica, quando há).
+ */
+export function LegendaRealizadoOrcado({ tipo = "barras", comparados }: { tipo?: TipoGrafico; comparados?: Array<{ rotulo: string; cor: string; dica?: string }> }) {
   const rotulos = useRotulosDoGrafico();
   return (
     <>
@@ -157,16 +162,18 @@ export function LegendaRealizadoOrcado({ tipo = "barras" }: { tipo?: TipoGrafico
         {tipo === "area" ? <QuadradinhoDaArea /> : <Quadradinho cor={OURO} />}
         {rotulos.realizado}
       </span>
-      <span className="inline-flex items-center gap-1.5">
-        {tipo === "area" ? (
-          <svg viewBox="0 0 12 2" className="inline-block h-0.5 w-3 shrink-0" aria-hidden>
-            <rect width={12} height={2} style={{ fill: PRETO }} />
-          </svg>
-        ) : (
-          <Quadradinho cor={PRETO} />
-        )}
-        {rotulos.orcado}
-      </span>
+      {(comparados ?? [{ rotulo: rotulos.orcado, cor: PRETO, dica: undefined }]).map((c) => (
+        <span key={c.rotulo} className="inline-flex items-center gap-1.5" title={c.dica}>
+          {tipo === "area" ? (
+            <svg viewBox="0 0 12 2" className="inline-block h-0.5 w-3 shrink-0" aria-hidden>
+              <rect width={12} height={2} style={{ fill: c.cor }} />
+            </svg>
+          ) : (
+            <Quadradinho cor={c.cor} />
+          )}
+          {c.rotulo}
+        </span>
+      ))}
     </>
   );
 }

@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { blocoComparado, CardDoPainel, type FormatacaoDoCard, type Cores } from "@/app/relatorios/painel/PainelContent";
+import { blocoComparado, CardDoPainel, type ComparacaoDoCard, type FormatacaoDoCard, type Cores } from "@/app/relatorios/painel/PainelContent";
 import type { ItemPainel } from "@/app/relatorios/services/relatoriosService";
 import { SeletorRotulos, SeletorTipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
+import type { MarcacaoComparavel } from "@/app/relatorios/services/relatoriosService";
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 import { valor, valorCurto } from "@/app/relatorios/indicadores/TabelaIndicadores";
 import { fatorDaEscalaDa } from "@/app/relatorios/services/relatoriosService";
@@ -30,6 +31,8 @@ import { estadoDoPlayer, irPara, pausarPlayer, PlayerDoVideo } from "./PlayerDoV
 import { videoDoLink } from "./videoIncorporado";
 import { ConfigurarTabelaDialog, TabelaDoBloco } from "./TabelaDoRelatorio";
 import { guardarCopia, textoDoBloco, TIPO_DA_COPIA, type Copia } from "./copiarColar";
+import { useProcesso } from "./processo";
+import { comCor, corDosCardsPadrao, ehProva, temProva } from "./cenariosDoProva";
 
 
 /** A grade: 12 colunas, linhas de 24 px, 12 px entre os blocos. */
@@ -78,10 +81,19 @@ export function tamanhoInicial(b: Pick<Bloco, "tipo"> & { comGrafico?: boolean; 
   return { w: 6, h: 6 };
 }
 
-/** O tamanho mínimo de cada tipo de bloco (16/10/2026), para as informações não se amontoarem; `largura`, a da grade. */
-function tamanhoMinimo(b: Bloco, largura: number) {
-  if (b.tipo === "PAINEL") return { minW: MINIMO.PAINEL[modoDoGrafico(b)], minH: 6 };
-  if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: 6 };
+/**
+ * A altura mínima dos cards: 6 linhas; nos cards PROVA (31/10/2026), com uma linha por cenário da Comparação PROVA
+ * embaixo dos valores, 7 com três cenários e 8 com quatro.
+ */
+const alturaMinimaDoCard = (b: Extract<Bloco, { tipo: "PAINEL" | "INDICADOR" }>, cenariosProva: number) => (ehProva(b) ? Math.max(6, cenariosProva + 4) : 6);
+
+/**
+ * O tamanho mínimo de cada tipo de bloco (16/10/2026), para as informações não se amontoarem; `largura`, a da grade;
+ * `cenariosProva`, os da Comparação PROVA do relatório.
+ */
+function tamanhoMinimo(b: Bloco, largura: number, cenariosProva: number) {
+  if (b.tipo === "PAINEL") return { minW: MINIMO.PAINEL[modoDoGrafico(b)], minH: alturaMinimaDoCard(b, cenariosProva) };
+  if (b.tipo === "INDICADOR") return { minW: MINIMO.INDICADOR[modoDoGrafico(b)], minH: alturaMinimaDoCard(b, cenariosProva) };
   // A Imagem Livre (22/10/2026) diminui até duas linhas de altura ou uma coluna de largura, o que vier antes (a altura
   // acompanha a largura, na proporção da imagem); a com legenda, até 2 × 2.
   if (b.tipo === "FOTO" && b.recorte) return { minW: 2, minH: 2 };
@@ -272,12 +284,12 @@ const FAIXAS_DA_BORDA: Array<{ lado: string; estilo: React.CSSProperties }> = [
 
 /** O nome do bloco escolhido, na dica da borda dele. */
 function nomeDoBloco(b: Bloco) {
-  if (b.tipo === "PAINEL") return "Card do Painel de Bordo";
-  if (b.tipo === "INDICADOR") return "Card de Indicador";
+  if (b.tipo === "PAINEL") return ehProva(b) ? "Card PROVA do Painel de Bordo" : "Card do Painel de Bordo";
+  if (b.tipo === "INDICADOR") return ehProva(b) ? "Card PROVA de Indicador" : "Card de Indicador";
   if (b.tipo === "ANOTACAO") return "Anotação";
   if (b.tipo === "TEXTO") return "Texto Livre";
   if (b.tipo === "SUMARIO") return "Sumário";
-  if (b.tipo === "TABELA") return "Tabela";
+  if (b.tipo === "TABELA") return ehProva(b) ? "Tabela PROVA" : "Tabela Padrão";
   if (b.tipo === "VIDEO") return "Vídeo";
   return b.livre ? "Imagem Livre" : "Imagem com Legenda";
 }
@@ -371,6 +383,7 @@ export function GradeDoRelatorio({
   tipo: TipoGrafico;
   onMudar: (blocos: Bloco[]) => void;
 }) {
+  const { rota } = useProcesso();
   const [configurando, setConfigurando] = useState<string | null>(null);
   // A imagem no Cortar e Posicionar (27/10/2026).
   const [cortando, setCortando] = useState<string | null>(() => (escolher?.cortar ? escolher.id : null));
@@ -408,6 +421,9 @@ export function GradeDoRelatorio({
     if (escolher?.cortar) setCortando(escolher.id);
   }
   const escolhido = editavel ? blocos.find((b) => b.id === selecionado) : undefined;
+  // Num slide com blocos PROVA (31/10/2026: os cards e as tabelas), os cards e as tabelas padrão na cor do cenário de comparação.
+  const corDoOrcado = corDosCardsPadrao(blocos, dados);
+  const comparadaProva = temProva(blocos) ? (dados?.prova.marcacaoComparada ?? null) : null;
   const campoDoEscolhido = useCallback(() => (selecionado ? (campos.current.get(selecionado) ?? null) : null), [selecionado]);
   const excluir = (id: string) => {
     onMudar(blocos.filter((x) => x.id !== id));
@@ -436,7 +452,7 @@ export function GradeDoRelatorio({
   const peloBotao = useRef(false);
   const copiarBloco = (e: ClipboardEvent | null, b: Bloco) => {
     // O texto vai junto (o do bloco; sem ele, o nome do bloco): é o que outro programa recebe.
-    const copia: Copia = { relatorioId, blocos: [b], texto: textoDoBloco(b) || nomeDoBloco(b), em: Date.now() };
+    const copia: Copia = { relatorioId, processo: rota, blocos: [b], texto: textoDoBloco(b) || nomeDoBloco(b), em: Date.now() };
     e?.clipboardData?.setData(TIPO_DA_COPIA, JSON.stringify(copia));
     e?.clipboardData?.setData("text/plain", copia.texto ?? "");
     guardarCopia(copia);
@@ -517,7 +533,7 @@ export function GradeDoRelatorio({
     y: b.y,
     w: b.w,
     h: b.h,
-    ...tamanhoMinimo(b, LARGURA),
+    ...tamanhoMinimo(b, LARGURA, dados?.prova.cenarios.length ?? 0),
     isResizable: editavel && b.id === selecionado,
     resizeHandles: naProporcao(b) ? CANTOS : TODAS_AS_ALCAS,
   }));
@@ -725,6 +741,7 @@ export function GradeDoRelatorio({
                 onCarregarImagem={onCarregarImagem ? (arquivo) => onCarregarImagem(b.id, arquivo) : undefined}
                 onEscolherVideo={onEscolherVideo ? () => onEscolherVideo(b.id) : undefined}
                 paraImagem={paraImagem}
+                corDoOrcado={corDoOrcado} comparadaProva={comparadaProva}
                 onMudar={(m) => mudarTexto(b, m)}
               />
             </div>
@@ -739,7 +756,7 @@ export function GradeDoRelatorio({
             // Só o gráfico: o card inteiro, no tamanho dele, deslocado para que só a área do gráfico fique à vista.
             <div className="relative size-full overflow-hidden">
               <div className="absolute" style={{ left: -ampliado.recorte.x, top: -ampliado.recorte.y, width: ampliado.w, height: ampliado.h }}>
-                <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado soCard onMudar={() => undefined} />
+                <ConteudoDoBloco relatorioId={relatorioId} b={ampliado.b} dados={dados} editavel={false} cores={cores} tipo={tipo} ampliado soCard corDoOrcado={corDoOrcado} comparadaProva={comparadaProva} onMudar={() => undefined} />
               </div>
             </div>
           ) : (
@@ -754,6 +771,7 @@ export function GradeDoRelatorio({
               soCard={ampliado.soCard}
               semGrafico={ampliado.semGrafico}
               video={ampliado.video}
+              corDoOrcado={corDoOrcado} comparadaProva={comparadaProva}
               onMudar={() => undefined}
             />
           )}
@@ -813,8 +831,8 @@ export function GradeDoRelatorio({
       {doCard?.tipo === "TABELA" ? (
         <ConfigurarTabelaDialog
           relatorioId={relatorioId}
-          titulo="Configurar Tabela"
-          inicial={{ visao: doCard.visao, nivel: doCard.nivel, linhas: doCard.linhas, recolhido: doCard.recolhido, colunas: doCard.colunas }}
+          titulo={ehProva(doCard) ? "Configurar Tabela PROVA" : "Configurar Tabela Padrão"}
+          inicial={{ visao: doCard.visao, nivel: doCard.nivel, linhas: doCard.linhas, recolhido: doCard.recolhido, colunas: doCard.colunas, prova: doCard.prova }}
           onFechar={() => setConfigurando(null)}
           onAplicar={(o) => {
             // Sem as linhas (todas), o campo sai do bloco.
@@ -891,20 +909,23 @@ function oQueAmpliar(b: Bloco, bloco: HTMLElement, alvo: HTMLElement) {
   if (!card) return inteiro;
   const rc = card.getBoundingClientRect();
   const escala = rc.width / card.offsetWidth || 1;
+  // As medidas do card são as de dentro do Zoom dele (o card é montado menor e ampliado); o bloco ampliado aplica o Zoom de
+  // novo, e elas voltam ao tamanho do bloco (31/10/2026: sem isso, o card com Zoom saía apertado, cortado embaixo).
+  const z = b.zoom ?? 1;
   const grafico = alvo.closest<HTMLElement>("[data-grafico-do-card]");
   if (!grafico || !card.contains(grafico)) {
     // A parte antes do gráfico: o card sem o gráfico, na largura do card menos a do gráfico (o card sem gráfico já ocupa só ela).
     const doCard = card.querySelector<HTMLElement>("[data-grafico-do-card]");
     const comGrafico = !!doCard && doCard.offsetWidth > 0;
-    return { b, w: card.offsetWidth - (comGrafico ? doCard.offsetWidth : 0), h: card.offsetHeight, soCard: true, semGrafico: comGrafico };
+    return { b, w: (card.offsetWidth - (comGrafico ? doCard.offsetWidth : 0)) * z, h: card.offsetHeight * z, soCard: true, semGrafico: comGrafico };
   }
   const rg = grafico.getBoundingClientRect();
   return {
     b,
-    w: card.offsetWidth,
-    h: card.offsetHeight,
+    w: card.offsetWidth * z,
+    h: card.offsetHeight * z,
     soCard: true,
-    recorte: { x: (rg.left - rc.left) / escala, y: (rg.top - rc.top) / escala, w: grafico.offsetWidth, h: grafico.offsetHeight },
+    recorte: { x: ((rg.left - rc.left) / escala) * z, y: ((rg.top - rc.top) / escala) * z, w: grafico.offsetWidth * z, h: grafico.offsetHeight * z },
   };
 }
 
@@ -934,7 +955,7 @@ type OpcoesDoGrafico = { tipoGrafico: TipoGrafico; comRotulos: boolean };
 /**
  * O Configurar Gráfico de um card do Painel de Bordo (16/10/2026) ou dos Indicadores (22/10/2026): as opções do Configurar
  * Gráficos do Painel — os Rótulos e o Tipo (as cores são as da Acessibilidade, 16/10/2026) —, aplicadas a este card ou a
- * todos os cards da aba.
+ * todos os cards da aba. Nos cards PROVA, os cenários são os da Comparação PROVA do relatório (a aba Configurações).
  */
 function ConfigurarGraficoDialog({
   b,
@@ -1192,12 +1213,18 @@ function ConteudoDoBloco({
   onCarregarImagem,
   onEscolherVideo,
   paraImagem = false,
+  corDoOrcado,
+  comparadaProva,
   onMudar,
 }: {
   relatorioId: string;
   b: Bloco;
   /** Na imagem do slide (22/10/2026: a exportação em PDF): o vídeo como um quadro com o ícone (o player não vira imagem). */
   paraImagem?: boolean;
+  /** A cor do orçado dos cards padrão (31/10/2026): a do cenário de comparação, nos slides com blocos PROVA. */
+  corDoOrcado?: string;
+  /** A marcação do cenário de comparação nos slides com blocos PROVA (31/10/2026): as colunas do orçado da Tabela Padrão na cor dele. */
+  comparadaProva?: MarcacaoComparavel | null;
   /** Na apresentação (20/10/2026): o vídeo sem os controles do player, com os botões ao passar o mouse. */
   apresentacao?: boolean;
   /** As telas e os slides, com os números, para o Sumário (20/10/2026). */
@@ -1222,6 +1249,7 @@ function ConteudoDoBloco({
   tipo: TipoGrafico;
   onMudar: (m: Partial<Bloco>) => void;
 }) {
+  const { rota } = useProcesso();
   const indisponivel = (o: string) => <div className="flex h-full items-center justify-center rounded-sm border border-dashed border-gray-300 bg-white p-3 text-center text-xs text-gray-500">{o}</div>;
   if (b.tipo === "ANOTACAO") {
     // No formato do card do Painel (16/10/2026): o título editável (de início, o nome da nota) no fundo da página, como o
@@ -1289,7 +1317,7 @@ function ConteudoDoBloco({
     // A Imagem Livre (21/10/2026): só a imagem, na proporção dela, sem a legenda e sem o fundo (o PNG transparente continua
     // transparente sobre o slide).
     return (
-      <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt="Imagem" proporcao={b.proporcao} ajustes={b.ajustes} recorte={b.recorte} />
+      <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo, rota)} alt="Imagem" proporcao={b.proporcao} ajustes={b.ajustes} recorte={b.recorte} />
     );
   }
   if (b.tipo === "FOTO") {
@@ -1298,7 +1326,7 @@ function ConteudoDoBloco({
       <figure className="flex h-full flex-col gap-2">
         <div className="min-h-0 flex-1">
           {b.arquivo ? (
-            <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo)} alt={b.legenda || "Imagem"} proporcao={b.proporcao} ajustes={b.ajustes} recorte={b.recorte} />
+            <ImagemComMoldura src={enderecoDaFoto(relatorioId, b.arquivo, rota)} alt={b.legenda || "Imagem"} proporcao={b.proporcao} ajustes={b.ajustes} recorte={b.recorte} />
           ) : (
             // O quadro sem a imagem (17/10/2026: o relatório importado sem as imagens): cinza, com o botão de carregar.
             <label
@@ -1385,12 +1413,31 @@ function ConteudoDoBloco({
     );
   }
   // A tabela de Resultados (22/10/2026), com a consulta dela (não depende dos dados dos cards).
-  if (b.tipo === "TABELA") return <TabelaDoBloco relatorioId={relatorioId} b={b} />;
+  if (b.tipo === "TABELA") return <TabelaDoBloco relatorioId={relatorioId} b={b} comparada={comparadaProva} />;
   if (!dados) return <div className="h-full animate-pulse rounded-sm bg-gray-100" />;
+  // O card PROVA (31/10/2026): os cenários da Comparação PROVA do relatório (Configurações); sem nenhum marcado, o aviso.
+  const cenarios = ehProva(b) ? comCor(dados.prova.cenarios) : null;
+  if (cenarios && !cenarios.length) return indisponivel("Nenhum cenário da Comparação PROVA (Configurações) está marcado (Criação de Cenários / Cenários Sintéticos).");
   if (b.tipo === "PAINEL") {
     const item = dados.painel.abas.find((a) => a.chave === b.aba)?.quadros.find((q) => q.titulo === b.quadro)?.itens.find((i) => i.titulo === b.titulo && i.sigla === b.sigla);
     if (!item) return indisponivel(`O card ${b.titulo} (${b.quadro}) não está mais no Painel de Bordo.`);
-    const card = <CardDoPainel i={item} rotuloMes={dados.painel.rotuloMes} tipo={b.tipoGrafico ?? tipo} cores={cores} comGrafico={b.comGrafico && !semGrafico} soAcumulado={!!b.soAcumulado} comRotulos={b.comRotulos ?? false} />;
+    const comparacoes = cenarios?.flatMap((c): ComparacaoDoCard[] => {
+      const p = item.prova?.[c.marcacao];
+      return p ? [{ rotulo: c.rotulo, cor: c.cor, dica: `${c.rotulo} (${c.cenario})`, ...p }] : [];
+    });
+    const card = (
+      <CardDoPainel
+        i={item}
+        rotuloMes={dados.painel.rotuloMes}
+        tipo={b.tipoGrafico ?? tipo}
+        cores={cores}
+        comGrafico={b.comGrafico && !semGrafico}
+        soAcumulado={!!b.soAcumulado}
+        comRotulos={b.comRotulos ?? false}
+        comparacoes={comparacoes}
+        corDoOrcado={cenarios ? undefined : corDoOrcado}
+      />
+    );
     // Sem o nome do grupo em cima do card (22/10/2026; antes, "PRODUÇÃO: MATRIZ"…): o card ocupa o bloco inteiro.
     return <CardComZoom zoom={b.zoom}>{card}</CardComZoom>;
   }
@@ -1416,6 +1463,21 @@ function ConteudoDoBloco({
     acumulado: blocoComparado(i.total, i.totalOrcado, i.sentido, !!dados.indicadores.cenarioOrcado),
     serie: daSerie,
   };
+  // O card PROVA do indicador (31/10/2026): o realizado contra o orçado de cada cenário, com a regra do painel.
+  const comparacoes = cenarios?.flatMap((c): ComparacaoDoCard[] => {
+    const p = i.prova?.[c.marcacao];
+    if (!p) return [];
+    return [
+      {
+        rotulo: c.rotulo,
+        cor: c.cor,
+        dica: `${c.rotulo} (${c.cenario})`,
+        mes: blocoComparado(i.meses[ate - 1] ?? null, p.orcado[ate - 1] ?? null, i.sentido),
+        acumulado: blocoComparado(i.total, p.totalOrcado, i.sentido),
+        serie: p.orcado.slice(0, ate),
+      },
+    ];
+  });
   return (
     <CardComZoom zoom={b.zoom}>
       <CardDoPainel
@@ -1427,6 +1489,8 @@ function ConteudoDoBloco({
         soAcumulado={modo === "ACUMULADO"}
         comRotulos={b.comRotulos ?? false}
         formatacao={{ mes: f, acumulado: f }}
+        comparacoes={comparacoes}
+        corDoOrcado={cenarios ? undefined : corDoOrcado}
       />
     </CardComZoom>
   );

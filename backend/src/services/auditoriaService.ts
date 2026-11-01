@@ -57,6 +57,13 @@ export const ROTULO_ACAO: Record<string, string> = {
   GRAVACAO_RE: "Gravação do grupo",
   FINALIZACAO_RE: "Finalização do grupo",
   REABERTURA_RE: "Reabertura do grupo",
+  // Os Painéis de Bordo (31/10/2026): a gravação das páginas do painel; a finalização e a reabertura (01/11/2026).
+  GRAVACAO_PAINEL: "Gravação do painel",
+  FINALIZACAO_PAINEL: "Finalização do painel",
+  REABERTURA_PAINEL: "Reabertura do painel",
+  // O Compartilhar dos painéis (01/11/2026): os editores convidados e os removidos.
+  COMPARTILHAMENTO_PAINEL: "Compartilhamento do painel",
+  REMOCAO_EDITOR_PAINEL: "Remoção de editor do painel",
   // A Biblioteca de APIs (24/10/2026): o token emitido e os pedidos às APIs, atendidos ou recusados.
   TOKEN_API: "Token da API emitido",
   ACESSO_API: "Acesso pela API",
@@ -87,6 +94,7 @@ export const ROTULO_ENTIDADE: Record<string, string> = {
   tipo_movimento: "Tipo de movimento",
   tabela_estaca: "Tabela de estacas",
   relatorio_executivo: "Relatório Executivo",
+  painel_de_bordo: "Painel de Bordo",
   api: "APIs",
   api_bloqueio: "Bloqueio nas APIs",
   contestacao: "Contestação de gasto",
@@ -251,6 +259,20 @@ async function nomesDosRegistros(itens: ItemDoLog[]) {
         `RE ${txt(m.mes) ?? ""}`.trim(),
         txt(m.aba),
         m.configuracoes ? "Configurações" : null,
+        m.porCima ? "por cima da gravação de outro usuário" : null,
+        typeof m.gravacoes === "number" && txt(m.desde) ? `${m.gravacoes} gravações seguidas, desde ${horaDe(txt(m.desde)!)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    // Os Painéis de Bordo (31/10/2026), como os relatórios: o nome e o mês do painel, as Configurações, o "por cima" e as
+    // gravações em sequência.
+    else if (i.entidade === "painel_de_bordo")
+      nome = [
+        txt(m.nome),
+        txt(m.mes),
+        m.configuracoes ? "Configurações" : null,
+        // Os editores convidados ou removidos (01/11/2026, o Compartilhar).
+        Array.isArray(m.usuarios) && m.usuarios.length ? m.usuarios.join(", ") : null,
         m.porCima ? "por cima da gravação de outro usuário" : null,
         typeof m.gravacoes === "number" && txt(m.desde) ? `${m.gravacoes} gravações seguidas, desde ${horaDe(txt(m.desde)!)}` : null,
       ]

@@ -4,6 +4,7 @@ import { Fragment, useState, useSyncExternalStore, type ReactNode, useMemo } fro
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
+import { comCor, ESTILOS_NA_TABELA, type CenarioDoProva } from "../components/cenariosDoProva";
 
 import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
@@ -174,6 +175,9 @@ function Caixa({ marcada, alguns, rotulo, onMudar }: { marcada: boolean; alguns?
   );
 }
 
+/** O estilo das colunas de um comparado: a classe do rótulo e o fundo de cada linha. */
+export type EstiloDoComparado = { rotulo: string; fundo: (l: { codigo: string; tipo: string }) => string };
+
 export function TabelaResultados({
   dados,
   titulo,
@@ -185,6 +189,8 @@ export function TabelaResultados({
   doCenario = false,
   estatico,
   soOMes = false,
+  comparados,
+  estiloDoOrcado,
 }: {
   dados: Resultados;
   titulo: string;
@@ -209,11 +215,18 @@ export function TabelaResultados({
   estatico?: { nivel: Nivel; linhas?: string[]; recolhido: boolean; colunas?: { unitario: boolean; diferenca: boolean; atingimento: boolean; eficiencia: boolean } };
   /** Um mês só (27/10/2026: a etapa Linhas do Fechamento Mensal): sem as colunas do total do exercício, que o repetiriam. */
   soOMes?: boolean;
+  /**
+   * Os cenários lado a lado no lugar do orçado (31/10/2026: a Tabela PROVA dos Relatórios Executivos), cada um com o
+   * rótulo, a dica, o estilo (a classe do rótulo e o fundo de cada linha) e as células dele; sem as colunas da variação.
+   */
+  comparados?: Array<{ chave: string; rotulo: string; dica?: string; estilo: EstiloDoComparado; celulas: (l: LinhaResultado) => { mes?: Celula; total: Celula } | null | undefined }>;
+  /** O estilo do orçado (31/10/2026: o do cenário, numa Tabela Padrão de um slide com blocos PROVA); sem ele, o preto e o cinza. */
+  estiloDoOrcado?: EstiloDoComparado;
 }) {
   // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
   // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
   const linhasDaTabela = useMemo(() => semPrimeiroTotalDaRol(dados.linhas), [dados.linhas]);
-  const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel", estatico?.nivel, !estatico);
+  const niveis = useNiveisDRE(linhasDaTabela, "sig.resultados.nivel", estatico?.nivel, estatico ? undefined : "recolhida");
   const linhasEscolhidas = estatico?.linhas;
   const escolhidas = useMemo(() => (linhasEscolhidas ? new Set(linhasEscolhidas) : null), [linhasEscolhidas]);
   // Sem o R$/m³ em Despesas e Extra e no RN (21/10/2026), nem na tabela fixa sem ele (30/10/2026).
@@ -236,7 +249,11 @@ export function TabelaResultados({
   const abre = (l: LinhaResultado) => !estatico && consultas && (detalhavel(l) || listavel(l, visao));
   // O orçado (só nas visões de Resultados Empresariais): depois do mês de referência e depois do total, o orçado (valor, % e
   // R$/m³, em cinza); só depois do total, a variação (em amarelo): a diferença, o atingimento e a eficiência.
-  const comOrcado = dados.linhas.some((l) => l.orcado !== undefined);
+  const comOrcado = !!comparados?.length || dados.linhas.some((l) => l.orcado !== undefined);
+  // O rótulo preto e o fundo em cinza do orçado, ou o estilo pedido (31/10/2026: a cor do cenário).
+  const doOrcado = estiloDoOrcado ?? { rotulo: ROTULO_DO_ORCADO, fundo: fundoDoOrcado };
+  // Os grupos de colunas do orçado: um só ou, na Tabela PROVA, um por cenário.
+  const grupos = comparados?.length ?? 1;
   // Nos cenários (13/10/2026), o cenário comparado no lugar do orçado: só depois do total (os 12 meses se olham inteiros).
   const comOrcadoNoMes = comOrcado && !dados.comparado;
   // O nome do comparado (21/10/2026): "ORÇADO" no Orçamento Empresarial; nos outros cenários do Compara Com, o nome da marcação.
@@ -265,12 +282,13 @@ export function TabelaResultados({
   // Colunas estreitas (12/10/2026): numa tela de 1920 px, o mês de referência, o orçado dele, os totais, o orçado
   // total e as variações cabem juntos; os rótulos do orçado quebram em duas linhas (ORÇADO / MAR/26).
   const LARGURAS_DO_ORCADO = comUnitario ? [100, 52, 64] : [100, 52];
-  // As colunas da variação, depois do orçado total; a tabela fixa escolhe quais entram (30/10/2026).
+  // As colunas da variação, depois do orçado total; a tabela fixa escolhe quais entram (30/10/2026). Com os cenários lado a
+  // lado (31/10/2026, a Tabela PROVA), nenhuma: seriam três por cenário.
   const variacoes = [
     { chave: "diferenca", rotulo: "DIFERENÇA", largura: 96, celula: diferenca },
     { chave: "atingimento", rotulo: "ATINGIMENTO", largura: 96, celula: atingimento },
     { chave: "eficiencia", rotulo: "EFICIÊNCIA", largura: 84, celula: eficiencia },
-  ].filter((v) => estatico?.colunas?.[v.chave as "diferenca" | "atingimento" | "eficiencia"] ?? true);
+  ].filter((v) => !comparados && (estatico?.colunas?.[v.chave as "diferenca" | "atingimento" | "eficiencia"] ?? true));
   const LARGURAS_DA_VARIACAO = variacoes.map((v) => v.largura);
   const th = "px-1.5 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
   const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
@@ -280,18 +298,26 @@ export function TabelaResultados({
   // NÃO CORRENTES (RFNC) (+)) terminam em reticências, com o nome inteiro na dica.
   const larguras = [
     420,
-    ...dados.meses.flatMap((_, i) => (!mostra(i) ? [] : i === referencia ? [96, 52, ...(unitarioNoMes ? [64] : []), ...(comOrcadoNoMes ? LARGURAS_DO_ORCADO : [])] : [96, 52])),
+    ...dados.meses.flatMap((_, i) =>
+      !mostra(i) ? [] : i === referencia ? [96, 52, ...(unitarioNoMes ? [64] : []), ...(comOrcadoNoMes ? Array.from({ length: grupos }).flatMap(() => LARGURAS_DO_ORCADO) : [])] : [96, 52],
+    ),
     ...(soOMes ? [] : [104, 52, ...(comUnitario ? [64] : [])]),
-    ...(comOrcado ? [104, ...LARGURAS_DO_ORCADO.slice(1), ...LARGURAS_DA_VARIACAO] : []),
+    ...(comOrcado ? [...Array.from({ length: grupos }).flatMap(() => [104, ...LARGURAS_DO_ORCADO.slice(1)]), ...LARGURAS_DA_VARIACAO] : []),
   ];
-  /** Os rótulos do orçado (pretos) e, nos totais, da variação (amarelo-ouro, como os demais). */
-  const rotulosDoOrcado = (rotulo: string, variacao: boolean) => (
+  /**
+   * Os rótulos do orçado (pretos, ou na cor do cenário) e, nos totais, da variação (amarelo-ouro, como os demais). Na
+   * Tabela PROVA, os grupos dos cenários se separam por uma linha.
+   */
+  const rotulosDoOrcado = (rotulo: string, variacao: boolean, classe = doOrcado.rotulo, dica?: string, separar = false) => (
     <>
-      <th className={`${th} ${ROTULO_DO_ORCADO} !whitespace-normal leading-tight`} title={dados.comparado && variacao ? `O total de ${dados.comparado.nome}` : undefined}>
+      <th
+        className={`${th} ${classe} !whitespace-normal leading-tight ${separar ? "border-l border-gray-300" : ""}`}
+        title={dica ?? (dados.comparado && variacao ? `O total de ${dados.comparado.nome}` : undefined)}
+      >
         {rotulo}
       </th>
-      <th className={`${th} ${ROTULO_DO_ORCADO}`}>%</th>
-      {comUnitario ? <th className={`${th} ${ROTULO_DO_ORCADO}`}>R$/m³</th> : null}
+      <th className={`${th} ${classe}`}>%</th>
+      {comUnitario ? <th className={`${th} ${classe}`}>R$/m³</th> : null}
       {variacao
         ? variacoes.map((v, k) => (
             <th key={v.chave} className={`${th} ${k === 0 ? "border-l border-gray-300" : ""}`}>
@@ -343,7 +369,11 @@ export function TabelaResultados({
                 </th>
                 <th className={th}>%</th>
                 {i === referencia && unitarioNoMes ? <th className={th}>R$/m³</th> : null}
-                {i === referencia && comOrcadoNoMes ? rotulosDoOrcado(`${ROTULO} ${m.rotulo}`, false) : null}
+                {i === referencia && comOrcadoNoMes
+                  ? comparados
+                    ? comparados.map((c) => <Fragment key={c.chave}>{rotulosDoOrcado(`${c.rotulo.toUpperCase()} ${m.rotulo}`, false, c.estilo.rotulo, c.dica, true)}</Fragment>)
+                    : rotulosDoOrcado(`${ROTULO} ${m.rotulo}`, false)
+                  : null}
               </Fragment>
               ),
             )}
@@ -354,7 +384,11 @@ export function TabelaResultados({
                 {comUnitario ? <th className={th}>R$/m³</th> : null}
               </>
             )}
-            {comOrcado ? rotulosDoOrcado(rotuloDoOrcadoTotal, true) : null}
+            {comOrcado
+              ? comparados
+                ? comparados.map((c) => <Fragment key={c.chave}>{rotulosDoOrcado(`${c.rotulo.toUpperCase()} TOTAL/${ano}`, true, c.estilo.rotulo, c.dica, true)}</Fragment>)
+                : rotulosDoOrcado(rotuloDoOrcadoTotal, true)
+              : null}
           </tr>
         }
         corpo={niveis.linhas.filter((l) => niveis.visivel(l) && (!escolhidas || escolhidas.has(l.codigo))).map((l) => {
@@ -366,12 +400,13 @@ export function TabelaResultados({
             const contas = contasDaLinha(l);
             const marcadas = contas.filter((c) => edicao?.linhasMarcadas.has(c)).length;
             const pctOrcado = `${td} text-xs ${destaque ? "text-gray-700" : "text-gray-500"}`;
-            // O orçado (valor, % e R$/m³, no cinza) e, nos totais, a variação contra o realizado (no amarelo da linha).
-            const celulasDoOrcado = (l: LinhaResultado, r: Celula, o: Celula | undefined, variacao: boolean) => (
+            // O orçado (valor, % e R$/m³, no cinza, ou na escala da cor do cenário) e, nos totais, a variação contra o
+            // realizado (no amarelo da linha).
+            const celulasDoOrcado = (l: LinhaResultado, r: Celula, o: Celula | undefined, variacao: boolean, fundoDo = doOrcado.fundo(l), separar = false) => (
               <>
-                <td className={`${td} ${fundoDoOrcado(l)}`}>{orcadoDa(l, o?.valor ?? undefined)}</td>
-                <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? fracao(l, o.pct, temPct(l)) : ""}</td>
-                {comUnitario ? <td className={`${pctOrcado} ${fundoDoOrcado(l)}`}>{o ? unitario(l, o.unitario) : ""}</td> : null}
+                <td className={`${td} ${fundoDo} ${separar ? "border-l border-gray-200" : ""}`}>{orcadoDa(l, o?.valor ?? undefined)}</td>
+                <td className={`${pctOrcado} ${fundoDo}`}>{o ? fracao(l, o.pct, temPct(l)) : ""}</td>
+                {comUnitario ? <td className={`${pctOrcado} ${fundoDo}`}>{o ? unitario(l, o.unitario) : ""}</td> : null}
                 {variacao
                   ? variacoes.map((v, k) => (
                       <td key={v.chave} className={`${td} ${k === 0 ? "border-l border-gray-100" : ""} ${fundo}`}>
@@ -429,7 +464,11 @@ export function TabelaResultados({
                       </td>
                       <td className={`${pct} ${fundo}`}>{fracao(l, c.pct, temPct(l))}</td>
                       {i === referencia && unitarioNoMes ? <td className={`${pct} ${fundo}`}>{unitario(l, c.unitario)}</td> : null}
-                      {i === referencia && comOrcadoNoMes ? celulasDoOrcado(l, c, l.orcado?.mes, false) : null}
+                      {i === referencia && comOrcadoNoMes
+                        ? comparados
+                          ? comparados.map((x) => <Fragment key={x.chave}>{celulasDoOrcado(l, c, x.celulas(l)?.mes, false, x.estilo.fundo(l), true)}</Fragment>)
+                          : celulasDoOrcado(l, c, l.orcado?.mes, false)
+                        : null}
                     </Fragment>
                   );
                 })}
@@ -440,7 +479,11 @@ export function TabelaResultados({
                     {comUnitario ? <td className={`${pct} ${fundo}`}>{unitario(l, l.total.unitario)}</td> : null}
                   </>
                 )}
-                {comOrcado ? celulasDoOrcado(l, l.total, l.orcado?.total, true) : null}
+                {comOrcado
+                  ? comparados
+                    ? comparados.map((x) => <Fragment key={x.chave}>{celulasDoOrcado(l, l.total, x.celulas(l)?.total, true, x.estilo.fundo(l), true)}</Fragment>)
+                    : celulasDoOrcado(l, l.total, l.orcado?.total, true)
+                  : null}
               </tr>
             );
           })}
@@ -750,11 +793,29 @@ export function PainelDeLinhas({
   );
 }
 
-function VisaoUnidade({ ano, ate, visao, nome, comparaCom }: { ano: number; ate: number; visao: number; nome: string; comparaCom: MarcacaoComparavel }) {
-  const consulta = useQuery({ queryKey: ["relatorios", "resultados", ano, ate, "visao", visao, comparaCom], queryFn: () => relatoriosService.resultados(ano, ate, visao, comparaCom) });
+/**
+ * Uma visão com o orçado (o Consolidado e as unidades). Com a Comparação PROVA (31/10/2026), os cenários dela lado a lado,
+ * cada um com as cores dele, no lugar do orçado, sem as variações (a Tabela PROVA dos Relatórios Executivos).
+ */
+function VisaoUnidade({ ano, ate, visao, nome, comparaCom, prova }: { ano: number; ate: number; visao: number; nome: string; comparaCom: MarcacaoComparavel; prova: CenarioDoProva[] | null }) {
+  const marcacoes = prova?.map((c) => c.marcacao);
+  const consulta = useQuery({
+    queryKey: ["relatorios", "resultados", ano, ate, "visao", visao, comparaCom, marcacoes ?? null],
+    queryFn: () => relatoriosService.resultados(ano, ate, visao, comparaCom, marcacoes),
+  });
   if (consulta.isError) return <Erro erro={consulta.error} padrao="Erro ao carregar os resultados." />;
   if (consulta.isPending) return <Carregando />;
-  return <TabelaResultados key={visao} dados={consulta.data} titulo={`Resultados · ${nome}`} visao={visao === 0 ? { consolidado: true } : { unidade: visao }} nomeVisao={nome} />;
+  // Os cenários que o servidor achou (os marcados), na ordem do PROVA.
+  const comparados = prova
+    ? comCor(consulta.data.prova ?? []).map((c) => ({
+        chave: c.marcacao,
+        rotulo: c.rotulo,
+        dica: `${c.rotulo}: ${c.cenario}`,
+        estilo: ESTILOS_NA_TABELA[c.marcacao],
+        celulas: (l: LinhaResultado) => l.prova?.[c.marcacao],
+      }))
+    : undefined;
+  return <TabelaResultados key={visao} dados={consulta.data} titulo={`Resultados · ${nome}`} visao={visao === 0 ? { consolidado: true } : { unidade: visao }} nomeVisao={nome} comparados={comparados} />;
 }
 
 export function ResultadosContent() {
@@ -860,15 +921,26 @@ export function ResultadosContent() {
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
             <li>Expandida, role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
-            <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas (Produção e Serviços, os volumes, aparece em todos); a seta de cada total ou atribuição abre e fecha só aquele grupo.</li>
+            <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas (Produção e Serviços, os volumes, aparece em todos: recolhido em Totais e Atribuições, aberto em Contas); a seta de cada total ou atribuição (e a de Produção e Serviços) abre e fecha só aquele grupo.</li>
             <li>A tabela rola para os lados: a descrição e os rótulos ficam presos. O mês de referência (o último) e o total do exercício trazem também o valor por m³.</li>
             <li>
-              Nas unidades e no Consolidado, as colunas de rótulo preto trazem o orçado (valor, % e R$/m³): depois do mês de referência, o do mês;
-              depois do total, o acumulado de janeiro até ele. Depois do orçado acumulado, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷
-              orçado) e Eficiência (% realizado − % orçado, em pontos percentuais). O orçado é o do cenário escolhido em “Comparação”, ao lado do
-              período, entre os cenários marcados (Previsão, Orçamento, Anterior e Vendido, em
-              Criação de Cenários; o padrão é a primeira marcação que houver, nessa ordem, até você escolher outra), de qualquer exercício (a lista mostra só o nome da marcação; num cenário de outro exercício, valem os mesmos meses dele); fora do Orçamento, as colunas trazem o nome da marcação (PREVISÃO AGO/26…). Sem cenário, zero. A escolha vale
-              também no Painel de Bordo. Os centros de custo não têm orçado.
+              “Comparação”, ao lado do período, abre o modal Comparação de Resultados Empresariais, com os cenários marcados (Previsão, Orçamento,
+              Anterior e Vendido, em Criação de Cenários), de qualquer exercício (num cenário de outro exercício, valem os mesmos meses dele): escolha o
+              tipo, Padrão ou PROVA, e os cenários, e clique em Aplicar. O botão mostra a escolha: o nome da marcação, na Padrão, ou PROVA, com as cores
+              dos cenários. A escolha fica guardada neste navegador e vale também no Painel de Bordo (os cards e a aba Indicadores).
+            </li>
+            <li>
+              Na Comparação Padrão (um cenário; de início, a primeira marcação que houver, nessa ordem), nas unidades e no Consolidado, as colunas de
+              rótulo preto trazem o orçado (valor, % e R$/m³): depois do mês de referência, o do mês; depois do total, o acumulado de janeiro até ele.
+              Depois do orçado acumulado, a variação: Diferença (realizado − orçado), Atingimento (realizado ÷ orçado) e Eficiência (% realizado − %
+              orçado, em pontos percentuais). Fora do Orçamento, as colunas trazem o nome da marcação (PREVISÃO AGO/26…). Sem cenário, zero.
+            </li>
+            <li>
+              Na Comparação PROVA (dois a quatro dos cenários marcados), os cenários ficam lado a lado no lugar do orçado: depois do mês de referência,
+              o do mês de cada um (PREVISÃO AGO/26, ORÇADO AGO/26…); depois do total, o acumulado de cada um (PREVISÃO TOTAL/2026…), sem a Diferença, o
+              Atingimento e a Eficiência. Cada cenário tem a cor dos objetos PROVA dos Relatórios Executivos — a Previsão em cinza, o Orçado em preto, o
+              Vendido em ouro forte e o Anterior em ouro fraco —, com as linhas nos tons mais fracos dela. Passe o mouse no rótulo para ver o nome do
+              cenário. Os centros de custo, as obras e as linhas não têm orçado.
             </li>
             <li>Clique no valor de um mês, numa linha com lupa, para ver os lançamentos de origem daquele mês (ou, nas linhas de volume, as listas somadas por obra); clicar na descrição abre o mês de referência.</li>
             <li>
@@ -948,8 +1020,8 @@ export function ResultadosContent() {
               }}
               onAte={setAte}
             />
-            {/* O cenário comparado (21/10/2026), entre os marcados (de qualquer exercício, 22/10/2026). */}
-            <SeletorComparaCom valor={comparacao.comparaCom} opcoes={comparacao.opcoes} onMudar={comparacao.mudar} />
+            {/* A Comparação (21/10/2026), entre os cenários marcados (de qualquer exercício, 22/10/2026); num modal, com a Padrão e a PROVA (31/10/2026). */}
+            <SeletorComparaCom comparacao={comparacao} />
             {opcoesExportar.length && visoes.length ? <ExportarRelatorio
                 caminho="resultados"
                 opcoes={opcoesExportar}
@@ -985,7 +1057,7 @@ export function ResultadosContent() {
           ) : nasLinhas ? (
             <VisaoLinhas ano={ano} ate={ate} escolhida={linha} onEscolher={setLinha} rateios={visao === "rateios_linhas"} />
           ) : (
-            <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} comparaCom={comparacao.comparaCom} />
+            <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} comparaCom={comparacao.comparaCom} prova={comparacao.prova} />
           )}
         </>
       )}

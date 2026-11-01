@@ -41,6 +41,7 @@ import { migalhas } from "@/lib/navigation-config";
 import type { Novidade } from "@/lib/novidades";
 
 import { relatoriosExecutivosService } from "@/app/analises-gerenciais/relatorios-executivos/services/relatoriosExecutivosService";
+import { paineisDeBordoService } from "@/app/analises-gerenciais/paineis-de-bordo/services/paineisDeBordoService";
 
 import { EtiquetaDoDesenvolvimento } from "./AmbienteDeDesenvolvimento";
 import { abrirIntroducao } from "./IntroducaoAoSig";
@@ -92,7 +93,14 @@ export function AppHeader() {
     queryFn: () => relatoriosExecutivosService.obter(idDoRelatorio!),
     enabled: !!idDoRelatorio,
   });
-  const caminho = migalhas(pathname, (trecho) => rotulosDaEtapa(etapas, trecho), relatorio.data?.rotuloMes ?? null);
+  // O nome do painel de bordo aberto (31/10/2026), no caminho, como o mês do relatório.
+  const idDoPainel = pathname.match(/^\/analises-gerenciais\/paineis-de-bordo\/([0-9a-f-]{36})/)?.[1] ?? null;
+  const painel = useQuery({
+    queryKey: ["paineis-de-bordo", "relatorio", idDoPainel],
+    queryFn: () => paineisDeBordoService.obter(idDoPainel!),
+    enabled: !!idDoPainel,
+  });
+  const caminho = migalhas(pathname, (trecho) => rotulosDaEtapa(etapas, trecho), (idDoPainel ? painel.data?.nome : relatorio.data?.rotuloMes) ?? null);
 
   async function handleLogout() {
     if (!podeSair()) return;

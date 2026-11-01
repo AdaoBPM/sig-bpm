@@ -82,8 +82,17 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
 }
 
 export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
-  // As Análises Gerenciais (15/10/2026): os Relatórios Executivos; os demais processos do grupo ainda em desenvolvimento.
-  { recurso: "ANALISES_GERENCIAIS", nome: "Análises Gerenciais", area: "analises_gerenciais", telas: [{ codigo: "relatorios_executivos", nome: "Relatórios Executivos" }] },
+  // As Análises Gerenciais (15/10/2026): os Relatórios Executivos e, desde 31/10/2026, os Painéis de Bordo; os demais
+  // processos do grupo ainda em desenvolvimento.
+  {
+    recurso: "ANALISES_GERENCIAIS",
+    nome: "Análises Gerenciais",
+    area: "analises_gerenciais",
+    telas: [
+      { codigo: "relatorios_executivos", nome: "Relatórios Executivos" },
+      { codigo: "paineis_de_bordo", nome: "Painéis de Bordo" },
+    ],
+  },
   { recurso: "CENARIOS_SINTETICOS", nome: "Cenários Sintéticos", area: "cenarios", telas: telasDoCenario("cenarios", false) },
   { recurso: "CENARIOS_ANALITICOS", nome: "Cenários Analíticos", area: "cenarios_analiticos", telas: telasDoCenario("cenarios_analiticos", true) },
   {

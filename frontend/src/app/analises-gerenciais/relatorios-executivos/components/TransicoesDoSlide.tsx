@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import type { Transicao } from "../services/relatoriosExecutivosService";
+import { useProcesso } from "./processo";
 
 /** As transições (27/10/2026; a lista Tipo da Animação): Nenhuma tira a do slide. */
 export const TRANSICOES: Array<{ valor: Transicao | undefined; rotulo: string }> = [
@@ -52,6 +53,7 @@ export function TransicoesDoSlide({
   className: string;
   disabled?: boolean;
 }) {
+  const { grupo } = useProcesso();
   const [aberto, setAberto] = useState(false);
   const [transicaoAoGrupo, setTransicaoAoGrupo] = useState(uniformes.transicao);
   const [avancoAoGrupo, setAvancoAoGrupo] = useState(uniformes.avancarApos);
@@ -84,7 +86,8 @@ export function TransicoesDoSlide({
         }}
         className="size-4 accent-black"
       />
-      Aplicar ao Grupo
+      {/* Num painel (31/10/2026), “Aplicar ao Painel”: todas as páginas dele. */}
+      Aplicar ao {grupo}
     </label>
   );
   return (

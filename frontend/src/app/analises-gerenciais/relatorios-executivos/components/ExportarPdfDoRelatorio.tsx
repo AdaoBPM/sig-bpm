@@ -16,6 +16,7 @@ import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import { SlideDoRelatorio, type Slide } from "./ApresentacaoDoRelatorio";
 import { TELA_PADRAO } from "./TelaPadrao";
+import { useProcesso } from "./processo";
 import type { DadosDoRelatorio, TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -57,6 +58,7 @@ type Escopo = "TUDO" | "GRUPO" | "ABA";
 export function ExportarPdfDoRelatorio({
   relatorioId,
   periodo,
+  nome: nomeDoDocumento,
   slides,
   grupo,
   pagina,
@@ -67,6 +69,8 @@ export function ExportarPdfDoRelatorio({
 }: {
   relatorioId: string;
   periodo: string;
+  /** O nome do painel de bordo (31/10/2026), no nome do arquivo; os relatórios não têm. */
+  nome?: string;
   slides: Array<Slide & { aba: string }>;
   /** A aba do relatório aberta (o grupo) e o nome dela. */
   grupo: { chave: string; nome: string };
@@ -77,6 +81,7 @@ export function ExportarPdfDoRelatorio({
   cores: Cores;
   tipo: TipoGrafico;
 }) {
+  const processo = useProcesso();
   // Os slides a exportar e o que vira a imagem agora; null: nada em andamento.
   const [fila, setFila] = useState<{ slides: Slide[]; nome: string } | null>(null);
   const [k, setK] = useState(0);
@@ -86,11 +91,12 @@ export function ExportarPdfDoRelatorio({
   const daPagina = slides.filter((s) => s.chave === pagina.chave);
   const exportar = (escopo: Escopo) => {
     const lista = escopo === "TUDO" ? slides : escopo === "GRUPO" ? doGrupo : daPagina;
-    const nome = escopo === "TUDO" ? "" : escopo === "GRUPO" ? ` - ${grupo.nome}` : ` - ${grupo.nome} - ${pagina.nome}`;
+    // No painel (31/10/2026), sem o grupo: a tela é uma só.
+    const nome = escopo === "TUDO" ? "" : escopo === "GRUPO" ? ` - ${grupo.nome}` : processo.comGrupos ? ` - ${grupo.nome} - ${pagina.nome}` : ` - ${pagina.nome}`;
     if (!lista.length) return;
     paginas.current = [];
     setK(0);
-    setFila({ slides: lista, nome: `Relatório Executivo - ${periodo.replace("/", " ")}${nome}` });
+    setFila({ slides: lista, nome: `${processo.nome}${nomeDoDocumento ? ` - ${nomeDoDocumento}` : ""} - ${periodo.replace("/", " ")}${nome}` });
   };
   // Um slide por vez: desenha, espera ficar pronto, vira a imagem e passa ao próximo; no fim, monta e baixa o PDF.
   useEffect(() => {
@@ -154,10 +160,13 @@ export function ExportarPdfDoRelatorio({
             Toda a Apresentação
             <span className="text-xs text-gray-500">{contagem(slides.length)}</span>
           </DropdownMenuItem>
-          <DropdownMenuItem className="flex justify-between gap-6 pl-6" disabled={!doGrupo.length} onClick={() => exportar("GRUPO")}>
-            Grupo Atual ({grupo.nome})
-            <span className="text-xs text-gray-500">{contagem(doGrupo.length)}</span>
-          </DropdownMenuItem>
+          {/* O Grupo Atual só nos relatórios (31/10/2026: o painel de bordo tem uma tela só, toda a apresentação). */}
+          {processo.comGrupos ? (
+            <DropdownMenuItem className="flex justify-between gap-6 pl-6" disabled={!doGrupo.length} onClick={() => exportar("GRUPO")}>
+              Grupo Atual ({grupo.nome})
+              <span className="text-xs text-gray-500">{contagem(doGrupo.length)}</span>
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem className="flex justify-between gap-6 pl-6" disabled={!daPagina.length} onClick={() => exportar("ABA")}>
             Aba Atual ({pagina.nome})
             <span className="text-xs text-gray-500">{contagem(daPagina.length)}</span>

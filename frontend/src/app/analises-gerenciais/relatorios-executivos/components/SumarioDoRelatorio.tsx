@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { botaoPrimario, OpcaoEmLinha } from "@/app/cenarios/components/CenarioDialog";
 
 import type { EstiloDoSumario, LinhaDoSumario, ListarDoSumario, TelaDoSumario } from "../services/relatoriosExecutivosService";
+import { useProcesso } from "./processo";
 import { COR_PADRAO, CORES_DA_FONTE, familiaDa, FONTES, ITEM_DA_BARRA, MenuDaBarra, semFoco, TAMANHOS, type ChaveDaFonte } from "./TextoRico";
 
 export type OpcoesDoSumario = { listar: ListarDoSumario; telas: string[]; linha?: LinhaDoSumario };
@@ -191,6 +192,7 @@ export function ConfigurarSumarioDialog({
   onAplicar: (o: OpcoesDoSumario) => void;
   onFechar: () => void;
 }) {
+  const processo = useProcesso();
   const [listar, setListar] = useState<ListarDoSumario>(inicial?.listar ?? "TELAS");
   const [linha, setLinha] = useState<LinhaDoSumario>(inicial?.linha ?? "PONTOS");
   const [telas, setTelas] = useState<Set<string>>(() => new Set(inicial?.telas ?? sumario.map((t) => t.chave)));
@@ -206,7 +208,12 @@ export function ConfigurarSumarioDialog({
       <DialogContent avisoAoSair className="rounded-sm sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{titulo}</DialogTitle>
-          <DialogDescription>A lista das telas do relatório, com o número do slide de cada uma (a contagem começa na Introdução; a Capa e o Encerramento não contam).</DialogDescription>
+          <DialogDescription>
+            {/* Os painéis (31/10/2026): uma tela só, com os slides contados do primeiro. */}
+            {processo.comGrupos
+              ? "A lista das telas do relatório, com o número do slide de cada uma (a contagem começa na Introdução; a Capa e o Encerramento não contam)."
+              : "A lista da tela do painel, com o número do primeiro slide, e, em Telas e Slides, os slides dela, com os números (a contagem começa no primeiro slide)."}
+          </DialogDescription>
         </DialogHeader>
         <fieldset className="space-y-2">
           <legend className="mb-1.5 text-sm leading-none font-medium">Listar</legend>

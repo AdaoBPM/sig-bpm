@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-import type { Indicadores, Painel, Resultados } from "@/app/relatorios/services/relatoriosService";
+import type { Indicadores, MarcacaoComparavel, Painel, Resultados } from "@/app/relatorios/services/relatoriosService";
 import type { MarcacaoCenario } from "@/app/cenarios/services/cenariosService";
 
 /**
@@ -52,12 +52,14 @@ export type Bloco = Posicao &
         cores?: "padrao" | "daltonismo";
         /** O Zoom do card (30/10/2026): o conteúdo inteiro maior (1,25 a 3), no mesmo bloco; sem ele, 1. */
         zoom?: number;
+        /** O card PROVA (31/10/2026): o realizado contra os cenários da Comparação PROVA do relatório (a lista de marcações é de antes dela e vale o mesmo); sem ele, o card padrão. */
+        prova?: true | MarcacaoComparavel[];
       }
     /**
      * O gráfico do card do indicador (22/10/2026): os meses e o acumulado ou só o acumulado; sem ele, só os valores. As
      * opções do gráfico, como as dos cards do Painel.
      */
-    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO"; tipoGrafico?: "barras" | "area"; comRotulos?: boolean; /** O Zoom do card (30/10/2026). */ zoom?: number }
+    | { tipo: "INDICADOR"; nome: string; grafico?: "MESES" | "ACUMULADO"; tipoGrafico?: "barras" | "area"; comRotulos?: boolean; /** O Zoom do card (30/10/2026). */ zoom?: number; /** O card PROVA (31/10/2026). */ prova?: true | MarcacaoComparavel[] }
     /** O título da anotação (16/10/2026); sem ele, o nome da nota. */
     | {
         tipo: "ANOTACAO";
@@ -100,7 +102,16 @@ export type Bloco = Posicao &
      * (1 Totais, 2 Atribuições, 3 Contas), as linhas escolhidas (os códigos; sem elas, todas) e os meses anteriores ao do
      * relatório recolhidos (só o mês e os totais) ou não; as colunas opcionais (30/10/2026; sem elas, todas).
      */
-    | { tipo: "TABELA"; visao: VisaoDaTabela; nivel: 1 | 2 | 3; linhas?: string[]; recolhido?: boolean; colunas?: ColunasDaTabela }
+    | {
+        tipo: "TABELA";
+        visao: VisaoDaTabela;
+        nivel: 1 | 2 | 3;
+        linhas?: string[];
+        recolhido?: boolean;
+        colunas?: ColunasDaTabela;
+        /** A Tabela PROVA (31/10/2026): os cenários da Comparação PROVA lado a lado, no lugar do comparado; sem ela, a Tabela Padrão. */
+        prova?: true | MarcacaoComparavel[];
+      }
   );
 export type VisaoDaTabela = 0 | 1 | 2 | 3 | 4 | 5;
 /** As colunas que a tabela mostra ou não (30/10/2026, pedido do Adão): o R$/m³ e as três da variação. */
@@ -185,60 +196,115 @@ export type Relatorio = {
   criadoEm: string;
   abas: AbaDoRelatorio[];
   podeExcluir: boolean;
+  /**
+   * O painel de bordo (31/10/2026; só nos painéis, que vêm como um relatório de uma aba só, a tela Painel de Bordo): o nome,
+   * a visualização e se o usuário o altera (quem o criou ou o Administrador).
+   */
+  nome?: string;
+  visualizacao?: VisualizacaoDoPainel;
+  podeAlterar?: boolean;
 };
-export type DadosDoRelatorio = { painel: Painel; indicadores: Indicadores };
 /**
- * As Configurações do relatório (22/10/2026): o cenário de comparação (nulo: o marcado como Orçamento Empresarial,
- * `marcado`), os cenários públicos do exercício e se o usuário pode mudar.
+ * Os cenários dos cards PROVA (31/10/2026): os marcados que existem, na ordem do PROVA (Previsão, Orçado, Vendido e
+ * Anterior), com o nome do cenário; e a marcação do cenário de comparação (a cor dos cards padrão nos slides com cards
+ * PROVA; nula: um cenário sem marcação).
+ */
+export type ProvaDoRelatorio = { cenarios: Array<{ marcacao: MarcacaoComparavel; rotulo: string; cenario: string }>; marcacaoComparada: MarcacaoComparavel | null };
+export type DadosDoRelatorio = { painel: Painel; indicadores: Indicadores; prova: ProvaDoRelatorio };
+/**
+ * As Configurações do relatório (22/10/2026): a Comparação Padrão — o cenário de comparação (nulo: o marcado como Orçamento
+ * Empresarial, `marcado`) —, desde 31/10/2026 a Comparação PROVA (as marcações; vazia, todas), os cenários públicos com
+ * marcação e se o usuário pode mudar.
  */
 export type ConfiguracoesDoRelatorio = {
   ano: number;
   cenarioComparadoId: string | null;
   marcado: { id: string; nome: string; ano: number } | null;
   cenarios: Array<{ id: string; nome: string; ano: number; tipo: string; marcacao: MarcacaoCenario | null }>;
+  comparacaoProva: MarcacaoComparavel[];
   podeEditar: boolean;
+  /**
+   * Os campos do painel de bordo (31/10/2026; só nos painéis): o nome, a visualização, a competência (`ano` e `mes`), as
+   * competências fechadas para escolher e quem o criou.
+   */
+  nome?: string;
+  visualizacao?: VisualizacaoDoPainel;
+  /** O Geral do painel (01/11/2026): só quem o criou (ou o Administrador) o muda; os Comparativos, também os editores convidados (`podeEditar`). */
+  podeEditarGeral?: boolean;
+  mes?: number;
+  competencias?: Array<{ ano: number; mes: number; rotulo: string }>;
+  criadoPor?: string;
 };
+/** A visualização de um painel de bordo (31/10/2026), como a dos cenários: Privado (só quem o criou e o Administrador) ou Público. */
+export type VisualizacaoDoPainel = "PRIVADO" | "PUBLICO";
+/**
+ * Uma mudança das Configurações: a Comparação Padrão (`cenarioComparadoId`) ou, desde 31/10/2026, a Comparação PROVA (dois
+ * ou mais cenários); nos painéis de bordo, também o nome, a visualização e a competência.
+ */
+export type MudancaDasConfiguracoes =
+  | { cenarioComparadoId: string | null }
+  | { comparacaoProva: MarcacaoComparavel[] }
+  | { nome: string }
+  | { visualizacao: VisualizacaoDoPainel }
+  | { ano: number; mes: number };
+
+/** Os processos com slides (31/10/2026): a rota da API e a pasta dos arquivos de cada um. */
+export type RotaDosSlides = "relatorios-executivos" | "paineis-de-bordo";
+
+/**
+ * As chamadas que os Relatórios Executivos e os Painéis de Bordo têm em comum (31/10/2026: os painéis, feitos a partir dos
+ * relatórios, com as mesmas melhorias), na rota de cada um.
+ */
+export function servicoDosSlides(rota: RotaDosSlides) {
+  const base = `/proxy/${rota}`;
+  return {
+    obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
+    dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
+    configuracoes: async (id: string) => (await api.get<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`)).data.data,
+    gravarConfiguracoes: async (id: string, mudanca: MudancaDasConfiguracoes) => (await api.put<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`, mudanca)).data.data,
+    /** A tabela de Resultados de uma visão (22/10/2026), até o mês do relatório, para os blocos de tabela. */
+    resultados: async (id: string, visao: VisaoDaTabela) => (await api.get<{ data: Resultados }>(`${base}/${id}/resultados`, { params: { visao } })).data.data,
+    /**
+     * Grava as páginas do grupo (a aba). `versao` (23/10/2026): quando ele foi gravado da última vez no que o usuário abriu; se
+     * outro gravou depois, o servidor recusa (409, codigo CONFLITO), a não ser com `forcar` (gravar por cima).
+     */
+    gravarAba: async (id: string, aba: string, paginas: Pagina[], opcoes: { versao?: string; forcar?: boolean } = {}) =>
+      (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas, ...opcoes })).data.data,
+    /**
+     * Copia as fotos e os vídeos de outro documento para este (24/10/2026: colar blocos copiados dele; desde 31/10/2026, de um
+     * relatório ou de um painel, `processo`).
+     */
+    copiarArquivos: async (id: string, de: { id: string; processo: RotaDosSlides }, arquivos: string[]) =>
+      (await api.post<{ data: { copiados: number; faltando: string[] } }>(`${base}/${id}/arquivos/copiar`, { de: de.id, processo: de.processo, arquivos })).data.data,
+    enviarFoto: async (id: string, foto: Blob) => (await api.post<{ data: { arquivo: string } }>(`${base}/${id}/fotos`, foto, { headers: { "Content-Type": foto.type } })).data.data,
+    /** O vídeo (20/10/2026): o arquivo cru, com o andamento do envio (0 a 1). */
+    enviarVideo: async (id: string, video: File, aoEnviar?: (fracao: number) => void) =>
+      (
+        await api.post<{ data: { arquivo: string } }>(`${base}/${id}/videos`, video, {
+          headers: { "Content-Type": video.type },
+          onUploadProgress: (e) => (e.total ? aoEnviar?.(e.loaded / e.total) : undefined),
+          timeout: 0,
+        })
+      ).data.data,
+    excluir: async (id: string) => (await api.delete<{ data: { excluido: boolean } }>(`${base}/${id}`)).data.data,
+    /** Finaliza ou reabre o grupo (a aba do relatório; no painel, desde 01/11/2026, a tela Painel de Bordo). */
+    finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
+    reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
+  };
+}
+export type ServicoDosSlides = ReturnType<typeof servicoDosSlides>;
 
 const base = "/proxy/relatorios-executivos";
 export const relatoriosExecutivosService = {
+  ...servicoDosSlides("relatorios-executivos"),
   listar: async () => (await api.get<{ data: ListaDeRelatorios }>(base)).data.data,
   /** Com `importarDe` (16/10/2026), as abas começam com os blocos (cards, fotos e anotações) daquele relatório. */
   // Sem `manterImagensEAnotacoes` (17/10/2026), só os cards vêm do relatório de origem.
   criar: async (ano: number, mes: number, importarDe: string | null, manterImagensEAnotacoes = true) =>
     (await api.post<{ data: { id: string; rotuloMes: string } }>(base, { ano, mes, importarDe, manterImagensEAnotacoes })).data.data,
-  obter: async (id: string) => (await api.get<{ data: Relatorio }>(`${base}/${id}`)).data.data,
-  dados: async (id: string) => (await api.get<{ data: DadosDoRelatorio }>(`${base}/${id}/dados`)).data.data,
-  configuracoes: async (id: string) => (await api.get<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`)).data.data,
-  gravarConfiguracoes: async (id: string, cenarioComparadoId: string | null) =>
-    (await api.put<{ data: ConfiguracoesDoRelatorio }>(`${base}/${id}/configuracoes`, { cenarioComparadoId })).data.data,
-  /** A tabela de Resultados de uma visão (22/10/2026), até o mês do relatório, para os blocos de tabela. */
-  resultados: async (id: string, visao: VisaoDaTabela) => (await api.get<{ data: Resultados }>(`${base}/${id}/resultados`, { params: { visao } })).data.data,
-  /**
-   * Grava as páginas do grupo (a aba). `versao` (23/10/2026): quando ele foi gravado da última vez no que o usuário abriu; se
-   * outro gravou depois, o servidor recusa (409, codigo CONFLITO), a não ser com `forcar` (gravar por cima).
-   */
-  gravarAba: async (id: string, aba: string, paginas: Pagina[], opcoes: { versao?: string; forcar?: boolean } = {}) =>
-    (await api.put<{ data: Relatorio }>(`${base}/${id}/abas/${aba}`, { paginas, ...opcoes })).data.data,
-  /** Copia as fotos e os vídeos de outro relatório para este (24/10/2026: colar blocos copiados dele). */
-  copiarArquivos: async (id: string, de: string, arquivos: string[]) =>
-    (await api.post<{ data: { copiados: number; faltando: string[] } }>(`${base}/${id}/arquivos/copiar`, { de, arquivos })).data.data,
-  finalizarAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/finalizar`)).data.data,
-  reabrirAba: async (id: string, aba: string) => (await api.post<{ data: Relatorio }>(`${base}/${id}/abas/${aba}/reabrir`)).data.data,
-  enviarFoto: async (id: string, foto: Blob) =>
-    (await api.post<{ data: { arquivo: string } }>(`${base}/${id}/fotos`, foto, { headers: { "Content-Type": foto.type } })).data.data,
-  /** O vídeo (20/10/2026): o arquivo cru, com o andamento do envio (0 a 1). */
-  enviarVideo: async (id: string, video: File, aoEnviar?: (fracao: number) => void) =>
-    (
-      await api.post<{ data: { arquivo: string } }>(`${base}/${id}/videos`, video, {
-        headers: { "Content-Type": video.type },
-        onUploadProgress: (e) => (e.total ? aoEnviar?.(e.loaded / e.total) : undefined),
-        timeout: 0,
-      })
-    ).data.data,
-  excluir: async (id: string) => (await api.delete<{ data: { excluido: boolean } }>(`${base}/${id}`)).data.data,
 };
 
-/** O endereço de uma foto do relatório (pelo proxy, com o login). */
-export const enderecoDaFoto = (id: string, arquivo: string) => `/api${base}/${id}/fotos/${arquivo}`;
-/** O endereço de um vídeo do relatório (20/10/2026; pelo proxy, em partes). */
-export const enderecoDoVideo = (id: string, arquivo: string) => `/api${base}/${id}/videos/${arquivo}`;
+/** O endereço de uma foto do documento (pelo proxy, com o login), na rota do processo (31/10/2026: o relatório ou o painel). */
+export const enderecoDaFoto = (id: string, arquivo: string, rota: RotaDosSlides) => `/api/proxy/${rota}/${id}/fotos/${arquivo}`;
+/** O endereço de um vídeo do documento (20/10/2026; pelo proxy, em partes). */
+export const enderecoDoVideo = (id: string, arquivo: string, rota: RotaDosSlides) => `/api/proxy/${rota}/${id}/videos/${arquivo}`;

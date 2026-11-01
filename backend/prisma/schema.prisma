@@ -164,6 +164,8 @@ model Usuario {
   reaberturas           ReaberturaCompetencia[]
   importacoes           Importacao[]
   conferenciasPlanilha  ConferenciaPlanilha[]
+  /// Os painéis de bordo de outros usuários que ele edita (01/11/2026: o Compartilhar das Configurações dos painéis).
+  paineisCompartilhados PainelDeBordoEditor[]
 
   @@map("usuarios")
 }
@@ -2432,6 +2434,9 @@ model RelatorioExecutivo {
   /// O cenário de comparação dos cards e das tabelas (22/10/2026; a aba Configurações): sem ele, o cenário marcado como
   /// Orçamento Empresarial no exercício. Sem chave estrangeira: com o cenário excluído, volta à marcação.
   cenarioComparadoId String?               @map("cenario_comparado_id")
+  /// A Comparação PROVA (31/10/2026; a aba Configurações): as marcações dos cenários que os objetos PROVA (os cards e as
+  /// tabelas) comparam, dois ou mais; vazia, todos os cenários marcados.
+  comparacaoProva    MarcacaoCenario[]       @default([]) @map("comparacao_prova")
   abas          RelatorioExecutivoAba[]
 
   @@unique([ano, mes])
@@ -2474,6 +2479,66 @@ model RelatorioExecutivoAba {
 
   @@id([relatorioId, departamento])
   @@map("relatorios_executivos_abas")
+}
+
+/// A visualização de um painel de bordo (31/10/2026), como a dos cenários: Privado (só quem o criou e o Administrador o
+/// veem) ou Público (todos os que leem os Painéis de Bordo).
+enum VisualizacaoPainel {
+  PRIVADO
+  PUBLICO
+}
+
+/// Um painel de bordo (31/10/2026, Análises Gerenciais / Painéis de Bordo; pedido do Adão: feito a partir dos Relatórios
+/// Executivos, com fins variados): o nome, a visualização e a competência — vários painéis por competência; ela é só mais
+/// um campo das Configurações — e uma tela só, Painel de Bordo, com as páginas (as abas) e os blocos delas, como um grupo
+/// dos relatórios. Quem o criou (ou o Administrador) o altera; público e finalizado (01/11/2026), os demais o leem.
+model PainelDeBordo {
+  id                 String             @id @default(uuid())
+  nome               String
+  visualizacao       VisualizacaoPainel @default(PRIVADO)
+  /// A situação (01/11/2026, pedido do Adão), como a de um grupo dos relatórios: em elaboração, só quem o criou e o
+  /// Administrador o veem; finalizado, fica só para leitura, e o público aparece para os demais.
+  situacao           SituacaoRelatorio  @default(EM_ELABORACAO)
+  finalizadoPor      String?            @map("finalizado_por")
+  finalizadoEm       DateTime?          @map("finalizado_em")
+  ano                Int
+  mes                Int
+  /// As páginas da tela Painel de Bordo, com os blocos: [{ id, nome, blocos, fundo, transicao, avancarApos }].
+  paginas            Json               @db.Json
+  /// Quem gravou as páginas por último e quando: a versão que a gravação confere (as Configurações não a mudam).
+  paginasPor         String?            @map("paginas_por")
+  paginasEm          DateTime           @default(now()) @map("paginas_em")
+  /// A Comparação Padrão (o cenário; sem ele, o marcado como Orçamento Empresarial) e a Comparação PROVA (as marcações;
+  /// vazia, todas), como nos relatórios. Sem chave estrangeira: com o cenário excluído, volta à marcação.
+  cenarioComparadoId String?            @map("cenario_comparado_id")
+  comparacaoProva    MarcacaoCenario[]  @default([]) @map("comparacao_prova")
+  criadoPorId        String             @map("criado_por_id")
+  criadoPorNome      String             @map("criado_por_nome")
+  criadoEm           DateTime           @default(now()) @map("criado_em")
+  atualizadoEm       DateTime           @updatedAt @map("atualizado_em")
+  /// Os editores convidados (01/11/2026, o Compartilhar).
+  editores           PainelDeBordoEditor[]
+
+  @@index([ano, mes])
+  @@map("paineis_de_bordo")
+}
+
+/// Os editores convidados de um painel de bordo (01/11/2026, pedido do Adão: o Compartilhar das Configurações / Geral):
+/// além de quem o criou e do Administrador, eles editam o painel — as páginas, os Comparativos, a finalização e a
+/// reabertura — e o veem mesmo privado ou em elaboração. Só quem criou o painel (ou o Administrador) convida e remove, e
+/// só quem tem a permissão de editar os Painéis de Bordo pode ser convidado.
+model PainelDeBordoEditor {
+  painelId     String   @map("painel_id")
+  usuarioId    String   @map("usuario_id")
+  convidadoPor String   @map("convidado_por")
+  convidadoEm  DateTime @default(now()) @map("convidado_em")
+
+  painel  PainelDeBordo @relation(fields: [painelId], references: [id], onDelete: Cascade)
+  usuario Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([painelId, usuarioId])
+  @@index([usuarioId])
+  @@map("paineis_de_bordo_editores")
 }
 
 /// O cadastro do Painel de Bordo (17/10/2026; Cadastros da Controladoria / Analítico / Painel de Bordo): os itens das

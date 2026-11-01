@@ -161,17 +161,22 @@ export function linhasDaDRE<L extends Linha>(todas: L[]) {
 /**
  * O estado dos níveis de uma tabela de linhas da DRE. As seções P e S não
  * aparecem; PRODUÇÃO E SERVIÇOS (PS) só quando há volumes, e (com eles) só em
- * Contas — ou, com `psSempre` (30/10/2026, pedido do Adão: Resultados Empresariais e as telas do Fechamento Mensal), em
- * todos os níveis, aberta (as linhas de volume são as bases dos totais; a seta dela ainda a fecha). `chave` guarda o nível
- * escolhido no navegador; com `fixo` (22/10/2026: as tabelas dos Relatórios Executivos), o nível é esse, sem o do navegador.
+ * Contas — ou, com `comPs` (30/10/2026, pedido do Adão), em todos os níveis (as linhas de volume são as bases dos totais):
+ * "aberta" (as telas Resultados e Conferência do Fechamento Mensal) ou "recolhida" em Totais e Atribuições e aberta em
+ * Contas (31/10/2026, pedido do Adão: as tabelas de Resultados Empresariais e dos Cenários); a seta dela a abre e fecha.
+ * `chave` guarda o nível escolhido no navegador; com `fixo` (22/10/2026: as tabelas dos Relatórios Executivos), o nível é
+ * esse, sem o do navegador.
  */
-export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: Nivel, psSempre = false) {
+export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: Nivel, comPs?: "aberta" | "recolhida") {
   const linhas = useMemo(() => linhasDaDRE(todas), [todas]);
   const { nivel, acima, comFilhos, soContas } = useMemo(() => estrutura(linhas), [linhas]);
   const ps = linhas.find((l) => l.tipo === "SECAO")?.codigo;
   const fechadosDo = (n: Nivel) => {
     const f = fechadosAte(n, nivel, comFilhos, soContas);
-    if (ps && psSempre) f.delete(ps);
+    if (ps && comPs) {
+      if (comPs === "recolhida" && n !== 3) f.add(ps);
+      else f.delete(ps);
+    }
     return f;
   };
   const [nivelGeral, setNivelGeral] = useState<Nivel>(() => fixo ?? nivelGuardado(chave));
@@ -190,7 +195,7 @@ export function useNiveisDRE<L extends Linha>(todas: L[], chave: string, fixo?: 
     });
   const visivel = (l: L) =>
     !(acima.get(l.codigo) ?? []).some((g) => fechados.has(g)) &&
-    !(ps && !psSempre && nivelGeral !== 3 && (l.codigo === ps || (acima.get(l.codigo) ?? []).includes(ps)));
+    !(ps && !comPs && nivelGeral !== 3 && (l.codigo === ps || (acima.get(l.codigo) ?? []).includes(ps)));
   return {
     linhas,
     nivelGeral,

@@ -21,6 +21,8 @@ export type LinhaResultado = {
    * Orçamento Empresarial; zero sem ele). Nos cenários com um cenário comparado (13/10/2026): só o total dele.
    */
   orcado?: { mes?: Celula; total: Celula } | null;
+  /** Na Tabela PROVA dos Relatórios Executivos e na Comparação PROVA de Resultados (31/10/2026): o orçado de cada cenário, como o do comparado. */
+  prova?: Partial<Record<MarcacaoComparavel, { mes: Celula; total: Celula }>>;
 };
 
 export type Resultados = {
@@ -32,6 +34,8 @@ export type Resultados = {
   rotuloComparado?: string;
   /** Nos cenários (13/10/2026): o cenário comparado, cujos totais vêm no lugar do orçado. */
   comparado?: { nome: string; ano: number } | null;
+  /** Nos Relatórios Executivos (31/10/2026, a Tabela PROVA): os cenários marcados que existem, na ordem do PROVA. */
+  prova?: Array<{ marcacao: MarcacaoComparavel; rotulo: string; cenario: string }>;
   meses: MesRelatorio[];
   linhas: LinhaResultado[];
   grupo?: string;
@@ -66,6 +70,8 @@ export type Indicador = {
   totalOrcado: number | null;
   /** A Média de Referência (os indicadores manuais dos analíticos, 15/10/2026). */
   referencia?: number | null;
+  /** Nos cards PROVA e na Comparação PROVA (31/10/2026): o orçado de cada mês e o acumulado de cada cenário marcado. */
+  prova?: Partial<Record<MarcacaoComparavel, { orcado: Array<number | null>; totalOrcado: number | null }>>;
 };
 export type Indicadores = {
   ano: number;
@@ -96,6 +102,8 @@ export type ItemPainel = {
   acumulado: BlocoPainel;
   /** Os meses do exercício até o de referência (os gráficos): o realizado e o orçado de cada um. */
   serie: Array<{ mes: string; realizado: number | null; orcado: number | null }>;
+  /** Nos cards PROVA e na Comparação PROVA (31/10/2026): o realizado contra cada cenário marcado e o orçado dele em cada mês. */
+  prova?: Partial<Record<MarcacaoComparavel, { mes: BlocoPainel; acumulado: BlocoPainel; serie: Array<number | null> }>>;
 };
 export type QuadroPainel = { titulo: string; itens: ItemPainel[] };
 export type Painel = {
@@ -118,10 +126,12 @@ export type MarcacaoComparavel = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORE
 /** Um cenário marcado (o Compara Com): de qualquer exercício (22/10/2026), com o ano dele. */
 export type Comparavel = { marcacao: MarcacaoComparavel; rotulo: string; cenario: { id: string; nome: string; ano: number } };
 const comparado = (comparaCom?: MarcacaoComparavel) => (comparaCom && comparaCom !== "ORCAMENTO_EMPRESARIAL" ? { comparaCom } : {});
+/** A Comparação PROVA (31/10/2026): as marcações dos cenários, separadas por vírgula; sem elas, a Comparação Padrão. */
+const comProva = (prova?: MarcacaoComparavel[]) => (prova?.length ? { prova: prova.join(",") } : {});
 
 export const relatoriosService = {
-  resultados: async (ano: number, ate: number | undefined, visao: number, comparaCom?: MarcacaoComparavel) =>
-    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao, ...comparado(comparaCom) } })).data.data,
+  resultados: async (ano: number, ate: number | undefined, visao: number, comparaCom?: MarcacaoComparavel, prova?: MarcacaoComparavel[]) =>
+    (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao, ...comparado(comparaCom), ...comProva(prova) } })).data.data,
   /** Os cenários marcados do exercício (21/10/2026): as opções do Compara Com. */
   comparaveis: async (ano: number) => (await api.get<{ data: Comparavel[] }>("/proxy/relatorios/comparaveis", { params: { ano } })).data.data,
   centros: async (ano: number, ate: number | undefined) =>
@@ -142,10 +152,10 @@ export const relatoriosService = {
   centro: async (ano: number, ate: number | undefined, grupo: string) =>
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros", grupo } })).data.data,
   /** `etapa`: a etapa Indicadores do Fechamento Mensal, que vê o mês aberto; sem ela, só as competências fechadas. */
-  indicadores: async (ano: number, ate: number | undefined, etapa = false, comparaCom?: MarcacaoComparavel) =>
-    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: { ...periodo(ano, ate), ...(etapa ? { etapa: 1 } : {}), ...comparado(comparaCom) } })).data.data,
-  painel: async (ano: number, ate: number | undefined, comparaCom?: MarcacaoComparavel) =>
-    (await api.get<{ data: Painel }>("/proxy/relatorios/painel", { params: { ...periodo(ano, ate), ...comparado(comparaCom) } })).data.data,
+  indicadores: async (ano: number, ate: number | undefined, etapa = false, comparaCom?: MarcacaoComparavel, prova?: MarcacaoComparavel[]) =>
+    (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: { ...periodo(ano, ate), ...(etapa ? { etapa: 1 } : {}), ...comparado(comparaCom), ...comProva(prova) } })).data.data,
+  painel: async (ano: number, ate: number | undefined, comparaCom?: MarcacaoComparavel, prova?: MarcacaoComparavel[]) =>
+    (await api.get<{ data: Painel }>("/proxy/relatorios/painel", { params: { ...periodo(ano, ate), ...comparado(comparaCom), ...comProva(prova) } })).data.data,
 };
 
 export function mensagemDeErro(error: unknown, padrao: string) {

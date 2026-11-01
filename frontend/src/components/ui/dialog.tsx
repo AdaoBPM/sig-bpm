@@ -146,8 +146,12 @@ function DialogContent({
         data-slot="dialog-content"
         onInputCapture={avisoAoSair ? marcarSujo : undefined}
         onClickCapture={avisoAoSair ? aoClicar : undefined}
+        // A rolagem no próprio modal (31/10/2026; antes, só nos que a pediam): o título e o rodapé presos (sticky) se prendem
+        // a ela. Sem ela, eles se prendiam à tela, e, num modal mais alto que meia tela, o rodapé subia para o meio dele (o
+        // modal é centralizado pelo translate, que o sticky não conta). Os modais que pedem outra altura ou outro overflow
+        // continuam com o deles.
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

@@ -6,10 +6,12 @@ import { ChevronLeft, ChevronRight, ChevronRightIcon, ChevronsLeft, ChevronsRigh
 import { BpmLogo } from "@/components/layout/BpmLogo";
 
 import { LegendaDoPainel, type Cores } from "@/app/relatorios/painel/PainelContent";
+import { ehProva, seriesDaLegenda } from "./cenariosDoProva";
 import type { TipoGrafico } from "@/app/relatorios/components/GraficoRealizadoOrcado";
 
 import { CamadaDoFundo } from "./FundoDoSlide";
 import { GradeDoRelatorio, linhasDaPagina } from "./GradeDoRelatorio";
+import { useProcesso } from "./processo";
 import { TelaNaEscala } from "./TelaPadrao";
 import type { Bloco, DadosDoRelatorio, Fundo, TelaDoSumario, Transicao } from "../services/relatoriosExecutivosService";
 
@@ -74,6 +76,7 @@ export function ApresentacaoDoRelatorio({
   tipo: TipoGrafico;
   onSair: () => void;
 }) {
+  const processo = useProcesso();
   const [k, setKAgora] = useState(inicial);
   // A troca em andamento (27/10/2026): o slide que sai, o sentido e a transição do que entra.
   const [troca, setTroca] = useState<Troca | null>(null);
@@ -156,7 +159,7 @@ export function ApresentacaoDoRelatorio({
   const slide = slides[k];
   const botao = "inline-flex size-9 items-center justify-center rounded-sm text-gray-100 hover:bg-gray-700 hover:text-white disabled:pointer-events-none disabled:opacity-40";
   return (
-    <div role="dialog" aria-modal aria-label={`Apresentação: Relatório Executivo de ${periodo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
+    <div role="dialog" aria-modal aria-label={`Apresentação: ${processo.nome} de ${periodo}`} className="fixed inset-0 z-[60] overflow-hidden bg-background select-none" onMouseMove={mostrarBotoes} onDragStart={(e) => e.preventDefault()}>
       <style>{ESTILO_DAS_TRANSICOES}</style>
       {/* O slide na tela padrão, na escala da tela de quem apresenta (27/10/2026); na troca, o que sai e o que entra. */}
       <TelaNaEscala>
@@ -178,18 +181,23 @@ export function ApresentacaoDoRelatorio({
         }}
         className={`fixed bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-sm bg-gray-800 p-1 shadow-lg transition-opacity duration-300 ${comBotoes ? "opacity-100" : "pointer-events-none opacity-0"}`}
       >
-        <button type="button" className={botao} disabled={grupoAnterior === null} onClick={() => grupoAnterior !== null && setK(grupoAnterior)} title="Grupo anterior" aria-label="Grupo anterior">
-          <ChevronsLeft className="size-5" />
-        </button>
+        {/* Os botões dos grupos só nos relatórios (31/10/2026: o painel de bordo tem uma tela só). */}
+        {processo.comGrupos ? (
+          <button type="button" className={botao} disabled={grupoAnterior === null} onClick={() => grupoAnterior !== null && setK(grupoAnterior)} title="Grupo anterior" aria-label="Grupo anterior">
+            <ChevronsLeft className="size-5" />
+          </button>
+        ) : null}
         <button type="button" className={botao} disabled={k === 0} onClick={() => ir(-1)} title="Slide anterior (←)" aria-label="Slide anterior">
           <ChevronLeft className="size-5" />
         </button>
         <button type="button" className={botao} disabled={k >= slides.length - 1} onClick={() => ir(1)} title="Próximo slide (→)" aria-label="Próximo slide">
           <ChevronRight className="size-5" />
         </button>
-        <button type="button" className={botao} disabled={proximoGrupo === null} onClick={() => proximoGrupo !== null && setK(proximoGrupo)} title="Próximo grupo" aria-label="Próximo grupo">
-          <ChevronsRight className="size-5" />
-        </button>
+        {processo.comGrupos ? (
+          <button type="button" className={botao} disabled={proximoGrupo === null} onClick={() => proximoGrupo !== null && setK(proximoGrupo)} title="Próximo grupo" aria-label="Próximo grupo">
+            <ChevronsRight className="size-5" />
+          </button>
+        ) : null}
         <span className="mx-1 h-6 w-px bg-gray-600" />
         <button type="button" className={botao} onClick={sair} title="Sair da apresentação (Esc)" aria-label="Sair da apresentação">
           <Minimize2 className="size-4" />
@@ -222,6 +230,7 @@ export function SlideDoRelatorio({
   tipo: TipoGrafico;
   paraImagem?: boolean;
 }) {
+  const processo = useProcesso();
   return (
     <>
     {/*
@@ -231,8 +240,8 @@ export function SlideDoRelatorio({
     <div className="flex h-full flex-col px-8 pt-6">
       {/*
         À esquerda, o grupo (o título da aba: Introdução…) em cinza, a seta dos caminhos do topo das telas, em cinza, e o
-        nome do slide (o da página) em preto; à direita, "Relatório Executivo" em cinza, a seta e o período em preto
-        (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
+        nome do slide (o da página) em preto; à direita, "Relatório Executivo" (num painel, "Painel de Bordo") em cinza, a seta e
+        o período em preto (20/10/2026; antes, o traço e "RE - período" em preto), logo antes da logo da BPM (16/10/2026). A logo, de 30 px,
         fica centrada na altura da barra, sem mudar a altura dela.
       */}
       {/* O contador (20/10/2026), no centro: o número do slide e o total, contados da Introdução em diante; na Capa e no Encerramento, sem ele. */}
@@ -240,7 +249,7 @@ export function SlideDoRelatorio({
         <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{slide?.nome}</span>
         <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
         <h1 className="min-w-0 truncate text-lg font-bold text-gray-900">{slide?.pagina}</h1>
-        <span className="ml-auto shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">Relatório Executivo</span>
+        <span className="ml-auto shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">{processo.nome}</span>
         <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-gray-500" />
         <span className="shrink-0 pr-1.5 text-lg font-bold whitespace-nowrap text-gray-900">{periodo}</span>
         <BpmLogo className="h-[30px] w-auto shrink-0" />
@@ -279,7 +288,20 @@ export function SlideDoRelatorio({
           e o contador ficam por cima dela.
         */}
         <span aria-hidden className="absolute inset-x-0 top-0 -z-10 border-t border-gray-200" />
-        <div>{slide?.blocos.some((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") ? <LegendaDoPainel tipo={tipo} cores={cores} comparado={dados?.painel.cenarioOrcado} /> : null}</div>
+        {/*
+          Com cards PROVA (31/10/2026), a legenda traz os cenários do slide, cada um na cor dele, e o nome do cenário de
+          comparação só com cards padrão.
+        */}
+        <div>
+          {slide?.blocos.some((b) => b.tipo === "PAINEL" || b.tipo === "INDICADOR") ? (
+            <LegendaDoPainel
+              tipo={tipo}
+              cores={cores}
+              comparado={slide.blocos.some((b) => (b.tipo === "PAINEL" || b.tipo === "INDICADOR") && !ehProva(b)) ? dados?.painel.cenarioOrcado : null}
+              comparados={seriesDaLegenda(slide.blocos, dados)}
+            />
+          ) : null}
+        </div>
         {slide?.numero ? (
           <span className="shrink-0 text-lg font-semibold whitespace-nowrap text-gray-500">
             <span className="font-bold text-gray-900">{slide.numero}</span>/{slide.total}

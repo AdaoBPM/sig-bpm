@@ -18,7 +18,8 @@ import { SemResultado, useTabelaFiltravel } from "@/components/shared/TabelaFilt
 import type { Coluna } from "@/lib/filtrosDeTabela";
 
 import { ROTULO_DO_ORCADO } from "../../competencias/[anoMes]/dre/components/NiveisDRE";
-import { formato, type Indicador, type MesRelatorio } from "../services/relatoriosService";
+import { ESTILOS_NOS_INDICADORES, type EstiloNosIndicadores } from "../components/cenariosDoProva";
+import { formato, type Indicador, type MarcacaoComparavel, type MesRelatorio } from "../services/relatoriosService";
 
 /** Os grupos, na ordem e com os nomes das abas da planilha (Produção, Serviços…). */
 const NOME_DO_GRUPO: Record<string, string> = { GME: "Metas Estratégicas (GME)" };
@@ -92,25 +93,30 @@ export function valorCurto(i: Pick<Indicador, "unidade">, v: number | null) {
   return formato.umaCasa(v * 100);
 }
 
-/** As cores da faixa dos grupos e dos totais (13/10/2026: um pouco mais fortes, antes yellow-50 e gray-200). */
+/**
+ * As cores da faixa dos grupos e dos totais (13/10/2026: um pouco mais fortes, antes yellow-50 e gray-200): a do realizado
+ * e, nas colunas do orçado, a do estilo do Orçado (o cinza; na Comparação PROVA, 31/10/2026, a de cada cenário).
+ */
 const FAIXA_DO_REALIZADO = "bg-yellow-100";
-const FAIXA_DO_ORCADO = "celula-orcado bg-gray-300";
+const DO_ORCADO = ESTILOS_NOS_INDICADORES.ORCAMENTO_EMPRESARIAL;
 
 /** O amarelo de antes da faixa dos grupos (o yellow-50) mais fraco, para as linhas pares, sem transparência (as colunas presas cobrem as que rolam). */
 const AMARELO_FRACO = "bg-[color-mix(in_srgb,var(--color-yellow-50)_55%,var(--color-white))]";
 
 /**
  * O fundo da linha do indicador (13/10/2026): sem numeração (os totais, como Custos de Produção: Matriz), a cor da faixa
- * dos grupos — o amarelo nas colunas do realizado, o cinza nas do orçado; com numeração par (2, 4…, GME 4, GME 8), um
- * tom mais fraco das mesmas cores; com numeração ímpar, sem fundo.
+ * dos grupos — o amarelo nas colunas do realizado, o cinza nas do orçado (na Comparação PROVA, a faixa de cada cenário);
+ * com numeração par (2, 4…, GME 4, GME 8), um tom mais fraco das mesmas cores; com numeração ímpar, sem fundo.
  */
-function fundoDoIndicador(i: Indicador, orcado: boolean) {
-  if (i.numero === "") return orcado ? FAIXA_DO_ORCADO : FAIXA_DO_REALIZADO;
+function fundoDoIndicador(i: Indicador, orcado: EstiloNosIndicadores | null) {
+  if (i.numero === "") return orcado ? orcado.faixa : FAIXA_DO_REALIZADO;
   const n = Number(/(\d+)\s*$/.exec(i.numero)?.[1]);
-  // Nas pares, o cinza do tema (sem a celula-orcado, que no Escuro deixaria a célula quase branca entre as escuras).
-  if (n % 2 === 0) return orcado ? "bg-gray-100" : AMARELO_FRACO;
+  if (n % 2 === 0) return orcado ? orcado.par : AMARELO_FRACO;
   return "";
 }
+
+/** Um cenário da Comparação PROVA (31/10/2026): a marcação, o rótulo, o nome e o estilo das colunas dele. */
+type ComparadoNosIndicadores = { marcacao: MarcacaoComparavel; rotulo: string; cenario: string; estilo: EstiloNosIndicadores };
 
 /** As larguras das colunas fixas (Indicador, Sent., Und.) e das de valor. */
 const LARGURA = { indicador: 400, sentido: 84, unidade: 100, mes: 112, acumulado: 124, orcado: 148 };
@@ -129,8 +135,29 @@ function montarColunas<T extends Indicador>(
   comparado: { rotulo: string } | null,
   comReferencia = false,
   rotuloDoOrcado = "Orçado",
+  comparados?: ComparadoNosIndicadores[],
 ): Coluna<T>[] {
   const ultimo = meses.length - 1;
+  // Na Comparação PROVA (31/10/2026), no lugar do orçado: o do último mês de cada cenário, depois dele, e o acumulado de
+  // cada um, depois do acumulado, lado a lado e cada um com o rótulo na cor dele.
+  if (orcado && comparados?.length) {
+    const doCenario = (c: ComparadoNosIndicadores, periodo: "mes" | "acum"): Coluna<T> => {
+      const v = (i: T) => (periodo === "mes" ? (i.prova?.[c.marcacao]?.orcado[ultimo] ?? null) : (i.prova?.[c.marcacao]?.totalOrcado ?? null));
+      return {
+        chave: `orcado:${periodo}:${c.marcacao}`,
+        rotulo: periodo === "mes" ? `${c.rotulo} ${meses[ultimo].rotulo}` : `${c.rotulo} Acum.`,
+        tipo: "numero",
+        alinhamento: "direita",
+        valor: v,
+        texto: (i) => valor(i, v(i)),
+        classe: c.estilo.rotulo,
+      };
+    };
+    const colunas = montarColunas<T>(meses, indices, acumulado, false, null, comReferencia);
+    const k = colunas.findIndex((c) => c.chave === "acumulado");
+    const doMes = comparados.map((c) => doCenario(c, "mes"));
+    return k < 0 ? [...colunas, ...doMes] : [...colunas.slice(0, k), ...doMes, colunas[k], ...comparados.map((c) => doCenario(c, "acum"))];
+  }
   // O orçado (Resultados Empresariais, 11/10/2026): o do último mês, depois dele, e o acumulado, depois do acumulado. Nos
   // cenários com um cenário comparado (13/10/2026), só o acumulado dele, depois do acumulado.
   const orcadoDoMes: Coluna<T>[] = orcado && !comparado
@@ -214,6 +241,11 @@ type Props<T extends Indicador> = {
   dicaDoDestaque?: string;
   /** A coluna Média de Referência, antes dos meses (os indicadores manuais dos analíticos, 15/10/2026). */
   comReferencia?: boolean;
+  /**
+   * A Comparação PROVA de Resultados Empresariais (31/10/2026): com `comOrcado`, no lugar das colunas do orçado, as de cada
+   * cenário (o último mês e o acumulado), lado a lado e nas cores dele.
+   */
+  comparados?: ComparadoNosIndicadores[];
 };
 
 /**
@@ -233,12 +265,13 @@ export function TabelaIndicadores<T extends Indicador>({
   destacar,
   dicaDoDestaque,
   comReferencia,
+  comparados,
 }: Props<T>) {
   const colunas = useMemo(() => {
     const indices = soUltimoMes ? [meses.length - 1] : meses.map((_, k) => k);
     const doComparado = comparado ? { rotulo: "Comparado Acum." } : null;
-    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado, !!comReferencia, rotuloDoOrcado);
-  }, [meses, soUltimoMes, comOrcado, comparado, comReferencia, rotuloDoOrcado]);
+    return montarColunas<T>(meses, indices, !soUltimoMes, (!!comOrcado || !!comparado) && !soUltimoMes, doComparado, !!comReferencia, rotuloDoOrcado, comparados);
+  }, [meses, soUltimoMes, comOrcado, comparado, comReferencia, rotuloDoOrcado, comparados]);
   // O grupo escolhido na lista antes do rótulo Indicador (13/10/2026); um grupo que a tabela não tem vale Todos.
   const [grupoEscolhido, setGrupo] = useState(TODOS_OS_GRUPOS);
   const grupos = useMemo(() => [...new Set(indicadores.map((i) => i.grupo))], [indicadores]);
@@ -246,13 +279,19 @@ export function TabelaIndicadores<T extends Indicador>({
   const doGrupo = useMemo(() => (grupo === TODOS_OS_GRUPOS ? indicadores : indicadores.filter((i) => i.grupo === grupo)), [indicadores, grupo]);
   const tabela = useTabelaFiltravel(doGrupo, colunas);
   const larguras = [LARGURA.indicador, LARGURA.sentido, LARGURA.unidade, ...colunas.slice(3).map((c) => (c.chave.startsWith("orcado:") ? LARGURA.orcado : c.chave === "acumulado" || c.chave === "referencia" ? LARGURA.acumulado : LARGURA.mes))];
-  const ehOrcado = (chave: string) => chave.startsWith("orcado:");
-  // A faixa do grupo em pedaços: amarela nas colunas do realizado, cinza nas do orçado (a mesma escala).
-  const faixas = colunas.reduce<Array<{ orcado: boolean; n: number }>>((fs, c) => {
-    const o = ehOrcado(c.chave);
+  // O estilo de uma coluna do orçado: o do Orçado ou, na Comparação PROVA, o do cenário dela; null nas do realizado.
+  const estiloDa = (chave: string): EstiloNosIndicadores | null => {
+    if (!chave.startsWith("orcado:")) return null;
+    const m = chave.split(":")[2];
+    return comparados?.find((c) => c.marcacao === m)?.estilo ?? DO_ORCADO;
+  };
+  // A faixa do grupo em pedaços: amarela nas colunas do realizado, cinza nas do orçado (a mesma escala); na Comparação
+  // PROVA, cada cenário na faixa dele.
+  const faixas = colunas.reduce<Array<{ estilo: EstiloNosIndicadores | null; n: number }>>((fs, c) => {
+    const estilo = estiloDa(c.chave);
     const ultima = fs[fs.length - 1];
-    if (ultima && ultima.orcado === o) ultima.n++;
-    else fs.push({ orcado: o, n: 1 });
+    if (ultima && ultima.estilo === estilo) ultima.n++;
+    else fs.push({ estilo, n: 1 });
     return fs;
   }, []);
   const total = larguras.reduce((s, w) => s + w, 0);
@@ -331,7 +370,7 @@ export function TabelaIndicadores<T extends Indicador>({
                 const principal = i.numero === "";
                 const tom = principal ? "text-gray-900" : "text-gray-700";
                 // As colunas presas precisam de fundo (as outras rolam por baixo): sem destaque, o branco.
-                const fundoPreso = fundoDoIndicador(i, false) || "bg-white";
+                const fundoPreso = fundoDoIndicador(i, null) || "bg-white";
                 const aoPassar = clicavel ? "group-hover:bg-gray-100" : "";
                 return (
                   <Fragment key={i.nome}>
@@ -339,7 +378,7 @@ export function TabelaIndicadores<T extends Indicador>({
                       // O nome do grupo no tamanho dos departamentos da DRE / Resultados (15/10/2026; de 14/10/2026, 21 px).
                       <tr className="border-y border-gray-300">
                         {faixas.map((f, n) => (
-                          <td key={n} colSpan={f.n} className={`${f.orcado ? FAIXA_DO_ORCADO : FAIXA_DO_REALIZADO} px-3 py-2 text-sm font-bold text-gray-900 uppercase`}>
+                          <td key={n} colSpan={f.n} className={`${f.estilo ? f.estilo.faixa : FAIXA_DO_REALIZADO} px-3 py-2 text-sm font-bold text-gray-900 uppercase`}>
                             {n === 0 ? <span className="sticky left-3">{nomeDoGrupo(i.grupo)}</span> : null}
                           </td>
                         ))}
@@ -376,7 +415,7 @@ export function TabelaIndicadores<T extends Indicador>({
                         const mes = c.chave.startsWith("mes:") ? Number(c.chave.slice(4)) - 1 : -1;
                         const emDestaque = mes >= 0 && !!destacar?.(i, meses.findIndex((m) => m.mes === mes + 1));
                         // O valor digitado (lançamentos manuais do cenário) num amarelo mais forte que o das linhas e o dos totais.
-                        const fundo = emDestaque ? "bg-yellow-200" : fundoDoIndicador(i, ehOrcado(c.chave));
+                        const fundo = emDestaque ? "bg-yellow-200" : fundoDoIndicador(i, estiloDa(c.chave));
                         return (
                           <td
                             key={c.chave}

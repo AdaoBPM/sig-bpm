@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerLinhaNaObra, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { cenarioDaComparacao, rotuloDaComparacao, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
+import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
 import { dreService, RegraDREError } from "../dre/dreService.js";
 import { obrasService } from "../dre/obrasService.js";
 import { GRUPOS_SEM_CENTRO, nomeDoGrupoSemCentro, semCentroService, type GrupoSemCentro } from "../dre/semCentroService.js";
@@ -160,7 +161,11 @@ export function montar(
 export const resultadosService = {
   /** Uma visão da DRE (0 Consolidado, 1..5 as unidades) mês a mês, até o mês `ate`. */
   /** `comparaCom` (21/10/2026): a marcação do cenário comparado (as colunas pretas); sem ela, o Orçamento Empresarial. */
-  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false, comparaCom: Comparacao = "ORCAMENTO_EMPRESARIAL") {
+  /**
+   * `prova` (31/10/2026, a Tabela PROVA dos Relatórios Executivos): as marcações dos outros cenários; os que existem vêm em
+   * `prova` (a marcação, o rótulo e o nome), e cada linha traz, em `prova`, o orçado de cada um, como o do comparado.
+   */
+  async unidade(ano: number, visao: 0 | 1 | 2 | 3 | 4 | 5, ate?: number, acesso: Acesso = ACESSO_TOTAL, somenteFechadas = false, comparaCom: Comparacao = "ORCAMENTO_EMPRESARIAL", prova: MarcacaoCenario[] = []) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const competencias = meses.map((m) => m.competenciaId);
     const [linhas, valores] = await Promise.all([estrutura(), valoresDaVisao(competencias, visao)]);
@@ -168,16 +173,21 @@ export const resultadosService = {
     // Em Despesas e Extra e no RN, a ROL do Consolidado abre a tabela, como nas abas da planilha.
     if (visao === 4 || visao === 5) valores.forEach((m, i) => consolidado[i].has(COD.RO) && m.set(COD.RO, consolidado[i].get(COD.RO)!));
     const apurado = meses.map((m) => m.competenciaId !== null);
-    const orcado = await orcadoDaVisao(visao, ultimo, comparaCom);
+    const [orcado, ...dosCenarios] = await Promise.all([orcadoDaVisao(visao, ultimo, comparaCom), ...prova.map((m) => orcadoDaVisao(visao, ultimo, m))]);
+    // Os cenários da Tabela PROVA que existem, com a marcação.
+    const doProva = prova.flatMap((m, k) => (dosCenarios[k].cenario ? [{ marcacao: m, orcado: dosCenarios[k] }] : []));
     // O % e o R$/m³ do orçado sobre as bases do próprio orçado (em Despesas e Extra e no RN, as do Consolidado).
-    const basesOrcado = basesDoConsolidado(visao) ? orcado.doConsolidado : orcado.daVisao;
-    const celulaOrcada = (l: LinhaEstrutura, periodo: "mes" | "total") => {
-      const v = arredonda(orcado.daVisao[periodo].get(l.codigo) ?? 0, 4);
+    const celulaDo = (o: typeof orcado) => (l: LinhaEstrutura, periodo: "mes" | "total") => {
+      const basesOrcado = basesDoConsolidado(visao) ? o.doConsolidado : o.daVisao;
+      const v = arredonda(o.daVisao[periodo].get(l.codigo) ?? 0, 4);
       const bp = baseDoPercentual(visao, l);
       const bu = baseDoUnitario(l);
       return { valor: v, pct: bp ? divide(v, basesOrcado[periodo].get(bp)) : null, unitario: bu ? divide(v, basesOrcado[periodo].get(bu)) : null };
     };
+    const celulaOrcada = celulaDo(orcado);
     const porCodigo = new Map(linhas.map((l) => [l.codigo, l]));
+    // As linhas que entram mesmo sem o realizado: as que têm o orçado do comparado ou de um dos cenários.
+    const comOrcado = new Set([orcado, ...doProva.map((c) => c.orcado)].flatMap((o) => [...o.daVisao.total.keys()]));
     return {
       ano,
       ate: ultimo,
@@ -186,10 +196,21 @@ export const resultadosService = {
       cenarioOrcado: orcado.cenario?.nome ?? null,
       // O nome do comparado nos rótulos (21/10/2026): "Orçado" no Orçamento Empresarial; nos outros, o nome da marcação.
       rotuloComparado: rotuloDaComparacao(comparaCom, orcado.cenario),
-      linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, new Set(orcado.daVisao.total.keys())).map((l) => ({
+      ...(prova.length ? { prova: doProva.map((c) => ({ marcacao: c.marcacao, rotulo: rotuloDaComparacao(c.marcacao), cenario: c.orcado.cenario!.nome })) } : {}),
+      linhas: montar(linhas, visao, apurado, valores, consolidado, acesso, comOrcado).map((l) => ({
         ...l,
         /** O orçado do mês de referência e o acumulado de janeiro até ele, com o % e o R$/m³ (zero sem o cenário ou sem a linha nele). */
         orcado: l.tipo === "SECAO" ? null : { mes: celulaOrcada(porCodigo.get(l.codigo)!, "mes"), total: celulaOrcada(porCodigo.get(l.codigo)!, "total") },
+        ...(prova.length && l.tipo !== "SECAO"
+          ? {
+              prova: Object.fromEntries(
+                doProva.map((c) => {
+                  const celula = celulaDo(c.orcado);
+                  return [c.marcacao, { mes: celula(porCodigo.get(l.codigo)!, "mes"), total: celula(porCodigo.get(l.codigo)!, "total") }];
+                }),
+              ),
+            }
+          : {}),
       })),
     };
   },

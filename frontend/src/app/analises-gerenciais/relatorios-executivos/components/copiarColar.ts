@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { Bloco } from "../services/relatoriosExecutivosService";
+import type { Bloco, RotaDosSlides } from "../services/relatoriosExecutivosService";
 
 /**
  * Copiar e colar os blocos dos slides (24/10/2026, pedido do Adão). O bloco copiado vai à área de transferência do sistema
@@ -14,8 +14,11 @@ export const TIPO_DA_COPIA = "application/x-sig-bpm-blocos";
 const CHAVE = "sig-bpm:re-copia";
 const EVENTO = "sig-bpm:re-copia";
 
-/** A cópia: o relatório de origem, os blocos e, guardados no navegador, o texto que foi junto e quando. */
-export type Copia = { relatorioId: string; blocos: Bloco[]; texto?: string; em?: number };
+/**
+ * A cópia: o documento de origem (o relatório ou, desde 31/10/2026, o painel de bordo: `processo`; sem ele, as cópias de
+ * antes, um relatório), os blocos e, guardados no navegador, o texto que foi junto e quando.
+ */
+export type Copia = { relatorioId: string; processo?: RotaDosSlides; blocos: Bloco[]; texto?: string; em?: number };
 
 const TIPOS = new Set(["PAINEL", "INDICADOR", "ANOTACAO", "FOTO", "VIDEO", "TEXTO", "SUMARIO", "TABELA"]);
 
@@ -27,7 +30,8 @@ export function copiaDe(texto: string | null | undefined): Copia | null {
       (b) => !!b && TIPOS.has(b.tipo) && [b.x, b.y, b.w, b.h].every((n) => Number.isInteger(n) && n >= 0) && b.w >= 1 && b.h >= 1,
     );
     if (typeof x.relatorioId !== "string" || !blocos.length) return null;
-    return { relatorioId: x.relatorioId, blocos, ...(typeof x.texto === "string" ? { texto: x.texto } : {}), ...(typeof x.em === "number" ? { em: x.em } : {}) };
+    const processo = x.processo === "paineis-de-bordo" ? x.processo : "relatorios-executivos";
+    return { relatorioId: x.relatorioId, processo, blocos, ...(typeof x.texto === "string" ? { texto: x.texto } : {}), ...(typeof x.em === "number" ? { em: x.em } : {}) };
   } catch {
     return null;
   }

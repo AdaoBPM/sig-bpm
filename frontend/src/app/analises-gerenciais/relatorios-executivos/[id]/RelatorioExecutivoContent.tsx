@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, Trash2, Type, Video } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CloudAlert, CloudCheck, CloudOff, Crop, FilePlus2, FileX2, Image as Imagem, ImageOff, ImagePlus, ImageUp, LayoutGrid, LayoutList, ListOrdered, LoaderCircle, LockOpen, Pencil, Plus, Presentation, Settings, StickyNote, Table2, TableProperties, Trash2, Type, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { EtiquetasDaBarra } from "@/components/layout/EtiquetasDaBarra";
@@ -35,6 +35,7 @@ import { ColarNoSlideDialog, type Colado, type ComoColar } from "../components/C
 import { TransicoesDoSlide, type MudancaDoSlide } from "../components/TransicoesDoSlide";
 import { copiaDe, copiaPeloTexto, formatacaoBasica, TIPO_DA_COPIA, useCopia, type Copia } from "../components/copiarColar";
 import { deTexto, limparHtml } from "../components/TextoRico";
+import { useProcesso } from "../components/processo";
 import { ABAS_SEM_NUMERO, relatoriosExecutivosService, type Bloco, type ConteudoDoBloco, type Fundo, type Pagina, type Relatorio, type TelaDoSumario } from "../services/relatoriosExecutivosService";
 
 /** Um id para o bloco novo (sem o crypto.randomUUID, que o navegador só dá em https). */
@@ -67,7 +68,49 @@ type Aberta = { chave: string; pagina: string | null };
 export function RelatorioExecutivoContent() {
   const { id } = useParams<{ id: string }>();
   useRegistrarAcessoTela("/analises-gerenciais/relatorios-executivos");
-  const consulta = useQuery({ queryKey: ["relatorios-executivos", "relatorio", id], queryFn: () => relatoriosExecutivosService.obter(id) });
+  return (
+    <DocumentoDosSlides
+      id={id}
+      barra={(relatorio, chave, onMudar) => <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={onMudar} />}
+      configuracoes={(relatorio, excluir) => (
+        <>
+          <ConfiguracoesDoRelatorio relatorioId={relatorio.id} />
+          {excluir}
+        </>
+      )}
+      comoUsar={<ComoUsarDoRelatorio />}
+      sobre={(relatorio) => (
+        <p>
+          O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (a Capa, a Introdução, o Demonstrativo de Resultados, as performances
+          Comercial, da Produção, de Serviços e Administrativa e o Encerramento), as páginas com os cards do Painel de Bordo e dos Indicadores de Resultados
+          Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção, os textos, o sumário, as fotos, os
+          vídeos e as imagens de fundo. Criado por {relatorio.criadoPor}.
+        </p>
+      )}
+    />
+  );
+}
+
+/** O que muda de um processo para o outro na tela do documento (31/10/2026: os Relatórios Executivos e os Painéis de Bordo). */
+export type PartesDoDocumento = {
+  /** A barra do topo: o documento, a aba Configurações e os grupos (as abas do relatório; a tela do painel). */
+  barra: (relatorio: Relatorio, chave: string, onMudar: (chave: string) => void) => React.ReactNode;
+  /**
+   * O conteúdo da aba Configurações, com o botão Excluir (nulo para quem não exclui): o relatório o põe embaixo das
+   * comparações; o painel (01/11/2026), na aba Geral.
+   */
+  configuracoes: (relatorio: Relatorio, excluir: React.ReactNode) => React.ReactNode;
+  comoUsar: React.ReactNode;
+  sobre: (relatorio: Relatorio) => React.ReactNode;
+};
+
+/**
+ * A tela de um documento com slides (31/10/2026: um relatório executivo ou um painel de bordo, pelo processo do contexto):
+ * lê o documento e monta o editor, com as partes de cada processo.
+ */
+export function DocumentoDosSlides({ id, ...partes }: { id: string } & PartesDoDocumento) {
+  const processo = useProcesso();
+  const consulta = useQuery({ queryKey: [processo.rota, "relatorio", id], queryFn: () => processo.servico.obter(id) });
   // A aba e a página abertas ficam aqui, para não mudarem quando o editor remonta (ao finalizar, reabrir ou recarregar).
   const [aberta, setAberta] = useState<Aberta | null>(null);
   // O Recarregar do conflito (24/10/2026): o editor remonta com o relatório de agora.
@@ -75,8 +118,8 @@ export function RelatorioExecutivoContent() {
   if (consulta.isError) {
     return (
       <div className="space-y-6">
-        <CabecalhoDaTela titulo="Relatório Executivo" />
-        <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar o relatório.")} />
+        <CabecalhoDaTela titulo={processo.nome} />
+        <Erro erro={mensagemDeErro(consulta.error, `Erro ao carregar o ${processo.documento}.`)} />
       </div>
     );
   }
@@ -91,7 +134,7 @@ export function RelatorioExecutivoContent() {
     await consulta.refetch();
     setGeracao((g) => g + 1);
   };
-  return <Editor key={versao} relatorio={consulta.data} aberta={aberta ?? inicial} setAberta={setAberta} onRecarregar={recarregar} />;
+  return <Editor key={versao} relatorio={consulta.data} aberta={aberta ?? inicial} setAberta={setAberta} onRecarregar={recarregar} {...partes} />;
 }
 
 /** O salvamento automático: 2 s depois da última alteração, ou 10 s depois da primeira, numa edição sem pausa. */
@@ -104,10 +147,22 @@ const JUNTAR = 1000;
 /** Um estado das páginas no histórico do Desfazer, com a aba e a página onde a alteração aconteceu. */
 type Passo = { paginas: Record<string, Pagina[]>; aberta: Aberta };
 
-function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Relatorio; aberta: Aberta; setAberta: (a: Aberta) => void; onRecarregar: () => Promise<void> }) {
+function Editor({
+  relatorio,
+  aberta,
+  setAberta,
+  onRecarregar,
+  barra,
+  configuracoes: conteudoDasConfiguracoes,
+  comoUsar,
+  sobre: sobreDoDocumento,
+}: { relatorio: Relatorio; aberta: Aberta; setAberta: (a: Aberta) => void; onRecarregar: () => Promise<void> } & PartesDoDocumento) {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const dados = useQuery({ queryKey: ["relatorios-executivos", "dados", relatorio.id], queryFn: () => relatoriosExecutivosService.dados(relatorio.id) });
+  // O processo (31/10/2026): o relatório executivo ou o painel de bordo — a rota da API, as consultas e os nomes.
+  const processo = useProcesso();
+  const { rota, servico, documento } = processo;
+  const dados = useQuery({ queryKey: [rota, "dados", relatorio.id], queryFn: () => servico.dados(relatorio.id) });
   const [cores] = useCoresDoPainel();
   const [tipo] = useTipoGrafico();
   // A base de cada grupo (23/10/2026): as páginas e a versão (quando o grupo foi gravado) do que o usuário abriu ou gravou
@@ -139,7 +194,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   // O histórico da sessão (24/10/2026, o Desfazer e o Refazer): os estados de antes de cada alteração e os desfeitos.
   const [historico, setHistorico] = useState<{ passado: Passo[]; futuro: Passo[] }>({ passado: [], futuro: [] });
   const ultimaMudanca = useRef(0);
-  const [adicionando, setAdicionando] = useState(false);
+  // O Adicionar Cards Padrão ou, desde 31/10/2026, o Adicionar Cards PROVA.
+  const [adicionando, setAdicionando] = useState<"padrao" | "prova" | null>(null);
   // O Adicionar Vídeo (20/10/2026): "novo" (um bloco novo) ou o id do quadro de vídeo vazio que recebe o vídeo.
   const [escolhendoVideo, setEscolhendoVideo] = useState<string | null>(null);
   // O andamento do envio do vídeo (0 a 1), no botão Adicionar.
@@ -148,8 +204,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   // A Imagem de Fundo em ajuste (20/10/2026) e o Adicionar Sumário aberto.
   const [ajustandoFundo, setAjustandoFundo] = useState<Fundo | null>(null);
   const [adicionandoSumario, setAdicionandoSumario] = useState(false);
-  // O Adicionar Tabela (22/10/2026).
-  const [adicionandoTabela, setAdicionandoTabela] = useState(false);
+  // O Adicionar Tabela Padrão (22/10/2026) ou, desde 31/10/2026, o Adicionar Tabela PROVA.
+  const [adicionandoTabela, setAdicionandoTabela] = useState<"padrao" | "prova" | null>(null);
   const [confirmar, setConfirmar] = useState<"finalizar" | "excluir" | "excluirPagina" | null>(null);
   // A página com o nome em edição (16/10/2026), na própria aba dela.
   const [renomeando, setRenomeando] = useState<string | null>(null);
@@ -225,7 +281,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   const foto = useMutation({
     mutationFn: async ({ arquivo }: { arquivo: File; livre: boolean }) => {
       const { foto: conteudo, proporcao } = await prepararFoto(arquivo);
-      const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorio.id, conteudo);
+      const { arquivo: nome } = await servico.enviarFoto(relatorio.id, conteudo);
       return { nome, proporcao };
     },
     onSuccess: ({ nome, proporcao }, { livre }) => {
@@ -245,7 +301,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   const imagemNoQuadro = useMutation({
     mutationFn: async ({ arquivo }: { id: string; arquivo: File }) => {
       const { foto: conteudo, proporcao } = await prepararFoto(arquivo);
-      const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorio.id, conteudo);
+      const { arquivo: nome } = await servico.enviarFoto(relatorio.id, conteudo);
       return { nome, proporcao };
     },
     onSuccess: ({ nome, proporcao }, { id }) => {
@@ -266,7 +322,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       if (v.origem === "LINK") return { origem: "LINK" as const, arquivo: "", url: v.url, proporcao: v.proporcao };
       setEnviando(0);
       try {
-        const { arquivo } = await relatoriosExecutivosService.enviarVideo(relatorio.id, v.arquivo, setEnviando);
+        const { arquivo } = await servico.enviarVideo(relatorio.id, v.arquivo, setEnviando);
         return { origem: "ARQUIVO" as const, arquivo, url: "", proporcao: v.proporcao };
       } finally {
         setEnviando(null);
@@ -291,7 +347,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   const imagemDeFundo = useMutation({
     mutationFn: async (arquivo: File) => {
       const { foto: conteudo, proporcao } = await prepararFoto(arquivo, 2560);
-      const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorio.id, conteudo);
+      const { arquivo: nome } = await servico.enviarFoto(relatorio.id, conteudo);
       return { arquivo: nome, proporcao, zoom: 1, x: 0.5, y: 0.5 };
     },
     onSuccess: (f) => setAjustandoFundo(f),
@@ -303,14 +359,17 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   const copia = useCopia();
   const colarBlocos = async (c: Copia) => {
     let blocos = c.blocos;
-    const arquivos = c.relatorioId === relatorio.id ? [] : blocos.flatMap((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo ? [b.arquivo] : []));
+    // A origem (31/10/2026): o relatório ou o painel de onde veio a cópia (sem o processo, as cópias de antes, um relatório).
+    const origem = { id: c.relatorioId, processo: c.processo ?? ("relatorios-executivos" as const) };
+    const outro = origem.processo === "paineis-de-bordo" ? "do outro painel" : "do outro relatório";
+    const arquivos = origem.id === relatorio.id && origem.processo === rota ? [] : blocos.flatMap((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && b.arquivo ? [b.arquivo] : []));
     if (arquivos.length) {
-      const faltando = await relatoriosExecutivosService.copiarArquivos(relatorio.id, c.relatorioId, arquivos).then(
+      const faltando = await servico.copiarArquivos(relatorio.id, origem, arquivos).then(
         (r) => r.faltando,
         () => arquivos,
       );
       if (faltando.length) {
-        toast.warning(`${plural(faltando.length, "1 imagem ou vídeo do outro relatório não veio", `${faltando.length} imagens ou vídeos do outro relatório não vieram`)}: o bloco fica com o quadro vazio.`);
+        toast.warning(`${plural(faltando.length, `1 imagem ou vídeo ${outro} não veio`, `${faltando.length} imagens ou vídeos ${outro} não vieram`)}: o bloco fica com o quadro vazio.`);
         blocos = blocos.map((b) => ((b.tipo === "FOTO" || b.tipo === "VIDEO") && faltando.includes(b.arquivo) ? ({ ...b, arquivo: "" } as Bloco) : b));
       }
     }
@@ -396,8 +455,8 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     setApresentando(Math.max(0, slides.findIndex((s) => s.chave === `${chave}|${pagina?.id}`)));
   };
   const atualizar = (r: Relatorio) => {
-    queryClient.setQueryData(["relatorios-executivos", "relatorio", relatorio.id], r);
-    queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"], exact: true });
+    queryClient.setQueryData([rota, "relatorio", relatorio.id], r);
+    queryClient.invalidateQueries({ queryKey: [rota], exact: true });
   };
   // O salvamento automático (24/10/2026, pedido do Adão, como no Canva; antes, o Gravar): grava os grupos alterados, um a
   // um, cada um com a versão dele, depois do salvamento em andamento (um de cada vez; o que mudar durante ele se grava em
@@ -416,14 +475,14 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       for (const a of alteradas()) {
         if (a.chave === conflitoAgora.current?.aba && forcar !== a.chave) continue;
         const enviadas = paginasAgora.current[a.chave] ?? [];
-        const gravado = await relatoriosExecutivosService.gravarAba(relatorio.id, a.chave, enviadas, { versao: baseAgora.current.versoes[a.chave], forcar: forcar === a.chave });
+        const gravado = await servico.gravarAba(relatorio.id, a.chave, enviadas, { versao: baseAgora.current.versoes[a.chave], forcar: forcar === a.chave });
         r = gravado;
         const versao = gravado.abas.find((x) => x.chave === a.chave)?.atualizadoEm;
         const b = baseAgora.current;
         mudarBase({ paginas: { ...b.paginas, [a.chave]: enviadas }, versoes: { ...b.versoes, [a.chave]: versao ?? b.versoes[a.chave] } });
       }
       // O relatório do cache com o gravado (para quem volta à tela), sem remontar o editor.
-      if (r) queryClient.setQueryData(["relatorios-executivos", "relatorio", relatorio.id], r);
+      if (r) queryClient.setQueryData([rota, "relatorio", relatorio.id], r);
     })();
     emAndamento.current = vez;
     vez.then(
@@ -490,12 +549,15 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     mutationFn: async (acao: "finalizar" | "reabrir") => {
       // Finalizar salva antes o que falta (24/10/2026: depois do salvamento em andamento).
       if (acao === "finalizar") await salvar();
-      return acao === "finalizar" ? relatoriosExecutivosService.finalizarAba(relatorio.id, chave) : relatoriosExecutivosService.reabrirAba(relatorio.id, chave);
+      return acao === "finalizar" ? servico.finalizarAba(relatorio.id, chave) : servico.reabrirAba(relatorio.id, chave);
     },
     onSuccess: (r, acao) => {
       setConfirmar(null);
       atualizar(r);
-      toast.success(acao === "finalizar" ? `${aba?.nome}: finalizado, com todas as abas (só para leitura).` : `${aba?.nome}: reaberto para a edição.`);
+      // No painel (01/11/2026), o painel: o público passa a aparecer para os demais (ou some, ao reabrir).
+      const publico = relatorio.visualizacao === "PUBLICO";
+      if (!processo.comGrupos) toast.success(acao === "finalizar" ? `Painel finalizado, só para leitura${publico ? ": agora aparece para os demais." : "."}` : `Painel reaberto para a edição${publico ? ": não aparece mais para os demais até ser finalizado." : "."}`);
+      else toast.success(acao === "finalizar" ? `${aba?.nome}: finalizado, com todas as abas (só para leitura).` : `${aba?.nome}: reaberto para a edição.`);
     },
     onError: (e) => {
       const c = conflitoDe(e);
@@ -508,15 +570,27 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
   const excluir = useMutation({
     mutationFn: () => {
       descartar.current = true;
-      return relatoriosExecutivosService.excluir(relatorio.id);
+      return servico.excluir(relatorio.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["relatorios-executivos"] });
-      toast.success("Relatório excluído.");
-      router.push("/analises-gerenciais/relatorios-executivos");
+      queryClient.invalidateQueries({ queryKey: [rota] });
+      toast.success(`${Documento} excluído.`);
+      router.push(processo.tela);
     },
   });
   const editavel = aba?.podeEditar ?? false;
+  // "Relatório" ou "Painel" (31/10/2026), no Excluir e nos avisos.
+  const Documento = documento[0].toUpperCase() + documento.slice(1);
+  // O Excluir Relatório só na aba Configurações (27/10/2026, pedido do Adão), embaixo do Cenário de Comparação; no painel
+  // (01/11/2026), na aba Geral. Quem o põe é a parte das Configurações de cada processo.
+  const botaoExcluir = relatorio.podeExcluir ? (
+    <div className="flex justify-end">
+      <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" onClick={() => setConfirmar("excluir")}>
+        <Trash2 className="size-4" />
+        Excluir {Documento}
+      </Button>
+    </div>
+  ) : null;
   // A aba Configurações (22/10/2026), antes da Capa: só o painel dela, sem páginas.
   const configuracoes = chave === CONFIGURACOES;
   const emConfirmacao = confirmar === "finalizar" ? situacao : excluir;
@@ -575,10 +649,11 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
     <RotulosDoGrafico.Provider value={{ realizado: "Realizado", orcado: dados.data?.painel.rotuloComparado ?? "Orçado" }}>
     {/* A largura da área (a da grade, menos as margens de fora), para a altura da foto nova. */}
     <div ref={area} className="space-y-6">
-      <BarraDoRelatorio relatorio={relatorio} chave={chave} onMudar={(c) => setAberta({ chave: c, pagina: null })} />
+      {barra(relatorio, chave, (c) => setAberta({ chave: c, pagina: null }))}
       <CabecalhoDaTela
         // O título da tela é o da aba aberta (17/10/2026: Introdução, Performance da Produção…); o mês fica na barra do topo.
-        titulo={configuracoes ? "Configurações" : (aba?.titulo ?? `RE - ${relatorio.rotuloMes}`)}
+        // No painel (31/10/2026), o nome da tela, Painel de Bordo (o título da aba, o nome do painel, fica nos slides).
+        titulo={configuracoes ? "Configurações" : processo.comGrupos ? (aba?.titulo ?? `RE - ${relatorio.rotuloMes}`) : (aba?.nome ?? processo.nome)}
         acoes={
           // Na aba Configurações (22/10/2026), sem as ações: ela não tem páginas nem slides (não se apresenta nem se exporta).
           configuracoes ? undefined : (
@@ -589,7 +664,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 <button
                   type="button"
                   className={`${classeDaSituacao} font-semibold text-red-700 hover:bg-red-50`}
-                  title={`${conflito.atualizadoPor ?? "Outro usuário"} gravou ${conflito.nome} depois que você abriu o relatório: clique para escolher o que fazer.`}
+                  title={`${conflito.atualizadoPor ?? "Outro usuário"} gravou ${conflito.nome} depois que você abriu o ${documento}: clique para escolher o que fazer.`}
                   onClick={() => setVendoConflito(true)}
                 >
                   <CloudAlert className="size-4" />
@@ -628,13 +703,23 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 <DropdownMenuContent align="end" className="w-max min-w-44 [&_[role=menuitem]]:whitespace-nowrap">
                   <DropdownMenuGroup>
                     <DropdownMenuLabel className="text-xs text-gray-500">Objetos</DropdownMenuLabel>
-                    <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando(true)}>
+                    <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando("padrao")}>
                       <LayoutGrid className="size-4" />
-                      Cards
+                      Cards Padrão
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setAdicionandoTabela(true)}>
+                    {/* Os Cards PROVA (31/10/2026, pedido do Adão): o realizado contra até quatro cenários marcados. */}
+                    <DropdownMenuItem disabled={!dados.data} onClick={() => setAdicionando("prova")}>
+                      <LayoutList className="size-4" />
+                      Cards PROVA
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAdicionandoTabela("padrao")}>
                       <Table2 className="size-4" />
-                      Tabela
+                      Tabela Padrão
+                    </DropdownMenuItem>
+                    {/* A Tabela PROVA (31/10/2026, pedido do Adão): os cenários marcados lado a lado. */}
+                    <DropdownMenuItem onClick={() => setAdicionandoTabela("prova")}>
+                      <TableProperties className="size-4" />
+                      Tabela PROVA
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -672,6 +757,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
+            {/* O Finalizar do grupo (no painel, desde 01/11/2026, o do painel). */}
             {editavel ? (
               <Button type="button" className={botaoPrimario} onClick={() => (conflito?.aba === chave ? setVendoConflito(true) : setConfirmar("finalizar"))}>
                 <CheckCheck className="size-4" />
@@ -692,6 +778,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <ExportarPdfDoRelatorio
               relatorioId={relatorio.id}
               periodo={relatorio.rotuloMes}
+              nome={relatorio.nome}
               slides={slides}
               grupo={{ chave, nome: aba?.nome ?? "" }}
               pagina={{ chave: `${chave}|${pagina?.id}`, nome: pagina ? nomeDaPagina(pagina, nPagina) : "" }}
@@ -736,191 +823,14 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
           </div>
           )
         }
-        comoUsar={
-          <ul>
-            <li>
-              A barra do topo mostra o mês (clique nele para ir a outro relatório), as oito abas — Capa, Introdução, Resultados (Demonstrativo de
-              Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de Serviços), Administrativo
-              (Performance Administrativa) e Encerramento — e, à direita, a situação do relatório. Todos os que leem a tela veem todas as
-              abas, e todos os que a editam editam todas (sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
-              na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O check verde ao lado do nome (o das etapas feitas do Fechamento Mensal) diz que o grupo está finalizado (a dica dele mostra quem o
-              finalizou e quando).
-            </li>
-            <li>
-              Configurações, antes da Capa, é preliminar à apresentação: não tem páginas, não conta nos slides e não entra na tela inteira nem no PDF. Nela, o
-              Cenário de Comparação é o orçado dos cards (Painel de Bordo e Indicadores) e das tabelas: de início, o cenário marcado como Orçamento (a
-              etiqueta amarela; o relatório acompanha a marcação até que se escolha um cenário); ou escolha um dos cenários da lista — todos os públicos, de
-              qualquer exercício, com o ano, o tipo (Sintético ou Analítico) e a marcação em etiquetas — para o relatório ficar com ele, mesmo que a marcação
-              mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). Quem edita a tela escolhe, e a escolha se salva na hora (“Salvo
-              às…”, embaixo da lista); os demais só veem. Embaixo, “Excluir Relatório” (de quem o criou ou do Administrador, enquanto nenhum grupo está
-              finalizado) exclui o relatório, com todas as abas, depois da confirmação.
-            </li>
-            <li>
-              Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
-              dois cliques nele (ou o lápis) o editam, e arrastar a aba de uma página para outra posição a troca de lugar (a ordem dos slides acompanha). Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
-              blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de uma aba para a outra.
-              A página tem o tamanho da tela padrão, 1920 × 1080 (o contorno tracejado): os blocos não passam dele. Na apresentação e no PDF, o slide se
-              reduz ou se amplia por inteiro para caber na tela de quem abre, com a mesma aparência e os blocos nos mesmos lugares em qualquer resolução.
-            </li>
-            <li>
-              Na sua aba, “Adicionar” traz oito opções, em três grupos, que entram na página aberta: Objetos (Cards e Tabela), Texto (Anotação, Texto
-              Livre e Sumário) e Imagem e Vídeo (Imagem com Legenda, Imagem Livre e Vídeo). Cards abre a lista dos cards do Painel de Bordo e
-              dos Indicadores (o card de destaque, com o valor do mês e o acumulado, cada um com o orçado num quadro cinza e a faixa de melhor ou pior, como no Painel), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
-              Painel e os dos Indicadores com os rótulos e em barras (o Configurar Gráfico do card muda); a Metodologia, à direita do nome, ocupa até metade da largura dos valores, quebrando as linhas. Os cards trazem só as competências fechadas, até o mês do relatório.
-            </li>
-            <li>
-              Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
-              nele para mudar) e o texto no card com o destaque da cor. No menu da edição (logo abaixo das abas, com o bloco escolhido), a formatação do
-              texto da anotação e da legenda da imagem: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
-              verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 144; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana, Georgia e as abertas Roboto, Open Sans, Montserrat, Lato e Poppins; a fonte do texto onde está o cursor fica destacada na lista, em negrito e com o fundo cinza) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
-              para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12 a 32; o padrão, 18), e o da fonte, a dele. No menu da edição, escolha a nota: Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
-              Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto. Enquanto você escreve, ela cresce
-              sozinha quando o texto passa da altura dela (até o pé da página), e os blocos de baixo descem.
-            </li>
-            <li>
-              Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (no menu da edição; o tamanho até 144 e o
-              branco servem aos textos sobre a Imagem de Fundo), mas sem o destaque lateral, o título, o ícone e o fundo: na edição, o contorno tracejado aparece com o mouse
-              sobre ele. Como a anotação, ele cresce sozinho enquanto você escreve. Na apresentação, ele não se destaca nem se amplia.
-            </li>
-            <li>
-              Sumário abre o modal Adicionar Sumário: listar as Telas (cada uma com o número do primeiro slide dela) ou as Telas e Slides (abaixo de cada
-              tela, os slides, com os números), e as telas que entram (da Introdução em diante; de início, todas). A lista se monta sozinha, com os slides de
-              agora (as páginas com algum bloco ou com a Imagem de Fundo): os números são a contagem dos slides a partir da Introdução, a mesma do contador
-              do topo dos slides; a tela marcada sem slides não aparece. O Sublinhado (Pontos, Traços, Linha ou Nenhum) é a linha entre o nome e o número, na cor
-              do texto. A engrenagem do menu da edição muda as opções. No menu, a formatação do texto (sem os marcadores e o espaçamento, quase apagados): negrito, itálico, sublinhado, o
-              tamanho, a fonte e a cor, que valem para todas as telas ou para todos os slides — em Telas e Slides, o botão Telas | Slides, no fim da formatação, escolhe qual nível
-              ela muda (de início, as telas em negrito, com 16, e os slides com 14).
-            </li>
-            <li>
-              Tabela abre o modal Adicionar Tabela: a tabela de Resultados de uma aba (Consolidado, Matriz, Filial, Serviços, Despesas e Extra ou RN), até o mês do relatório, como na
-              tela Resultados, com o orçado e a variação. Escolha o Modo (Totais, Atribuições ou Contas, como os níveis da tela), os Meses Anteriores (Recolhidos: só o mês do relatório e os totais;
-              Expandidos: de janeiro ao mês do relatório), as Colunas (Valores Unitários, o R$/m³, que Despesas e Extra e RN não têm; Diferença; Atingimento; e Eficiência: marcadas,
-              entram; de início, todas) e os Totais e Contas que entram (de início, todos; marcar um total marca as linhas dele). A tabela inteira cabe no bloco: ela
-              se reduz na proporção (aumente o bloco para lê-la maior; menos linhas, como em Totais, ficam maiores). A engrenagem do menu da edição muda as opções. Na apresentação, como os
-              cards, ela se destaca sob o mouse e se amplia ao clicar.
-            </li>
-            <li>
-              Imagem com Legenda envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
-              amarelo-ouro. Ao adicionar a imagem (e, depois, pelo botão Cortar e Posicionar do menu da edição), o modal Cortar e Posicionar escolhe o tamanho
-              do bloco: Na Proporção da Imagem (a lista da largura em colunas; a altura acompanha, e a imagem fica inteira), Tamanho Pronto (a lista das
-              frações do slide, de inteira a 1/4 na largura e na altura, cada uma com o desenho dela no slide) ou Tamanho Atual (ao lado, as colunas e as
-              linhas do bloco). Como na Imagem de Fundo, a imagem cobre o quadro: arraste-a para posicioná-la e use o Tamanho (ou a roda do mouse) para
-              aumentá-la; na proporção, aumentá-la a corta no quadro. Embaixo, o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; “Restaurar
-              Ajustes”, no rodapé, volta a imagem ao centro, a 100% e sem os ajustes. Inteira, a imagem aumenta e diminui sempre na mesma proporção, pelos
-              cantos; cortada, por todos os quadrados de ancoragem, e continua cobrindo o quadro. Nas imagens (com legenda, livres e de fundo), o botão de
-              ajustes da barra do bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; nas com legenda e nas livres, também a Borda (a
-              espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). Nas barras dos modais das imagens, o valor também se digita (a
-              barra acompanha). “Restaurar Ajustes”, no canto esquerdo do rodapé, volta à imagem como veio, e “Trocar
-              Imagem” põe outra imagem no lugar, com os ajustes de agora (o bloco fica na proporção da nova; na cortada, o quadro fica, e a nova o cobre).
-            </li>
-            <li>
-              Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
-              slide). Como ela, abre o Cortar e Posicionar ao entrar; na proporção, aumenta e diminui na mesma proporção (até duas linhas de altura ou uma coluna de largura, o que vier antes) e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
-            </li>
-            <li>
-              Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
-              envio) ou o link de um vídeo público do YouTube, do Instagram, do Facebook ou do LinkedIn (o endereço ou o código “incorporar” da
-              plataforma). Ele entra como a Imagem com Legenda, com a legenda embaixo; o do computador e o do YouTube aumentam e diminuem na proporção do vídeo. Na edição
-              e na leitura, o vídeo tem os controles do player.
-            </li>
-            <li>
-              A Imagem de Fundo fica nos botões ao lado das páginas: o ícone de imagem envia uma (reduzida a até 2560 px) e abre o modal Imagem de Fundo,
-              com a miniatura da tela inteira: arraste a imagem
-              para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; “Restaurar Ajustes” a centraliza a 100% (o tamanho que
-              cobre a tela) e sem os ajustes. Ela
-              ocupa o fundo do slide inteiro, por cima do cabeçalho (a faixa tracejada da miniatura) e atrás dos blocos; cada página tem uma. Na página, ela
-              aparece atrás da grade; com ela, o ícone de imagem dá lugar aos de ajustá-la e removê-la. Uma página só com a Imagem de Fundo já é um slide. No modal, “Aplicar
-              Em Todo o Grupo” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas do grupo aberto.
-            </li>
-            <li>
-              O ícone Transições, nos botões ao lado das páginas (depois dos da Imagem de Fundo), abre o modal Transições do slide aberto, em que as
-              mudanças valem na hora: em Animação, a lista Tipo escolhe como o slide entra na apresentação: Esmaecer (o novo aparece
-              sobre o anterior), Rolar Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou
-              da esquerda), ou Nenhuma (a troca na hora). Em Cronômetro, “Avançar Após”, digite os segundos: na apresentação, o slide passa
-              sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A Animação e o Cronômetro têm cada um o seu “Aplicar ao Grupo”:
-              marcado, a mudança vale para todos os slides do grupo (marcar a caixa já leva a transição, ou o avanço, do slide aberto a todos; ela abre
-              marcada quando todos já são iguais); desmarcado, só para o slide aberto. A página nova entra com a transição e o avanço da aberta.
-            </li>
-            <li>
-              Como no Canva: clique num bloco para escolhê-lo (o contorno tracejado, com o mouse sobre um bloco, mostra qual o clique escolhe). O escolhido fica destacado
-              em azul, com os quadrados de ancoragem nos cantos e no meio dos lados: arraste um quadrado para redimensionar (até um tamanho mínimo, para as
-              informações não se amontoarem; a imagem e os vídeos só pelos cantos, na proporção deles). Clique e segure na borda destacada para mover o bloco.
-              Ao mover ou redimensionar, a grade aparece no fundo, bem clara, e o bloco se encaixa nela; o bloco arrastado sobre outro o empurra e, se você
-              continua arrastando e sai de cima dele, o empurrado volta ao lugar. Um clique fora dos blocos ou o Esc soltam o escolhido; o Delete (fora de um
-              texto) o exclui. Num vídeo, o primeiro clique o escolhe; depois, o player responde. O bloco adicionado ou colado já fica escolhido.
-            </li>
-            <li>
-              Copiar e colar: com um bloco escolhido, o Ctrl+C (ou o Copiar do menu da edição) o copia, e o Ctrl+X o recorta; o Ctrl+V (ou o Colar) o cola
-              na página aberta — desta ou de outra aba, ou de outro relatório (as imagens e os vídeos vêm junto) —, no lugar livre mais perto de onde ele
-              estava (sem lugar na página, embaixo do último bloco). Num texto em edição, o Ctrl+C copia o trecho selecionado; sem trecho, o bloco. De outro
-              programa, o Ctrl+V de um texto ou de uma imagem abre o Colar no Slide: o texto entra como Texto Livre ou como Anotação (Positivo, Negativo ou
-              Atenção), com a formatação básica (negrito, itálico, sublinhado e listas; sem as fontes, os tamanhos e as cores de lá) ou só o texto; a imagem,
-              como Imagem com Legenda, Imagem Livre ou Imagem de Fundo. Com o texto e a imagem juntos (a cópia do Word ou do Excel), as duas escolhas. O link
-              de um vídeo do YouTube, do Instagram, do Facebook ou do LinkedIn (ou um arquivo de vídeo) entra direto como vídeo, sem o modal. Num texto em
-              edição, o Ctrl+V de fora cola no próprio texto.
-            </li>
-            <li>
-              O menu da edição, logo abaixo das abas (centralizado e preso no alto ao rolar a página), tem as opções de todos os tipos de bloco, sempre
-              nos mesmos lugares; as que não valem para o bloco escolhido ficam quase apagadas (o nome do bloco aparece na dica da borda dele). Da esquerda para a
-              direita: Desfazer e Refazer (Ctrl+Z e Ctrl+Y, ou Ctrl+Shift+Z: as alterações desta sessão, em todas as abas, até 100 passos; a digitação seguida
-              conta como um passo, e o Desfazer abre a aba e a página da alteração; dentro de um texto em edição, o Ctrl+Z desfaz a digitação, como no
-              navegador), Copiar e Colar (o bloco; veja acima), o gráfico dos cards do Painel e dos Indicadores (em
-              ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), o Zoom do card (100%,
-              125%, 150%, 200%, 250% ou 300%: o conteúdo inteiro — os textos, os valores e o gráfico — maior, no mesmo bloco; o que não couber, aumente o
-              bloco), Configurar (as opções do
-              gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
-              imagem, o Cortar e Posicionar, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
-            </li>
-            <li>
-              “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
-              Introdução, Performance da Produção…), em cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Relatório Executivo”, em
-              cinza, a seta, o período, em preto, e a logo da BPM à direita; embaixo, o rodapé, com o separador igual ao do cabeçalho (atrás da Imagem de Fundo, como o do cabeçalho): à esquerda, a legenda dos cards (nos slides
-              com cards do Painel ou dos Indicadores), e, à direita, o contador dos slides (“1/10”: o slide em preto e negrito e o total, contados da
-              Introdução em diante; nos slides da Capa e do Encerramento, sem ele). Mova o mouse para ver os botões, no centro da base:
-              o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra). Passe o mouse num bloco para destacá-lo; clique nele para
-              ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
-              na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Num vídeo, o mouse sobre ele mostra, no centro de baixo,
-              Reproduzir (Pausar, tocando), Parar e Mudo; o clique o amplia, continuando de onde estava, com os controles do player (a barra para avançar
-              e recuar, o volume e a tela cheia; um clique fora do vídeo ou o Esc fecha, e o vídeo da página fica no ponto em que parou). No Instagram, no
-              Facebook e no LinkedIn, que não aceitam os botões da página, o vídeo toca ampliado, nos controles da plataforma. Na apresentação, os textos
-              não se selecionam.
-            </li>
-            <li>
-              “Exportar” baixa os slides em PDF, como na apresentação (um slide por página, na tela padrão, 1920 × 1080): Toda a Apresentação, o Grupo Atual (a aba do
-              relatório aberta: Capa, Introdução, Administrativo…) ou a Aba Atual (a página aberta), com o número de slides de cada um. Vale o que está na tela, gravado
-              ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
-            </li>
-            <li>
-              As alterações se salvam sozinhas, como no Canva: 2 segundos depois da última (numa edição sem pausa, a cada 10 segundos). Na linha do título, antes
-              do Adicionar, a situação: Salvando…, Salvo às 14:32 ou Não Salvo, em vermelho. Sem conexão ou durante uma publicação do SIG, o Não Salvo tenta de novo
-              sozinho (clique nele para tentar na hora). Saindo da tela por um link, o que falta se salva em segundo plano; fechar ou recarregar a aba do
-              navegador antes de salvar pergunta. Se outra pessoa gravou o mesmo grupo depois que você abriu o relatório, nada desse grupo é salvo: o aviso diz
-              quem gravou e quando, e você escolhe Recarregar (vê o que ela gravou; as suas alterações desse grupo se perdem) ou Gravar por Cima (a sua versão
-              do grupo fica; as dela, nesse grupo, se perdem); com o Cancelar, o grupo fica sem salvar, e o Não Salvo reabre o aviso. Na Auditoria, as
-              gravações seguidas de um grupo pela mesma pessoa ficam numa entrada só, a mais recente (com quantas foram e desde quando).
-            </li>
-            <li>
-              “Finalizar” salva o que falta e finaliza o grupo aberto (Capa, Introdução,
-              Administrativo…), com todas as abas dele, só para leitura, e o grupo ganha o check verde na barra do topo; “Reabrir” o devolve à elaboração. O relatório
-              fica Finalizado quando todos os grupos estão finalizados.
-            </li>
-          </ul>
-        }
-        sobre={
-          <p>
-            O relatório executivo (RE) de {relatorio.rotuloMes}: em cada aba (a Capa, a Introdução, o Demonstrativo de Resultados, as performances
-            Comercial, da Produção, de Serviços e Administrativa e o Encerramento), as páginas com os cards do Painel de Bordo e dos Indicadores de Resultados
-            Empresariais escolhidos pelos gestores, com as anotações dos pontos positivos, negativos e de atenção, os textos, o sumário, as fotos, os
-            vídeos e as imagens de fundo. Criado por{" "}
-            {relatorio.criadoPor}.
-          </p>
-        }
+        comoUsar={comoUsar}
+        sobre={sobreDoDocumento(relatorio)}
       />
       {/*
         As páginas da aba (16/10/2026), no formato das abas das telas, com o nome de cada uma (o do slide; na sua aba, dois
         cliques ou o lápis o editam) e, na altura delas, os botões só com ícones: renomear, incluir, excluir, recuar e avançar.
       */}
-      {configuracoes ? <ConfiguracoesDoRelatorio relatorioId={relatorio.id} /> : null}
+      {configuracoes ? conteudoDasConfiguracoes(relatorio, botaoExcluir) : null}
       {!configuracoes && aba?.visivel ? (
         <div className="flex items-end">
           <div role="tablist" aria-label={`Páginas de ${aba.nome}`} data-tour="abas" className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200">
@@ -1090,15 +1000,6 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
           onMudar={mudarPagina}
         />
       )}
-      {/* O Excluir Relatório só na aba Configurações (27/10/2026, pedido do Adão), embaixo do Cenário de Comparação. */}
-      {configuracoes && relatorio.podeExcluir ? (
-        <div className="flex justify-end">
-          <Button type="button" variant="outline" className="rounded-sm border-red-300 text-red-700 hover:bg-red-50" onClick={() => setConfirmar("excluir")}>
-            <Trash2 className="size-4" />
-            Excluir Relatório
-          </Button>
-        </div>
-      ) : null}
       {/*
         O grupo gravado por outro usuário depois que este abriu o relatório (23/10/2026): recarregar (as alterações não
         salvas deste grupo se perdem) ou gravar por cima (as do outro, nesse grupo, se perdem). Com o Cancelar, o grupo fica
@@ -1110,13 +1011,13 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <DialogHeader>
               <DialogTitle>Gravado por Outro Usuário</DialogTitle>
               <DialogDescription>
-                {conflito.atualizadoPor ?? "Outro usuário"} gravou {conflito.nome} em {dataHora(conflito.atualizadoEm)}, depois que você abriu o relatório. As
+                {conflito.atualizadoPor ?? "Outro usuário"} gravou {conflito.nome} em {dataHora(conflito.atualizadoEm)}, depois que você abriu o {documento}. As
                 suas alterações deste grupo não foram salvas.
               </DialogDescription>
             </DialogHeader>
             <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
               <li>
-                <strong>Recarregar</strong> traz o relatório como está gravado agora, com as alterações de {conflito.atualizadoPor ?? "quem gravou"}; as suas
+                <strong>Recarregar</strong> traz o {documento} como está gravado agora, com as alterações de {conflito.atualizadoPor ?? "quem gravou"}; as suas
                 alterações deste grupo se perdem.
               </li>
               <li>
@@ -1205,11 +1106,12 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       {adicionandoTabela ? (
         <ConfigurarTabelaDialog
           relatorioId={relatorio.id}
-          titulo="Adicionar Tabela"
-          onFechar={() => setAdicionandoTabela(false)}
+          titulo={adicionandoTabela === "prova" ? "Adicionar Tabela PROVA" : "Adicionar Tabela Padrão"}
+          prova={adicionandoTabela === "prova"}
+          onFechar={() => setAdicionandoTabela(null)}
           onAplicar={(o) => {
             incluir([{ tipo: "TABELA", ...o }]);
-            setAdicionandoTabela(false);
+            setAdicionandoTabela(null);
           }}
         />
       ) : null}
@@ -1226,10 +1128,11 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       {adicionando && dados.data ? (
         <AdicionarCardsDialog
           dados={dados.data}
-          onFechar={() => setAdicionando(false)}
+          prova={adicionando === "prova"}
+          onFechar={() => setAdicionando(null)}
           onAdicionar={(novos) => {
             incluir(novos);
-            setAdicionando(false);
+            setAdicionando(null);
           }}
         />
       ) : null}
@@ -1239,7 +1142,7 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
             <DialogHeader>
               <DialogTitle>Excluir a Página {pagina ? nomeDaPagina(pagina, nPagina) : ""}</DialogTitle>
               <DialogDescription>
-                A página {pagina ? nomeDaPagina(pagina, nPagina) : ""} da aba {aba?.nome} sai com os blocos dela. O Desfazer, no menu da edição, a traz de volta.
+                A página {pagina ? nomeDaPagina(pagina, nPagina) : ""} {processo.comGrupos ? `da aba ${aba?.nome}` : "do painel"} sai com os blocos dela. O Desfazer, no menu da edição, a traz de volta.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -1256,11 +1159,16 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(null) : undefined)}>
           <DialogContent className="rounded-sm sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{confirmar === "finalizar" ? `Finalizar ${aba?.nome ?? ""}` : "Excluir Relatório"}</DialogTitle>
+              <DialogTitle>{confirmar === "finalizar" ? (processo.comGrupos ? `Finalizar ${aba?.nome ?? ""}` : "Finalizar Painel") : `Excluir ${Documento}`}</DialogTitle>
               <DialogDescription>
                 {confirmar === "finalizar"
-                  ? `O grupo ${aba?.nome} de ${relatorio.rotuloMes}, com todas as abas dele, fica finalizado, só para leitura.${mudouAba ? " As alterações ainda não salvas são salvas antes." : ""}${vazia ? " O grupo está vazio." : ""} Você pode reabri-lo depois.`
-                  : `O relatório de ${relatorio.rotuloMes}, com todas as abas, é excluído.`}
+                  ? processo.comGrupos
+                    ? `O grupo ${aba?.nome} de ${relatorio.rotuloMes}, com todas as abas dele, fica finalizado, só para leitura.${mudouAba ? " As alterações ainda não salvas são salvas antes." : ""}${vazia ? " O grupo está vazio." : ""} Você pode reabri-lo depois.`
+                    : // O painel (01/11/2026): o público só aparece para os demais depois de finalizado.
+                      `O painel ${relatorio.nome}, com todas as abas, fica finalizado, só para leitura${relatorio.visualizacao === "PUBLICO" ? ", e passa a aparecer para todos os que leem os Painéis de Bordo (é Público)" : " (é Privado: continua só para você e os Administradores)"}.${mudouAba ? " As alterações ainda não salvas são salvas antes." : ""}${vazia ? " O painel está vazio." : ""} Você pode reabri-lo depois.`
+                  : relatorio.nome
+                    ? `O painel ${relatorio.nome}, com todas as páginas, as imagens e os vídeos, é excluído.`
+                    : `O relatório de ${relatorio.rotuloMes}, com todas as abas, é excluído.`}
               </DialogDescription>
             </DialogHeader>
             <Erro erro={emConfirmacao.isError ? mensagemDeErro(emConfirmacao.error, "Não foi possível concluir.") : null} />
@@ -1283,6 +1191,268 @@ function Editor({ relatorio, aberta, setAberta, onRecarregar }: { relatorio: Rel
       ) : null}
     </div>
     </RotulosDoGrafico.Provider>
+  );
+}
+
+/** O Como Usar do relatório executivo: a barra do topo e as Configurações, o que é comum aos painéis e o Finalizar. */
+function ComoUsarDoRelatorio() {
+  return (
+    <ul>
+      <li>
+        A barra do topo mostra o mês (clique nele para ir a outro relatório), as oito abas — Capa, Introdução, Resultados (Demonstrativo de
+        Resultados), Comercial (Performance Comercial), Produção (Performance da Produção), Serviços (Performance de Serviços), Administrativo
+        (Performance Administrativa) e Encerramento — e, à direita, a situação do relatório. Todos os que leem a tela veem todas as
+        abas, e todos os que a editam editam todas (sem o recorte de departamentos). Os slides da Capa abrem a apresentação e os do Encerramento a fecham; os dois têm os blocos onde se põem e não entram
+        na contagem dos slides nem no Sumário (o contador do topo e os números do Sumário começam na Introdução). O check verde ao lado do nome (o das etapas feitas do Fechamento Mensal) diz que o grupo está finalizado (a dica dele mostra quem o
+        finalizou e quando).
+      </li>
+      <li>
+        Configurações, antes da Capa, é preliminar à apresentação: não tem páginas, não conta nos slides e não entra na tela inteira nem no PDF. Ela tem
+        dois grupos. A Comparação Padrão é o orçado dos Cards Padrão (Painel de Bordo e Indicadores) e das Tabelas Padrão: de início, o cenário marcado
+        como Orçamento (a etiqueta amarela; o relatório acompanha a marcação até que se escolha um cenário); ou escolha um dos cenários da lista — os
+        cenários com marcação, de qualquer exercício, com o ano, o tipo (Sintético ou Analítico) e a marcação em etiquetas — para o relatório ficar com
+        ele, mesmo que a marcação mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). A Comparação PROVA são os cenários dos
+        Cards PROVA e das Tabelas PROVA: marque dois ou mais dos cenários marcados (Previsão, Orçado, Vendido e Anterior, cada um com o quadradinho da cor
+        dele; de início, todos); com dois marcados, eles não se desmarcam antes de se marcar outro. Ela acompanha as marcações: se uma marcação passar para
+        outro cenário, os objetos PROVA comparam com ele. Quem edita a tela escolhe, e as escolhas se salvam na hora (“Salvo às…”, embaixo das listas); os
+        demais só veem. Embaixo, “Excluir Relatório” (de quem o criou ou do Administrador, enquanto nenhum grupo está finalizado) exclui o relatório, com
+        todas as abas, depois da confirmação.
+      </li>
+      <ItensDoComoUsar />
+      <li>
+        “Finalizar” salva o que falta e finaliza o grupo aberto (Capa, Introdução,
+        Administrativo…), com todas as abas dele, só para leitura, e o grupo ganha o check verde na barra do topo; “Reabrir” o devolve à elaboração. O relatório
+        fica Finalizado quando todos os grupos estão finalizados.
+      </li>
+    </ul>
+  );
+}
+
+/**
+ * Os itens do Como Usar comuns aos Relatórios Executivos e aos Painéis de Bordo (31/10/2026: as mesmas páginas, blocos,
+ * edição, apresentação, PDF e salvamento), com as frases que mudam de um processo para o outro (as abas e os grupos do
+ * relatório; a tela única do painel).
+ */
+export function ItensDoComoUsar() {
+  const p = useProcesso();
+  const d = p.documento;
+  // O relatório tem os grupos (as abas da barra do topo); o painel, uma tela só.
+  const g = p.comGrupos;
+  return (
+    <>
+      <li>
+        {g ? (
+          <>
+            Cada aba tem uma ou mais páginas, logo abaixo do título. O nome da página é o do slide na apresentação (de início, “Página 1”): na sua aba,
+            dois cliques nele (ou o lápis) o editam, e arrastar a aba de uma página para outra posição a troca de lugar (a ordem dos slides acompanha). Os outros botões ao lado delas incluem uma página nova (depois da aberta), excluem a página aberta (com
+            blocos, pede confirmação; a única página não se exclui) e recuam ou avançam pelas páginas, passando de uma aba para a outra.
+          </>
+        ) : (
+          <>
+            A tela tem uma ou mais abas (as páginas do painel), logo abaixo do título. O nome da aba é o do slide na apresentação (de início, “Página 1”):
+            dois cliques nele (ou o lápis) o editam, e arrastar uma aba para outra posição a troca de lugar (a ordem dos slides acompanha). Os outros botões
+            ao lado delas incluem uma aba nova (depois da aberta), excluem a aba aberta (com blocos, pede confirmação; a única não se exclui) e recuam ou
+            avançam pelas abas.
+          </>
+        )}{" "}
+        A página tem o tamanho da tela padrão, 1920 × 1080 (o contorno tracejado): os blocos não passam dele. Na apresentação e no PDF, o slide se
+        reduz ou se amplia por inteiro para caber na tela de quem abre, com a mesma aparência e os blocos nos mesmos lugares em qualquer resolução.
+      </li>
+      <li>
+        {g ? "Na sua aba, “Adicionar”" : "“Adicionar”"} traz dez opções, em três grupos, que entram na página aberta: Objetos (Cards Padrão, Cards PROVA, Tabela Padrão e Tabela PROVA), Texto (Anotação, Texto
+        Livre e Sumário) e Imagem e Vídeo (Imagem com Legenda, Imagem Livre e Vídeo). Cards Padrão abre o modal Adicionar Cards Padrão, com a lista dos cards do Painel de Bordo e
+        dos Indicadores (o card de destaque, com o valor do mês e o acumulado, cada um com o orçado num quadro cinza e a faixa de melhor ou pior, como no Painel), com ou sem o gráfico (a caixa Com Gráfico): marque os que quiser; eles entram no fim da página, os do
+        Painel e os dos Indicadores com os rótulos e em barras (o Configurar Gráfico do card muda); a Metodologia, à direita do nome, ocupa até metade da largura dos valores, quebrando as linhas. Os cards trazem só as competências fechadas, até o mês do {d}.
+      </li>
+      <li>
+        Cards PROVA abre o modal Adicionar Cards PROVA: os mesmos cards, comparados com os cenários da Comparação PROVA (Configurações), que o modal
+        lista; ela vale para todos os objetos PROVA do {d}. No
+        card PROVA, embaixo do valor do mês e do acumulado, cada cenário vem numa linha: “vs.” e o cenário, com o quadradinho da cor dele, o orçado, a
+        variação e a faixa de melhor ou pior à direita (a dica traz o nome do cenário). O gráfico traz uma série por cenário: nas barras, uma coluna para
+        cada um; na área, o realizado em área e os cenários em linhas. As cores: a Previsão em cinza forte (cinza fraco no tema Escuro), o Orçado em
+        preto (claro no Escuro), o Vendido em ouro forte e o Anterior em ouro fraco; o realizado continua no amarelo-ouro. Num slide com cards ou
+        tabelas PROVA, os cards e as tabelas padrão ficam na cor do cenário de comparação do {d} (comparado com a Previsão, em cinza forte, como
+        no PROVA).
+      </li>
+      <li>
+        Anotação inclui um bloco de texto ao lado do último bloco, no formato dos cards do Painel: o título em cima (de início, o nome da nota; clique
+        nele para mudar) e o texto no card com o destaque da cor. No menu da edição (logo abaixo das abas, com o bloco escolhido), a formatação do
+        texto da anotação e da legenda da imagem: negrito, itálico, sublinhado, aumentar e diminuir a fonte, a cor (Padrão — a cor do tema —, cinza, ouro,
+        verde, azul, amarelo, laranja, vermelho e branco) e os marcadores (quadrado, seta, check e erro, o “x”); o tamanho da fonte é o botão com o número (clique nele para escolher, de 10 a 144; o padrão, 14, tem asterisco). Nas anotações e no Texto Livre, também a fonte (o botão Aa: Padrão, Arial, Calibri, Segoe UI, Verdana, Georgia e as abertas Roboto, Open Sans, Montserrat, Lato e Poppins; a fonte do texto onde está o cursor fica destacada na lista, em negrito e com o fundo cinza) e o espaçamento entre as linhas (de 0,50 a 2,00, para o texto todo do bloco; 1,00 é o simples, e Padrão volta ao de antes). Ela vale para o trecho selecionado (diminuir ou voltar ao padrão vale também para parte de um trecho aumentado); sem seleção,
+        para todo o texto. Com o cursor no título da anotação, o botão do tamanho muda o do título (de 12 a 32; o padrão, 18), e o da fonte, a dele. No menu da edição, escolha a nota: Positivo (verde; azul com a Acessibilidade Daltonismo, no menu do usuário),
+        Negativo (vermelho) ou Atenção (laranja). A anotação pode ficar baixa a ponto de mostrar uma linha só do texto. Enquanto você escreve, ela cresce
+        sozinha quando o texto passa da altura dela (até o pé da página), e os blocos de baixo descem.
+      </li>
+      <li>
+        Texto Livre inclui um texto com a formatação das anotações, com a fonte e o espaçamento entre as linhas (no menu da edição; o tamanho até 144 e o
+        branco servem aos textos sobre a Imagem de Fundo), mas sem o destaque lateral, o título, o ícone e o fundo: na edição, o contorno tracejado aparece com o mouse
+        sobre ele. Como a anotação, ele cresce sozinho enquanto você escreve. Na apresentação, ele não se destaca nem se amplia.
+      </li>
+      <li>
+        {g ? (
+          <>
+            Sumário abre o modal Adicionar Sumário: listar as Telas (cada uma com o número do primeiro slide dela) ou as Telas e Slides (abaixo de cada
+            tela, os slides, com os números), e as telas que entram (da Introdução em diante; de início, todas). A lista se monta sozinha, com os slides de
+            agora (as páginas com algum bloco ou com a Imagem de Fundo): os números são a contagem dos slides a partir da Introdução, a mesma do contador
+            do topo dos slides; a tela marcada sem slides não aparece.
+          </>
+        ) : (
+          <>
+            Sumário abre o modal Adicionar Sumário: listar a Tela (o Painel de Bordo, com o número do primeiro slide) ou as Telas e Slides (abaixo da tela,
+            os slides do painel, com os números). A lista se monta sozinha, com os slides de agora (as páginas com algum bloco ou com a Imagem de Fundo): os
+            números são a contagem dos slides a partir do primeiro, a mesma do contador do rodapé dos slides.
+          </>
+        )}{" "}
+        O Sublinhado (Pontos, Traços, Linha ou Nenhum) é a linha entre o nome e o número, na cor
+        do texto. A engrenagem do menu da edição muda as opções. No menu, a formatação do texto (sem os marcadores e o espaçamento, quase apagados): negrito, itálico, sublinhado, o
+        tamanho, a fonte e a cor, que valem para todas as telas ou para todos os slides — em Telas e Slides, o botão Telas | Slides, no fim da formatação, escolhe qual nível
+        ela muda (de início, as telas em negrito, com 16, e os slides com 14).
+      </li>
+      <li>
+        Tabela Padrão abre o modal Adicionar Tabela Padrão: a tabela de Resultados de uma aba (Consolidado, Matriz, Filial, Serviços, Despesas e Extra ou RN), até o mês do {d}, como na
+        tela Resultados, com o orçado e a variação. Escolha o Modo (Totais, Atribuições ou Contas, como os níveis da tela), os Meses Anteriores (Recolhidos: só o mês do {d} e os totais;
+        Expandidos: de janeiro ao mês do {d}), as Colunas (Valores Unitários, o R$/m³, que Despesas e Extra e RN não têm; Diferença; Atingimento; e Eficiência: marcadas,
+        entram; de início, todas) e os Totais e Contas que entram (de início, todos; marcar um total marca as linhas dele). A tabela inteira cabe no bloco: ela
+        se reduz na proporção (aumente o bloco para lê-la maior; menos linhas, como em Totais, ficam maiores). A engrenagem do menu da edição muda as opções. Na apresentação, como os
+        cards, ela se destaca sob o mouse e se amplia ao clicar.
+      </li>
+      <li>
+        Tabela PROVA abre o modal Adicionar Tabela PROVA: a mesma tabela, com os cenários da Comparação PROVA (Configurações), como nos Cards PROVA.
+        Depois do mês do {d} e depois do total, cada cenário vem no seu grupo de colunas, lado a lado, no lugar
+        do orçado: o valor, o % e o R$/m³. As colunas da Diferença, do Atingimento e da Eficiência não entram (das opcionais, só o R$/m³). Cada grupo
+        tem o rótulo na cor do cenário (a dos Cards PROVA), e as linhas, as variações mais fracas dela (as linhas de resultado, a média; os totais, a
+        mais fraca; as contas, brancas), como o cinza do orçado; o Orçado fica como o orçado da Tabela Padrão. A dica do rótulo traz o nome do cenário.
+      </li>
+      <li>
+        Imagem com Legenda envia uma imagem (JPEG, PNG, WebP ou GIF; reduzida a até 1600 px; as partes transparentes continuam transparentes) e a inclui com a legenda embaixo, no destaque
+        amarelo-ouro. Ao adicionar a imagem (e, depois, pelo botão Cortar e Posicionar do menu da edição), o modal Cortar e Posicionar escolhe o tamanho
+        do bloco: Na Proporção da Imagem (a lista da largura em colunas; a altura acompanha, e a imagem fica inteira), Tamanho Pronto (a lista das
+        frações do slide, de inteira a 1/4 na largura e na altura, cada uma com o desenho dela no slide) ou Tamanho Atual (ao lado, as colunas e as
+        linhas do bloco). Como na Imagem de Fundo, a imagem cobre o quadro: arraste-a para posicioná-la e use o Tamanho (ou a roda do mouse) para
+        aumentá-la; na proporção, aumentá-la a corta no quadro. Embaixo, o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; “Restaurar
+        Ajustes”, no rodapé, volta a imagem ao centro, a 100% e sem os ajustes. Inteira, a imagem aumenta e diminui sempre na mesma proporção, pelos
+        cantos; cortada, por todos os quadrados de ancoragem, e continua cobrindo o quadro. Nas imagens (com legenda, livres e de fundo), o botão de
+        ajustes da barra do bloco (ou o modal da Imagem de Fundo) muda o Brilho, a Matiz, a Saturação, o Desfoque e a Transparência; nas com legenda e nas livres, também a Borda (a
+        espessura e a cor) e o Sombreamento centralizado (a intensidade e o desfoque). Nas barras dos modais das imagens, o valor também se digita (a
+        barra acompanha). “Restaurar Ajustes”, no canto esquerdo do rodapé, volta à imagem como veio, e “Trocar
+        Imagem” põe outra imagem no lugar, com os ajustes de agora (o bloco fica na proporção da nova; na cortada, o quadro fica, e a nova o cobre).
+      </li>
+      <li>
+        Imagem Livre envia uma imagem como a Imagem com Legenda, mas a inclui sozinha: sem a legenda e sem o fundo (um PNG transparente fica transparente sobre o
+        slide). Como ela, abre o Cortar e Posicionar ao entrar; na proporção, aumenta e diminui na mesma proporção (até duas linhas de altura ou uma coluna de largura, o que vier antes) e, na apresentação, como as demais imagens, se destaca sob o mouse e se amplia ao clicar.
+      </li>
+      <li>
+        Vídeo abre o modal Adicionar Vídeo: um arquivo do computador (MP4, WebM, MOV, M4V ou OGG, até 200 MB; o botão Adicionar mostra o andamento do
+        envio) ou o link de um vídeo público do YouTube, do Instagram, do Facebook ou do LinkedIn (o endereço ou o código “incorporar” da
+        plataforma). Ele entra como a Imagem com Legenda, com a legenda embaixo; o do computador e o do YouTube aumentam e diminuem na proporção do vídeo. Na edição
+        e na leitura, o vídeo tem os controles do player.
+      </li>
+      <li>
+        A Imagem de Fundo fica nos botões ao lado das páginas: o ícone de imagem envia uma (reduzida a até 2560 px) e abre o modal Imagem de Fundo,
+        com a miniatura da tela inteira: arraste a imagem
+        para posicioná-la e use o Tamanho (ou a roda do mouse sobre ela) para aumentá-la; “Restaurar Ajustes” a centraliza a 100% (o tamanho que
+        cobre a tela) e sem os ajustes. Ela
+        ocupa o fundo do slide inteiro, por cima do cabeçalho (a faixa tracejada da miniatura) e atrás dos blocos; cada página tem uma. Na página, ela
+        aparece atrás da grade; com ela, o ícone de imagem dá lugar aos de ajustá-la e removê-la. Uma página só com a Imagem de Fundo já é um slide. No modal, “Aplicar
+        Em Todo o {p.grupo}” põe a mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas {g ? "do grupo aberto" : "do painel"}.
+      </li>
+      <li>
+        O ícone Transições, nos botões ao lado das páginas (depois dos da Imagem de Fundo), abre o modal Transições do slide aberto, em que as
+        mudanças valem na hora: em Animação, a lista Tipo escolhe como o slide entra na apresentação: Esmaecer (o novo aparece
+        sobre o anterior), Rolar Vertical ou Rolar Horizontal (o novo empurra o anterior: ao avançar, de baixo ou da direita; ao recuar, de cima ou
+        da esquerda), ou Nenhuma (a troca na hora). Em Cronômetro, “Avançar Após”, digite os segundos: na apresentação, o slide passa
+        sozinho ao próximo depois desse tempo (em branco ou zero, só pelas setas). A Animação e o Cronômetro têm cada um o seu “Aplicar ao {p.grupo}”:
+        marcado, a mudança vale para todos os slides do {p.grupo.toLowerCase()} (marcar a caixa já leva a transição, ou o avanço, do slide aberto a todos; ela abre
+        marcada quando todos já são iguais); desmarcado, só para o slide aberto. A página nova entra com a transição e o avanço da aberta.
+      </li>
+      <li>
+        Como no Canva: clique num bloco para escolhê-lo (o contorno tracejado, com o mouse sobre um bloco, mostra qual o clique escolhe). O escolhido fica destacado
+        em azul, com os quadrados de ancoragem nos cantos e no meio dos lados: arraste um quadrado para redimensionar (até um tamanho mínimo, para as
+        informações não se amontoarem; a imagem e os vídeos só pelos cantos, na proporção deles). Clique e segure na borda destacada para mover o bloco.
+        Ao mover ou redimensionar, a grade aparece no fundo, bem clara, e o bloco se encaixa nela; o bloco arrastado sobre outro o empurra e, se você
+        continua arrastando e sai de cima dele, o empurrado volta ao lugar. Um clique fora dos blocos ou o Esc soltam o escolhido; o Delete (fora de um
+        texto) o exclui. Num vídeo, o primeiro clique o escolhe; depois, o player responde. O bloco adicionado ou colado já fica escolhido.
+      </li>
+      <li>
+        Copiar e colar: com um bloco escolhido, o Ctrl+C (ou o Copiar do menu da edição) o copia, e o Ctrl+X o recorta; o Ctrl+V (ou o Colar) o cola
+        na página aberta — {g ? "desta ou de outra aba, ou de outro relatório ou painel de bordo" : "desta ou de outra aba, ou de outro painel ou relatório executivo"} (as imagens e os vídeos vêm junto) —, no lugar livre mais perto de onde ele
+        estava (sem lugar na página, embaixo do último bloco). Num texto em edição, o Ctrl+C copia o trecho selecionado; sem trecho, o bloco. De outro
+        programa, o Ctrl+V de um texto ou de uma imagem abre o Colar no Slide: o texto entra como Texto Livre ou como Anotação (Positivo, Negativo ou
+        Atenção), com a formatação básica (negrito, itálico, sublinhado e listas; sem as fontes, os tamanhos e as cores de lá) ou só o texto; a imagem,
+        como Imagem com Legenda, Imagem Livre ou Imagem de Fundo. Com o texto e a imagem juntos (a cópia do Word ou do Excel), as duas escolhas. O link
+        de um vídeo do YouTube, do Instagram, do Facebook ou do LinkedIn (ou um arquivo de vídeo) entra direto como vídeo, sem o modal. Num texto em
+        edição, o Ctrl+V de fora cola no próprio texto.
+      </li>
+      <li>
+        O menu da edição, logo abaixo das abas (centralizado e preso no alto ao rolar a página), tem as opções de todos os tipos de bloco, sempre
+        nos mesmos lugares; as que não valem para o bloco escolhido ficam quase apagadas (o nome do bloco aparece na dica da borda dele). Da esquerda para a
+        direita: Desfazer e Refazer (Ctrl+Z e Ctrl+Y, ou Ctrl+Shift+Z: as alterações desta sessão, {g ? "em todas as abas" : "em todas as páginas"}, até 100 passos; a digitação seguida
+        conta como um passo, e o Desfazer abre {g ? "a aba e a página" : "a página"} da alteração; dentro de um texto em edição, o Ctrl+Z desfaz a digitação, como no
+        navegador), Copiar e Colar (o bloco; veja acima), o gráfico dos cards do Painel e dos Indicadores (em
+        ciclo: os meses e o acumulado → só o acumulado, com o “A” no ícone → sem gráfico; o card muda de largura na proporção), o Zoom do card (100%,
+        125%, 150%, 200%, 250% ou 300%: o conteúdo inteiro — os textos, os valores e o gráfico — maior, no mesmo bloco; o que não couber, aumente o
+        bloco), Configurar (as opções do
+        gráfico — os rótulos e o tipo, neste card ou em todos os cards da aba; as cores seguem a Acessibilidade —, do Sumário ou da Tabela), os ajustes da
+        imagem, o Cortar e Posicionar, as notas das anotações, a formatação do texto (nas anotações, no Texto Livre, nas legendas e, a do Sumário, por nível) e excluir.
+      </li>
+      <li>
+        {g ? (
+          <>
+            “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o grupo (o título da aba:
+            Introdução, Performance da Produção…), em cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Relatório Executivo”, em
+            cinza, a seta, o período, em preto, e a logo da BPM à direita; embaixo, o rodapé, com o separador igual ao do cabeçalho (atrás da Imagem de Fundo, como o do cabeçalho): à esquerda, a legenda dos cards (nos slides
+            com cards do Painel ou dos Indicadores; com cards PROVA, os cenários do slide, cada um na cor dele), e, à direita, o contador dos slides (“1/10”: o slide em preto e negrito e o total, contados da
+            Introdução em diante; nos slides da Capa e do Encerramento, sem ele). Mova o mouse para ver os botões, no centro da base:
+            o grupo anterior (a aba), recuar, avançar, o próximo grupo e sair (as setas do teclado também mudam o slide; Esc encerra).
+          </>
+        ) : (
+          <>
+            “Apresentar” mostra as páginas com blocos como slides, em tela inteira e sem o menu lateral, a partir da página aberta, com o nome do painel, em
+            cinza, a seta e o nome do slide (o da página), em preto, à esquerda do topo, e “Painel de Bordo”, em cinza, a seta, a competência, em preto, e a
+            logo da BPM à direita; embaixo, o rodapé, com o separador igual ao do cabeçalho (atrás da Imagem de Fundo, como o do cabeçalho): à esquerda, a
+            legenda dos cards (nos slides com cards do Painel ou dos Indicadores; com cards PROVA, os cenários do slide, cada um na cor dele), e, à direita, o
+            contador dos slides (“1/10”: o slide em preto e negrito e o total). Mova o mouse para ver os botões, no centro da base: recuar, avançar e sair
+            (as setas do teclado também mudam o slide; Esc encerra).
+          </>
+        )}{" "}
+        Passe o mouse num bloco para destacá-lo; clique nele para
+        ampliá-lo na tela, com o fundo escurecido (um clique em qualquer lugar fecha). Num card do Painel, o clique no gráfico amplia só o gráfico, e
+        na parte antes dele, só essa parte (o nome e os valores, como num card sem gráfico). Num vídeo, o mouse sobre ele mostra, no centro de baixo,
+        Reproduzir (Pausar, tocando), Parar e Mudo; o clique o amplia, continuando de onde estava, com os controles do player (a barra para avançar
+        e recuar, o volume e a tela cheia; um clique fora do vídeo ou o Esc fecha, e o vídeo da página fica no ponto em que parou). No Instagram, no
+        Facebook e no LinkedIn, que não aceitam os botões da página, o vídeo toca ampliado, nos controles da plataforma. Na apresentação, os textos
+        não se selecionam.
+      </li>
+      <li>
+        “Exportar” baixa os slides em PDF, como na apresentação (um slide por página, na tela padrão, 1920 × 1080):{" "}
+        {g
+          ? "Toda a Apresentação, o Grupo Atual (a aba do relatório aberta: Capa, Introdução, Administrativo…) ou a Aba Atual (a página aberta)"
+          : "Toda a Apresentação ou a Aba Atual (a página aberta)"}
+        , com o número de slides de cada um. Vale o que está na tela, gravado
+        ou não; o botão mostra o andamento (Gerando PDF… 3/12), e os vídeos saem como um quadro com o ícone (o player não vira imagem).
+      </li>
+      <li>
+        As alterações se salvam sozinhas, como no Canva: 2 segundos depois da última (numa edição sem pausa, a cada 10 segundos). Na linha do título, antes
+        do Adicionar, a situação: Salvando…, Salvo às 14:32 ou Não Salvo, em vermelho. Sem conexão ou durante uma publicação do SIG, o Não Salvo tenta de novo
+        sozinho (clique nele para tentar na hora). Saindo da tela por um link, o que falta se salva em segundo plano; fechar ou recarregar a aba do
+        navegador antes de salvar pergunta.{" "}
+        {g ? (
+          <>
+            Se outra pessoa gravou o mesmo grupo depois que você abriu o relatório, nada desse grupo é salvo: o aviso diz
+            quem gravou e quando, e você escolhe Recarregar (vê o que ela gravou; as suas alterações desse grupo se perdem) ou Gravar por Cima (a sua versão
+            do grupo fica; as dela, nesse grupo, se perdem); com o Cancelar, o grupo fica sem salvar, e o Não Salvo reabre o aviso. Na Auditoria, as
+            gravações seguidas de um grupo pela mesma pessoa ficam numa entrada só, a mais recente (com quantas foram e desde quando).
+          </>
+        ) : (
+          <>
+            Se o painel foi gravado em outro lugar (outra aba do navegador ou o Administrador) depois que você o abriu, nada é salvo: o aviso diz quem
+            gravou e quando, e você escolhe Recarregar (vê o que foi gravado; as suas alterações se perdem) ou Gravar por Cima (a sua versão fica; a outra se
+            perde); com o Cancelar, o painel fica sem salvar, e o Não Salvo reabre o aviso. Na Auditoria, as gravações seguidas do painel pela mesma pessoa
+            ficam numa entrada só, a mais recente (com quantas foram e desde quando).
+          </>
+        )}
+      </li>
+    </>
   );
 }
 

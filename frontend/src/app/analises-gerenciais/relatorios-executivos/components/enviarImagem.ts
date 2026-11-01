@@ -1,4 +1,4 @@
-import { relatoriosExecutivosService } from "../services/relatoriosExecutivosService";
+import type { ProcessoDosSlides } from "./processo";
 
 /**
  * A foto para o relatório (16/10/2026): reduzida a até 1600 px no lado maior (a Imagem de Fundo, 20/10/2026, a até 2560,
@@ -32,9 +32,12 @@ export async function prepararFoto(arquivo: File, maximo = 1600): Promise<{ foto
   return { foto: await gerar("image/jpeg", 0.85), proporcao: imagem.width / imagem.height };
 }
 
-/** Prepara e envia a imagem (22/10/2026: o Trocar Imagem dos modais): o nome do arquivo no servidor e a proporção. */
-export async function enviarImagem(relatorioId: string, arquivo: File, maximo = 1600) {
+/**
+ * Prepara e envia a imagem (22/10/2026: o Trocar Imagem dos modais), na rota do processo (31/10/2026: o relatório ou o
+ * painel): o nome do arquivo no servidor e a proporção.
+ */
+export async function enviarImagem(processo: ProcessoDosSlides, relatorioId: string, arquivo: File, maximo = 1600) {
   const { foto, proporcao } = await prepararFoto(arquivo, maximo);
-  const { arquivo: nome } = await relatoriosExecutivosService.enviarFoto(relatorioId, foto);
+  const { arquivo: nome } = await processo.servico.enviarFoto(relatorioId, foto);
   return { arquivo: nome, proporcao };
 }

@@ -12,6 +12,7 @@ import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 import { enderecoDaFoto, type Fundo } from "../services/relatoriosExecutivosService";
 import { ajustesNoPadrao, ajustesRestaurados, BarraComValor, BotaoRestaurarAjustes, ControlesDosAjustes, estiloDosAjustes } from "./AjustesDaImagem";
 import { enviarImagem } from "./enviarImagem";
+import { useProcesso } from "./processo";
 import { TELA_PADRAO } from "./TelaPadrao";
 
 /** O zoom da Imagem de Fundo: de 1 (o tamanho que cobre a tela) a 4. */
@@ -24,12 +25,13 @@ const entre = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
  * direita, com qualquer zoom; ela sempre cobre a caixa inteira.
  */
 export function CamadaDoFundo({ relatorioId, fundo, className, style }: { relatorioId: string; fundo: Fundo; className?: string; style?: React.CSSProperties }) {
+  const { rota } = useProcesso();
   const ponto = `${fundo.x * 100}% ${fundo.y * 100}%`;
   return (
     <div aria-hidden className={`pointer-events-none overflow-hidden ${className ?? ""}`} style={style}>
       {/* eslint-disable-next-line @next/next/no-img-element -- a foto vem do servidor, pelo proxy, com o login. */}
       <img
-        src={enderecoDaFoto(relatorioId, fundo.arquivo)}
+        src={enderecoDaFoto(relatorioId, fundo.arquivo, rota)}
         alt=""
         draggable={false}
         className="size-full max-w-none object-cover select-none"
@@ -64,6 +66,7 @@ export function AjustarFundoDialog({
   onAplicar: (f: Fundo, todoOGrupo: boolean) => void;
   onFechar: () => void;
 }) {
+  const processo = useProcesso();
   const [f, setF] = useState(fundo);
   // A mesma Imagem de Fundo em todas as páginas do grupo (27/10/2026, pedido do Adão).
   const [todoOGrupo, setTodoOGrupo] = useState(false);
@@ -85,7 +88,7 @@ export function AjustarFundoDialog({
   const trocar = async (arquivo: File) => {
     setEnviando(true);
     try {
-      mudar(await enviarImagem(relatorioId, arquivo, 2560));
+      mudar(await enviarImagem(processo, relatorioId, arquivo, 2560));
     } catch (e) {
       toast.error(e instanceof Error && e.message ? e.message : "Não foi possível enviar a imagem.");
     } finally {
@@ -101,7 +104,7 @@ export function AjustarFundoDialog({
             A imagem cobre o slide inteiro, por cima do cabeçalho, atrás dos blocos. Arraste-a para posicionar; o Tamanho (ou a roda do mouse sobre ela) a
             aumenta; embaixo, o brilho, a matiz, a saturação, o desfoque e a transparência (os valores também se digitam). “Restaurar Ajustes” volta a imagem
             ao centro, a 100% e sem os ajustes, e “Trocar Imagem” põe outra imagem no lugar, com a posição, o tamanho e os ajustes. Com “Aplicar Em Todo o
-            Grupo”, a imagem vai para todas as páginas do grupo.
+            {processo.grupo}”, a imagem vai para todas as páginas do {processo.grupo.toLowerCase()}.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -137,7 +140,9 @@ export function AjustarFundoDialog({
         {grupo ? (
           <label className="flex items-center gap-2 text-sm" title={`A mesma imagem, na mesma posição e com os mesmos ajustes, em todas as páginas de ${grupo}`}>
             <input type="checkbox" className="accent-black" checked={todoOGrupo} onChange={(e) => setTodoOGrupo(e.target.checked)} />
-            Aplicar Em Todo o Grupo ({grupo})
+            {/* Num painel (31/10/2026), “Aplicar Em Todo o Painel”, sem o nome do grupo (é o da tela). */}
+            Aplicar Em Todo o {processo.grupo}
+            {processo.comGrupos ? ` (${grupo})` : null}
           </label>
         ) : null}
         <DialogFooter className="sm:justify-between">

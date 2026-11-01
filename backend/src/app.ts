@@ -31,6 +31,7 @@ import { rateiosRoutes } from "./routes/rateios/rateiosRoutes.js";
 import { relatoriosRoutes } from "./routes/relatorios/relatoriosRoutes.js";
 import { resultadosLinhaRoutes } from "./routes/resultadosLinha/resultadosLinhaRoutes.js";
 import { relatoriosExecutivosRoutes } from "./routes/analisesGerenciais/relatoriosExecutivosRoutes.js";
+import { paineisDeBordoRoutes } from "./routes/analisesGerenciais/paineisDeBordoRoutes.js";
 import { apiExternaRoutes, conectividadeRoutes } from "./routes/conectividade/conectividadeRoutes.js";
 import { cenariosRoutes } from "./routes/cenarios/cenariosRoutes.js";
 import {
@@ -99,6 +100,8 @@ app.use("/lancamentos-receita", lancamentosReceitaRoutes);
 app.use("/relatorios", relatoriosRoutes);
 // Os Relatórios Executivos (15/10/2026, Análises Gerenciais).
 app.use("/relatorios-executivos", relatoriosExecutivosRoutes);
+// Os Painéis de Bordo (31/10/2026, Análises Gerenciais), feitos a partir dos Relatórios Executivos.
+app.use("/paineis-de-bordo", paineisDeBordoRoutes);
 // A Biblioteca de APIs (24/10/2026): a API externa (pelo /api/v1 do Next) e a tela.
 app.use("/v1", apiExternaRoutes);
 app.use("/conectividade", conectividadeRoutes);

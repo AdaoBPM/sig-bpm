@@ -12,6 +12,7 @@ import { plural } from "@/lib/texto";
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import type { Bloco, DadosDoRelatorio } from "../services/relatoriosExecutivosService";
+import { listaDosCenarios } from "./cenariosDoProva";
 
 /** O texto para a busca: sem diferença de maiúsculas e de acentos. */
 const normal = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -19,10 +20,12 @@ const normal = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLower
 type Novo = Omit<Extract<Bloco, { tipo: "PAINEL" }>, "id" | "x" | "y" | "w" | "h"> | Omit<Extract<Bloco, { tipo: "INDICADOR" }>, "id" | "x" | "y" | "w" | "h">;
 
 /**
- * O modal Adicionar Cards (15/10/2026): os cards do Painel de Bordo (as abas Resultados e Performance, por grupo), com ou
- * sem o gráfico, e os dos Indicadores (por grupo), com a busca; os marcados entram no fim da aba do relatório.
+ * O modal Adicionar Cards Padrão (15/10/2026; antes, Adicionar Cards): os cards do Painel de Bordo (as abas Resultados e Performance, por grupo), com ou
+ * sem o gráfico, e os dos Indicadores (por grupo), com a busca; os marcados entram no fim da aba do relatório. Com `prova`
+ * (31/10/2026, pedido do Adão), o Adicionar Cards PROVA: os mesmos cards, comparados com os cenários da Comparação PROVA
+ * do relatório (a aba Configurações).
  */
-export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: DadosDoRelatorio; onAdicionar: (novos: Novo[]) => void; onFechar: () => void }) {
+export function AdicionarCardsDialog({ dados, prova = false, onAdicionar, onFechar }: { dados: DadosDoRelatorio; prova?: boolean; onAdicionar: (novos: Novo[]) => void; onFechar: () => void }) {
   const [origem, setOrigem] = useState<"painel" | "indicadores">("painel");
   const [busca, setBusca] = useState("");
   const [comGrafico, setComGrafico] = useState(true);
@@ -55,9 +58,10 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
       const [t, ...p] = k.split("|");
       // Os cards do Painel entram com os rótulos e em barras (20/10/2026; os dos Indicadores também, 22/10/2026); o Configurar
       // Gráfico do card os muda.
+      const comProva = prova ? { prova: true as const } : {};
       return t === "P"
-        ? { tipo: "PAINEL", aba: p[0] as "resultados" | "performance", quadro: p[1], titulo: p[2], sigla: p[3], comGrafico, comRotulos: true, tipoGrafico: "barras" }
-        : { tipo: "INDICADOR", nome: p.join("|"), ...(comGrafico ? { grafico: "MESES" as const } : {}), comRotulos: true, tipoGrafico: "barras" };
+        ? { tipo: "PAINEL", aba: p[0] as "resultados" | "performance", quadro: p[1], titulo: p[2], sigla: p[3], comGrafico, comRotulos: true, tipoGrafico: "barras", ...comProva }
+        : { tipo: "INDICADOR", nome: p.join("|"), ...(comGrafico ? { grafico: "MESES" as const } : {}), comRotulos: true, tipoGrafico: "barras", ...comProva };
     });
     onAdicionar(novos);
   };
@@ -65,10 +69,11 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
       <DialogContent className="flex max-h-[90vh] flex-col rounded-sm sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Adicionar Cards</DialogTitle>
+          <DialogTitle>{prova ? "Adicionar Cards PROVA" : "Adicionar Cards Padrão"}</DialogTitle>
           <DialogDescription>
-            Marque os cards do Painel de Bordo ou dos Indicadores (até {dados.painel.rotuloMes}, só das competências fechadas). Eles entram no fim da aba; depois,
-            mova e redimensione cada um na tela.
+            {prova
+              ? `Marque os cards do Painel de Bordo ou dos Indicadores (até ${dados.painel.rotuloMes}, só das competências fechadas): cada card compara o realizado com os cenários da Comparação PROVA (Configurações)${dados.prova.cenarios.length ? `, hoje ${listaDosCenarios(dados.prova.cenarios)}` : ""}, um por linha e uma série no gráfico. Eles entram no fim da aba; depois, mova e redimensione cada um na tela.`
+              : `Marque os cards do Painel de Bordo ou dos Indicadores (até ${dados.painel.rotuloMes}, só das competências fechadas). Eles entram no fim da aba; depois, mova e redimensione cada um na tela.`}
           </DialogDescription>
         </DialogHeader>
         {/* As abas e a busca na altura delas (sem encolher): só a lista rola. */}
@@ -119,7 +124,7 @@ export function AdicionarCardsDialog({ dados, onAdicionar, onFechar }: { dados: 
           <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
             Cancelar
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={!marcados.size} onClick={adicionar}>
+          <Button type="button" className={botaoPrimario} disabled={!marcados.size || (prova && !dados.prova.cenarios.length)} onClick={adicionar}>
             <Plus className="size-4" />
             Adicionar
           </Button>

@@ -11,6 +11,7 @@ import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 
 import { enderecoDaFoto, type AjustesDeImagem, type RecorteDaImagem } from "../services/relatoriosExecutivosService";
 import { enviarImagem } from "./enviarImagem";
+import { useProcesso } from "./processo";
 import { COR_PADRAO, CORES_DA_FONTE } from "./TextoRico";
 
 type Controle = { chave: keyof AjustesDeImagem; rotulo: string; min: number; max: number; padrao: number; unidade: string };
@@ -295,6 +296,7 @@ export function AjustesDaImagemDialog({
   onAplicar: (a: AjustesDeImagem | undefined, troca?: ImagemTrocada) => void;
   onFechar: () => void;
 }) {
+  const processo = useProcesso();
   const [a, setA] = useState(inicial);
   const [troca, setTroca] = useState<ImagemTrocada | undefined>(undefined);
   const [enviando, setEnviando] = useState(false);
@@ -302,7 +304,7 @@ export function AjustesDaImagemDialog({
   const trocar = async (escolhido: File) => {
     setEnviando(true);
     try {
-      setTroca(await enviarImagem(relatorioId, escolhido));
+      setTroca(await enviarImagem(processo, relatorioId, escolhido));
     } catch (e) {
       toast.error(e instanceof Error && e.message ? e.message : "Não foi possível enviar a imagem.");
     } finally {
@@ -321,7 +323,7 @@ export function AjustesDaImagemDialog({
         </DialogHeader>
         {/* A prévia sobre o xadrez, para a transparência aparecer. */}
         <div className="h-56 overflow-hidden rounded-sm border border-gray-200 bg-[repeating-conic-gradient(var(--color-gray-200)_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] p-2">
-          <ImagemComMoldura src={enderecoDaFoto(relatorioId, troca?.arquivo ?? arquivo)} alt="Prévia" proporcao={troca?.proporcao ?? proporcao} ajustes={a} />
+          <ImagemComMoldura src={enderecoDaFoto(relatorioId, troca?.arquivo ?? arquivo, processo.rota)} alt="Prévia" proporcao={troca?.proporcao ?? proporcao} ajustes={a} />
         </div>
         <ControlesDosAjustes ajustes={a} onMudar={setA} comMoldura={comMoldura} />
         <DialogFooter className="sm:justify-between">

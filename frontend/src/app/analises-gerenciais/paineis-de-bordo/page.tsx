@@ -1,6 +1,16 @@
-import { TelaEmDesenvolvimento } from "@/components/shared/TelaEmDesenvolvimento";
+import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { SemLeitura } from "@/components/shared/SemLeitura";
 
-/** Processo do menu lateral ainda em desenvolvimento (27/10/2026). */
+import { PaineisDeBordoContent } from "./PaineisDeBordoContent";
+
+/** Os Painéis de Bordo (31/10/2026, Análises Gerenciais), feitos a partir dos Relatórios Executivos. */
 export default function PaineisDeBordoPage() {
-  return <TelaEmDesenvolvimento />;
+  return (
+    <ProtectedLayout>
+      <PermissionGuard permission="paineis_de_bordo:ler" fallback={<SemLeitura />}>
+        <PaineisDeBordoContent />
+      </PermissionGuard>
+    </ProtectedLayout>
+  );
 }

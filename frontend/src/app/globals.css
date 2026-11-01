@@ -135,6 +135,28 @@
   --cor-texto-rotulo-orcado: #ffffff;
   --cor-grafico-orcado: #111111;
   --cor-grafico-grade: #e5e7eb;
+  /* Os cenários dos cards PROVA (31/10/2026, pedido do Adão): a Previsão em cinza forte, o Orçado no preto do orçado
+     (--cor-grafico-orcado), o Vendido em ouro forte e o Anterior em ouro fraco; o Realizado continua no amarelo-ouro. */
+  --cor-grafico-previsao: #6a7282;
+  --cor-grafico-vendido: #b8860b;
+  --cor-grafico-anterior: #f1df9b;
+  /* A Tabela PROVA (31/10/2026): o rótulo de cada cenário na cor dele (o texto, branco ou escuro, o que lê melhor) e as
+     linhas nas variações mais fracas, como o cinza do orçado (gray-300 e gray-200): a de resultado, a média; a dos totais,
+     a mais fraca; as contas, brancas. O Orçado usa as do orçado. */
+  --cor-texto-rotulo-previsao: #ffffff;
+  --cor-texto-rotulo-vendido: #111111;
+  --cor-texto-rotulo-anterior: #111111;
+  --cor-tabela-previsao-resultado: #e2e5e9;
+  --cor-tabela-previsao-total: #f0f2f4;
+  --cor-tabela-vendido-resultado: #ead3a0;
+  --cor-tabela-vendido-total: #f5eacd;
+  --cor-tabela-anterior-resultado: #f8edc6;
+  --cor-tabela-anterior-total: #fcf6e3;
+  /* As linhas pares dos Indicadores na Comparação PROVA (31/10/2026): a variação mais fraca de cada cenário; no Escuro,
+     escuras, como as pares do orçado (gray-100), com um pouco da cor do cenário. */
+  --cor-indicadores-previsao-par: var(--cor-tabela-previsao-total);
+  --cor-indicadores-vendido-par: var(--cor-tabela-vendido-total);
+  --cor-indicadores-anterior-par: var(--cor-tabela-anterior-total);
   /* Os contadores do menu lateral (14/10/2026): brancos com o número preto no Padrão e no Escuro (o menu é preto); pretos
      com o número branco no Claro (o menu é branco). Não são amarelos, para não sumirem na tela ativa, em amarelo-ouro. */
   --cor-contador-menu: #ffffff;
@@ -245,6 +267,15 @@
   --cor-texto-rotulo-orcado: #111827;
   --cor-grafico-orcado: #f3f4f6;
   --cor-grafico-grade: #42474f;
+  /* A Previsão dos cards PROVA em cinza fraco (o Orçado fica claro); no rótulo da Tabela PROVA, com o texto escuro. As
+     linhas da Tabela PROVA continuam claras, com o texto escuro, como as do orçado (celula-orcado). */
+  --cor-grafico-previsao: #7b828c;
+  --cor-texto-rotulo-previsao: #111827;
+  /* As pares dos Indicadores na Comparação PROVA: o gray-100 do Escuro com um pouco da cor de cada cenário (em hexadecimal:
+     o color-mix com variáveis some no processamento do CSS). */
+  --cor-indicadores-previsao-par: #454a52;
+  --cor-indicadores-vendido-par: #534b36;
+  --cor-indicadores-anterior-par: #5f5e56;
 }
 /* O preto dos destaques (a tela atual nas barras, a escolha nas listas) vira claro; o texto branco dele já ficou escuro. */
 [data-tema="escuro"] .bg-black {

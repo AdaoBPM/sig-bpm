@@ -19,9 +19,11 @@ import { ExportarRelatorio } from "../components/ExportarRelatorio";
 import { IndicadoresDoPainel } from "./IndicadoresDoPainel";
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { useComparaCom } from "../components/ComparaCom";
+import type { CenarioDoProva } from "../components/cenariosDoProva";
 import { MiniGrafico } from "../components/MiniGrafico";
 import {
   LegendaRealizadoOrcado,
+  Quadradinho,
   SeletorRotulos,
   SeletorTipoGrafico,
   useRotulosDosValores,
@@ -194,6 +196,42 @@ function DestaqueDoDesvio({ b, formatarOrcado }: { b: Pick<BlocoPainel, "orcado"
 }
 
 /**
+ * Um cenário dos cards PROVA (31/10/2026: os Relatórios Executivos): o nome, a cor (a das séries do gráfico), a dica (o
+ * nome do cenário), o realizado contra ele no mês e no acumulado e o orçado dele em cada mês da série.
+ */
+export type ComparacaoDoCard = { rotulo: string; cor: string; dica?: string; mes: BlocoPainel; acumulado: BlocoPainel; serie: Array<number | null> };
+
+/**
+ * Uma linha da lista dos cards PROVA (31/10/2026, pedido do Adão): o destaque do desvio deitado — "vs." e o cenário, com o
+ * quadradinho da cor dele no gráfico, o orçado dele e a variação com o ícone do sinal —, no cinza do destaque, com a
+ * faixa na cor do sinal à direita (sem orçado, cinza). Os fundos em SVG, como os do destaque (o Copiar como Imagem).
+ */
+function LinhaDoCenario({ c, b, formatarOrcado }: { c: Pick<ComparacaoDoCard, "rotulo" | "cor" | "dica">; b: BlocoPainel; formatarOrcado: (v: number | null) => string }) {
+  const SINAL = useSinais();
+  const cor = b.sinal === null ? "var(--color-gray-400)" : SINAL[b.sinal].cor;
+  return (
+    <div
+      className="relative flex min-w-0 items-center gap-2 overflow-hidden rounded-sm border-r-[12px] px-2 py-0.5"
+      style={{ borderRightColor: cor }}
+      title={`${c.dica ?? c.rotulo}: ${b.sinal === null ? "sem sinal" : SINAL[b.sinal].rotulo}`}
+    >
+      <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
+        <rect width="100%" height="100%" style={{ fill: "var(--color-gray-100)" }} />
+      </svg>
+      <span className="relative flex min-w-0 flex-1 items-center gap-1.5 text-xs text-gray-600">
+        <Quadradinho cor={c.cor} />
+        <span className="truncate">vs. {c.rotulo}</span>
+      </span>
+      <span className="relative min-w-12 shrink-0 text-right text-base leading-snug font-bold whitespace-nowrap text-gray-900">{formatarOrcado(b.orcado)}</span>
+      <span className="relative inline-flex min-w-[4.5rem] shrink-0 items-center justify-end gap-1.5 text-base leading-snug font-bold whitespace-nowrap text-gray-900">
+        {b.sinal === null ? null : <IconeDoSinal s={b.sinal} />}
+        {desvio(b.vsOrcado)}
+      </span>
+    </div>
+  );
+}
+
+/**
  * O realizado contra o orçado fora do painel (22/10/2026: os cards de Indicadores dos Relatórios Executivos), com a mesma
  * regra do painel: o desvio é o realizado sobre o orçado, menos 1, com o sinal invertido no orçado negativo; até 5%,
  * amarelo; senão, melhor ou pior conforme o sentido — ↑ quanto maior, melhor; ↓ quanto menor, melhor; nos indicadores
@@ -236,7 +274,38 @@ const percentualDaBase = (i: ItemPainel, b: BlocoPainel) =>
  * "Realizado (Atual)", e o valor com a unidade), o valor em destaque e o percentual da base; à direita, na altura do rótulo, o destaque do desvio
  * (a variação, "vs. Orçado" ou "vs. Comparado" e o valor orçado).
  */
-function GrupoPeriodo({ periodo, b, f, base, dica }: { periodo: string; b: BlocoPainel; f: FormatacaoDoCard; base: string | null; dica?: string }) {
+function GrupoPeriodo({
+  periodo,
+  b,
+  f,
+  base,
+  dica,
+  comparacoes,
+}: {
+  periodo: string;
+  b: BlocoPainel;
+  f: FormatacaoDoCard;
+  base: string | null;
+  dica?: string;
+  /** Nos cards PROVA (31/10/2026): um cenário por linha, embaixo do valor, no lugar do destaque do desvio. */
+  comparacoes?: Array<Pick<ComparacaoDoCard, "rotulo" | "cor" | "dica"> & { b: BlocoPainel }>;
+}) {
+  if (comparacoes)
+    return (
+      <div className="min-w-0" title={dica}>
+        <p className="text-xs text-gray-600">
+          {periodo}
+          {f.unidade ? ` (${f.unidade})` : ""}
+        </p>
+        <p className="text-[27.5px] leading-tight font-extrabold whitespace-nowrap text-gray-900 2xl:text-[32.5px]">{f.formatarCurto(b.realizado)}</p>
+        <p className="h-4 text-xs whitespace-nowrap text-gray-500">{base}</p>
+        <div className="mt-1.5 flex flex-col gap-0.5">
+          {comparacoes.map((c) => (
+            <LinhaDoCenario key={c.rotulo} c={c} b={c.b} formatarOrcado={f.formatarCurto} />
+          ))}
+        </div>
+      </div>
+    );
   return (
     // Sem espaço para os dois lado a lado (21/10/2026), o destaque do desvio desce para baixo do valor, em vez de cortá-lo.
     <div className="flex min-w-0 flex-wrap items-start justify-between gap-2" title={dica}>
@@ -266,6 +335,8 @@ function CardIndicador({
   tipo,
   comRotulos,
   formatacao,
+  comparacoes,
+  corDoOrcado,
 }: {
   i: ItemPainel;
   rotuloMes: string;
@@ -273,9 +344,17 @@ function CardIndicador({
   comRotulos: boolean;
   /** A formatação do Atual e do Acumulado, quando não é a do formato do item (os cards de Indicadores, 22/10/2026). */
   formatacao?: { mes: FormatacaoDoCard; acumulado: FormatacaoDoCard };
+  /** Os cenários dos cards PROVA (31/10/2026), no lugar do orçado. */
+  comparacoes?: ComparacaoDoCard[];
+  /** A cor do orçado no gráfico (31/10/2026: a do cenário, nos slides com cards PROVA). */
+  corDoOrcado?: string;
 }) {
   const fm = formatacao?.mes ?? formatacaoDo(i.formato);
   const fa = formatacao?.acumulado ?? formatacaoDo(i.formatoAcumulado);
+  // As séries do gráfico e os valores delas em cada mês e no acumulado (os cards PROVA).
+  const comparados = comparacoes?.map((c) => ({ rotulo: c.rotulo, cor: c.cor }));
+  const serie = comparacoes ? i.serie.map((m, k) => ({ ...m, comparados: comparacoes.map((c) => c.serie[k] ?? null) })) : i.serie;
+  const doPeriodo = (p: "mes" | "acumulado") => comparacoes?.map((c) => ({ rotulo: c.rotulo, cor: c.cor, dica: c.dica, b: c[p] }));
   const sentido = (
     <span title={i.sentido === "↑" ? "Quanto maior, melhor" : i.sentido === "↓" ? "Quanto menor, melhor" : "Acompanhamento"} className="font-bold">
       {i.sentido}
@@ -307,10 +386,10 @@ function CardIndicador({
         </p>
       </header>
       <div className="self-end lg:col-start-1 lg:row-start-2 lg:pr-3">
-        <GrupoPeriodo periodo="Atual" b={i.mes} f={fm} base={percentualDaBase(i, i.mes)} dica={`Atual: ${rotuloMes}`} />
+        <GrupoPeriodo periodo="Atual" b={i.mes} f={fm} base={percentualDaBase(i, i.mes)} dica={`Atual: ${rotuloMes}`} comparacoes={doPeriodo("mes")} />
       </div>
       <div className={`self-end lg:col-start-2 lg:row-start-2 lg:pr-3 ${coluna}`}>
-        <GrupoPeriodo periodo="Acumulado" b={i.acumulado} f={fa} base={percentualDaBase(i, i.acumulado)} dica={`Acumulado: ${acumulado}`} />
+        <GrupoPeriodo periodo="Acumulado" b={i.acumulado} f={fa} base={percentualDaBase(i, i.acumulado)} dica={`Acumulado: ${acumulado}`} comparacoes={doPeriodo("acumulado")} />
       </div>
       {/*
         O gráfico dos meses e, ao lado, o do acumulado (realizado × orçado), como na planilha, na altura do card: os meses e
@@ -325,13 +404,15 @@ function CardIndicador({
           */}
           <div data-grafico-dos-meses className="min-w-0" style={{ flex: `${Math.max(1, i.serie.length)} 1 ${comRotulos ? 0 : LARGURA_DA_ESCALA}px` }}>
             <MiniGrafico
-              dados={i.serie}
+              dados={serie}
               formatar={fm.formatar}
               formatarCurto={fm.formatarCurto}
               tipo={tipo}
               comRotulos={comRotulos}
               comEscala={!comRotulos}
               fatorDaEscala={fm.fatorDaEscala}
+              comparados={comparados}
+              corDoOrcado={corDoOrcado}
             />
           </div>
           {/*
@@ -349,7 +430,7 @@ function CardIndicador({
             </svg>
             <div className="relative h-full">
             <MiniGrafico
-              dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado }]}
+              dados={[{ mes: "ACUM.", realizado: i.acumulado.realizado, orcado: i.acumulado.orcado, comparados: comparacoes?.map((c) => c.acumulado.orcado) }]}
               formatar={fa.formatar}
               formatarCurto={fa.formatarCurto}
               tipo={tipo}
@@ -357,6 +438,8 @@ function CardIndicador({
               comEscala={!comRotulos}
               fatorDaEscala={fa.fatorDaEscala}
               acumulado
+              comparados={comparados}
+              corDoOrcado={corDoOrcado}
             />
             </div>
           </div>
@@ -379,6 +462,8 @@ export function CardDoPainel({
   soAcumulado = false,
   comRotulos = false,
   formatacao,
+  comparacoes,
+  corDoOrcado,
 }: {
   i: ItemPainel;
   rotuloMes: string;
@@ -390,6 +475,10 @@ export function CardDoPainel({
   comRotulos?: boolean;
   /** A formatação do indicador (os cards de Indicadores dos Relatórios Executivos, 22/10/2026). */
   formatacao?: { mes: FormatacaoDoCard; acumulado: FormatacaoDoCard };
+  /** O card PROVA (31/10/2026): o realizado contra estes cenários, cada um numa linha e numa série do gráfico. */
+  comparacoes?: ComparacaoDoCard[];
+  /** A cor do orçado no gráfico do card padrão (31/10/2026: a do cenário, nos slides com cards PROVA). */
+  corDoOrcado?: string;
 }) {
   const doGrafico = !comGrafico
     ? "[&_[data-grafico-do-card]]:hidden lg:[&_[data-card-indicador]]:grid-cols-2"
@@ -399,7 +488,7 @@ export function CardDoPainel({
   return (
     <CoresDoPainel.Provider value={cores}>
       <div className={`h-full [&>article]:h-full ${doGrafico}`}>
-        <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} formatacao={formatacao} />
+        <CardIndicador i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} formatacao={formatacao} comparacoes={comparacoes} corDoOrcado={corDoOrcado} />
       </div>
     </CoresDoPainel.Provider>
   );
@@ -431,8 +520,18 @@ function useGrupoRecolhido(titulo: string): [boolean, () => void] {
   return [recolhido, alternar];
 }
 
-/** Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção abaixo da outra. */
-function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean }) {
+/** As linhas dos cenários de um card com a Comparação PROVA (31/10/2026): os que o item traz, na ordem do PROVA. */
+const comparacoesDo = (i: ItemPainel, prova: CenarioDoProva[] | null | undefined) =>
+  prova?.flatMap((c): ComparacaoDoCard[] => {
+    const p = i.prova?.[c.marcacao];
+    return p ? [{ rotulo: c.rotulo, cor: c.cor, dica: `${c.rotulo} (${c.cenario})`, ...p }] : [];
+  });
+
+/**
+ * Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção
+ * abaixo da outra. Com a Comparação PROVA (31/10/2026), os cards PROVA, como os dos Relatórios Executivos.
+ */
+function Secao({ q, rotuloMes, tipo, comRotulos, prova }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean; prova?: CenarioDoProva[] | null }) {
   const secao = useRef<HTMLElement>(null);
   const [recolhido, alternar] = useGrupoRecolhido(q.titulo);
   return (
@@ -460,7 +559,7 @@ function Secao({ q, rotuloMes, tipo, comRotulos }: { q: QuadroPainel; rotuloMes:
       </div>
       <div className={recolhido ? "hidden" : "space-y-3"}>
         {q.itens.map((i) => (
-          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} />
+          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} comparacoes={comparacoesDo(i, prova)} />
         ))}
       </div>
     </section>
@@ -481,6 +580,7 @@ export function CorpoDoPainel({
   aviso,
   comRotulos = false,
   extras = [],
+  prova,
 }: {
   dados: Painel;
   aba: string;
@@ -492,6 +592,8 @@ export function CorpoDoPainel({
   comRotulos?: boolean;
   /** As abas depois de Resultados e Performance (19/10/2026: os Indicadores), com o conteúdo de cada uma. */
   extras?: Array<{ chave: string; rotulo: string; conteudo: ReactNode }>;
+  /** A Comparação PROVA de Resultados Empresariais (31/10/2026): os cards PROVA, com estes cenários. */
+  prova?: CenarioDoProva[] | null;
 }) {
   const extra = extras.find((e) => e.chave === aba);
   const atual = extra ? null : (dados.abas.find((a) => a.chave === aba) ?? dados.abas[0]);
@@ -512,7 +614,7 @@ export function CorpoDoPainel({
       ) : (
         <div className="space-y-6">
           {atual!.quadros.map((q) => (
-            <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} />
+            <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} prova={prova} />
           ))}
         </div>
       )}
@@ -525,14 +627,18 @@ export function CorpoDoPainel({
  * cores do gráfico (Realizado e Orçado ou Comparado) e, numa etiqueta, o cenário comparado, "(vs. <nome>)", quando há
  * (21/10/2026; antes, as cores primeiro e os sinais com o texto completo).
  */
-export function LegendaDoPainel({ tipo, cores, comparado }: { tipo: TipoGrafico; cores: Cores; comparado?: string | null }) {
+/**
+ * `comparados` (31/10/2026: os slides com cards PROVA dos Relatórios Executivos e a Comparação PROVA de Resultados
+ * Empresariais): as séries no lugar do orçado (com o nome do cenário na dica, quando há).
+ */
+export function LegendaDoPainel({ tipo, cores, comparado, comparados }: { tipo: TipoGrafico; cores: Cores; comparado?: string | null; comparados?: Array<{ rotulo: string; cor: string; dica?: string }> }) {
   return (
     <CoresDoPainel.Provider value={cores}>
-      <ItensDaLegenda tipo={tipo} comparado={comparado} />
+      <ItensDaLegenda tipo={tipo} comparado={comparado} comparados={comparados} />
     </CoresDoPainel.Provider>
   );
 }
-function ItensDaLegenda({ tipo, comparado }: { tipo: TipoGrafico; comparado?: string | null }) {
+function ItensDaLegenda({ tipo, comparado, comparados }: { tipo: TipoGrafico; comparado?: string | null; comparados?: Array<{ rotulo: string; cor: string; dica?: string }> }) {
   const SINAL = useSinais();
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600 lg:justify-end">
@@ -544,7 +650,7 @@ function ItensDaLegenda({ tipo, comparado }: { tipo: TipoGrafico; comparado?: st
           </span>
         ))}
       </span>
-      <LegendaRealizadoOrcado tipo={tipo} />
+      <LegendaRealizadoOrcado tipo={tipo} comparados={comparados} />
       <EtiquetaDoComparado nome={comparado} />
     </div>
   );
@@ -587,15 +693,20 @@ export function PainelContent() {
   const ate = ateEscolhido && meses.includes(ateEscolhido) ? ateEscolhido : meses[meses.length - 1];
   // O cenário comparado (21/10/2026): o Compara Com, entre os marcados (de qualquer exercício; o mesmo de Resultados).
   const comparacao = useComparaCom(ano ?? null);
+  // A Comparação PROVA (31/10/2026): os cards PROVA, com os cenários escolhidos em Resultados.
+  const { prova } = comparacao;
+  const marcacoes = prova?.map((c) => c.marcacao);
   const consulta = useQuery({
-    queryKey: ["relatorios", "painel", ano, ate, comparacao.comparaCom],
-    queryFn: () => relatoriosService.painel(ano!, ate, comparacao.comparaCom),
+    queryKey: ["relatorios", "painel", ano, ate, comparacao.comparaCom, marcacoes ?? null],
+    queryFn: () => relatoriosService.painel(ano!, ate, comparacao.comparaCom, marcacoes),
     enabled: !!ano && !!ate && comparacao.pronta,
   });
+  // As séries da legenda na Comparação PROVA, com o nome do cenário na dica.
+  const comparados = prova?.map((c) => ({ rotulo: c.rotulo, cor: c.cor, dica: `${c.rotulo}: ${c.cenario}` }));
   const dados = consulta.data;
   // A aba Indicadores (19/10/2026; antes, a tela Indicadores): o Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem nela.
   const extras =
-    comIndicadores && ano && ate ? [{ chave: "indicadores", rotulo: "Indicadores", conteudo: <IndicadoresDoPainel ano={ano} ate={ate} tipo={tipoGrafico} comRotulos={comRotulos} comparaCom={comparacao.comparaCom} /> }] : [];
+    comIndicadores && ano && ate ? [{ chave: "indicadores", rotulo: "Indicadores", conteudo: <IndicadoresDoPainel ano={ano} ate={ate} tipo={tipoGrafico} comRotulos={comRotulos} comparaCom={comparacao.comparaCom} prova={prova} /> }] : [];
   const naAbaIndicadores = comIndicadores && (aba === "indicadores" || (dados ? dados.abas.length === 0 : false));
   const atual = dados?.abas.find((a) => a.chave === aba) ?? dados?.abas[0];
 
@@ -619,7 +730,8 @@ export function PainelContent() {
               Na aba Indicadores, os indicadores do exercício mês a mês até o Período, com o acumulado e, nas colunas de
               rótulo preto, o orçado do último mês e o acumulado do orçado. O Exercício, o Período, os Rótulos e o Tipo do Configurar Gráficos valem
               também nela; fora do Orçamento, as colunas do orçado trazem o nome da marcação escolhida na Comparação (Previsão SET/26, Previsão
-              Acum.…), como em Resultados. Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo; use os filtros nos rótulos das colunas;
+              Acum.…), como em Resultados. Na Comparação PROVA, cada cenário dela tem as duas colunas (Previsão SET/26, Previsão Acum., Orçado
+              SET/26…), lado a lado e na cor dele, como em Resultados, e o gráfico do indicador traz uma série por cenário. Na lista antes do rótulo Indicador (a seta), escolha Todos os Grupos ou um grupo; use os filtros nos rótulos das colunas;
               as colunas Indicador, Sent. e Und. ficam fixas. Clique num indicador para abrir o gráfico dele (o realizado e o orçado mês a mês e o
               acumulado), que o botão ao lado do nome copia como imagem. Nesta aba, “Exportar” baixa os indicadores em Excel ou PDF.
             </li>
@@ -639,9 +751,16 @@ export function PainelContent() {
             <li>Passe o mouse sobre o gráfico para ver os valores do mês, sobre o selo para ler o sinal e sobre a seta para ver o sentido do indicador.</li>
             <li>A seta antes do nome de cada grupo recolhe e expande os cards dele; a escolha fica guardada no navegador.</li>
             <li>
-              O cenário comparado é o escolhido na “Comparação” da tela Resultados (a escolha fica guardada neste navegador), entre os cenários marcados, de qualquer exercício (Previsão, Orçamento, Anterior e Vendido; o
-              padrão é a primeira marcação que houver, nessa ordem), e o nome dele aparece no fim da legenda, “(vs. …)”; fora do Orçamento, os
-              cards dizem “vs.” e o nome da marcação.
+              A comparação é a escolhida na “Comparação” da tela Resultados (a escolha fica guardada neste navegador), entre os cenários marcados, de
+              qualquer exercício (Previsão, Orçamento, Anterior e Vendido). Na Comparação Padrão, um cenário (de início, a primeira marcação que houver,
+              nessa ordem): o nome dele aparece no fim da legenda, “(vs. …)”, e, fora do Orçamento, os cards dizem “vs.” e o nome da marcação.
+            </li>
+            <li>
+              Na Comparação PROVA (dois a quatro dos cenários marcados), os cards PROVA, como os dos Relatórios Executivos: embaixo do Atual e do
+              Acumulado, uma linha por cenário — “vs.” e o nome dele, com o quadradinho da cor, o valor dele e a variação com o ícone do sinal, com a
+              faixa na cor do sinal à direita —, e, nos gráficos, uma série por cenário (na Área, só o realizado em área; os cenários em linhas). As
+              cores: a Previsão em cinza, o Orçado em preto, o Vendido em ouro forte e o Anterior em ouro fraco. A legenda troca o Orçado pelos
+              cenários, cada um na cor dele (passe o mouse para ver o nome do cenário).
             </li>
             <li>
               Com os Rótulos, o valor do realizado fica à esquerda do centro de cada mês (e do acumulado) e o do orçado à direita, e os gráficos
@@ -688,13 +807,14 @@ export function PainelContent() {
           ano && ate ? (
             <div className="flex flex-wrap items-center justify-end gap-4">
               {/* Na aba Indicadores, só as cores das séries (os sinais são dos cards). */}
+              {/* Na Comparação PROVA (31/10/2026), as séries dos cenários dela, cada uma na cor dela, sem a etiqueta do comparado. */}
               {naAbaIndicadores ? (
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-                  <LegendaRealizadoOrcado tipo={tipoGrafico} />
-                  <EtiquetaDoComparado nome={dados?.cenarioOrcado} />
+                  <LegendaRealizadoOrcado tipo={tipoGrafico} comparados={comparados} />
+                  {prova ? null : <EtiquetaDoComparado nome={dados?.cenarioOrcado} />}
                 </div>
               ) : (
-                <LegendaDoPainel tipo={tipoGrafico} cores={cores} comparado={dados?.cenarioOrcado} />
+                <LegendaDoPainel tipo={tipoGrafico} cores={cores} comparado={prova ? null : dados?.cenarioOrcado} comparados={comparados} />
               )}
               <ConfigurarGraficos>
               <Seletor
@@ -744,9 +864,11 @@ export function PainelContent() {
           tipo={tipoGrafico}
           cores={cores}
           comRotulos={comRotulos}
+          prova={prova}
           aviso={
-            // Os avisos como um quadro comum, com o destaque vermelho à esquerda (13/10/2026; antes, amarelos).
-            !dados.cenarioOrcado ? (
+            // Os avisos como um quadro comum, com o destaque vermelho à esquerda (13/10/2026; antes, amarelos); os do cenário
+            // da Comparação Padrão (na PROVA, os cenários são só os marcados).
+            prova ? null : !dados.cenarioOrcado ? (
               <div className={AVISO_DO_PAINEL}>
                 Nenhum cenário está marcado (Orçamento, Anterior, Vendido ou Previsão): o orçado aparece como zero. Marque um cenário em Criação de
                 Cenários / Cenários Sintéticos.

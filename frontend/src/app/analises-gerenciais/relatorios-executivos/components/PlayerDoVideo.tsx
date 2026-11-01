@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pause, Play, Square, Video, Volume2, VolumeX } from "lucide-react";
 
 import { enderecoDoVideo, type Bloco } from "../services/relatoriosExecutivosService";
+import { useProcesso } from "./processo";
 import { comandoDoYoutube, estadoDoYoutube, NOME_DA_PLATAFORMA, ouvirYoutube, videoDoLink } from "./videoIncorporado";
 
 type BlocoDeVideo = Extract<Bloco, { tipo: "VIDEO" }>;
@@ -52,6 +53,7 @@ export function PlayerDoVideo({
   /** No quadro vazio, na edição: escolher o vídeo (o arquivo ou o link). */
   onEscolher?: () => void;
 }) {
+  const { rota } = useProcesso();
   const video = useRef<HTMLVideoElement>(null);
   const iframe = useRef<HTMLIFrameElement>(null);
   const [tocando, setTocando] = useState(false);
@@ -124,7 +126,7 @@ export function PlayerDoVideo({
     b.origem === "ARQUIVO" ? (
       <video
         ref={video}
-        src={enderecoDoVideo(relatorioId, b.arquivo)}
+        src={enderecoDoVideo(relatorioId, b.arquivo, rota)}
         data-video-do-bloco={b.id}
         controls={!apresentacao}
         preload="metadata"

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { CopiarComoImagem } from "../components/CopiarComoImagem";
 import { LegendaRealizadoOrcado, type TipoGrafico } from "../components/GraficoRealizadoOrcado";
 import { MiniGrafico } from "../components/MiniGrafico";
+import type { CenarioDoProva } from "../components/cenariosDoProva";
 import { fatorDaEscalaDa, type Indicador, type MesRelatorio } from "../services/relatoriosService";
 
 // O comportamento com iniciais maiúsculas (13/10/2026), como os nomes.
@@ -27,6 +28,7 @@ export function GraficoIndicadorDialog({
   formatarCurto = formatar,
   tipo = "barras",
   comRotulos = false,
+  comparados,
   onFechar,
 }: {
   indicador: Indicador;
@@ -39,9 +41,17 @@ export function GraficoIndicadorDialog({
   tipo?: TipoGrafico;
   /** Os valores escritos no gráfico (a lista Rótulos da tela); sem eles, a escala. */
   comRotulos?: boolean;
+  /** A Comparação PROVA (31/10/2026): uma série por cenário, cada uma na cor dele, no lugar do orçado. */
+  comparados?: CenarioDoProva[];
   onFechar: () => void;
 }) {
-  const dados = meses.map((m, k) => ({ mes: m.rotulo.split("/")[0], realizado: i.meses[k], orcado: i.orcado[k] }));
+  const dados = meses.map((m, k) => ({
+    mes: m.rotulo.split("/")[0],
+    realizado: i.meses[k],
+    orcado: i.orcado[k],
+    comparados: comparados?.map((c) => i.prova?.[c.marcacao]?.orcado[k] ?? null),
+  }));
+  const series = comparados?.map((c) => ({ rotulo: c.rotulo, cor: c.cor }));
   const ultimo = meses.length - 1;
   // O que vai para a imagem: todo o conteúdo do modal (o X e o botão de copiar ficam de fora).
   const conteudo = useRef<HTMLDivElement>(null);
@@ -72,7 +82,7 @@ export function GraficoIndicadorDialog({
               {SENTIDO[i.sentido] ? ` · ${i.sentido} ${SENTIDO[i.sentido]}` : ""}
             </DialogDescription>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-              <LegendaRealizadoOrcado tipo={tipo} />
+              <LegendaRealizadoOrcado tipo={tipo} comparados={comparados?.map((c) => ({ rotulo: c.rotulo, cor: c.cor, dica: `${c.rotulo}: ${c.cenario}` }))} />
             </div>
           </div>
           {/* Os meses e, depois do último, o acumulado (realizado × orçado), como nos cards do Painel de Bordo. */}
@@ -87,6 +97,7 @@ export function GraficoIndicadorDialog({
                 comEscala={!comRotulos}
                 topoComRotulos={20}
                 fatorDaEscala={fatorDaEscalaDa(i.unidade)}
+                comparados={series}
               />
             </div>
             <div
@@ -94,7 +105,7 @@ export function GraficoIndicadorDialog({
               title={i.acumulado === "ATUAL" ? "Indicador de posição: o acumulado é o último mês." : `Acumulado do exercício (até ${meses[ultimo]?.rotulo ?? ""}): realizado × orçado`}
             >
               <MiniGrafico
-                dados={[{ mes: "ACUM.", realizado: i.total, orcado: i.totalOrcado }]}
+                dados={[{ mes: "ACUM.", realizado: i.total, orcado: i.totalOrcado, comparados: comparados?.map((c) => i.prova?.[c.marcacao]?.totalOrcado ?? null) }]}
                 acumulado
                 formatar={formatar}
                 formatarCurto={formatarCurto}
@@ -103,6 +114,7 @@ export function GraficoIndicadorDialog({
                 comEscala={!comRotulos}
                 topoComRotulos={20}
                 fatorDaEscala={fatorDaEscalaDa(i.unidade)}
+                comparados={series}
               />
             </div>
           </div>

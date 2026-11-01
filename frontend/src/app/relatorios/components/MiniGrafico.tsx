@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { Tooltip as Dica } from "@base-ui/react/tooltip";
 
 import { degradeDoRealizado, useRotulosDoGrafico, type MesDoGrafico, type TipoGrafico } from "./GraficoRealizadoOrcado";
 
@@ -58,6 +59,8 @@ export function MiniGrafico({
   topoComRotulos = TOPO_COM_ROTULOS,
   fatorDaEscala = 1,
   acumulado = false,
+  comparados,
+  corDoOrcado = PRETO,
 }: {
   dados: MesDoGrafico[];
   /** O valor com a unidade (a dica do mês). */
@@ -78,12 +81,43 @@ export function MiniGrafico({
   fatorDaEscala?: number;
   /** O gráfico do acumulado (23/10/2026): a legenda (ACUM.) em negrito e ela e os rótulos 2 px maiores. */
   acumulado?: boolean;
+  /**
+   * As séries comparadas no lugar do orçado (31/10/2026: os cards PROVA dos Relatórios Executivos, com até quatro
+   * cenários), cada uma com o nome e a cor; os valores vêm em `comparados` de cada mês, na mesma ordem.
+   */
+  comparados?: Array<{ rotulo: string; cor: string }>;
+  /** A cor do orçado (31/10/2026: a do cenário, nos cards padrão dos slides com cards PROVA); sem ela, a do tema. */
+  corDoOrcado?: string;
 }) {
   const rotulos = useRotulosDoGrafico();
   const gradiente = `mini-${useId().replace(/:/g, "")}`;
   const [foco, setFoco] = useState<number | null>(null);
   const n = dados.length;
-  const valores = dados.flatMap((d) => [d.realizado, d.orcado]).filter(numero);
+  // A dica do mês (31/10/2026) presa à faixa dele no gráfico, desenhada por cima de tudo (a dica da Base UI, no corpo da
+  // página): dentro do card, ela era cortada pela borda dele (o Zoom, os cards de Indicadores dos Relatórios Executivos, a
+  // caixa do acumulado), e, nos cards PROVA, com uma linha por cenário, é mais alta.
+  const [grafico, setGrafico] = useState<HTMLDivElement | null>(null);
+  const faixaDoMes = useMemo(
+    () =>
+      foco === null || !grafico
+        ? null
+        : {
+            getBoundingClientRect: () => {
+              const r = grafico.getBoundingClientRect();
+              return DOMRect.fromRect({ x: r.left + (foco * r.width) / n, y: r.top, width: r.width / n, height: r.height });
+            },
+          },
+    [foco, grafico, n],
+  );
+  // O realizado primeiro e, depois dele, o orçado ou as séries comparadas.
+  const series: Array<{ rotulo: string; cor: string; valor: (d: MesDoGrafico) => number | null }> = [
+    { rotulo: rotulos.realizado, cor: OURO, valor: (d) => d.realizado },
+    ...(comparados
+      ? comparados.map((c, j) => ({ rotulo: c.rotulo, cor: c.cor, valor: (d: MesDoGrafico) => d.comparados?.[j] ?? null }))
+      : [{ rotulo: rotulos.orcado, cor: corDoOrcado, valor: (d: MesDoGrafico) => d.orcado }]),
+  ];
+  const k = series.length;
+  const valores = dados.flatMap((d) => series.map((s) => s.valor(d))).filter(numero);
   // Com a escala, os limites são as marcas práticas em volta dos valores (19/10/2026; antes, o maior e o menor valor).
   const escala = comEscala && !comRotulos ? escalaPratica(Math.min(0, ...valores) * fatorDaEscala, Math.max(0, ...valores) * fatorDaEscala) : null;
   const max = escala ? escala.max / fatorDaEscala : Math.max(0, ...valores);
@@ -107,10 +141,12 @@ export function MiniGrafico({
   // As colunas: 73% da faixa do mês, metade para cada série; o espaço entre os meses, 27% (14/10/2026: 50% maior que os
   // 18% de antes, como o barCategoryGap). No gráfico do acumulado (um só período), os mesmos 73% (23/10/2026: o acumulado tem
   // a largura de um mês nos cards; antes, 82%).
-  const coluna = (faixaX * 0.73) / 2;
-  const retangulo = (x: number, v: number) => ({ x, y: Math.min(y(v), zero), width: coluna, height: Math.max(Math.abs(y(v) - zero), 0.6) });
-  const pontos = (k: "realizado" | "orcado") =>
-    dados.flatMap((d, i) => (numero(d[k]) ? [`${centro(i)},${y(d[k] as number)}`] : [])).join(" ");
+  // Com mais séries (31/10/2026: os cards PROVA), os mesmos 73% divididos por todas.
+  const coluna = (faixaX * 0.73) / k;
+  const inicio = (i: number) => centro(i) - (k * coluna) / 2;
+  const retangulo = (x: number, v: number, largura = coluna) => ({ x, y: Math.min(y(v), zero), width: largura, height: Math.max(Math.abs(y(v) - zero), 0.6) });
+  const pontos = (s: (typeof series)[number]) =>
+    dados.flatMap((d, i) => { const v = s.valor(d); return numero(v) ? [`${centro(i)},${y(v)}`] : []; }).join(" ");
   const realizados = dados.map((d, i) => ({ i, v: d.realizado })).filter((p): p is { i: number; v: number } => numero(p.v));
   const traco = { vectorEffect: "non-scaling-stroke" as const };
   // A escala: as marcas práticas, sem casas decimais (só com o passo fracionário: 0,1, 0,2, 0,5…), nas linhas da grade.
@@ -150,7 +186,7 @@ export function MiniGrafico({
         </div>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="relative min-h-0 flex-1" onMouseLeave={() => setFoco(null)}>
+        <div ref={setGrafico} className="relative min-h-0 flex-1" onMouseLeave={() => setFoco(null)}>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="block size-full overflow-visible" aria-hidden>
             <defs>
               <linearGradient id={gradiente} x1="0" y1="0" x2="0" y2="1">
@@ -168,21 +204,24 @@ export function MiniGrafico({
                   .map((t) => <line key={t} x1={0} x2={100} y1={t} y2={t} stroke="var(--cor-grafico-grade)" strokeWidth={1} style={traco} />)}
             {foco !== null ? <rect x={foco * faixaX} y={0} width={faixaX} height={100} style={{ fill: "var(--color-gray-100)" }} /> : null}
             {!area ? (
-              dados.map((d, i) => {
-                const x0 = centro(i) - coluna;
-                return (
-                  <g key={i}>
-                    {numero(d.realizado) ? <rect {...retangulo(x0, d.realizado)} fill={OURO} /> : null}
-                    {numero(d.orcado) ? <rect {...retangulo(x0 + coluna, d.orcado)} style={{ fill: PRETO }} /> : null}
-                  </g>
-                );
-              })
+              dados.map((d, i) => (
+                <g key={i}>
+                  {series.map((s, j) => {
+                    const v = s.valor(d);
+                    return numero(v) ? <rect key={j} {...retangulo(inicio(i) + j * coluna, v)} style={{ fill: s.cor }} /> : null;
+                  })}
+                </g>
+              ))
             ) : umPonto ? (
               <>
+                {/* O realizado na largura de antes (metade dos 73%) e cada série comparada numa linha. */}
                 {numero(dados[0].realizado) ? (
-                  <rect {...retangulo(50 - coluna / 2, dados[0].realizado)} fill={`url(#${gradiente})`} stroke={OURO} strokeWidth={2} style={traco} />
+                  <rect {...retangulo(50 - (faixaX * 0.73) / 4, dados[0].realizado, (faixaX * 0.73) / 2)} fill={`url(#${gradiente})`} stroke={OURO} strokeWidth={2} style={traco} />
                 ) : null}
-                {numero(dados[0].orcado) ? <line x1={0} x2={100} y1={y(dados[0].orcado)} y2={y(dados[0].orcado)} strokeWidth={2} style={{ ...traco, stroke: PRETO }} /> : null}
+                {series.slice(1).map((s, j) => {
+                  const v = s.valor(dados[0]);
+                  return numero(v) ? <line key={j} x1={0} x2={100} y1={y(v)} y2={y(v)} strokeWidth={2} style={{ ...traco, stroke: s.cor }} /> : null;
+                })}
               </>
             ) : (
               <>
@@ -192,55 +231,61 @@ export function MiniGrafico({
                     fill={`url(#${gradiente})`}
                   />
                 ) : null}
-                <polyline points={pontos("realizado")} fill="none" stroke={OURO} strokeWidth={2} style={traco} />
-                <polyline points={pontos("orcado")} fill="none" strokeWidth={2} style={{ ...traco, stroke: PRETO }} />
+                {/* O realizado em área e as séries comparadas em linhas (31/10/2026: todas, nos cards PROVA). */}
+                {series.map((s, j) => (
+                  <polyline key={j} points={pontos(s)} fill="none" strokeWidth={2} style={{ ...traco, stroke: s.cor }} />
+                ))}
               </>
             )}
             <line x1={0} x2={100} y1={zero} y2={zero} stroke="#9ca3af" strokeWidth={1.5} style={traco} />
           </svg>
           {/* Os losangos dos meses na área (13/10/2026), na cor de cada série, fora do SVG esticado para não se deformarem. */}
+          {/* Os do realizado por cima. */}
           {area && !umPonto
-            ? (["orcado", "realizado"] as const).flatMap((k) =>
-                dados.map((d, i) =>
-                  numero(d[k]) ? (
+            ? [...series.slice(1), series[0]].flatMap((s, j) =>
+                dados.map((d, i) => {
+                  const v = s.valor(d);
+                  return numero(v) ? (
                     <span
-                      key={`${k}-${i}`}
+                      key={`${j}-${i}`}
                       className="pointer-events-none absolute size-[7px] -translate-x-1/2 -translate-y-1/2 rotate-45 ring-1 ring-white"
-                      style={{ left: `${centro(i)}%`, top: `${y(d[k] as number)}%`, background: k === "realizado" ? OURO : PRETO }}
+                      style={{ left: `${centro(i)}%`, top: `${y(v)}%`, background: s.cor }}
                     />
-                  ) : null,
-                ),
+                  ) : null;
+                }),
               )
             : null}
           {/*
             Os rótulos dos valores (13/10/2026): o do realizado à esquerda do centro do mês e o do orçado à direita, sem se
             cruzarem. Cada um numa faixa de meia coluna (nas Barras, a da coluna da série, com o rótulo no meio dela; na
             Área, a metade do mês, com o rótulo encostado no centro); o rótulo mais largo que a faixa sai para o lado de fora.
+            Com mais séries (31/10/2026: os cards PROVA), cada uma na sua faixa, da esquerda para a direita, com o rótulo no
+            meio dela.
           */}
           {comRotulos
-            ? (["orcado", "realizado"] as const).flatMap((k) =>
+            ? series.flatMap((s, j) =>
                 dados.map((d, i) => {
-                  const v = d[k];
+                  const v = s.valor(d);
                   if (!numero(v)) return null;
-                  const esquerda = k === "realizado";
-                  const meia = area ? faixaX / 2 : coluna;
+                  const esquerda = j === 0;
+                  const meia = area ? faixaX / k : coluna;
                   const negativo = v < 0;
                   const yv = area ? y(v) : negativo ? Math.max(y(v), zero) : Math.min(y(v), zero);
                   return (
                     <div
-                      key={`r-${k}-${i}`}
-                      className={`pointer-events-none absolute flex ${esquerda ? "z-[2] flex-row-reverse pr-0.5" : "z-[1] pl-0.5"}`}
+                      key={`r-${j}-${i}`}
+                      className={`pointer-events-none absolute flex ${esquerda ? "z-[2]" : "z-[1]"} ${k === 2 ? (esquerda ? "flex-row-reverse pr-0.5" : "pl-0.5") : ""}`}
                       style={{
-                        left: `${esquerda ? centro(i) - meia : centro(i)}%`,
+                        left: `${centro(i) - (k * meia) / 2 + j * meia}%`,
                         width: `${meia}%`,
                         top: `${yv}%`,
                         transform: negativo ? "translateY(3px)" : "translateY(calc(-100% - 3px))",
                       }}
                     >
                       <span
-                        className={`shrink-0 rounded-[2px] border bg-white py-0.5 font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${acumulado ? "text-[14px] leading-[16px]" : "text-[12px] leading-[14px]"} ${area ? "" : "mx-auto"}`}
+                        className={`shrink-0 rounded-[2px] border bg-white py-0.5 font-bold whitespace-nowrap text-gray-900 [writing-mode:vertical-rl] ${acumulado ? "text-[14px] leading-[16px]" : "text-[12px] leading-[14px]"} ${area && k === 2 ? "" : "mx-auto"}`}
                         // Na vertical, lido de baixo para cima: o texto em pé, girado meia volta.
-                        style={{ transform: "rotate(180deg)", borderColor: esquerda ? OURO : PRETO }}
+                        style={{ transform: "rotate(180deg)", borderColor: s.cor }}
                       >
                         {formatarCurto(v)}
                       </span>
@@ -257,19 +302,26 @@ export function MiniGrafico({
               setFoco(Math.min(n - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * n))));
             }}
           />
-          {foco !== null ? (
-            <div
-              className="pointer-events-none absolute bottom-full z-30 mb-1 rounded-sm border border-gray-200 bg-white px-2.5 py-1.5 text-xs whitespace-nowrap shadow-sm"
-              style={{ left: `${centro(foco)}%`, transform: `translateX(${foco === 0 && n > 1 ? "0" : foco === n - 1 && n > 1 ? "-100%" : "-50%"})` }}
-            >
-              <p className="font-bold text-gray-900">{dados[foco].mes}</p>
-              {(["realizado", "orcado"] as const).map((k) => (
-                <p key={k} className="flex items-center gap-1.5 text-gray-700">
-                  <span className="inline-block size-2.5 rounded-[2px]" style={{ background: k === "realizado" ? OURO : PRETO }} />
-                  {rotulos[k]}: {formatar(dados[foco][k])}
-                </p>
-              ))}
-            </div>
+          {/*
+            Em cima do gráfico, no centro do mês, sem sair da tela (encosta na borda dela); sem espaço em cima, embaixo do
+            gráfico. Por cima de tudo: a apresentação e o bloco ampliado ficam abaixo dela.
+          */}
+          {foco !== null && faixaDoMes ? (
+            <Dica.Root open>
+              <Dica.Portal>
+                <Dica.Positioner anchor={faixaDoMes} side="top" sideOffset={4} collisionPadding={4} className="pointer-events-none isolate z-[100]">
+                  <Dica.Popup className="rounded-sm border border-gray-200 bg-white px-2.5 py-1.5 text-xs whitespace-nowrap shadow-sm">
+                    <p className="font-bold text-gray-900">{dados[foco].mes}</p>
+                    {series.map((s, j) => (
+                      <p key={j} className="flex items-center gap-1.5 text-gray-700">
+                        <span className="inline-block size-2.5 rounded-[2px]" style={{ background: s.cor }} />
+                        {s.rotulo}: {formatar(s.valor(dados[foco]))}
+                      </p>
+                    ))}
+                  </Dica.Popup>
+                </Dica.Positioner>
+              </Dica.Portal>
+            </Dica.Root>
           ) : null}
         </div>
         {meses}

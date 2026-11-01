@@ -2,7 +2,8 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { acumular, type Parte } from "./indicadores.js";
 import { catalogoDeIndicadores } from "./catalogoIndicadores.js";
 import { dadosDoMes, encadearMeses } from "./indicadoresService.js";
-import { orcamentoDoExercicio } from "./orcamento.js";
+import { orcamentoDoExercicio, type CenariosDoProva } from "./orcamento.js";
+import type { MarcacaoCenario } from "../../generated/prisma/enums.js";
 import { rotuloDaComparacao, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
 import { quadrosDoPainel } from "./cadastroPainel.js";
 import { sinal, vsOrcado, type ItemPainel, type QuadroPainel, type Valor } from "./painelDeBordo.js";
@@ -33,12 +34,18 @@ function metodologiaPorExtenso(formula: string) {
 /** Os meses do exercício até o de referência, para os gráficos: o realizado e o orçado de cada um. */
 export type MesDaSerie = { rotulo: string; realizado: Valor; orcado: Valor };
 
-/** Os quadros do painel; exportada para o Painel de Bordo dos cenários (13/10/2026: o cenário × o comparado). */
-export function montarPainel(
-  quadros: QuadroPainel[],
-  periodos: { mes: [Valor, Valor]; acumulado: [Valor, Valor]; comOrcado?: { mes: boolean; acumulado: boolean } },
-  serie: MesDaSerie[],
-) {
+type Periodos = { mes: [Valor, Valor]; acumulado: [Valor, Valor]; comOrcado?: { mes: boolean; acumulado: boolean } };
+/**
+ * Um dos cenários dos cards PROVA (31/10/2026: os Relatórios Executivos): a marcação, o realizado contra o orçado dele no
+ * mês e no acumulado e o orçado dele em cada mês da série.
+ */
+type ComparadoDoPainel = { marcacao: MarcacaoCenario; periodos: Periodos; serie: Valor[] };
+
+/**
+ * Os quadros do painel; exportada para o Painel de Bordo dos cenários (13/10/2026: o cenário × o comparado). Com
+ * `comparados` (31/10/2026), cada item traz também, em `prova`, o realizado contra cada um desses cenários.
+ */
+export function montarPainel(quadros: QuadroPainel[], periodos: Periodos, serie: MesDaSerie[], comparados: ComparadoDoPainel[] = []) {
   return quadros.map((q) => ({
     titulo: q.titulo,
     itens: q.itens.map((i) => ({
@@ -55,6 +62,20 @@ export function montarPainel(
       mes: bloco(i, ...periodos.mes, periodos.comOrcado?.mes),
       acumulado: bloco(i, ...periodos.acumulado, periodos.comOrcado?.acumulado),
       serie: serie.map((m) => ({ mes: m.rotulo, realizado: i.conta(m.realizado), orcado: i.conta(m.orcado) })),
+      ...(comparados.length
+        ? {
+            prova: Object.fromEntries(
+              comparados.map((c) => [
+                c.marcacao,
+                {
+                  mes: bloco(i, ...c.periodos.mes, c.periodos.comOrcado?.mes),
+                  acumulado: bloco(i, ...c.periodos.acumulado, c.periodos.comOrcado?.acumulado),
+                  serie: c.serie.map((v) => i.conta(v)),
+                },
+              ]),
+            ),
+          }
+        : {}),
     })),
   }));
 }
@@ -68,7 +89,11 @@ export const painelService = {
    * 11/10/2026). O acumulado vai de janeiro ao mês; os meses que o cenário não
    * tem vão em `mesesSemMeta`.
    */
-  async painel(ano: number, ate?: number, somenteFechadas = false, comparaCom: Comparacao = "ORCAMENTO_EMPRESARIAL") {
+  /**
+   * `prova` (31/10/2026, os cards PROVA dos Relatórios Executivos): os orçados de outros cenários, cada um com a marcação,
+   * para o realizado contra cada um deles (o realizado continua o do `comparaCom`).
+   */
+  async painel(ano: number, ate?: number, somenteFechadas = false, comparaCom: Comparacao = "ORCAMENTO_EMPRESARIAL", prova: CenariosDoProva = []) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     // Com `somenteFechadas` (Resultados Empresariais), só os meses de competência fechada têm valor.
     const fechados = new Set(meses.filter((m) => m.competenciaId !== null).map((m) => m.mes));
@@ -106,6 +131,19 @@ export const painelService = {
       realizado: (n) => partes.get(n)?.[i]?.valor ?? null,
       orcado: (n) => metas[i].get(n) ?? 0,
     }));
+    // Os cenários dos cards PROVA, como o comparado acima.
+    const comparados: ComparadoDoPainel[] = (await prova).map(([marcacao, o]) => {
+      const doCenario = meses.map((m) => o.porMes[m.mes - 1]);
+      return {
+        marcacao,
+        periodos: {
+          mes: [realizadoMes, (n) => doCenario[ultimo - 1].get(n) ?? 0],
+          acumulado: [realizadoAcum, (n) => (porNome.has(n) ? o.acumulado(porNome.get(n)!, ultimo) : 0)],
+          comOrcado: { mes: !!o.cenario && !o.mesesSemValor.includes(ultimo), acumulado: !!o.cenario },
+        },
+        serie: doCenario.map((m): Valor => (n) => m.get(n) ?? 0),
+      };
+    });
     return {
       ano,
       ate: ultimo,
@@ -119,8 +157,8 @@ export const painelService = {
       mesesSemMeta: meses.filter((m) => orcamento.mesesSemValor.includes(m.mes)).map((m) => `${MESES[m.mes - 1]}/${ano}`),
       abas: [
         // Os itens do cadastro do Painel de Bordo (17/10/2026; antes, fixos no código).
-        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(quadros.resultados, periodos, serie) },
-        { chave: "performance", titulo: "Performance", quadros: montarPainel(quadros.performance, periodos, serie) },
+        { chave: "resultados", titulo: "Resultados", quadros: montarPainel(quadros.resultados, periodos, serie, comparados) },
+        { chave: "performance", titulo: "Performance", quadros: montarPainel(quadros.performance, periodos, serie, comparados) },
       ],
     };
   },

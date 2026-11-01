@@ -91,8 +91,15 @@ export const navGrupos: NavGrupo[] = [
       { title: "Resultados PROVA", href: "/analises-gerenciais/resultados-prova", icon: TrendingUp, emDesenvolvimento: true },
       // Custos Operacionais (15/10/2026), em desenvolvimento.
       { title: "Custos Operacionais", href: "/analises-gerenciais/custos-operacionais", icon: Calculator, emDesenvolvimento: true },
-      // Painéis de Bordo (27/10/2026), em desenvolvimento.
-      { title: "Painéis de Bordo", href: "/analises-gerenciais/paineis-de-bordo", icon: PanelsTopLeft, emDesenvolvimento: true },
+      // Painéis de Bordo (31/10/2026, pedido do Adão; em desenvolvimento desde 27/10/2026): painéis com fins variados, feitos a
+      // partir dos Relatórios Executivos.
+      {
+        title: "Painéis de Bordo",
+        href: "/analises-gerenciais/paineis-de-bordo",
+        icon: PanelsTopLeft,
+        permission: "paineis_de_bordo:ler",
+        recurso: "ANALISES_GERENCIAIS",
+      },
       // Demonstrativos Financeiros (27/10/2026), em desenvolvimento.
       { title: "Demonstrativos Financeiros", href: "/analises-gerenciais/demonstrativos-financeiros", icon: FileSpreadsheet, emDesenvolvimento: true },
     ],
@@ -321,6 +328,7 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/auditoria(\/|$)/, "auditoria:ler"],
   [/^\/divergencias(\/|$)/, "divergencia:ler"],
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
+  [/^\/analises-gerenciais\/paineis-de-bordo(\/|$)/, "paineis_de_bordo:ler"],
   [/^\/central-de-conectividade\/biblioteca-de-apis(\/|$)/, "biblioteca_apis:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
   // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
@@ -431,6 +439,10 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
   // Um relatório executivo (16/10/2026): "Relatórios Executivos › Agosto/2026"; o mês vem do relatório (`rotuloDoRelatorio`).
   if (/^\/analises-gerenciais\/relatorios-executivos\/[^/]+/.test(pathname)) {
     return [{ rotulo: "Relatórios Executivos", href: "/analises-gerenciais/relatorios-executivos" }, { rotulo: rotuloDoRelatorio ?? "Relatório" }];
+  }
+  // Um painel de bordo (31/10/2026): "Painéis de Bordo › Produção da Matriz"; o nome vem do painel (`rotuloDoRelatorio`).
+  if (/^\/analises-gerenciais\/paineis-de-bordo\/[^/]+/.test(pathname)) {
+    return [{ rotulo: "Painéis de Bordo", href: "/analises-gerenciais/paineis-de-bordo" }, { rotulo: rotuloDoRelatorio ?? "Painel" }];
   }
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }, ...(doGrupo.aba ? [{ rotulo: doGrupo.aba.title }] : [])];

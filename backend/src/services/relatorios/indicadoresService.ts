@@ -2,7 +2,7 @@ import { getPrismaClient } from "../../config/prisma.js";
 import { acumular, type DadosDoMes } from "./indicadores.js";
 import { catalogoDeIndicadores, TOTAIS_SINTETICOS } from "./catalogoIndicadores.js";
 import { totaisDaCompetencia } from "../volumes/volumesService.js";
-import { orcamentoDoExercicio } from "./orcamento.js";
+import { orcamentoDoExercicio, type CenariosDoProva } from "./orcamento.js";
 import { rotuloDaComparacao, type Comparacao } from "../cenarios/indicadoresDoCenario.js";
 import { mesesDoExercicio } from "./resultadosService.js";
 
@@ -62,7 +62,11 @@ export const indicadoresService = {
    * Os indicadores do exercício, mês a mês até `ate`, com o acumulado. Com `somenteFechadas` (Resultados Empresariais),
    * só os meses de competência fechada têm valor.
    */
-  async listar(ano: number, ate?: number, somenteFechadas = false, comparaCom: Comparacao = "ORCAMENTO_EMPRESARIAL") {
+  /**
+   * `prova` (31/10/2026, os cards PROVA dos Relatórios Executivos): os orçados de outros cenários, cada um com a marcação;
+   * cada indicador traz, em `prova`, o orçado de cada mês e o acumulado de cada um deles.
+   */
+  async listar(ano: number, ate?: number, somenteFechadas = false, comparaCom: Comparacao = "ORCAMENTO_EMPRESARIAL", prova: CenariosDoProva = []) {
     const { ultimo, meses } = await mesesDoExercicio(ano, ate, somenteFechadas);
     const fechados = new Set(meses.filter((m) => m.competenciaId !== null).map((m) => m.mes));
     const competencias = new Map(
@@ -78,6 +82,7 @@ export const indicadoresService = {
     const dados = encadearMeses(
       await Promise.all(meses.map((m) => (competencias.has(m.mes) ? dadosDoMes(competencias.get(m.mes)!, m.competenciaId !== null, orcamento.porMes[m.mes - 1]) : null))),
     );
+    const doProva = await prova;
     return {
       ano,
       ate: ultimo,
@@ -101,6 +106,9 @@ export const indicadoresService = {
           /** O orçado de cada mês e o acumulado do orçado (zero sem o cenário Orçamento Empresarial ou sem o valor nele). */
           orcado: metas.map((m) => m.get(i.nome) ?? 0),
           totalOrcado: orcamento.acumulado(i, ultimo),
+          ...(doProva.length
+            ? { prova: Object.fromEntries(doProva.map(([marcacao, o]) => [marcacao, { orcado: meses.map((m) => o.porMes[m.mes - 1].get(i.nome) ?? 0), totalOrcado: o.acumulado(i, ultimo) }])) }
+            : {}),
         };
       }),
     };

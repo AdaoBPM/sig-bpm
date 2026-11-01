@@ -94,7 +94,7 @@ function TabelaDRE({
   // Os níveis (Totais, Atribuições, Contas) e os agrupadores, como no contorno da planilha; sem o primeiro total da ROL,
   // que repete o segundo (22/10/2026).
   const semRolRepetida = useMemo(() => semPrimeiroTotalDaRol(todas), [todas]);
-  const niveis = useNiveisDRE(semRolRepetida, "sig.dre.nivel", undefined, true);
+  const niveis = useNiveisDRE(semRolRepetida, "sig.dre.nivel", undefined, "aberta");
 
   const [aberta, setAberta] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<string | null>(null);
