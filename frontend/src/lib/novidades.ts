@@ -28,6 +28,78 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 01/11/2026, 11:10
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Painéis de Bordo",
+    rota: "/analises-gerenciais/paineis-de-bordo",
+    itens: [
+      "O processo entra em uso: painéis de bordo com fins variados, montados como os Relatórios Executivos — as páginas, os Cards e as Tabelas (Padrão e PROVA), as anotações, as imagens, os vídeos, a apresentação e o Exportar em PDF.",
+      "Cada painel tem um nome, uma competência (pode haver vários da mesma) e a visualização: Privado (só quem o criou, os editores convidados e o Administrador o veem) ou Público (todos o veem, depois de finalizado).",
+      "Novo Painel começa vazio ou como cópia de outro painel, com os dados da competência nova.",
+      "Uma só tela, Painel de Bordo, com várias páginas, e o Finalizar e o Reabrir, como nos grupos dos Relatórios Executivos.",
+      "As Configurações têm duas abas: Geral (o nome, a competência, a visualização, o Compartilhar e o Excluir Painel) e Comparativos (a Comparação Padrão e a Comparação PROVA).",
+      "Compartilhar: quem criou o painel convida outros usuários para editá-lo junto; os convidados editam as páginas, os Comparativos e a finalização.",
+      "Copiar e colar blocos entre um painel e um relatório, com as imagens e os vídeos.",
+    ],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Relatórios Executivos",
+    rota: RE,
+    itens: [
+      "No Adicionar › Objetos, os Cards passam a se chamar Cards Padrão e a Tabela, Tabela Padrão; entram os Cards PROVA e a Tabela PROVA, que comparam o realizado com os cenários marcados (Previsão, Orçado, Vendido e Anterior), cada um na sua cor.",
+      "Nos Cards PROVA, embaixo do valor do mês e do acumulado, uma linha por cenário com a variação; o gráfico tem uma série por cenário.",
+      "Na Tabela PROVA, cada cenário tem o seu grupo de colunas (o valor, o % e o R$/m³), depois do mês e depois do total.",
+      "As Configurações têm dois grupos: a Comparação Padrão (o cenário dos objetos padrão, entre os cenários com marcação) e a Comparação PROVA (os cenários de todos os objetos PROVA do relatório, dois ou mais).",
+      "No slide com objetos PROVA, a legenda traz o Realizado e os cenários, cada um na sua cor.",
+    ],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Resultados Empresariais",
+    tela: "Resultados",
+    rota: RESULTADOS,
+    itens: [
+      "A lista Comparação vira um botão que abre o modal Comparação de Resultados Empresariais: Padrão (um cenário, como antes) ou PROVA (de dois a quatro cenários marcados). A escolha vale também no Painel de Bordo.",
+      "Na PROVA, as abas com orçado mostram os cenários lado a lado, cada um na sua cor, com o mês e o acumulado de cada um.",
+      "Nas abas com DRE, Produção e Serviços (PS) fica recolhido em Totais e Atribuições, e aberto em Contas; a seta dele o abre.",
+    ],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Resultados Empresariais",
+    tela: "Painel de Bordo",
+    rota: PAINEL,
+    itens: [
+      "Com a Comparação PROVA, os cards trazem uma linha e uma série do gráfico por cenário; na aba Indicadores, as colunas de cada cenário ficam no lugar das do orçado, e o gráfico do indicador tem uma série por cenário.",
+    ],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Cenários Analíticos",
+    rota: "/cenarios/analiticos",
+    itens: ["Nas abas com DRE dos Resultados, Produção e Serviços (PS) fica recolhido em Totais e Atribuições, e aberto em Contas; a seta dele o abre."],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Cenários Sintéticos",
+    rota: "/cenarios/sinteticos",
+    itens: ["Nas abas com DRE dos Resultados, Produção e Serviços (PS) fica recolhido em Totais e Atribuições, e aberto em Contas; a seta dele o abre."],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: TODO_O_SIG,
+    tela: "Modais",
+    itens: ["Os modais mais altos que a tela rolam por si, com o título e os botões do rodapé sempre à vista."],
+  },
+  {
+    publicada: "2026-11-01T11:10",
+    processo: "Controle de Usuários",
+    tela: "Perfis",
+    rota: "/perfis",
+    itens: ["Na matriz do perfil, as Análises Gerenciais trazem a tela Painéis de Bordo, que começa com as mesmas permissões dos Relatórios Executivos."],
+  },
   // 30/10/2026, 16:57
   {
     publicada: "2026-10-30T16:57",
