@@ -106,18 +106,22 @@ function DialogContent({
   const vigia = React.useContext(VigiaDoModal)
   const [sujo, setSujo] = React.useState(false)
   useAlteracoesPendentes(sujo)
-  const marcarSujo = () => {
-    if (!avisoAoSair || sujo) return
+  const popup = React.useRef<HTMLDivElement | null>(null)
+  // Só o que acontece no próprio modal conta (04/11/2026): os eventos de um modal aberto sobre ele (a busca das consultas do
+  // Contestar) sobem pela árvore do React, mas estão fora dele na página. O que preenche este formulário a partir do modal
+  // de cima (`deCima`: a conta ou o centro escolhido na lupa, com data-altera) conta.
+  const marcarSujo = (e: React.SyntheticEvent, deCima = false) => {
+    if (!avisoAoSair || sujo || (!deCima && !popup.current?.contains(e.target as Node))) return
     setSujo(true)
     vigia?.marcarSujo()
   }
   // As caixas e as listas do Base UI são botões (sem o evento input): o clique nelas também conta. Os botões que
   // preenchem o formulário (como o Aplicar Padrão das realocações, 14/10/2026) levam data-altera.
   const aoClicar = (e: React.MouseEvent) => {
-    if ((e.target as Element).closest?.('[role="switch"], [role="checkbox"], [role="radio"], [role="option"], [data-altera]')) marcarSujo()
+    const alvo = (e.target as Element).closest?.('[role="switch"], [role="checkbox"], [role="radio"], [role="option"], [data-altera]')
+    if (alvo) marcarSujo(e, alvo.hasAttribute("data-altera"))
   }
   const [cabecalhos, setCabecalhos] = React.useState(0)
-  const popup = React.useRef<HTMLDivElement | null>(null)
   // O recuo de baixo do modal (30/10/2026), para o rodapé preso: a posição fixa conta a partir dele, e ele muda de um
   // modal para outro (p-4, pb-0…). Medido quando o modal aparece (o portal o monta depois).
   const prenderPopup = React.useCallback((el: HTMLDivElement | null) => {

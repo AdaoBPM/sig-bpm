@@ -233,6 +233,7 @@ export function BalanceteDialog({
               centro: centroTexto(contestando),
               conta: contestando.contaNaDRE ? `${contestando.contaNaDRE.reduzido} · ${contestando.contaNaDRE.descricao}` : contaDoBalancete,
             }}
+            anoMes={anoMes}
             onFechar={() => setContestando(null)}
             onCriada={() => {
               setContestando(null);

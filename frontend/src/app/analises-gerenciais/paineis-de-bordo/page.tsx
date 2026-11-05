@@ -4,7 +4,7 @@ import { SemLeitura } from "@/components/shared/SemLeitura";
 
 import { PaineisDeBordoContent } from "./PaineisDeBordoContent";
 
-/** Os Painéis de Bordo (31/10/2026, Análises Gerenciais), feitos a partir dos Relatórios Executivos. */
+/** Painéis e Apresentações (31/10/2026, Análises Gerenciais): painéis feitos a partir dos Relatórios Executivos. */
 export default function PaineisDeBordoPage() {
   return (
     <ProtectedLayout>

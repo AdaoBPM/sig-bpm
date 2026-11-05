@@ -80,5 +80,6 @@ export const ROTULO_TIPO: Record<string, string> = {
   INDICADORES_COMERCIAL: "Indicadores do Comercial",
   REQUISICOES: "Requisições",
   NOTAS_FISCAIS: "Notas Fiscais",
+  CREDITOS_IMPOSTOS: "Créditos de Impostos",
   METAS_ORCAMENTO: "Metas do Orçamento",
 };

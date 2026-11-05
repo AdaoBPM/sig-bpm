@@ -28,10 +28,125 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 05/11/2026, 08:20
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Realizado por Obra",
+    tela: "Resultados",
+    rota: "/realizado-por-obra/resultados",
+    itens: [
+      "O processo entra em uso: a DRE de uma venda (a obra e a versão vendida, escolhidas na lista Venda, ao lado do Exportar), da receita à Margem de Contribuição, mês a mês, com o Realizado contra o Vendido da DRE do CONTROLE DAS VENDAS.",
+      "O Consolidado e uma aba por linha da obra. Os custos são os da etapa Linhas: o direto nos centros da obra e a parte dela no rateio de cada linha. A receita é a faturada nos centros da obra, sem o Reconhecimento do CPV.",
+      "Nos custos de Matérias Primas, de Gastos Gerais Variáveis da Produção e de Frete e Descarga, o ajuste pelos Créditos de Impostos do mês: na venda mercantil, sem o Estornado; na global, sem o Estornado e com o Creditado reaplicado.",
+      "Clique num valor para ver como ele se formou (o direto, o rateio e os créditos) e, na Mão de Obra e nos Gastos Gerais, a memória do rateio.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Fechamento Mensal",
+    tela: "Resultados",
+    rota: DRE,
+    itens: [
+      "Nova aba Impostos (os Créditos de Impostos): em cada unidade (Matriz e Filial), o Creditado e o Estornado do mês das contas de Matérias Primas, de Gastos Gerais Variáveis da Produção e do Frete e Descarga, em R$ e em % sobre o valor da conta.",
+      "No extrato de uma linha, Regras de Rateio, no canto de baixo, mostra as regras vigentes no mês: em cada chave, como o valor se divide entre as unidades, com o percentual e o volume de cada destino.",
+      "Na aba Obras, a receita da obra deixa de fora as contas de Reconhecimento do CPV; a receita prévia de frete da obra vai ao Frete, e a complementar, à Complementar.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Fechamento Mensal",
+    tela: "Importações",
+    rota: "/competencias/0000-00/importar",
+    itens: [
+      "Novo tipo Créditos de Impostos: a aba Impostos (Lista) do LISTAS REALIZADO (RESULTADOS), com o Creditado e o Estornado do mês por unidade e conta (a Atribuição e a Conta). As linhas de contas que não são de Matérias Primas nem de Gastos Gerais Variáveis da Produção ou do Frete ficam de fora, sem erro.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Fechamento Mensal",
+    tela: "Linhas",
+    rota: "/competencias/0000-00/linhas",
+    itens: [
+      "A etapa também grava as obras de cada linha (a base do Realizado por Obra). Numa competência fechada sem elas, o Gravar grava só as obras.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Fechamento Mensal",
+    tela: "Prévias",
+    rota: "/competencias/0000-00/receita-previa",
+    itens: [
+      "Na Receita, a nota de saída vai à unidade da linha dela no cadastro (a nota da Estrutura, à Matriz).",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Resultados Empresariais",
+    tela: "Resultados",
+    rota: RESULTADOS,
+    itens: [
+      "Nova aba Impostos (os Créditos de Impostos): em cada unidade (Matriz e Filial), o Creditado e o Estornado de cada mês fechado, em R$ e em %, com os meses anteriores recolhidos ou não.",
+      "No extrato de uma linha, Regras de Rateio, no canto de baixo, mostra as regras vigentes no mês.",
+      "Na aba Obras, a receita da obra deixa de fora as contas de Reconhecimento do CPV; a receita prévia de frete vai ao Frete, e a complementar, à Complementar.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Contestações de Gastos",
+    tela: "Contestações",
+    rota: "/contestacoes-de-gastos/solicitadas",
+    itens: [
+      "No modal Contestar, as listas do Novo Centro de Custo e da Nova Conta de Resultado mostram todas as opções, com a barra de rolagem.",
+      "A lupa ao lado de cada campo abre a lista inteira — os centros de custo (o departamento, a atribuição e o balde) e as Contas de Resultado (a linha e o grupo da DRE) —, e clicar num item o escolhe.",
+      "Saem da lista os centros de custo genéricos (1.01, 1.02, 1.11…), os sem código e os de código mais longo: só os de código com três níveis.",
+      "No canto de baixo do modal, Regras de Rateio mostra as regras vigentes no mês do movimento.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Painéis e Apresentações",
+    rota: "/analises-gerenciais/paineis-de-bordo",
+    itens: [
+      "O processo passa a se chamar Painéis e Apresentações; cada painel continua um Painel de Bordo.",
+      "Na Competência, a opção Automática: o painel mostra sempre a última competência fechada, e a Comparação Padrão acompanha a marcação do cenário escolhido.",
+      "Com o painel em elaboração, os editores convidados também mudam o Geral das Configurações: o nome, a competência, a visualização e o Compartilhar.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Cenários Sintéticos",
+    rota: "/cenarios/sinteticos",
+    itens: [
+      "Nas Configurações, o Comparativo com o título Cenário Comparado como o da Variação Máxima, o Escolher Cenário à direita e o Exportar depois do Limpar; nos Índices, depois do Incluir Índice; na Referência, o Remover da 2ª Referência ao lado do Carregar Referência.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: "Cenários Analíticos",
+    rota: "/cenarios/analiticos",
+    itens: [
+      "Nas Configurações, o Comparativo com o título Cenário Comparado como o da Variação Máxima, o Escolher Cenário à direita e o Exportar depois do Limpar; na Referência, o Carregar Realizado e o Realocar na altura do De e do Até.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: TODO_O_SIG,
+    itens: [
+      "No Sobre Esta Tela, o Exportar passa a ser um item do Como Usar Esta Tela, com o que é próprio de cada tela.",
+    ],
+  },
+  {
+    publicada: "2026-11-05T08:20",
+    processo: TODO_O_SIG,
+    soAdministrador: true,
+    itens: [
+      "Saíram do menu os processos em desenvolvimento Resultados PROVA e Custos Operacionais (Análises Gerenciais) e Balanço Patrimonial (Apuração dos Resultados).",
+    ],
+  },
   // 01/11/2026, 11:10
   {
     publicada: "2026-11-01T11:10",
-    processo: "Painéis de Bordo",
+    processo: "Painéis e Apresentações",
     rota: "/analises-gerenciais/paineis-de-bordo",
     itens: [
       "O processo entra em uso: painéis de bordo com fins variados, montados como os Relatórios Executivos — as páginas, os Cards e as Tabelas (Padrão e PROVA), as anotações, as imagens, os vídeos, a apresentação e o Exportar em PDF.",
@@ -332,7 +447,7 @@ export const NOVIDADES: Novidade[] = [
   },
   {
     publicada: "2026-10-27T14:51",
-    processo: "Painéis de Bordo",
+    processo: "Painéis e Apresentações",
     soAdministrador: true,
     itens: ["Novo processo em Análises Gerenciais, em desenvolvimento."],
   },

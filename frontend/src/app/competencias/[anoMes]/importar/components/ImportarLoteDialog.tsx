@@ -234,8 +234,9 @@ const ARQUIVOS_DE_IMPORTACAO = [
       "Estoque (2025)",
     ],
   },
-  // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do arquivo em 15/10/2026 e voltaram em 26/10/2026 (a etapa Linhas).
-  { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)", "Requisições (Lista)", "Notas Fiscais (Lista)"] },
+  // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do arquivo em 15/10/2026 e voltaram em 26/10/2026 (a etapa Linhas);
+  // a Impostos (Lista), os Créditos de Impostos, entrou em 04/11/2026.
+  { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)", "Requisições (Lista)", "Notas Fiscais (Lista)", "Impostos (Lista)"] },
   { arquivo: "CONTROLE DAS VENDAS - COMERCIAL", abas: ["DRE", "Indicadores (Comercial)"] },
 ];
 

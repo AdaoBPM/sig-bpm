@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getPrismaClient } from "../../config/prisma.js";
 import { anoMesSchema } from "../../schemas/importacoes/importacaoSchemas.js";
 import { departamentoDaLinha, gestaoDoCentro } from "../../services/acesso/recorteDepartamento.js";
-import { contestacoesService, RegraContestacaoError, type UsuarioDaContestacao } from "../../services/contestacoes/contestacoesService.js";
+import { centroForaDaContestacao, contestacoesService, RegraContestacaoError, type UsuarioDaContestacao } from "../../services/contestacoes/contestacoesService.js";
 
 /** As contestações de gastos (27/10/2026): o pedido, as abas, a resposta, a validação e a importação para os lançamentos. */
 
@@ -67,26 +67,33 @@ export const contestacoesController = {
 
   /**
    * As listas do modal Contestar: os centros de custo ativos de um departamento da DRE (30/10/2026: sem os de Almoxarifado,
-   * Investimento e Requisição) e as contas analíticas ativas com destino na DRE, cada um com o departamento do recorte
-   * (a lista das contas mostra as do departamento do centro e as do Extra-Operacional).
+   * Investimento e Requisição; 04/11/2026: só os de código com três níveis, `centroForaDaContestacao`) e as contas analíticas
+   * ativas com destino na DRE, cada um com o departamento do recorte (a lista das contas mostra as do departamento do centro e
+   * as do Extra-Operacional) e, para a consulta Contas do modal
+   * (04/11/2026), o grupo e a descrição da linha da DRE.
    */
   async opcoes(_request: Request, response: Response) {
     const prisma = getPrismaClient();
     const [centros, contas] = await Promise.all([
-      prisma.centroCusto.findMany({ where: { ativo: true }, orderBy: [{ codigoRM: "asc" }], select: { id: true, codigoRM: true, nomeRM: true, departamento: true } }),
+      // O balde e a atribuição (04/11/2026): a lista da lupa do Novo Centro de Custo.
+      prisma.centroCusto.findMany({ where: { ativo: true }, orderBy: [{ codigoRM: "asc" }], select: { id: true, codigoRM: true, nomeRM: true, departamento: true, atribuicao: true, balde: true } }),
       prisma.contaResultado.findMany({
         where: { ativo: true, tipoConta: "ANALITICA", linhaDREId: { not: null } },
         orderBy: { reduzido: "asc" },
-        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true, balde: true, linhaDRE: { select: { grupoSigla: true, descricao: true } } },
+        select: { id: true, reduzido: true, descricao: true, departamento: true, atribuicao: true, balde: true, linhaDRE: { select: { grupo: true, grupoSigla: true, descricao: true } } },
       }),
     ]);
     return response.json({
       data: {
         centros: centros.flatMap((c) => {
           const departamentoDoRecorte = gestaoDoCentro(c.departamento);
-          return departamentoDoRecorte ? [{ ...c, departamentoDoRecorte }] : [];
+          return departamentoDoRecorte && !centroForaDaContestacao(c.codigoRM) ? [{ ...c, departamentoDoRecorte }] : [];
         }),
-        contas: contas.map(({ linhaDRE, ...c }) => ({ ...c, departamentoDoRecorte: linhaDRE ? departamentoDaLinha(linhaDRE) : null })),
+        contas: contas.map(({ linhaDRE, ...c }) => ({
+          ...c,
+          departamentoDoRecorte: linhaDRE ? departamentoDaLinha(linhaDRE) : null,
+          linha: linhaDRE ? { grupo: linhaDRE.grupo, descricao: linhaDRE.descricao } : null,
+        })),
       },
     });
   },

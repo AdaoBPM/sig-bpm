@@ -12,11 +12,11 @@ import { CONFIGURACOES } from "@/app/analises-gerenciais/relatorios-executivos/c
 import { EtiquetaSituacao } from "@/app/analises-gerenciais/relatorios-executivos/components/EtiquetaSituacao";
 import type { Relatorio } from "@/app/analises-gerenciais/relatorios-executivos/services/relatoriosExecutivosService";
 
-import { paineisDeBordoService, ROTULO_DA_VISUALIZACAO } from "../services/paineisDeBordoService";
+import { paineisDeBordoService, ROTULO_DA_VISUALIZACAO, rotuloDaCompetencia } from "../services/paineisDeBordoService";
 
 /**
  * A barra do painel de bordo (31/10/2026), como a dos Relatórios Executivos: o nome do painel e a competência em
- * amarelo-ouro (o menu leva aos outros painéis que o usuário vê), as Configurações (sem a engrenagem, 01/11/2026) e a única tela, Painel de Bordo (com o
+ * amarelo-ouro (na competência automática, 03/11/2026, “Automática · Outubro/2026”; o menu leva aos outros painéis que o usuário vê), as Configurações (sem a engrenagem, 01/11/2026) e a única tela, Painel de Bordo (com o
  * check verde quando o painel está finalizado, 01/11/2026); à direita, a situação e a visualização (Privado ou Público) em
  * etiquetas.
  */
@@ -34,9 +34,9 @@ export function BarraDoPainel({ painel, chave, onMudar }: { painel: Relatorio; c
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <button type="button" title={`${painel.nome} · ${painel.rotuloMes}`} className="bg-bpm-primary hover:bg-bpm-primary-hover inline-flex max-w-full min-w-0 items-center gap-1 rounded-sm px-2.5 py-1 text-sm font-bold text-black xl:max-w-md">
+              <button type="button" title={`${painel.nome} · ${rotuloDaCompetencia(painel)}`} className="bg-bpm-primary hover:bg-bpm-primary-hover inline-flex max-w-full min-w-0 items-center gap-1 rounded-sm px-2.5 py-1 text-sm font-bold text-black xl:max-w-md">
                 <span className="truncate">
-                  {painel.nome} · {painel.rotuloMes}
+                  {painel.nome} · {rotuloDaCompetencia(painel)}
                 </span>
                 <ChevronDown className="size-3.5 shrink-0 text-black/70" />
               </button>
@@ -52,7 +52,7 @@ export function BarraDoPainel({ painel, chave, onMudar }: { painel: Relatorio; c
                   className={`flex justify-between gap-3 ${p.id === painel.id ? "font-bold" : ""}`}
                 >
                   <span className="truncate">{p.nome}</span>
-                  <span className="shrink-0 text-xs text-gray-500">{p.rotuloMes}</span>
+                  <span className="shrink-0 text-xs text-gray-500">{rotuloDaCompetencia(p)}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -91,8 +91,8 @@ export function BarraDoPainel({ painel, chave, onMudar }: { painel: Relatorio; c
             privado
               ? "Só quem criou o painel, os editores convidados e os Administradores o veem."
               : painel.situacao === "FINALIZADO"
-                ? "Todos os usuários com permissão nos Painéis de Bordo o veem."
-                : "Aparece para todos os usuários com permissão nos Painéis de Bordo quando for finalizado."
+                ? "Todos os usuários com permissão em Painéis e Apresentações o veem."
+                : "Aparece para todos os usuários com permissão em Painéis e Apresentações quando for finalizado."
           }
           className={`inline-flex items-center gap-1 rounded-sm border px-1.5 py-px text-xs font-medium whitespace-nowrap ${privado ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 bg-white text-gray-700"}`}
         >

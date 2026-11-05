@@ -294,15 +294,19 @@ export async function pastaDaOrigem(processo: ProcessoDosSlides, id: string, usu
   return pastaDosArquivos(processo, id);
 }
 
-/** As comparações de um documento (as Configurações): o cenário da Comparação Padrão e as marcações da Comparação PROVA. */
-export type ComparacoesDoDocumento = { ano: number; mes: number; cenarioComparadoId: string | null; comparacaoProva: MarcacaoCenario[] };
+/**
+ * As comparações de um documento (as Configurações): o cenário da Comparação Padrão e as marcações da Comparação PROVA. No
+ * painel de bordo com a competência automática (03/11/2026), a Comparação Padrão é uma marcação (`comparacaoPadrao`).
+ */
+export type ComparacoesDoDocumento = { ano: number; mes: number; cenarioComparadoId: string | null; comparacaoPadrao?: MarcacaoCenario | null; comparacaoProva: MarcacaoCenario[] };
 
 /**
  * O cenário de comparação (22/10/2026; desde 31/10/2026, a Comparação Padrão): o escolhido nas Configurações; sem ele (ou
  * com ele excluído, particular ou, desde 31/10/2026, sem marcação), o Orçamento Empresarial, como a tela das Configurações
- * mostra.
+ * mostra. Pela marcação (03/11/2026, o painel automático): o cenário que a tiver; sem nenhum, o Orçamento Empresarial.
  */
-export async function comparacaoDo(r: { cenarioComparadoId: string | null }): Promise<Comparacao> {
+export async function comparacaoDo(r: { cenarioComparadoId: string | null; comparacaoPadrao?: MarcacaoCenario | null }): Promise<Comparacao> {
+  if (r.comparacaoPadrao) return (await cenarioMarcado(r.comparacaoPadrao)) ? r.comparacaoPadrao : "ORCAMENTO_EMPRESARIAL";
   if (!r.cenarioComparadoId) return "ORCAMENTO_EMPRESARIAL";
   const c = await getPrismaClient().cenario.findFirst({ where: { id: r.cenarioComparadoId, visualizacao: "PUBLICA", marcacao: { not: null } }, select: { id: true } });
   return c ? { cenarioId: c.id } : "ORCAMENTO_EMPRESARIAL";
@@ -366,8 +370,13 @@ export async function comparacoesDas(r: ComparacoesDoDocumento) {
     }),
     cenarioMarcado("ORCAMENTO_EMPRESARIAL"),
   ]);
-  // O escolhido que deixou de existir (ou ficou particular ou sem marcação) volta à marcação.
-  const escolhido = r.cenarioComparadoId && cenarios.some((c) => c.id === r.cenarioComparadoId) ? r.cenarioComparadoId : null;
+  // O escolhido que deixou de existir (ou ficou particular ou sem marcação) volta à marcação. Pela marcação (03/11/2026, o
+  // painel automático), o cenário que a tem hoje.
+  const escolhido = r.comparacaoPadrao
+    ? (cenarios.find((c) => c.marcacao === r.comparacaoPadrao)?.id ?? null)
+    : r.cenarioComparadoId && cenarios.some((c) => c.id === r.cenarioComparadoId)
+      ? r.cenarioComparadoId
+      : null;
   return { ano: r.ano, cenarioComparadoId: escolhido, marcado, cenarios, comparacaoProva: r.comparacaoProva };
 }
 

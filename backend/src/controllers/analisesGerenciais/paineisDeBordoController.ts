@@ -28,8 +28,12 @@ export const paineisDeBordoController = {
     return responder(response, () => s.listar(usuario(request)));
   },
 
+  /** O painel novo: a competência (o ano e o mês) ou, com `automatica` (03/11/2026), a competência automática. */
   criar(request: Request, response: Response) {
-    const corpo = z.object({ nome, visualizacao, ano, mes, copiarDe: z.string().uuid().nullish(), manterImagensEAnotacoes: z.boolean().optional() }).safeParse(request.body);
+    const corpo = z
+      .object({ nome, visualizacao, ano: ano.optional(), mes: mes.optional(), automatica: z.boolean().optional(), copiarDe: z.string().uuid().nullish(), manterImagensEAnotacoes: z.boolean().optional() })
+      .refine((c) => (c.automatica ? c.ano === undefined && c.mes === undefined : c.ano !== undefined && c.mes !== undefined))
+      .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Dê um nome ao painel (até 80 caracteres) e escolha a visualização e a competência." });
     return responder(response, () => s.criar(corpo.data, usuario(request)), 201);
   },
@@ -49,13 +53,17 @@ export const paineisDeBordoController = {
     return r ? responder(response, () => s.configuracoes(r, usuario(request))) : undefined;
   },
 
-  /** As Configurações: o nome, a visualização, a competência (o ano e o mês juntos) e as comparações; uma ou mais. */
+  /**
+   * As Configurações: o nome, a visualização, a competência (o ano e o mês juntos ou, com `automatica`, 03/11/2026, a
+   * competência automática) e as comparações; uma ou mais.
+   */
   gravarConfiguracoes(request: Request, response: Response) {
     const r = id(request, response);
     if (!r) return;
     const corpo = z
-      .object({ nome: nome.optional(), visualizacao: visualizacao.optional(), ano: ano.optional(), mes: mes.optional(), ...corpoDasComparacoes })
+      .object({ nome: nome.optional(), visualizacao: visualizacao.optional(), ano: ano.optional(), mes: mes.optional(), automatica: z.literal(true).optional(), ...corpoDasComparacoes })
       .refine((c) => (c.ano === undefined) === (c.mes === undefined))
+      .refine((c) => !(c.automatica && c.ano !== undefined))
       .refine((c) => Object.values(c).some((v) => v !== undefined))
       .safeParse(request.body);
     if (!corpo.success) return response.status(400).json({ error: "Configurações inválidas: o nome (até 80 caracteres), a visualização, a competência ou as comparações." });

@@ -11,7 +11,7 @@ import { ROTULO_DA_VISUALIZACAO } from "../services/paineisDeBordoService";
 const OPCOES: Array<{ v: VisualizacaoDoPainel; detalhe: string; Icone: typeof Lock }> = [
   { v: "PRIVADO", detalhe: "Apenas você (quem criou), os editores que você convidar e os Administradores têm acesso.", Icone: Lock },
   // Desde 01/11/2026, só depois de finalizado.
-  { v: "PUBLICO", detalhe: "Depois de finalizado, todos os usuários com permissão nos Painéis de Bordo o veem; só você, os editores convidados e os Administradores o alteram.", Icone: Globe },
+  { v: "PUBLICO", detalhe: "Depois de finalizado, todos os usuários com permissão em Painéis e Apresentações o veem; só você, os editores convidados e os Administradores o alteram.", Icone: Globe },
 ];
 
 /** A visualização do painel na lista: o cadeado no Privado e o globo no Público, como na lista dos cenários. */

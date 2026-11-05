@@ -28,7 +28,8 @@ type Cenario = Configuracoes["cenarios"][number];
  * ele) — e a Comparação PROVA — os cenários dos objetos PROVA (os Cards PROVA e as Tabelas PROVA), dois ou mais dos
  * marcados; de início, todos. Quem edita a tela escolhe, e a escolha se salva na hora; os demais só veem. Nos Painéis de
  * Bordo (31/10/2026), as mesmas comparações, na aba Comparativos das Configurações deles (01/11/2026), com os grupos nos
- * destaques das Configurações dos cenários (`destaque`: a faixa amarelo-ouro à esquerda).
+ * destaques das Configurações dos cenários (`destaque`: a faixa amarelo-ouro à esquerda). No painel com a competência
+ * automática (03/11/2026), a Comparação Padrão vale pela marcação do cenário escolhido, como a PROVA.
  */
 export function ConfiguracoesDoRelatorio({ relatorioId, destaque = false }: { relatorioId: string; destaque?: boolean }) {
   const secao = `space-y-4 rounded-sm border border-gray-200 bg-white p-5${destaque ? " border-l-4 border-l-bpm-primary" : ""}`;
@@ -54,7 +55,13 @@ export function ConfiguracoesDoRelatorio({ relatorioId, destaque = false }: { re
       setEscolhido(undefined);
       setProva(undefined);
       setSalvoEm(new Date());
-      toast.success("comparacaoProva" in m ? "Configurações salvas: os objetos PROVA usam os cenários marcados." : "Configurações salvas: os objetos padrão usam o cenário escolhido.");
+      toast.success(
+        "comparacaoProva" in m
+          ? "Configurações salvas: os objetos PROVA usam os cenários marcados."
+          : c.automatica
+            ? "Configurações salvas: os objetos padrão acompanham a marcação do cenário escolhido."
+            : "Configurações salvas: os objetos padrão usam o cenário escolhido.",
+      );
     },
   });
   if (consulta.isError) return <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as configurações.")} />;
@@ -88,11 +95,20 @@ export function ConfiguracoesDoRelatorio({ relatorioId, destaque = false }: { re
       <section className={secao}>
         <div>
           <h2 className="text-base font-bold text-gray-900">Comparação Padrão</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            O orçado dos Cards Padrão (Painel de Bordo e Indicadores: o destaque do desvio e os gráficos) e das Tabelas Padrão. De início, o cenário marcado
-            como Orçamento (o {documento} acompanha a marcação até que se escolha um cenário); num cenário de outro exercício, valem os mesmos meses dele. A
-            lista traz os cenários com marcação.
-          </p>
+          {c.automatica ? (
+            // O painel automático: a comparação pela marcação, que acompanha o cenário do exercício novo.
+            <p className="mt-1 text-sm text-gray-600">
+              O orçado dos Cards Padrão (Painel de Bordo e Indicadores: o destaque do desvio e os gráficos) e das Tabelas Padrão. Com a competência
+              automática, vale a marcação do cenário escolhido: se ela passar para outro cenário (por exemplo, o do exercício novo), os objetos padrão
+              comparam com ele. De início, a marcação Orçamento. A lista traz os cenários com marcação.
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-gray-600">
+              O orçado dos Cards Padrão (Painel de Bordo e Indicadores: o destaque do desvio e os gráficos) e das Tabelas Padrão. De início, o cenário marcado
+              como Orçamento (o {documento} acompanha a marcação até que se escolha um cenário); num cenário de outro exercício, valem os mesmos meses dele. A
+              lista traz os cenários com marcação.
+            </p>
+          )}
           {/* Sem cenário escolhido e sem o marcado na lista: o que vale hoje. */}
           {c.cenarioComparadoId === null && !c.cenarios.some((x) => x.id === c.marcado?.id) ? (
             <p className="mt-1 text-sm text-gray-600">

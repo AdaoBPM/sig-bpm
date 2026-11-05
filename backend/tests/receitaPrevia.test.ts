@@ -105,6 +105,18 @@ describe("receita prévia", () => {
     assert.equal(r.itens.find((i) => i.detalhe === "1.2.33")?.observacao ?? null, null);
   });
 
+  it("saídas: a unidade da nota é a da linha no cadastro; sem ela, a Metalúrgica na Matriz e as demais na Filial (04/11/2026)", () => {
+    const d = vazio();
+    d.saidas = [
+      { id: "e", obra: null, unidade: 1, linha: "ESTRUTURA", unidadeDaLinha: 1, quantidade: D(0), valor: D(100), creditos: D(0) },
+      { id: "a", obra: null, unidade: 2, linha: "ALVEOLARES", unidadeDaLinha: 2, quantidade: D(0), valor: D(30), creditos: D(0) },
+      { id: "m", obra: null, unidade: 1, linha: "METALÚRGICA", quantidade: D(0), valor: D(7), creditos: D(0) },
+      { id: "x", obra: null, unidade: null, linha: null, quantidade: D(0), valor: D(5), creditos: D(0) },
+    ];
+    assert.equal(total(d, 1, "PRE_FABRICADO")!.receitaBruta.toFixed(2), "107.00");
+    assert.equal(total(d, 2, "PRE_FABRICADO")!.receitaBruta.toFixed(2), "35.00");
+  });
+
   it("serviços: montagem e vedação à parte; líquida pela proporção IRB/ROB da MONTAGEM da DRE", () => {
     const d = vazio();
     d.precos = [

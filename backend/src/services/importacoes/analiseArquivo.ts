@@ -14,6 +14,7 @@ import { DEFINICOES_INDICADORES, atualizarNomesDasMetas, lerIndicadores, type Ti
 import { ABA_LOTACAO, lerLotacao, ROTULO_LOTACAO } from "./lotacao/leituraLotacao.js";
 import { escolherAba } from "./statusImportacao.js";
 import { DEFINICOES_DOCUMENTOS, lerDocumentos, type TipoDocumentos } from "./documentos/leituraDocumentos.js";
+import { ABA_CREDITOS, lerCreditos, ROTULO_CREDITOS } from "./impostos/leituraCreditos.js";
 import { plural } from "../../utils/plural.js";
 
 /**
@@ -174,6 +175,23 @@ const TIPOS: Tipo[] = [
   // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do LISTAS REALIZADO (RESULTADOS) em 15/10/2026 e voltaram
   // em 26/10/2026: a tarefa dos itens leva os custos às linhas (a etapa Linhas da apuração).
   ...documentos,
+  // O Creditado e o Estornado do mês por unidade e conta (04/11/2026): os Créditos de Impostos.
+  {
+    tipo: "CREDITOS_IMPOSTOS",
+    rotulo: ROTULO_CREDITOS,
+    abas: [ABA_CREDITOS],
+    alcance: "POR_MES",
+    ler(linhas, ano, mes) {
+      const l = lerCreditos(linhas, ano, mes);
+      if (!l.ok) throw new AbaInvalida(l.motivo);
+      if (l.itens.length === 0 && l.rejeicoes.length === 0) return null;
+      return {
+        registros: l.itens.length,
+        assinatura: assinar([...l.itens, ...l.rejeicoes.map((r) => ({ codigo: r.codigo, mensagem: r.mensagem }))]),
+        avisos: l.rejeicoes.length ? [`${l.rejeicoes.length} ${plural(l.rejeicoes.length, "linha com erro, que não será gravada", "linhas com erro, que não serão gravadas")}.`] : [],
+      };
+    },
+  },
   {
     tipo: "DRE_COMERCIAL",
     rotulo: "DRE do Comercial",

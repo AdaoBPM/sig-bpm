@@ -55,6 +55,20 @@ export function contaCabeNoCentro(departamentoDoCentro: DepartamentoAcesso | nul
   return departamentoDaConta === departamentoDoCentro || departamentoDaConta === "EXTRA_OPERACIONAL";
 }
 
+/**
+ * Por que o centro não pode ser o centro novo de uma contestação (nulo se pode), pelo código (04/11/2026, pedido do Adão): só
+ * vale o de código com três níveis (1.01.00000001). Ficam fora o sem código no cadastro, o genérico (dois níveis: 1.01
+ * Administrativo, 1.02 Comercial, 1.11 a 1.15 da Produção, 1.16 Serviços, que agrupam os centros do departamento) e o de
+ * código mais longo (1.11.00000006.1 Laboratório).
+ */
+export function centroForaDaContestacao(codigoRM: string | null) {
+  const codigo = codigoRM?.trim() ?? "";
+  if (!codigo) return "não tem código no cadastro";
+  if (/^\d+\.\d+$/.test(codigo)) return "é genérico";
+  if (!/^\d+\.\d+\.\d+$/.test(codigo)) return "tem o código fora do padrão de três níveis (como 1.01.00000001)";
+  return null;
+}
+
 /** A forma da contestação validada, pelos movimentos: os lançamentos manuais, se algum foi por eles; senão, o balancete. */
 function formaDaContestacao(ms: Array<{ formaValidacao: FormaValidacaoContestacao | null }>): FormaValidacaoContestacao | null {
   if (ms.some((m) => m.formaValidacao === "LANCAMENTO_MANUAL")) return "LANCAMENTO_MANUAL";
@@ -469,9 +483,11 @@ export const contestacoesService = {
     // O centro que vale depois: o novo (de um departamento da DRE) ou o do movimento.
     let departamentoAlvo: DepartamentoAcesso | null;
     if (d.centroNovoId) {
-      const c = await prisma.centroCusto.findUnique({ where: { id: d.centroNovoId }, select: { ativo: true, nomeRM: true, departamento: true } });
+      const c = await prisma.centroCusto.findUnique({ where: { id: d.centroNovoId }, select: { ativo: true, codigoRM: true, nomeRM: true, departamento: true } });
       if (!c) throw new RegraContestacaoError(400, "Centro de custo não encontrado.");
       if (!c.ativo) throw new RegraContestacaoError(400, `O centro de custo ${c.nomeRM} está inativo no cadastro.`);
+      const fora = centroForaDaContestacao(c.codigoRM);
+      if (fora) throw new RegraContestacaoError(400, `O centro de custo ${[c.codigoRM, c.nomeRM].filter(Boolean).join(" ")} ${fora}: escolha outro centro do departamento.`);
       departamentoAlvo = gestaoDoCentro(c.departamento);
       if (!departamentoAlvo) throw new RegraContestacaoError(400, `O centro de custo ${c.nomeRM} não é de um departamento da DRE.`);
     } else {

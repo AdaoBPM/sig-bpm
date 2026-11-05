@@ -37,6 +37,8 @@ export const RECURSOS: RecursoSistema[] = [
   "ANALISES_GERENCIAIS",
   "CENARIOS_SINTETICOS",
   "CENARIOS_ANALITICOS",
+  // O Realizado por Obra (03/11/2026), no alto da Apuração dos Resultados, como no menu.
+  "REALIZADO_POR_OBRA",
   "RESULTADOS_REALIZADOS",
   "CONTESTACOES_GASTOS",
   "FECHAMENTO_MENSAL",
@@ -56,6 +58,7 @@ const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   ANALISES_GERENCIAIS: "Análises Gerenciais",
   CENTRAL_CONECTIVIDADE: "Central de Conectividade",
   CONTESTACOES_GASTOS: "Contestações de Gastos",
+  REALIZADO_POR_OBRA: "Realizado por Obra",
 };
 const ACOES: AcaoPermissao[] = ["LER", "EDITAR"];
 const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [

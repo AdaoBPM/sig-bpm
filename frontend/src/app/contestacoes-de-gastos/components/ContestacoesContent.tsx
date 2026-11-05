@@ -169,8 +169,8 @@ export function ContestacoesContent({ aba }: { aba: AbaDasContestacoes }) {
             <li>
               Para contestar um movimento, abra o extrato de uma linha (a lupa) na tela Resultados do Fechamento Mensal ou nos Resultados Empresariais e
               clique na conta de um lançamento: no balancete da conta, “Contestar”, na coluna Ações, abre o modal para sugerir o novo centro de custo e/ou
-              a nova conta de resultado (as listas buscam por código ou nome) e, se quiser, o motivo. Os centros são os de um departamento da DRE; as
-              contas, as do departamento do centro (o novo; sem ele, o do movimento) e as do Extra-Operacional.
+              a nova conta de resultado (as listas buscam por código ou nome) e, se quiser, o motivo. Os centros são os de um departamento da DRE com o código de três níveis (como 1.01.00000001; sem os genéricos, como 1.01, e sem os sem código); as
+              contas, as do departamento do centro (o novo; sem ele, o do movimento) e as do Extra-Operacional. A lupa ao lado de cada campo abre a lista inteira — os centros de custo (o departamento, a atribuição e o balde) e as Contas de Resultado (a linha e o grupo da DRE, o departamento, a atribuição e o balde) —, e clicar num item o escolhe. No canto de baixo do modal, “Regras de Rateio” mostra as regras vigentes no mês do movimento: como cada balde se divide entre as unidades.
             </li>
             <li>
               “Contestar Anteriores” e “Contestar Posteriores” levam junto os movimentos do mesmo fornecedor, na mesma conta e no mesmo centro de custo,

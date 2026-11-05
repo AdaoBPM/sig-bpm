@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { BuscaNaLista, type OpcaoDaBusca } from "@/components/shared/BuscaNaLista";
@@ -13,10 +14,30 @@ import { plural } from "@/lib/texto";
 import { botaoPrimario } from "@/app/cenarios/components/CenarioDialog";
 import { moeda } from "@/app/competencias/[anoMes]/utils/formatacao";
 
-import { contaCabeNoCentro, contestacoesService, mensagemDeErro, quemResponde, ROTULO_DEPARTAMENTO, type ResumoDaCombinacao } from "../services/contestacoesService";
+import {
+  contaCabeNoCentro,
+  contestacoesService,
+  mensagemDeErro,
+  quemResponde,
+  ROTULO_DEPARTAMENTO,
+  type CentroOpcao,
+  type ContaOpcao,
+  type ResumoDaCombinacao,
+} from "../services/contestacoesService";
+import { CentrosDeCustoDialog } from "./CentrosDeCustoDialog";
+import { ContasDeResultadoDialog } from "./ContasDeResultadoDialog";
+import { RegrasDeRateioDialog } from "./RegrasDeRateioDialog";
 
 const dataCurta = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : null);
 const somar = (...xs: string[]) => (xs.reduce((s, x) => s + Math.round(Number(x) * 100), 0) / 100).toFixed(2);
+/** As opções das listas com busca: o centro com o grupo da DRE; a conta com o departamento, a atribuição e o balde. */
+const opcaoDoCentro = (c: CentroOpcao): OpcaoDaBusca => ({ id: c.id, codigo: c.codigoRM ?? "—", nome: c.nomeRM, detalhe: c.departamento });
+const opcaoDaConta = (c: ContaOpcao): OpcaoDaBusca => ({
+  id: c.id,
+  codigo: c.reduzido,
+  nome: c.descricao,
+  detalhe: [c.departamento, c.atribuicao, c.balde ? `Balde ${c.balde}` : null].filter(Boolean).join(" · ") || null,
+});
 
 /** O movimento contestado, como o balancete mostra: o centro e a conta que valem hoje. */
 export type MovimentoContestado = {
@@ -40,19 +61,22 @@ function competenciasDoResumo(r: ResumoDaCombinacao | undefined) {
 /**
  * O modal Contestar (27/10/2026, pedido do Adão), no balancete de uma conta: o usuário sugere outro centro de custo e/ou
  * outra conta de resultado para o movimento (as listas com o código e o nome, com busca por termos) e, se quiser, o
- * motivo. Os centros são os de um departamento da DRE; as contas, as do departamento do centro (o novo; sem ele, o do
- * movimento) e as do Extra-Operacional. Contestar Anteriores e Posteriores (30/10/2026) levam junto os movimentos do mesmo
+ * motivo. Os centros são os de um departamento da DRE (só os de código com três níveis, como 1.01.00000001); as contas, as
+ * do departamento do centro (o novo; sem ele, o do movimento) e as do Extra-Operacional. Contestar Anteriores e Posteriores (30/10/2026) levam junto os movimentos do mesmo
  * fornecedor, conta e centro de custo nas competências anteriores e nas seguintes (as já importadas), com o total que muda
  * de centro e/ou de conta. A contestação vai para o responsável pelo centro (o novo; sem ele, o de hoje) — ou já fica
- * acatada, quando quem pede é o responsável.
+ * acatada, quando quem pede é o responsável. Desde 04/11/2026 (pedido do Adão), a lupa ao lado de cada campo abre a lista
+ * inteira (os centros de custo; as Contas de Resultado), e clicar num item o escolhe; no canto de baixo, Regras de Rateio (as
+ * vigentes no mês do movimento, `anoMes`).
  */
-export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: MovimentoContestado; onFechar: () => void; onCriada: () => void }) {
+export function ContestarDialog({ movimento, anoMes, onFechar, onCriada }: { movimento: MovimentoContestado; anoMes: string; onFechar: () => void; onCriada: () => void }) {
   const opcoes = useQuery({ queryKey: ["contestacoes", "opcoes"], queryFn: contestacoesService.opcoes, staleTime: 5 * 60_000 });
   const [centro, setCentro] = useState<OpcaoDaBusca | null>(null);
   const [conta, setConta] = useState<OpcaoDaBusca | null>(null);
   const [motivo, setMotivo] = useState("");
   const [anteriores, setAnteriores] = useState(false);
   const [posteriores, setPosteriores] = useState(false);
+  const [consulta, setConsulta] = useState<"centros" | "contas" | "rateios" | null>(null);
   const previa = useQuery({
     queryKey: ["contestacoes", "previa", movimento.id, centro?.id ?? null, conta?.id ?? null],
     queryFn: () => contestacoesService.previa({ lancamentoId: movimento.id, centroNovoId: centro?.id ?? null, contaNovaId: conta?.id ?? null }),
@@ -63,11 +87,8 @@ export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: 
   const contasDoCadastro = opcoes.data?.contas ?? [];
   // O departamento que vale para a conta: o do centro novo; sem ele, o do centro do movimento.
   const departamentoDoCentro = centro ? (centrosDoCadastro.find((c) => c.id === centro.id)?.departamentoDoRecorte ?? null) : (p?.departamentoDoCentro ?? null);
-  const centros: OpcaoDaBusca[] = centrosDoCadastro.map((c) => ({ id: c.id, codigo: c.codigoRM ?? "—", nome: c.nomeRM, detalhe: c.departamento }));
-  const contas: OpcaoDaBusca[] = contasDoCadastro
-    .filter((c) => contaCabeNoCentro(departamentoDoCentro, c.departamentoDoRecorte))
-    // O detalhe: o departamento, a atribuição e o balde da conta (a chave de rateio ou o destino direto).
-    .map((c) => ({ id: c.id, codigo: c.reduzido, nome: c.descricao, detalhe: [c.departamento, c.atribuicao, c.balde ? `Balde ${c.balde}` : null].filter(Boolean).join(" · ") || null }));
+  const centros = centrosDoCadastro.map(opcaoDoCentro);
+  const contas = contasDoCadastro.filter((c) => contaCabeNoCentro(departamentoDoCentro, c.departamentoDoRecorte)).map(opcaoDaConta);
   const escolherCentro = (o: OpcaoDaBusca | null) => {
     setCentro(o);
     // A conta escolhida que não cabe no departamento do centro novo sai.
@@ -139,14 +160,28 @@ export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: 
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="ct-centro">Novo Centro de Custo</Label>
-            <BuscaNaLista id="ct-centro" opcoes={centros} valor={centro} onEscolher={escolherCentro} placeholder="Código ou nome do centro de custo" />
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <BuscaNaLista id="ct-centro" opcoes={centros} valor={centro} onEscolher={escolherCentro} placeholder="Código ou nome do centro de custo" />
+              </div>
+              <Button type="button" variant="outline" size="icon" className="shrink-0 rounded-sm" disabled={!opcoes.data} onClick={() => setConsulta("centros")} aria-label="Ver todos os centros de custo e escolher um" title="Ver todos os centros de custo e escolher um">
+                <Search className="size-4" />
+              </Button>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ct-conta">
               Nova Conta de Resultado
               {departamentoDoCentro ? <span className="ml-1 font-normal text-gray-500">({ROTULO_DEPARTAMENTO[departamentoDoCentro]} e Extra-Operacional)</span> : null}
             </Label>
-            <BuscaNaLista id="ct-conta" opcoes={contas} valor={conta} onEscolher={setConta} placeholder="Código ou nome da conta" />
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <BuscaNaLista id="ct-conta" opcoes={contas} valor={conta} onEscolher={setConta} placeholder="Código ou nome da conta" />
+              </div>
+              <Button type="button" variant="outline" size="icon" className="shrink-0 rounded-sm" disabled={!opcoes.data} onClick={() => setConsulta("contas")} aria-label="Ver todas as contas de resultado e escolher uma" title="Ver todas as contas de resultado e escolher uma">
+                <Search className="size-4" />
+              </Button>
+            </div>
           </div>
           <div className="space-y-1.5">
             {caixa(anteriores, setAnteriores, "Contestar Anteriores", ant, "ct-anteriores")}
@@ -210,14 +245,41 @@ export function ContestarDialog({ movimento, onFechar, onCriada }: { movimento: 
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
-            Cancelar
+        <DialogFooter className="sm:justify-between">
+          <Button type="button" variant="outline" className="rounded-sm" onClick={() => setConsulta("rateios")} title="As Regras de Rateio vigentes no mês do movimento">
+            Regras de Rateio
           </Button>
-          <Button type="button" className={botaoPrimario} disabled={(!centro && !conta) || enviar.isPending} onClick={() => enviar.mutate()} title={!centro && !conta ? "Escolha o novo centro de custo e/ou a nova conta" : undefined}>
-            {enviar.isPending ? "Enviando…" : "Contestar"}
-          </Button>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button type="button" variant="outline" className="rounded-sm" onClick={onFechar}>
+              Cancelar
+            </Button>
+            <Button type="button" className={botaoPrimario} disabled={(!centro && !conta) || enviar.isPending} onClick={() => enviar.mutate()} title={!centro && !conta ? "Escolha o novo centro de custo e/ou a nova conta" : undefined}>
+              {enviar.isPending ? "Enviando…" : "Contestar"}
+            </Button>
+          </div>
         </DialogFooter>
+        {consulta === "centros" ? (
+          <CentrosDeCustoDialog
+            centros={centrosDoCadastro}
+            onEscolher={(c) => {
+              escolherCentro(opcaoDoCentro(c));
+              setConsulta(null);
+            }}
+            onFechar={() => setConsulta(null)}
+          />
+        ) : null}
+        {consulta === "contas" ? (
+          <ContasDeResultadoDialog
+            contas={contasDoCadastro}
+            departamentoDoCentro={departamentoDoCentro}
+            onEscolher={(c) => {
+              setConta(opcaoDaConta(c));
+              setConsulta(null);
+            }}
+            onFechar={() => setConsulta(null)}
+          />
+        ) : null}
+        {consulta === "rateios" ? <RegrasDeRateioDialog anoMes={anoMes} onFechar={() => setConsulta(null)} /> : null}
       </DialogContent>
     </Dialog>
   );

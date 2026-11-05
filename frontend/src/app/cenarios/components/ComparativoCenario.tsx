@@ -124,38 +124,39 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
   return (
     <div className="space-y-6">
       <section className={QUADRO}>
-        <div className="flex flex-wrap items-end gap-3">
-          {/* O cenário escolhido e o botão que abre o modal de escolha (13/10/2026; antes, uma lista). */}
-          <div className="w-full max-w-xl space-y-1.5">
-            <span className="text-sm leading-none font-medium">Cenário Comparado</span>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-sm border border-gray-300 bg-gray-50 px-3 text-sm">
-                {escolhido ? (
-                  <>
-                    <span className="truncate font-medium text-gray-900">{escolhido.nome}</span>
-                    <span className="shrink-0 text-gray-600">
-                      {rotuloVersao(escolhido.versao)} · {escolhido.ano}
-                    </span>
-                    <Etiqueta>{ROTULO_DO_TIPO[escolhido.tipo]}</Etiqueta>
-                    {escolhido.vigente ? <EtiquetaVigente classe={ETIQUETA} /> : null}
-                    <EtiquetaMarcacao marcacao={escolhido.marcacao} classe={ETIQUETA} />
-                  </>
-                ) : (
-                  <span className="text-gray-500">Nenhum (sem comparativo)</span>
-                )}
-              </div>
-              {podeEditar ? (
-                <Button type="button" variant="outline" className="shrink-0 rounded-sm" onClick={() => setEscolhendo(true)}>
-                  Escolher Cenário
-                </Button>
-              ) : null}
+        {/*
+          O cenário escolhido e o botão que abre o modal de escolha (13/10/2026; antes, uma lista). Desde 03/11/2026 (pedido do
+          Adão): o título como o da Variação Máxima, o espaço do nome mais largo (1,5 vez o original) e o Escolher Cenário à direita.
+        */}
+        <div className="space-y-2">
+          <h2 className={TITULO}>Cenário Comparado</h2>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex h-9 w-full max-w-[40.5rem] min-w-0 items-center gap-2 rounded-sm border border-gray-300 bg-gray-50 px-3 text-sm">
+              {escolhido ? (
+                <>
+                  <span className="truncate font-medium text-gray-900">{escolhido.nome}</span>
+                  <span className="shrink-0 text-gray-600">
+                    {rotuloVersao(escolhido.versao)} · {escolhido.ano}
+                  </span>
+                  <Etiqueta>{ROTULO_DO_TIPO[escolhido.tipo]}</Etiqueta>
+                  {escolhido.vigente ? <EtiquetaVigente classe={ETIQUETA} /> : null}
+                  <EtiquetaMarcacao marcacao={escolhido.marcacao} classe={ETIQUETA} />
+                </>
+              ) : (
+                <span className="text-gray-500">Nenhum (sem comparativo)</span>
+              )}
             </div>
+            <p className="min-w-0 flex-1 text-xs text-gray-600">
+              {comparado
+                ? `Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima delas aparecem na aba Justificativas da tela ${daTela}.`
+                : `Sem cenário comparado, o comparativo fica desligado e a aba Justificativas (tela ${daTela}) não aparece. ${analitico ? "Os índices das contas ficam guardados." : "As variações máximas ficam guardadas."}`}
+            </p>
+            {podeEditar ? (
+              <Button type="button" variant="outline" className="shrink-0 rounded-sm" onClick={() => setEscolhendo(true)}>
+                Escolher Cenário
+              </Button>
+            ) : null}
           </div>
-          <p className="min-w-0 flex-1 pb-2 text-xs text-gray-600">
-            {comparado
-              ? `Cada conta se compara, mês a mês e em cada aba da DRE, com a mesma conta do cenário escolhido. As que passam da variação máxima delas aparecem na aba Justificativas da tela ${daTela}.`
-              : `Sem cenário comparado, o comparativo fica desligado e a aba Justificativas (tela ${daTela}) não aparece. ${analitico ? "Os índices das contas ficam guardados." : "As variações máximas ficam guardadas."}`}
-          </p>
         </div>
       </section>
 
@@ -163,11 +164,7 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
         {/* O "Preencher Selecionados" à direita, ao lado do texto (13/10/2026; até 15/10/2026, "Preencher Todos Com"). */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className={TITULO}>{analitico ? "Índices de Reajuste" : "Variação Máxima"}</h2>
-              {/* O Exportar (30/10/2026): o que está gravado em cada linha da DRE. */}
-              <ExportarTabela titulo={`Cenário · Comparativo · ${analitico ? "Índices de Reajuste" : "Variação Máxima"}`} colunas={colunasExportadas} linhas={dados.linhas} />
-            </div>
+            <h2 className={TITULO}>{analitico ? "Índices de Reajuste" : "Variação Máxima"}</h2>
             <p className="mt-1 text-xs text-gray-600">
               {analitico
                 ? "O índice de reajuste de cada conta, na estrutura da DRE vigente. Contas sem índice não serão verificadas."
@@ -177,43 +174,47 @@ function Formulario({ id, dados, podeEditar }: { id: string; dados: Comparativo;
               <p className="mt-1 text-xs font-medium text-red-700">Nenhum índice cadastrado: inclua os índices na aba Índices.</p>
             ) : null}
           </div>
-          {podeEditar ? (
-            <div className="flex shrink-0 items-center gap-2">
-              <Label htmlFor="cmp-todos">Preencher Selecionados</Label>
-              {analitico ? (
-                <select id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} className="h-9 max-w-64 rounded-sm border border-gray-300 bg-white px-2 text-sm">
-                  <option value="">Escolha o índice…</option>
-                  {indices.map((i) => (
-                    <option key={i.chave} value={i.chave}>
-                      {rotuloDoIndice(i)}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} placeholder="%" inputMode="decimal" className="w-24 rounded-sm text-right" />
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-sm"
-                disabled={marcadas.size === 0 || typeof valorTodos !== "number" || valorTodos < 0}
-                title={marcadas.size === 0 ? "Marque as contas (a caixa de um total ou de uma atribuição marca as contas abaixo dele)" : undefined}
-                onClick={() => preencherMarcadas(analitico ? todos : duasCasas(valorTodos as number))}
-              >
-                Aplicar
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-sm"
-                disabled={![...marcadas].some((c) => (analitico ? !!limites[c] : typeof lidos[c] === "number"))}
-                title={marcadas.size === 0 ? "Marque as contas que perdem a variação" : undefined}
-                onClick={() => preencherMarcadas("")}
-              >
-                Limpar
-              </Button>
-            </div>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {podeEditar ? (
+              <>
+                <Label htmlFor="cmp-todos">Preencher Selecionados</Label>
+                {analitico ? (
+                  <select id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} className="h-9 max-w-64 rounded-sm border border-gray-300 bg-white px-2 text-sm">
+                    <option value="">Escolha o índice…</option>
+                    {indices.map((i) => (
+                      <option key={i.chave} value={i.chave}>
+                        {rotuloDoIndice(i)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input id="cmp-todos" value={todos} onChange={(e) => setTodos(e.target.value)} placeholder="%" inputMode="decimal" className="w-24 rounded-sm text-right" />
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-sm"
+                  disabled={marcadas.size === 0 || typeof valorTodos !== "number" || valorTodos < 0}
+                  title={marcadas.size === 0 ? "Marque as contas (a caixa de um total ou de uma atribuição marca as contas abaixo dele)" : undefined}
+                  onClick={() => preencherMarcadas(analitico ? todos : duasCasas(valorTodos as number))}
+                >
+                  Aplicar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-sm"
+                  disabled={![...marcadas].some((c) => (analitico ? !!limites[c] : typeof lidos[c] === "number"))}
+                  title={marcadas.size === 0 ? "Marque as contas que perdem a variação" : undefined}
+                  onClick={() => preencherMarcadas("")}
+                >
+                  Limpar
+                </Button>
+              </>
+            ) : null}
+            {/* O Exportar (30/10/2026): o que está gravado em cada linha da DRE; por último, depois do Limpar (03/11/2026, pedido do Adão). */}
+            <ExportarTabela titulo={`Cenário · Comparativo · ${analitico ? "Índices de Reajuste" : "Variação Máxima"}`} colunas={colunasExportadas} linhas={dados.linhas} />
+          </div>
         </div>
         <div className="rounded-sm border border-gray-200">
           <table className="tabela-sig w-full border-collapse">

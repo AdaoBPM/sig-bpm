@@ -14,6 +14,7 @@ import { Abas } from "@/components/shared/Abas";
 import { CampoBusca } from "@/components/shared/Filtros";
 
 import { lerAnoMes, moeda, moedaInteira } from "../utils/formatacao";
+import { CreditosDoMes, ExportarCreditosDoMes } from "../impostos/components/CreditosDoMes";
 import { DetalheDialog } from "./components/DetalheDialog";
 import { ExportarDRE } from "./components/ExportarDRE";
 import { AcoesApuracao, SituacaoApuracao, TextoApuracao } from "./components/PainelApuracao";
@@ -25,8 +26,8 @@ import { dreService, mensagemDeErro, ROTULO_CHAVE, UNIDADES, type LinhaDRE, type
 const ehVolume = (l: LinhaDRE) => l.grupoSigla === "P" || l.grupoSigla === "S";
 const volume = (v: string) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
-/** Consolidado, uma das unidades (1 a 5), a visão por centro de custo, a dos movimentos sem centro ou a por obra. */
-type Visao = "consolidado" | "centros" | "sem_centros" | "obras" | number;
+/** Consolidado, uma das unidades (1 a 5), a visão por centro de custo, a dos movimentos sem centro, a por obra ou os créditos de impostos. */
+type Visao = "consolidado" | "centros" | "sem_centros" | "obras" | "impostos" | number;
 const ABA_DA_UNIDADE = ["consolidado", "matriz", "filial", "servicos", "despesas", "rn"];
 const VISOES: Array<{ visao: Visao; aba: string; nome: string }> = [
   { visao: "consolidado", aba: "consolidado", nome: "Consolidado" },
@@ -35,6 +36,8 @@ const VISOES: Array<{ visao: Visao; aba: string; nome: string }> = [
   // Os movimentos sem centro de custo (15/10/2026), como em Resultados Empresariais.
   { visao: "sem_centros", aba: "sem_centros", nome: "Sem Centros de Custo" },
   { visao: "obras", aba: "obras", nome: "Obras" },
+  // Os Créditos de Impostos do mês (04/11/2026, pedido do Adão; de 03/11/2026, a etapa Impostos), como em Resultados Empresariais.
+  { visao: "impostos", aba: "impostos", nome: "Impostos" },
 ];
 
 /**
@@ -494,6 +497,8 @@ export function DREContent() {
       semCentroEscolhido ? <ExportarDRE anoMes={anoMes} visao={{ semCentro: semCentroEscolhido }} /> : null
     ) : visao === "obras" ? (
       obraEscolhida ? <ExportarDRE anoMes={anoMes} visao={{ obra: obraEscolhida }} /> : null
+    ) : visao === "impostos" ? (
+      <ExportarCreditosDoMes anoMes={anoMes} />
     ) : visao !== null && cabecalho?.apuradoEm ? (
       <ExportarDRE anoMes={anoMes} visao={visao} />
     ) : null;
@@ -504,7 +509,7 @@ export function DREContent() {
         titulo="Resultados"
         comoUsar={
           <ul>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo, Sem Centros de Custo ou Obras (com a lista dos centros, dos grupos ou das obras à esquerda). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, RN, Centros de Custo, Sem Centros de Custo, Obras (com a lista dos centros, dos grupos ou das obras à esquerda) ou Impostos (os Créditos de Impostos). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
               Centros de Custo, Sem Centros de Custo e Obras saem dos lançamentos do balancete: consultam-se desde a importação, antes da apuração (com
               o que já está classificado). Depois da apuração, os centros de custo mostram os valores apurados.
@@ -520,6 +525,11 @@ export function DREContent() {
               de custo e na filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
             </li>
             <li>
+              “Regras de Rateio”, no canto de baixo do extrato, mostra as regras de rateio vigentes no mês: em cada chave (Projeto, Produção,
+              Metalurgia, Armadura e Acompanhamento), como o valor se divide entre as unidades, com um card por destino (o percentual do mês e o volume);
+              e os baldes diretos, que não se dividem.
+            </li>
+            <li>
               “Exportar”, no pé do extrato, baixa um Excel com a aba Movimentações (os lançamentos do extrato, por bloco, com o valor e a parcela na
               linha) e a aba Detalhes (os movimentos do balancete de cada lançamento, item a item: a emissão, o cliente ou fornecedor e o histórico). No
               Balancete, o “Exportar” baixa só a conta: o lançamento numa aba e os movimentos que o modal mostra (no recorte da caixa) na outra.
@@ -531,11 +541,11 @@ export function DREContent() {
             </li>
             <li>
               No balancete, a coluna Ações tem “Contestar” (de quem edita Contestações de Gastos › Contestações › Solicitadas): o modal sugere o novo centro
-              de custo (os de um departamento da DRE) e/ou a nova conta de resultado (as do departamento do centro e as do Extra-Operacional) do movimento
+              de custo (os de um departamento da DRE, com o código de três níveis, como 1.01.00000001) e/ou a nova conta de resultado (as do departamento do centro e as do Extra-Operacional) do movimento
               (as listas buscam por código ou nome) e, se quiser, o motivo. “Contestar Anteriores” e “Contestar Posteriores” levam junto os movimentos do
               mesmo fornecedor, conta e centro de custo nas competências anteriores e nas seguintes, com o total que muda. O movimento com uma contestação
               em andamento mostra o número e a situação dela; o que chega à linha pelo rateio de outra (como os da Metalurgia nas linhas de Serviços)
-              mostra “Rateio”: contesta-se na linha de origem.
+              mostra “Rateio”: contesta-se na linha de origem. A lupa ao lado de cada campo abre a lista inteira — os centros de custo (o departamento, a atribuição e o balde) e as Contas de Resultado (a linha e o grupo da DRE, o departamento, a atribuição e o balde) —, e clicar num item o escolhe. No canto de baixo do modal, “Regras de Rateio” mostra as regras vigentes no mês do movimento: como cada balde se divide entre as unidades.
             </li>
             <li>
               Os lançamentos de rateio das contestações de competências fechadas (Lançamentos / Contestações) entram no extrato em blocos à parte,
@@ -546,8 +556,15 @@ export function DREContent() {
               CLT e PJ, Horas Extras, Multas Rescisórias, Encargos e Benefícios e Pró Labore Diretoria) mostram os valores, mas não abrem o extrato.
             </li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas para recolher ou expandir a DRE nos três níveis da planilha; as contas, sem negrito, só aparecem em Contas, menos as de Produção e Serviços (PS), os volumes, que aparecem em todos os níveis. A seta à esquerda de cada total ou atribuição abre e fecha só aquele grupo.</li>
+            <li>
+              Em Impostos, uma tabela por unidade (Matriz e Filial), com as contas de Matérias Primas, de Gastos Gerais Variáveis da Produção e o Frete e
+              Descarga, o valor de cada uma na DRE apurada da unidade e o Creditado (R$) e o Estornado (R$) do mês, cada um com o % sobre o valor da conta.
+              Os R$ vêm da aba Impostos (Lista) importada (Importações); sem ela, um traço. O Total e cada grupo somam os R$ das contas, com o % sobre a soma
+              delas. Os menus de níveis e as setas dos grupos funcionam como na DRE. No recorte
+              por departamento ou por centro de custo, a aba não aparece.
+            </li>
             <li>Em Centros de Custo, escolha o centro na lista à esquerda; o ícone de informação ao lado do nome mostra o agrupamento e os centros de custo agrupados. A DRE do centro traz só os custos e as despesas de mão de obra, gastos gerais e depreciação.</li>
-            <li>Em Obras, escolha a obra na lista à esquerda (o código do centro de custo da obra fica acima do nome; a busca aceita os dois): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, sem as margens e os resultados calculados.</li>
+            <li>Em Obras, escolha a obra na lista à esquerda (o código do centro de custo da obra fica acima do nome; a busca aceita os dois): a DRE da obra traz todos os movimentos lançados no centro de custo dela — receita, impostos, custos, despesas e financeiros —, sem as margens e os resultados calculados. Nas receitas, como na DRE das unidades: as contas de Reconhecimento do CPV ficam de fora (no centro da obra, elas anulam o faturamento, porque a DRE reconhece a receita na produção); a receita prévia de frete da obra sai da Receita Bruta do Pré-Fabricado e vai à de Frete; a complementar sai da de Montagem e vai à Complementar. No extrato dessas linhas, o botão da receita prévia abre a memória de cálculo só com a obra.</li>
             <li>
               “Excluir Competência” apaga a competência com tudo o que é dela (importações, lançamentos, listas, apuração, divergências): só a mais
               recente e em aberto (não fechada) — nas outras, o botão fica apagado, com o motivo na dica. A confirmação mostra o que sai e pede a
@@ -566,17 +583,25 @@ export function DREContent() {
               bloqueada” aparece quando uma competência anterior tem entradas ou cadastros alterados: reapure as anteriores, em ordem, pelos botões
               “Ir para MM/AAAA”.
             </li>
-            <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo). Na confirmação, um aviso lista as telas do mês sem nenhum valor (Importações sem requisições nem notas fiscais, Lançamentos, Prévias › Receita, Totais › Indicadores, Prévias › Estoque, Conferência), para conferir antes de fechar; ele não impede o fechamento. “Exportar”, na linha do título, baixa a DRE; “Reaberturas” mostra o histórico das reaberturas.</li>
-            <li>Use “Exportar” para baixar a DRE em Excel ou PDF; em Excel, também um arquivo por centro de custo (num ZIP, com o departamento e o centro no nome de cada arquivo).</li>
+            <li>Com o mês conferido, “Fechar Competência” congela os valores — os meses se fecham em ordem: com uma competência anterior em aberto, o botão fica desabilitado (passe o mouse para ver o motivo). Na confirmação, um aviso lista as telas do mês sem nenhum valor (Importações sem requisições nem notas fiscais, Lançamentos, Prévias › Receita, Totais › Indicadores, Prévias › Estoque, Conferência), para conferir antes de fechar; ele não impede o fechamento. “Reaberturas” mostra o histórico das reaberturas.</li>
+            <li>
+              “Exportar”, na linha do título, baixa a DRE da aba aberta em Excel ou PDF; em Excel, também um arquivo por centro de custo (num ZIP, com o
+              departamento e o centro no nome de cada arquivo). Em Impostos, ele leva as duas tabelas, com a unidade de cada linha.
+            </li>
           </ul>
         }
         sobre={
           <>
             <p>
               Os resultados do mês: a DRE consolidada, a de cada unidade e a de cada centro de custo, a partir da classificação, dos rateios, da
-              receita prévia e dos lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99) e,
-              em Produção e Serviços (PS), os volumes da obra nas Listas Operacionais. Clique numa
-              linha para ver como o valor foi formado e chegar aos lançamentos de origem.
+              receita prévia e dos lançamentos manuais, e a de cada obra, com os lançamentos do balancete nos centros de custo de obra (1.98 e 1.99),
+              a receita prévia de frete e complementar da obra e, em Produção e Serviços (PS), os volumes da obra nas Listas Operacionais.
+            </p>
+            <p>
+              Em Impostos, os créditos de impostos do mês em cada unidade (Matriz e Filial): o Creditado e o Estornado das contas de Matérias Primas, de
+              Gastos Gerais Variáveis da Produção e do Frete e Descarga (da aba Impostos (Lista) do LISTAS REALIZADO (RESULTADOS), com cada conta pela
+              atribuição e pelo nome, como na Estrutura da DRE; as linhas das demais contas ficam de fora), em R$ e em % sobre o valor da conta na unidade. O Realizado por Obra usa esses percentuais nos custos dessas contas: nas vendas mercantis, tira o Estornado (custo
+              × (1 − % Estornado)); nas globais, tira o Estornado e reaplica o Creditado (custo × (1 − % Estornado) ÷ (1 − % Creditado)).
             </p>
             <p>
               <TextoApuracao anoMes={anoMes} />
@@ -615,6 +640,8 @@ export function DREContent() {
         <VisaoSemCentros key={anoMes} anoMes={anoMes} escolhido={semCentroEscolhido} onEscolher={setSemCentro} />
       ) : visao === "obras" ? (
         <VisaoObras key={anoMes} anoMes={anoMes} escolhida={obraEscolhida} onEscolher={setObra} />
+      ) : visao === "impostos" ? (
+        <CreditosDoMes key={anoMes} anoMes={anoMes} />
       ) : consulta.isError ? (
         <Erro erro={consulta.error} padrao="Erro ao carregar a DRE." />
       ) : consulta.isPending ? (

@@ -82,7 +82,8 @@ function telasDoCenario(base: string, analitico: boolean): TelaDoCatalogo[] {
 }
 
 export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
-  // As Análises Gerenciais (15/10/2026): os Relatórios Executivos e, desde 31/10/2026, os Painéis de Bordo; os demais
+  // As Análises Gerenciais (15/10/2026): os Relatórios Executivos e, desde 31/10/2026, o processo Painéis e Apresentações (de início,
+  // Painéis de Bordo; de 03 a 04/11/2026, Apresentações de Resultados); os demais
   // processos do grupo ainda em desenvolvimento.
   {
     recurso: "ANALISES_GERENCIAIS",
@@ -90,11 +91,21 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
     area: "analises_gerenciais",
     telas: [
       { codigo: "relatorios_executivos", nome: "Relatórios Executivos" },
-      { codigo: "paineis_de_bordo", nome: "Painéis de Bordo" },
+      { codigo: "paineis_de_bordo", nome: "Painéis e Apresentações" },
     ],
   },
   { recurso: "CENARIOS_SINTETICOS", nome: "Cenários Sintéticos", area: "cenarios", telas: telasDoCenario("cenarios", false) },
   { recurso: "CENARIOS_ANALITICOS", nome: "Cenários Analíticos", area: "cenarios_analiticos", telas: telasDoCenario("cenarios_analiticos", true) },
+  // O Realizado por Obra (03/11/2026, pedido do Adão; antes, o processo Resultados por Obra, em desenvolvimento): os
+  // Resultados (o Consolidado e uma aba por linha da obra), com a venda escolhida na lista Venda. O Painel de Bordo saiu no
+  // mesmo dia, até os Resultados Vendidos e a busca no RM. Os créditos de impostos ficam na aba Impostos dos Resultados
+  // Empresariais › Resultados.
+  {
+    recurso: "REALIZADO_POR_OBRA",
+    nome: "Realizado por Obra",
+    area: "realizado_obra",
+    telas: [{ codigo: "realizado_obra_resultados", nome: "Resultados" }],
+  },
   {
     recurso: "RESULTADOS_REALIZADOS",
     nome: "Resultados Empresariais",
@@ -104,10 +115,18 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       // A aba Rateios das Linhas (26/10/2026, antes Rateios por Obras; a chave rateios_linhas) saiu da tela em 27/10/2026, a
       // pedido do Adão: o código fica (a visão rateios_linhas do relatório e da exportação, o `rateios` do PainelDeLinhas e do
       // resultadosLinhaService.linha) para o processo Resultados por Obra. Fora do catálogo, nenhum perfil a alcança.
+      // A aba Impostos (Créditos de Impostos; 03/11/2026, pedido do Adão; de início, Almoxarifado), depois de Obras: os créditos
+      // de impostos de cada mês fechado.
       {
         codigo: "relatorio_resultados",
         nome: "Resultados",
-        abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, { codigo: "linhas", nome: "Linhas" }, COM_CENTROS_E_OBRAS[7]],
+        abas: [
+          ...COM_CENTROS_E_OBRAS.slice(0, 7),
+          { codigo: "sem_centros", nome: "Sem Centros de Custo" },
+          { codigo: "linhas", nome: "Linhas" },
+          COM_CENTROS_E_OBRAS[7],
+          { codigo: "impostos", nome: "Impostos" },
+        ],
       },
       // Os Indicadores são uma aba do Painel de Bordo (19/10/2026; antes, uma tela).
       { codigo: "relatorio_painel", nome: "Painel de Bordo", abas: [...PAINEL, { codigo: "indicadores", nome: "Indicadores" }] },
@@ -169,8 +188,13 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
         ],
       },
       // A aba Sem Centros de Custo também na DRE do mês (15/10/2026), antes de Obras. A tela se chama Resultados desde
-      // 27/10/2026 (antes, DRE); a chave não muda.
-      { codigo: "dre", nome: "Resultados", abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7]] },
+      // 27/10/2026 (antes, DRE); a chave não muda. Depois de Obras, os Créditos de Impostos do mês (04/11/2026, pedido do
+      // Adão; de 03/11/2026, a etapa Impostos, `impostos_mes`).
+      {
+        codigo: "dre",
+        nome: "Resultados",
+        abas: [...COM_CENTROS_E_OBRAS.slice(0, 7), { codigo: "sem_centros", nome: "Sem Centros de Custo" }, COM_CENTROS_E_OBRAS[7], { codigo: "impostos", nome: "Impostos" }],
+      },
       // A etapa Linhas (26/10/2026): a DRE de cada unidade dividida entre as linhas, gravada na apuração. Editar grava as
       // linhas de uma competência fechada antes dela.
       { codigo: "linhas_mes", nome: "Linhas" },

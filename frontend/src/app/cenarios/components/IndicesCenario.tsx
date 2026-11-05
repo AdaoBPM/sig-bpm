@@ -75,14 +75,14 @@ function Lista({ id, indices, podeEditar }: { id: string; indices: Array<IndiceD
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {/* O Exportar (30/10/2026): os índices gravados. */}
-          <ExportarTabela titulo="Cenário · Índices de Reajuste" colunas={COLUNAS_DOS_INDICES} linhas={indices} />
           {podeEditar ? (
             <Button type="button" variant="outline" className="shrink-0 rounded-sm" onClick={() => setLinhas((atual) => [...atual, { chave: null, descricao: "", observacao: "", variacao: "", contas: 0 }])}>
               <Plus className="size-4" />
               Incluir Índice
             </Button>
           ) : null}
+          {/* O Exportar (30/10/2026): os índices gravados; por último, depois do Incluir Índice (03/11/2026, pedido do Adão). */}
+          <ExportarTabela titulo="Cenário · Índices de Reajuste" colunas={COLUNAS_DOS_INDICES} linhas={indices} />
         </div>
       </div>
       <div className="rounded-sm border border-gray-200">

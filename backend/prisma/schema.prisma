@@ -42,6 +42,8 @@ enum RecursoSistema {
   CENTRAL_CONECTIVIDADE
   /// As Contestações de Gastos (27/10/2026): as telas Contestações (Solicitadas e Recebidas) e Validações.
   CONTESTACOES_GASTOS
+  /// O Realizado por Obra (03/11/2026): as telas Configurações (Geral e Almoxarifado), Resultados e Painel de Bordo.
+  REALIZADO_POR_OBRA
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
@@ -166,6 +168,8 @@ model Usuario {
   conferenciasPlanilha  ConferenciaPlanilha[]
   /// Os painéis de bordo de outros usuários que ele edita (01/11/2026: o Compartilhar das Configurações dos painéis).
   paineisCompartilhados PainelDeBordoEditor[]
+  /// A obra e a versão vendida escolhidas no Realizado por Obra (03/11/2026).
+  realizadoObra RealizadoObraConfiguracao?
 
   @@map("usuarios")
 }
@@ -380,6 +384,7 @@ model Linha {
   correspondenciasTarefas CorrespondenciaTarefa[]
   alocacoes               AlocacaoLinha[]
   resultados              ResultadoLinha[]
+  resultadosObras         ResultadoObra[]
   rateiosFixos            RegraRateioLinha[]
 
   @@unique([tipo, codigo])
@@ -539,6 +544,8 @@ model LinhaDRE {
   lancamentosManuais   LancamentoManual[]
   resultadosApurados   ResultadoApurado[]
   resultadosLinhas     ResultadoLinha[]
+  resultadosObras      ResultadoObra[]
+  creditosImpostos     CreditoImposto[]
   cenariosResultados   CenarioResultado[]
   cenariosJustificativas CenarioJustificativa[]
 
@@ -706,6 +713,8 @@ enum TipoImportacao {
   NOTAS_FISCAIS
   /// Os colaboradores do mês por centro de custo: aba Quadro de Lotação do LISTAS REALIZADO (OPERAÇÃO) (19/10/2026).
   QUADRO_LOTACAO
+  /// O Creditado e o Estornado do mês (R$) por unidade e conta: aba Impostos (Lista) do LISTAS REALIZADO (RESULTADOS) (04/11/2026).
+  CREDITOS_IMPOSTOS
 }
 
 /// ENUM: estado do processamento de uma importação.
@@ -800,6 +809,8 @@ model Competencia {
   volumesOperacionais VolumeOperacional[]
   resultadosApurados  ResultadoApurado[]
   resultadosLinhas    ResultadoLinha[]
+  resultadosObras     ResultadoObra[]
+  creditosImpostos    CreditoImposto[]
   conferenciasPlanilha ConferenciaPlanilha[]
 
   @@unique([ano, mes])
@@ -876,6 +887,7 @@ model Importacao {
   requisicoes     RequisicaoItem[]
   notasFiscais    NotaFiscalItem[]
   lotacoes        LotacaoCentro[]
+  creditosImpostos CreditoImposto[]
 
   @@index([competenciaId, tipo])
   @@index([hashArquivo])
@@ -1023,6 +1035,9 @@ model Obra {
   medicoes            Medicao[]
   devolucoes          Devolucao[]
   saidas              Saida[]
+
+  resultados             ResultadoObra[]
+  configuracoesRealizado RealizadoObraConfiguracao[]
 
   @@index([situacaoCadastro])
   @@map("obras")
@@ -1855,6 +1870,73 @@ model ResultadoLinha {
   @@map("resultados_linhas")
 }
 
+/// O Realizado por Obra (03/11/2026, pedido do Adão): o valor de cada obra em cada linha e item da DRE, gravado pela etapa
+/// Linhas da apuração com os Resultados por Linha e congelado com a competência no fechamento. É a soma do direto na obra (a
+/// receita dela, os lançamentos dos centros de obra e os volumes dela nas listas) com a parte dela no rateio da linha (os
+/// custos da linha que não vieram dos centros de obra, pela base da linha). As obras de uma linha somam a linha.
+model ResultadoObra {
+  id            String  @id @default(uuid())
+  competenciaId String  @map("competencia_id")
+  /// A unidade pelo código: 1 Matriz, 2 Filial, 3 Serviços.
+  unidade       Int
+  /// Nulo: a Sem Linha da unidade.
+  linhaId       String? @map("linha_id")
+  /// Nulo: a Sem Obra (o rateio da linha sem base no mês e no exercício, e o direto de um centro de obra sem a obra no cadastro).
+  obraId        String? @map("obra_id")
+  linhaDREId    String  @map("linha_dre_id")
+  /// DECIMAL: o valor da obra no item (o direto mais a parte do rateio).
+  valor         Decimal
+  /// DECIMAL: a parte direta do valor (a receita, os centros de obra e os volumes); o resto é o rateio.
+  direto        Decimal @default(0)
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  linha       Linha?      @relation(fields: [linhaId], references: [id], onDelete: Restrict)
+  obra        Obra?       @relation(fields: [obraId], references: [id], onDelete: Restrict)
+  linhaDRE    LinhaDRE    @relation(fields: [linhaDREId], references: [id])
+
+  @@index([obraId, competenciaId])
+  @@index([competenciaId])
+  @@map("resultados_obras")
+}
+
+/// Os Créditos de Impostos do mês (a tela Impostos do Fechamento Mensal; 03/11/2026, importados desde 04/11/2026): de cada
+/// conta de Matérias Primas, de Gastos Gerais Variáveis da Produção e de Frete e Descarga, por unidade, o Creditado e o
+/// Estornado em R$, da aba Impostos (Lista) do LISTAS REALIZADO (RESULTADOS). Os percentuais saem na leitura, sobre o custo
+/// da conta na unidade (a DRE apurada).
+model CreditoImposto {
+  competenciaId String  @map("competencia_id")
+  importacaoId  String  @map("importacao_id")
+  /// A unidade pelo código: 1 Matriz, 2 Filial.
+  unidade       Int
+  linhaDREId    String  @map("linha_dre_id")
+  /// DECIMAL: R$.
+  creditado     Decimal
+  estornado     Decimal
+  linhaArquivo  Int     @map("linha_arquivo")
+
+  competencia Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  importacao  Importacao  @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+  linhaDRE    LinhaDRE    @relation(fields: [linhaDREId], references: [id], onDelete: Cascade)
+
+  @@id([competenciaId, unidade, linhaDREId])
+  @@index([importacaoId])
+  @@map("creditos_impostos")
+}
+
+/// A obra e a versão vendida que cada usuário escolheu no Realizado por Obra (03/11/2026, a aba Geral das Configurações).
+model RealizadoObraConfiguracao {
+  usuarioId    String   @id @map("usuario_id")
+  obraId       String   @map("obra_id")
+  /// A VERSÃO (N) da DRE do Comercial (0: VER00).
+  versao       Int      @default(0)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  obra    Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  @@map("realizado_obra_configuracoes")
+}
+
 /// Reclassificação de conta por centro de custo — a versão de cadastro da
 /// coluna CONTA (ALOC.) da planilha. Corrige o lançamento que o RM gravou numa
 /// conta de outro departamento ou de outra atribuição (folha, requisição, nota
@@ -2503,6 +2585,12 @@ model PainelDeBordo {
   finalizadoEm       DateTime?          @map("finalizado_em")
   ano                Int
   mes                Int
+  /// A competência automática (03/11/2026, pedido do Adão): o painel mostra sempre a última competência fechada; `ano` e
+  /// `mes` guardam a da última escolha (a fixa ou a de quando o painel ficou automático).
+  competenciaAutomatica Boolean          @default(false) @map("competencia_automatica")
+  /// No painel automático (03/11/2026), a Comparação Padrão pela marcação: acompanha o cenário que a tiver, como a
+  /// Comparação PROVA (nula: o Orçamento). No painel fixo, nula: vale o `cenarioComparadoId`.
+  comparacaoPadrao   MarcacaoCenario?   @map("comparacao_padrao")
   /// As páginas da tela Painel de Bordo, com os blocos: [{ id, nome, blocos, fundo, transicao, avancarApos }].
   paginas            Json               @db.Json
   /// Quem gravou as páginas por último e quando: a versão que a gravação confere (as Configurações não a mudam).

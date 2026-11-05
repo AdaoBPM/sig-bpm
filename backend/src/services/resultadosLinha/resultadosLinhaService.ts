@@ -9,6 +9,7 @@ import { mesesDoExercicio, montar, type LinhaEstrutura } from "../relatorios/res
 import { valeNoMes } from "../volumes/vigenciasRateio.js";
 import { alocar, fracoesDaTarefa, numeroDaObra, ROTULO_DO_NIVEL, semLinha, type Nivel, type Passo } from "./alocacaoNasLinhas.js";
 import { linhasDoNegocio, pesosDaBase, receitaDoMes, volumeDaLinhaDRE, volumesDoMes, type Base, type ItemDaReceita, type LinhaDoNegocio, type Volume } from "./basesDasLinhas.js";
+import { basesDoRateio, dividirPelasObras, pesosDasObras, ratearEntreObras, SEM_OBRA, somarNaObra, type BaseDaObra, type ValoresDasObras } from "./divisaoEntreObras.js";
 
 /**
  * Os Resultados por Linha (26/10/2026, pedido do Adão): a DRE de cada linha de produto e de obra, da receita à Margem de
@@ -26,7 +27,8 @@ import { linhasDoNegocio, pesosDaBase, receitaDoMes, volumeDaLinhaDRE, volumesDo
  * - os volumes (as linhas P e S), pelas listas, na regra da aba Totais.
  *
  * A soma das linhas de cada unidade é a DRE da unidade (a Conferência). A parte de cada custo que veio dos centros de obra
- * é direta nas obras; o resto é o que a aba Rateios das Linhas leva às obras (os Resultados por Obra).
+ * é direta nas obras; o resto é o rateio da linha, que a etapa também divide entre as obras dela (03/11/2026, o Realizado
+ * por Obra: `divisaoEntreObras.ts`), e as obras de cada linha somam a linha.
  */
 
 const Decimal = Prisma.Decimal;
@@ -41,13 +43,14 @@ const SECOES = new Set(["PS", "P", "S"]);
 const CUSTOS = new Set(["CPP", "CSM", "CSC", "DVV"]);
 /** A aba Rateios das Linhas: só os custos (e os volumes, a base). */
 const DOS_RATEIOS = new Set(["PS", "P", "S", "CPP", "CSM", "CSC", "CPV", "DVV"]);
-const NATUREZA_DA_RECEITA: Record<string, string> = {
+/** A natureza da Receita Prévia de cada item da receita (pela sigla: RBPF, RLPF…). */
+export const NATUREZA_DA_RECEITA: Record<string, string> = {
   RBPF: "PRE_FABRICADO", RLPF: "PRE_FABRICADO", RBF: "FRETE", RLF: "FRETE", RBM: "MONTAGEM", RLM: "MONTAGEM",
   RBC: "COMPLEMENTAR", RLC: "COMPLEMENTAR", RBDI: "DEVOLUCOES_INVENTARIOS", RLDI: "DEVOLUCOES_INVENTARIOS",
 };
 const MC = "MC.MARGEM_DE_CONTRIBUICAO_MC";
 
-type LinhaDRE = LinhaEstrutura & { expressao: string | null; unidades: number[] };
+export type LinhaDRE = LinhaEstrutura & { expressao: string | null; unidades: number[] };
 type Par = { balde: string; filial?: number };
 type OrigemContabil = { linhaId: string; pares?: Par[]; baldes?: string[]; fator?: string };
 type Composicao = { origem?: { contabil?: OrigemContabil; contabilPar?: OrigemContabil }; rateios?: Array<{ chave: string; destino?: string; percentual: string; linhaId?: string; competenciaId?: string }> };
@@ -59,7 +62,7 @@ type Fonte = { linhaDREId: string; balde: string; filial: number; rateio: boolea
 type Regra = { origem: string; centroCustoId: string | null; balde: string | null; destino: string; linhaId: string | null; base: string | null };
 type DadosDoMes = { volumes: Volume[]; receita: ItemDaReceita[] };
 
-async function estruturaDaDRE(): Promise<LinhaDRE[]> {
+export async function estruturaDaDRE(): Promise<LinhaDRE[]> {
   const ls = await getPrismaClient().linhaDRE.findMany({
     where: { ativo: true },
     orderBy: { ordem: "asc" },
@@ -69,7 +72,7 @@ async function estruturaDaDRE(): Promise<LinhaDRE[]> {
 }
 
 /** As linhas da DRE da tabela: os itens do escopo, as seções dos volumes e os totais feitos só deles (até a MC). */
-function escopo(est: LinhaDRE[], prefixos: Set<string>) {
+export function escopo(est: LinhaDRE[], prefixos: Set<string>) {
   const s = new Set(est.filter((l) => (l.tipo === "ITEM" && prefixos.has(prefixo(l.codigo)) && ITENS.has(prefixo(l.codigo))) || (l.tipo === "SECAO" && SECOES.has(prefixo(l.codigo)) && prefixos.has(prefixo(l.codigo)))).map((l) => l.codigo));
   for (let mudou = true; mudou; ) {
     mudou = false;
@@ -175,11 +178,26 @@ async function documentosDoMes(competenciaId: string) {
 type ResultadoDoMes = {
   valores: Map<string, Map<string, number>>;
   naObra: Map<string, Map<string, number>>;
+  /** O valor de cada obra em cada linha e item (03/11/2026): o direto e a parte do rateio da linha. */
+  obras: ValoresDasObras;
   niveis: Map<number, Map<Nivel, number>>;
   mcDaDRE: Map<number, number>;
   avisos: string[];
   documentos: { requisicoes: number; notas: number };
 };
+
+/**
+ * As obras do Realizado por Obra (03/11/2026) para o rateio das linhas: a do centro de obra pelo número; a da Receita Prévia
+ * pelo código (ou pelo número); as genéricas, que ficam fora da base do rateio.
+ */
+export function obrasDoRateio(obras: Array<{ id: string; codigo: string; generica: boolean }>) {
+  const obraDoNumero = new Map<string, { id: string; codigo: string }>();
+  for (const o of obras) if (!obraDoNumero.has(numeroDaObra(o.codigo))) obraDoNumero.set(numeroDaObra(o.codigo), o);
+  const obraPorCodigo = new Map(obras.map((o) => [o.codigo.trim().toUpperCase(), o.id]));
+  const obraDaReceita = (codigo: string | null) =>
+    !codigo ? SEM_OBRA : (obraPorCodigo.get(codigo.trim().toUpperCase()) ?? obraDoNumero.get(numeroDaObra(codigo))?.id ?? SEM_OBRA);
+  return { obraDoNumero, obraDaReceita, genericas: new Set(obras.filter((o) => o.generica).map((o) => o.id)) };
+}
 
 async function calcularMes(
   competencia: { id: string; ano: number; mes: number },
@@ -197,7 +215,7 @@ async function calcularMes(
       select: { valor: true, composicao: true, linhaDRE: { select: { codigo: true, tipo: true } }, unidadeNegocio: { select: { codigo: true } } },
     }),
     prisma.alocacaoLinha.findMany({ select: { origem: true, centroCustoId: true, balde: true, destino: true, linhaId: true, base: true, vigenciaInicio: true, vigenciaFim: true } }),
-    prisma.obra.findMany({ select: { id: true, codigo: true } }),
+    prisma.obra.findMany({ select: { id: true, codigo: true, generica: true } }),
     // Os percentuais por linha dos rateios fixos (26/10/2026).
     prisma.regraRateio.findMany({
       where: { percentualFixo: { not: null }, linhas: { some: {} } },
@@ -214,8 +232,7 @@ async function calcularMes(
       .filter((r) => valeNoMes({ inicio: r.vigenciaInicio, fim: r.vigenciaFim }, competencia.ano, competencia.mes))
       .map((r) => [`${r.chave}|${r.destino}`, new Map(r.linhas.map((l) => [l.linhaId, Number(l.percentual)]))]),
   );
-  const obraDoNumero = new Map<string, { id: string; codigo: string }>();
-  for (const o of obras) if (!obraDoNumero.has(numeroDaObra(o.codigo))) obraDoNumero.set(numeroDaObra(o.codigo), o);
+  const { obraDoNumero, obraDaReceita, genericas } = obrasDoRateio(obras);
 
   const fontesDaLinha = new Map<string, Fonte[]>();
   const doBalancete = new Map<string, number>();
@@ -229,7 +246,7 @@ async function calcularMes(
 
   const linhasDa = (u: number) => new Set(linhas.filter((l) => l.unidade === u).map((l) => l.id));
   const porUnidade = new Map([1, 2, 3].map((u) => [u, linhasDa(u)]));
-  const r: ResultadoDoMes = { valores: new Map(), naObra: new Map(), niveis: new Map(), mcDaDRE: new Map(), avisos: [], documentos: { requisicoes: documentos.requisicoes, notas: documentos.notas } };
+  const r: ResultadoDoMes = { valores: new Map(), naObra: new Map(), obras: new Map(), niveis: new Map(), mcDaDRE: new Map(), avisos: [], documentos: { requisicoes: documentos.requisicoes, notas: documentos.notas } };
   const somar = (alvo: Map<string, Map<string, number>>, linha: string, codigo: string, v: number) => {
     const m = alvo.get(linha) ?? new Map<string, number>();
     m.set(codigo, (m.get(codigo) ?? 0) + v);
@@ -300,6 +317,18 @@ async function calcularMes(
             : []
           : [...pesos].flatMap(([linhaId, p]) => (linhaId === semLinha(u) ? pelaReceita((V * p) / soma) : [{ linhaId, nivel: "RECEITA" as Nivel, valor: (V * p) / soma }]));
       registrar(u, codigo, partes, false);
+      // Nas obras (03/11/2026), a receita de cada linha pela da obra na Receita Prévia: a da natureza da conta ou, na parte
+      // que seguiu a receita bruta da unidade, a receita bruta da obra na linha.
+      for (const p of partes) {
+        const daObra = new Map<string, number>();
+        for (const i of dadosDoMes.receita) {
+          if (i.unidade !== u || i.linhaId !== p.linhaId) continue;
+          if (p.nivel === "RECEITA" ? i.natureza !== natureza : p.nivel !== "UNIDADE" || i.natureza === "DEVOLUCOES_INVENTARIOS") continue;
+          const k = obraDaReceita(i.obraCodigo);
+          daObra.set(k, (daObra.get(k) ?? 0) + (p.nivel === "RECEITA" && grupo === "ROL" ? i.liquida : i.bruta));
+        }
+        for (const [obra, v] of dividirPelasObras(p.valor, daObra)) somarNaObra(r.obras, p.linhaId, obra, codigo, v, true);
+      }
       const sem = partes.filter((p) => p.nivel === "SEM_LINHA").reduce((s, p) => s + p.valor, 0);
       if (Math.abs(sem) >= 1) r.avisos.push(`${NOME_DA_UNIDADE[u]}: ${linhaDRE.get(codigo)?.descricao ?? codigo} de ${sem.toFixed(2)} sem linha na Receita Prévia e sem receita na unidade: ficou Sem Linha.`);
       continue;
@@ -338,7 +367,14 @@ async function calcularMes(
         { nivel: "RATEIO", pesos: () => (f ? pelaRegra(u, regraDoBalde.get(f.balde)) : null) },
         { nivel: "UNIDADE", pesos: () => pesosDaBase(baseDaUnidade(u), u, dadosDoMes) },
       ];
-      registrar(u, codigo, alocar(a, tarefa, passos, semLinha(u)), !!f?.codigoCentro && ehCentroDeObra(f.codigoCentro));
+      const doCentroDeObra = !!f?.codigoCentro && ehCentroDeObra(f.codigoCentro);
+      const alocado = alocar(a, tarefa, passos, semLinha(u));
+      registrar(u, codigo, alocado, doCentroDeObra);
+      // O lançamento do centro de obra é direto na obra (03/11/2026), em cada linha a que foi.
+      if (doCentroDeObra) {
+        const obra = obraDoNumero.get(numeroDaObra(f!.codigoCentro))?.id ?? SEM_OBRA;
+        for (const p of alocado) somarNaObra(r.obras, p.linhaId, obra, codigo, p.valor, true);
+      }
     }
   }
 
@@ -348,13 +384,37 @@ async function calcularMes(
       if (l.tipo !== "ITEM" || !l.unidades.includes(u) || (prefixo(l.codigo) !== "P" && prefixo(l.codigo) !== "S")) continue;
       const totais = VOLUMES_DA_DRE[u]?.[n(l.descricao)] ?? [];
       for (const [linhaId, v] of volumeDaLinhaDRE(totais, dadosDoMes.volumes)) if (porUnidade.get(u)!.has(linhaId)) somar(r.valores, linhaId, l.codigo, v);
+      // E os de cada obra (03/11/2026).
+      for (const v of dadosDoMes.volumes) if (totais.includes(v.total) && porUnidade.get(u)!.has(v.linhaId)) somarNaObra(r.obras, v.linhaId, v.obraId ?? SEM_OBRA, l.codigo, v.quantidade, true);
+    }
+  }
+
+  // O rateio de cada linha entre as obras dela (03/11/2026): os custos que não vieram dos centros de obra, pelas bases da
+  // etapa Linhas (no mês e, sem elas, no exercício até ele); o que nenhuma base leva, e o da Sem Linha, fica Sem Obra.
+  const linhaPorId = new Map(linhas.map((l) => [l.id, l]));
+  const cache = new Map<string, Map<string, number>>();
+  const pesos = (base: BaseDaObra, linhaId: string, doAno: boolean) => {
+    const k = `${base}|${linhaId}|${doAno ? 1 : 0}`;
+    if (!cache.has(k)) cache.set(k, pesosDasObras(base, linhaId, doAno ? dadosDoAno : dadosDoMes, genericas, obraDaReceita));
+    return cache.get(k)!;
+  };
+  for (const [chave, itens] of r.valores) {
+    const linha = linhaPorId.get(chave);
+    for (const [codigo, v] of itens) {
+      const grupo = prefixo(codigo);
+      if (!CUSTOS.has(grupo)) continue;
+      const rateado = v - (r.naObra.get(chave)?.get(codigo) ?? 0);
+      if (Math.abs(rateado) < 1e-9) continue;
+      const bases = linha ? basesDoRateio(grupo, linha.unidade, linha.codigo) : [];
+      const divisao = ratearEntreObras(rateado, [...bases.map((b) => () => pesos(b, chave, false)), ...bases.map((b) => () => pesos(b, chave, true))]);
+      for (const [obra, x] of divisao) somarNaObra(r.obras, chave, obra, codigo, x, false);
     }
   }
   return r;
 }
 
 /** Os totais da linha (as subtotais e os totais do escopo), pelas expressões da DRE; só os que têm algum item com valor. */
-function comTotais(itens: Map<string, number>, est: LinhaDRE[], noEscopo: Set<string>) {
+export function comTotais(itens: Map<string, number>, est: LinhaDRE[], noEscopo: Set<string>) {
   const valores = new Map(itens);
   const porCodigo = new Map(est.map((l) => [l.codigo, l]));
   const avaliar = (codigo: string, pilha = new Set<string>()): number | undefined => {
@@ -380,12 +440,14 @@ function comTotais(itens: Map<string, number>, est: LinhaDRE[], noEscopo: Set<st
 
 
 const arredonda = (x: number) => Math.round(x * 100) / 100;
+/** O valor em reais nos avisos das obras ("R$ 27.420,46"). */
+const reais = (x: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(x);
 const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${ano}`;
 /** O mês no rótulo das colunas, como nos Resultados Empresariais ("SET/26"). */
 const MESES_CURTOS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ROL = "RO.RECEITA_OPERACIONAL_LIQUIDA_ROL";
 /** As linhas da DRE das abas Linhas (da receita à Margem de Contribuição) e Rateios das Linhas (os custos, sobre os volumes). */
-const DO_RESULTADO = new Set([...ITENS, ...SECOES, "RO", "IRB", "CPV", "MB", "MC"]);
+export const DO_RESULTADO = new Set([...ITENS, ...SECOES, "RO", "IRB", "CPV", "MB", "MC"]);
 
 export class RegraLinhasError extends Error {
   constructor(
@@ -405,6 +467,11 @@ export type ApuracaoLinhas = {
   mcDaDRE: Record<string, number>;
   documentos: { requisicoes: number; notas: number };
   avisos: string[];
+  /**
+   * As obras (03/11/2026, o Realizado por Obra): quando foram gravadas, quantas, o que ficou Sem Obra nos custos e os avisos.
+   * Sem elas, a competência foi apurada (ou gravada) antes.
+   */
+  obras?: { gravadasEm: string; obras: number; semObra: number; avisos: string[] };
 };
 
 /** Os valores gravados de uma competência: por chave da linha (o id, ou a Sem Linha da unidade) e por código da DRE. */
@@ -479,9 +546,9 @@ export const resultadosLinhaService = {
    * cada linha em cada item (ResultadoLinha), com o resumo na competência (os passos, os documentos e os avisos). A obra
    * sem produção no mês usa a do exercício até ele.
    */
-  async apurar(competenciaId: string) {
+  async apurar(competenciaId: string, soObras = false) {
     const prisma = getPrismaClient();
-    const c = await prisma.competencia.findUniqueOrThrow({ where: { id: competenciaId }, select: { id: true, ano: true, mes: true } });
+    const c = await prisma.competencia.findUniqueOrThrow({ where: { id: competenciaId }, select: { id: true, ano: true, mes: true, apuracaoLinhas: true } });
     const [linhas, est, codigos, doAno] = await Promise.all([
       linhasDoNegocio(),
       estruturaDaDRE(),
@@ -512,21 +579,72 @@ export const resultadosLinhaService = {
         rows.push({ competenciaId: c.id, unidade, linhaId: sem ? null : chave, linhaDREId, valor: new Decimal(valor), naObra: new Decimal(naObra) });
       }
     }
-    const resumo: ApuracaoLinhas = {
-      gravadaEm: new Date().toISOString(),
-      niveis: Object.fromEntries([...r.niveis].map(([u, m]) => [String(u), Object.fromEntries(m)])),
-      mcDaDRE: Object.fromEntries([...r.mcDaDRE].map(([u, v]) => [String(u), v])),
-      documentos: r.documentos,
-      avisos: r.avisos,
+    // As obras de cada linha (03/11/2026, o Realizado por Obra).
+    const obras: Prisma.ResultadoObraCreateManyInput[] = [];
+    // Os custos Sem Obra: os diretos (de centros de obra sem a obra no cadastro) e os do rateio (sem base).
+    const semObra = { direto: 0, rateio: 0 };
+    for (const [chave, porObra] of r.obras) {
+      const sem = chave.startsWith("SEM_LINHA|");
+      const unidade = sem ? Number(chave.split("|")[1]) : unidadeDa.get(chave);
+      if (!unidade) continue;
+      for (const [obra, itens] of porObra) {
+        for (const [codigo, { valor, direto }] of itens) {
+          const linhaDREId = idDoCodigo.get(codigo);
+          if (!linhaDREId || Math.abs(valor) < 1e-9) continue;
+          if (obra === SEM_OBRA && CUSTOS.has(prefixo(codigo))) {
+            semObra.direto += direto;
+            semObra.rateio += valor - direto;
+          }
+          obras.push({ competenciaId: c.id, unidade, linhaId: sem ? null : chave, obraId: obra === SEM_OBRA ? null : obra, linhaDREId, valor: new Decimal(valor), direto: new Decimal(direto) });
+        }
+      }
+    }
+    const avisosDasObras: string[] = [];
+    if (Math.abs(semObra.direto) >= 1) avisosDasObras.push(`${reais(semObra.direto)} dos custos de centros de obra sem a obra no cadastro ficaram Sem Obra.`);
+    if (Math.abs(semObra.rateio) >= 1)
+      avisosDasObras.push(`${reais(semObra.rateio)} do rateio ficaram Sem Obra: o da Sem Linha e o das linhas sem base (volume ou receita das obras vendidas) no mês e no exercício.`);
+    const anterior = c.apuracaoLinhas as ApuracaoLinhas | null;
+    if (soObras) {
+      // As linhas gravadas antes ficam: as obras saem do cálculo de hoje, e a diferença para elas vira aviso.
+      const gravadas = await prisma.resultadoLinha.findMany({ where: { competenciaId: c.id }, select: { unidade: true, linhaId: true, valor: true, linhaDRE: { select: { codigo: true } } } });
+      const codigoDoId = new Map(codigos.map((l) => [l.id, l.codigo]));
+      const deHoje = new Map(rows.map((x) => [`${x.linhaId ?? semLinha(x.unidade)}|${codigoDoId.get(x.linhaDREId)}`, Number(x.valor)]));
+      let maior = 0;
+      for (const g of gravadas) {
+        const k = `${g.linhaId ?? semLinha(g.unidade)}|${g.linhaDRE.codigo}`;
+        maior = Math.max(maior, Math.abs(Number(g.valor) - (deHoje.get(k) ?? 0)));
+        deHoje.delete(k);
+      }
+      for (const v of deHoje.values()) maior = Math.max(maior, Math.abs(v));
+      if (maior >= 1) avisosDasObras.push(`As obras saíram dos cadastros de hoje e diferem das linhas gravadas em até ${reais(maior)} num item.`);
+    }
+    const resumoDasObras = {
+      gravadasEm: new Date().toISOString(),
+      obras: new Set(obras.map((x) => x.obraId).filter(Boolean)).size,
+      semObra: arredonda(semObra.direto + semObra.rateio),
+      avisos: avisosDasObras,
     };
+    const resumo: ApuracaoLinhas =
+      soObras && anterior
+        ? { ...anterior, obras: resumoDasObras }
+        : {
+            gravadaEm: new Date().toISOString(),
+            niveis: Object.fromEntries([...r.niveis].map(([u, m]) => [String(u), Object.fromEntries(m)])),
+            mcDaDRE: Object.fromEntries([...r.mcDaDRE].map(([u, v]) => [String(u), v])),
+            documentos: r.documentos,
+            avisos: r.avisos,
+            obras: resumoDasObras,
+          };
+    // Em lotes: cada registro leva até oito parâmetros, e o PostgreSQL aceita até 65 535 por comando.
+    const emLotes = <T,>(xs: T[], criar: (lote: T[]) => Prisma.PrismaPromise<unknown>) => Array.from({ length: Math.ceil(xs.length / 5000) }, (_, i) => criar(xs.slice(i * 5000, (i + 1) * 5000)));
     await prisma.$transaction([
-      prisma.resultadoLinha.deleteMany({ where: { competenciaId: c.id } }),
-      // Em lotes: cada registro leva sete parâmetros, e o PostgreSQL aceita até 65 535 por comando.
-      ...Array.from({ length: Math.ceil(rows.length / 5000) }, (_, i) => prisma.resultadoLinha.createMany({ data: rows.slice(i * 5000, (i + 1) * 5000) })),
+      ...(soObras ? [] : [prisma.resultadoLinha.deleteMany({ where: { competenciaId: c.id } }), ...emLotes(rows, (data) => prisma.resultadoLinha.createMany({ data }))]),
+      prisma.resultadoObra.deleteMany({ where: { competenciaId: c.id } }),
+      ...emLotes(obras, (data) => prisma.resultadoObra.createMany({ data })),
       prisma.competencia.update({ where: { id: c.id }, data: { apuracaoLinhas: resumo as unknown as Prisma.InputJsonValue } }),
     ]);
-    const semLinha = [...r.valores].filter(([k]) => k.startsWith("SEM_LINHA|")).reduce((s, [, m]) => s + [...m].filter(([cod]) => CUSTOS.has(prefixo(cod)) || prefixo(cod) === "ROB").reduce((t, [, v]) => t + v, 0), 0);
-    return { registros: rows.length, linhas: new Set(rows.map((x) => x.linhaId).filter(Boolean)).size, semLinha: arredonda(semLinha), avisos: r.avisos };
+    const semLinhaNosCustos = [...r.valores].filter(([k]) => k.startsWith("SEM_LINHA|")).reduce((s, [, m]) => s + [...m].filter(([cod]) => CUSTOS.has(prefixo(cod)) || prefixo(cod) === "ROB").reduce((t, [, v]) => t + v, 0), 0);
+    return { registros: rows.length, linhas: new Set(rows.map((x) => x.linhaId).filter(Boolean)).size, semLinha: arredonda(semLinhaNosCustos), avisos: r.avisos, obras: resumoDasObras };
   },
 
   /**
@@ -574,8 +692,15 @@ export const resultadosLinhaService = {
     const c = await prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true, status: true, apuradaEm: true, apuracaoLinhas: true } });
     if (!c) throw new RegraLinhasError(404, `A competência ${rotulo(ano, mes)} não existe.`);
     const resumo = c.apuracaoLinhas as ApuracaoLinhas | null;
-    const situacao = { status: c.status, apurada: c.apuradaEm !== null, gravadaEm: resumo?.gravadaEm ?? null, podeGravar: c.status === "FECHADA" && !resumo };
-    if (!resumo) return { situacao, unidades: [], niveis: [], documentos: null, avisos: [], linhas: [] };
+    // A competência fechada sem as linhas, ou com elas e sem as obras (03/11/2026), grava aqui o que falta.
+    const situacao = {
+      status: c.status,
+      apurada: c.apuradaEm !== null,
+      gravadaEm: resumo?.gravadaEm ?? null,
+      obrasGravadasEm: resumo?.obras?.gravadasEm ?? null,
+      podeGravar: c.status === "FECHADA" && !resumo?.obras,
+    };
+    if (!resumo) return { situacao, unidades: [], niveis: [], documentos: null, avisos: [], obras: null, linhas: [] };
     const [linhas, est, g] = await Promise.all([linhasDoNegocio(), estruturaDaDRE(), gravados([c.id])]);
     const gravado = g.get(c.id)!;
     const s = escopo(est, DO_RESULTADO);
@@ -595,6 +720,7 @@ export const resultadosLinhaService = {
         .filter((x) => x.porUnidade.some((v) => Math.abs(v) >= 0.005)),
       documentos: resumo.documentos,
       avisos: resumo.avisos,
+      obras: resumo.obras ?? null,
       linhas: linhas
         .filter((l) => l.ativo || totais.has(l.id))
         .map((l) => ({ ...descricaoDaLinha(l), receitaLiquida: totais.get(l.id)?.get(ROL) ?? null, mc: totais.get(l.id)?.get(MC) ?? null })),
@@ -602,21 +728,31 @@ export const resultadosLinhaService = {
   },
 
   /**
-   * Grava as linhas de uma competência fechada antes da etapa Linhas (26/10/2026), com a Alocação nas Linhas e as tarefas
-   * de hoje. Uma vez só: depois, as linhas mudam como o resto do mês, reabrindo e reapurando.
+   * Grava as linhas e as obras de uma competência fechada antes da etapa Linhas (26/10/2026), com a Alocação nas Linhas e as
+   * tarefas de hoje; na fechada com as linhas e sem as obras (03/11/2026, o Realizado por Obra), só as obras, com as linhas
+   * gravadas como estão. Uma vez só: depois, mudam como o resto do mês, reabrindo e reapurando.
    */
   async gravarFechada(ano: number, mes: number, usuarioId: string) {
     const c = await getPrismaClient().competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true, status: true, apuracaoLinhas: true } });
     if (!c) throw new RegraLinhasError(404, `A competência ${rotulo(ano, mes)} não existe.`);
     if (c.status !== "FECHADA") throw new RegraLinhasError(409, `A competência ${rotulo(ano, mes)} está aberta: as linhas dela são gravadas na apuração.`);
-    if (c.apuracaoLinhas !== null) throw new RegraLinhasError(409, `As linhas de ${rotulo(ano, mes)} já estão gravadas: para refazê-las, reabra a competência e apure de novo.`);
-    const r = await this.apurar(c.id);
+    const anterior = c.apuracaoLinhas as ApuracaoLinhas | null;
+    if (anterior?.obras) throw new RegraLinhasError(409, `As linhas e as obras de ${rotulo(ano, mes)} já estão gravadas: para refazê-las, reabra a competência e apure de novo.`);
+    const soObras = anterior !== null;
+    const r = await this.apurar(c.id, soObras);
     await auditar({
       usuarioId,
       acao: "APURACAO",
       entidade: "competencia",
       entidadeId: c.id,
-      metadados: { competencia: rotulo(ano, mes), resultado: "linhas gravadas na competência fechada", etapas: ["linhas"], registros: r.registros, semLinha: r.semLinha },
+      metadados: {
+        competencia: rotulo(ano, mes),
+        resultado: soObras ? "obras gravadas na competência fechada" : "linhas e obras gravadas na competência fechada",
+        etapas: ["linhas"],
+        ...(soObras ? {} : { registros: r.registros, semLinha: r.semLinha }),
+        obras: r.obras.obras,
+        semObra: r.obras.semObra,
+      },
     });
     return this.doMes(ano, mes);
   },

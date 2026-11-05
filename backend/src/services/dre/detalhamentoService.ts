@@ -5,7 +5,9 @@ import { manualNoSinalDoBalancete, type Composicao, type OrigemValor, type Parce
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { MENSAGEM_SENSIVEL, podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import { grupoDoCentro, RegraDREError } from "./dreService.js";
-import { CENTRO_DE_OBRA, sinalDaLinha } from "./obrasService.js";
+import { CENTRO_DE_OBRA, foraDaObra, PREVIAS_DA_OBRA, previasDaObra, sinalDaLinha } from "./obrasService.js";
+import { numeroDaObra } from "../resultadosLinha/alocacaoNasLinhas.js";
+import { plural } from "../../utils/plural.js";
 import { deveriaTerCentro, ehGrupoSemCentro, grupoSemCentro, nomeDoGrupoSemCentro, veSemCentros } from "./semCentroService.js";
 
 /**
@@ -77,7 +79,8 @@ type Bloco =
       total: string;
       lancamentos: LancamentoDetalhe[];
     }
-  | { tipo: "PREVIA"; titulo: string; unidade: number; natureza: string; componente: string; sinal: number; total: string };
+  // `obra` (03/11/2026): a receita prévia de uma obra (o número), na aba Obras; a memória de cálculo abre só com ela.
+  | { tipo: "PREVIA"; titulo: string; unidade: number; natureza: string; componente: string; sinal: number; total: string; obra?: string };
 
 const selecaoContabil = {
   id: true,
@@ -362,25 +365,58 @@ export const detalhamentoService = {
         observacao = "Linha que soma outras linhas do grupo: veja o detalhamento de cada uma.";
       }
     } else if ("obra" in visao) {
-      // A obra (aba Obras): os lançamentos do centro de obra na linha, com o sinal da DRE (receitas trocadas).
+      // A obra (aba Obras): os lançamentos do centro de obra na linha, com o sinal da DRE (receitas trocadas). Nas receitas
+      // (03/11/2026, pedido do Adão), sem as contas de Reconhecimento do CPV e com a receita prévia de frete e complementar
+      // da obra, como na lista (obrasService).
       if (!CENTRO_DE_OBRA.test(visao.obra)) throw new RegraDREError(400, `${visao.obra} não é um centro de custo de obra (1.98 ou 1.99).`);
-      const ls = await prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, codigoCentroCusto: visao.obra }, select: selecaoContabil, orderBy: { linhaArquivo: "asc" } });
-      titulo = `Obra ${ls[0]?.nomeCentroCusto ?? visao.obra} (${visao.obra})`;
-      regra = "Lançamentos contábeis do centro de obra, diretos e de rateio, antes do rateio";
+      const [todos, previas] = await Promise.all([
+        prisma.lancamentoContabil.findMany({ where: { competenciaId: c.id, linhaDREId: linha.id, codigoCentroCusto: visao.obra }, select: selecaoContabil, orderBy: { linhaArquivo: "asc" } }),
+        previasDaObra(c.id, visao.obra),
+      ]);
+      const ls = todos.filter((l) => !foraDaObra(linha.codigo, l.contaAdotada ?? l.contaResultado));
+      titulo = `Obra ${todos[0]?.nomeCentroCusto ?? visao.obra} (${visao.obra})`;
+      const receita = linha.codigo.startsWith("ROB.");
+      const contabil = `lançamentos contábeis do centro de obra${receita ? " (sem as contas de Reconhecimento do CPV)" : ""}, diretos e de rateio, antes do rateio`;
+      const entra = PREVIAS_DA_OBRA.find((p) => p.item === linha.codigo);
+      const sai = PREVIAS_DA_OBRA.find((p) => p.de === linha.codigo);
+      regra = entra
+        ? `Receita bruta ${entra.natureza === "FRETE" ? "de frete" : "complementar"} da receita prévia da obra`
+        : sai
+          ? `${contabil.charAt(0).toUpperCase()}${contabil.slice(1)}, menos a receita prévia ${sai.natureza === "FRETE" ? "de frete" : "complementar"} da obra`
+          : `${contabil.charAt(0).toUpperCase()}${contabil.slice(1)}`;
       if (ls.length > 0) {
         const fator = new Decimal(sinalDaLinha(linha.codigo));
-        valor = somar(ls.map((l) => l.valorMovimento)).times(fator);
         blocos.push({
           tipo: "CONTABIL",
           titulo: "Lançamentos Contábeis",
-          filtro: "todas as filiais, diretos e de rateio",
+          filtro: `todas as filiais, diretos e de rateio${receita ? ", sem as contas de Reconhecimento do CPV" : ""}`,
           ...(fator.isNegative() ? { fator: "-1" } : {}),
-          total: valor.toFixed(2),
+          total: somar(ls.map((l) => l.valorMovimento)).times(fator).toFixed(2),
           lancamentos: agrupar(ls).map((l) => paraDetalhe(l, fator)).sort(porValor),
         });
-      } else {
-        observacao = "Linha que soma outras linhas da obra: veja o detalhamento de cada uma.";
       }
+      for (const [p, sinal] of [entra ? ([entra, 1] as const) : null, sai ? ([sai, -1] as const) : null].filter((x) => x !== null)) {
+        for (const [unidade, v] of [...(previas?.get(p.natureza) ?? [])].sort((a, b) => a[0] - b[0])) {
+          blocos.push({
+            tipo: "PREVIA",
+            titulo: `Receita Prévia da Obra: ${ROTULO_NATUREZA[p.natureza]} (Bruta)${sinal < 0 ? ", com sinal trocado" : ""}`,
+            unidade,
+            natureza: p.natureza,
+            componente: "BRUTA",
+            sinal,
+            total: v.times(sinal).toFixed(2),
+            obra: numeroDaObra(visao.obra),
+          });
+        }
+      }
+      if (blocos.length > 0) valor = somar(blocos.map((b) => new Decimal(b.total)));
+      const ignorados = todos.length - ls.length;
+      observacao =
+        ignorados > 0
+          ? `Fora da obra: ${ignorados} ${plural(ignorados, "lançamento", "lançamentos")} das contas de Reconhecimento do CPV, que anulam o faturamento da obra (a DRE reconhece a receita na produção, sem obra).`
+          : blocos.length === 0
+            ? "Linha que soma outras linhas da obra: veja o detalhamento de cada uma."
+            : null;
     } else if ("grupo" in visao) {
       titulo = `Centro de Custo ${visao.grupo}`;
       const centros = await prisma.centroCusto.findMany({ select: { id: true, nomeControladoria: true, departamento: true } });

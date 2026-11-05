@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { ConfirmacaoDialog } from "@/components/shared/ConfirmacaoDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import { plural } from "@/lib/texto";
 
 import { mensagemDeErro } from "@/app/relatorios/services/relatoriosService";
@@ -23,12 +25,15 @@ const normal = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLower
 
 /**
  * O Compartilhar da aba Geral (01/11/2026, pedido do Adão): quem criou o painel (ou o Administrador) convida outros usuários
- * do SIG para editá-lo com ele — as abas, os Comparativos, o Finalizar e o Reabrir; o Geral e a exclusão ficam com o dono.
- * Os convidados veem o painel mesmo privado ou em elaboração. Só os usuários ativos com a permissão de editar os Painéis de
- * Bordo podem ser convidados (os Administradores já editam todos). Os demais veem a lista, só para leitura.
+ * do SIG para editá-lo com ele — as abas, os Comparativos, o Finalizar e o Reabrir e, desde 03/11/2026, com o painel em
+ * elaboração, o Geral (também convidar e remover editores, com o Remover de cada um); a exclusão fica com o dono. Os
+ * convidados veem o painel mesmo privado ou em elaboração. Só os usuários ativos com a permissão de editar Painéis e Apresentações
+ * podem ser convidados (os Administradores já editam todos). Os demais veem a lista, só para leitura.
  */
 export function CompartilharPainel({ painelId }: { painelId: string }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { user } = useAuth();
   const chave = ["paineis-de-bordo", "compartilhamento", painelId];
   const consulta = useQuery({ queryKey: chave, queryFn: () => paineisDeBordoService.compartilhamento(painelId) });
   const [convidando, setConvidando] = useState(false);
@@ -41,8 +46,15 @@ export function CompartilharPainel({ painelId }: { painelId: string }) {
   const remover = useMutation({
     mutationFn: (u: UsuarioDoCompartilhamento) => paineisDeBordoService.removerEditor(painelId, u.id),
     onSuccess: (c, u) => {
-      atualizar(c);
       setRemovendo(null);
+      // O editor que tirou a si mesmo deixa de ver o painel: volta à lista.
+      if ("saiu" in c) {
+        queryClient.invalidateQueries({ queryKey: ["paineis-de-bordo"], exact: true });
+        toast.success("Você não edita mais o painel.");
+        router.push("/analises-gerenciais/paineis-de-bordo");
+        return;
+      }
+      atualizar(c);
       toast.success(`${u.nome} não edita mais o painel.`);
     },
   });
@@ -55,13 +67,14 @@ export function CompartilharPainel({ painelId }: { painelId: string }) {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-gray-900">Compartilhar</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Os usuários convidados editam o painel com quem o criou ({c.criadoPor}): as abas, os Comparativos, o Finalizar e o Reabrir; o Geral (o nome, a
-            competência, a visualização e o Compartilhar) e a exclusão ficam com quem o criou e com os Administradores. Eles veem o painel mesmo Privado ou em
-            elaboração. Só os usuários com a permissão de editar os Painéis de Bordo podem ser convidados.
+            Os usuários convidados editam o painel com quem o criou ({c.criadoPor}): as abas, os Comparativos, o Finalizar e o Reabrir e, com o painel em
+            elaboração, o Geral (o nome, a competência, a visualização e o Compartilhar: eles também convidam e removem editores). A exclusão fica com quem
+            o criou e com os Administradores. Os convidados veem o painel mesmo Privado ou em elaboração. Só os usuários com a permissão de editar
+            Painéis e Apresentações podem ser convidados.
           </p>
         </div>
         {c.podeCompartilhar ? (
-          <Button type="button" className={botaoPrimario} disabled={!c.candidatos.length} title={c.candidatos.length ? undefined : "Nenhum outro usuário com a permissão de editar os Painéis de Bordo"} onClick={() => setConvidando(true)}>
+          <Button type="button" className={botaoPrimario} disabled={!c.candidatos.length} title={c.candidatos.length ? undefined : "Nenhum outro usuário com a permissão de editar Painéis e Apresentações"} onClick={() => setConvidando(true)}>
             <UserPlus className="size-4" />
             Convidar
           </Button>
@@ -82,10 +95,13 @@ export function CompartilharPainel({ painelId }: { painelId: string }) {
               {c.editores.map((e) => (
                 <tr key={e.id} className="border-b border-gray-100 last:border-b-0">
                   <td className="px-3 py-2">
-                    <span className="font-medium text-gray-900">{e.nome}</span>
+                    <span className="font-medium text-gray-900">
+                      {e.nome}
+                      {e.id === user?.id ? <span className="ml-1 text-xs font-normal text-gray-500">(você)</span> : null}
+                    </span>
                     <div className="text-xs text-gray-500">{e.email}</div>
                     {/* O convidado que perdeu a permissão (ou ficou inativo) só lê o painel. */}
-                    {!e.edita ? <div className="text-xs text-red-700">Sem a permissão de editar os Painéis de Bordo (ou inativo): só lê o painel.</div> : null}
+                    {!e.edita ? <div className="text-xs text-red-700">Sem a permissão de editar Painéis e Apresentações (ou inativo): só lê o painel.</div> : null}
                   </td>
                   <td className="px-3 py-2 text-gray-700">{e.perfil ?? "—"}</td>
                   <td className="px-3 py-2 whitespace-nowrap text-gray-700">
@@ -112,7 +128,11 @@ export function CompartilharPainel({ painelId }: { painelId: string }) {
       {removendo ? (
         <ConfirmacaoDialog
           titulo="Remover Editor"
-          descricao={`${removendo.nome} deixa de editar o painel; se ele for Privado ou estiver em elaboração, também deixa de vê-lo.`}
+          descricao={
+            removendo.id === user?.id
+              ? "Você deixa de editar o painel e, com ele em elaboração, também deixa de vê-lo: só quem o criou (ou outro editor) pode convidá-lo de novo."
+              : `${removendo.nome} deixa de editar o painel; se ele for Privado ou estiver em elaboração, também deixa de vê-lo.`
+          }
           acao="Remover"
           acaoPendente="Removendo…"
           pendente={remover.isPending}
@@ -165,7 +185,7 @@ function ConvidarUsuariosDialog({
         <DialogHeader>
           <DialogTitle>Convidar Usuários para Editar o Painel</DialogTitle>
           <DialogDescription>
-            Marque os usuários que vão editar o painel com você. A lista traz os usuários ativos com a permissão de editar os Painéis de Bordo (os
+            Marque os usuários que vão editar o painel com você. A lista traz os usuários ativos com a permissão de editar Painéis e Apresentações (os
             Administradores já editam todos).
           </DialogDescription>
         </DialogHeader>

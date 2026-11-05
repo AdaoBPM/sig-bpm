@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment, useState, useSyncExternalStore, type ReactNode, useMemo } from "react";
+import { Fragment, useState, type ReactNode, useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { BotaoMeses, useMesesRecolhidos } from "../components/MesesRecolhidos";
 import { SeletorComparaCom, useComparaCom } from "../components/ComparaCom";
 import { comCor, ESTILOS_NA_TABELA, type CenarioDoProva } from "../components/cenariosDoProva";
 
@@ -10,7 +11,6 @@ import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Abas } from "@/components/shared/Abas";
 import { CabecalhoDaTela } from "@/components/shared/CabecalhoDaTela";
 import { CampoBusca } from "@/components/shared/Filtros";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
@@ -23,6 +23,7 @@ import type { VisaoDetalhe } from "../../competencias/[anoMes]/dre/services/dreS
 import { ExportarRelatorio, type OpcaoExportar } from "../components/ExportarRelatorio";
 import { SeletorPeriodo, useExercicios } from "../components/SeletorPeriodo";
 import { TabelaEstatica, TabelaLarga } from "../components/TabelaLarga";
+import { ExportarImpostos, VisaoImpostos } from "./VisaoImpostos";
 import {
   formato,
   mensagemDeErro,
@@ -54,6 +55,9 @@ const VISOES: Array<{ chave: string; aba: string; nome: string; foraDaTela?: boo
   { chave: "rateios_linhas", aba: "rateios_linhas", nome: "Rateios das Linhas", foraDaTela: true },
   // As obras (centros 1.98 e 1.99), como a aba Obras da DRE (11/10/2026).
   { chave: "obras", aba: "obras", nome: "Obras" },
+  // Os Créditos de Impostos de cada mês fechado (03/11/2026, pedido do Adão; de início, Almoxarifado; antes, nas
+  // Configurações do Realizado por Obra).
+  { chave: "impostos", aba: "impostos", nome: "Impostos" },
 ];
 
 const Carregando = () => <div className="h-64 animate-pulse rounded-sm bg-gray-100" />;
@@ -86,61 +90,6 @@ const listavel = (l: LinhaResultado, visao: VisaoDetalhe) => l.volume && l.tipo 
  * descrição, a do mês de referência. Sem `consultas` (os cenários, que não têm
  * lançamentos), nada abre.
  */
-/**
- * Os meses anteriores ao de referência recolhidos ou não (12/10/2026): a escolha fica guardada neste navegador e vale
- * em todas as tabelas de Resultados. Começa expandido; sem armazenamento (janela privada), só não é lembrada. Lida por
- * useSyncExternalStore (13/10/2026; antes, um efeito): no servidor, expandido; as tabelas abertas mudam juntas.
- */
-const CHAVE_MESES = "sig.resultados.mesesRecolhidos";
-const ouvintesDosMeses = new Set<() => void>();
-/** A escolha desta visita (vale também sem armazenamento); null: a guardada no navegador. */
-let mesesRecolhidosNaMemoria: boolean | null = null;
-function lerMesesRecolhidos() {
-  if (mesesRecolhidosNaMemoria !== null) return mesesRecolhidosNaMemoria;
-  try {
-    return window.localStorage.getItem(CHAVE_MESES) === "1";
-  } catch {
-    return false; // sem armazenamento
-  }
-}
-function useMesesRecolhidos(): [boolean, () => void] {
-  const recolhido = useSyncExternalStore(
-    (avisar) => {
-      ouvintesDosMeses.add(avisar);
-      return () => ouvintesDosMeses.delete(avisar);
-    },
-    lerMesesRecolhidos,
-    () => false,
-  );
-  const alternar = () => {
-    mesesRecolhidosNaMemoria = !recolhido;
-    try {
-      window.localStorage.setItem(CHAVE_MESES, recolhido ? "0" : "1");
-    } catch {
-      // sem armazenamento
-    }
-    ouvintesDosMeses.forEach((avisar) => avisar());
-  };
-  return [recolhido, alternar];
-}
-
-/** O botão ao lado dos níveis: a seta para a direita expande os meses anteriores; para a esquerda, recolhe. */
-function BotaoMeses({ recolhido, onAlternar }: { recolhido: boolean; onAlternar: () => void }) {
-  const rotulo = recolhido ? "Expandir os meses anteriores" : "Recolher os meses anteriores";
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={onAlternar}
-      aria-label={rotulo}
-      aria-pressed={recolhido}
-      title={rotulo}
-      className="size-8 shrink-0 rounded-sm border-black/30 bg-white p-0"
-    >
-      {recolhido ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-    </Button>
-  );
-}
 
 /**
  * O modo de edição da tabela (os cenários, 12/10/2026): a caixa de cada linha (a de um total marca as contas dele) e
@@ -191,6 +140,8 @@ export function TabelaResultados({
   soOMes = false,
   comparados,
   estiloDoOrcado,
+  rotulosDoTotal,
+  consultaDaVenda,
 }: {
   dados: Resultados;
   titulo: string;
@@ -222,6 +173,23 @@ export function TabelaResultados({
   comparados?: Array<{ chave: string; rotulo: string; dica?: string; estilo: EstiloDoComparado; celulas: (l: LinhaResultado) => { mes?: Celula; total: Celula } | null | undefined }>;
   /** O estilo do orçado (31/10/2026: o do cenário, numa Tabela Padrão de um slide com blocos PROVA); sem ele, o preto e o cinza. */
   estiloDoOrcado?: EstiloDoComparado;
+  /**
+   * Os rótulos das colunas do total e do comparado total (03/11/2026: o Realizado por Obra, cujos meses passam do exercício):
+   * sem eles, TOTAL/AA e o do comparado.
+   */
+  rotulosDoTotal?: { realizado: string; comparado: string };
+  /**
+   * As consultas de uma venda (03/11/2026: o Realizado por Obra): em cada mês (o índice), a visão dos lançamentos (o centro
+   * da obra; nula, o mês sem a consulta dos lançamentos) e a nota no alto do extrato; as obras dos volumes (sem a conferência
+   * com o valor da célula: o extrato traz a venda inteira, de todas as linhas e unidades).
+   */
+  consultaDaVenda?: {
+    visao: (mes: number) => VisaoDetalhe | null;
+    nota: (l: LinhaResultado, mes: number) => ReactNode;
+    obras: string[];
+    /** Uma consulta própria de uma linha (a memória de cálculo dos subtotais agrupados): as linhas que a abrem e o modal. */
+    memoria?: { abre: (l: LinhaResultado) => boolean; modal: (l: LinhaResultado, mes: number, onFechar: () => void) => ReactNode };
+  };
 }) {
   // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
   // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
@@ -246,7 +214,8 @@ export function TabelaResultados({
   const unitarioNoMes = !doCenario && comUnitario;
   // O mês de referência da descrição: o último apurado.
   const ultimoApurado = [...dados.meses].reverse().find((m) => m.apurado) ?? null;
-  const abre = (l: LinhaResultado) => !estatico && consultas && (detalhavel(l) || listavel(l, visao));
+  const daMemoria = (l: LinhaResultado) => !!consultaDaVenda?.memoria?.abre(l);
+  const abre = (l: LinhaResultado) => !estatico && consultas && (detalhavel(l) || listavel(l, visao) || daMemoria(l));
   // O orçado (só nas visões de Resultados Empresariais): depois do mês de referência e depois do total, o orçado (valor, % e
   // R$/m³, em cinza); só depois do total, a variação (em amarelo): a diferença, o atingimento e a eficiência.
   const comOrcado = !!comparados?.length || dados.linhas.some((l) => l.orcado !== undefined);
@@ -258,7 +227,7 @@ export function TabelaResultados({
   const comOrcadoNoMes = comOrcado && !dados.comparado;
   // O nome do comparado (21/10/2026): "ORÇADO" no Orçamento Empresarial; nos outros cenários do Compara Com, o nome da marcação.
   const ROTULO = (dados.rotuloComparado ?? "Orçado").toUpperCase();
-  const rotuloDoOrcadoTotal = dados.comparado ? `COMPARADO TOTAL/${String(dados.comparado.ano).slice(2)}` : `${ROTULO} TOTAL/${ano}`;
+  const rotuloDoOrcadoTotal = rotulosDoTotal?.comparado ?? (dados.comparado ? `COMPARADO TOTAL/${String(dados.comparado.ano).slice(2)}` : `${ROTULO} TOTAL/${ano}`);
   const orcadoDa = (l: LinhaResultado, v: number | undefined) => (l.tipo === "SECAO" || v === undefined ? "" : l.volume ? formato.valor(v) : formato.inteiro(v));
   /** O texto com o sinal: + nos positivos (o − dos negativos vem do formato); o que arredonda para zero fica sem sinal. */
   const comSinal = (v: number, texto: string) => (v > 0 && /[1-9]/.test(texto) ? `+${texto}` : texto);
@@ -291,7 +260,10 @@ export function TabelaResultados({
   ].filter((v) => !comparados && (estatico?.colunas?.[v.chave as "diferenca" | "atingimento" | "eficiencia"] ?? true));
   const LARGURAS_DA_VARIACAO = variacoes.map((v) => v.largura);
   const th = "px-1.5 py-2 text-right text-xs font-bold whitespace-nowrap text-gray-900";
-  const anoMes = (m: MesRelatorio) => `${dados.ano}-${String(m.mes).padStart(2, "0")}`;
+  // A visão dos lançamentos da consulta aberta: a da tabela ou, numa venda, a do mês (nula: o mês sem os lançamentos).
+  const visaoDaConsulta = consulta ? (consultaDaVenda ? consultaDaVenda.visao(dados.meses.indexOf(consulta.mes)) : visao) : null;
+  // O mês (1 a 12) do exercício ou, no Realizado por Obra, cujos meses passam do exercício, o ano e o mês (AAAAMM).
+  const anoMes = (m: MesRelatorio) => (m.mes > 12 ? `${Math.floor(m.mes / 100)}-${String(m.mes % 100).padStart(2, "0")}` : `${dados.ano}-${String(m.mes).padStart(2, "0")}`);
   // Descrição; em cada mês, o valor e o % (e o R$/m³ no de referência); o total com o % e o R$/m³.
   // A descrição sem quebra de linha, em 420 px: com os meses anteriores recolhidos, a descrição, o mês, o orçado dele,
   // os totais, o orçado total e as variações enchem uma tela de 1920 px. As poucas mais longas (RECEITAS FINANCERIAS
@@ -379,7 +351,7 @@ export function TabelaResultados({
             )}
             {soOMes ? null : (
               <>
-                <th className={`${th} border-l border-gray-300`}>TOTAL/{ano}</th>
+                <th className={`${th} border-l border-gray-300`}>{rotulosDoTotal?.realizado ?? `TOTAL/${ano}`}</th>
                 <th className={th}>%</th>
                 {comUnitario ? <th className={th}>R$/m³</th> : null}
               </>
@@ -416,7 +388,8 @@ export function TabelaResultados({
                   : null}
               </>
             );
-            const dica = (m: MesRelatorio) => (detalhavel(l) ? `Ver os lançamentos de origem de ${m.rotulo}` : `Ver as listas por obra de ${m.rotulo}`);
+            const dica = (m: MesRelatorio) =>
+              daMemoria(l) ? `Ver a memória de cálculo de ${m.rotulo}` : detalhavel(l) ? `Ver os lançamentos de origem de ${m.rotulo}` : `Ver as listas por obra de ${m.rotulo}`;
             return (
               <tr key={l.codigo} className={destaque ? "border-y border-gray-300 font-bold" : "border-t border-gray-100"}>
                 <td
@@ -449,7 +422,7 @@ export function TabelaResultados({
                 {l.meses.map((c, i) => {
                   if (!mostra(i)) return null;
                   const m = dados.meses[i];
-                  const abreMes = clicavel && m.apurado && c.valor !== null;
+                  const abreMes = clicavel && m.apurado && c.valor !== null && (!consultaDaVenda || !detalhavel(l) || consultaDaVenda.visao(i) !== null);
                   // Na edição, o valor de uma conta abre a edição dele; o marcado (conta e mês) fica contornado.
                   const editaMes = !!edicao && edicao.editavel(l);
                   const marcado = editaMes && edicao!.linhasMarcadas.has(l.codigo) && edicao!.mesesMarcados.has(i);
@@ -488,18 +461,28 @@ export function TabelaResultados({
             );
           })}
       />
-      {consulta && detalhavel(consulta.linha) ? (
-        <DetalheDialog anoMes={anoMes(consulta.mes)} linha={consulta.linha.codigo} visao={visao} rotuloMes={consulta.mes.rotulo} onFechar={() => setConsulta(null)} />
+      {consulta && detalhavel(consulta.linha) && visaoDaConsulta ? (
+        <DetalheDialog
+          anoMes={anoMes(consulta.mes)}
+          linha={consulta.linha.codigo}
+          visao={visaoDaConsulta}
+          rotuloMes={consulta.mes.rotulo}
+          nota={consultaDaVenda?.nota(consulta.linha, dados.meses.indexOf(consulta.mes))}
+          onFechar={() => setConsulta(null)}
+        />
       ) : null}
+      {consulta && daMemoria(consulta.linha) ? consultaDaVenda!.memoria!.modal(consulta.linha, dados.meses.indexOf(consulta.mes), () => setConsulta(null)) : null}
       {consulta && listavel(consulta.linha, visao) ? (
         <VolumesDialog
           anoMes={anoMes(consulta.mes)}
           linha={consulta.linha.codigo}
           unidade={"unidade" in visao ? visao.unidade : undefined}
           obra={"obra" in visao ? visao.obra : undefined}
+          obras={consultaDaVenda?.obras}
           nomeVisao={nomeVisao}
           rotuloMes={consulta.mes.rotulo}
           valorApurado={(() => {
+            if (consultaDaVenda) return null;
             const v = consulta.linha.meses[dados.meses.indexOf(consulta.mes)]?.valor;
             return v === null || v === undefined ? null : String(v);
           })()}
@@ -872,7 +855,7 @@ export function ResultadosContent() {
             ? linhaEscolhida
               ? { chave: "atual", excel: "Linha Atual", pdf: "Linha Atual", params: { ...periodo, visao, linha: linhaEscolhida } }
               : null
-          : visao
+          : visao && visao !== "impostos"
             ? { chave: "atual", excel: "Visão Atual", pdf: "Visão Atual", params: { ...periodo, visao } }
             : null;
   const opcoesExportar: OpcaoExportar[] = [
@@ -902,7 +885,7 @@ export function ResultadosContent() {
         comoUsar={
           <ul>
             <li>Escolha o exercício e o mês até onde ver; só as competências fechadas aparecem (os meses abertos ou em conferência ficam de fora).</li>
-            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo, Linhas (com a lista das linhas à esquerda, por unidade) ou Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
+            <li>Escolha a visão nas abas: Consolidado, cada unidade, Centros de Custo (com a lista dos centros à esquerda), Sem Centros de Custo, Linhas (com a lista das linhas à esquerda, por unidade), Obras (com a lista das obras à esquerda, com o código e a busca por nome ou código) ou Impostos (os Créditos de Impostos). Aparecem só as abas que o seu perfil lê (Controle de Usuários / Perfis).</li>
             <li>
               Em Linhas, a DRE de cada linha de produto e de obra, da receita à Margem de Contribuição, com o % e o R$/m³ da unidade dela. A lista traz só as
               linhas das unidades (Matriz, Filial e Serviços) que o seu perfil lê. Os valores são os gravados na etapa Linhas do Fechamento Mensal; uma
@@ -917,7 +900,8 @@ export function ResultadosContent() {
               da conta na DRE e, na Produção e na DVV, pela filial do lançamento. Clique no valor de um mês para ver os lançamentos. Os Gastos Gerais
               Variáveis ficam de fora (nos cenários, vêm das premissas). “Exportar” baixa o grupo na tela ou todos (um por aba no Excel, um por página no PDF); o Coordenador não vê a aba.
             </li>
-            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da tela Resultados do Fechamento Mensal, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). No alto, Produção e Serviços (PS): os volumes da obra nas Listas Operacionais (Produção, Expedição, Montagem e Acompanhamento, pelo número da obra), que dão também o R$/m³ da obra. No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
+            <li>Em Obras, cada obra mostra a DRE dos lançamentos dos centros de obra (1.98 e 1.99) mês a mês, como a aba Obras da tela Resultados do Fechamento Mensal, com o % sobre a receita da própria obra (a ROB nas receitas e nos impostos, a ROL no resto). Nas receitas, como na DRE das unidades: as contas de Reconhecimento do CPV ficam de fora (no centro da obra, elas anulam o faturamento, porque a DRE reconhece a receita na produção); a receita prévia de frete da obra sai da Receita Bruta do Pré-Fabricado e vai à de Frete; a complementar sai da de Montagem e vai à Complementar. No alto, Produção e Serviços (PS): os volumes da obra nas Listas Operacionais (Produção, Expedição, Montagem e Acompanhamento, pelo número da obra), que dão também o R$/m³ da obra. No recorte por departamento ou por centro de custo, só as linhas que o usuário alcança (o Coordenador, com a opção de ver as obras no cadastro, as da gestão dele). “Exportar” baixa a obra na tela ou todas (uma por aba no Excel, uma por página no PDF).</li>
+            <li>Em Impostos (os Créditos de Impostos), uma tabela por unidade (Matriz e Filial), no padrão do Consolidado: no alto, o Total e, embaixo, cada grupo (Matérias Primas e Gastos Gerais Variáveis, com o Frete e Descarga) com as contas dele; cada mês fechado do exercício, até o mês escolhido, tem o Creditado (R$) e o Estornado (R$), cada um com o % (sobre o valor da conta na unidade); o % do Total e dos grupos é sobre a soma das contas; um traço é o mês sem os créditos importados (Fechamento Mensal › Resultados › Impostos). O menu de níveis, a seta de cada grupo e a seta dos meses anteriores funcionam como nas demais abas. Nesta aba, o “Exportar” baixa as duas tabelas em Excel ou PDF. No recorte por departamento ou por centro de custo, a aba não aparece.</li>
             <li>O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses anteriores ao escolhido. Recolhidos, a tabela mostra só as contas, o mês (realizado e orçado), os totais (realizado e orçado) e as variações; a escolha fica guardada neste navegador.</li>
             <li>A barra de rolagem lateral (a do navegador, como na tabela de Indicadores) fica presa no pé da janela enquanto a tabela está na tela; também dá para rolar com Shift + roda do mouse.</li>
             <li>Expandida, role a tabela para os lados até o mês escolhido: dele em diante, o orçado do mês, os totais, o orçado total e as variações cabem na tela. As descrições mais longas terminam em reticências; passe o mouse para lê-las inteiras.</li>
@@ -949,6 +933,11 @@ export function ResultadosContent() {
               de custo e na filial do lançamento, com a soma ao lado do valor dele; desmarque a caixa para ver a conta inteira.
             </li>
             <li>
+              “Regras de Rateio”, no canto de baixo do extrato, mostra as regras de rateio vigentes no mês: em cada chave (Projeto, Produção,
+              Metalurgia, Armadura e Acompanhamento), como o valor se divide entre as unidades, com um card por destino (o percentual do mês e o volume);
+              e os baldes diretos, que não se dividem.
+            </li>
+            <li>
               “Exportar”, no pé do extrato, baixa um Excel com a aba Movimentações (os lançamentos do extrato, por bloco, com o valor e a parcela na
               linha) e a aba Detalhes (os movimentos do balancete de cada lançamento, item a item: a emissão, o cliente ou fornecedor e o histórico). No
               Balancete, o “Exportar” baixa só a conta: o lançamento numa aba e os movimentos que o modal mostra (no recorte da caixa) na outra.
@@ -960,11 +949,11 @@ export function ResultadosContent() {
             </li>
             <li>
               No balancete, a coluna Ações tem “Contestar” (de quem edita Contestações de Gastos › Contestações › Solicitadas): o modal sugere o novo centro
-              de custo (os de um departamento da DRE) e/ou a nova conta de resultado (as do departamento do centro e as do Extra-Operacional) do movimento
+              de custo (os de um departamento da DRE, com o código de três níveis, como 1.01.00000001) e/ou a nova conta de resultado (as do departamento do centro e as do Extra-Operacional) do movimento
               (as listas buscam por código ou nome) e, se quiser, o motivo. “Contestar Anteriores” e “Contestar Posteriores” levam junto os movimentos do
               mesmo fornecedor, conta e centro de custo nas competências anteriores e nas seguintes, com o total que muda. O movimento com uma contestação
               em andamento mostra o número e a situação dela; o que chega à linha pelo rateio de outra (como os da Metalurgia nas linhas de Serviços)
-              mostra “Rateio”: contesta-se na linha de origem.
+              mostra “Rateio”: contesta-se na linha de origem. A lupa ao lado de cada campo abre a lista inteira — os centros de custo (o departamento, a atribuição e o balde) e as Contas de Resultado (a linha e o grupo da DRE, o departamento, a atribuição e o balde) —, e clicar num item o escolhe. No canto de baixo do modal, “Regras de Rateio” mostra as regras vigentes no mês do movimento: como cada balde se divide entre as unidades.
             </li>
             <li>
               Sem o Acesso a Informações Sensíveis no perfil (Controle de Usuários / Perfis), as linhas de Mão de Obra Direta e Indireta (Remunerações
@@ -1004,6 +993,12 @@ export function ResultadosContent() {
               das requisições e das notas fiscais e as regras da Alocação nas Linhas), gravada e congelada com o fechamento: a soma das linhas de uma unidade é a
               DRE dela até a Margem de Contribuição.
             </p>
+            <p>
+              Em Impostos (os Créditos de Impostos), em cada unidade (Matriz e Filial), as contas de Matérias Primas, de Gastos Gerais Variáveis da Produção e o
+              Frete e Descarga, com o Creditado e o Estornado de cada mês fechado, em R$ e em % sobre o valor da conta na unidade (Fechamento Mensal ›
+              Resultados › Impostos). O Realizado por Obra usa esses percentuais nos custos dessas contas: na venda mercantil, sem o Estornado; na venda global, sem o
+              Estornado e com o Creditado reaplicado.
+            </p>
           </>
         }
         acoes={
@@ -1022,7 +1017,8 @@ export function ResultadosContent() {
             />
             {/* A Comparação (21/10/2026), entre os cenários marcados (de qualquer exercício, 22/10/2026); num modal, com a Padrão e a PROVA (31/10/2026). */}
             <SeletorComparaCom comparacao={comparacao} />
-            {opcoesExportar.length && visoes.length ? <ExportarRelatorio
+            {/* Na aba Impostos (03/11/2026), o Exportar leva a tabela dela. */}
+            {visao === "impostos" ? <ExportarImpostos ano={ano} ate={ate} /> : opcoesExportar.length && visoes.length ? <ExportarRelatorio
                 caminho="resultados"
                 opcoes={opcoesExportar}
                 padrao={`Resultados ${ano}`}
@@ -1056,6 +1052,8 @@ export function ResultadosContent() {
             <VisaoObras ano={ano} ate={ate} escolhida={obra} onEscolher={setObra} />
           ) : nasLinhas ? (
             <VisaoLinhas ano={ano} ate={ate} escolhida={linha} onEscolher={setLinha} rateios={visao === "rateios_linhas"} />
+          ) : visao === "impostos" ? (
+            <VisaoImpostos ano={ano} ate={ate} />
           ) : (
             <VisaoUnidade ano={ano} ate={ate} visao={Number(visao)} nome={VISOES.find((v) => v.chave === visao)!.nome} comparaCom={comparacao.comparaCom} prova={comparacao.prova} />
           )}

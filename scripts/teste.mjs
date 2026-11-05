@@ -2,7 +2,8 @@
 // com o banco do desenvolvimento (o DATABASE_URL do backend/.env.teste; na branch postgres, o sig_bpm_dev). Telas na porta
 // 3200, backend na 3201.
 // Uso (na pasta sig-bpm):
-//   npm run teste:construir   gera a versão de teste do código de agora (o backend em backend/dist, as telas em frontend/.next)
+//   npm run teste:construir   confere os tipos (backend e frontend) e gera a versão de teste do código de agora (o backend
+//                             em backend/dist, as telas em frontend/.next); com erro de tipos, não gera nada
 //   npm run teste             inicia o teste a partir do que foi gerado
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -28,6 +29,15 @@ function rodar(nome, comando, pasta, env = {}) {
 const esperar = (p) => new Promise((ok, erro) => p.on("exit", (codigo) => (codigo === 0 ? ok() : erro(new Error(`saiu com o código ${codigo}`)))));
 
 if (process.argv[2] === "construir") {
+  // A checagem de tipos antes de gerar (03/11/2026, pedido do Adão): o build das telas não verifica os tipos (o
+  // ignoreBuildErrors do next.config), e um arquivo pela metade (outra sessão editando a mesma pasta) gerou um teste que
+  // quebrava os painéis. Com erro, nada é gerado e o teste de antes continua como estava.
+  try {
+    await Promise.all([esperar(rodar("backend", "npx tsc --noEmit", backend)), esperar(rodar("frontend", "npx tsc --noEmit", frontend))]);
+  } catch {
+    console.error("A checagem de tipos achou erros (acima): a versão de teste não foi gerada, e a de antes continua.");
+    process.exit(1);
+  }
   // A etiqueta "Teste" e o cookie próprio entram nas telas na compilação (NEXT_PUBLIC_AMBIENTE).
   await esperar(rodar("backend", "npm run build", backend));
   await esperar(rodar("frontend", "npx next build --turbopack", frontend, { NEXT_PUBLIC_AMBIENTE: "teste" }));

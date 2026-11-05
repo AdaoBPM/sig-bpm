@@ -13,6 +13,8 @@ dreRoutes.get("/centros", autenticacao, lerDREDoMes, asyncHandler(c.centros));
 dreRoutes.get("/obras", autenticacao, lerDREDoMes, asyncHandler(c.obras));
 dreRoutes.get("/sem-centros", autenticacao, lerDREDoMes, asyncHandler(c.semCentros));
 dreRoutes.get("/detalhe", autenticacao, lerDREDoMes, asyncHandler(c.detalhe));
+// As Regras de Rateio vigentes no mês (04/11/2026): o extrato de uma linha e o modal Contestar.
+dreRoutes.get("/rateios", autenticacao, lerDREDoMes, asyncHandler(c.rateios));
 dreRoutes.get("/detalhe/exportar", autenticacao, lerDREDoMes, asyncHandler(c.exportarExtrato));
 dreRoutes.get("/documentos", autenticacao, lerDREDoMes, asyncHandler(c.documentos));
 dreRoutes.get("/volumes", autenticacao, lerDREDoMes, asyncHandler(c.volumes));

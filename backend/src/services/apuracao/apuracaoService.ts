@@ -538,10 +538,11 @@ export const apuracaoService = {
       const d = await dreService.apurar(ano, mes, usuarioId);
       etapas.push({ etapa, resumo: d });
       avisos.push(...d.avisos);
-      // A DRE de cada unidade dividida entre as linhas (26/10/2026): os avisos dela ficam na etapa Linhas do mês.
+      // A DRE de cada unidade dividida entre as linhas (26/10/2026) e cada linha entre as obras (03/11/2026, o Realizado por
+      // Obra): os avisos ficam na etapa Linhas do mês.
       etapa = "linhas";
       const l = await resultadosLinhaService.apurar(c.id);
-      etapas.push({ etapa, resumo: { registros: l.registros, linhas: l.linhas, semLinha: l.semLinha, avisos: l.avisos.length } });
+      etapas.push({ etapa, resumo: { registros: l.registros, linhas: l.linhas, semLinha: l.semLinha, avisos: l.avisos.length, obras: l.obras.obras, semObra: l.obras.semObra } });
     } catch (e) {
       await prisma.competencia.update({ where: { id: c.id }, data: { apuradaEm: null, apuradaPor: null, entradasApuradas: Prisma.DbNull } });
       const msg = e instanceof Error ? e.message : String(e);

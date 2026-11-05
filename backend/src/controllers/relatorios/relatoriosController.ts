@@ -7,6 +7,7 @@ import { indicadoresService } from "../../services/relatorios/indicadoresService
 import { orcamentosDoProva } from "../../services/relatorios/orcamento.js";
 import { painelService } from "../../services/relatorios/painelService.js";
 import { RelatorioError, resultadosService } from "../../services/relatorios/resultadosService.js";
+import { creditosImpostosService } from "../../services/impostos/creditosImpostosService.js";
 import { veObras } from "../../services/acesso/recorteDepartamento.js";
 import { cenariosMarcados } from "../../services/cenarios/indicadoresDoCenario.js";
 import { ehGrupoSemCentro, veSemCentros, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
@@ -99,6 +100,13 @@ export const relatoriosController = {
   /** Os cenários marcados (21/10/2026; desde 22/10/2026, de qualquer exercício): as opções do Compara Com. */
   async comparaveis(_request: Request, response: Response) {
     return responder(response, () => cenariosMarcados());
+  },
+
+  /** A aba Impostos (Créditos de Impostos, 03/11/2026): os créditos de impostos de cada mês fechado do exercício, até ?ate=. */
+  async impostos(request: Request, response: Response) {
+    const p = periodo(request, response);
+    if (!p) return;
+    return responder(response, () => creditosImpostosService.impostos(p.ano, p.ate));
   },
 
   /**

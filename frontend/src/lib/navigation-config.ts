@@ -87,14 +87,12 @@ export const navGrupos: NavGrupo[] = [
         permission: "relatorios_executivos:ler",
         recurso: "ANALISES_GERENCIAIS",
       },
-      // Resultados PROVA (30/10/2026, pedido do Adão; antes, Resultados ROVA), em desenvolvimento. O Indicadores VPR saiu.
-      { title: "Resultados PROVA", href: "/analises-gerenciais/resultados-prova", icon: TrendingUp, emDesenvolvimento: true },
-      // Custos Operacionais (15/10/2026), em desenvolvimento.
-      { title: "Custos Operacionais", href: "/analises-gerenciais/custos-operacionais", icon: Calculator, emDesenvolvimento: true },
-      // Painéis de Bordo (31/10/2026, pedido do Adão; em desenvolvimento desde 27/10/2026): painéis com fins variados, feitos a
+      // Resultados PROVA e Custos Operacionais saíram do menu em 04/11/2026 (pedido do Adão; estavam em desenvolvimento).
+      // Painéis e Apresentações (antes, Painéis de Bordo: 31/10/2026, pedido do Adão; em desenvolvimento desde 27/10/2026;
+      // Apresentações de Resultados de 03 a 04/11/2026): painéis com fins variados, feitos a
       // partir dos Relatórios Executivos.
       {
-        title: "Painéis de Bordo",
+        title: "Painéis e Apresentações",
         href: "/analises-gerenciais/paineis-de-bordo",
         icon: PanelsTopLeft,
         permission: "paineis_de_bordo:ler",
@@ -125,11 +123,21 @@ export const navGrupos: NavGrupo[] = [
   {
     titulo: "Apuração dos Resultados",
     itens: [
-      { title: "Resultados por Obra", href: "/resultados-por-obra", icon: HardHat, emDesenvolvimento: true },
-      // O Balanço Patrimonial (27/10/2026), em desenvolvimento.
-      { title: "Balanço Patrimonial", href: "/balanco-patrimonial", icon: Scale, emDesenvolvimento: true },
+      // O Realizado por Obra (03/11/2026, pedido do Adão; antes, Resultados por Obra, em desenvolvimento): os Resultados, com a
+      // venda escolhida na lista Venda. A tela Configurações e o Painel de Bordo saíram no mesmo dia (o Painel volta com os
+      // Resultados Vendidos e a busca no RM).
+      {
+        title: "Realizado por Obra",
+        href: "/realizado-por-obra/resultados",
+        icon: HardHat,
+        recurso: "REALIZADO_POR_OBRA",
+        telas: [
+          { title: "Resultados", href: "/realizado-por-obra/resultados", icon: ListOrdered, permission: "realizado_obra_resultados:ler" },
+        ],
+      },
+      // O Balanço Patrimonial saiu do menu em 04/11/2026 (pedido do Adão; estava em desenvolvimento).
       // Os Resultados por Linha (26/10/2026) não são um processo: a etapa Linhas do Fechamento Mensal e a aba Linhas dos
-      // Resultados Empresariais (os Rateios das Linhas, guardados para os Resultados por Obra).
+      // Resultados Empresariais.
       {
         // Antes, Resultados Realizados (renomeado em 14/10/2026).
         title: "Resultados Empresariais",
@@ -330,6 +338,8 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
   [/^\/analises-gerenciais\/paineis-de-bordo(\/|$)/, "paineis_de_bordo:ler"],
   [/^\/central-de-conectividade\/biblioteca-de-apis(\/|$)/, "biblioteca_apis:ler"],
+  // O Realizado por Obra (03/11/2026): a tela Resultados.
+  [/^\/realizado-por-obra\/resultados(\/|$)/, "realizado_obra_resultados:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],
   // A antiga tela Indicadores leva à aba Indicadores do Painel de Bordo (19/10/2026).
   [/^\/relatorios\/indicadores(\/|$)/, "relatorio_painel:ler"],
@@ -375,7 +385,7 @@ export function permissaoDaTela(pathname: string): string | null {
 export function primeiraTelaPermitida(pode: (p: string) => boolean): string | null {
   for (const g of navGrupos) {
     for (const item of g.itens) {
-      // As telas em desenvolvimento (Resultados PROVA…) não são início de ninguém (17/10/2026).
+      // As telas em desenvolvimento (Demonstrativos Financeiros…) não são início de ninguém (17/10/2026).
       if (item.emDesenvolvimento) continue;
       const permitido = itemPermitido(item, pode);
       if (permitido) return permitido.href;
@@ -440,9 +450,9 @@ export function migalhas(pathname: string, rotuloDaEtapa: (chave: string) => str
   if (/^\/analises-gerenciais\/relatorios-executivos\/[^/]+/.test(pathname)) {
     return [{ rotulo: "Relatórios Executivos", href: "/analises-gerenciais/relatorios-executivos" }, { rotulo: rotuloDoRelatorio ?? "Relatório" }];
   }
-  // Um painel de bordo (31/10/2026): "Painéis de Bordo › Produção da Matriz"; o nome vem do painel (`rotuloDoRelatorio`).
+  // Um painel de bordo (31/10/2026): "Painéis e Apresentações › Produção da Matriz"; o nome vem do painel (`rotuloDoRelatorio`).
   if (/^\/analises-gerenciais\/paineis-de-bordo\/[^/]+/.test(pathname)) {
-    return [{ rotulo: "Painéis de Bordo", href: "/analises-gerenciais/paineis-de-bordo" }, { rotulo: rotuloDoRelatorio ?? "Painel" }];
+    return [{ rotulo: "Painéis e Apresentações", href: "/analises-gerenciais/paineis-de-bordo" }, { rotulo: rotuloDoRelatorio ?? "Painel" }];
   }
   const doGrupo = grupoDaTela(pathname);
   if (doGrupo) return [{ rotulo: doGrupo.grupo.title, href: doGrupo.grupo.href }, { rotulo: doGrupo.tela.title }, ...(doGrupo.aba ? [{ rotulo: doGrupo.aba.title }] : [])];

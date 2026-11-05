@@ -10,12 +10,15 @@ import { exportarExtrato } from "../../services/dre/exportacaoExtrato.js";
 import { obrasService } from "../../services/dre/obrasService.js";
 import { ehGrupoSemCentro, semCentroService, type GrupoSemCentro } from "../../services/dre/semCentroService.js";
 import { volumesDaLinha } from "../../services/dre/volumesDaLinhaService.js";
+import { rateiosService, RegraRateioError } from "../../services/volumes/rateiosService.js";
 import { auditar } from "../../services/auditoriaService.js";
 
 const unidadeSchema = z.coerce.number().int().min(1).max(5);
 const grupoSchema = z.string().trim().min(1).max(200).optional();
 /** A obra: o código do centro de custo de obra no RM (1.98.… ou 1.99.…). */
 const obraSchema = z.string().trim().regex(/^1.9[89].[0-9.]+$/).optional();
+/** ?obras= (03/11/2026, o Realizado por Obra): os códigos das obras de uma venda, separados por vírgula. */
+const obrasSchema = z.string().trim().max(4000).optional().transform((s) => (s ? s.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 200) : undefined));
 
 function competencia(request: Request, response: Response) {
   const c = anoMesSchema.safeParse(request.params.anoMes);
@@ -101,6 +104,21 @@ export const dreController = {
     );
   },
 
+  /**
+   * As Regras de Rateio vigentes no mês (04/11/2026, pedido do Adão): o botão Regras de Rateio do extrato de uma linha e do
+   * modal Contestar (que se abre do extrato).
+   */
+  async rateios(request: Request, response: Response) {
+    const c = competencia(request, response);
+    if (!c) return;
+    try {
+      return response.json({ data: await rateiosService.vigentes(c.ano, c.mes) });
+    } catch (error) {
+      if (error instanceof RegraRateioError) return response.status(error.status).json({ error: error.message });
+      throw error;
+    }
+  },
+
   /** Detalhamento de uma linha: ?linha=código e ?unidade=1..5, ?grupo=centro, ou nenhum dos dois (consolidado). */
   async detalhe(request: Request, response: Response) {
     const c = competencia(request, response);
@@ -178,7 +196,9 @@ export const dreController = {
     // ?obra= (30/10/2026): só os registros da obra (a linha de volume na aba Obras).
     const o = obraSchema.safeParse(request.query.obra);
     if (!o.success) return response.status(400).json({ error: "Obra inválida" });
-    return responder(response, () => volumesDaLinha(c.ano, c.mes, linha.data, unidade, request.user!.acesso, o.data));
+    const os = obrasSchema.safeParse(request.query.obras);
+    if (!os.success) return response.status(400).json({ error: "Obras inválidas" });
+    return responder(response, () => volumesDaLinha(c.ano, c.mes, linha.data, unidade, request.user!.acesso, o.data, os.data));
   },
 
   async apurar(request: Request, response: Response) {

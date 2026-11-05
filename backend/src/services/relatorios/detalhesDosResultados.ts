@@ -5,7 +5,7 @@ import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { linhaSensivel, podeVerCentro, podeVerLinhaNaObra, podeVerLinhaNoCentro, podeVerMovimentos, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import type { Composicao, OrigemValor, ParcelaRateio } from "../dre/apuracaoUnidades.js";
 import { grupoDoCentro } from "../dre/dreService.js";
-import { sinalDaLinha } from "../dre/obrasService.js";
+import { foraDaObra, sinalDaLinha } from "../dre/obrasService.js";
 import { deveriaTerCentro, grupoSemCentro, type GrupoSemCentro } from "../dre/semCentroService.js";
 
 /**
@@ -197,9 +197,10 @@ export async function detalhesDosResultados(ano: number, ate: number, acesso: Ac
           for (const [linhaId, ms] of porLinha) {
             const linha = porId.get(linhaId);
             if (!naAba(linha) || !podeVerLinhaNaObra(acesso, linha)) continue;
-            // O sinal da DRE (as receitas trocadas), como na aba Obras.
+            // O sinal da DRE (as receitas trocadas), como na aba Obras; sem as contas de Reconhecimento do CPV nas receitas (03/11/2026).
             const fator = new Prisma.Decimal(sinalDaLinha(linha.codigo));
-            partes.push({ linha, bloco: "Lançamentos Contábeis", ms: ms.filter((m) => m.codigoCentroCusto === alvo.codigo), fator: () => fator });
+            const daObra = ms.filter((m) => m.codigoCentroCusto === alvo.codigo && !foraDaObra(linha.codigo, m.contaAdotada ?? m.contaResultado));
+            partes.push({ linha, bloco: "Lançamentos Contábeis", ms: daObra, fator: () => fator });
           }
         } else {
           for (const [linhaId, ms] of porLinha) {

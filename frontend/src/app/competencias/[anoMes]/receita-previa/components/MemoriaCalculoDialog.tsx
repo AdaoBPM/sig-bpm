@@ -32,8 +32,13 @@ type Props = {
    * o extrato das receitas, sem a variação e sem os itens que só movem o estoque.
    */
   variacao?: boolean;
+  /** Aberto pelo extrato de uma obra (a aba Obras, 03/11/2026): o número da obra, e só os itens dela. */
+  obra?: string;
   onFechar: () => void;
 };
+
+/** O número da obra, sem a letra nem os zeros à esquerda (G887305, 1.98.00887305 → 887305), como no servidor. */
+const numeroDaObra = (codigo: string | null) => (codigo ?? "").split(".").pop()!.replace(/\D/g, "").replace(/^0+/, "");
 
 const zero = (v: string | null) => v === null || Number(v) === 0;
 /**
@@ -165,7 +170,7 @@ const numerica = (chave: string, rotulo: string, campo: (l: LinhaExtrato) => num
  * Serviços e Lanç. Manuais) e, em cada uma, os itens somados por obra, com
  * filtro e ordem nos rótulos das colunas.
  */
-export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = false, onFechar }: Props) {
+export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = false, obra, onFechar }: Props) {
   const { data, isPending, isError } = useQuery({
     queryKey: ["receita-previa", anoMes, "itens", unidade, natureza],
     queryFn: () => receitaPreviaService.itens(anoMes, unidade, natureza),
@@ -174,9 +179,12 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = fal
     () =>
       GRUPOS_ORIGEM.map((g) => ({
         ...g,
-        linhas: agrupar((data?.itens ?? []).filter((i) => i.origem === g.origem && doExtrato(i, variacao)), g.origem),
+        linhas: agrupar(
+          (data?.itens ?? []).filter((i) => i.origem === g.origem && doExtrato(i, variacao) && (!obra || numeroDaObra(i.obra) === obra)),
+          g.origem,
+        ),
       })).filter((g) => g.linhas.length > 0),
-    [data, variacao],
+    [data, variacao, obra],
   );
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const ativo = grupos.find((g) => g.origem === escolhido) ?? grupos[0];
@@ -195,6 +203,7 @@ export function MemoriaCalculoDialog({ anoMes, unidade, natureza, variacao = fal
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {ROTULO_UNIDADE[unidade]} · {variacao ? "Variação do Estoque" : ROTULO_NATUREZA[natureza]}
+            {obra ? ` · Obra ${obra}` : ""}
           </DialogTitle>
           <DialogDescription>
             Memória de cálculo: {data ? inteiro(registros) : "…"} {plural(data ? registros : 0, "registro, somado", "registros, somados")} por obra como nas abas de receita do BASE PRÉVIAS. Os

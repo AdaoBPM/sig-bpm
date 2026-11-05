@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import { Prisma } from "../src/generated/prisma/client.js";
 import { departamentoDaLinha } from "../src/services/acesso/recorteDepartamento.js";
-import { agruparParaLancamentos, contaCabeNoCentro } from "../src/services/contestacoes/contestacoesService.js";
+import { agruparParaLancamentos, centroForaDaContestacao, contaCabeNoCentro } from "../src/services/contestacoes/contestacoesService.js";
 
 describe("Contestações de Gastos: a conta no departamento do centro (30/10/2026)", () => {
   const conta = (grupoSigla: string, descricao = "X") => departamentoDaLinha({ grupoSigla, descricao });
@@ -26,6 +26,16 @@ describe("Contestações de Gastos: a conta no departamento do centro (30/10/202
   it("o centro sem departamento (o do movimento, quando só a conta muda) aceita todas", () => {
     assert.equal(contaCabeNoCentro(null, conta("DA")), true);
     assert.equal(contaCabeNoCentro(null, conta("ROB")), true);
+  });
+
+  it("o centro novo só com o código de três níveis: sem os genéricos, os sem código e os de código mais longo (04/11/2026)", () => {
+    assert.equal(centroForaDaContestacao("1.01.00000001"), null);
+    assert.equal(centroForaDaContestacao(" 1.98.00878202 "), null);
+    assert.equal(centroForaDaContestacao("1.01"), "é genérico");
+    assert.equal(centroForaDaContestacao("1.16"), "é genérico");
+    assert.equal(centroForaDaContestacao(null), "não tem código no cadastro");
+    assert.equal(centroForaDaContestacao("  "), "não tem código no cadastro");
+    assert.match(centroForaDaContestacao("1.11.00000006.1") ?? "", /fora do padrão/);
   });
 });
 

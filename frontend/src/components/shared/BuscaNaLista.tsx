@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 
 export type OpcaoDaBusca = { id: string; codigo: string; nome: string; detalhe?: string | null };
 
-const MAX_SUGESTOES = 15;
 const rotulo = (o: OpcaoDaBusca) => `${o.codigo} — ${o.nome}`;
 /** Sem acentos e sem caixa, para a busca achar "manutencao" em "MANUTENÇÃO". */
 const normal = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 /**
  * Uma lista com busca (27/10/2026: o modal Contestar): o código e o nome de cada opção; digitar filtra por qualquer
- * termo (todos os termos, em qualquer ordem), e o X limpa a escolha.
+ * termo (todos os termos, em qualquer ordem), e o X limpa a escolha. A lista mostra todas as opções, com a barra de
+ * rolagem (04/11/2026, pedido do Adão; antes, só as 15 primeiras, e as demais só digitando); clicar na barra não a fecha.
+ * A escolha feita fora do campo (a lupa do modal Contestar) aparece nele; a que sai de fora (a conta que não cabe no centro
+ * novo) o limpa, se ele ainda mostrava a escolha.
  */
 export function BuscaNaLista({
   id,
@@ -31,9 +33,16 @@ export function BuscaNaLista({
 }) {
   const [texto, setTexto] = useState(valor ? rotulo(valor) : "");
   const [aberta, setAberta] = useState(false);
+  // A escolha que veio de fora (o valor mudou sem o campo): o texto acompanha (o ajuste durante a renderização, sem efeito).
+  const [visto, setVisto] = useState(valor);
+  if (valor?.id !== visto?.id) {
+    setVisto(valor);
+    if (valor) setTexto(rotulo(valor));
+    else if (visto && texto === rotulo(visto)) setTexto("");
+  }
   const termos = normal(texto).split(/\s+/).filter(Boolean);
   const sugestoes = useMemo(
-    () => opcoes.filter((o) => !termos.length || termos.every((t) => normal(`${rotulo(o)} ${o.detalhe ?? ""}`).includes(t))).slice(0, MAX_SUGESTOES),
+    () => opcoes.filter((o) => !termos.length || termos.every((t) => normal(`${rotulo(o)} ${o.detalhe ?? ""}`).includes(t))),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- os termos saem do texto.
     [opcoes, texto],
   );
@@ -67,11 +76,13 @@ export function BuscaNaLista({
         </button>
       ) : null}
       {aberta && !valor && sugestoes.length > 0 ? (
-        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-sm border border-gray-200 bg-white shadow-sm">
+        // O mousedown na lista (na barra de rolagem, inclusive) não tira o foco do campo: sem isso, a lista se fechava.
+        <ul onMouseDown={(e) => e.preventDefault()} className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-sm border border-gray-200 bg-white shadow-sm">
           {sugestoes.map((o) => (
             <li key={o.id}>
               <button
                 type="button"
+                data-altera
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onEscolher(o);

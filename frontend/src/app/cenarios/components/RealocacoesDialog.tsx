@@ -195,12 +195,26 @@ export function RealocacoesDialog({ cenario, podeEditar, onFechar }: { cenario: 
 
 const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : null);
 
+/** O botão que abre o modal das realocações (Realocar; só lendo, Realocações), com o modal; nada sem movimentações fora dos padrões. */
+export function BotaoRealocar({ cenario, podeEditar }: { cenario: Cenario; podeEditar: boolean }) {
+  const [aberto, setAberto] = useState(false);
+  if (!cenario.realocacoes?.movimentacoes.length) return null;
+  return (
+    <>
+      <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
+        {podeEditar ? "Realocar" : "Realocações"}
+      </Button>
+      {aberto ? <RealocacoesDialog cenario={cenario} podeEditar={podeEditar} onFechar={() => setAberto(false)} /> : null}
+    </>
+  );
+}
+
 /**
  * O quadro da aba Referência (14/10/2026; antes, os avisos com os totais sem centro de custo): diz que há movimentações
- * fora dos padrões das premissas, registra as realocações gravadas e abre o modal delas.
+ * fora dos padrões das premissas, registra as realocações gravadas e abre o modal delas. `comBotao` falso: o botão fica
+ * fora do quadro (03/11/2026, pedido do Adão: ao lado do Carregar Realizado).
  */
-export function QuadroDeRealocacoes({ cenario, podeEditar }: { cenario: Cenario; podeEditar: boolean }) {
-  const [aberto, setAberto] = useState(false);
+export function QuadroDeRealocacoes({ cenario, podeEditar, comBotao = true }: { cenario: Cenario; podeEditar: boolean; comBotao?: boolean }) {
   const r = cenario.realocacoes;
   if (!r?.movimentacoes.length) return null;
   const realocadas = r.movimentacoes.filter((m) => r.aplicadas[m.chave]);
@@ -212,9 +226,7 @@ export function QuadroDeRealocacoes({ cenario, podeEditar }: { cenario: Cenario;
           <p className="font-medium text-gray-900">Movimentações Fora dos Padrões</p>
           <p>Foram encontradas movimentações realizadas fora dos padrões das premissas.</p>
         </div>
-        <Button type="button" className={botaoPrimario} onClick={() => setAberto(true)}>
-          {podeEditar ? "Realocar" : "Realocações"}
-        </Button>
+        {comBotao ? <BotaoRealocar cenario={cenario} podeEditar={podeEditar} /> : null}
       </div>
       {realocadas.length ? (
         <>
@@ -238,7 +250,6 @@ export function QuadroDeRealocacoes({ cenario, podeEditar }: { cenario: Cenario;
           Fora do cenário: {fora.length} {plural(fora.length, "conta", "contas")} ({moeda(somaDe(fora))}).
         </p>
       ) : null}
-      {aberto ? <RealocacoesDialog cenario={cenario} podeEditar={podeEditar} onFechar={() => setAberto(false)} /> : null}
     </div>
   );
 }

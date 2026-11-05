@@ -35,14 +35,15 @@ async function carregarDados(competenciaId: string): Promise<DadosCalculo> {
     quantidade: true,
     obra: { select: { codigo: true } },
     unidadeNegocio: { select: { codigo: true } },
-    linha: { select: { nome: true } },
+    linha: { select: { nome: true, unidadeNegocio: { select: { codigo: true } } } },
   } as const;
-  type Bruto = { id: string; quantidade: Registro["quantidade"]; obra: { codigo: string } | null; unidadeNegocio: { codigo: number } | null; linha: { nome: string } | null };
+  type Bruto = { id: string; quantidade: Registro["quantidade"]; obra: { codigo: string } | null; unidadeNegocio: { codigo: number } | null; linha: { nome: string; unidadeNegocio: { codigo: number } | null } | null };
   const registro = (r: Bruto, extra: Partial<Registro> = {}): Registro => ({
     id: r.id,
     obra: r.obra?.codigo ?? null,
     unidade: r.unidadeNegocio?.codigo ?? null,
     linha: r.linha ? chaveDaLinha(r.linha.nome) : null,
+    unidadeDaLinha: r.linha?.unidadeNegocio?.codigo ?? null,
     quantidade: r.quantidade,
     ...extra,
   });

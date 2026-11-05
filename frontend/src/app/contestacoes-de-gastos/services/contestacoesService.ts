@@ -78,16 +78,50 @@ export type Contestacao = {
 
 /** O departamento do recorte (o da gestão): o do centro de custo e o da linha da DRE da conta. */
 export type DepartamentoDoRecorte = "PRODUCAO" | "SERVICOS" | "LOGISTICA" | "TECNICO" | "COMERCIAL" | "ADMINISTRATIVO" | "EXTRA_OPERACIONAL";
-export type CentroOpcao = { id: string; codigoRM: string | null; nomeRM: string; departamento: string | null; departamentoDoRecorte: DepartamentoDoRecorte };
+export type CentroOpcao = {
+  id: string;
+  codigoRM: string | null;
+  nomeRM: string;
+  departamento: string | null;
+  /** A atribuição (DIRETA ou INDIRETA) e o balde do centro (04/11/2026, a lista da lupa). */
+  atribuicao: "DIRETA" | "INDIRETA" | null;
+  balde: string | null;
+  departamentoDoRecorte: DepartamentoDoRecorte;
+};
 export type ContaOpcao = {
   id: string;
   reduzido: string;
   descricao: string;
   departamento: string | null;
   atribuicao: string | null;
-  /** O balde da conta (a chave de rateio ou o destino direto). */
+  /** O balde da conta (a chave de rateio ou o destino direto): vale para os lançamentos sem centro de custo. */
   balde: string | null;
   departamentoDoRecorte: DepartamentoDoRecorte | null;
+  /** A linha da DRE da conta (04/11/2026, a consulta Contas do modal Contestar): o grupo e a descrição. */
+  linha: { grupo: string; descricao: string } | null;
+};
+
+/**
+ * As regras de rateio vigentes no mês (04/11/2026, a consulta Rateios do modal Contestar): por chave, os centros de custo e
+ * as contas com o balde dela, a vigência, se é por volume ou por percentuais fixos e os destinos (o percentual do mês: o
+ * apurado; sem a apuração, o fixo ou nulo); e os baldes diretos, que não se rateiam.
+ */
+export type DestinoDoRateio = {
+  destino: "MATRIZ" | "FILIAL" | "MONTAGEM" | "COMPLEMENTAR";
+  unidade: string;
+  rotulo: string;
+  origem: string;
+  medida: string | null;
+  quantidade: string | null;
+  percentual: string | null;
+  percentualFixo: string | null;
+  linhas: Array<{ nome: string; percentual: string }>;
+};
+export type RegrasDeRateioDoMes = {
+  competencia: { ano: number; mes: number; status: string };
+  apurado: boolean;
+  chaves: Array<{ chave: string; nome: string; centros: number; contas: number; baseFisica: string | null; fixo: boolean; vigencias: string[]; destinos: DestinoDoRateio[] }>;
+  diretos: Array<{ balde: string; centros: number; contas: number }>;
 };
 
 export const ROTULO_DEPARTAMENTO: Record<DepartamentoDoRecorte, string> = {
@@ -135,6 +169,8 @@ export function mensagemDeErro(e: unknown, padrao: string) {
 
 export const contestacoesService = {
   opcoes: async (): Promise<{ centros: CentroOpcao[]; contas: ContaOpcao[] }> => (await api.get("/proxy/contestacoes/opcoes")).data.data,
+  /** As Regras de Rateio vigentes no mês (a rota da DRE do mês: o extrato e o modal Contestar). */
+  rateios: async (anoMes: string): Promise<RegrasDeRateioDoMes> => (await api.get(`/proxy/competencias/${anoMes}/dre/rateios`)).data.data,
   previa: async (d: { lancamentoId: string; centroNovoId: string | null; contaNovaId: string | null }): Promise<PreviaDaContestacao> =>
     (await api.get("/proxy/contestacoes/previa", { params: { lancamentoId: d.lancamentoId, centroNovoId: d.centroNovoId ?? "", contaNovaId: d.contaNovaId ?? "" } })).data.data,
   criar: async (d: {

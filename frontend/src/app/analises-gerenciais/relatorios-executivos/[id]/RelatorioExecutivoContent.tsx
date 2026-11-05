@@ -1211,7 +1211,8 @@ function ComoUsarDoRelatorio() {
         dois grupos. A Comparação Padrão é o orçado dos Cards Padrão (Painel de Bordo e Indicadores) e das Tabelas Padrão: de início, o cenário marcado
         como Orçamento (a etiqueta amarela; o relatório acompanha a marcação até que se escolha um cenário); ou escolha um dos cenários da lista — os
         cenários com marcação, de qualquer exercício, com o ano, o tipo (Sintético ou Analítico) e a marcação em etiquetas — para o relatório ficar com
-        ele, mesmo que a marcação mude de cenário (num cenário de outro exercício, valem os mesmos meses dele). A Comparação PROVA são os cenários dos
+        ele enquanto ele tiver a marcação (se a marcação passar para outro cenário, o relatório volta ao marcado como Orçamento; num cenário de outro
+        exercício, valem os mesmos meses dele). A Comparação PROVA são os cenários dos
         Cards PROVA e das Tabelas PROVA: marque dois ou mais dos cenários marcados (Previsão, Orçado, Vendido e Anterior, cada um com o quadradinho da cor
         dele; de início, todos); com dois marcados, eles não se desmarcam antes de se marcar outro. Ela acompanha as marcações: se uma marcação passar para
         outro cenário, os objetos PROVA comparam com ele. Quem edita a tela escolhe, e as escolhas se salvam na hora (“Salvo às…”, embaixo das listas); os

@@ -211,3 +211,63 @@ export function nomesDasObras(linhas: LinhaPlanilha[]): Map<string, string> {
   }
   return nomes;
 }
+
+/** Uma linha da DRE de venda inteira (03/11/2026, o Vendido do Realizado por Obra): todas as contas, não só as de preço. */
+export type LinhaVendida = {
+  obra: string;
+  versao: number;
+  venda: string | null;
+  etapa: string | null;
+  unidade: string | null;
+  linhaTexto: string;
+  departamento: string;
+  conta: string;
+  atribuicao: string | null;
+  valorTotal: number;
+};
+
+/**
+ * A aba DRE inteira (03/11/2026, o Realizado por Obra): todas as linhas de todas as obras e versões, com o V. TOTAL ("-" e
+ * vazio são zero). As linhas idênticas repetidas (a DRE de uma obra colada duas vezes) entram uma vez; a repetida com outro
+ * valor também fica de fora (vale a primeira) e conta em `conflitantes`.
+ */
+export function interpretarDreVendida(linhas: LinhaPlanilha[]): { ok: false; motivo: string } | { ok: true; linhas: LinhaVendida[]; repetidas: number; conflitantes: number } {
+  const cab = localizarCabecalho(linhas, OBRIGATORIAS, OPCIONAIS);
+  if ("erro" in cab) return { ok: false, motivo: cab.erro };
+  const c = (l: LinhaPlanilha, nome: string) => (cab.col[nome] < 0 ? null : (l.celulas[cab.col[nome]] ?? null));
+  const saida: LinhaVendida[] = [];
+  const vistas = new Map<string, number>();
+  let repetidas = 0;
+  let conflitantes = 0;
+  for (const l of linhas) {
+    if (l.numero <= cab.numero) continue;
+    const obra = texto(c(l, "CÓD."));
+    if (!obra) continue;
+    const versaoBruta = c(l, "VERSÃO (N)");
+    const versao = vazia(versaoBruta) ? 0 : Number(versaoBruta);
+    const v = valor(c(l, "V. TOTAL"));
+    if (!Number.isInteger(versao) || versao < 0 || v === undefined) continue;
+    const linha: LinhaVendida = {
+      obra,
+      versao,
+      venda: texto(c(l, "VENDA")),
+      etapa: texto(c(l, "ETAPA")),
+      unidade: texto(c(l, "UNIDADE")),
+      linhaTexto: normalizar(c(l, "LINHA")),
+      departamento: normalizar(c(l, "DEPTO.")),
+      conta: texto(c(l, "CONTA CONTÁBIL")) ?? "",
+      atribuicao: texto(c(l, "ATRIBUIÇÃO")),
+      valorTotal: v === null ? 0 : v.toNumber(),
+    };
+    const chave = [chaveDoPreco({ ...linha, contaResultado: linha.conta }), linha.atribuicao ?? ""].join(" | ");
+    const anterior = vistas.get(chave);
+    if (anterior !== undefined) {
+      if (Math.abs(anterior - linha.valorTotal) < 1e-6) repetidas++;
+      else conflitantes++;
+      continue;
+    }
+    vistas.set(chave, linha.valorTotal);
+    saida.push(linha);
+  }
+  return { ok: true, linhas: saida, repetidas, conflitantes };
+}

@@ -179,8 +179,7 @@ export function CompetenciasContent() {
         }
         sobre={
           <p>
-            Cada mês do fechamento, o estado em que ele se encontra e o andamento das etapas. Clique na linha para abrir o mês, ou num passo do
-            andamento para ir direto à etapa.
+            Cada mês do fechamento, o estado em que ele se encontra e o andamento das etapas.
           </p>
         }
         acoes={

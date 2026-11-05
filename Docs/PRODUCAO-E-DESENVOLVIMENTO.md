@@ -56,6 +56,12 @@ de banco da empresa, **192.168.0.40:5432** (PostgreSQL 15, ordenação `C`, igua
 
 - O teste mostra o código do último `npm run teste:construir`: depois de uma alteração, gerar de novo (parar o teste antes) e
   iniciar.
+- Por padrão (pedido do Adão, 04/11/2026), toda alteração feita no desenvolvimento vai também para o teste logo em seguida,
+  sem precisar pedir. Isso vale também para as cargas de dados. A ordem: as migrações no esquema `teste`; parar o teste;
+  `npm run teste:construir`; e `npm run teste`. Atualizar o teste não é publicar, nem copiar de novo os dados da produção.
+- O `npm run teste:construir` confere os tipos antes de gerar (`npx tsc --noEmit` no backend e no frontend), porque o build
+  das telas não os verifica. Com erro, ele para sem gerar nada, e a versão de teste de antes continua. Isso evita gerar o
+  teste com um arquivo pela metade, de outra sessão editando a mesma pasta.
 - O teste tem os dados da produção: o esquema `teste` do banco do desenvolvimento, com uma cópia do banco da produção
   (o back-up lógico, só de leitura), e a pasta `backend/uploads-teste`, com uma cópia dos arquivos enviados ao SIG. O que
   se grava no teste não chega à produção nem ao desenvolvimento, e a cópia não se atualiza sozinha. O login é o da

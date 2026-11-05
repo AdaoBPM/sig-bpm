@@ -25,14 +25,15 @@ import type { VisualizacaoDoPainel } from "@/app/analises-gerenciais/relatorios-
 import { EtiquetaSituacao, ROTULO_SITUACAO } from "@/app/analises-gerenciais/relatorios-executivos/components/EtiquetaSituacao";
 
 import { CampoVisualizacaoDoPainel, RotuloDaVisualizacao } from "./components/VisualizacaoDoPainel";
-import { paineisDeBordoService, ROTULO_DA_VISUALIZACAO, type ListaDePaineis, type ResumoDoPainel } from "./services/paineisDeBordoService";
+import { AUTOMATICA, paineisDeBordoService, ROTULO_DA_VISUALIZACAO, rotuloDaCompetencia, TEXTO_DA_AUTOMATICA, type ListaDePaineis, type ResumoDoPainel } from "./services/paineisDeBordoService";
 
 const dataCurta = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
 const COLUNAS: Coluna<ResumoDoPainel>[] = [
   { chave: "nome", rotulo: "Painel", classe: "!px-3", valor: (p) => p.nome },
-  { chave: "competencia", rotulo: "Competência", classe: "!px-3", tipo: "numero", valor: (p) => p.ano * 100 + p.mes, texto: (p) => p.rotuloMes },
+  // O automático (03/11/2026), na competência que mostra: a última fechada.
+  { chave: "competencia", rotulo: "Competência", classe: "!px-3", tipo: "numero", valor: (p) => p.ano * 100 + p.mes, texto: rotuloDaCompetencia },
   { chave: "visualizacao", rotulo: "Visualização", classe: "!px-3", valor: (p) => ROTULO_DA_VISUALIZACAO[p.visualizacao] },
   // A situação (01/11/2026), como a dos relatórios: o público só aparece para os demais finalizado.
   { chave: "situacao", rotulo: "Situação", classe: "!px-3", valor: (p) => ROTULO_SITUACAO[p.situacao] },
@@ -41,7 +42,7 @@ const COLUNAS: Coluna<ResumoDoPainel>[] = [
 ];
 
 /**
- * A lista dos Painéis de Bordo (31/10/2026, Análises Gerenciais; pedido do Adão), como a dos Relatórios Executivos: os
+ * A lista de Painéis e Apresentações (31/10/2026, Análises Gerenciais; pedido do Adão), como a dos Relatórios Executivos: os
  * painéis que o usuário vê (os seus e, desde 01/11/2026, os públicos finalizados; o Administrador, todos), com o nome, a
  * competência (vários painéis por competência), a visualização, a situação e quem o criou. Clicar na linha abre o painel; “Novo Painel” cria um.
  */
@@ -58,8 +59,8 @@ export function PaineisDeBordoContent() {
   return (
     <div className="space-y-6">
       <CabecalhoDaTela
-        titulo="Painéis de Bordo"
-        exportar={<ExportarTabela titulo="Painéis de Bordo" colunas={COLUNAS} linhas={tabela.filtradas} />}
+        titulo="Painéis e Apresentações"
+        exportar={<ExportarTabela titulo="Painéis e Apresentações" colunas={COLUNAS} linhas={tabela.filtradas} />}
         acoes={
           pode ? (
             <Button type="button" className={botaoPrimario} disabled={!consulta.data || !competencias.length} title={consulta.data && !competencias.length ? "Nenhuma competência fechada" : undefined} onClick={() => setCriando(true)}>
@@ -70,18 +71,22 @@ export function PaineisDeBordoContent() {
         }
         comoUsar={
           <ul>
-            <li>Cada linha é um painel de bordo: o nome, a competência, a visualização, a situação e quem o criou. Clique na linha para abrir o painel.</li>
             <li>
-              A Visualização é a dos cenários: Privado (só quem criou o painel e os Administradores o veem; os demais não o veem na lista) ou Público
-              (todos os que leem os Painéis de Bordo o veem, depois de finalizado). A Situação é Em Elaboração ou Finalizado, como nos Relatórios
+              Cada linha é um painel de bordo: o nome, a competência (nos painéis com a competência automática, a última fechada, com “Automática”
+              embaixo), a visualização, a situação e quem o criou. Clique na linha para abrir o painel.
+            </li>
+            <li>
+              A Visualização é a dos cenários: Privado (só quem criou o painel, os editores convidados e os Administradores o veem; os demais não o veem na lista) ou Público
+              (todos os que leem Painéis e Apresentações o veem, depois de finalizado). A Situação é Em Elaboração ou Finalizado, como nos Relatórios
               Executivos: em elaboração, o painel só aparece para quem o criou, para os editores convidados e para os Administradores, mesmo o
-              Público; finalizado, fica só para leitura. Quem criou o painel, os editores que ele convidou (Configurações / Geral / Compartilhar) e o
+              Público; finalizado, fica só para leitura. Quem criou o painel, os editores convidados (Configurações / Geral / Compartilhar) e o
               Administrador o editam, o finalizam e o reabrem; a etiqueta Compartilhado, ao lado do nome, marca os painéis que você edita a convite de
               quem os criou. Nos públicos finalizados, os demais o veem, o apresentam e o exportam, só para leitura.
             </li>
             {pode ? (
               <li>
-                “Novo Painel” cria um painel: o Nome, a Competência (uma das fechadas; vários painéis podem ser do mesmo mês) e a Visualização. Em Copiar
+                “Novo Painel” cria um painel: o Nome, a Competência (uma das fechadas, e vários painéis podem ser do mesmo mês; ou Automática: o painel
+                mostra sempre a última competência fechada, e a que fechar depois entra sozinha ao abrir o painel) e a Visualização. Em Copiar
                 de, escolha um painel de onde vêm as abas (os cards, com os dados da competência nova, as imagens, as anotações e as Imagens de Fundo) e as
                 comparações das Configurações, ou Nenhum, para começar vazio; sem “Manter Imagens e Anotações”, só os cards e as Imagens de Fundo vêm do
                 painel escolhido. O nome, a competência e a visualização mudam depois, nas Configurações do painel.
@@ -92,10 +97,10 @@ export function PaineisDeBordoContent() {
         }
         sobre={
           <p>
-            Os Painéis de Bordo são painéis com fins variados, feitos a partir dos Relatórios Executivos, com as mesmas ferramentas: cada um tem o nome, a
+            Painéis e Apresentações reúne painéis com fins variados, feitos a partir dos Relatórios Executivos, com as mesmas ferramentas: cada um tem o nome, a
             visualização (Privado ou Público) e a competência, e uma tela, Painel de Bordo, com uma ou mais abas, onde entram os cards do Painel de Bordo e
             dos Indicadores, as tabelas de Resultados, as anotações, os textos, o sumário, as imagens e os vídeos; o painel se apresenta em tela inteira e
-            se exporta em PDF. Os cards trazem só as competências fechadas, até a do painel. Quem cria o painel o monta e o finaliza; o Público só
+            se exporta em PDF. Os cards trazem só as competências fechadas, até a do painel (na competência automática, até a última fechada). Quem cria o painel o monta e o finaliza; o Público só
             aparece para os demais depois de finalizado.
           </p>
         }
@@ -131,7 +136,10 @@ export function PaineisDeBordoContent() {
                   </span>
                 ) : null}
               </td>
-              <td className="px-3 py-2 text-sm whitespace-nowrap">{p.rotuloMes}</td>
+              <td className="px-3 py-2 text-sm whitespace-nowrap">
+                {p.rotuloMes}
+                {p.automatica ? <div className="text-xs text-gray-500">Automática</div> : null}
+              </td>
               <td className="px-3 py-2 text-sm whitespace-nowrap">
                 <RotuloDaVisualizacao visualizacao={p.visualizacao} />
               </td>
@@ -153,20 +161,23 @@ export function PaineisDeBordoContent() {
 }
 
 /**
- * O modal Novo Painel (31/10/2026): o nome, a competência (uma das fechadas; de início, a mais recente), a visualização
- * (de início, Público, como nos cenários) e o painel de onde copiar as abas (de início, nenhum).
+ * O modal Novo Painel (31/10/2026): o nome, a competência (uma das fechadas; de início, a mais recente; ou, desde 03/11/2026,
+ * a Automática: a última fechada, sempre), a visualização (de início, Público, como nos cenários) e o painel de onde copiar
+ * as abas (de início, nenhum).
  */
 function NovoPainelDialog({ dados, onFechar }: { dados: ListaDePaineis; onFechar: () => void }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
   const [competencia, setCompetencia] = useState(dados.competencias[0] ? `${dados.competencias[0].ano}|${dados.competencias[0].mes}` : "");
+  const automatica = competencia === AUTOMATICA;
   const [ano, mes] = competencia.split("|").map(Number);
   const [visualizacao, setVisualizacao] = useState<VisualizacaoDoPainel>("PUBLICO");
   const [copiarDe, setCopiarDe] = useState("");
   const [manter, setManter] = useState(true);
   const criar = useMutation({
-    mutationFn: () => paineisDeBordoService.criar({ nome: nome.trim(), visualizacao, ano, mes, copiarDe: copiarDe || null, manterImagensEAnotacoes: manter }),
+    mutationFn: () =>
+      paineisDeBordoService.criar({ nome: nome.trim(), visualizacao, ...(automatica ? { automatica: true as const } : { ano, mes }), copiarDe: copiarDe || null, manterImagensEAnotacoes: manter }),
     onSuccess: (p) => {
       queryClient.invalidateQueries({ queryKey: ["paineis-de-bordo"] });
       toast.success(`Painel ${p.nome} criado.`);
@@ -191,12 +202,14 @@ function NovoPainelDialog({ dados, onFechar }: { dados: ListaDePaineis; onFechar
         <div className="space-y-1.5">
           <Label htmlFor="novo-painel-competencia">Competência</Label>
           <select id="novo-painel-competencia" value={competencia} onChange={(e) => setCompetencia(e.target.value)} className={classeSelect}>
+            {dados.competencias[0] ? <option value={AUTOMATICA}>Automática (a última fechada: {dados.competencias[0].rotulo})</option> : null}
             {dados.competencias.map((c) => (
               <option key={`${c.ano}|${c.mes}`} value={`${c.ano}|${c.mes}`}>
                 {c.rotulo}
               </option>
             ))}
           </select>
+          {automatica ? <p className="text-xs text-gray-500">{TEXTO_DA_AUTOMATICA}</p> : null}
         </div>
         <CampoVisualizacaoDoPainel valor={visualizacao} onMudar={setVisualizacao} />
         <div className="space-y-1.5">
@@ -205,7 +218,7 @@ function NovoPainelDialog({ dados, onFechar }: { dados: ListaDePaineis; onFechar
             <option value="">Nenhum (painel vazio)</option>
             {dados.paineis.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.nome} · {p.rotuloMes}
+                {p.nome} · {rotuloDaCompetencia(p)}
               </option>
             ))}
           </select>

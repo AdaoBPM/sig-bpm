@@ -105,7 +105,9 @@ export async function volumesDasObras(competenciaId: string, linhas: Array<{ cod
  * (VOLUMES_DA_DRE). As listas são as de hoje: se mudaram depois da apuração,
  * o total difere do valor apurado.
  */
-export async function volumesDaLinha(ano: number, mes: number, codigoLinha: string, unidade: number | null, acesso: Acesso, obra?: string) {
+export async function volumesDaLinha(ano: number, mes: number, codigoLinha: string, unidade: number | null, acesso: Acesso, obra?: string, obras?: string[]) {
+  // Com as obras (03/11/2026: a venda do Realizado por Obra, com as obras numeradas), só os registros delas, pelo código.
+  const dasObras = obras ? new Set(obras.map((o) => o.trim().toUpperCase())) : null;
   const prisma = getPrismaClient();
   const [competencia, linhaDRE] = await Promise.all([
     prisma.competencia.findUnique({ where: { ano_mes: { ano, mes } }, select: { id: true } }),
@@ -131,6 +133,7 @@ export async function volumesDaLinha(ano: number, mes: number, codigoLinha: stri
     for (const r of registros) {
       // Com a obra (30/10/2026: a linha de volume na aba Obras), só os registros dela, pelo número.
       if (obra !== undefined && numeroDaObra(r.obra?.codigo) !== numeroDaObra(obra)) continue;
+      if (dasObras && !dasObras.has(r.obra?.codigo.trim().toUpperCase() ?? "")) continue;
       const destino = destinoDoRegistro(tipo, r);
       if (!destino || !codigos.has(destino)) continue;
       const chave = [r.obra?.codigo ?? "", destino, r.linha?.nome ?? ""].join("|");

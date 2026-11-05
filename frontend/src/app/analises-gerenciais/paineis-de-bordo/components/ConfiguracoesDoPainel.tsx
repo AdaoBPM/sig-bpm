@@ -16,6 +16,7 @@ import { ConfiguracoesDoRelatorio } from "@/app/analises-gerenciais/relatorios-e
 import { useProcesso } from "@/app/analises-gerenciais/relatorios-executivos/components/processo";
 import type { MudancaDasConfiguracoes } from "@/app/analises-gerenciais/relatorios-executivos/services/relatoriosExecutivosService";
 
+import { AUTOMATICA, TEXTO_DA_AUTOMATICA } from "../services/paineisDeBordoService";
 import { CompartilharPainel } from "./CompartilharPainel";
 import { CampoVisualizacaoDoPainel } from "./VisualizacaoDoPainel";
 
@@ -27,7 +28,8 @@ type AbaDasConfiguracoes = "geral" | "comparativos";
 /**
  * As Configurações do painel de bordo (01/11/2026, pedido do Adão: em duas abas, como as dos cenários, e em destaques). A
  * aba **Geral**: o grupo Painel (o nome, a competência e a visualização), o Compartilhar (os editores convidados) e o
- * Excluir Painel — só quem criou o painel (ou o Administrador) os muda. A aba **Comparativos**: a Comparação Padrão e a
+ * Excluir Painel — quem criou o painel (ou o Administrador) e, desde 03/11/2026, com o painel em elaboração, os editores
+ * convidados mudam o Painel e o Compartilhar; o Excluir fica com quem o criou. A aba **Comparativos**: a Comparação Padrão e a
  * Comparação PROVA (as dos Relatórios Executivos), que quem edita o painel (também os editores convidados) muda.
  */
 export function ConfiguracoesDoPainel({ painelId, excluir }: { painelId: string; excluir: React.ReactNode }) {
@@ -45,9 +47,8 @@ export function ConfiguracoesDoPainel({ painelId, excluir }: { painelId: string;
       />
       {aba === "geral" ? (
         <>
-          <GeralDoPainel painelId={painelId} />
+          <GeralDoPainel painelId={painelId} excluir={excluir} />
           <CompartilharPainel painelId={painelId} />
-          {excluir}
         </>
       ) : (
         <ConfiguracoesDoRelatorio relatorioId={painelId} destaque />
@@ -58,10 +59,12 @@ export function ConfiguracoesDoPainel({ painelId, excluir }: { painelId: string;
 
 /**
  * O grupo Painel da aba Geral (31/10/2026): o nome, a visualização (Privado ou Público, como nos cenários) e a competência
- * — só mais um campo, entre as fechadas (vários painéis por competência). Cada mudança se salva na hora; só quem criou o
- * painel (ou o Administrador) muda.
+ * — só mais um campo, entre as fechadas (vários painéis por competência), ou, desde 03/11/2026, a Automática (a última
+ * fechada, sempre; com o aviso de que os textos não mudam com ela). Cada mudança se salva na hora; quem criou o painel (ou o
+ * Administrador) muda e, com o painel em elaboração, também os editores convidados (03/11/2026). O Excluir Painel (`excluir`)
+ * fica no canto de baixo, à direita, do grupo (03/11/2026, pedido do Adão; antes, embaixo do Compartilhar).
  */
-function GeralDoPainel({ painelId }: { painelId: string }) {
+function GeralDoPainel({ painelId, excluir }: { painelId: string; excluir: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { rota, servico } = useProcesso();
   const chave = [rota, "configuracoes", painelId];
@@ -77,14 +80,22 @@ function GeralDoPainel({ painelId }: { painelId: string }) {
       // A barra, o título dos slides e a lista mostram o nome, a visualização e a competência.
       queryClient.invalidateQueries({ queryKey: [rota, "relatorio", painelId] });
       queryClient.invalidateQueries({ queryKey: [rota], exact: true });
-      // Os cards e as tabelas mudam de mês.
-      if ("ano" in m) {
+      // Os cards e as tabelas mudam de mês (e, na automática, de comparação).
+      if ("ano" in m || "automatica" in m) {
         queryClient.invalidateQueries({ queryKey: [rota, "dados", painelId] });
         queryClient.invalidateQueries({ queryKey: [rota, "resultados", painelId] });
       }
       setNome(undefined);
       setSalvoEm(new Date());
-      toast.success("nome" in m ? "Nome do painel salvo." : "visualizacao" in m ? "Visualização do painel salva." : "Competência do painel salva: os cards e as tabelas vão até ela.");
+      toast.success(
+        "nome" in m
+          ? "Nome do painel salvo."
+          : "visualizacao" in m
+            ? "Visualização do painel salva."
+            : "automatica" in m
+              ? "Competência automática salva: o painel mostra sempre a última competência fechada."
+              : "Competência do painel salva: os cards e as tabelas vão até ela.",
+      );
     },
   });
   if (consulta.isError) return <Erro erro={mensagemDeErro(consulta.error, "Erro ao carregar as configurações do painel.")} />;
@@ -106,7 +117,8 @@ function GeralDoPainel({ painelId }: { painelId: string }) {
       <div>
         <h2 className="text-base font-bold text-gray-900">Painel</h2>
         <p className="mt-1 text-sm text-gray-600">
-          O nome do painel (o da barra do topo e o dos slides), a visualização e a competência: os cards e as tabelas trazem as competências fechadas até ela.
+          O nome do painel (o da barra do topo e o dos slides), a visualização e a competência: os cards e as tabelas trazem as competências fechadas até ela
+          (na Automática, até a última fechada).
           Criado por {c.criadoPor}.
         </p>
       </div>
@@ -131,14 +143,16 @@ function GeralDoPainel({ painelId }: { painelId: string }) {
           <Label htmlFor="competencia-do-painel">Competência</Label>
           <select
             id="competencia-do-painel"
-            value={`${c.ano}|${c.mes}`}
+            value={c.automatica ? AUTOMATICA : `${c.ano}|${c.mes}`}
             disabled={travado}
             onChange={(e) => {
+              if (e.target.value === AUTOMATICA) return gravar.mutate({ automatica: true });
               const [ano, mes] = e.target.value.split("|").map(Number);
               gravar.mutate({ ano, mes });
             }}
             className={classeSelect}
           >
+            {c.ultimaFechada ? <option value={AUTOMATICA}>Automática (a última fechada: {c.ultimaFechada})</option> : null}
             {(c.competencias ?? []).map((x) => (
               <option key={`${x.ano}|${x.mes}`} value={`${x.ano}|${x.mes}`}>
                 {x.rotulo}
@@ -147,16 +161,24 @@ function GeralDoPainel({ painelId }: { painelId: string }) {
           </select>
         </div>
       </div>
+      {/* O aviso da competência automática (03/11/2026): os números mudam sozinhos; os textos, não. */}
+      {c.automatica ? <p className="rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{TEXTO_DA_AUTOMATICA}</p> : null}
       <CampoVisualizacaoDoPainel valor={c.visualizacao ?? "PRIVADO"} onMudar={(v) => (v !== c.visualizacao ? gravar.mutate({ visualizacao: v }) : undefined)} emLinhas desabilitado={travado} />
-      {pode ? (
-        <p className="flex items-center justify-end gap-1.5 text-sm text-gray-500" role="status">
-          {gravar.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <CloudCheck className="size-4" />}
-          {gravar.isPending ? "Salvando…" : salvoEm ? `Salvo às ${salvoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "As mudanças se salvam sozinhas."}
-        </p>
-      ) : (
-        <p className="text-sm text-gray-600">Só quem criou o painel ({c.criadoPor}) ou o Administrador muda o nome, a competência e a visualização.</p>
-      )}
       <Erro erro={gravar.isError ? mensagemDeErro(gravar.error, "Não foi possível salvar as configurações do painel.") : null} />
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {pode ? (
+          <p className="flex items-center justify-end gap-1.5 text-sm text-gray-500" role="status">
+            {gravar.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <CloudCheck className="size-4" />}
+            {gravar.isPending ? "Salvando…" : salvoEm ? `Salvo às ${salvoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "As mudanças se salvam sozinhas."}
+          </p>
+        ) : (
+          <p className="min-w-0 flex-1 text-sm text-gray-600">
+            Quem criou o painel ({c.criadoPor}), o Administrador e, com o painel em elaboração, os editores convidados mudam o nome, a competência e a
+            visualização.
+          </p>
+        )}
+        {excluir}
+      </div>
     </section>
   );
 }

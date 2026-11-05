@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { z } from "zod";
 
 import { corpoDasPaginas } from "../src/controllers/analisesGerenciais/slides.js";
-import { alteraGeral, alteraPainel, vePainel } from "../src/services/analisesGerenciais/paineisDeBordoService.js";
+import { alteraGeral, alteraPainel, comparacoesDoPainel, competenciaEfetiva, excluiPainel, vePainel } from "../src/services/analisesGerenciais/paineisDeBordoService.js";
 import { conferirVersao, paginasCopiadas, paginasDe, SlidesError, type PaginaDoRelatorio } from "../src/services/analisesGerenciais/slides.js";
 
 const adao = { id: "adao", admin: false, edita: true };
@@ -38,17 +38,52 @@ describe("os Painéis de Bordo (31/10/2026): quem vê e quem altera, como nos ce
     assert.equal(alteraPainel(painel, { ...adao, edita: false }), false);
   });
 
-  it("o editor convidado (01/11/2026, o Compartilhar) vê e edita o painel, mas não o Geral das Configurações", () => {
+  it("o editor convidado (01/11/2026, o Compartilhar) vê e edita o painel", () => {
     const privado = { visualizacao: "PRIVADO" as const, situacao: "EM_ELABORACAO" as const, criadoPorId: "adao", editores: [{ usuarioId: "maiko" }] };
     assert.equal(vePainel(privado, maiko), true);
     assert.equal(vePainel(privado, leitor), false);
     assert.equal(alteraPainel(privado, maiko), true);
     // Sem a permissão de editar a tela, o convidado só lê.
     assert.equal(alteraPainel(privado, { ...maiko, edita: false }), false);
-    // O nome, a competência, a visualização, o Compartilhar e a exclusão: só quem criou e o Administrador.
-    assert.equal(alteraGeral(privado, maiko), false);
-    assert.equal(alteraGeral(privado, adao), true);
-    assert.equal(alteraGeral(privado, administrador), true);
+  });
+
+  it("o Geral das Configurações: o editor convidado o muda com o painel em elaboração (03/11/2026); a exclusão, só o dono", () => {
+    const emElaboracao = { visualizacao: "PRIVADO" as const, situacao: "EM_ELABORACAO" as const, criadoPorId: "adao", editores: [{ usuarioId: "maiko" }] };
+    const finalizado = { ...emElaboracao, situacao: "FINALIZADO" as const };
+    assert.equal(alteraGeral(emElaboracao, maiko), true);
+    assert.equal(alteraGeral(finalizado, maiko), false);
+    // Quem criou e o Administrador, também no finalizado; quem não edita a tela, nunca.
+    for (const p of [emElaboracao, finalizado]) {
+      assert.equal(alteraGeral(p, adao), true);
+      assert.equal(alteraGeral(p, administrador), true);
+      assert.equal(alteraGeral(p, { ...maiko, edita: false }), false);
+      assert.equal(alteraGeral(p, leitor), false);
+    }
+    assert.equal(excluiPainel(emElaboracao, maiko), false);
+    assert.equal(excluiPainel(emElaboracao, adao), true);
+    assert.equal(excluiPainel(emElaboracao, administrador), true);
+  });
+});
+
+describe("a competência automática dos painéis (03/11/2026)", () => {
+  const fechadas = [
+    { ano: 2026, mes: 10 },
+    { ano: 2026, mes: 9 },
+  ];
+
+  it("o automático mostra a última fechada; o fixo, a dele", () => {
+    assert.deepEqual(competenciaEfetiva({ competenciaAutomatica: true, ano: 2026, mes: 8 }, fechadas), { ano: 2026, mes: 10 });
+    assert.deepEqual(competenciaEfetiva({ competenciaAutomatica: false, ano: 2026, mes: 8 }, fechadas), { ano: 2026, mes: 8 });
+    // Com a última reaberta (fora das fechadas), a anterior; sem nenhuma fechada, a guardada.
+    assert.deepEqual(competenciaEfetiva({ competenciaAutomatica: true, ano: 2026, mes: 10 }, fechadas.slice(1)), { ano: 2026, mes: 9 });
+    assert.deepEqual(competenciaEfetiva({ competenciaAutomatica: true, ano: 2026, mes: 10 }, []), { ano: 2026, mes: 10 });
+  });
+
+  it("no automático, a Comparação Padrão é a marcação; no fixo, o cenário escolhido", () => {
+    const painel = { cenarioComparadoId: "previsao-2026", comparacaoPadrao: "PREVISAO" as const, comparacaoProva: [] };
+    const outubro = { ano: 2026, mes: 10 };
+    assert.deepEqual(comparacoesDoPainel({ ...painel, competenciaAutomatica: true }, outubro), { ...outubro, cenarioComparadoId: null, comparacaoPadrao: "PREVISAO", comparacaoProva: [] });
+    assert.deepEqual(comparacoesDoPainel({ ...painel, competenciaAutomatica: false }, outubro), { ...outubro, cenarioComparadoId: "previsao-2026", comparacaoProva: [] });
   });
 });
 

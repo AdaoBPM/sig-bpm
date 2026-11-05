@@ -176,15 +176,7 @@ export function ReferenciaSintetica({ cenario, podeEditar, aviso }: { cenario: C
             const realizado = p.origem === REALIZADO;
             return (
               <div key={i} className="space-y-3 rounded-sm border border-gray-200 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold text-gray-900">{partes.length > 1 ? `${i + 1}ª Referência` : "Referência"}</p>
-                  {i > 0 ? (
-                    <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setPartes((ps) => ps.filter((_, k) => k !== i))}>
-                      <X className="size-4" />
-                      Remover
-                    </Button>
-                  ) : null}
-                </div>
+                <p className="text-sm font-bold text-gray-900">{partes.length > 1 ? `${i + 1}ª Referência` : "Referência"}</p>
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-64 flex-1 space-y-1.5">
                     <Label htmlFor={`ref-origem-${i}`}>Origem</Label>
@@ -272,6 +264,13 @@ export function ReferenciaSintetica({ cenario, podeEditar, aviso }: { cenario: C
               >
                 <Plus className="size-4" />
                 Incluir Referência
+              </Button>
+            ) : null}
+            {/* O Remover da 2ª Referência, no canto de baixo, ao lado do Carregar Referência (03/11/2026, pedido do Adão). */}
+            {partes.length > 1 ? (
+              <Button type="button" variant="outline" className="rounded-sm" title="Remover a 2ª Referência" onClick={() => setPartes((ps) => ps.slice(0, 1))}>
+                <X className="size-4" />
+                Remover
               </Button>
             ) : null}
             <Button type="button" className={botaoPrimario} disabled={invalida} onClick={() => setConfirmar(true)}>

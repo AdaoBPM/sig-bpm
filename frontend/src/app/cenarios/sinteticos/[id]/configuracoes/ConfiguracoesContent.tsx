@@ -48,7 +48,7 @@ export function ConfiguracoesContent() {
                 <li>
                   Se a carga do realizado encontrar movimentações fora dos padrões das premissas (mão de obra e gastos gerais sem centro de custo, em
                   centros fora do cenário — estoque, investimento, obras — ou numa conta fora do grupo do centro), o quadro “Movimentações Fora dos
-                  Padrões” aparece na aba Referência. Em “Realocar”, cada conta mostra a alocação na DRE (Departamento, Atribuição e Conta de Resultado),
+                  Padrões” aparece na aba Referência, e o “Realocar” fica depois do “Carregar Realizado”. Nele, cada conta mostra a alocação na DRE (Departamento, Atribuição e Conta de Resultado),
                   o valor do período e o centro de custo que a recebe (só os grupos com a mesma atribuição e conta; num centro de outro departamento,
                   ela entra como do departamento dele). Sem centro, a conta fica fora do cenário, e gravar assim pede confirmação. As realocações ficam
                   registradas no quadro, entram na Média de Referência dos centros do cenário (no Mês a Mês, também nos meses; a DRE se recalcula) e valem nas próximas cargas do realizado, ainda editáveis.
@@ -113,7 +113,7 @@ export function ConfiguracoesContent() {
               Com um cenário comparado, a tela Resultados e a aba Indicadores do Painel de Bordo trazem, em preto e cinza depois do total, os totais dele (e, nos Resultados, a
               Diferença, o Atingimento e a Eficiência), e a tela {analitico ? "Histórico" : "Reajustes"} ganha a aba Justificativas, com as contas acima da variação.
             </li>
-            <li>“Exportar”, ao lado do título do quadro (no Comparativo e nos Índices), leva o que está gravado em Excel ou PDF.</li>
+            <li>“Exportar”, o último botão do quadro (no Comparativo, depois do Limpar; nos Índices, depois do Incluir Índice), leva o que está gravado em Excel ou PDF.</li>
           </ul>
         }
         sobre={

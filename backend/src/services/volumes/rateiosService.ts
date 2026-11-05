@@ -1,6 +1,7 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { calcularPercentuais } from "./percentuaisRateio.js";
-import type { CodigoTotais } from "./totaisOperacao.js";
+import { LINHAS_TOTAIS, type CodigoTotais } from "./totaisOperacao.js";
+import { descreverVigencia } from "./vigenciasRateio.js";
 import { totaisDaCompetencia } from "./volumesService.js";
 
 /** As chaves de rateio e os nomes delas. */
@@ -148,6 +149,81 @@ export const rateiosService = {
         semVolume: percentual === 0 && lancadoNaChave.get(k.chave) ? lancadoNaChave.get(k.chave)!.toFixed(2) : null,
       })),
       totais: totais.map((t) => ({ codigo: t.codigo, rotulo: t.rotulo, medida: t.medida, tipo: t.tipo, quantidade: t.quantidade.toFixed(3) })),
+    };
+  },
+
+  /**
+   * As regras de rateio vigentes no mês, para a consulta do modal Contestar (04/11/2026, pedido do Adão): por chave, quantos
+   * centros de custo ativos e quantas contas ativas a usam (o balde do lançamento é o do centro; sem centro, o da conta), a
+   * vigência, se a divisão é pelo volume ou por percentuais fixos e os destinos — a unidade, o percentual do mês (o apurado;
+   * sem a apuração, o fixo ou nulo), o volume de origem e as linhas de cada um. Também os baldes diretos, que não se rateiam.
+   */
+  async vigentes(ano: number, mes: number) {
+    const c = await competenciaPorAnoMes(ano, mes);
+    const prisma = getPrismaClient();
+    const inicioMes = new Date(Date.UTC(ano, mes - 1, 1));
+    const [regras, volumes, centros, contas] = await Promise.all([
+      prisma.regraRateio.findMany({
+        where: { vigenciaInicio: { lte: inicioMes }, OR: [{ vigenciaFim: null }, { vigenciaFim: { gte: inicioMes } }] },
+        orderBy: [{ ordem: "asc" }],
+        select: {
+          id: true,
+          chave: true,
+          destino: true,
+          rotulo: true,
+          baseFisica: true,
+          origemDoVolume: true,
+          vigenciaInicio: true,
+          vigenciaFim: true,
+          percentualFixo: true,
+          unidadeDestino: { select: { nome: true } },
+          linhas: { select: { percentual: true, linha: { select: { nome: true, ordem: true } } } },
+        },
+      }),
+      prisma.volumeOperacional.findMany({ where: { competenciaId: c.id }, select: { regraRateioId: true, quantidade: true, percentual: true } }),
+      prisma.centroCusto.groupBy({ by: ["balde"], where: { ativo: true }, _count: { _all: true } }),
+      prisma.contaResultado.groupBy({ by: ["balde"], where: { ativo: true, tipoConta: "ANALITICA", linhaDREId: { not: null } }, _count: { _all: true } }),
+    ]);
+    const doMes = new Map(volumes.map((v) => [v.regraRateioId, v]));
+    const daOrigem = new Map<string, { rotulo: string; medida: string }>(LINHAS_TOTAIS.map((t) => [t.codigo, { rotulo: t.rotulo, medida: t.medida }]));
+    const centrosNoBalde = new Map(centros.map((x) => [x.balde as string | null, x._count._all]));
+    const contasNoBalde = new Map(contas.map((x) => [x.balde as string | null, x._count._all]));
+    const ehChave = (balde: string | null) => !!balde && (CHAVES_DE_RATEIO as readonly string[]).includes(balde);
+    return {
+      competencia: { ano, mes, status: c.status },
+      apurado: volumes.length > 0,
+      chaves: CHAVES_DE_RATEIO.map((chave) => {
+        const rs = regras.filter((r) => r.chave === chave);
+        return {
+          chave,
+          nome: NOME_DA_CHAVE[chave],
+          centros: centrosNoBalde.get(chave) ?? 0,
+          contas: contasNoBalde.get(chave) ?? 0,
+          baseFisica: rs[0]?.baseFisica ?? null,
+          fixo: rs.some((r) => r.percentualFixo !== null),
+          vigencias: [...new Set(rs.map((r) => descreverVigencia({ inicio: r.vigenciaInicio, fim: r.vigenciaFim })))],
+          destinos: rs.map((r) => {
+            const v = doMes.get(r.id);
+            return {
+              destino: r.destino,
+              unidade: r.unidadeDestino.nome,
+              rotulo: r.rotulo,
+              origem: daOrigem.get(r.origemDoVolume)?.rotulo ?? r.origemDoVolume,
+              medida: daOrigem.get(r.origemDoVolume)?.medida ?? null,
+              quantidade: v ? v.quantidade.toFixed(3) : null,
+              percentual: v ? v.percentual.toFixed(10) : (r.percentualFixo?.toFixed(10) ?? null),
+              percentualFixo: r.percentualFixo?.toFixed(10) ?? null,
+              linhas: r.linhas
+                .sort((a, b) => a.linha.ordem - b.linha.ordem || a.linha.nome.localeCompare(b.linha.nome, "pt-BR"))
+                .map((l) => ({ nome: l.linha.nome, percentual: l.percentual.toFixed(10) })),
+            };
+          }),
+        };
+      }),
+      diretos: [...new Set([...centrosNoBalde.keys(), ...contasNoBalde.keys()])]
+        .filter((balde): balde is string => !!balde && !ehChave(balde))
+        .map((balde) => ({ balde, centros: centrosNoBalde.get(balde) ?? 0, contas: contasNoBalde.get(balde) ?? 0 }))
+        .sort((a, b) => b.centros + b.contas - (a.centros + a.contas)),
     };
   },
 };

@@ -30,6 +30,8 @@ import { estoqueRoutes } from "./routes/estoque/estoqueRoutes.js";
 import { rateiosRoutes } from "./routes/rateios/rateiosRoutes.js";
 import { relatoriosRoutes } from "./routes/relatorios/relatoriosRoutes.js";
 import { resultadosLinhaRoutes } from "./routes/resultadosLinha/resultadosLinhaRoutes.js";
+import { creditosImpostosRoutes } from "./routes/impostos/creditosImpostosRoutes.js";
+import { realizadoObraRoutes } from "./routes/realizadoObra/realizadoObraRoutes.js";
 import { relatoriosExecutivosRoutes } from "./routes/analisesGerenciais/relatoriosExecutivosRoutes.js";
 import { paineisDeBordoRoutes } from "./routes/analisesGerenciais/paineisDeBordoRoutes.js";
 import { apiExternaRoutes, conectividadeRoutes } from "./routes/conectividade/conectividadeRoutes.js";
@@ -85,6 +87,8 @@ app.use("/competencias/:anoMes/estoque", estoqueRoutes);
 app.use("/competencias/:anoMes/dre", dreRoutes);
 // A etapa Linhas (26/10/2026): a DRE de cada unidade dividida entre as linhas, gravada na apuração.
 app.use("/competencias/:anoMes/linhas", resultadosLinhaRoutes);
+// Os Créditos de Impostos (03/11/2026): a tela Impostos do mês.
+app.use("/competencias/:anoMes/impostos", creditosImpostosRoutes);
 app.use("/competencias/:anoMes/apuracao", apuracaoRoutes);
 app.use("/competencias/:anoMes/conferencia-planilha", conferenciaPlanilhaRoutes);
 app.use("/competencias", competenciasRoutes);
@@ -98,6 +102,8 @@ app.use("/contestacoes", contestacoesRoutes);
 app.use("/listas", listasRoutes);
 app.use("/lancamentos-receita", lancamentosReceitaRoutes);
 app.use("/relatorios", relatoriosRoutes);
+// O Realizado por Obra (03/11/2026): os Resultados de uma venda.
+app.use("/realizado-por-obra", realizadoObraRoutes);
 // Os Relatórios Executivos (15/10/2026, Análises Gerenciais).
 app.use("/relatorios-executivos", relatoriosExecutivosRoutes);
 // Os Painéis de Bordo (31/10/2026, Análises Gerenciais), feitos a partir dos Relatórios Executivos.

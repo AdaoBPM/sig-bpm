@@ -77,10 +77,19 @@ const Destaque = ({ children }: { children: ReactNode }) => (
 function Situacao({ dados }: { dados: LinhasDoMes }) {
   const s = dados.situacao;
   if (s.gravadaEm) {
+    // As obras (o Realizado por Obra): gravadas com as linhas, ou depois, na competência fechada que já tinha as linhas.
+    const obras = !s.obrasGravadasEm
+      ? s.podeGravar
+        ? " As obras ainda não foram gravadas: grave-as (botão Gravar), com os cadastros de hoje."
+        : " As obras ainda não foram gravadas: reapure a competência (Resultados › Apurar) para gravá-las."
+      : s.obrasGravadasEm.slice(0, 16) === s.gravadaEm.slice(0, 16)
+        ? " As obras foram gravadas junto."
+        : ` Obras gravadas em ${dataHora(s.obrasGravadasEm)}.`;
     return (
       <Destaque>
         Linhas gravadas em {dataHora(s.gravadaEm)}
         {s.status === "FECHADA" ? ", congeladas com o fechamento." : ", na última apuração."}
+        {obras}
       </Destaque>
     );
   }
@@ -165,9 +174,25 @@ function Conferencia({ dados }: { dados: LinhasDoMes }) {
           }
         />
       ) : null}
-      {dados.avisos.length ? (
+      {dados.obras ? (
+        <Tabela
+          titulo="Obras"
+          colunas={["Valor"]}
+          linhas={[
+            { chave: "obras", rotulo: "Obras com valor no mês", valores: [inteiro(dados.obras.obras)] },
+            { chave: "semObra", rotulo: "Custos Sem Obra (R$)", valores: [valor(dados.obras.semObra)] },
+          ]}
+          rodape={
+            <p className="text-xs text-gray-500">
+              As obras de cada linha somam a linha: o direto de cada obra (a receita, os centros de obra e os volumes) e a parte dela no rateio da linha. Sem
+              Obra: os custos de centros de obra sem a obra no cadastro, os da Sem Linha e o rateio das linhas sem base no mês e no exercício.
+            </p>
+          }
+        />
+      ) : null}
+      {dados.avisos.length || dados.obras?.avisos.length ? (
         <div className="space-y-1 rounded-sm border border-l-4 border-gray-200 border-l-red-600 bg-white px-4 py-3 text-sm text-gray-700">
-          {dados.avisos.map((a) => (
+          {[...dados.avisos, ...(dados.obras?.avisos ?? [])].map((a) => (
             <p key={a}>{a}</p>
           ))}
         </div>
@@ -189,15 +214,18 @@ export function LinhasContent() {
   const queryClient = useQueryClient();
   const [confirmar, setConfirmar] = useState(false);
   const consulta = useQuery({ queryKey: ["linhas-do-mes", anoMes], queryFn: () => linhasService.doMes(anoMes), enabled: periodo !== null });
+  // Com as linhas já gravadas, o Gravar grava só as obras (03/11/2026, o Realizado por Obra).
+  const soObras = !!consulta.data?.situacao.gravadaEm;
   const gravar = useMutation({
     mutationFn: () => linhasService.gravar(anoMes),
     onSuccess: (dados) => {
       queryClient.setQueryData(["linhas-do-mes", anoMes], dados);
       queryClient.invalidateQueries({ queryKey: ["linhas-do-mes", anoMes, "lista"] });
       queryClient.invalidateQueries({ queryKey: ["linhas-do-mes", anoMes, "linha"] });
-      // Resultados Empresariais passam a mostrar o mês na aba Linhas.
+      // Resultados Empresariais passam a mostrar o mês na aba Linhas, e o Realizado por Obra, nas obras.
       queryClient.invalidateQueries({ queryKey: ["relatorios", "resultados"] });
-      toast.success(`Linhas de ${rotuloCompetencia(periodo!.ano, periodo!.mes)} gravadas.`);
+      queryClient.invalidateQueries({ queryKey: ["realizado-obra"] });
+      toast.success(`${soObras ? "Obras" : "Linhas e obras"} de ${rotuloCompetencia(periodo!.ano, periodo!.mes)} gravadas.`);
       setConfirmar(false);
     },
   });
@@ -220,6 +248,7 @@ export function LinhasContent() {
             <ExportarTabela titulo={`Linhas · Margem de Contribuição: DRE × Soma das Linhas · ${rotulo}`} colunas={COLUNAS_DA_CONFERENCIA} linhas={dados.unidades} />
           ) : null
         }
+        comoExportar="Aqui, a tabela é a DRE × Soma das Linhas, embaixo; a DRE das linhas se exporta em Resultados Empresariais › Resultados, na aba Linhas."
         sobre={
           <>
             <p>
@@ -234,6 +263,13 @@ export function LinhasContent() {
               própria obra), os percentuais por linha do rateio fixo (na parte de rateio de uma chave com percentuais fixos no mês: Cadastros da Controladoria ›
               Regras de Rateio), a regra do rateio do centro (Cadastros da Controladoria › Alocação nas Linhas) e, por último, o volume da unidade.
             </p>
+            <p>
+              A etapa divide também cada linha entre as obras dela, para o Realizado por Obra: o direto de cada obra (a receita dela na Receita Prévia, os
+              lançamentos dos centros de obra e os volumes dela nas listas) e a parte dela no rateio da linha — os custos que não vieram dos centros de obra,
+              pelo m³ produzido (custos de produção), pelo m³ montado (custos de montagem da linha Montagem), pelos dias de acompanhamento (custos
+              complementares e demais serviços) ou pela receita bruta
+              (despesas variáveis de venda) da obra no mês e, sem eles, no exercício até ele. As obras genéricas ficam fora da base do rateio.
+            </p>
           </>
         }
         comoUsar={
@@ -247,14 +283,14 @@ export function LinhasContent() {
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada grupo abre e fecha só ele.</li>
             <li>
               Embaixo, confira antes de fechar: a Margem de Contribuição da DRE de cada unidade contra a soma das linhas (iguais, com o que ficou Sem Linha), de
-              que passo veio cada valor, os documentos do mês e os avisos. “Exportar” leva a primeira (DRE × Soma das Linhas) em Excel ou PDF; a DRE das linhas
-              se exporta em Resultados Empresariais › Resultados, na aba Linhas.
+              que passo veio cada valor, os documentos do mês e os avisos.
             </li>
             <li>Para corrigir, ajuste a Alocação nas Linhas, as tarefas das linhas ou os documentos (etapa Importações) e reapure.</li>
             <li>
-              Uma competência fechada antes da etapa Linhas mostra o botão Gravar: grava as linhas uma vez, com a Alocação nas Linhas e as tarefas de hoje. Depois,
-              só reabrindo e reapurando.
+              Uma competência fechada antes da etapa Linhas mostra o botão Gravar: grava as linhas e as obras uma vez, com a Alocação nas Linhas e as tarefas de
+              hoje; a fechada com as linhas e sem as obras grava só as obras, com as linhas como estão. Depois, só reabrindo e reapurando.
             </li>
+            <li>A tabela Obras traz quantas obras têm valor no mês e o custo que ficou Sem Obra; os avisos dizem de onde ele veio.</li>
             <li>O exercício de cada linha, mês a mês, fica em Resultados Empresariais › Resultados, na aba Linhas (com as competências fechadas).</li>
           </ul>
         }
@@ -294,10 +330,11 @@ export function LinhasContent() {
       <Dialog open={confirmar} onOpenChange={(aberto) => !gravar.isPending && setConfirmar(aberto)}>
         <DialogContent className="rounded-sm sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Gravar as Linhas de {rotulo}</DialogTitle>
+            <DialogTitle>{soObras ? `Gravar as Obras de ${rotulo}` : `Gravar as Linhas de ${rotulo}`}</DialogTitle>
             <DialogDescription>
-              A competência foi fechada antes da etapa Linhas. As linhas serão gravadas com a Alocação nas Linhas, as tarefas das linhas e os documentos de hoje,
-              e ficam congeladas: para refazê-las, só reabrindo a competência e reapurando.
+              {soObras
+                ? "As linhas da competência fechada ficam como estão. As obras de cada linha serão gravadas com a Alocação nas Linhas, as tarefas das linhas e o cadastro das obras de hoje, e ficam congeladas: para refazê-las, só reabrindo a competência e reapurando."
+                : "A competência foi fechada antes da etapa Linhas. As linhas e as obras de cada uma serão gravadas com a Alocação nas Linhas, as tarefas das linhas e os documentos de hoje, e ficam congeladas: para refazê-las, só reabrindo a competência e reapurando."}
             </DialogDescription>
           </DialogHeader>
           {gravar.isError ? (

@@ -117,7 +117,8 @@ export type BlocoDetalhe =
       total: string;
       lancamentos: LancamentoDetalhe[];
     }
-  | { tipo: "PREVIA"; titulo: string; unidade: number; natureza: string; componente: string; sinal: number; total: string };
+  // `obra` (03/11/2026): a receita prévia de uma obra (o número), na aba Obras; a memória de cálculo abre só com ela.
+  | { tipo: "PREVIA"; titulo: string; unidade: number; natureza: string; componente: string; sinal: number; total: string; obra?: string };
 
 export type DetalheDRE = {
   competencia: { ano: number; mes: number };
@@ -191,9 +192,12 @@ export const dreService = {
       },
       responseType: "blob",
     }),
-  /** As listas que formam uma linha de volume (Produção, Expedição…), por obra; sem unidade, o consolidado; com a obra, só as dela. */
-  volumes: async (anoMes: string, linha: string, unidade?: number, obra?: string): Promise<VolumesDaLinha> => {
-    const { data } = await api.get<{ data: VolumesDaLinha }>(`/proxy/competencias/${anoMes}/dre/volumes`, { params: { linha, unidade, obra } });
+  /**
+   * As listas que formam uma linha de volume (Produção, Expedição…), por obra; sem unidade, o consolidado; com a obra, só as
+   * dela; com as obras (os códigos de uma venda), só as delas.
+   */
+  volumes: async (anoMes: string, linha: string, unidade?: number, obra?: string, obras?: string[]): Promise<VolumesDaLinha> => {
+    const { data } = await api.get<{ data: VolumesDaLinha }>(`/proxy/competencias/${anoMes}/dre/volumes`, { params: { linha, unidade, obra, obras: obras?.join(",") } });
     return data.data;
   },
   consolidado: async (anoMes: string): Promise<DREUnidade> => {

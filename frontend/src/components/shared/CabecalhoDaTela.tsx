@@ -19,6 +19,8 @@ type Props = {
   acoes?: ReactNode;
   /** O Exportar da tabela da tela (30/10/2026, `ExportarTabela`): no fim da barra, depois das ações (pedido do Adão). */
   exportar?: ReactNode;
+  /** O que o Exportar desta tela tem de próprio: vem no fim do item dele no Como Usar, depois do texto comum. */
+  comoExportar?: ReactNode;
 };
 
 /**
@@ -32,7 +34,7 @@ type Props = {
  * o componente devolve dois irmãos, sem envoltório: o fixo precisa ser filho
  * direto do contêiner da página, que é o que tem a altura toda.
  */
-export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar }: Props) {
+export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar, comoExportar }: Props) {
   // Numa tela com abas (17/10/2026), o título é o nome da tela, e as abas vêm logo abaixo; o painel Sobre segue o da aba.
   const daTela = useAbasDaTela();
   const ref = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar
         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
           <div data-tour="titulo-da-tela" className="flex items-center gap-1.5">
             <h1 className="text-2xl font-extrabold tracking-tight whitespace-nowrap text-gray-900">{daTela?.titulo ?? titulo}</h1>
-            {sobre || comoUsar ? (
+            {sobre || comoUsar || exportar ? (
               <button
                 type="button"
                 onClick={() => setSobreAberto(true)}
@@ -96,14 +98,22 @@ export function CabecalhoDaTela({ titulo, sobre, comoUsar, selo, acoes, exportar
       {/* Painel lateral, da direita para a esquerda, como o relatório das importações em vigor. */}
       <PainelInformacao aberto={sobreAberto} onMudar={setSobreAberto} titulo="Sobre Esta Tela">
         {sobre ? <TextoPainel>{sobre}</TextoPainel> : null}
-        {comoUsar ? <SecaoPainel titulo="Como Usar Esta Tela">{comoUsar}</SecaoPainel> : null}
-        {/* O Exportar da tabela (30/10/2026): a explicação vem com ele, em todas as telas que o têm. */}
-        {exportar ? (
-          <SecaoPainel titulo="Exportar">
-            <p>
-              “Exportar”, à direita do título, leva a tabela da tela a um arquivo Excel ou PDF: as linhas que os filtros dos rótulos deixam, na ordem
-              escolhida, e as colunas com rótulo (sem as de ações). O arquivo traz o título da tela, quem o gerou e quando.
-            </p>
+        {comoUsar || exportar ? (
+          <SecaoPainel titulo="Como Usar Esta Tela">
+            {comoUsar}
+            {/*
+             * O Exportar da tabela (30/10/2026), em todas as telas que o têm: o último item da lista do Como Usar (04/11/2026, pedido
+             * do Adão; antes, numa seção à parte). Os Como Usar são listas: esta continua a da tela, com o mesmo espaço entre os itens.
+             */}
+            {exportar ? (
+              <ul className={comoUsar ? "mt-1.5" : undefined}>
+                <li>
+                  “Exportar”, à direita do título, leva a tabela da tela a um arquivo Excel ou PDF: as linhas que os filtros dos rótulos deixam, na
+                  ordem escolhida, e as colunas com rótulo (sem as de ações). O arquivo traz o título da tela, quem o gerou e quando.
+                  {comoExportar ? <> {comoExportar}</> : null}
+                </li>
+              </ul>
+            ) : null}
           </SecaoPainel>
         ) : null}
       </PainelInformacao>

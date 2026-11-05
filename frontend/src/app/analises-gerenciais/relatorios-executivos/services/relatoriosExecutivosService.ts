@@ -203,6 +203,8 @@ export type Relatorio = {
   nome?: string;
   visualizacao?: VisualizacaoDoPainel;
   podeAlterar?: boolean;
+  /** A competência automática do painel (03/11/2026): ele mostra a última fechada (a do `rotuloMes`). */
+  automatica?: boolean;
 };
 /**
  * Os cenários dos cards PROVA (31/10/2026): os marcados que existem, na ordem do PROVA (Previsão, Orçado, Vendido e
@@ -232,6 +234,13 @@ export type ConfiguracoesDoRelatorio = {
   /** O Geral do painel (01/11/2026): só quem o criou (ou o Administrador) o muda; os Comparativos, também os editores convidados (`podeEditar`). */
   podeEditarGeral?: boolean;
   mes?: number;
+  /**
+   * A competência automática do painel (03/11/2026): `ano` e `mes` são a última fechada, a que ele mostra; a Comparação
+   * Padrão acompanha a marcação do cenário escolhido.
+   */
+  automatica?: boolean;
+  /** A última competência fechada (a da opção Automática); nula: nenhuma. */
+  ultimaFechada?: string | null;
   competencias?: Array<{ ano: number; mes: number; rotulo: string }>;
   criadoPor?: string;
 };
@@ -239,14 +248,16 @@ export type ConfiguracoesDoRelatorio = {
 export type VisualizacaoDoPainel = "PRIVADO" | "PUBLICO";
 /**
  * Uma mudança das Configurações: a Comparação Padrão (`cenarioComparadoId`) ou, desde 31/10/2026, a Comparação PROVA (dois
- * ou mais cenários); nos painéis de bordo, também o nome, a visualização e a competência.
+ * ou mais cenários); nos painéis de bordo, também o nome, a visualização e a competência (uma fechada ou, desde 03/11/2026,
+ * a automática).
  */
 export type MudancaDasConfiguracoes =
   | { cenarioComparadoId: string | null }
   | { comparacaoProva: MarcacaoComparavel[] }
   | { nome: string }
   | { visualizacao: VisualizacaoDoPainel }
-  | { ano: number; mes: number };
+  | { ano: number; mes: number }
+  | { automatica: true };
 
 /** Os processos com slides (31/10/2026): a rota da API e a pasta dos arquivos de cada um. */
 export type RotaDosSlides = "relatorios-executivos" | "paineis-de-bordo";

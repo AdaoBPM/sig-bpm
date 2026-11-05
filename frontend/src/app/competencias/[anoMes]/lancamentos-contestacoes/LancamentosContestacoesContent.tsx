@@ -104,6 +104,7 @@ export function LancamentosContestacoesContent() {
       <CabecalhoDaTela
         titulo="Lançamentos Manuais"
         exportar={<ExportarTabela titulo={`Lançamentos Manuais · Contestações · ${rotuloMes}`} colunas={COLUNAS_DO_EXPORTAR} linhas={tabela.filtradas} />}
+        comoExportar="Aqui, com a competência do movimento numa coluna."
         selo={fechada ? <AvisoCongelado anoMes={anoMes} fechada oQue="dos lançamentos" /> : null}
         sobre={
           <p>
@@ -125,7 +126,7 @@ export function LancamentosContestacoesContent() {
             </li>
             <li>
               A coluna Contestação mostra o número e, abaixo, a competência do movimento que o lançamento corrige e quem pediu a contestação (o título diz
-              também a competência contestada). O “Exportar” leva a competência do movimento numa coluna.
+              também a competência contestada).
             </li>
             <li>
               Os valores ficam no sinal da DRE: o estorno tira o valor dos movimentos do centro e da conta de antes, e o lançamento novo o põe no centro e

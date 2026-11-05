@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
+import type { NaturezaReceita } from "../../generated/prisma/enums.js";
 import { ACESSO_TOTAL, type Acesso } from "../acesso/acesso.js";
 import { podeVerLinhaNaObra, podeVerSensiveis } from "../acesso/recorteDepartamento.js";
 import type { LinhaEstrutura } from "./apuracaoUnidades.js";
@@ -34,7 +35,12 @@ const rotulo = (ano: number, mes: number) => `${String(mes).padStart(2, "0")}/${
  * balancete não tem a receita líquida por natureza (na DRE das unidades ela
  * sai da receita prévia): na obra, a Receita Operacional Líquida é a ROB menos
  * os impostos (IRB), e dela saem as margens até o Resultado Líquido, que é o
- * resultado da obra no mês — o valor na lista das obras. A tabela da obra não
+ * resultado da obra no mês — o valor na lista das obras.
+ *
+ * As receitas da obra (03/11/2026, pedido do Adão), como na DRE das unidades: as contas de Reconhecimento do CPV ficam
+ * de fora (no centro de obra, elas anulam o faturamento da obra — 44635 com 7061, 50305 com 44701 —, porque a DRE
+ * reconhece a receita na produção, num lançamento sem obra); a receita prévia de frete da obra sai da Receita Bruta do
+ * Pré-Fabricado e vai à de Frete; a complementar sai da de Montagem e vai à Complementar. A tabela da obra não
  * mostra esses totais calculados (pedido de 09/10/2026): a primeira ROL, o CPV,
  * a MB, a MC, o EBITDA, o EBIT, o NOPAT e o RL (CALCULADOS). No recorte do Gestor por departamento, só as
  * linhas dos departamentos dele, com os totais que só somam (como nos centros); no do Coordenador (com a opção de
@@ -65,7 +71,32 @@ const CALCULADOS = new Set([
   RL,
 ]);
 
-type Movimento = { codigoCentroCusto: string | null; nomeCentroCusto: string | null; linhaDREId: string | null; valorMovimento: Decimal };
+/** As contas de Reconhecimento do CPV (7061, 44701 e 7692), que ficam fora das receitas da obra (03/11/2026). */
+export const ehReconhecimentoDoCpv = (descricao: string) => descricao.toUpperCase().includes("RECONHECIMENTO DO CPV");
+/** O lançamento que a obra não leva: o de uma conta de Reconhecimento do CPV numa linha de receita (pela conta que vale). */
+export const foraDaObra = (codigoDaLinha: string, conta: { descricao: string }) => codigoDaLinha.startsWith("ROB.") && ehReconhecimentoDoCpv(conta.descricao);
+/** Os ids das contas de Reconhecimento do CPV (a lista das obras os usa: ler a descrição de cada lançamento custa ~0,4 s no ano). */
+async function contasDoReconhecimentoDoCpv() {
+  const cs = await getPrismaClient().contaResultado.findMany({ where: { descricao: { contains: "RECONHECIMENTO DO CPV", mode: "insensitive" } }, select: { id: true, descricao: true } });
+  return new Set(cs.filter((c) => ehReconhecimentoDoCpv(c.descricao)).map((c) => c.id));
+}
+
+/** A receita prévia que muda a obra: a de frete sai do Pré-Fabricado e vai ao Frete; a complementar sai da Montagem e vai à Complementar. */
+export const PREVIAS_DA_OBRA = [
+  { natureza: "FRETE", item: "ROB.RBF.RECEITA_BRUTA_DE_FRETE", de: "ROB.RBPF.RECEITA_BRUTA_DO_PRE_FABRICADO" },
+  { natureza: "COMPLEMENTAR", item: "ROB.RBC.RECEITA_BRUTA_COMPLEMENTAR", de: "ROB.RBM.RECEITA_BRUTA_DE_MONTAGEM" },
+] as const satisfies ReadonlyArray<{ natureza: NaturezaReceita; item: string; de: string }>;
+/** A receita prévia bruta de uma obra: por natureza (frete e complementar) e unidade. */
+export type PreviasDaObra = Map<NaturezaReceita, Map<number, Decimal>>;
+
+type Movimento = {
+  codigoCentroCusto: string | null;
+  nomeCentroCusto: string | null;
+  linhaDREId: string | null;
+  valorMovimento: Decimal;
+  contaResultadoId: string;
+  contaAdotadaId: string | null;
+};
 
 /** Os itens de uma obra (com o sinal da DRE), e os subtotais e totais pela estrutura. */
 export function linhasDaObra(linhas: LinhaEstrutura[], itens: Map<string, { valor: Decimal; n: number }>, completa: boolean, acesso: Acesso = ACESSO_TOTAL) {
@@ -117,16 +148,20 @@ async function apuracao(competenciaId: string) {
 
 /** Os lançamentos dos centros de obra no mês, nas linhas que o usuário alcança, agrupados por obra e linha. */
 async function movimentos(competenciaId: string, linhas: LinhaEstrutura[], acesso: Acesso, obra?: string) {
-  const ls: Movimento[] = await getPrismaClient().lancamentoContabil.findMany({
-    where: { competenciaId, linhaDREId: { not: null }, ...(obra ? { codigoCentroCusto: obra } : { OR: [{ codigoCentroCusto: { startsWith: "1.98." } }, { codigoCentroCusto: { startsWith: "1.99." } }] }) },
-    select: { codigoCentroCusto: true, nomeCentroCusto: true, linhaDREId: true, valorMovimento: true },
-  });
+  const [ls, cpv]: [Movimento[], Set<string>] = await Promise.all([
+    getPrismaClient().lancamentoContabil.findMany({
+      where: { competenciaId, linhaDREId: { not: null }, ...(obra ? { codigoCentroCusto: obra } : { OR: [{ codigoCentroCusto: { startsWith: "1.98." } }, { codigoCentroCusto: { startsWith: "1.99." } }] }) },
+      select: { codigoCentroCusto: true, nomeCentroCusto: true, linhaDREId: true, valorMovimento: true, contaResultadoId: true, contaAdotadaId: true },
+    }),
+    contasDoReconhecimentoDoCpv(),
+  ]);
   const porId = new Map(linhas.filter((l) => podeVerLinhaNaObra(acesso, l)).map((l) => [l.id, l]));
   const obras = new Map<string, { nomes: Map<string, number>; itens: Map<string, { valor: Decimal; n: number }> }>();
   for (const m of ls) {
     if (!ehCentroDeObra(m.codigoCentroCusto)) continue;
     const l = porId.get(m.linhaDREId!);
-    if (!l) continue;
+    // Nas receitas, sem as contas de Reconhecimento do CPV (pela conta que vale: a adotada, se houver).
+    if (!l || (l.codigo.startsWith("ROB.") && cpv.has(m.contaAdotadaId ?? m.contaResultadoId))) continue;
     const o = obras.get(m.codigoCentroCusto) ?? { nomes: new Map<string, number>(), itens: new Map<string, { valor: Decimal; n: number }>() };
     const nome = m.nomeCentroCusto?.trim();
     if (nome) o.nomes.set(nome, (o.nomes.get(nome) ?? 0) + 1);
@@ -150,6 +185,83 @@ async function volumesDaObra(competenciaId: string, linhas: LinhaEstrutura[], ac
   return new Map([...vs].filter(([codigo, v]) => alcancadas.has(codigo) && !v.isZero()).map(([codigo, v]) => [codigo, { valor: v, n: 1 }]));
 }
 
+/** A receita prévia bruta de frete e complementar das obras no mês (de uma, com o número), pelo número da obra. */
+export async function previasDasObras(competenciaId: string, numero?: string) {
+  const itens = await getPrismaClient().receitaPreviaItem.findMany({
+    where: { receitaPrevia: { competenciaId, natureza: { in: PREVIAS_DA_OBRA.map((p) => p.natureza) } }, obraCodigo: numero ? { endsWith: numero } : { not: null } },
+    select: { obraCodigo: true, receitaBruta: true, receitaPrevia: { select: { natureza: true, unidadeNegocio: { select: { codigo: true } } } } },
+  });
+  const obras = new Map<string, PreviasDaObra>();
+  for (const i of itens) {
+    const n = numeroDaObra(i.obraCodigo);
+    if (!n || (numero && n !== numero) || i.receitaBruta.isZero()) continue;
+    const o = obras.get(n) ?? new Map();
+    const porUnidade = o.get(i.receitaPrevia.natureza) ?? new Map<number, Decimal>();
+    const u = i.receitaPrevia.unidadeNegocio.codigo;
+    porUnidade.set(u, (porUnidade.get(u) ?? zero()).plus(i.receitaBruta));
+    o.set(i.receitaPrevia.natureza, porUnidade);
+    obras.set(n, o);
+  }
+  return obras;
+}
+
+/**
+ * A receita prévia de uma obra (o centro 1.98 ou 1.99). A obra com os dois centros no mês (rara: uma em 2026) a leva no
+ * 1.98, a obra com montagem, para não contar duas vezes.
+ */
+export async function previasDaObra(competenciaId: string, obra: string) {
+  if (obra.startsWith("1.99.")) {
+    const irma = await getPrismaClient().lancamentoContabil.findFirst({ where: { competenciaId, linhaDREId: { not: null }, codigoCentroCusto: obra.replace(/^1\.99\./, "1.98.") }, select: { id: true } });
+    if (irma) return undefined;
+  }
+  const numero = numeroDaObra(obra);
+  return (await previasDasObras(competenciaId, numero)).get(numero);
+}
+
+/** Leva a receita prévia da obra aos itens dela (no sinal da DRE): o frete sai do Pré-Fabricado e vai ao Frete; a complementar, da Montagem à Complementar. */
+export function comAsPrevias(itens: Map<string, { valor: Decimal; n: number }>, previas: PreviasDaObra | undefined) {
+  if (!previas) return itens;
+  const r = new Map(itens);
+  const somar = (codigo: string, v: Decimal) => {
+    const a = r.get(codigo) ?? { valor: zero(), n: 0 };
+    r.set(codigo, { valor: a.valor.plus(v), n: a.n + 1 });
+  };
+  for (const p of PREVIAS_DA_OBRA) {
+    const v = [...(previas.get(p.natureza)?.values() ?? [])].reduce((s, x) => s.plus(x), zero());
+    if (v.isZero()) continue;
+    somar(p.de, v.negated());
+    somar(p.item, v);
+  }
+  return r;
+}
+
+/**
+ * As receitas e os impostos de uma obra (o número) em cada competência, no modelo da aba Obras (03/11/2026, o Realizado por
+ * Obra): os lançamentos dos centros de obra dela (1.98 e 1.99) nas linhas da ROB e dos impostos (IRB), sem as contas de
+ * Reconhecimento do CPV, no sinal da DRE. Também os centros da obra com lançamento no mês (em qualquer linha), com quantos
+ * lançamentos cada um tem. A receita prévia de frete e complementar fica com quem chama.
+ */
+export async function receitasDaObra(competenciaIds: string[], numero: string) {
+  const [ls, cpv] = await Promise.all([
+    getPrismaClient().lancamentoContabil.findMany({
+      where: { competenciaId: { in: competenciaIds }, linhaDREId: { not: null }, codigoCentroCusto: { endsWith: numero } },
+      select: { competenciaId: true, codigoCentroCusto: true, valorMovimento: true, contaResultadoId: true, contaAdotadaId: true, linhaDRE: { select: { codigo: true } } },
+    }),
+    contasDoReconhecimentoDoCpv(),
+  ]);
+  const r = new Map(competenciaIds.map((id) => [id, { receitas: new Map<string, number>(), centros: new Map<string, number>() }]));
+  for (const m of ls) {
+    if (!ehCentroDeObra(m.codigoCentroCusto) || numeroDaObra(m.codigoCentroCusto) !== numero || !m.linhaDRE) continue;
+    const x = r.get(m.competenciaId)!;
+    x.centros.set(m.codigoCentroCusto, (x.centros.get(m.codigoCentroCusto) ?? 0) + 1);
+    const codigo = m.linhaDRE.codigo;
+    if (!codigo.startsWith("ROB.") && !codigo.startsWith("IRB.")) continue;
+    if (codigo.startsWith("ROB.") && cpv.has(m.contaAdotadaId ?? m.contaResultadoId)) continue;
+    x.receitas.set(codigo, (x.receitas.get(codigo) ?? 0) + Number(m.valorMovimento) * sinalDaLinha(codigo));
+  }
+  return r;
+}
+
 /** O total da obra na lista: o Resultado Líquido; no recorte, a soma das linhas que o usuário vê. */
 function totalDa(linhas: Array<{ codigo: string; tipo: string; valor: string | null }>) {
   const rl = linhas.find((l) => l.codigo === RL);
@@ -164,13 +276,16 @@ export const obrasService = {
     const ap = await apuracao(c.id);
     const linhas = await estrutura();
     // Desde a importação do balancete (15/10/2026; antes, só depois da apuração): os lançamentos dos centros de obra.
-    const obras = await movimentos(c.id, linhas, acesso);
+    const [obras, previas] = await Promise.all([movimentos(c.id, linhas, acesso), previasDasObras(c.id)]);
     const completa = !acesso.recorteDepartamento && !acesso.recorteCentro;
+    // A receita prévia vai ao 1.98 quando a obra tem os dois centros no mês (previasDaObra).
+    const de98 = new Set(obras.filter((o) => o.codigo.startsWith("1.98.")).map((o) => numeroDaObra(o.codigo)));
+    const previasDe = (codigo: string) => (codigo.startsWith("1.99.") && de98.has(numeroDaObra(codigo)) ? undefined : previas.get(numeroDaObra(codigo)));
     return {
       competencia: { ano, mes, status: c.status },
       apuradoEm: ap?.apuradoEm ?? null,
       obras: obras
-        .map((o) => ({ codigo: o.codigo, nome: o.nome, total: totalDa(linhasDaObra(linhas, o.itens, completa)) }))
+        .map((o) => ({ codigo: o.codigo, nome: o.nome, total: totalDa(linhasDaObra(linhas, comAsPrevias(o.itens, previasDe(o.codigo)), completa)) }))
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || a.codigo.localeCompare(b.codigo)),
     };
   },
@@ -181,9 +296,9 @@ export const obrasService = {
     const c = await competencia(ano, mes);
     const ap = await apuracao(c.id);
     const linhas = await estrutura();
-    const [[o], volumes] = await Promise.all([movimentos(c.id, linhas, acesso, obra), volumesDaObra(c.id, linhas, acesso, obra)]);
-    if (!o && !volumes.size) throw new RegraDREError(404, `Nenhum lançamento nem volume da obra ${obra} em ${rotulo(ano, mes)}.`);
-    const itens = new Map([...volumes, ...(o?.itens ?? [])]);
+    const [[o], volumes, previas] = await Promise.all([movimentos(c.id, linhas, acesso, obra), volumesDaObra(c.id, linhas, acesso, obra), previasDaObra(c.id, obra)]);
+    if (!o && !volumes.size && !previas) throw new RegraDREError(404, `Nenhum lançamento nem volume da obra ${obra} em ${rotulo(ano, mes)}.`);
+    const itens = comAsPrevias(new Map([...volumes, ...(o?.itens ?? [])]), previas);
     return {
       competencia: { ano, mes, status: c.status },
       obra: { codigo: obra, nome: o?.nome ?? obra },

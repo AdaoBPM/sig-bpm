@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, AlertTriangle, FileSearch } from "lucide-react";
 
@@ -15,6 +15,8 @@ import { moeda } from "../../utils/formatacao";
 import { dreService, mensagemDeErro, UNIDADES, type BlocoDetalhe, type LancamentoDetalhe, type VisaoDetalhe } from "../services/dreService";
 import { IconeDaCorrecao } from "@/components/shared/IconeDaCorrecao";
 
+import { RegrasDeRateioDialog } from "@/app/contestacoes-de-gastos/components/RegrasDeRateioDialog";
+
 import { BalanceteDialog } from "./BalanceteDialog";
 import { ExportarExtrato } from "./ExportarExtrato";
 import { plural } from "@/lib/texto";
@@ -26,6 +28,8 @@ type Props = {
   onFechar: () => void;
   /** O mês no título ("AGO/26"), quando a tela mostra vários meses (Resultados). */
   rotuloMes?: string;
+  /** Uma nota no alto do extrato (03/11/2026: no Realizado por Obra, a composição do valor da célula). */
+  nota?: ReactNode;
 };
 
 const nomeUnidade = (u?: number) => UNIDADES.find((x) => x.codigo === u)?.nome;
@@ -40,7 +44,7 @@ function Bloco({
 }: {
   b: BlocoDetalhe;
   consolidado: boolean;
-  onMemoria: (u: number, n: Natureza) => void;
+  onMemoria: (u: number, n: Natureza, obra?: string) => void;
   onDocumentos: (l: LancamentoDetalhe) => void;
 }) {
   const cabecalho = (
@@ -66,7 +70,7 @@ function Bloco({
     return (
       <div className="space-y-2 rounded-sm border border-gray-200 p-3">
         {cabecalho}
-        <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => onMemoria(b.unidade, b.natureza as Natureza)}>
+        <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => onMemoria(b.unidade, b.natureza as Natureza, b.obra)}>
           Abrir a memória de cálculo da receita prévia
         </Button>
       </div>
@@ -191,10 +195,12 @@ function TabelaLancamentos({ lancamentos, multiplica, onDocumentos }: { lancamen
 }
 
 /** Detalhamento de um valor da DRE até os lançamentos de origem. */
-export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Props) {
-  const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza } | null>(null);
+export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes, nota }: Props) {
+  const [memoria, setMemoria] = useState<{ unidade: number; natureza: Natureza; obra?: string } | null>(null);
   // O lançamento cuja conta abre o balancete do mês (15/10/2026; o extrato volta ao fechar).
   const [documentos, setDocumentos] = useState<LancamentoDetalhe | null>(null);
+  // As Regras de Rateio vigentes no mês (04/11/2026, pedido do Adão), por cima do extrato.
+  const [regras, setRegras] = useState(false);
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["dre", anoMes, "detalhe", linha, visao],
     queryFn: () => dreService.detalhe(anoMes, linha, visao),
@@ -205,7 +211,7 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
     return <BalanceteDialog anoMes={anoMes} linha={linha} visao={visao} lancamento={documentos} rotuloMes={rotuloMes} onVoltar={() => setDocumentos(null)} />;
   }
   if (memoria) {
-    return <MemoriaCalculoDialog anoMes={anoMes} unidade={memoria.unidade} natureza={memoria.natureza} onFechar={() => setMemoria(null)} />;
+    return <MemoriaCalculoDialog anoMes={anoMes} unidade={memoria.unidade} natureza={memoria.natureza} obra={memoria.obra} onFechar={() => setMemoria(null)} />;
   }
   return (
     <Dialog open onOpenChange={(o) => (!o ? onFechar() : undefined)}>
@@ -217,13 +223,14 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
           </DialogTitle>
           <DialogDescription>{data?.regra ?? "Os lançamentos que formaram o valor, como foram apurados."}</DialogDescription>
         </DialogHeader>
+        {nota ? <div className="rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white px-3 py-2 text-sm text-gray-700">{nota}</div> : null}
         {isError ? <p className="text-sm text-red-700">{mensagemDeErro(error, "Erro ao carregar o detalhamento.")}</p> : null}
         {isPending ? <div className="h-40 animate-pulse rounded-sm bg-gray-100" /> : null}
         {data ? (
           <div className="space-y-3">
             {data.observacao ? <p className="rounded-sm border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">{data.observacao}</p> : null}
             {data.blocos.map((b, i) => (
-              <Bloco key={i} b={b} consolidado={data.visao === "Consolidado"} onMemoria={(u, n) => setMemoria({ unidade: u, natureza: n })} onDocumentos={setDocumentos} />
+              <Bloco key={i} b={b} consolidado={data.visao === "Consolidado"} onMemoria={(u, n, obra) => setMemoria({ unidade: u, natureza: n, obra })} onDocumentos={setDocumentos} />
             ))}
             {data.somaOrigens !== null ? (
               <div className={`flex items-center gap-2 rounded-sm border p-3 text-sm ${fecha ? "border-green-200 bg-green-50 text-green-800" : "border-yellow-200 bg-yellow-50 text-yellow-800"}`}>
@@ -234,12 +241,17 @@ export function DetalheDialog({ anoMes, linha, visao, onFechar, rotuloMes }: Pro
           </div>
         ) : null}
         {/* O extrato em Excel (24/10/2026): as movimentações numa aba e os detalhes, item a item, em outra. O pé fica preso
-            embaixo (o DialogFooter), como o título em cima, para o botão aparecer sem rolar o extrato. */}
+            embaixo (o DialogFooter), como o título em cima, para o botão aparecer sem rolar o extrato. À esquerda, as Regras de
+            Rateio do mês (04/11/2026). */}
         {data ? (
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            <Button type="button" variant="outline" className="rounded-sm" onClick={() => setRegras(true)} title="As Regras de Rateio vigentes no mês">
+              Regras de Rateio
+            </Button>
             <ExportarExtrato anoMes={anoMes} linha={linha} visao={visao} />
           </DialogFooter>
         ) : null}
+        {regras ? <RegrasDeRateioDialog anoMes={anoMes} onFechar={() => setRegras(false)} /> : null}
       </DialogContent>
     </Dialog>
   );

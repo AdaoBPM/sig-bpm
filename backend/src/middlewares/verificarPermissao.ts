@@ -76,10 +76,10 @@ export function abasDaDREDoPedido(request: Request): string[] | null {
   }
   // O detalhamento dos movimentos sem centro de custo: a aba deles (nos Resultados Empresariais e, desde 15/10/2026, na DRE do mês).
   if (q.semCentro !== undefined) return ["sem_centros"];
-  // Os documentos de uma linha valem para qualquer aba da tela.
-  if (caminho.endsWith("/documentos")) return [];
+  // Os documentos de uma linha e as Regras de Rateio do mês valem para qualquer aba da tela.
+  if (caminho.endsWith("/documentos") || caminho.endsWith("/rateios")) return [];
   if (q.grupo !== undefined) return ["centros"];
-  if (q.obra !== undefined) return ["obras"];
+  if (q.obra !== undefined || q.obras !== undefined) return ["obras"];
   if (q.unidade !== undefined) {
     const a = abaDaVisao(q.unidade);
     return a ? [a] : null;
@@ -99,7 +99,10 @@ export async function lerDREDoMes(request: Request, response: Response, next: Ne
   // Sem aba (os documentos de uma linha), basta a tela.
   const pode = (tela: string) => (abas.length ? abas.every((a) => temPermissao(request, `${tela}.${a}:ler`)) : temPermissao(request, `${tela}:ler`));
   if (pode("dre")) return next();
-  if (!pode("relatorio_resultados")) return response.status(403).json(SEM_PERMISSAO);
+  // As consultas dos Resultados do Realizado por Obra (03/11/2026): as da obra (os lançamentos dos centros dela, os volumes
+  // das listas e o balancete de uma conta), só nas competências fechadas, como nos Resultados Empresariais.
+  const doRealizado = abas.every((a) => a === "obras") && temPermissao(request, "realizado_obra_resultados:ler");
+  if (!pode("relatorio_resultados") && !doRealizado) return response.status(403).json(SEM_PERMISSAO);
   const m = /^(\d{4})-(\d{2})$/.exec(String(request.params.anoMes ?? ""));
   if (!m) return response.status(400).json({ error: "Competência inválida." });
   try {

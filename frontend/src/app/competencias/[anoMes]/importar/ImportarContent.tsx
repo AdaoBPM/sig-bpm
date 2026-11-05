@@ -33,7 +33,7 @@ const botaoPrimario = "bg-bpm-primary hover:bg-bpm-primary-hover rounded-sm font
  * Os arquivos de todo mês, na ordem do fechamento: todos obrigatórios para fechar a competência (17/10/2026). Depois deles,
  * sempre visíveis, os opcionais: a DRE do Comercial e o saldo inicial (antes, só apareciam quando importados no mês).
  */
-const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "QUADRO_LOTACAO", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL", "REQUISICOES", "NOTAS_FISCAIS"];
+const TIPOS_DO_MES = ["BALANCETE", "PROJETO", "PRODUCAO", "PRODUCAO_PISTA", "PRODUCAO_ARMADURA", "PRODUCAO_METALURGIA", "EXPEDICAO", "MONTAGEM", "ACOMPANHAMENTO", "MEDICAO", "DEVOLUCAO", "SAIDA", "QUADRO_LOTACAO", "INDICADORES_ADMIN", "INDICADORES_COMERCIAL", "REQUISICOES", "NOTAS_FISCAIS", "CREDITOS_IMPOSTOS"];
 const TIPOS_EVENTUAIS = ["DRE_COMERCIAL", "ESTOQUE_INICIAL"];
 
 const ESTILO_STATUS: Record<StatusImportacao, { classe: string; rotulo: string }> = {
@@ -201,13 +201,14 @@ export function ImportarContent() {
             <p>
               O balancete (LISTAS REALIZADO (RESULTADOS)), as listas operacionais — as abas (Resumo), Produção (Armaduras), Produção
               (Metalúrgica) e as demais do LISTAS REALIZADO (OPERAÇÃO) —, o Quadro de Lotação por centro de custo (a referência do
-              quadro de lotação dos Cenários Analíticos, fora da apuração), os indicadores do Administrativo e do Comercial, a DRE do Comercial
+              quadro de lotação dos Cenários Analíticos, fora da apuração), os Créditos de Impostos (a aba Impostos (Lista) do LISTAS REALIZADO (RESULTADOS): o
+              Creditado e o Estornado de cada conta da Matriz e da Filial, para a aba Impostos de Resultados, fora da apuração), os indicadores do Administrativo e do Comercial, a DRE do Comercial
               e o saldo inicial do estoque entram por aqui (o balancete é detalhado: um movimento por linha, com o cliente ou fornecedor, a emissão e o histórico, que o extrato de uma conta na DRE abre no modal Balancete; nas abas Requisições (Lista) e Notas Fiscais (Lista), a tarefa dos itens leva os custos às linhas, na etapa Linhas da apuração) (as metas do orçamento ficam nos cenários: Criação de Cenários / Cenários Sintéticos). Reimportar um tipo substitui o
               lote anterior por inteiro.
             </p>
             <p>
               &quot;Em vigor&quot; mostra o arquivo que vale para cada tipo neste mês. O histórico guarda toda importação, inclusive as recusadas e
-              as substituídas. Clique numa linha para ver o relatório.
+              as substituídas.
             </p>
           </>
         }

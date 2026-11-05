@@ -119,7 +119,7 @@ export const ehTipoIndicadores = (tipo: string): tipo is TipoIndicadores => tipo
 // As requisições e as notas fiscais (11/10/2026) também ficam fora das importações do retrato: desde 26/10/2026 têm
 // entrada própria nele (a etapa Linhas), para as apurações de antes não acusarem mudança. E o quadro de lotação por
 // centro de custo (19/10/2026): a referência dos cenários analíticos.
-export const TIPOS_FORA_DA_APURACAO: TipoImportacao[] = [...(Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[]), "REQUISICOES", "NOTAS_FISCAIS", "QUADRO_LOTACAO"];
+export const TIPOS_FORA_DA_APURACAO: TipoImportacao[] = [...(Object.keys(DEFINICOES_INDICADORES) as TipoIndicadores[]), "REQUISICOES", "NOTAS_FISCAIS", "QUADRO_LOTACAO", "CREDITOS_IMPOSTOS"];
 
 export type ValorIndicador = { nome: string; valor: number; linhaArquivo: number };
 export type Rejeicao = { linha: number; codigo: string; mensagem: string };

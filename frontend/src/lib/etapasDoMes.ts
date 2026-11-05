@@ -93,6 +93,7 @@ export function etapasDoMes(hasPermission: (p: string) => boolean, acesso: Acess
     { caminho: "dre", chave: "dre", rotulo: "Resultados", icone: FileBarChart, permissao: "dre:ler" },
     // A DRE de cada unidade dividida entre as linhas, gravada na apuração (26/10/2026).
     { caminho: "linhas", chave: "linhas", rotulo: "Linhas", icone: ChartColumn, permissao: "linhas_mes:ler" },
+    // Os Créditos de Impostos do mês (03/11/2026) viraram a aba Impostos de Resultados em 04/11/2026.
     { caminho: "conferencia-planilha", chave: "conferencia-planilha", rotulo: "Conferência", icone: GitCompareArrows, permissao: "conferencia:ler" },
     { caminho: "divergencias", chave: "divergencias", rotulo: "Divergências", icone: TriangleAlert, permissao: "divergencia:ler" },
   ];

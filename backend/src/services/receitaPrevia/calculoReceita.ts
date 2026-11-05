@@ -53,6 +53,8 @@ export type Registro = {
   obra: string | null;
   unidade: number | null;
   linha: string | null;
+  /** A unidade da linha no cadastro (04/11/2026): a das notas de saída. */
+  unidadeDaLinha?: number | null;
   quantidade: Decimal;
   nomePeca?: string | null;
   secao?: string | null;
@@ -292,9 +294,12 @@ export function calcularReceita(d: DadosCalculo): { itens: ItemReceita[]; avisos
   }
 
   // Receita (Saídas) --------------------------------------------------------
+  // A unidade da nota é a da linha no cadastro (04/11/2026, pedido do Adão: a nota da Estrutura vai à Matriz); sem ela, a
+  // Metalúrgica na Matriz e as demais na Filial, como antes.
   for (const r of d.saidas) {
     const linha = norm(r.linha);
-    const item = base(r, linha === "METALÚRGICA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL, "PRE_FABRICADO", "SAIDA");
+    const daLinha = r.unidadeDaLinha === UNIDADE.MATRIZ || r.unidadeDaLinha === UNIDADE.FILIAL ? r.unidadeDaLinha : null;
+    const item = base(r, daLinha ?? (linha === "METALÚRGICA" ? UNIDADE.MATRIZ : UNIDADE.FILIAL), "PRE_FABRICADO", "SAIDA");
     item.criterio = "NOTA_FISCAL";
     item.detalhe = r.movimento ?? null;
     item.detalheDescricao = r.nomeMovimento ?? null;

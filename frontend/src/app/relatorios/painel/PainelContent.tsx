@@ -337,6 +337,7 @@ function CardIndicador({
   formatacao,
   comparacoes,
   corDoOrcado,
+  rotuloDoAcumulado,
 }: {
   i: ItemPainel;
   rotuloMes: string;
@@ -348,6 +349,8 @@ function CardIndicador({
   comparacoes?: ComparacaoDoCard[];
   /** A cor do orçado no gráfico (31/10/2026: a do cenário, nos slides com cards PROVA). */
   corDoOrcado?: string;
+  /** O período do acumulado (03/11/2026: o Realizado por Obra, da obra inteira); sem ele, de janeiro ao mês. */
+  rotuloDoAcumulado?: string;
 }) {
   const fm = formatacao?.mes ?? formatacaoDo(i.formato);
   const fa = formatacao?.acumulado ?? formatacaoDo(i.formatoAcumulado);
@@ -360,7 +363,7 @@ function CardIndicador({
       {i.sentido}
     </span>
   );
-  const acumulado = rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`;
+  const acumulado = rotuloDoAcumulado ?? (rotuloMes.startsWith("JAN") ? rotuloMes : `JAN–${rotuloMes}`);
   // O espaço entre os blocos menor (12 px), para o rótulo, a tag e os valores caberem em 1/5 do card.
   const coluna = "lg:border-l lg:border-gray-100 lg:pl-3";
   return (
@@ -423,7 +426,7 @@ function CardIndicador({
             data-grafico-acumulado
             className="relative min-w-0 overflow-hidden rounded-sm px-1.5"
             style={{ flex: `1 1 ${(comRotulos ? 0 : LARGURA_DA_ESCALA) + 12}px` }}
-            title={`Acumulado do exercício (${acumulado}): realizado × orçado`}
+            title={rotuloDoAcumulado ? `Acumulado (${acumulado})` : `Acumulado do exercício (${acumulado}): realizado × orçado`}
           >
             <svg className="pointer-events-none absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
               <rect width="100%" height="100%" style={{ fill: "var(--color-gray-100)" }} />
@@ -531,7 +534,21 @@ const comparacoesDo = (i: ItemPainel, prova: CenarioDoProva[] | null | undefined
  * Um quadro do painel (Consolidado, Produção: Matriz…): uma seção com um card por indicador, um abaixo do outro, e uma seção
  * abaixo da outra. Com a Comparação PROVA (31/10/2026), os cards PROVA, como os dos Relatórios Executivos.
  */
-function Secao({ q, rotuloMes, tipo, comRotulos, prova }: { q: QuadroPainel; rotuloMes: string; tipo: TipoGrafico; comRotulos: boolean; prova?: CenarioDoProva[] | null }) {
+function Secao({
+  q,
+  rotuloMes,
+  tipo,
+  comRotulos,
+  prova,
+  rotuloDoAcumulado,
+}: {
+  q: QuadroPainel;
+  rotuloMes: string;
+  tipo: TipoGrafico;
+  comRotulos: boolean;
+  prova?: CenarioDoProva[] | null;
+  rotuloDoAcumulado?: string;
+}) {
   const secao = useRef<HTMLElement>(null);
   const [recolhido, alternar] = useGrupoRecolhido(q.titulo);
   return (
@@ -559,7 +576,15 @@ function Secao({ q, rotuloMes, tipo, comRotulos, prova }: { q: QuadroPainel; rot
       </div>
       <div className={recolhido ? "hidden" : "space-y-3"}>
         {q.itens.map((i) => (
-          <CardIndicador key={`${i.titulo}|${i.sigla}`} i={i} rotuloMes={rotuloMes} tipo={tipo} comRotulos={comRotulos} comparacoes={comparacoesDo(i, prova)} />
+          <CardIndicador
+            key={`${i.titulo}|${i.sigla}`}
+            i={i}
+            rotuloMes={rotuloMes}
+            tipo={tipo}
+            comRotulos={comRotulos}
+            comparacoes={comparacoesDo(i, prova)}
+            rotuloDoAcumulado={rotuloDoAcumulado}
+          />
         ))}
       </div>
     </section>
@@ -581,6 +606,7 @@ export function CorpoDoPainel({
   comRotulos = false,
   extras = [],
   prova,
+  rotuloDoAcumulado,
 }: {
   dados: Painel;
   aba: string;
@@ -594,6 +620,8 @@ export function CorpoDoPainel({
   extras?: Array<{ chave: string; rotulo: string; conteudo: ReactNode }>;
   /** A Comparação PROVA de Resultados Empresariais (31/10/2026): os cards PROVA, com estes cenários. */
   prova?: CenarioDoProva[] | null;
+  /** O período do acumulado nos cards (03/11/2026: o Realizado por Obra); sem ele, de janeiro ao mês. */
+  rotuloDoAcumulado?: string;
 }) {
   const extra = extras.find((e) => e.chave === aba);
   const atual = extra ? null : (dados.abas.find((a) => a.chave === aba) ?? dados.abas[0]);
@@ -614,7 +642,7 @@ export function CorpoDoPainel({
       ) : (
         <div className="space-y-6">
           {atual!.quadros.map((q) => (
-            <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} prova={prova} />
+            <Secao key={q.titulo} q={q} rotuloMes={dados.rotuloMes} tipo={tipo} comRotulos={comRotulos} prova={prova} rotuloDoAcumulado={rotuloDoAcumulado} />
           ))}
         </div>
       )}

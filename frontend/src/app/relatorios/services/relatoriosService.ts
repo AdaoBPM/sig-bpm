@@ -121,6 +121,24 @@ export type Painel = {
 
 const periodo = (ano: number, ate?: number) => ({ ano, ...(ate ? { ate } : {}) });
 
+/**
+ * O Creditado e o Estornado num mês (04/11/2026): o R$ e o percentual (fração) sobre o custo da conta na unidade; nulo, sem os
+ * créditos importados no mês (o percentual nulo também sem o custo).
+ */
+export type CreditosDoMes = { creditado: { valor: number | null; pct: number | null }; estornado: { valor: number | null; pct: number | null } } | null;
+/**
+ * A aba Impostos (Créditos de Impostos, 03/11/2026; por unidade desde 04/11/2026): em cada unidade (Matriz e Filial), de cada
+ * mês fechado, os créditos do total, de cada grupo (Matérias Primas, Gastos Gerais Variáveis) e de cada conta dele.
+ */
+export type CreditosDosMeses = {
+  meses: Array<{ mes: number; rotulo: string }>;
+  unidades: Array<{
+    codigo: number;
+    nome: string;
+    total: { meses: CreditosDoMes[] };
+    grupos: Array<{ codigo: string; descricao: string; meses: CreditosDoMes[]; contas: Array<{ codigo: string; descricao: string; meses: CreditosDoMes[] }> }>;
+  }>;
+};
 /** As marcações dos cenários que o Compara Com escolhe (21/10/2026). */
 export type MarcacaoComparavel = "ORCAMENTO_EMPRESARIAL" | "RESULTADOS_ANTERIORES" | "RESULTADOS_VENDIDOS" | "PREVISAO";
 /** Um cenário marcado (o Compara Com): de qualquer exercício (22/10/2026), com o ano dele. */
@@ -151,6 +169,9 @@ export const relatoriosService = {
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "obras", obra } })).data.data,
   centro: async (ano: number, ate: number | undefined, grupo: string) =>
     (await api.get<{ data: Resultados }>("/proxy/relatorios/resultados", { params: { ...periodo(ano, ate), visao: "centros", grupo } })).data.data,
+  /** A aba Impostos (Créditos de Impostos, 03/11/2026): os créditos de impostos de cada mês fechado do exercício. */
+  impostos: async (ano: number, ate: number | undefined) =>
+    (await api.get<{ data: CreditosDosMeses }>("/proxy/relatorios/resultados/impostos", { params: periodo(ano, ate) })).data.data,
   /** `etapa`: a etapa Indicadores do Fechamento Mensal, que vê o mês aberto; sem ela, só as competências fechadas. */
   indicadores: async (ano: number, ate: number | undefined, etapa = false, comparaCom?: MarcacaoComparavel, prova?: MarcacaoComparavel[]) =>
     (await api.get<{ data: Indicadores }>("/proxy/relatorios/indicadores", { params: { ...periodo(ano, ate), ...(etapa ? { etapa: 1 } : {}), ...comparado(comparaCom), ...comProva(prova) } })).data.data,

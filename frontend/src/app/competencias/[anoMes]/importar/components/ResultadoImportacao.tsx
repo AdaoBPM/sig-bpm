@@ -635,6 +635,32 @@ function ConcluidaLotacao({ imp }: { imp: ImportacaoDetalhe }) {
   );
 }
 
+/**
+ * Os Créditos de Impostos do mês (04/11/2026): as contas de cada unidade, as somas do Creditado e do Estornado e as linhas de
+ * outras contas, que a importação ignora (as que não são de Matérias Primas nem de Gastos Gerais Variáveis da Produção nem o Frete).
+ */
+function ConcluidaCreditos({ imp }: { imp: ImportacaoDetalhe }) {
+  const resumo = imp.resumo as { aba: string; contas: number; creditado: number; estornado: number; foraDasContas?: number; modo?: string } | null;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Contador rotulo="Contas" valor={imp.linhasAceitas} destaque="ok" detalhe="da Matriz e da Filial, no mês" />
+        <Contador rotulo="Rejeitadas" valor={imp.linhasRejeitadas} destaque={imp.linhasRejeitadas > 0 ? "erro" : undefined} />
+        <Contador rotulo="De outros meses" valor={imp.linhasIgnoradas} />
+        <Contador rotulo="De outras contas" valor={resumo?.foraDasContas ?? 0} detalhe="ignoradas: nem MP nem GGV da Produção nem Frete" />
+      </div>
+      {resumo ? (
+        <p className="text-sm text-gray-600">
+          Aba lida: {resumo.aba}.{resumo.modo === "CARGA_RETROATIVA" ? " Carga retroativa, sem reabrir a competência." : ""} Creditado: {moeda(resumo.creditado)};
+          Estornado: {moeda(resumo.estornado)}. Os créditos aparecem na aba Impostos de Resultados do mês, com os percentuais sobre o valor de cada conta na unidade; não
+          entram na apuração.
+        </p>
+      ) : null}
+      <TabelaRejeicoes rejeicoes={imp.relatorioErros ?? []} />
+    </div>
+  );
+}
+
 function ConcluidaIndicadores({ imp }: { imp: ImportacaoDetalhe }) {
   const resumo = imp.resumo as ResumoIndicadores | null;
   const metas = imp.tipo === "METAS_ORCAMENTO";
@@ -759,6 +785,8 @@ export function ResultadoImportacao({ id, anoMes, noPainel }: ResultadoImportaca
           <ConcluidaDocumentos imp={imp} />
         ) : imp.tipo === "QUADRO_LOTACAO" ? (
           <ConcluidaLotacao imp={imp} />
+        ) : imp.tipo === "CREDITOS_IMPOSTOS" ? (
+          <ConcluidaCreditos imp={imp} />
         ) : (
           <ConcluidaLista imp={imp} />
         )

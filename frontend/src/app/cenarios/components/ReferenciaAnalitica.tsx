@@ -16,7 +16,7 @@ import { plural } from "@/lib/texto";
 import { cenariosService, rotuloVersao, type Cenario } from "../services/cenariosService";
 import { AvisoMarcado, estaTravado } from "./AvisoMarcado";
 import { descreverFechadas } from "./descreverFechadas";
-import { QuadroDeRealocacoes } from "./RealocacoesDialog";
+import { BotaoRealocar, QuadroDeRealocacoes } from "./RealocacoesDialog";
 import { botaoPrimario, classeSelect, Erro, OpcaoEmLinha } from "./CenarioDialog";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -79,6 +79,18 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
       ),
   });
   const travado = estaTravado(cenario);
+  // As ações do realizado (03/11/2026, pedido do Adão): o Carregar Realizado e, depois dele, o Realocar, na altura do De e do
+  // Até (na Média do Período) ou sozinhos à direita (no Mês a Mês).
+  const comCarregarRealizado = podeEditar && !travado && tipo === "realizado" && anos.length > 0;
+  const acoes = (
+    <>
+      <Button type="button" className={botaoPrimario} disabled={periodoInvalido} onClick={() => setConfirmar(true)}>
+        <History className="size-4" />
+        Carregar Realizado
+      </Button>
+      <BotaoRealocar cenario={cenario} podeEditar />
+    </>
+  );
 
   return (
     <section className="space-y-4 rounded-sm border border-l-4 border-gray-200 border-l-bpm-primary bg-white p-5">
@@ -198,14 +210,11 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
                     ? `O período tem ${plural(abertasNoPeriodo.length, "um mês", "meses")} sem competência fechada: ${abertasNoPeriodo.map((m) => MESES[m - 1]).join(", ")}.`
                     : `A média de ${periodo.length} ${plural(periodo.length, "mês", "meses")}, ${de === ate ? MESES[de - 1] : `de ${MESES[de - 1]} a ${MESES[ate - 1]}`}.`}
               </p>
+              {acoes}
             </div>
-          ) : null}
-          <div className="flex justify-end">
-            <Button type="button" className={botaoPrimario} disabled={periodoInvalido} onClick={() => setConfirmar(true)}>
-              <History className="size-4" />
-              Carregar Realizado
-            </Button>
-          </div>
+          ) : (
+            <div className="flex flex-wrap items-end justify-end gap-3">{acoes}</div>
+          )}
         </div>
       )}
       {/* O que não coube nas premissas na última carga (com o destaque vermelho dos avisos). */}
@@ -220,8 +229,8 @@ export function ReferenciaAnalitica({ cenario, podeEditar = true, aviso }: { cen
         </div>
       ) : null}
 
-      {/* As movimentações fora dos padrões da última carga do realizado e as realocações delas (14/10/2026). */}
-      <QuadroDeRealocacoes cenario={cenario} podeEditar={podeEditar && !travado} />
+      {/* As movimentações fora dos padrões da última carga do realizado e as realocações delas (14/10/2026); o Realocar fica ao lado do Carregar Realizado, quando ele está na tela. */}
+      <QuadroDeRealocacoes cenario={cenario} podeEditar={podeEditar && !travado} comBotao={!comCarregarRealizado} />
 
       {confirmar ? (
         <Dialog open onOpenChange={(o) => (!o ? setConfirmar(false) : undefined)}>
