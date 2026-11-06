@@ -289,12 +289,16 @@ const fontesDoBanco = (): FontesAnalise => {
  * Lê o arquivo e devolve, por aba reconhecida, o que fazer em cada mês: o da
  * competência do envio e os anteriores do mesmo ano. `alcanca` diz se o
  * usuário importa o tipo (recorte por setor).
+ *
+ * `soTipo` (o Importar da linha do tipo, 06/11/2026): só a aba desse tipo, sem as outras do arquivo. Como no envio de
+ * um tipo (escolherAba), serve também a pasta de trabalho de uma aba só, de qualquer nome; sem a aba, o arquivo é recusado.
  */
 export async function analisarArquivo(
   conteudo: Uint8Array,
   origem: Competencia,
   alcanca: (tipo: TipoImportacao) => boolean,
   fontes: FontesAnalise = fontesDoBanco(),
+  soTipo?: TipoImportacao,
 ) {
   // Os nomes dos indicadores do cadastro, para a aba das metas.
   await atualizarNomesDasMetas();
@@ -312,8 +316,12 @@ export async function analisarArquivo(
   const abas: AbaAnalisada[] = [];
   const reconhecidas = new Set<string>();
   for (const t of TIPOS) {
-    const aba = nomes.find((n) => t.abas.some((a) => mesmaAba(n, a)));
-    if (!aba) continue;
+    if (soTipo && t.tipo !== soTipo) continue;
+    const aba = nomes.find((n) => t.abas.some((a) => mesmaAba(n, a))) ?? (soTipo && nomes.length === 1 ? nomes[0] : undefined);
+    if (!aba) {
+      if (soTipo) throw new ArquivoInvalidoError(`O arquivo não tem a aba ${t.abas[0]}. Escolha o arquivo com essa aba ou uma pasta de trabalho só com ela.`);
+      continue;
+    }
     reconhecidas.add(aba);
     const base = { aba, tipo: t.tipo, rotulo: t.rotulo, meses: [] as MesDaAba[] };
     if (!alcanca(t.tipo)) {
@@ -374,5 +382,5 @@ export async function analisarArquivo(
       mensagem: base.meses.length === 0 ? `A aba não tem registros de ${rotuloMes(origem.ano, origem.mes)} nem de meses anteriores.` : undefined,
     });
   }
-  return { abas, outras: nomes.filter((n) => !reconhecidas.has(n)) };
+  return { abas, outras: soTipo ? [] : nomes.filter((n) => !reconhecidas.has(n)) };
 }

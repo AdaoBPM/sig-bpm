@@ -7,7 +7,6 @@ import { Lock, Upload } from "lucide-react";
 
 import { useAbaLembrada } from "@/hooks/useAbaLembrada";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ExportarTabela } from "@/components/shared/ExportarTabela";
 import { Abas } from "@/components/shared/Abas";
@@ -21,7 +20,6 @@ import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useRegistrarAcessoTela } from "@/hooks/useRegistrarAcessoTela";
 
-import { EnviarArquivoForm } from "./components/EnviarArquivoForm";
 import { ImportarLoteDialog } from "./components/ImportarLoteDialog";
 import { ResultadoImportacao } from "./components/ResultadoImportacao";
 import { importacoesService, type Importacao, type StatusImportacao } from "./services/importacoesService";
@@ -118,8 +116,9 @@ export function ImportarContent() {
   const periodo = lerAnoMes(anoMes);
   const [aba, setAba] = useAbaLembrada<"vigor" | "historico">("aba", "vigor", ["vigor", "historico"]);
   const [aberta, setAberta] = useState<string | null>(null);
-  // Reimportar um tipo (da linha da tabela): o formulário de um tipo só.
-  const [envio, setEnvio] = useState<{ tipo?: string } | null>(null);
+  // Importar ou Reimportar um tipo (da linha da tabela): o diálogo do Importar Arquivo, só com a aba dele. Fechado, guarda o tipo,
+  // para o diálogo reabrir com o andamento (como o do Importar Arquivo); outro tipo começa do zero.
+  const [doTipo, setDoTipo] = useState<{ tipo: string; titulo: string; aberto: boolean } | null>(null);
   // "Importar Arquivo": o arquivo inteiro, aba por aba.
   const [lote, setLote] = useState(false);
 
@@ -174,10 +173,13 @@ export function ImportarContent() {
         }
         comoUsar={
           <ul>
-            <li>Clique em “Importar Arquivo” e escolha a planilha (.xlsx); o diálogo lista os arquivos e as abas que servem. A ferramenta reconhece as abas pelo nome, confere a estrutura de cada uma e importa as certas, uma por vez, sem pedir mais nada. Uma aba com erro é avisada, e a próxima segue.</li>
+            <li>Clique em “Importar Arquivo” e escolha a planilha (.xlsx); o diálogo lista os arquivos e as abas que servem. A ferramenta reconhece as abas pelo nome, confere a estrutura de cada uma e mostra a prévia: o que muda, mês a mês. Nada é importado antes de você clicar em “Importar”; aí as abas certas entram na fila, uma por vez, e uma aba com erro é avisada, sem parar as próximas.</li>
             <li>Uma aba sem diferença em relação à importação em vigor fica “Sem mudança” e não se importa de novo, a menos que nada tenha mudado no arquivo: aí “Importar” continua valendo e reimporta o mês atual assim mesmo (os meses anteriores ficam como estão). Um arquivo com vários meses atualiza todos eles; os meses já apurados que mudarem ganham a bola verde e pedem reapuração.</li>
             <li>A lista do arquivo avisa quando a importação muda competências fechadas (o balancete do ano inteiro, os preços da DRE do Comercial); as diferenças vão para Divergências.</li>
-            <li>Para trocar só um tipo, use “Reimportar” na linha dele.</li>
+            <li>
+              Para importar só um tipo, use “Importar” (ou “Reimportar”) na linha dele: abre o mesmo diálogo, só com a aba daquele tipo. Escolha o arquivo
+              completo ou uma pasta de trabalho só com essa aba; a prévia mostra só essa aba, mês a mês, e nada é importado antes de você confirmar.
+            </li>
             <li>Na aba Em Vigor, clique numa linha para abrir o relatório: linhas aceitas, recusadas e avisos.</li>
             <li>
               A aba Em Vigor mostra sempre todos os tipos, também os não importados. Para fechar a competência, todos precisam estar importados, menos os
@@ -286,7 +288,13 @@ export function ImportarContent() {
                     </td>
                     <td className="px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       {podeEnviar(tipo) && TIPOS_DO_MES.includes(tipo) ? (
-                        <Button type="button" variant="outline" size="sm" className="rounded-sm" onClick={() => setEnvio({ tipo })}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-sm"
+                          onClick={() => setDoTipo({ tipo, titulo: `${fechada ? "Comparar" : vigente ? "Reimportar" : "Importar"} ${ROTULO_TIPO[tipo] ?? tipo}`, aberto: true })}
+                        >
                           {fechada ? "Comparar" : vigente ? "Reimportar" : "Importar"}
                         </Button>
                       ) : null}
@@ -314,7 +322,7 @@ export function ImportarContent() {
           {isPending ? (
             <Carregando linhas={6} />
           ) : itens.length === 0 ? (
-            <Vazio titulo="Nenhuma importação nesta competência" dica={podeImportar ? "Use o botão Importar arquivo." : undefined} />
+            <Vazio titulo="Nenhuma importação nesta competência" dica={podeImportar ? "Use o botão Importar Arquivo." : undefined} />
           ) : (
             <table className="tabela-sig w-full border-collapse">
               {historico.cabecalho}
@@ -356,25 +364,21 @@ export function ImportarContent() {
         }}
       />
 
-      {/* Reimportar um tipo, num diálogo; enviado o arquivo, o relatório abre no painel e acompanha o processamento. */}
-      <Dialog open={envio !== null} onOpenChange={(o) => (!o ? setEnvio(null) : undefined)}>
-        <DialogContent className="rounded-sm sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{fechada ? "Comparar Balancete" : "Importar Arquivo"}</DialogTitle>
-          </DialogHeader>
-          {envio ? (
-            <EnviarArquivoForm
-              anoMes={anoMes}
-              somenteBalancete={fechada}
-              tipoInicial={envio.tipo}
-              onEnviado={(imp) => {
-                setEnvio(null);
-                setAberta(imp.id);
-              }}
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      {doTipo ? (
+        <ImportarLoteDialog
+          key={doTipo.tipo}
+          anoMes={anoMes}
+          aberto={doTipo.aberto}
+          fechada={fechada}
+          tipo={doTipo.tipo}
+          titulo={doTipo.titulo}
+          onFechar={() => setDoTipo({ ...doTipo, aberto: false })}
+          onAbrirRelatorio={(id) => {
+            setDoTipo({ ...doTipo, aberto: false });
+            setAberta(id);
+          }}
+        />
+      ) : null}
 
       <Sheet open={aberta !== null} onOpenChange={(o) => (!o ? setAberta(null) : undefined)}>
         <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-6 data-[side=right]:sm:max-w-4xl">

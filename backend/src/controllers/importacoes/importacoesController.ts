@@ -59,16 +59,18 @@ export const importacoesController = {
     }
   },
 
-  /** Importação em lote, passo 1: a prévia das abas do arquivo, sem importar. */
+  /** Importação em lote, passo 1: a prévia das abas do arquivo (ou, com `tipo`, só a dele), sem importar. */
   async analisarLote(request: Request, response: Response) {
     const competencia = anoMesSchema.safeParse(request.params.anoMes);
     const nome = z.string().trim().min(1).max(255).safeParse(request.query.nomeArquivo);
-    if (!competencia.success || !nome.success) return response.status(400).json({ error: "Informe a competência e o nome do arquivo." });
+    const tipo = receberImportacaoSchema.shape.tipo.optional().safeParse(request.query.tipo);
+    if (!competencia.success || !nome.success || !tipo.success) return response.status(400).json({ error: "Informe a competência e o nome do arquivo." });
     if (!Buffer.isBuffer(request.body)) return response.status(400).json({ error: "Envie o arquivo no corpo da requisição." });
     try {
       const data = await importacoesService.analisarLote({
         ...competencia.data,
         nomeArquivo: nome.data,
+        tipo: tipo.data,
         conteudo: request.body,
         alcanca: (tipo) => alcancaLista(request.user!.acesso, tipo),
       });
@@ -82,7 +84,12 @@ export const importacoesController = {
   async importarLote(request: Request, response: Response) {
     const competencia = anoMesSchema.safeParse(request.params.anoMes);
     const corpo = z
-      .object({ hash: z.string().regex(/^[0-9a-f]{64}$/), nomeArquivo: z.string().trim().min(1).max(255), reimportar: z.boolean().optional() })
+      .object({
+        hash: z.string().regex(/^[0-9a-f]{64}$/),
+        nomeArquivo: z.string().trim().min(1).max(255),
+        reimportar: z.boolean().optional(),
+        tipo: receberImportacaoSchema.shape.tipo.optional(),
+      })
       .safeParse(request.body);
     if (!competencia.success || !corpo.success) return response.status(400).json({ error: "Dados inválidos." });
     try {

@@ -72,4 +72,21 @@ describe("importação em lote: prévia das abas, mês a mês", () => {
     const recorte = await analisarArquivo(arquivo, agosto, (tipo) => tipo !== "ACOMPANHAMENTO", fontes);
     assert.equal(recorte.abas.find((a) => a.aba === "Acompanhamentos")?.situacao, "IGNORADA");
   });
+
+  it("um tipo só (o Importar da linha): só a aba dele, a pasta de uma aba só de qualquer nome, e recusa sem a aba", async () => {
+    const so = await analisarArquivo(arquivo, agosto, todos, fontes, "ACOMPANHAMENTO");
+    assert.deepEqual(
+      so.abas.map((a) => a.tipo),
+      ["ACOMPANHAMENTO"],
+    );
+    assert.deepEqual(so.outras, []);
+    assert.equal(so.abas[0].meses.find((m) => m.anoMes === "2026-03")?.acao, "IMPORTAR");
+
+    const umaAba = gerarXlsx([aba("Planilha1", [["PERÍODO", "PROJETO", "OBRA", "ETAPA", "DIAS DE ACOMP."], [46235, "G1", "OBRA 1", "MONTAGEM", 3]])]);
+    const r = await analisarArquivo(umaAba, agosto, todos, fontes, "ACOMPANHAMENTO");
+    assert.equal(r.abas[0].aba, "Planilha1");
+    assert.equal(r.abas[0].situacao, "ANALISADA");
+
+    await assert.rejects(analisarArquivo(arquivo, agosto, todos, fontes, "MONTAGEM"), /não tem a aba Montagem \(Resumo\)/);
+  });
 });

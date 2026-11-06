@@ -2,16 +2,6 @@ import { api } from "@/lib/api";
 
 import type { StatusCompetencia } from "../../../services/competenciasService";
 
-export type TipoImportacao =
-  | "BALANCETE"
-  | "PROJETO"
-  | "PRODUCAO"
-  | "PRODUCAO_PISTA"
-  | "PRODUCAO_ARMADURA"
-  | "PRODUCAO_METALURGIA"
-  | "EXPEDICAO"
-  | "MONTAGEM"
-  | "ACOMPANHAMENTO";
 export type StatusImportacao = "PROCESSANDO" | "CONCLUIDA" | "REJEITADA";
 
 export type Importacao = {
@@ -163,9 +153,6 @@ export type ImportacoesDaCompetencia = {
   itens: Importacao[];
 };
 
-/** Resposta de erro do backend: mensagem pronta e, às vezes, um código. */
-export type ErroImportacao = { error?: string; codigo?: string };
-
 export const importacoesService = {
   listar: async (anoMes: string): Promise<ImportacoesDaCompetencia> => {
     const { data } = await api.get<{ data: ImportacoesDaCompetencia }>(
@@ -181,10 +168,10 @@ export const importacoesService = {
     return data.data;
   },
 
-  /** Importação em lote, passo 1: envia o arquivo e recebe a prévia (nada é importado). */
-  analisarLote: async (anoMes: string, arquivo: File, onProgresso?: (percentual: number) => void): Promise<PreviaLote> => {
+  /** Importação em lote, passo 1: envia o arquivo e recebe a prévia (nada é importado). Com `tipo`, só a aba dele. */
+  analisarLote: async (anoMes: string, arquivo: File, onProgresso?: (percentual: number) => void, tipo?: string): Promise<PreviaLote> => {
     const { data } = await api.post<{ data: PreviaLote }>(`/proxy/competencias/${anoMes}/importacoes/lote/analise`, arquivo, {
-      params: { nomeArquivo: arquivo.name },
+      params: { nomeArquivo: arquivo.name, tipo },
       headers: { "Content-Type": "application/octet-stream" },
       onUploadProgress: (e) => {
         if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
@@ -194,35 +181,15 @@ export const importacoesService = {
   },
 
   /** Importação em lote, passo 2: importa o que a prévia indicou; devolve as importações na fila. */
-  importarLote: async (anoMes: string, previa: PreviaLote, reimportar = false): Promise<PreviaLote> => {
+  importarLote: async (anoMes: string, previa: PreviaLote, reimportar = false, tipo?: string): Promise<PreviaLote> => {
     const { data } = await api.post<{ data: PreviaLote }>(`/proxy/competencias/${anoMes}/importacoes/lote/importar`, {
       hash: previa.hash,
       nomeArquivo: previa.nomeArquivo,
       // Sem nenhuma mudança no arquivo: reimporta o mês do envio assim mesmo.
       reimportar,
+      // O da prévia do Importar da linha do tipo: só a aba dele entra.
+      tipo,
     });
-    return data.data;
-  },
-
-  /** O arquivo vai cru no corpo; tipo e nome, na query. */
-  enviar: async (
-    anoMes: string,
-    tipo: TipoImportacao,
-    arquivo: File,
-    forcar: boolean,
-    onProgresso?: (percentual: number) => void,
-  ): Promise<Importacao> => {
-    const { data } = await api.post<{ data: Importacao }>(
-      `/proxy/competencias/${anoMes}/importacoes`,
-      arquivo,
-      {
-        params: { tipo, nomeArquivo: arquivo.name, forcar: forcar || undefined },
-        headers: { "Content-Type": "application/octet-stream" },
-        onUploadProgress: (e) => {
-          if (e.total) onProgresso?.(Math.round((e.loaded / e.total) * 100));
-        },
-      },
-    );
     return data.data;
   },
 };

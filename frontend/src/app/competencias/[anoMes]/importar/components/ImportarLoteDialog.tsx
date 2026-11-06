@@ -212,38 +212,46 @@ function Aba({ anoMes, a, onAbrirRelatorio }: { anoMes: string; a: AbaLote; onAb
  * "Importar", os meses que mudaram entram na fila, um por vez; um erro é
  * avisado e o próximo segue. Sem nenhuma mudança, "Importar" continua valendo e
  * reimporta o mês do envio das abas sem mudança (11/10/2026).
+ *
+ * Com `tipo` (o Importar ou Reimportar da linha do tipo, 06/11/2026), o mesmo
+ * diálogo só com a aba dele: na lista dos arquivos, na prévia e na importação.
  */
-/** Os arquivos que a importação lê, com as abas de cada um (o reconhecimento é pelo nome da aba). */
-const ARQUIVOS_DE_IMPORTACAO = [
+/** Os arquivos que a importação lê, com as abas de cada um e o tipo de cada aba (o reconhecimento é pelo nome da aba). */
+const ARQUIVOS_DE_IMPORTACAO: Array<{ arquivo: string; abas: Record<string, string> }> = [
   {
     arquivo: "SIG BPM 2026 - LISTAS REALIZADO (OPERAÇÃO)",
-    abas: [
-      "Projetos (Resumo)",
-      "Produção (Resumo)",
-      "Produção (Lista pst)",
-      "Produção (Armaduras)",
-      "Produção (Metalúrgica)",
-      "Expedição (Resumo)",
-      "Montagem (Resumo)",
-      "Acompanhamentos",
-      "Medições",
-      "Devoluções (Resumo)",
-      "Saídas (Resumo)",
-      "Quadro de Lotação",
-      "Indicadores (Admin.)",
-      "Estoque (2025)",
-    ],
+    abas: {
+      "Projetos (Resumo)": "PROJETO",
+      "Produção (Resumo)": "PRODUCAO",
+      "Produção (Lista pst)": "PRODUCAO_PISTA",
+      "Produção (Armaduras)": "PRODUCAO_ARMADURA",
+      "Produção (Metalúrgica)": "PRODUCAO_METALURGIA",
+      "Expedição (Resumo)": "EXPEDICAO",
+      "Montagem (Resumo)": "MONTAGEM",
+      Acompanhamentos: "ACOMPANHAMENTO",
+      Medições: "MEDICAO",
+      "Devoluções (Resumo)": "DEVOLUCAO",
+      "Saídas (Resumo)": "SAIDA",
+      "Quadro de Lotação": "QUADRO_LOTACAO",
+      "Indicadores (Admin.)": "INDICADORES_ADMIN",
+      "Estoque (2025)": "ESTOQUE_INICIAL",
+    },
   },
   // As abas Requisições (Lista) e Notas Fiscais (Lista) saíram do arquivo em 15/10/2026 e voltaram em 26/10/2026 (a etapa Linhas);
   // a Impostos (Lista), os Créditos de Impostos, entrou em 04/11/2026.
-  { arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)", abas: ["Balancete (Lista)", "Requisições (Lista)", "Notas Fiscais (Lista)", "Impostos (Lista)"] },
-  { arquivo: "CONTROLE DAS VENDAS - COMERCIAL", abas: ["DRE", "Indicadores (Comercial)"] },
+  {
+    arquivo: "SIG BPM 2026 - LISTAS REALIZADO (RESULTADOS)",
+    abas: { "Balancete (Lista)": "BALANCETE", "Requisições (Lista)": "REQUISICOES", "Notas Fiscais (Lista)": "NOTAS_FISCAIS", "Impostos (Lista)": "CREDITOS_IMPOSTOS" },
+  },
+  { arquivo: "CONTROLE DAS VENDAS - COMERCIAL", abas: { DRE: "DRE_COMERCIAL", "Indicadores (Comercial)": "INDICADORES_COMERCIAL" } },
 ];
 
 export function ImportarLoteDialog({
   anoMes,
   aberto,
   fechada,
+  tipo,
+  titulo,
   onFechar,
   onAbrirRelatorio,
 }: {
@@ -251,6 +259,10 @@ export function ImportarLoteDialog({
   aberto: boolean;
   /** Competência fechada: só o balancete entra, para comparar. */
   fechada: boolean;
+  /** O Importar da linha de um tipo: só a aba dele. */
+  tipo?: string;
+  /** O título no Importar da linha ("Reimportar Projetos"); sem ele, o do Importar Arquivo. */
+  titulo?: string;
   onFechar: () => void;
   onAbrirRelatorio: (id: string) => void;
 }) {
@@ -265,12 +277,12 @@ export function ImportarLoteDialog({
       setEnvio(0);
       setPrevia(null);
       setImportado(null);
-      return importacoesService.analisarLote(anoMes, arquivo, setEnvio);
+      return importacoesService.analisarLote(anoMes, arquivo, setEnvio, tipo);
     },
     onSuccess: setPrevia,
   });
   const importar = useMutation({
-    mutationFn: () => importacoesService.importarLote(anoMes, previa!, reimportar),
+    mutationFn: () => importacoesService.importarLote(anoMes, previa!, reimportar, tipo),
     onSuccess: (r) => {
       setImportado(r);
       // As importações novas (na fila) já entram no Histórico, no Em Vigor e nos sinais das competências.
@@ -296,6 +308,9 @@ export function ImportarLoteDialog({
   const aReimportar = aImportar.length === 0 ? meses.filter((m) => m.acao === "SEM_MUDANCA" && m.atual) : [];
   const reimportar = aReimportar.length > 0;
   const quantos = aImportar.length || aReimportar.length;
+  // Os arquivos que servem; no Importar da linha, só o do tipo, com a aba dele.
+  const arquivos = ARQUIVOS_DE_IMPORTACAO.map((a) => ({ arquivo: a.arquivo, abas: Object.keys(a.abas).filter((aba) => !tipo || a.abas[aba] === tipo) })).filter((a) => a.abas.length);
+  const abaDoTipo = tipo ? arquivos[0]?.abas[0] : undefined;
   return (
     <Dialog
       open={aberto}
@@ -309,11 +324,21 @@ export function ImportarLoteDialog({
       {/* O topo (título, descrição, resumo do arquivo e rótulos da tabela) e os botões ficam fixos; só as linhas da tabela rolam. */}
       <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-sm sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{fechada ? "Comparar Balancete" : "Importar Arquivo"}</DialogTitle>
+          <DialogTitle>{titulo ?? (fechada ? "Comparar Balancete" : "Importar Arquivo")}</DialogTitle>
           <DialogDescription>
-            Escolha uma planilha (.xlsx). A ferramenta lê o arquivo inteiro, reconhece as abas pelo nome (Balancete (Lista), Projetos (Resumo), DRE…),
-            confere a estrutura e compara, mês a mês, com o que está importado — o mês desta competência e os meses anteriores ainda abertos. Nada é
-            importado antes de você confirmar.
+            {tipo ? (
+              <>
+                Escolha a planilha (.xlsx) com a aba {abaDoTipo}: o arquivo completo ou uma pasta de trabalho só com essa aba. A ferramenta confere a
+                estrutura e compara, mês a mês, com o que está importado — o mês desta competência e os meses anteriores ainda abertos. Só essa aba é lida,
+                e nada é importado antes de você confirmar.
+              </>
+            ) : (
+              <>
+                Escolha uma planilha (.xlsx). A ferramenta lê o arquivo inteiro, reconhece as abas pelo nome (Balancete (Lista), Projetos (Resumo), DRE…),
+                confere a estrutura e compara, mês a mês, com o que está importado — o mês desta competência e os meses anteriores ainda abertos. Nada é
+                importado antes de você confirmar.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -338,9 +363,9 @@ export function ImportarLoteDialog({
             {analisar.isError ? <p className="text-sm text-red-700">{mensagemDoErro(analisar.error, "Não foi possível ler o arquivo.")}</p> : null}
             {/* Os arquivos que servem para a importação, com as abas que a ferramenta lê de cada um. */}
             <div className="rounded-sm border border-gray-200 bg-gray-50 p-3">
-              <p className="text-xs font-bold text-gray-900">Arquivos que Servem para a Importação</p>
+              <p className="text-xs font-bold text-gray-900">{arquivos.length === 1 ? "Arquivo que Serve" : "Arquivos que Servem"} para a Importação</p>
               <ul className="mt-1.5 space-y-1 text-xs text-gray-700">
-                {ARQUIVOS_DE_IMPORTACAO.map((a) => (
+                {arquivos.map((a) => (
                   <li key={a.arquivo}>
                     <span className="font-medium text-gray-900">{a.arquivo}</span>: {a.abas.join(", ")}
                   </li>

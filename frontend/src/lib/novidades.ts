@@ -28,6 +28,17 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 06/11/2026, 15:50
+  {
+    publicada: "2026-11-06T15:50",
+    processo: "Fechamento Mensal",
+    tela: "Importações",
+    rota: "/competencias/0000-00/importar",
+    itens: [
+      "O Importar (ou Reimportar) da linha de cada tipo abre o mesmo diálogo do Importar Arquivo, só com a aba daquele tipo: escolhido o arquivo, a prévia mostra, mês a mês, o que muda, e nada é importado antes de você clicar em Importar.",
+      "Serve o arquivo completo (o LISTAS REALIZADO, por exemplo) ou uma planilha só com aquela aba; as outras abas do arquivo ficam de fora.",
+    ],
+  },
   // 06/11/2026, 12:03
   {
     publicada: "2026-11-06T12:03",

@@ -258,14 +258,15 @@ export const importacoesService = {
   /**
    * Importação em lote, passo 1: guarda o arquivo (pelo hash) e devolve a
    * prévia — as abas reconhecidas e, em cada uma, o que fazer no mês do envio
-   * e nos meses anteriores do ano (analisarArquivo). Nada é importado.
+   * e nos meses anteriores do ano (analisarArquivo). Nada é importado. Com
+   * `tipo` (o Importar da linha do tipo), só a aba dele.
    */
-  async analisarLote(input: { ano: number; mes: number; nomeArquivo: string; conteudo: Buffer; alcanca: (tipo: TipoImportacao) => boolean }) {
+  async analisarLote(input: { ano: number; mes: number; nomeArquivo: string; conteudo: Buffer; alcanca: (tipo: TipoImportacao) => boolean; tipo?: TipoImportacao }) {
     if (input.conteudo.length === 0) throw new RegraImportacaoError(400, "O arquivo enviado está vazio.");
     const competencia = await competenciaPorAnoMes(input.ano, input.mes);
     let analise: Awaited<ReturnType<typeof analisarArquivo>>;
     try {
-      analise = await analisarArquivo(input.conteudo, competencia, input.alcanca);
+      analise = await analisarArquivo(input.conteudo, competencia, input.alcanca, undefined, input.tipo);
     } catch (error) {
       if (error instanceof ArquivoInvalidoError) throw new RegraImportacaoError(400, error.message);
       throw error;
@@ -278,7 +279,7 @@ export const importacoesService = {
     } catch {
       await writeFile(caminho, input.conteudo);
     }
-    previas.set(`${competencia.id}|${hash}`, { em: Date.now(), analise });
+    previas.set(`${competencia.id}|${hash}|${input.tipo ?? ""}`, { em: Date.now(), analise });
     return { hash, nomeArquivo: input.nomeArquivo, ...analise };
   },
 
@@ -291,6 +292,8 @@ export const importacoesService = {
    * `reimportar` (11/10/2026): o arquivo é igual ao importado, e o usuário quer importá-lo assim mesmo (por exemplo,
    * para a importação gravar algo que antes não lia, como o nome das obras da aba Pedidos). Entram também os meses
    * sem mudança do mês do envio (os anteriores ficam como estão, para não pedirem reapuração à toa).
+   *
+   * `tipo`: o da prévia do Importar da linha do tipo; só a aba dele entra.
    */
   async importarLote(input: {
     ano: number;
@@ -300,6 +303,7 @@ export const importacoesService = {
     usuarioId: string;
     alcanca: (tipo: TipoImportacao) => boolean;
     reimportar?: boolean;
+    tipo?: TipoImportacao;
   }) {
     const origem = await competenciaPorAnoMes(input.ano, input.mes);
     let conteudo: Buffer;
@@ -309,9 +313,17 @@ export const importacoesService = {
       throw new RegraImportacaoError(404, "O arquivo analisado não foi encontrado. Escolha o arquivo de novo.");
     }
     // A prévia que o usuário acabou de ver (até 10 minutos); senão, refeita.
-    const guardada = previas.get(`${origem.id}|${input.hash}`);
-    previas.delete(`${origem.id}|${input.hash}`);
-    const analise = guardada && Date.now() - guardada.em < 10 * 60_000 ? guardada.analise : await analisarArquivo(conteudo, origem, input.alcanca);
+    const chave = `${origem.id}|${input.hash}|${input.tipo ?? ""}`;
+    const guardada = previas.get(chave);
+    previas.delete(chave);
+    let analise: Awaited<ReturnType<typeof analisarArquivo>>;
+    try {
+      analise = guardada && Date.now() - guardada.em < 10 * 60_000 ? guardada.analise : await analisarArquivo(conteudo, origem, input.alcanca, undefined, input.tipo);
+    } catch (error) {
+      // Como na prévia: o arquivo que não se lê (ou sem a aba do tipo) vira mensagem.
+      if (error instanceof ArquivoInvalidoError) throw new RegraImportacaoError(400, error.message);
+      throw error;
+    }
     const anoMesOrigem = `${input.ano}-${String(input.mes).padStart(2, "0")}`;
     type MesImportado = (typeof analise.abas)[number]["meses"][number] & { importacaoId?: string; erro?: string };
     const abas = [];
