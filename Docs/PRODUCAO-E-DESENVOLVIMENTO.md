@@ -124,7 +124,7 @@ Só com a autorização do Adão (“publique”); cada autorização vale para 
 1. Desenvolver e conferir em http://localhost:3100, com a cópia do banco. Com migração nova, aplicar primeiro no
    desenvolvimento (`npx prisma migrate deploy`, em `backend`) e conferir.
 2. Etiquetar o commit (`git tag publicado-AAAA-MM-DD-…`) e enviar: `git push origin "<tag>^{commit}:refs/heads/master"` e
-   `git push origin <tag>` (repositório https://github.com/AdaoBPM/sig-bpm). **Enviar à `master` já é publicar.**
+   `git push origin <tag>` (repositório https://github.com/desenvolvimento-bpm/sig-bpm; até 06/11/2026, github.com/AdaoBPM/sig-bpm, que redireciona). **Enviar à `master` já é publicar.**
 3. Acompanhar o deploy no servidor (a cada 2 minutos o timer confere a `master`; ele faz o back-up do banco, aplica as
    migrações e troca os containers): `ssh srv-docker "cd /root/dados/sig-bpm && tail -20 deploy.log && docker compose ps"`.
 4. Com script de dados: seguir as regras do servidor (simular sem `--gravar` e mostrar ao Adão, aprovação, conferir que
