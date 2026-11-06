@@ -32,6 +32,10 @@ type PainelProps = {
   onOrdenar: (decrescente: boolean) => void;
   /** null: sem filtro (todos marcados). */
   onAplicar: (chaves: string[] | null) => void;
+  /** Algum filtro na tabela, nesta coluna ou em outra: habilita o Limpar Todos os Filtros. */
+  algumFiltro: boolean;
+  /** Limpa os filtros de todas as colunas da tabela (a ordem fica). */
+  onLimparTodos: () => void;
   /** Só ordenar, sem lista de valores (a data da Auditoria, filtrada por De e Até). */
   soOrdenar?: boolean;
   /** Só filtrar, sem ordenar (colunas que o servidor não ordena). */
@@ -43,7 +47,7 @@ type PainelProps = {
  * Não sabe de onde vêm os valores: a tabela filtrada na tela usa
  * FiltroDeColuna; a Auditoria, que filtra no servidor, passa os valores dele.
  */
-export function PainelFiltro({ rotulo, tipo, alinhamento, filtrado, ordem, valores: carregar, marcadosAoAbrir, onOrdenar, onAplicar, soOrdenar, semOrdem }: PainelProps) {
+export function PainelFiltro({ rotulo, tipo, alinhamento, filtrado, ordem, valores: carregar, marcadosAoAbrir, onOrdenar, onAplicar, algumFiltro, onLimparTodos, soOrdenar, semOrdem }: PainelProps) {
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const [valores, setValores] = useState<ValorDoFiltro[]>([]);
@@ -107,6 +111,11 @@ export function PainelFiltro({ rotulo, tipo, alinhamento, filtrado, ordem, valor
                 <button type="button" className={itemMenu} disabled={!filtrado} onClick={fechaE(() => onAplicar(null))}>
                   <FilterX className="size-4 text-gray-500" />
                   Limpar Filtro de &quot;{rotulo}&quot;
+                </button>
+                {/* Os filtros de todas as colunas (06/11/2026, pedido do Adão), no lugar do Limpar Filtros acima da tabela. */}
+                <button type="button" className={itemMenu} disabled={!algumFiltro} onClick={fechaE(onLimparTodos)}>
+                  <FilterX className="size-4 text-gray-500" />
+                  Limpar Todos os Filtros
                 </button>
                 <div className="my-1.5 border-t border-gray-200" />
                 <div className="relative px-1">
@@ -203,6 +212,8 @@ function FiltroDeColuna<T>({ coluna, linhas, colunas, estado, onMudar }: FiltroP
         else filtros[coluna.chave] = chaves;
         onMudar({ ...estado, filtros });
       }}
+      algumFiltro={Object.keys(estado.filtros).length > 0}
+      onLimparTodos={() => onMudar({ ...estado, filtros: {} })}
     />
   );
 }

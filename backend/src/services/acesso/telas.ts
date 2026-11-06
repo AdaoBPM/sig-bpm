@@ -255,6 +255,17 @@ export const CATALOGO_DE_TELAS: GrupoDoCatalogo[] = [
       },
     ],
   },
+  // Os Arquivos Gerais (05/11/2026, pedido do Adão), acima do Controle de Usuários, como no menu: Ler visualiza e baixa os
+  // arquivos; Editar também os adiciona e exclui.
+  {
+    recurso: "ARQUIVOS_GERAIS",
+    nome: "Arquivos Gerais",
+    area: "arquivos_gerais",
+    telas: [
+      { codigo: "arquivos_treinamentos", nome: "Treinamentos" },
+      { codigo: "arquivos_informativos", nome: "Informativos" },
+    ],
+  },
   {
     recurso: "CONTROLE_USUARIOS",
     nome: "Controle de Usuários",

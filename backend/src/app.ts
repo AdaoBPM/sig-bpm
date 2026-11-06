@@ -32,6 +32,7 @@ import { relatoriosRoutes } from "./routes/relatorios/relatoriosRoutes.js";
 import { resultadosLinhaRoutes } from "./routes/resultadosLinha/resultadosLinhaRoutes.js";
 import { creditosImpostosRoutes } from "./routes/impostos/creditosImpostosRoutes.js";
 import { realizadoObraRoutes } from "./routes/realizadoObra/realizadoObraRoutes.js";
+import { arquivosGeraisRoutes } from "./routes/arquivosGerais/arquivosGeraisRoutes.js";
 import { relatoriosExecutivosRoutes } from "./routes/analisesGerenciais/relatoriosExecutivosRoutes.js";
 import { paineisDeBordoRoutes } from "./routes/analisesGerenciais/paineisDeBordoRoutes.js";
 import { apiExternaRoutes, conectividadeRoutes } from "./routes/conectividade/conectividadeRoutes.js";
@@ -104,6 +105,8 @@ app.use("/lancamentos-receita", lancamentosReceitaRoutes);
 app.use("/relatorios", relatoriosRoutes);
 // O Realizado por Obra (03/11/2026): os Resultados de uma venda.
 app.use("/realizado-por-obra", realizadoObraRoutes);
+// Os Arquivos Gerais (05/11/2026): as telas Treinamentos e Informativos.
+app.use("/arquivos-gerais", arquivosGeraisRoutes);
 // Os Relatórios Executivos (15/10/2026, Análises Gerenciais).
 app.use("/relatorios-executivos", relatoriosExecutivosRoutes);
 // Os Painéis de Bordo (31/10/2026, Análises Gerenciais), feitos a partir dos Relatórios Executivos.

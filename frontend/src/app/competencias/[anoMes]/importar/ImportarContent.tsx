@@ -108,13 +108,6 @@ const COLUNAS_HISTORICO: Coluna<Importacao>[] = [
   { chave: "por", rotulo: "Por", valor: (i) => i.usuario?.nome },
 ];
 
-function LimparFiltros({ onLimpar }: { onLimpar: () => void }) {
-  return (
-    <button type="button" onClick={onLimpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-      Limpar Filtros
-    </button>
-  );
-}
 
 export function ImportarContent() {
   const { anoMes } = useParams<{ anoMes: string }>();
@@ -235,15 +228,7 @@ export function ImportarContent() {
       />
 
       {aba === "vigor" ? (
-        <QuadroTabela
-          barra={
-            vigor.ativos ? (
-              <div className="ml-auto">
-                <LimparFiltros onLimpar={vigor.limpar} />
-              </div>
-            ) : null
-          }
-        >
+        <QuadroTabela>
           {isPending ? (
             <Carregando linhas={6} />
           ) : (
@@ -314,13 +299,6 @@ export function ImportarContent() {
         </QuadroTabela>
       ) : (
         <QuadroTabela
-          barra={
-            historico.ativos ? (
-              <div className="ml-auto">
-                <LimparFiltros onLimpar={historico.limpar} />
-              </div>
-            ) : null
-          }
           rodape={
             historico.total > 0 ? (
               <Paginacao

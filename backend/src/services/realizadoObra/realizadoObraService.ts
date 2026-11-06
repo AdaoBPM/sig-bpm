@@ -403,21 +403,18 @@ export const realizadoObraService = {
       if (linhaId) somar(linhaId, i, codigo, v, c);
     };
     const indiceDa = new Map(meses.flatMap((m, i) => (m.competenciaId ? [[m.competenciaId, i] as const] : [])));
-    // As contas com um percentual dos créditos de 100% ou mais (o crédito maior que o custo da conta na unidade): sem o ajuste.
-    const semAjuste = new Set<string>();
-    // Os custos e os volumes gravados; a receita gravada (pela Receita Prévia) dá lugar à do modelo da aba Obras.
+    // Os custos e os volumes gravados; a receita gravada (pela Receita Prévia) dá lugar à do modelo da aba Obras. A conta com
+    // um percentual dos créditos de 100% ou mais (o crédito maior que o custo da conta na unidade) fica sem o ajuste, sem
+    // aviso (05/11/2026, pedido do Adão).
     for (const r of rows) {
       const codigo = r.linhaDRE.codigo;
       if (codigo.startsWith("ROB.") || codigo.startsWith("ROL.")) continue;
       const i = indiceDa.get(r.competenciaId)!;
       const valor = Number(r.valor);
       const p = ehContaDosCreditos(codigo) ? percentuais.get(r.competenciaId)?.get(`${r.unidade}|${codigo}`) : undefined;
-      const ajustado = p ? comOsCreditos(valor, tipoVenda, p) : valor;
-      if (ajustado === null) semAjuste.add(`${est.find((l) => l.codigo === codigo)?.descricao ?? codigo} (${NOME_DA_UNIDADE[r.unidade] ?? r.unidade}, ${meses[i].rotulo})`);
-      const v = ajustado ?? valor;
+      const v = (p ? comOsCreditos(valor, tipoVenda, p) : valor) ?? valor;
       nasAbas(r.linhaId, i, codigo, v, { direto: Number(r.direto), rateio: valor - Number(r.direto), creditos: v - valor });
     }
-    if (semAjuste.size) avisos.push(`Créditos de Impostos de 100% ou mais do custo da conta na unidade, sem o ajuste: ${[...semAjuste].join("; ")}.`);
     // As receitas e os impostos (o modelo da aba Obras), por linha. Os impostos não são item da DRE (o total deles é a ROB
     // menos a ROL): ficam só na composição e na ROL de cada aba, a ROB menos os impostos.
     const linhasDaVenda = new Set(linhasDoCadastro.map((l) => l.id));

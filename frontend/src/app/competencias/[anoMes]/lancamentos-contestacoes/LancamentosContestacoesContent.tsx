@@ -162,11 +162,6 @@ export function LancamentosContestacoesContent() {
         rodape={
           itens.length > 0 ? (
             <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-2.5 text-sm">
-              {tabela.ativos ? (
-                <button type="button" onClick={tabela.limpar} className="mr-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar Filtros
-                </button>
-              ) : null}
               <span className="text-gray-600">{tabela.total !== tabela.totalGeral ? `Total filtrado (${tabela.total} de ${tabela.totalGeral})` : "Total"}</span>
               <span className="font-bold text-gray-900">
                 {moeda(tabela.total !== tabela.totalGeral ? (tabela.filtradas.reduce((s, l) => s + Math.round(Number(l.valor) * 100), 0) / 100).toFixed(2) : (dados?.total ?? "0"))}

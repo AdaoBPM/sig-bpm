@@ -174,13 +174,6 @@ export function DivergenciasContent() {
       />
 
       <QuadroTabela
-        barra={
-          tabela.ativos ? (
-            <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-              Limpar Filtros
-            </button>
-          ) : undefined
-        }
         rodape={
           d && tabela.total > 0 ? (
             <Paginacao

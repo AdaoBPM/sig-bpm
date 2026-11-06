@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,24 +49,6 @@ export function SeletorFiltro({
           ))}
         </SelectContent>
       </Select>
-    </div>
-  );
-}
-
-/** A barra de filtros acima da tabela, com "Limpar filtros" quando algum está ativo. */
-export function BarraDeFiltros({ children, ativos, onLimpar, direita }: { children: ReactNode; ativos?: boolean; onLimpar?: () => void; direita?: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="flex flex-wrap items-end gap-3">
-        {children}
-        {ativos && onLimpar ? (
-          <button type="button" onClick={onLimpar} className="inline-flex h-9 items-center gap-1 rounded-sm px-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900">
-            <X className="size-3.5" />
-            Limpar Filtros
-          </button>
-        ) : null}
-      </div>
-      {direita ? <div className="flex items-end gap-2">{direita}</div> : null}
     </div>
   );
 }

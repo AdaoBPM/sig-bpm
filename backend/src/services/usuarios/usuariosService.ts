@@ -45,6 +45,8 @@ export const RECURSOS: RecursoSistema[] = [
   "CADASTROS_APURACAO",
   "CENTRAL_CONECTIVIDADE",
   "CADASTROS_CONTROLADORIA",
+  // Os Arquivos Gerais (05/11/2026), acima do Controle de Usuários, como no menu.
+  "ARQUIVOS_GERAIS",
   "CONTROLE_USUARIOS",
 ];
 const ROTULO_RECURSO: Record<RecursoSistema, string> = {
@@ -59,6 +61,7 @@ const ROTULO_RECURSO: Record<RecursoSistema, string> = {
   CENTRAL_CONECTIVIDADE: "Central de Conectividade",
   CONTESTACOES_GASTOS: "Contestações de Gastos",
   REALIZADO_POR_OBRA: "Realizado por Obra",
+  ARQUIVOS_GERAIS: "Arquivos Gerais",
 };
 const ACOES: AcaoPermissao[] = ["LER", "EDITAR"];
 const SETORES: Array<{ tipo: TipoImportacao; rotulo: string }> = [

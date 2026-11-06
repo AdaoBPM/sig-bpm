@@ -44,5 +44,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image).*)"],
+  // Fora do proxy (06/11/2026): os Arquivos Gerais (até 500 MB). Com o proxy, o Next guarda o corpo inteiro na memória e o
+  // corta no proxyClientMaxBodySize; sem ele, o arquivo vai em fluxo ao backend, que confere o login e a permissão.
+  matcher: ["/((?!_next/static|_next/image|api/proxy/arquivos-gerais/).*)"],
 };

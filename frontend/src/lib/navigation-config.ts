@@ -9,6 +9,9 @@ import {
   ChartPie,
   SlidersHorizontal,
   Factory,
+  FolderOpen,
+  GraduationCap,
+  Newspaper,
   FileSpreadsheet,
   HandCoins,
   HardHat,
@@ -245,6 +248,18 @@ export const navGrupos: NavGrupo[] = [
           },
         ],
       },
+      // Os Arquivos Gerais (05/11/2026, pedido do Adão), acima do Controle de Usuários: as telas Treinamentos e Informativos, em
+      // que se adicionam, visualizam, baixam e excluem arquivos.
+      {
+        title: "Arquivos Gerais",
+        href: "/arquivos-gerais/treinamentos",
+        icon: FolderOpen,
+        recurso: "ARQUIVOS_GERAIS",
+        telas: [
+          { title: "Treinamentos", href: "/arquivos-gerais/treinamentos", icon: GraduationCap, permission: "arquivos_treinamentos:ler" },
+          { title: "Informativos", href: "/arquivos-gerais/informativos", icon: Newspaper, permission: "arquivos_informativos:ler" },
+        ],
+      },
       {
         title: "Controle de Usuários",
         // Os Perfis antes dos Usuários (27/10/2026): o grupo abre nos Perfis.
@@ -338,6 +353,9 @@ const PERMISSAO_DA_TELA: Array<[RegExp, string]> = [
   [/^\/analises-gerenciais\/relatorios-executivos(\/|$)/, "relatorios_executivos:ler"],
   [/^\/analises-gerenciais\/paineis-de-bordo(\/|$)/, "paineis_de_bordo:ler"],
   [/^\/central-de-conectividade\/biblioteca-de-apis(\/|$)/, "biblioteca_apis:ler"],
+  // Os Arquivos Gerais (05/11/2026).
+  [/^\/arquivos-gerais\/treinamentos(\/|$)/, "arquivos_treinamentos:ler"],
+  [/^\/arquivos-gerais\/informativos(\/|$)/, "arquivos_informativos:ler"],
   // O Realizado por Obra (03/11/2026): a tela Resultados.
   [/^\/realizado-por-obra\/resultados(\/|$)/, "realizado_obra_resultados:ler"],
   [/^\/relatorios\/resultados(\/|$)/, "relatorio_resultados:ler"],

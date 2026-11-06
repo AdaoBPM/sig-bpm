@@ -43,9 +43,13 @@ export function useMesesRecolhidos(): [boolean, () => void] {
   return [recolhido, alternar];
 }
 
-/** O botão ao lado dos níveis: a seta para a direita expande os meses anteriores; para a esquerda, recolhe. */
-export function BotaoMeses({ recolhido, onAlternar }: { recolhido: boolean; onAlternar: () => void }) {
-  const rotulo = recolhido ? "Expandir os meses anteriores" : "Recolher os meses anteriores";
+/**
+ * O botão ao lado dos níveis: a seta para a direita expande os meses anteriores; para a esquerda, recolhe. `todos`: recolhe
+ * todos os meses, também o de referência (o Realizado por Obra).
+ */
+export function BotaoMeses({ recolhido, onAlternar, todos = false }: { recolhido: boolean; onAlternar: () => void; todos?: boolean }) {
+  const meses = todos ? "os meses" : "os meses anteriores";
+  const rotulo = recolhido ? `Expandir ${meses}` : `Recolher ${meses}`;
   return (
     <Button
       type="button"

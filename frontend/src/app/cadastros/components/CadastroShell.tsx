@@ -20,8 +20,6 @@ type CadastroShellProps = {
   /** Sem ele, a quantidade por página é fixa. */
   onPorPaginaChange?: (porPagina: number) => void;
   carregando: boolean;
-  /** Com filtro nos rótulos: o total antes dos filtros e o "Limpar filtros". */
-  filtros?: { totalGeral: number; ativos: boolean; onLimpar: () => void };
   /** Botões à direita do título, como o de recarga da planilha. */
   acoes?: ReactNode;
   /** A caixa "Apenas Ativas" (Cadastros da Controladoria), logo antes dos botões. */
@@ -46,7 +44,6 @@ export function CadastroShell({
   onPaginaChange,
   onPorPaginaChange,
   carregando,
-  filtros,
   acoes,
   apenasAtivas,
   exportar,
@@ -71,13 +68,6 @@ export function CadastroShell({
         }
       />
       <QuadroTabela
-        barra={
-          filtros?.ativos ? (
-            <button type="button" onClick={filtros?.onLimpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-              Limpar Filtros
-            </button>
-          ) : undefined
-        }
         rodape={<Paginacao total={total} pagina={pagina} porPagina={porPagina} onPagina={onPaginaChange} onPorPagina={onPorPaginaChange} carregando={carregando} />}
       >
         {children}

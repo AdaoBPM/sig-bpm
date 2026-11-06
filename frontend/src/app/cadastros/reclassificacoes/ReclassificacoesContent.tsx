@@ -73,7 +73,6 @@ export function ReclassificacoesContent() {
       onPorPaginaChange={tabela.setPorPagina}
       onPaginaChange={tabela.setPagina}
       carregando={isPending}
-      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       <DataTable<Reclassificacao>
         data={tabela.visiveis}

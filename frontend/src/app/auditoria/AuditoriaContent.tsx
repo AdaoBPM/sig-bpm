@@ -90,6 +90,9 @@ export function AuditoriaContent() {
   const opcoes = useQuery({ queryKey: ["auditoria", "opcoes"], queryFn: auditoriaService.opcoes });
   const log = useQuery({ queryKey: ["auditoria", filtro], queryFn: () => auditoriaService.consultar(filtro), placeholderData: keepPreviousData });
   const muda = (p: Partial<FiltroAuditoria>) => setFiltro((f) => ({ ...f, ...p, pagina: p.pagina ?? 1 }));
+  // O Limpar Todos os Filtros dos rótulos: os filtros das colunas, sem o período nem os acessos.
+  const algumFiltro = !!(filtro.usuarioId || filtro.acao || filtro.entidade);
+  const limparTodos = () => muda({ usuarioId: undefined, acao: undefined, entidade: undefined });
   const rotuloAcao = new Map(opcoes.data?.acoes.map((a) => [a.acao, a.rotulo]));
   const rotuloEntidade = new Map(opcoes.data?.entidades.map((e) => [e.entidade, e.rotulo]));
   // O Exportar (30/10/2026): as colunas da tabela e todas as páginas dos filtros (até 20 mil registros).
@@ -126,7 +129,10 @@ export function AuditoriaContent() {
         }
         comoUsar={
           <ul>
-            <li>Informe o período em De e Até, à direita do título, e use os filtros nos rótulos das colunas (cada um se limpa no próprio rótulo).</li>
+            <li>
+              Informe o período em De e Até, à direita do título, e use os filtros nos rótulos das colunas. O menu de cada rótulo limpa o filtro da coluna (Limpar Filtro de) ou os de todas
+              as colunas (Limpar Todos os Filtros).
+            </li>
             <li>Marque “Incluir Acessos às Telas”, ao lado do período, para ver também as visitas às telas.</li>
             <li>Clique numa linha para ver cada campo alterado, com o antes e o depois.</li>
           </ul>
@@ -173,6 +179,8 @@ export function AuditoriaContent() {
                     marcadosAoAbrir={() => []}
                     onOrdenar={(decrescente) => muda({ ordem: decrescente ? "desc" : "asc" })}
                     onAplicar={() => undefined}
+                    algumFiltro={algumFiltro}
+                    onLimparTodos={limparTodos}
                   />
                 </span>
               </th>
@@ -194,6 +202,8 @@ export function AuditoriaContent() {
                       marcadosAoAbrir={() => filtro[campo] ?? valores.map((v) => v.chave)}
                       onOrdenar={() => undefined}
                       onAplicar={(chaves) => muda({ [campo]: chaves ?? undefined })}
+                      algumFiltro={algumFiltro}
+                      onLimparTodos={limparTodos}
                       semOrdem
                     />
                   </span>

@@ -142,6 +142,7 @@ export function TabelaResultados({
   estiloDoOrcado,
   rotulosDoTotal,
   consultaDaVenda,
+  recolheTodosOsMeses = false,
 }: {
   dados: Resultados;
   titulo: string;
@@ -190,6 +191,11 @@ export function TabelaResultados({
     /** Uma consulta própria de uma linha (a memória de cálculo dos subtotais agrupados): as linhas que a abrem e o modal. */
     memoria?: { abre: (l: LinhaResultado) => boolean; modal: (l: LinhaResultado, mes: number, onFechar: () => void) => ReactNode };
   };
+  /**
+   * Recolhidos, sem nenhum mês (05/11/2026: o Realizado por Obra, pedido do Adão): só a descrição, o acumulado (o realizado
+   * e o comparado) e as variações.
+   */
+  recolheTodosOsMeses?: boolean;
 }) {
   // Sem o primeiro total da ROL (21/10/2026): ele repete o segundo (depois da receita bruta e dos impostos). Nas visões
   // com um só (Despesas e Extra e RN, a ROL do Consolidado no topo), ele fica.
@@ -209,7 +215,7 @@ export function TabelaResultados({
   // (13/10/2026): os meses marcados e escondidos continuam marcados (a barra de marcação mostra quantos).
   const [recolhidoNaTela, alternarMeses] = useMesesRecolhidos();
   const recolhido = estatico ? estatico.recolhido : recolhidoNaTela;
-  const mostra = (i: number) => !recolhido || (i === referencia && !doCenario);
+  const mostra = (i: number) => !recolhido || (i === referencia && !doCenario && !recolheTodosOsMeses);
   // O R$/m³ do mês de referência (Resultados Empresariais); nos cenários, só no total.
   const unitarioNoMes = !doCenario && comUnitario;
   // O mês de referência da descrição: o último apurado.
@@ -313,7 +319,9 @@ export function TabelaResultados({
                 {estatico ? null : (
                   <span data-fora-da-imagem className="flex shrink-0 items-center gap-1.5">
                     <SeletorNivel nivel={niveis.nivelGeral} onEscolher={niveis.escolherNivel} />
-                    {dados.meses.length > 1 ? <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} /> : null}
+                    {dados.meses.length > 1 || (recolheTodosOsMeses && dados.meses.length) ? (
+                      <BotaoMeses recolhido={recolhido} onAlternar={alternarMeses} todos={recolheTodosOsMeses} />
+                    ) : null}
                   </span>
                 )}
                 <span className="truncate text-sm font-bold tracking-wide whitespace-nowrap text-gray-900 uppercase" title={titulo}>

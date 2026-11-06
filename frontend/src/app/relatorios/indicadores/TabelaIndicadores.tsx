@@ -324,13 +324,6 @@ export function TabelaIndicadores<T extends Indicador>({
   );
   return (
     <>
-      {tabela.ativos ? (
-        <div className="flex justify-end">
-          <button type="button" onClick={tabela.limpar} className="text-xs font-medium text-gray-900 underline underline-offset-2">
-            Limpar Filtros
-          </button>
-        </div>
-      ) : null}
       {/*
         Como a tabela de Resultados (12/10/2026; antes, uma caixa com rolagem própria): a página rola, os rótulos ficam
         presos logo abaixo do título da tela, as três primeiras colunas à esquerda, e a barra de rolagem lateral no pé

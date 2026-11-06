@@ -101,7 +101,6 @@ export function EstruturaDreContent() {
       onPorPaginaChange={tabela.setPorPagina}
       onPaginaChange={tabela.setPagina}
       carregando={isPending}
-      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       <DataTable<LinhaDRE>
         data={tabela.visiveis}

@@ -204,15 +204,7 @@ export function ReceitaPreviaContent() {
             <ExportarTabela titulo={`Receita Prévia · Lançamentos Manuais de Receita · ${anoMes.slice(5)}/${anoMes.slice(0, 4)}`} colunas={COLUNAS} linhas={tabela.filtradas} />
           </div>
         </div>
-        <QuadroTabela
-          barra={
-            tabela.ativos ? (
-              <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-                Limpar Filtros
-              </button>
-            ) : null
-          }
-        >
+        <QuadroTabela>
           <DataTable<LancamentoReceita>
             data={tabela.visiveis}
             cabecalho={tabela.cabecalho}

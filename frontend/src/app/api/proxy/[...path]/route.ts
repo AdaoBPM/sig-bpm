@@ -56,9 +56,11 @@ async function proxyRequest(
     cache: "no-store",
   };
 
-  // O vídeo (20/10/2026, Relatórios Executivos; até 200 MB) vai em fluxo, sem guardar o arquivo inteiro na memória.
+  // O vídeo (20/10/2026, Relatórios Executivos; até 200 MB) vai em fluxo, sem guardar o arquivo inteiro na memória; os
+  // Arquivos Gerais também (05/11/2026: qualquer tipo, até 500 MB), na ida e na volta.
   const ehVideo = (request.headers.get("content-type") ?? "").startsWith("video/");
-  if (method !== "GET" && method !== "HEAD" && ehVideo && request.body) {
+  const dosArquivosGerais = targetPath.startsWith("arquivos-gerais/");
+  if (method !== "GET" && method !== "HEAD" && (ehVideo || dosArquivosGerais) && request.body) {
     init.body = request.body;
     (init as RequestInit & { duplex: "half" }).duplex = "half";
   } else if (method !== "GET" && method !== "HEAD") {
@@ -76,9 +78,9 @@ async function proxyRequest(
     }
     const contentType = response.headers.get("content-type") ?? "application/json";
     // O vídeo (20/10/2026): em fluxo e em partes (206, com o Content-Range), para o player avançar e recuar.
-    if (contentType.startsWith("video/") || response.status === 206 || response.status === 416) {
+    if (contentType.startsWith("video/") || response.status === 206 || response.status === 416 || (dosArquivosGerais && targetPath.endsWith("/conteudo"))) {
       const repassar: Record<string, string> = { "Content-Type": contentType };
-      for (const h of ["content-length", "content-range", "accept-ranges", "cache-control"]) {
+      for (const h of ["content-length", "content-range", "accept-ranges", "cache-control", "content-disposition", "x-content-type-options"]) {
         const v = response.headers.get(h);
         if (v) repassar[h] = v;
       }

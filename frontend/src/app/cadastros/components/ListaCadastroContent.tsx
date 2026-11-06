@@ -124,7 +124,6 @@ export function ListaCadastroContent({ entidade, rota, titulo, descricao, comoUs
       onPorPaginaChange={tabela.setPorPagina}
       onPaginaChange={tabela.setPagina}
       carregando={def.isPending || lista.isPending}
-      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
     >
       {aviso}
       <DataTable<Registro>

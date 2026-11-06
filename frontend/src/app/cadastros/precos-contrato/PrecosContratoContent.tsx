@@ -87,7 +87,6 @@ export function PrecosContratoContent() {
       onPorPaginaChange={tabela.setPorPagina}
       onPaginaChange={tabela.setPagina}
       carregando={isPending}
-      filtros={{ totalGeral: tabela.totalGeral, ativos: tabela.ativos, onLimpar: tabela.limpar }}
       acoes={
         <label className="flex items-center gap-2 text-sm whitespace-nowrap text-gray-700">
           <input

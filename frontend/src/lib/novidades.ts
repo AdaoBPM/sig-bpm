@@ -28,6 +28,46 @@ const PAINEL = "/relatorios/painel";
 const DRE = "/competencias/0000-00/dre";
 
 export const NOVIDADES: Novidade[] = [
+  // 06/11/2026, 12:03
+  {
+    publicada: "2026-11-06T12:03",
+    processo: "Arquivos Gerais",
+    tela: "Treinamentos",
+    rota: "/arquivos-gerais/treinamentos",
+    itens: [
+      "O processo entra em uso, na Controladoria: os arquivos dos treinamentos (apostilas, apresentações, vídeos, listas de presença…) guardados no SIG.",
+      "Adicionar, à direita do título, envia um arquivo de qualquer tipo, até 500 MB, com a descrição que aparece na lista e serve para buscá-lo.",
+      "No menu da coluna Ações, Visualizar abre o arquivo numa nova aba (PDF, imagem, vídeo, áudio ou texto), Baixar o salva com o nome original e Excluir o apaga, depois da confirmação.",
+    ],
+  },
+  {
+    publicada: "2026-11-06T12:03",
+    processo: "Arquivos Gerais",
+    tela: "Informativos",
+    rota: "/arquivos-gerais/informativos",
+    itens: [
+      "A tela entra em uso: os arquivos dos informativos (comunicados, boletins, orientações…) guardados no SIG, com o Adicionar, o Visualizar, o Baixar e o Excluir, como em Treinamentos.",
+    ],
+  },
+  {
+    publicada: "2026-11-06T12:03",
+    processo: "Realizado por Obra",
+    tela: "Resultados",
+    rota: "/realizado-por-obra/resultados",
+    itens: [
+      "O botão de seta ao lado do menu de níveis recolhe todos os meses: a tabela mostra só o acumulado (o Realizado e o Vendido) e as variações, em todas as abas.",
+      "Saiu o aviso dos Créditos de Impostos de 100% ou mais do custo da conta na unidade; a conta continua sem o ajuste naquele mês.",
+    ],
+  },
+  {
+    publicada: "2026-11-06T12:03",
+    processo: TODO_O_SIG,
+    tela: "Filtros das Tabelas",
+    itens: [
+      "No menu do filtro de cada coluna, abaixo do Limpar Filtro de, o Limpar Todos os Filtros limpa os filtros de todas as colunas da tabela.",
+      "Saiu o Limpar Filtros que aparecia acima das tabelas (e no rodapé dos Lançamentos Manuais e dos Lançamentos de Contestações).",
+    ],
+  },
   // 05/11/2026, 08:20
   {
     publicada: "2026-11-05T08:20",

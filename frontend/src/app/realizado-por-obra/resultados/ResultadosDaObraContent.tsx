@@ -155,7 +155,7 @@ export function ResultadosDaObraContent() {
               Créditos de Impostos (Fechamento Mensal › Resultados › Impostos), com os percentuais da conta na unidade do custo (Matriz ou Filial): na venda mercantil, sem
               o Estornado (custo × (1 − % Estornado)); na venda global, sem o Estornado e com o Creditado reaplicado (custo × (1 − % Estornado) ÷ (1 − %
               Creditado)). Os percentuais de cada mês estão na aba Impostos de Resultados Empresariais › Resultados; com um percentual de 100% ou mais, o custo
-              fica sem o ajuste (aviso). A obra sem o tipo de venda no cadastro segue a regra da venda mercantil.
+              fica sem o ajuste. A obra sem o tipo de venda no cadastro segue a regra da venda mercantil.
             </p>
             <p>
               A Mão de Obra e os Gastos Gerais, Diretos e Indiretos, aparecem agrupados, sem as contas, como na DRE das vendas.
@@ -175,6 +175,10 @@ export function ResultadosDaObraContent() {
             </li>
             <li>Troque entre o Consolidado e as linhas da obra nas abas.</li>
             <li>No menu de níveis (a seta antes do título da tabela), escolha Totais, Atribuições ou Contas; a seta de cada grupo abre e fecha só ele.</li>
+            <li>
+              O botão de seta ao lado do menu de níveis recolhe (seta para a esquerda) ou expande (seta para a direita) os meses. Recolhidos, a tabela mostra só
+              o acumulado (o Realizado e o Vendido) e as variações, em todas as abas; a escolha fica guardada neste navegador.
+            </li>
             <li>
               Clique no valor de um mês (ou na descrição, para o último mês) para consultar os movimentos, como em Resultados Empresariais: nas contas e nos
               impostos, o extrato dos lançamentos dos centros da obra, com o balancete de cada conta; nos volumes, as listas da venda. No alto do extrato, a
@@ -217,6 +221,7 @@ export function ResultadosDaObraContent() {
             visao={{ consolidado: true }}
             nomeVisao={`${dados.obra.codigo} · ${nomeDaAba(aba, dados.abas)}`}
             rotulosDoTotal={{ realizado: "REALIZADO", comparado: `VENDIDO ${rotuloDaVersao(dados.versao)}` }}
+            recolheTodosOsMeses
             consultaDaVenda={{
               visao: (i) => (dados.centros[i] ? { obra: dados.centros[i]! } : null),
               nota: (l, i) => notaDaConsulta(aba, l, i, aba.dados.meses[i]?.rotulo ?? ""),

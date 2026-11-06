@@ -301,13 +301,6 @@ export function ClassificacaoContent() {
             ]}
           />
           <QuadroTabela
-            barra={
-              tabela.ativos ? (
-                <button type="button" onClick={tabela.limpar} className="ml-auto text-xs font-medium text-gray-900 underline underline-offset-2">
-                  Limpar Filtros
-                </button>
-              ) : undefined
-            }
             rodape={
               lista.data && tabela.total > 0 ? (
                 <Paginacao total={tabela.total} pagina={tabela.pagina} porPagina={tabela.porPagina} onPagina={tabela.setPagina} onPorPagina={tabela.setPorPagina} carregando={lista.isFetching} />

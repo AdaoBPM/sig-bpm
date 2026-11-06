@@ -44,6 +44,8 @@ enum RecursoSistema {
   CONTESTACOES_GASTOS
   /// O Realizado por Obra (03/11/2026): as telas Configurações (Geral e Almoxarifado), Resultados e Painel de Bordo.
   REALIZADO_POR_OBRA
+  /// Os Arquivos Gerais (05/11/2026): as telas Treinamentos e Informativos, na Controladoria.
+  ARQUIVOS_GERAIS
 }
 
 /// ENUM: ação permitida sobre um grupo — Ler (a tela aparece e os dados
@@ -2801,4 +2803,33 @@ model ContestacaoMovimento {
   @@index([competenciaId])
   @@index([lancamentoContabilId])
   @@map("contestacoes_movimentos")
+}
+
+/// A tela dos Arquivos Gerais em que o arquivo fica (05/11/2026).
+enum CategoriaArquivoGeral {
+  TREINAMENTOS
+  INFORMATIVOS
+}
+
+/// Os Arquivos Gerais (05/11/2026, pedido do Adão; processo da Controladoria): os arquivos das telas Treinamentos e
+/// Informativos — a descrição (a busca da lista), o nome e o tipo do arquivo enviado, o tamanho, quem o enviou e quando. O
+/// conteúdo fica no disco, em UPLOAD_DIR/arquivos-gerais, com um UUID e a extensão no nome (`arquivo`).
+model ArquivoGeral {
+  id             String                @id @default(uuid())
+  categoria      CategoriaArquivoGeral
+  descricao      String
+  /// O nome do arquivo como veio do computador de quem o enviou (o do Baixar).
+  nomeOriginal   String                @map("nome_original")
+  /// O tipo MIME (o do Visualizar).
+  tipo           String
+  /// Bytes.
+  tamanho        Int
+  /// O nome no disco: UUID e extensão.
+  arquivo        String                @unique
+  enviadoPor     String?               @map("enviado_por")
+  enviadoPorNome String?               @map("enviado_por_nome")
+  enviadoEm      DateTime              @default(now()) @map("enviado_em")
+
+  @@index([categoria, enviadoEm])
+  @@map("arquivos_gerais")
 }
